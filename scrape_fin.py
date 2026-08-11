@@ -208,19 +208,20 @@ def plausible(rev_q, rev_a):
 
     연간이 없으면 재볼 수가 없다 — 그때는 통과시킨다(모르는 걸 틀렸다고 하지 않는다).
     """
-    if not rev_a or len(rev_q) < 4:
+    if not rev_a or len(rev_q) < 2:
         return True
-    checked = 0
     for end, year_val in rev_a.items():
         if not year_val:
             continue
         y_end = date.fromisoformat(end)
         y_start = date(y_end.year - 1, y_end.month, 1)
         qs = [v for e, v in rev_q.items() if y_start.isoformat() < e <= end]
-        if len(qs) != 4:
+        # 그 해 분기가 다 모여 있지 않아도 된다. 평균 분기에 넷을 곱해 견준다 —
+        # 넉 개가 다 있는 해만 따지면 중간중간 빠진 회사는 영영 못 걸러낸다
+        # (UBS 가 그랬다: 분기가 띄엄띄엄 열넷이라 온전한 해가 없었다).
+        if not 2 <= len(qs) <= 4:
             continue
-        checked += 1
-        if not 0.6 <= sum(qs) / year_val <= 1.4:
+        if not 0.6 <= (sum(qs) / len(qs) * 4) / year_val <= 1.4:
             return False
     return True
 
