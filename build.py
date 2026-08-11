@@ -12,6 +12,7 @@ data/earnings*.json  ->  index.html (단일 파일, 외부 의존 없음)
 "미수집"으로 적는다. 없는 걸 빈 화면으로 두면 '발표가 없는 것'처럼 보인다.
 """
 import json
+import re
 from collections import Counter
 from datetime import date, datetime, timedelta
 from pathlib import Path
@@ -163,6 +164,56 @@ def pack_jp(r):
             ] + list(to_kst("jp", r["date"], "", ""))
 
 
+# 홍콩 결산기는 원본이 공시 문서 제목이라 통째로 영어 한 문장이다.
+#   'ANNOUNCEMENT OF THE RESULTS FOR THE THREE MONTHS ENDED 31 MARCH 2026'
+# 그대로 실으면 칸을 넘겨 문장 중간에서 잘린다. 어느 기간인지만 뽑아 적는다.
+# 표현이 회사마다 제각각이라(31 MARCH 2026 / MARCH 31, 2026 / 31ST MARCH ...)
+# 몇 갈래로 나눠 본다. 그래도 못 읽으면 **원문을 그대로 둔다** — 짐작해 넣지 않는다.
+HK_MONTH = {m: i + 1 for i, m in enumerate(
+    ["JANUARY", "FEBRUARY", "MARCH", "APRIL", "MAY", "JUNE", "JULY",
+     "AUGUST", "SEPTEMBER", "OCTOBER", "NOVEMBER", "DECEMBER"])}
+HK_SPAN = {"THREE": "분기", "SIX": "반기", "NINE": "누적 9개월", "TWELVE": "연간"}
+HK_ORD = {"FIRST": 1, "SECOND": 2, "THIRD": 3, "FOURTH": 4}
+_MON = "|".join(HK_MONTH)
+# '(기간) ENDED (날짜)' — 날짜는 '31 MARCH 2026' 과 'MARCH 31, 2026' 둘 다 온다.
+HK_ENDED = re.compile(
+    r"(?:(THREE|SIX|NINE|TWELVE)\s+MONTHS|(?:HALF-YEAR\s+)?(YEAR|PERIOD))\s+ENDED\s+"
+    r"(?:\d{1,2}(?:ST|ND|RD|TH)?\s+(" + _MON + r")|(" + _MON + r")\s+\d{1,2})"
+    r"[,\s]+(\d{4})")
+HK_QUARTER = re.compile(r"(FIRST|SECOND|THIRD|FOURTH)\s+QUARTER")
+HK_KIND = re.compile(r"(INTERIM|ANNUAL|FINAL)\s+RESULTS")
+HK_YEAR = re.compile(r"(?:19|20)(\d{2})")
+
+
+def hk_period(title):
+    """공시 제목 -> '2026년 3월 분기' 처럼. 못 읽으면 빈 문자열."""
+    t = (title or "").upper()
+
+    m = HK_ENDED.search(t)
+    if m:
+        span = HK_SPAN.get(m.group(1) or "") or ("연간" if m.group(2) == "YEAR" else "반기")
+        mon = HK_MONTH.get(m.group(3) or m.group(4) or "")
+        if mon:
+            return f"{m.group(5)}년 {mon}월 {span}"
+
+    # 연도는 제목 어딘가에 있다. 여러 개면 뒤엣것이 결산 연도다(2025/2026 처럼).
+    years = HK_YEAR.findall(t)
+    year = "20" + years[-1] if years else ""
+
+    m = HK_QUARTER.search(t)
+    if m and year:
+        return f"{year}년 {HK_ORD[m.group(1)]}분기"
+
+    m = HK_KIND.search(t)
+    if m and year:
+        return f"{year}년 " + ("반기" if m.group(1) == "INTERIM" else "연간")
+    if year and "INTERIM" in t:
+        return f"{year}년 반기"
+    if year and "ANNUAL" in t:
+        return f"{year}년 연간"
+    return ""
+
+
 def pack_en(r, mkt):
     """미국·홍콩은 원본이 영문이라 그대로도 읽힌다. 사전에 있으면 한글명을 쓰고
     없으면 영문명을 그대로 둔다 — 억지 음차는 오히려 못 알아보게 만든다.
@@ -175,8 +226,11 @@ def pack_en(r, mkt):
     hhmm = raw_time if mkt == "hk" else ""
     # 업종은 원본에 없다. 미국은 나스닥 스크리너에서 따로 받아둔 것을 붙인다.
     sec = r.get("sector", "") or SECTORS.get(mkt + ":" + r["code"], "")
+    fy = r.get("fy", "")
+    if mkt == "hk":
+        fy = hk_period(fy) or fy
     return [r["date"], r["code"], cur[0] if cur else name,
-            r.get("fy", ""), r.get("kind", ""),
+            fy, r.get("kind", ""),
             US_SECTOR_KO.get(sec, sec),
             MARKET_KO.get(r.get("market", ""), r.get("market", "")),
             name, 2, mkt, timing,
