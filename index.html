@@ -1091,13 +1091,21 @@ function openModal(k, dt) {
    환산하지 않고 원래 통화 그대로 적는다 — 몇 년치를 오늘 환율로 환산하면
    매출 추세가 아니라 환율 추세가 된다. */
 const CUR = {
-  USD: { ko: '달러', steps: [[1e9, 'B'], [1e6, 'M'], [1e3, 'K']] },
-  JPY: { ko: '엔',   steps: [[1e12, '조'], [1e8, '억'], [1e4, '만']] },
-  HKD: { ko: '홍콩달러', steps: [[1e9, 'B'], [1e6, 'M'], [1e3, 'K']] },
-  CNY: { ko: '위안', steps: [[1e8, '억'], [1e4, '만']] },
-  EUR: { ko: '유로', steps: [[1e9, 'B'], [1e6, 'M'], [1e3, 'K']] },
+  USD: '달러', JPY: '엔', HKD: '홍콩달러', CNY: '위안', EUR: '유로',
+  GBP: '파운드', CHF: '스위스프랑', CAD: '캐나다달러', AUD: '호주달러',
+  DKK: '덴마크크로네', SEK: '스웨덴크로나', NOK: '노르웨이크로네',
+  BRL: '헤알', INR: '루피', KRW: '원', TWD: '대만달러', SGD: '싱가포르달러',
+  MXN: '페소', ZAR: '란드', ILS: '셰켈', THB: '바트', IDR: '루피아',
 };
-
+/* 자릿수 눈금. 엔·원·위안은 억/조로 끊어야 읽히고, 달러·파운드는 B/M 이 익숙하다.
+   모르는 통화는 달러식으로 끊고 통화 이름만 원문 그대로 적는다 — 지어내지 않는다. */
+const CUR_BIG = { JPY: 1, KRW: 1, CNY: 1, TWD: 1, INR: 1, IDR: 1 };
+const STEP_BIG = [[1e12, '조'], [1e8, '억'], [1e4, '만']];
+const STEP_SM = [[1e9, 'B'], [1e6, 'M'], [1e3, 'K']];
+function curOf(code) {
+  const c = code || 'USD';
+  return { ko: CUR[c] || c, steps: CUR_BIG[c] ? STEP_BIG : STEP_SM };
+}
 function finBlock(m, code) {
   const f = D.fin[m + ':' + code];
   if (!f) return '<p class="finnote">이 종목은 아직 실적 수치를 받지 않았습니다. ' +
@@ -1128,7 +1136,7 @@ function finChart(f) {
   const x0 = L + ((W - L - R) - bw * pts.length) / 2;
   const y = v => H - B - (H - T - B) * v / max;
   // 통화가 시장마다 다르다. 엔·위안은 자릿수가 커서 조(兆) 단위가 읽기 좋다.
-  const U = CUR[f.cur || 'USD'] || CUR.USD;
+  const U = curOf(f.cur);
   const money = v => {
     const a = Math.abs(v);
     for (const [n, u] of U.steps) if (a >= n) return (v / n).toFixed(a / n >= 100 ? 0 : 1) + u;
