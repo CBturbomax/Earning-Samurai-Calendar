@@ -198,6 +198,33 @@ def reaches(d):
     return max(d) if d else ""
 
 
+def plausible(rev_q, rev_a):
+    """분기 넷을 더하면 그해 연간과 맞아야 한다. 안 맞으면 다른 줄이다.
+
+    은행이 특히 헷갈린다. UBS 는 '수수료 수익'이 분기 20억 달러쯤인데 총수익은
+    120억 달러다. 이름만 보고 고르면 이 둘을 구분할 수 없다. 그런데 우리는
+    연간 총수익을 이미 들고 있으므로, **분기 합이 연간과 맞는지** 재보면 된다.
+    맞지 않으면 그 분기 줄은 다른 것을 재고 있는 것이라 쓰지 않는다.
+
+    연간이 없으면 재볼 수가 없다 — 그때는 통과시킨다(모르는 걸 틀렸다고 하지 않는다).
+    """
+    if not rev_a or len(rev_q) < 4:
+        return True
+    checked = 0
+    for end, year_val in rev_a.items():
+        if not year_val:
+            continue
+        y_end = date.fromisoformat(end)
+        y_start = date(y_end.year - 1, y_end.month, 1)
+        qs = [v for e, v in rev_q.items() if y_start.isoformat() < e <= end]
+        if len(qs) != 4:
+            continue
+        checked += 1
+        if not 0.6 <= sum(qs) / year_val <= 1.4:
+            return False
+    return True
+
+
 def merged(cik, ns, tags, into=None, enough=0):
     """여러 태그를 훑어 **가장 최근까지 오는 줄**을 뼈대로 삼고 나머지로 메운다.
 
@@ -229,21 +256,24 @@ def merged(cik, ns, tags, into=None, enough=0):
                 and len(q) >= enough and reaches(q) >= fresh):
             break
 
-    # 뼈대: 이미 들고 있던 것이 있으면 그것, 없으면 가장 최근까지 오는 것.
-    if not mq and not ma and got:
-        got.sort(key=lambda t: (reaches(t[0]) or reaches(t[1]), len(t[0]), len(t[1])),
-                 reverse=True)
-        mq, ma, cur = dict(got[0][0]), dict(got[0][1]), got[0][2]
-        got = got[1:]
+    # 뼈대는 분기와 연간을 **따로** 고른다. 한 태그의 (분기, 연간)을 묶어서
+    # 고르면, 연간만 최근까지 오는 태그가 뽑히면서 다른 태그의 분기 열넷이
+    # 통째로 버려진다(셸이 분기 14개 -> 연간 4개로 줄었다).
+    if not mq and got:
+        pick = max(got, key=lambda t: (reaches(t[0]), len(t[0])))
+        mq, cur = dict(pick[0]), cur or pick[2]
+    if not ma and got:
+        pick = max(got, key=lambda t: (reaches(t[1]), len(t[1])))
+        ma, cur = dict(pick[1]), cur or pick[2]
 
     for q, a, c in got:
-        if not compatible(mq, q) or not compatible(ma, a):
-            continue                       # 다른 것을 재는 태그다. 섞지 않는다.
         cur = cur or c
-        for k, v in q.items():
-            mq.setdefault(k, v)
-        for k, v in a.items():
-            ma.setdefault(k, v)
+        if compatible(mq, q):
+            for k, v in q.items():
+                mq.setdefault(k, v)
+        if compatible(ma, a):
+            for k, v in a.items():
+                ma.setdefault(k, v)
     return mq, ma, cur
 
 
@@ -329,6 +359,10 @@ def series(cik, budget=None):
         if len(q3) > len(got[0]) or len(a3) > len(got[1]):
             got = (q3, a3, c3 or got[2])
     rev_q, rev_a, cur = got
+    # 분기 줄이 연간과 앞뒤가 안 맞으면(은행의 수수료 수익 같은 다른 줄) 버린다.
+    # 긴 줄보다 맞는 줄이 낫다 — 매출이라 적어 놓고 다른 걸 보여주면 안 된다.
+    if not plausible(rev_q, rev_a):
+        rev_q = {}
     if not rev_q and not rev_a:
         return None
 
