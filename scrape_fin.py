@@ -72,7 +72,9 @@ SINCE = "2018-10-01"                                  # 1Q19 부터 보려면 �
 # 헌 것으로 쳐서 다시 받는다.
 #   2 -> 3  매출 태그를 합치도록. 그 전에는 첫 태그에서 멈춰 엔비디아가 6분기.
 #   3 -> 4  IFRS(외국 기업) + 달러 아닌 통화 + 막힌 것과 없는 것을 가름.
-FIN_VER = 4
+#   4 -> 5  뼈대 태그를 개수로 가리도록. 그 전에는 날짜만 봐서 점 두 개짜리가
+#           스물두 개짜리를 이겼다(엑슨이 실행마다 22개와 2개를 오갔다).
+FIN_VER = 5
 
 BACKOFF = (0, 5, 20, 60)   # SEC 가 막으면 쉬었다 다시. 없는 태그(404)는 재시도 않는다.
 GIVE_UP_AFTER = 5          # 연속 이만큼 막히면 이번 실행은 접는다
@@ -260,11 +262,19 @@ def merged(cik, ns, tags, into=None, enough=0):
     # 뼈대는 분기와 연간을 **따로** 고른다. 한 태그의 (분기, 연간)을 묶어서
     # 고르면, 연간만 최근까지 오는 태그가 뽑히면서 다른 태그의 분기 열넷이
     # 통째로 버려진다(셸이 분기 14개 -> 연간 4개로 줄었다).
+    #
+    # 고르는 잣대는 '최근까지 오는가'가 **먼저**, 그 다음이 '몇 개인가'다.
+    # 다만 최근까지 오는 것끼리는 반드시 개수로 가려야 한다 — 날짜만 보고
+    # 고르면 점 두 개짜리 태그가 스물두 개짜리를 이긴다(엑슨이 실행마다
+    # 22개와 2개를 오갔다).
+    def rank(d):
+        return (reaches(d) >= fresh, len(d), reaches(d))
+
     if not mq and got:
-        pick = max(got, key=lambda t: (reaches(t[0]), len(t[0])))
+        pick = max(got, key=lambda t: rank(t[0]))
         mq, cur = dict(pick[0]), cur or pick[2]
     if not ma and got:
-        pick = max(got, key=lambda t: (reaches(t[1]), len(t[1])))
+        pick = max(got, key=lambda t: rank(t[1]))
         ma, cur = dict(pick[1]), cur or pick[2]
 
     for q, a, c in got:
