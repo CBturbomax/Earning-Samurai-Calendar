@@ -223,7 +223,7 @@ US_SECTOR_KO = {
     # 야후가 홍콩 종목에 붙이는 업종명(GICS 계열). 나스닥 것과 낱말이 조금 다르다.
     "Financial Services": "금융", "Healthcare": "헬스케어",
     "Consumer Cyclical": "경기소비재", "Consumer Defensive": "필수소비재",
-    "Communication Services": "통신", "Basic Materials ": "소재",
+    "Communication Services": "통신",
 }
 
 # 거래소 표기. 시장(region) 안에서 다시 갈리는 층이다.

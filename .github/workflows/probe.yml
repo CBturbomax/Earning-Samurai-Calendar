@@ -1,68 +1,62 @@
-# 소스가 GitHub 러너에서 실제로 열리는지, 응답이 어떻게 생겼는지 확인한다.
+# 실적 '수치' 소스를 확인한다. 지금까지는 일정만 다뤘다.
 #
-# 확인 끝난 것:
-#   🇺🇸 나스닥   — 정상. 발표 시각·시가총액까지 온다.
-#   🇯🇵 닛케이   — 데이터센터 IP 를 막는다. CI 에서는 새 날짜를 못 받는다.
-#   🇭🇰 HKEXnews — 정상. 하루씩 받아야 안 잘린다.
-#
-# 지금 찾는 것: 일본·홍콩의 **시가총액**. 나스닥은 미국 시총만 준다.
-# 시총이 없으면 규모 필터가 반쪽이 된다 — 개잡주를 걸러낼 수가 없다.
-
+# 알아볼 것:
+#   1) 발표 완료 여부 — 예정만 있으면 지났는지 알 수 없다
+#   2) 매출·영업이익 시계열 — 1Q19 부터 분기별로 쭉
+#   3) 부문별 매출(가레나/쇼피/머니 같은) 이 구조화돼 오는가
 name: 소스 접근 확인
-
 on:
   workflow_dispatch:
   push:
-    paths:
-      - '.github/workflows/probe.yml'
-
+    paths: ['.github/workflows/probe.yml']
 jobs:
   probe:
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
-      - uses: actions/checkout@v4
+      - name: SEC EDGAR — 미국 공식 재무제표 (XBRL)
+        continue-on-error: true
+        run: |
+          UA='EarningSamurai/1.0 (cbpark@wisdomasset.co.kr)'
+          echo '--- 회사 목록(티커→CIK) ---'
+          curl -sS --max-time 30 -H "User-Agent: $UA" -o t.json \
+            'https://www.sec.gov/files/company_tickers.json' -w 'HTTP %{http_code} / %{size_download}바이트\n'
+          head -c 200 t.json; echo
+          echo '--- SEA(CIK 1703399) 분기 매출 시계열 ---'
+          curl -sS --max-time 30 -H "User-Agent: $UA" -o c.json \
+            'https://data.sec.gov/api/xbrl/companyconcept/CIK0001703399/us-gaap/Revenues.json' \
+            -w 'HTTP %{http_code} / %{size_download}바이트\n'
+          python3 - <<'PY'
+          import json
+          try: d=json.load(open('c.json'))
+          except Exception as e: print('읽기 실패', e); raise SystemExit
+          u=d.get('units',{}).get('USD',[])
+          q=[x for x in u if x.get('fp','').startswith('Q') or x.get('form')=='10-Q']
+          print(f"항목 {len(u)}건 / 분기 {len(q)}건")
+          for x in u[-6:]:
+              print(f"  {x.get('fy')} {x.get('fp')} {x.get('start')}~{x.get('end')} {x.get('val'):>15,} {x.get('form')}")
+          PY
+          echo '--- 애플 전체 팩트(어떤 항목이 오는지) ---'
+          curl -sS --max-time 40 -H "User-Agent: $UA" -o a.json \
+            'https://data.sec.gov/api/xbrl/companyfacts/CIK0000320193.json' \
+            -w 'HTTP %{http_code} / %{size_download}바이트\n'
+          python3 -c "
+          import json; d=json.load(open('a.json'))
+          g=d.get('facts',{}).get('us-gaap',{})
+          want=['Revenues','RevenueFromContractWithCustomerExcludingAssessedTax','OperatingIncomeLoss','GrossProfit','NetIncomeLoss','EarningsPerShareDiluted']
+          print('  주요 항목 존재:', {w: (w in g) for w in want})
+          print('  전체 항목 수:', len(g))"
 
-      - name: 야후 파이낸스 — 여러 종목 시총을 한 번에
+      - name: 나스닥 — 발표 완료·서프라이즈
         continue-on-error: true
         run: |
           UA='Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
-          # 도요타(JP) · 소니(JP) · 텐센트(HK) · 알리바바(HK)
-          SYMS='7203.T,6758.T,0700.HK,9988.HK'
-          for base in query1 query2; do
-            for path in "v7/finance/quote?symbols=$SYMS" "v6/finance/quote?symbols=$SYMS"; do
-              u="https://$base.finance.yahoo.com/$path"
-              code=$(curl -sS --max-time 20 -o /tmp/y.json -w '%{http_code}' -H "User-Agent: $UA" "$u" 2>/dev/null || echo 000)
-              echo "HTTP $code  $u"
-              [ "$code" = "200" ] && head -c 400 /tmp/y.json && echo
-            done
+          for u in \
+            'https://api.nasdaq.com/api/company/SE/earnings-surprise' \
+            'https://api.nasdaq.com/api/quote/SE/eps' \
+            'https://api.nasdaq.com/api/company/SE/financials?frequency=2' ; do
+            echo "--- $u"
+            curl -sS --max-time 25 -H "User-Agent: $UA" -H 'Accept: application/json' \
+              -o n.json "$u" -w 'HTTP %{http_code} / %{size_download}바이트\n' || true
+            head -c 450 n.json; echo
           done
-          echo '--- 쿠키+crumb 을 받아서 재시도 ---'
-          curl -sS --max-time 20 -c /tmp/ck -o /dev/null -H "User-Agent: $UA" 'https://fc.yahoo.com' || true
-          CRUMB=$(curl -sS --max-time 20 -b /tmp/ck -H "User-Agent: $UA" \
-                  'https://query1.finance.yahoo.com/v1/test/getcrumb' 2>/dev/null || true)
-          echo "crumb: ${CRUMB:0:20}"
-          if [ -n "$CRUMB" ]; then
-            curl -sS --max-time 20 -b /tmp/ck -H "User-Agent: $UA" -o /tmp/y2.json \
-              -w 'HTTP %{http_code}\n' \
-              "https://query1.finance.yahoo.com/v7/finance/quote?symbols=$SYMS&crumb=$CRUMB" || true
-            head -c 700 /tmp/y2.json; echo
-          fi
-
-      - name: 그 외 시총 후보
-        continue-on-error: true
-        run: |
-          UA='Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
-          shot() {
-            code=$(curl -sS --max-time 20 -L -o /tmp/x -w '%{http_code}' -H "User-Agent: $UA" "$1" 2>/dev/null || echo 000)
-            printf '%-5s %9s  %s\n' "$code" "$(wc -c </tmp/x)" "$1"
-            [ "$code" = "200" ] && head -c 220 /tmp/x | tr -d '\n' | sed 's/^/        /' && echo
-          }
-          echo '=== stooq (일본·홍콩 시세) ==='
-          shot 'https://stooq.com/q/l/?s=7203.jp&f=sd2t2ohlcv&h&e=csv'
-          echo '=== JPX 상장종목 일람 ==='
-          shot 'https://www.jpx.co.jp/markets/statistics-equities/misc/tvdivq0000001vg2-att/data_j.xls'
-          echo '=== 나스닥 스크리너 (미국 외 ADR 확인용) ==='
-          shot 'https://api.nasdaq.com/api/screener/stocks?tableonly=true&limit=5&exchange=NYSE'
-          echo '=== HKEX 상장증권 목록 (시총 없음, 종목 분류용) ==='
-          shot 'https://www.hkex.com.hk/eng/services/trading/securities/securitieslists/ListOfSecurities.xlsx'
