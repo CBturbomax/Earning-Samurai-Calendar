@@ -167,7 +167,8 @@ def fetch_chunk(a: date, b: date, probe: bool = False):
                 "date": d,
                 "code": code,
                 "name": (r.get("STOCK_NAME") or "").strip(),
-                "fy": (r.get("TITLE") or "").strip()[:60],
+                # 공시 제목에 줄바꿈이 그대로 들어 있다. 한 줄로 눕힌다.
+                "fy": re.sub(r"\s+", " ", r.get("TITLE") or "").strip()[:60],
                 "kind": kind_of(label),
                 "sector": "",
                 "market": "",

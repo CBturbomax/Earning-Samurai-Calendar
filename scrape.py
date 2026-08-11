@@ -10,6 +10,7 @@ https://www.nikkei.com/markets/kigyo/money-schedule/kessan/
 결과: data/earnings.json
 """
 import json
+import os
 import re
 import sys
 import time
@@ -31,7 +32,11 @@ BACKOFF = (0, 15, 45, 120, 300)
 
 # 연속으로 이만큼 실패하면 접는다. 백오프는 '잠깐 막힌 것'을 견디는 장치지
 # '차단된 상대'를 뚫는 장치가 아니다. 받아둔 만큼은 저장돼 있고 다시 돌리면 이어받는다.
-GIVE_UP_AFTER = 3
+#
+# 닛케이는 데이터센터 IP 를 아예 막는다. 집에서 돌리면 잘 되지만 GitHub 러너에서는
+# 첫 요청부터 껍데기가 온다. 거기서 3번 × 480초를 기다리면 24분이 헛간다.
+# 그래서 CI 쪽에서는 EARNINGS_GIVE_UP=1 로 낮춰 빨리 접게 한다.
+GIVE_UP_AFTER = int(os.environ.get("EARNINGS_GIVE_UP", "3"))
 
 # 한 행이 통째로 <tr class="tr2"> ... </tr>. 셀 8개를 순서대로 뽑는다.
 ROW_RE = re.compile(r'<tr class="tr2">(.*?)</tr>', re.S)
