@@ -193,18 +193,50 @@ def compatible(base, add):
     return True
 
 
+def reaches(d):
+    """이 줄이 어디까지 오는가. 최근까지 오는 줄이 기준이 돼야 한다."""
+    return max(d) if d else ""
+
+
 def merged(cik, ns, tags, into=None, enough=0):
-    """여러 태그를 훑어 합친다. 먼저 걸리는 하나만 쓰면 안 된다 —
-    회사가 도중에 태그를 갈아타기 때문이다. 엔비디아가 그랬다: 옛 태그에는
-    2020년까지만 있어서, 첫 태그에서 멈추니 6분기밖에 안 나왔다.
-    이미 채워진 분기는 건드리지 않는다(앞 태그가 더 정확한 표현이다).
+    """여러 태그를 훑어 **가장 최근까지 오는 줄**을 뼈대로 삼고 나머지로 메운다.
+
+    두 가지를 다 조심해야 한다.
+
+    (1) 첫 태그에서 멈추면 안 된다. 회사가 도중에 태그를 갈아타기 때문이다.
+        엔비디아가 그랬다 — 옛 태그에 2020년까지만 있어서 6분기만 나왔다.
+    (2) 그렇다고 아무거나 합치면 안 된다. 엑슨은 '고객 매출'과 '총수익(기타
+        수익 포함)'을 둘 다 쓰는데, 이어 붙이면 정의가 다른 두 줄이 한 막대
+        그래프에 섞인다. 겹치는 기간의 값으로 같은 줄인지 가려낸다.
+
+    그래서 뼈대를 **먼저 나온 태그**가 아니라 **가장 최근까지 오는 태그**로
+    잡는다. 지금 무엇을 발표했는지 보는 도구라 최근이 비면 쓸모가 없다.
 
     into 를 주면 거기에 이어 붙인다 — 회계 기준을 갈아탄 회사는 us-gaap 과
     IFRS 를 한 줄로 이어야 한다.
-    enough 를 주면 그만큼 모였을 때 남은 태그를 건너뛴다."""
+    enough 를 주면 첫 태그만으로 충분할 때 나머지를 건너뛴다(요청 아끼기).
+    """
     mq, ma, cur = into if into else ({}, {}, "")
+    fresh = (date.today() - timedelta(days=150)).isoformat()
+
+    got = []
     for tag in tags:
         q, a, c = one(cik, ns, tag)
+        if q or a:
+            got.append((q, a, c))
+        # 첫 태그만으로 넉넉하고 최근까지 온다면 더 물어볼 것이 없다.
+        if (enough and not into and len(got) == 1
+                and len(q) >= enough and reaches(q) >= fresh):
+            break
+
+    # 뼈대: 이미 들고 있던 것이 있으면 그것, 없으면 가장 최근까지 오는 것.
+    if not mq and not ma and got:
+        got.sort(key=lambda t: (reaches(t[0]) or reaches(t[1]), len(t[0]), len(t[1])),
+                 reverse=True)
+        mq, ma, cur = dict(got[0][0]), dict(got[0][1]), got[0][2]
+        got = got[1:]
+
+    for q, a, c in got:
         if not compatible(mq, q) or not compatible(ma, a):
             continue                       # 다른 것을 재는 태그다. 섞지 않는다.
         cur = cur or c
@@ -212,8 +244,6 @@ def merged(cik, ns, tags, into=None, enough=0):
             mq.setdefault(k, v)
         for k, v in a.items():
             ma.setdefault(k, v)
-        if enough and len(mq) >= enough:
-            break
     return mq, ma, cur
 
 
@@ -222,7 +252,60 @@ def thin(rev_q, rev_a):
     return len(rev_q) < 12 and len(rev_a) < 6
 
 
-def series(cik):
+# 태그 이름을 짐작하는 데는 한계가 있다. 코카콜라·HSBC·아메리칸타워는 위 목록
+# 어느 것도 안 써서 통째로 비었다. 그럴 때는 **그 회사가 실제로 무엇을 쓰는지**
+# 본다 — companyfacts 가 그 회사의 모든 항목을 한 번에 준다.
+# 다만 응답이 수 MB 라 아무 때나 부르지 않는다. 다른 방법이 다 실패했을 때만,
+# 한 실행에 몇 종목까지만.
+FACTS = "https://data.sec.gov/api/xbrl/companyfacts/CIK{cik:010d}.json"
+FACTS_PER_RUN = int(os.environ.get("FIN_FACTS_PER_RUN", "40"))
+# 매출로 볼 만한 항목 이름. 뒤엣것은 매출이 아니면서 이름만 닮은 것들이라 걸러낸다
+# (이연수익·잔여계약·매출원가·매출채권…). 이걸 안 거르면 엉뚱한 줄이 차트에 오른다.
+REV_OK = re.compile(r"revenue|sales|turnover", re.I)
+# 'tax' 를 통째로 거르면 안 된다 — 정작 가장 흔한 매출 항목 이름이
+# RevenueFromContractWithCustomerExcludingAssessedTax 다. 세금 항목만 집어 거른다.
+# 'expense' 도 통째로 거르면 안 된다 — 은행의 매출 항목이
+# RevenuesNetOfInterestExpense 다. 'cost' 만으로 매출원가는 걸러진다.
+REV_NO = re.compile(r"deferred|unearned|remaining|obligation|"
+                    r"cost|receivable|percent|concentration|discount|"
+                    r"allowance|segment|geographic|disaggregat|adjustment|"
+                    r"incometax|taxespaid|pershare|persquare|growth|benchmark|"
+                    r"policy|textblock|table|axis|member|domain", re.I)
+
+
+def discover(cik, budget):
+    """그 회사가 실제로 쓰는 매출 항목을 찾아 (분기, 연간, 통화) 로.
+
+    budget 은 남은 호출 수를 담은 한 칸짜리 리스트다(0이면 안 부른다).
+    """
+    if budget[0] <= 0:
+        return {}, {}, ""
+    budget[0] -= 1
+    try:
+        d = get(FACTS.format(cik=cik), SEC_UA, timeout=90)
+    except Throttled:
+        return {}, {}, ""
+    finally:
+        time.sleep(0.3)
+    if not d:
+        return {}, {}, ""
+
+    best = ({}, {}, "")
+    for ns in ("us-gaap", "ifrs-full"):
+        for name, node in ((d.get("facts") or {}).get(ns, {}).items()):
+            if not REV_OK.search(name) or REV_NO.search(name):
+                continue
+            units, cur = biggest_unit(node)
+            q, a = quarters(units)
+            # 최근까지 오면서 점이 많은 것을 고른다.
+            key = (reaches(q) or reaches(a), len(q), len(a))
+            cmp = (reaches(best[0]) or reaches(best[1]), len(best[0]), len(best[1]))
+            if key > cmp:
+                best = (q, a, cur)
+    return best
+
+
+def series(cik, budget=None):
     """한 종목의 분기 매출·영업이익·순이익 시계열.
 
     미국 기준(us-gaap)과 국제 기준(IFRS)을 **둘 다** 본다. 없으면 넘어가는 게
@@ -239,6 +322,12 @@ def series(cik):
         before = (len(got[0]), len(got[1]))
         got = merged(cik, "ifrs-full", IFRS_REV, into=got, enough=24)
         used_ifrs = (len(got[0]), len(got[1])) != before
+    # 여기까지 와서도 얇으면 태그 이름을 짐작하는 게 안 통한 것이다.
+    # 그 회사가 실제로 쓰는 항목을 찾아본다(무거워서 마지막에만).
+    if budget is not None and thin(got[0], got[1]):
+        q3, a3, c3 = discover(cik, budget)
+        if len(q3) > len(got[0]) or len(a3) > len(got[1]):
+            got = (q3, a3, c3 or got[2])
     rev_q, rev_a, cur = got
     if not rev_q and not rev_a:
         return None
@@ -379,12 +468,13 @@ def main():
     today = date.today().isoformat()
     stocks = dict(old)
     got, blocked, streak = 0, 0, 0
+    budget = [FACTS_PER_RUN]      # 무거운 companyfacts 호출은 이만큼만
     for i, sym in enumerate(todo):
         rec = {}
         cik = cikmap.get(re.sub(r"[^A-Z.]", "", sym.upper()))
         if cik:
             try:
-                s = series(cik)
+                s = series(cik, budget)
                 streak = 0
                 if s:
                     rec.update(s)
@@ -440,6 +530,8 @@ def main():
     print(f"\n{len(have):,}종목 -> {OUT} (자료 없는 종목 {len(stocks)-len(have):,} 표시만)")
     if blocked:
         print(f"  SEC 가 막아서 못 받은 종목 {blocked:,}개 — 다음 실행에서 다시 받는다")
+    print(f"  항목 이름을 직접 찾아본 종목 {FACTS_PER_RUN - budget[0]}개 "
+          f"(한 실행 한도 {FACTS_PER_RUN})")
     print(f"  분기 시계열 {nq:,} · 연간만 {na:,} · EPS(발표완료) {ne:,}")
 
     # 눈으로 한 번 본다. 태그를 갈아탄 회사를 놓치면 여기서 짧게 나온다.
