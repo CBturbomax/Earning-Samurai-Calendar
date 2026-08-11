@@ -1,0 +1,73 @@
+# 세 소스가 GitHub 러너에서 실제로 열리는지만 확인한다. 몇 초면 끝난다.
+#
+# 수집 워크플로가 한 시장에서 몇 시간씩 붙들려 있으면 원인을 알 수가 없다.
+# 스크래퍼의 백오프(15/45/120/300초)는 '잠깐 막힌 것'을 견디려는 장치인데,
+# 아예 차단된 상대에게는 그냥 시간만 태운다. 그 둘을 구분하려고 둔다.
+
+name: 소스 접근 확인
+
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - '.github/workflows/probe.yml'
+
+jobs:
+  probe:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: 러너 위치
+        run: curl -s --max-time 20 https://ipinfo.io/json || true
+
+      - name: 🇺🇸 나스닥 실적 캘린더 API
+        run: |
+          curl -sS --max-time 30 -o us.txt -w 'HTTP %{http_code} / %{size_download}바이트\n' \
+            -H 'User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36' \
+            -H 'Accept: application/json, text/plain, */*' \
+            -H 'Accept-Language: en-US,en;q=0.9' \
+            -H 'Referer: https://www.nasdaq.com/market-activity/earnings' \
+            'https://api.nasdaq.com/api/calendar/earnings?date=2026-08-12' || true
+          echo '--- 앞 600자 ---'; head -c 600 us.txt; echo
+
+      - name: 🇺🇸 나스닥 심볼 디렉터리
+        run: |
+          curl -sS --max-time 30 -o sym.txt -w 'HTTP %{http_code} / %{size_download}바이트\n' \
+            -H 'User-Agent: Mozilla/5.0' \
+            'https://www.nasdaqtrader.com/dynamic/SymDir/nasdaqlisted.txt' || true
+          echo '--- 앞 200자 ---'; head -c 200 sym.txt; echo
+
+      - name: 🇯🇵 닛케이 결산발표 스케줄
+        run: |
+          curl -sS --max-time 30 -o jp.txt -w 'HTTP %{http_code} / %{size_download}바이트\n' \
+            -H 'User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36' \
+            -H 'Accept-Language: ja,en;q=0.8' \
+            'https://www.nikkei.com/markets/kigyo/money-schedule/kessan/?ResultFlag=1&SearchDate1=2026%E5%B9%B408&SearchDate2=12&hm=1' || true
+          echo '--- 건수 표시 있나 ---'
+          grep -o '件目を表示([^)]*)' jp.txt | head -3 || echo '(없음)'
+          grep -c 'tr2' jp.txt || true
+
+      - name: 🇭🇰 HKEX 이사회 캘린더 페이지
+        run: |
+          curl -sS --max-time 30 -o hk.txt -w 'HTTP %{http_code} / %{size_download}바이트\n' \
+            -H 'User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36' \
+            'https://www.hkex.com.hk/Market-Data/Statistics/Consolidated-Reports/Board-Meeting?sc_lang=en' || true
+          echo '--- 토큰 후보 ---'
+          grep -oE 'token=[A-Za-z0-9%_.=-]{16,}' hk.txt | head -3 || echo '(없음)'
+          grep -oE '"token"\s*:\s*"[^"]{16,}"' hk.txt | head -3 || echo '(없음)'
+
+      - name: 파이썬 스크래퍼로 하루만 떠보기 (미국)
+        continue-on-error: true
+        timeout-minutes: 3
+        run: |
+          python - <<'PY'
+          import scrape_us, datetime, json
+          try:
+              rows = scrape_us.fetch_valid(datetime.date(2026, 8, 12))
+              print("받은 행:", len(rows))
+              if rows: print(json.dumps(rows[0], ensure_ascii=False)[:400])
+          except Exception as e:
+              print("실패:", type(e).__name__, e)
+          PY
