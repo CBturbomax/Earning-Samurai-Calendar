@@ -356,8 +356,12 @@ def series(cik, budget=None):
     # 그 회사가 실제로 쓰는 항목을 찾아본다(무거워서 마지막에만).
     if budget is not None and thin(got[0], got[1]):
         q3, a3, c3 = discover(cik, budget)
-        if len(q3) > len(got[0]) or len(a3) > len(got[1]):
-            got = (q3, a3, c3 or got[2])
+        # 분기와 연간을 각각 더 긴 쪽으로. 통째로 갈아치우면 안 된다 —
+        # 이름을 보고 찾은 줄이 엉뚱할 때 그걸 가려낼 잣대(믿을 만한 연간)까지
+        # 같이 버리게 된다. UBS 가 그랬다.
+        got = (q3 if len(q3) > len(got[0]) else got[0],
+               a3 if len(a3) > len(got[1]) else got[1],
+               got[2] or c3)
     rev_q, rev_a, cur = got
     # 분기 줄이 연간과 앞뒤가 안 맞으면(은행의 수수료 수익 같은 다른 줄) 버린다.
     # 긴 줄보다 맞는 줄이 낫다 — 매출이라 적어 놓고 다른 걸 보여주면 안 된다.
