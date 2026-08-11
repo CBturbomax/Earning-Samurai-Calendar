@@ -176,6 +176,45 @@ def us_sectors():
     return out
 
 
+PROFILE = ("https://query1.finance.yahoo.com/v10/finance/quoteSummary/"
+           "{sym}?modules=assetProfile&crumb={crumb}")
+# 한 번 실행에 새로 받을 홍콩 업종 수. 종목당 한 번씩 물어야 해서 느리다.
+# 업종은 잘 안 바뀌므로 한 번 받으면 계속 쓰고, 새 종목만 조금씩 채운다.
+HK_SECTOR_PER_RUN = 250
+
+
+def hk_sectors(codes, known):
+    """홍콩 업종. 야후는 종목당 하나씩만 물을 수 있어서 조금씩 채워 나간다.
+
+    HKEXnews 도 나스닥 스크리너 같은 목록을 안 준다. 종목당 요청이라 느리지만
+    업종은 잘 바뀌지 않으니 이미 받은 건 건너뛰고 새 종목만 받는다.
+    """
+    todo = [c for c in codes if "hk:" + c not in known][:HK_SECTOR_PER_RUN]
+    if not todo:
+        print("  홍콩 업종: 새로 받을 종목 없음")
+        return {}
+    out = {}
+    for i, code in enumerate(todo):
+        sym = f"{int(re.sub(r'[^0-9]', '', code)):04d}.HK"
+        try:
+            req = urllib.request.Request(
+                PROFILE.format(sym=sym, crumb=urllib.parse.quote(_crumb)),
+                headers={"User-Agent": UA, "Accept": "application/json"})
+            with _opener.open(req, timeout=30) as r:
+                body = json.loads(r.read().decode("utf-8", "replace"))
+            res = ((body.get("quoteSummary") or {}).get("result") or [{}])[0]
+            sec = ((res.get("assetProfile") or {}).get("sector") or "").strip()
+            if sec:
+                out["hk:" + code] = sec
+        except Exception:
+            pass                                   # 한 종목 실패가 전체를 멈추지 않는다
+        if i % 50 == 49:
+            print(f"    홍콩 업종 {i+1}/{len(todo)} (확보 {len(out)})", flush=True)
+        time.sleep(0.4)
+    print(f"  홍콩 업종 {len(out):,}종목 추가 (남은 종목은 다음 실행에서)")
+    return out
+
+
 def main():
     OUT.parent.mkdir(parents=True, exist_ok=True)
     bootstrap()
@@ -222,13 +261,25 @@ def main():
             continue
         caps[f"{mkt}:{code}"] = round(cap / rates[cur] / 1e9, 3)
 
+    # 업종은 이미 받아둔 것을 이어 쓴다. 홍콩은 종목당 요청이라 한 번에 다 못 받는다.
+    known = {}
+    if OUT.exists():
+        try:
+            known = json.loads(OUT.read_text(encoding="utf-8")).get("sectors", {})
+        except (ValueError, OSError):
+            pass
+    sectors = dict(known)
+    sectors.update(us_sectors())
+    hk_codes = sorted({c for s, (m, c) in todo.items() if m == "hk"})
+    sectors.update(hk_sectors(hk_codes, sectors))
+
     payload = {
-        "source": "Yahoo Finance quote API (시총) + Nasdaq screener (미국 업종)",
+        "source": "Yahoo Finance (시총·홍콩 업종) + Nasdaq screener (미국 업종)",
         "note": "십억 달러 단위. 현지 통화 시총을 당일 환율로 환산한 값이라 어림값이다.",
         "rates": {k: round(v, 4) for k, v in rates.items()},
         "count": len(caps),
         "caps": caps,
-        "sectors": us_sectors(),
+        "sectors": sectors,
     }
     tmp = OUT.with_suffix(".tmp")
     tmp.write_text(json.dumps(payload, ensure_ascii=False), encoding="utf-8")

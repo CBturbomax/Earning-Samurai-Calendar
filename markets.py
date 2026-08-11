@@ -210,7 +210,9 @@ SECTOR_KO = {
 }
 
 # 거래소 표기. 시장(region) 안에서 다시 갈리는 층이다.
-# 미국 업종 — 나스닥 스크리너가 주는 값. 닫힌 집합이라 전량 대역한다.
+# 영문권 업종 대역표 — 미국(나스닥 스크리너)과 홍콩(야후)에 함께 쓴다.
+# 두 곳이 쓰는 낱말이 조금 달라서(Finance vs Financial Services) 양쪽을 다 받아
+# 같은 한글로 모은다. 그래야 업종 필터에 '금융'이 하나만 뜬다.
 US_SECTOR_KO = {
     "Technology": "기술", "Health Care": "헬스케어", "Finance": "금융",
     "Consumer Discretionary": "경기소비재", "Consumer Staples": "필수소비재",
@@ -219,6 +221,10 @@ US_SECTOR_KO = {
     "Utilities": "유틸리티", "Consumer Services": "소비서비스",
     "Capital Goods": "자본재", "Public Utilities": "유틸리티",
     "Transportation": "운송", "Miscellaneous": "기타",
+    # 야후가 홍콩 종목에 붙이는 업종명(GICS 계열). 나스닥 것과 낱말이 조금 다르다.
+    "Financial Services": "금융", "Healthcare": "헬스케어",
+    "Consumer Cyclical": "경기소비재", "Consumer Defensive": "필수소비재",
+    "Communication Services": "통신", "Basic Materials ": "소재",
 }
 
 MARKET_KO = {
