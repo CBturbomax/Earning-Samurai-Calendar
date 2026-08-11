@@ -19,8 +19,9 @@ from pathlib import Path
 import companies
 import companies_hk
 import companies_us
-from markets import (CAP_STEPS, HOLIDAYS, MARKET_KO, MARKET_ORDER, MARKETS,
-                     SECTOR_KO, TIMING_KO, USD_KRW, holiday_ko)
+from markets import (CAP_STEPS, HK_TYPICAL, HKT, HOLIDAYS, JP_TYPICAL, KST,
+                     MARKET_KO, MARKET_ORDER, MARKETS, SECTOR_KO, TIMING_KO,
+                     US_AMC, US_BMO, US_EDT, US_EST, USD_KRW, holiday_ko)
 from translit import to_korean
 
 HERE = Path(__file__).parent
@@ -37,6 +38,52 @@ KIND_MAP = {"第１": "1Q", "第２": "2Q", "第３": "3Q", "本": "본결산"}
 
 def monday_of(d: date) -> date:
     return d - timedelta(days=d.weekday())
+
+
+def us_utc_offset(d: date) -> int:
+    """미국 동부 표준시 오프셋. 3월 둘째 일요일 ~ 11월 첫째 일요일이 서머타임."""
+    def nth_sunday(year, month, n):
+        first = date(year, month, 1)
+        first += timedelta(days=(6 - first.weekday()) % 7)     # 그 달 첫 일요일
+        return first + timedelta(weeks=n - 1)
+    start = nth_sunday(d.year, 3, 2)
+    end = nth_sunday(d.year, 11, 1)
+    return US_EDT if start <= d < end else US_EST
+
+
+def to_kst(mkt: str, day: str, hhmm: str, timing: str):
+    """현지 발표 시점을 한국 시각으로 옮긴다.
+
+    돌려주는 값: (한국날짜, 'HH:MM', 정확도)
+      정확도 1 = 원본에 실제 시각이 있었다 (홍콩)
+      정확도 0 = 통상 시각으로 어림했다 (미국 장전/장후, 일본 15시)
+    시각을 전혀 모르면 ('', 0) 으로 두고 날짜만 옮기지 않는다 —
+    모르는 걸 아는 척하면 캘린더가 조용히 거짓말을 한다.
+    """
+    d = date.fromisoformat(day)
+    if mkt == "jp":
+        # JST 와 KST 는 둘 다 UTC+9 라 시차가 없다. 날짜도 그대로다.
+        return day, "%02d:%02d" % JP_TYPICAL, 0
+    if mkt == "hk":
+        if hhmm:
+            h, m = int(hhmm[:2]), int(hhmm[3:5])
+            exact = 1
+        else:
+            h, m = HK_TYPICAL
+            exact = 0
+        shift = KST - HKT                                       # 한국이 1시간 빠르다
+    else:                                                       # 미국
+        if timing == "장전":
+            h, m = US_BMO
+        elif timing == "장후":
+            h, m = US_AMC
+        else:
+            return "", "", 0                                    # 시각을 모르면 옮기지 않는다
+        exact = 0
+        shift = KST - us_utc_offset(d)
+    total = h * 60 + m + shift * 60
+    day_shift, mins = divmod(total, 24 * 60)
+    return (d + timedelta(days=day_shift)).isoformat(), "%02d:%02d" % divmod(mins, 60), exact
 
 
 def load(mkt: str):
@@ -83,7 +130,8 @@ def pack_jp(r):
             KIND_MAP.get(r.get("kind", ""), r.get("kind", "")),
             SECTOR_KO.get(r.get("sector", ""), r.get("sector", "")),
             MARKET_KO.get(r.get("market", ""), r.get("market", "")),
-            r["name"], lvl, "jp", "", CAPS.get("jp:" + r["code"], 0)]
+            r["name"], lvl, "jp", "", CAPS.get("jp:" + r["code"], 0)
+            ] + list(to_kst("jp", r["date"], "", ""))
 
 
 def pack_en(r, mkt):
@@ -92,14 +140,18 @@ def pack_en(r, mkt):
     지어낸 표기가 아니므로 '기계 변환'(등급 0) 점선은 붙지 않는다."""
     cur = DICTS[mkt].NOTABLE.get(r["code"])
     name = r.get("name", "")
+    # 미국의 time 은 장전/장후 구분, 홍콩의 time 은 실제 시각(HH:MM)이다.
+    raw_time = r.get("time", "")
+    timing = TIMING_KO.get(raw_time, "") if mkt == "us" else ""
+    hhmm = raw_time if mkt == "hk" else ""
     return [r["date"], r["code"], cur[0] if cur else name,
             r.get("fy", ""), r.get("kind", ""),
             r.get("sector", ""),
             MARKET_KO.get(r.get("market", ""), r.get("market", "")),
-            name, 2, mkt,
-            TIMING_KO.get(r.get("time", ""), ""),
+            name, 2, mkt, timing,
             # 미국은 나스닥이 시총을 같이 주고, 홍콩은 따로 받아둔 것을 붙인다.
-            r.get("cap", 0) or CAPS.get(mkt + ":" + r["code"], 0)]
+            r.get("cap", 0) or CAPS.get(mkt + ":" + r["code"], 0)
+            ] + list(to_kst(mkt, r["date"], hhmm, timing))
 
 
 def build():
@@ -143,7 +195,10 @@ def build():
     all_ok = sorted({d for m in ok_days for d in ok_days[m]})
 
     # 데이터가 있는 주만 네비게이션에 노출한다.
-    weeks = sorted({monday_of(date.fromisoformat(d)).isoformat() for d in all_ok})
+    # 한국 시간으로 보면 미국 장후 발표가 다음 날로 밀리므로, 그 날짜도 포함한다.
+    kdays = {p[12] for p in packed if p[12]}
+    weeks = sorted({monday_of(date.fromisoformat(d)).isoformat()
+                    for d in set(all_ok) | kdays})
 
     today = date.today().isoformat()
     default_week = monday_of(date.fromisoformat(today)).isoformat()
@@ -431,6 +486,13 @@ button.btn:disabled:hover { border-color:var(--line); color:var(--fg); }
 }
 .tm.pre { color:var(--a3); border:1px solid #4a3a1c; }
 .tm.post { color:var(--ok); border:1px solid #24463a; }
+/* 한국 시간 표기. 원본에 실제 시각이 있으면 또렷하게, 어림한 것은 흐리게. */
+.tm.exact { color:var(--ok); border:1px solid #24463a; font-variant-numeric:tabular-nums; }
+.tm.approx { color:var(--mute); border:1px solid var(--line); font-variant-numeric:tabular-nums; }
+/* 칩의 시총 표기 */
+.chip .cc {
+  flex:0 0 auto; font-size:13px; color:#8fb8dc; font-variant-numeric:tabular-nums;
+}
 .chip:hover { border-color:var(--a2); background:#16202b; }
 .chip.big { background:#1d1418; border-color:#43242c; }
 .chip.big:hover { border-color:var(--a1); }
@@ -580,7 +642,7 @@ svg.bars rect.b:hover { fill:var(--a3); }
   <button class="btn" id="wToday">오늘 주</button>
   <select id="wPick"></select>
   <select id="fCap" title="시가총액으로 거릅니다. 캘린더와 표에 함께 적용됩니다."></select>
-  <label class="chk"><input type="checkbox" id="onlyBig">주목종목만</label>
+  <label class="chk"><input type="checkbox" id="kstToggle" checked>한국 시간</label>
   <label class="chk"><input type="checkbox" id="onlyWatch">관심종목만</label>
   <label class="chk"><input type="checkbox" id="jpToggle">원문 보기</label>
 </div>
@@ -681,6 +743,15 @@ const LS_KEY = 'jpEarnWatch';
 const keyOf = r => r[9] + ':' + r[1];
 const noteOf = r => NOTE[keyOf(r)];
 
+/* ── 한국 시간 ────────────────────────────────────────────────
+   r[0]=현지 날짜, r[12]=한국 날짜, r[13]='HH:MM', r[14]=1이면 원본의 실제 시각.
+   현지 날짜로 칸을 나누면 한국에서 볼 때 어긋난다 — 미국 장후 발표는
+   한국 시각으로 다음 날 새벽이라, 현지 기준 '오늘'이 실제로는 내일이다.
+   그래서 기본을 한국 시간으로 두고, 현지 시간으로 되돌리는 토글을 준다. */
+let useKst = true;
+const dateOf = r => (useKst && r[12]) ? r[12] : r[0];
+const timeOf = r => (useKst && r[13]) ? r[13] + (r[14] ? '' : '경') : '';
+
 /* 보고 있는 시장. '' 이면 전체. */
 let mkt = '';
 const inMkt = r => !mkt || r[9] === mkt;
@@ -691,9 +762,16 @@ function reslice() {
   VIEW = mkt ? ROWS.filter(r => r[9] === mkt) : ROWS;
   byDate = new Map();
   for (const r of VIEW) {
-    if (!byDate.has(r[0])) byDate.set(r[0], []);
-    byDate.get(r[0]).push(r);
+    const d = dateOf(r);
+    if (!byDate.has(d)) byDate.set(d, []);
+    byDate.get(d).push(r);
   }
+  // 칸 안에서는 시총 큰 순. 접혀서 12개만 보일 때 큰 게 먼저 오게 한다.
+  // 시총을 모르는 종목은 뒤로 민다 — 0으로 쳐서 섞으면 큰 회사가 밀린다.
+  for (const list of byDate.values())
+    list.sort((a, b) => (b[11] || -1) - (a[11] || -1) ||
+                        (a[13] || '').localeCompare(b[13] || '') ||
+                        a[1].localeCompare(b[1]));
 }
 
 /* 수집에 성공한 날 — 시장별로 따로 본다. 미국은 받았는데 일본은 못 받은 날이
@@ -785,6 +863,8 @@ function go(w) { week = w; renderAll(); }
 /* ── 주간 캘린더 ──────────────────────────────────────────── */
 const CHIP_LIMIT = 12;
 const expanded = new Set();
+/* 이 이상이면 칸에서 크게 띄운다. 10조원 — 수기 목록이 아니라 시총이 기준이다. */
+const BIG_CAP = 10e12 / D.usdKrw / 1e9;
 
 /* 시총은 십억 달러 단위로 들어온다. 한국식으로 억/조 달러로 고쳐 읽는다.
    1 십억 달러 = 10억 달러, 1000 십억 달러 = 1조 달러. */
@@ -816,21 +896,27 @@ function timeTag(r) {
 }
 
 function chip(r, big) {
-  const k = keyOf(r), on = watch.has(k);
+  const k = keyOf(r), on = watch.has(k), t = timeOf(r);
   return '<button class="chip m-' + r[9] + (big ? ' big' : '') + (on ? ' watch' : '') +
-         '" data-key="' + esc(k) + '" data-date="' + r[0] + '">' +
+         '" data-key="' + esc(k) + '" data-date="' + dateOf(r) + '">' +
          (mkt ? '' : '<span class="fl">' + MKT[r[9]].flag + '</span>') +
          '<span class="cd">' + esc(r[1]) + '</span>' +
          '<span class="cn' + (r[8] === 0 ? ' guess' : '') + '" title="' + esc(bothOf(r)) +
          '">' + esc(nameOf(r)) + '</span>' +
-         timeTag(r) +
-         '<span class="cq">' + esc(r[4]) + '</span>' +
+         (t ? '<span class="tm ' + (r[14] ? 'exact' : 'approx') + '">' + t + '</span>'
+            : timeTag(r)) +
+         (r[11] ? '<span class="cc">' + capShort(r[11]) + '</span>' : '') +
          '<span class="st' + (on ? ' on' : '') + '">' + (on ? '★' : '☆') + '</span>' +
          '</button>';
 }
 
+/* 칩에 넣을 짧은 시총 표기. 조원 단위로만 적는다. */
+function capShort(b) {
+  const jo = b * 1e9 * D.usdKrw / 1e12;
+  return jo >= 100 ? Math.round(jo) + '조' : jo.toFixed(jo < 10 ? 1 : 0) + '조';
+}
+
 function renderCal() {
-  const onlyBig = document.getElementById('onlyBig').checked;
   const onlyWatch = document.getElementById('onlyWatch').checked;
 
   /* 아직 한 번도 수집하지 않은 시장. 빈 칸 일곱 개를 늘어놓으면 '발표가 없는 주'로
@@ -863,9 +949,7 @@ function renderCal() {
     // '이 날 몇 건 보이는지'와 맞는다.
     let list = (byDate.get(d) || []).filter(passCap);
     total += list.length;
-    bigTotal += list.filter(noteOf).length;
     watchTotal += list.filter(r => watch.has(keyOf(r))).length;
-    if (onlyBig) list = list.filter(noteOf);
     if (onlyWatch) list = list.filter(r => watch.has(keyOf(r)));
 
     const dt = parse(d), dow = (dt.getDay() + 6) % 7;
@@ -873,11 +957,10 @@ function renderCal() {
     const hol = holidayInfo(d), weekend = dow >= 5;
     const closed = (hol.all || weekend) && !list.length;
 
-    const big = list.filter(noteOf);
-    const rest = list.filter(r => !noteOf(r));
+    // 시총 큰 순으로 이미 정렬돼 있다. 앞에서부터 자르면 큰 회사가 남는다.
     const key = week + d;
     const open = expanded.has(key);
-    const restShown = open ? rest : rest.slice(0, CHIP_LIMIT);
+    const shownList = open ? list : list.slice(0, CHIP_LIMIT);
 
     let body;
     if (!list.length) {
@@ -890,14 +973,12 @@ function renderCal() {
       body = '<div class="empty">발표 없음' + why + '</div>';
     } else {
       const miss = missing(d);
+      // 시총 상위 몇 개는 크게, 나머지는 보통 크기로. 기준은 수기 목록이 아니라 시총이다.
       body = (hol.text ? '<div class="dsec gap">' + esc(hol.text) + '</div>' : '') +
-             (big.length ? '<div class="dsec star">★ 주목종목 ' + big.length + '</div>' +
-                           big.map(r => chip(r, true)).join('') : '') +
-             (rest.length ? '<div class="dsec">그 외 ' + rest.length + '</div>' +
-                            restShown.map(r => chip(r, false)).join('') : '') +
-             (rest.length > CHIP_LIMIT
+             shownList.map((r, i) => chip(r, i < 3 && r[11] >= BIG_CAP)).join('') +
+             (list.length > CHIP_LIMIT
                ? '<button class="more" data-key="' + key + '">' +
-                 (open ? '접기' : '+' + (rest.length - CHIP_LIMIT) + '개 더 보기') + '</button>'
+                 (open ? '접기' : '+' + (list.length - CHIP_LIMIT) + '개 더 보기') + '</button>'
                : '') +
              /* 한 시장은 받았고 다른 시장은 못 받은 날. 목록이 차 있어도
                 다 받은 날처럼 보이면 안 된다. */
@@ -915,7 +996,7 @@ function renderCal() {
 
   document.getElementById('wLabel').textContent = fmtWeek(week);
   document.getElementById('wSum').textContent =
-    total.toLocaleString() + '건 · 주목 ' + bigTotal + '건' +
+    total.toLocaleString() + '건' + (useKst ? ' · 한국 시간' : ' · 현지 시간') +
     (watch.size ? ' · 관심 ' + watchTotal + '건' : '');
   wPick.value = D.weeks.includes(week) ? week : '';
 
@@ -1313,7 +1394,12 @@ function renderCapNote() {
 }
 document.getElementById('q').oninput = renderTable;
 for (const id of ['tBig','tWatch','tFuture']) document.getElementById(id).onchange = renderTable;
-for (const id of ['onlyBig','onlyWatch']) document.getElementById(id).onchange = renderCal;
+document.getElementById('onlyWatch').onchange = renderCal;
+/* 한국 시간으로 보면 미국 장후 발표가 다음 날 칸으로 옮겨간다.
+   날짜 묶음 자체가 달라지므로 다시 자른 뒤 전부 그린다. */
+document.getElementById('kstToggle').onchange = e => {
+  useKst = e.target.checked; expanded.clear(); reslice(); fillWeeks(); renderAll();
+};
 document.getElementById('jpToggle').onchange = e => { showJp = e.target.checked; renderCal(); };
 
 /* ── 시장 탭 ──────────────────────────────────────────────── */

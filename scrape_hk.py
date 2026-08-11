@@ -129,13 +129,19 @@ def first_field(v) -> str:
     return re.sub(r"<[^>]+>", "", s).strip()
 
 
-def norm_date(s: str) -> str:
-    """'07/08/2026 17:25' — 홍콩 표기는 일/월/연이다."""
-    m = re.match(r"^\s*(\d{1,2})/(\d{1,2})/(\d{4})", s or "")
+def norm_dt(s: str):
+    """'07/08/2026 17:25' -> ('2026-08-07', '17:25'). 홍콩 표기는 일/월/연이다.
+
+    시각까지 챙기는 이유: 세 시장 중 **실제 발표 시각이 원본에 오는 건 홍콩뿐**이다.
+    미국은 장전/장후 구분만, 일본은 아예 없다. 한국 시간으로 환산해 보여주려면
+    이 시각이 있어야 어림이 아니라 진짜 값으로 적을 수 있다.
+    """
+    m = re.match(r"^\s*(\d{1,2})/(\d{1,2})/(\d{4})(?:\s+(\d{1,2}):(\d{2}))?", s or "")
     if not m:
-        return ""
-    d, mo, y = m.groups()
-    return f"{int(y):04d}-{int(mo):02d}-{int(d):02d}"
+        return "", ""
+    d, mo, y, hh, mi = m.groups()
+    return (f"{int(y):04d}-{int(mo):02d}-{int(d):02d}",
+            f"{int(hh):02d}:{mi}" if hh else "")
 
 
 def kind_of(text: str) -> str:
@@ -185,7 +191,7 @@ def fetch_day(day: date, probe: bool = False):
             label = f"{r.get('LONG_TEXT','')} {r.get('TITLE','')}"
             if not KEEP.search(label) or DROP.search(label):
                 continue
-            d = norm_date(r.get("DATE_TIME", ""))
+            d, hhmm = norm_dt(r.get("DATE_TIME", ""))
             code = re.sub(r"\D", "", first_field(r.get("STOCK_CODE")))
             if not d or not code or len(code) > 5:
                 continue
@@ -195,6 +201,7 @@ def fetch_day(day: date, probe: bool = False):
             seen.add((d, code))
             out.append({
                 "date": d,
+                "time": hhmm,                  # 홍콩 현지 시각 (HKT)
                 "code": code,
                 "name": first_field(r.get("STOCK_NAME")),
                 # 공시 제목에 줄바꿈이 그대로 들어 있다. 한 줄로 눕힌다.
