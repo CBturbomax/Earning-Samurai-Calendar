@@ -91,7 +91,7 @@ def get(url: str, retries: int = 3) -> str:
 
 # 하루에 올라오는 공시가 수백 건이라 넉넉히 잡는다. 이 수에 딱 맞게 돌아오면
 # 잘렸다는 뜻이므로 fetch_day 가 큰 소리로 알린다.
-ROW_CAP = 2000
+ROW_CAP = 5000
 
 
 def query(a: date, b: date, rows: int = ROW_CAP) -> str:
@@ -115,6 +115,18 @@ def unwrap(text: str):
     if not isinstance(raw, list):
         raise ShapeChanged(f"result 가 목록이 아니다: {type(raw).__name__}")
     return raw, body
+
+
+def first_field(v) -> str:
+    """복수 카운터 종목은 코드·사명이 <br/> 로 이어져 온다.
+
+    알리바바는 09988(홍콩달러 창구)과 89988(위안화 창구)이 한 칸에 같이 담겨
+    "09988<br/>89988" 로 온다. 태그만 지우고 숫자만 남기면 '0998889988' 이 되어
+    어느 종목도 아닌 코드가 만들어진다 — 실제로 알리바바·레노버가 그렇게 새어나갔다.
+    같은 회사의 다른 창구이므로 첫 번째(주 창구)만 쓴다.
+    """
+    s = re.split(r"<br\s*/?>", str(v or ""), maxsplit=1)[0]
+    return re.sub(r"<[^>]+>", "", s).strip()
 
 
 def norm_date(s: str) -> str:
@@ -174,8 +186,8 @@ def fetch_day(day: date, probe: bool = False):
             if not KEEP.search(label) or DROP.search(label):
                 continue
             d = norm_date(r.get("DATE_TIME", ""))
-            code = re.sub(r"\D", "", r.get("STOCK_CODE", "") or "")
-            if not d or not code:
+            code = re.sub(r"\D", "", first_field(r.get("STOCK_CODE")))
+            if not d or not code or len(code) > 5:
                 continue
             code = code.zfill(5)
             if (d, code) in seen:
