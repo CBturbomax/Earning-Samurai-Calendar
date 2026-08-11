@@ -1,10 +1,11 @@
-# 소스가 GitHub 러너에서 실제로 열리는지 확인한다. 몇 초면 끝난다.
+# 소스가 GitHub 러너에서 실제로 열리는지, 응답이 어떻게 생겼는지 확인한다.
 #
 # 수집 워크플로가 한 시장에서 몇 시간씩 붙들려 있으면 원인을 알 수가 없다.
 # 스크래퍼의 백오프는 '잠깐 막힌 것'을 견디려는 장치인데, 아예 주소가 틀렸거나
 # 차단된 상대에게는 그냥 시간만 태운다. 그 둘을 구분하려고 둔다.
 #
-# 지금은 홍콩 주소를 찾는 중이다. HKEX 는 개편이 잦아 예전 경로가 404 가 된다.
+# 지금 상태: 미국·일본은 확인 완료. 홍콩은 HKEX 이사회 캘린더 경로가 통째로
+# 404 라 대체 소스의 구조를 뜯어보는 중이다.
 
 name: 소스 접근 확인
 
@@ -21,58 +22,53 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: 🇭🇰 홍콩 — 후보 주소 훑기
-        run: |
-          UA='Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
-          try() {
-            code=$(curl -sS --max-time 25 -L -o /tmp/p.html -w '%{http_code}' \
-                   -H "User-Agent: $UA" -H 'Accept-Language: en-US,en;q=0.9' "$1" 2>/dev/null || echo 000)
-            size=$(wc -c < /tmp/p.html 2>/dev/null || echo 0)
-            title=$(grep -oiE '<title>[^<]*' /tmp/p.html 2>/dev/null | head -1 | cut -c8-90)
-            printf '%-6s %8s  %s\n            제목: %s\n' "$code" "$size" "$1" "${title:-(없음)}"
-            if [ "$code" = "200" ]; then
-              grep -oiE 'board[- ]?meeting[^"<]{0,40}' /tmp/p.html | head -3 | sed 's/^/            힌트: /'
-              grep -oE 'token[=":][ "]*[A-Za-z0-9%_.=-]{16,}' /tmp/p.html | head -2 | sed 's/^/            토큰: /'
-            fi
-          }
-          echo '=== HKEX 본사이트 ==='
-          try 'https://www.hkex.com.hk/Market-Data/Statistics/Consolidated-Reports?sc_lang=en'
-          try 'https://www.hkex.com.hk/Market-Data/Statistics/Consolidated-Reports/Board-Meeting'
-          try 'https://www.hkex.com.hk/eng/stat/smstat/bmdiary/bmdiary.htm'
-          echo '=== HKEX 위젯 API (토큰 없이) ==='
-          try 'https://www1.hkex.com.hk/hkexwidget/data/getboardmeeting?lang=eng&qid=1&callback=cb'
-          echo '--- 위젯 응답 본문 ---'; head -c 400 /tmp/p.html; echo
-          echo '=== HKEXnews (공시 검색) ==='
-          try 'https://www1.hkexnews.hk/search/titlesearch.xhtml?lang=en'
-          try 'https://www.hkexnews.hk/'
-          echo '=== 대안 소스 ==='
-          try 'https://www.aastocks.com/en/stocks/market/company-results.aspx'
-          try 'https://www.etnet.com.hk/www/eng/stocks/report_calendar.php'
-
-      - name: 🇭🇰 HKEX 사이트 검색으로 경로 찾기
+      - name: 🇭🇰 HKEX 통계 페이지가 실제로 내놓는 목록
         continue-on-error: true
         run: |
           UA='Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
-          for u in \
-            'https://www.hkex.com.hk/Global/Search?q=board+meeting&sc_lang=en' \
-            'https://www.hkex.com.hk/sitemap.xml' ; do
-            echo "--- $u"
-            curl -sS --max-time 25 -L -H "User-Agent: $UA" "$u" -o /tmp/s.txt \
-              -w 'HTTP %{http_code} / %{size_download}바이트\n' || true
-            grep -oiE '[A-Za-z0-9/_.-]*[Bb]oard[-_]?[Mm]eeting[A-Za-z0-9/_.-]*' /tmp/s.txt | sort -u | head -10 || echo '(없음)'
-          done
+          curl -sS --max-time 25 -L -H "User-Agent: $UA" \
+            'https://www.hkex.com.hk/Market-Data/Statistics/Consolidated-Reports?sc_lang=en' -o idx.html \
+            -w 'HTTP %{http_code} / %{size_download}바이트\n'
+          echo '--- Consolidated-Reports 아래 링크들 ---'
+          grep -oE 'href="[^"]*Consolidated-Reports[^"]*"' idx.html | sort -u | head -30
+          echo '--- 이사회/실적 관련 낱말 ---'
+          grep -oiE '(board[ -]?meeting|results announcement|業績|董事會)[^"<]{0,30}' idx.html | sort -u | head -10 || echo '(없음)'
 
-      - name: 🇺🇸🇯🇵 고친 판정 로직으로 하루씩 떠보기
+      - name: 🇭🇰 AAStocks 실적발표 캘린더 구조
         continue-on-error: true
-        timeout-minutes: 5
         run: |
-          python - <<'PY'
-          import datetime, scrape_us
-          # 발표가 있는 날과 원래 0건인 날(일요일)을 둘 다 확인한다.
-          for d in (datetime.date(2026, 8, 12), datetime.date(2026, 8, 16)):
-              try:
-                  rows = scrape_us.fetch_valid(d)
-                  print(f"미국 {d} ({'월화수목금토일'[d.weekday()]}): {len(rows)}행")
-              except Exception as e:
-                  print(f"미국 {d}: 실패 {type(e).__name__} {e}")
+          UA='Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
+          curl -sS --max-time 25 -L -H "User-Agent: $UA" \
+            'https://www.aastocks.com/en/stocks/market/company-results.aspx' -o aa.html \
+            -w 'HTTP %{http_code} / %{size_download}바이트\n'
+          echo '--- 표 헤더 ---'
+          python3 - <<'PY'
+          import re, html
+          t = open('aa.html', encoding='utf-8', errors='replace').read()
+          # 표를 찾아 앞쪽 행 몇 개를 셀 단위로 찍는다
+          for ti, tbl in enumerate(re.findall(r'<table.*?</table>', t, re.S)[:6]):
+              rows = re.findall(r'<tr.*?</tr>', tbl, re.S)
+              if len(rows) < 3:
+                  continue
+              print(f"[표 {ti}] {len(rows)}행")
+              for r in rows[:4]:
+                  cells = [html.unescape(re.sub(r'<[^>]+>', ' ', c)).strip()
+                           for c in re.findall(r'<t[dh][^>]*>(.*?)</t[dh]>', r, re.S)]
+                  cells = [c for c in cells if c]
+                  if cells:
+                      print('   ', ' | '.join(cells)[:200])
+              print()
+          # 종목코드처럼 보이는 것과 날짜 형식 확인
+          print('코드 후보:', re.findall(r'\b\d{5}\b', t)[:12])
+          print('날짜 후보:', re.findall(r'\d{4}/\d{2}/\d{2}|\d{2}/\d{2}/\d{4}', t)[:12])
           PY
+
+      - name: 🇭🇰 HKEXnews 이사회 공시 검색 API
+        continue-on-error: true
+        run: |
+          UA='Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
+          # t2code 40100 = Date of Board Meeting (공시 분류)
+          U='https://www1.hkexnews.hk/search/titleSearchServlet.do?sortDir=0&sortByOptions=DateTime&category=0&market=SEHK&stockId=-1&documentType=-1&fromDate=20260801&toDate=20260831&title=&searchType=1&t1code=40000&t2Gcode=-2&t2code=40100&rowRange=20&lang=EN'
+          curl -sS --max-time 25 -L -H "User-Agent: $UA" -H 'Accept: application/json, */*' \
+            "$U" -o news.json -w 'HTTP %{http_code} / %{size_download}바이트\n'
+          echo '--- 앞 900자 ---'; head -c 900 news.json; echo
