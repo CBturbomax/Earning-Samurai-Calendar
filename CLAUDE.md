@@ -3,7 +3,7 @@
 일본 상장사 결산발표(決算発表) 주간 캘린더. 정적 단일 HTML 하나가 산출물이고,
 GitHub Pages로 그대로 서비스한다. 서버·빌드툴·의존 패키지가 없다.
 
-<https://cbturbomax.github.io/Earning-Samurai-Calender/>
+<https://cbturbomax.github.io/Earning-Samurai-Calendar/>
 
 ## 파이프라인
 
