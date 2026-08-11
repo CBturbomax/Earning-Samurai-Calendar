@@ -19,8 +19,8 @@ from pathlib import Path
 import companies
 import companies_hk
 import companies_us
-from markets import (HOLIDAYS, MARKET_KO, MARKET_ORDER, MARKETS, SECTOR_KO,
-                     TIMING_KO, holiday_ko)
+from markets import (CAP_STEPS, HOLIDAYS, MARKET_KO, MARKET_ORDER, MARKETS,
+                     SECTOR_KO, TIMING_KO, USD_KRW, holiday_ko)
 from translit import to_korean
 
 HERE = Path(__file__).parent
@@ -59,6 +59,22 @@ def load(mkt: str):
 #   [날짜, 코드, 한글명, 결산기, 분기, 업종, 거래소, 원문, 변환등급, 시장, 발표시각, 시총]
 # 뒤 세 칸(시장·발표시각·시총)이 이번에 늘어난 자리다. 시각과 시총은 미국만 있다.
 
+# 일본·홍콩 시총. 원본 소스가 안 줘서 따로 받아둔 것(scrape_caps.py).
+# 없으면 0 — 그 시장에는 규모 필터가 걸리지 않고, 화면이 그렇게 적는다.
+def load_caps():
+    p = HERE / "data" / "caps.json"
+    if not p.exists():
+        return {}
+    try:
+        return json.loads(p.read_text(encoding="utf-8")).get("caps", {})
+    except (ValueError, OSError) as e:
+        print(f"  ! caps.json 읽기 실패: {e}")
+        return {}
+
+
+CAPS = load_caps()
+
+
 def pack_jp(r):
     """일본만 기계 변환을 거친다. 원본이 일본어라 그대로는 훑어보기가 안 된다."""
     ko, lvl = to_korean(r["name"], companies.NOTABLE.get(r["code"], ("",))[0])
@@ -67,7 +83,7 @@ def pack_jp(r):
             KIND_MAP.get(r.get("kind", ""), r.get("kind", "")),
             SECTOR_KO.get(r.get("sector", ""), r.get("sector", "")),
             MARKET_KO.get(r.get("market", ""), r.get("market", "")),
-            r["name"], lvl, "jp", "", 0]
+            r["name"], lvl, "jp", "", CAPS.get("jp:" + r["code"], 0)]
 
 
 def pack_en(r, mkt):
@@ -82,7 +98,8 @@ def pack_en(r, mkt):
             MARKET_KO.get(r.get("market", ""), r.get("market", "")),
             name, 2, mkt,
             TIMING_KO.get(r.get("time", ""), ""),
-            r.get("cap", 0) or 0]
+            # 미국은 나스닥이 시총을 같이 주고, 홍콩은 따로 받아둔 것을 붙인다.
+            r.get("cap", 0) or CAPS.get(mkt + ":" + r["code"], 0)]
 
 
 def build():
@@ -146,6 +163,12 @@ def build():
         "defaultWeek": default_week,
         "today": today,
         "sources": sources,
+        # 규모 필터 눈금. 원 단위로 매기되 실제 비교는 달러(십억)로 한다.
+        "capSteps": [{"jo": j, "usdB": round(j * 1e12 / USD_KRW / 1e9, 2)}
+                     for j in CAP_STEPS],
+        "usdKrw": USD_KRW,
+        # 시총 데이터가 있는 시장. 없는 시장에는 규모 필터를 적용할 수 없다.
+        "capMarkets": sorted({p[9] for p in packed if p[11]}),
     }
 
     stamp = datetime.now().strftime("%Y-%m-%d %H:%M KST")
@@ -254,6 +277,14 @@ h2 .n { color:var(--a3); margin-right:10px; }
 /* ── 시장 탭 ───────────────────────────────────────────────── */
 /* --mk 는 시장 강조색. markets.py 가 유일한 출처고 여기로 흘러온다. */
 __MKTCSS__
+/* 규모 필터가 닿지 않는 시장 안내 */
+.capnote {
+  background:#1a2129; border:1px solid var(--line); border-left:5px solid var(--a3);
+  border-radius:8px; padding:11px 18px; margin:0 0 12px; color:#c9d6e0; font-size:18px;
+}
+.capnote b { color:var(--a3); }
+.capnote .dim { color:var(--mute); font-size:16px; }
+
 .mtabs { display:flex; flex-wrap:wrap; gap:10px; margin:20px 0 4px; }
 .mtab {
   display:flex; align-items:center; gap:9px; background:var(--panel);
@@ -548,10 +579,12 @@ svg.bars rect.b:hover { fill:var(--a3); }
   <span class="spacer"></span>
   <button class="btn" id="wToday">오늘 주</button>
   <select id="wPick"></select>
+  <select id="fCap" title="시가총액으로 거릅니다. 캘린더와 표에 함께 적용됩니다."></select>
   <label class="chk"><input type="checkbox" id="onlyBig">주목종목만</label>
   <label class="chk"><input type="checkbox" id="onlyWatch">관심종목만</label>
   <label class="chk"><input type="checkbox" id="jpToggle">원문 보기</label>
 </div>
+<div class="capnote" id="capNote" hidden></div>
 <div class="cal" id="cal"></div>
 
 <h2><span class="n">3</span>주목종목 발표일 <span class="meta" id="gMeta"></span></h2>
@@ -572,12 +605,6 @@ svg.bars rect.b:hover { fill:var(--a3); }
   <select id="fSector"><option value="">전체 업종</option></select>
   <select id="fMarket"><option value="">전체 거래소</option></select>
   <select id="fKind"><option value="">전체 분기</option></select>
-  <select id="fCap" hidden>
-    <option value="0">전체 시총</option>
-    <option value="10">100억 달러 이상</option>
-    <option value="50">500억 달러 이상</option>
-    <option value="200">2000억 달러 이상</option>
-  </select>
   <label class="chk"><input type="checkbox" id="tBig">주목종목만</label>
   <label class="chk"><input type="checkbox" id="tWatch">관심종목만</label>
   <label class="chk"><input type="checkbox" id="tFuture">오늘 이후만</label>
@@ -763,9 +790,24 @@ const expanded = new Set();
    1 십억 달러 = 10억 달러, 1000 십억 달러 = 1조 달러. */
 function capKo(b) {
   if (!b) return '';
-  return b >= 1000 ? (b / 1000).toFixed(2) + '조 달러'
-                   : Math.round(b * 10).toLocaleString() + '억 달러';
+  const won = b * 1e9 * D.usdKrw;                      // 원으로도 같이 적는다
+  const wonKo = won >= 1e12 ? (won / 1e12).toFixed(1) + '조원'
+                            : Math.round(won / 1e8).toLocaleString() + '억원';
+  const usd = b >= 1000 ? (b / 1000).toFixed(2) + '조 달러'
+                        : Math.round(b * 10).toLocaleString() + '억 달러';
+  return usd + ' (약 ' + wonKo + ')';
 }
+
+/* ── 규모 필터 ────────────────────────────────────────────────
+   시총은 미국 소스에만 온다. 일본·홍콩은 원본에 없어서 거를 수가 없다.
+   그 행들을 조용히 지워버리면 두 시장이 통째로 사라지므로 통과시키되,
+   어느 시장에 적용되지 않는지 화면에 적는다. 없는 값을 지어내지 않는다. */
+const capSel = document.getElementById('fCap');
+capSel.innerHTML = '<option value="0">전체 규모</option>' +
+  D.capSteps.map(s => '<option value="' + s.usdB + '">시총 ' + s.jo + '조원 이상</option>').join('');
+const capMin = () => +capSel.value || 0;
+/* 시총을 아는 행만 거른다. 모르는 행(일본·홍콩)은 그대로 통과. */
+const passCap = r => !capMin() || !r[11] || r[11] >= capMin();
 
 /* 발표 시각 배지. 미국만 값이 있다. */
 function timeTag(r) {
@@ -817,7 +859,9 @@ function renderCal() {
 
   let total = 0, bigTotal = 0, watchTotal = 0;
   cal.innerHTML = shown.map(d => {
-    let list = byDate.get(d) || [];
+    // 규모 필터를 제일 먼저 건다. 칸 위의 건수도 걸러진 뒤 숫자여야
+    // '이 날 몇 건 보이는지'와 맞는다.
+    let list = (byDate.get(d) || []).filter(passCap);
     total += list.length;
     bigTotal += list.filter(noteOf).length;
     watchTotal += list.filter(r => watch.has(keyOf(r))).length;
@@ -1006,13 +1050,11 @@ function renderTable() {
   const tw = document.getElementById('tWatch').checked;
   const tf = document.getElementById('tFuture').checked;
 
-  const fc = +document.getElementById('fCap').value || 0;
-
   let list = VIEW.filter(r => {
+    if (!passCap(r)) return false;
     if (fs && r[5] !== fs) return false;
     if (fm && r[6] !== fm) return false;
     if (fk && r[4] !== fk) return false;
-    if (fc && r[11] < fc) return false;
     if (tb && !noteOf(r)) return false;
     if (tw && !watch.has(keyOf(r))) return false;
     if (tf && r[0] < D.today) return false;
@@ -1248,13 +1290,27 @@ function fillFilters() {
     if (arr.includes(keep)) sel.value = keep;
     sel.hidden = !arr.length;
   }
-  // 시총은 미국 소스에만 있다. 다른 시장에서 걸어봐야 전부 걸러질 뿐이다.
-  const cap = document.getElementById('fCap');
-  cap.hidden = !VIEW.some(r => r[11]);
-  if (cap.hidden) cap.value = '0';
 }
-for (const id of ['fSector','fMarket','fKind','fCap'])
+for (const id of ['fSector','fMarket','fKind'])
   document.getElementById(id).onchange = renderTable;
+
+/* 규모 필터는 캘린더·표에 함께 걸리므로 전체를 다시 그린다. */
+capSel.onchange = () => { expanded.clear(); renderAll(); };
+
+/* 시총 자료가 없어 규모 필터가 닿지 않는 시장을 적어준다.
+   조용히 빠져나가게 두면 '걸렀는데 왜 아직 많냐'가 된다. */
+function renderCapNote() {
+  const el = document.getElementById('capNote');
+  const shown = mkt ? [mkt] : LIVE;
+  const blind = shown.filter(m => !D.capMarkets.includes(m));
+  if (!capMin() || !blind.length) { el.hidden = true; return; }
+  el.hidden = false;
+  el.innerHTML = '규모 필터는 시가총액이 있는 시장에만 걸립니다. ' +
+    blind.map(m => MKT[m].flag + ' ' + MKT[m].ko).join(' · ') +
+    '은 원본에 시총이 없어 그대로 보입니다 — 이 시장은 <b>주목종목만</b> 으로 좁혀보세요.' +
+    ' <span class="dim">(1조원 ≈ $' + (1e12 / D.usdKrw / 1e9).toFixed(2) +
+    'B, 환율 ' + D.usdKrw.toLocaleString() + '원 어림)</span>';
+}
 document.getElementById('q').oninput = renderTable;
 for (const id of ['tBig','tWatch','tFuture']) document.getElementById(id).onchange = renderTable;
 for (const id of ['onlyBig','onlyWatch']) document.getElementById(id).onchange = renderCal;
@@ -1335,7 +1391,7 @@ function renderFoot() {
 }
 
 function renderAll() {
-  renderTabs(); renderCards();
+  renderTabs(); renderCards(); renderCapNote();
   renderCal(); renderAlert(); renderGroups(); renderBars(); renderTable();
 }
 reslice(); fillFilters(); fillWeeks(); renderFoot(); renderAll();
