@@ -1,0 +1,118 @@
+# 실적발표 일정을 GitHub이 대신 받아온다.
+#
+# 세 시장 소스는 브라우저에서 열리는 평범한 공개 페이지지만, 받아오려면 어딘가에서
+# 인터넷에 나가야 한다. 그 '어딘가'를 GitHub 러너로 삼으면 아무 컴퓨터도 켜둘 필요가 없다.
+# 받은 결과(data/*.json)와 다시 만든 index.html 을 저장소에 되커밋한다.
+#
+# 한 시장이 막혀도 나머지는 계속 간다(continue-on-error). 실패한 시장은 그냥
+# '미수집'으로 남고, 다음 실행 때 못 받은 날만 이어서 받는다.
+
+name: 실적발표 일정 수집
+
+on:
+  # 손으로 돌리기 — Actions 탭에서 Run workflow 버튼
+  workflow_dispatch:
+    inputs:
+      from:
+        description: '시작일 (YYYY-MM-DD, 비우면 2주 전)'
+        required: false
+      to:
+        description: '종료일 (YYYY-MM-DD, 비우면 60일 뒤)'
+        required: false
+  # 매일 21:00 UTC = 한국 시각 06:00
+  schedule:
+    - cron: '0 21 * * *'
+  # 수집 코드를 고쳐 올리면 바로 한 번 돌려본다.
+  # data/ 와 index.html 은 제외 — 이 워크플로가 만든 커밋이 자기를 또 부르면 안 된다.
+  push:
+    paths:
+      - 'scrape*.py'
+      - 'build.py'
+      - 'markets.py'
+      - 'companies*.py'
+      - 'translit.py'
+      - '.github/workflows/collect.yml'
+
+permissions:
+  contents: write
+
+# 앞선 실행이 아직 돌고 있으면 기다린다. 같은 파일에 동시에 쓰지 않도록.
+concurrency:
+  group: collect-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  collect:
+    runs-on: ubuntu-latest
+    timeout-minutes: 180
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: 수집 범위 정하기
+        id: range
+        run: |
+          FROM="${{ inputs.from }}"
+          TO="${{ inputs.to }}"
+          [ -z "$FROM" ] && FROM=$(date -u -d '14 days ago' +%F)
+          [ -z "$TO" ]   && TO=$(date -u -d '60 days'      +%F)
+          echo "from=$FROM" >> "$GITHUB_OUTPUT"
+          echo "to=$TO"     >> "$GITHUB_OUTPUT"
+          echo "수집 범위: $FROM ~ $TO"
+
+      # 이미 받아둔 날은 건너뛰므로, 매일 돌려도 새로 늘어난 날만 받는다.
+      - name: 🇺🇸 미국 (나스닥)
+        continue-on-error: true
+        run: python scrape_us.py "${{ steps.range.outputs.from }}" "${{ steps.range.outputs.to }}"
+
+      - name: 🇯🇵 일본 (닛케이)
+        continue-on-error: true
+        run: python scrape.py "${{ steps.range.outputs.from }}" "${{ steps.range.outputs.to }}"
+
+      - name: 🇭🇰 홍콩 (HKEX)
+        continue-on-error: true
+        run: python scrape_hk.py "${{ steps.range.outputs.from }}" "${{ steps.range.outputs.to }}"
+
+      # 홍콩 위젯은 토큰·파라미터가 개편 때마다 바뀐다. 위에서 실패했으면
+      # 응답 원문을 로그에 남겨 무엇이 달라졌는지 눈으로 볼 수 있게 한다.
+      - name: 🇭🇰 홍콩 응답 확인 (실패했을 때만 의미 있음)
+        if: always()
+        continue-on-error: true
+        run: |
+          if [ ! -f data/earnings_hk.json ]; then
+            echo "홍콩 수집 결과가 없다. 응답 원문을 떠본다:"
+            python scrape_hk.py --probe || true
+          fi
+
+      # build.py 가 시장별 건수를 그대로 찍어준다. 그걸 실행 요약에 붙인다.
+      - name: 페이지 다시 만들기
+        run: |
+          python build.py | tee build.log
+          {
+            echo '### 수집 결과'
+            echo '```'
+            cat build.log
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: 저장소에 반영
+        run: |
+          git config user.name  "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          rm -f build.log
+          git add data/ index.html
+          if git diff --cached --quiet; then
+            echo "달라진 게 없다. 커밋하지 않는다."
+            exit 0
+          fi
+          # [skip ci] — 이 커밋이 워크플로를 다시 부르지 않도록
+          git commit -m "일정 갱신 $(date -u +%F) [skip ci]"
+          for i in 1 2 3 4; do
+            git pull --rebase origin "${GITHUB_REF_NAME}" \
+              && git push origin "HEAD:${GITHUB_REF_NAME}" && exit 0
+            echo "푸시 실패, $((2**i))초 뒤 재시도"; sleep $((2**i))
+          done
+          echo "푸시를 끝내 못 했다"; exit 1
