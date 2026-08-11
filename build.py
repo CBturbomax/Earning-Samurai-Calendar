@@ -1,96 +1,132 @@
 # -*- coding: utf-8 -*-
 """
-data/earnings.json  ->  index.html (단일 파일, 외부 의존 없음)
+data/earnings*.json  ->  index.html (단일 파일, 외부 의존 없음)
+
+일본·미국·홍콩 세 시장을 한 페이지에 합친다. 시장마다 수집 소스도 원본 언어도
+다르지만, 화면에 올라가는 행의 모양은 하나로 맞춘다 — pack_* 가 그 일을 한다.
 
 주간 캘린더는 클라이언트에서 그린다. 주(週)를 넘길 때마다 서버가 없으니,
 전 기간 데이터를 JSON으로 심어두고 JS가 해당 주만 잘라 렌더한다.
+
+세 시장이 다 있어야 돌아가는 건 아니다. data/ 에 있는 것만 싣고, 없는 시장은
+"미수집"으로 적는다. 없는 걸 빈 화면으로 두면 '발표가 없는 것'처럼 보인다.
 """
 import json
 from collections import Counter
 from datetime import date, datetime, timedelta
 from pathlib import Path
 
-from companies import GROUP_ORDER, NOTABLE
+import companies
+import companies_hk
+import companies_us
+from markets import (HOLIDAYS, MARKET_KO, MARKET_ORDER, MARKETS, SECTOR_KO,
+                     TIMING_KO, holiday_ko)
 from translit import to_korean
 
 HERE = Path(__file__).parent
-DATA = HERE / "data" / "earnings.json"
 OUT = HERE / "index.html"
+
+# 시장별 주목종목 사전. 코드가 시장 사이에 겹치므로(일본 8035 / 홍콩 08035)
+# 합칠 때는 "jp:8035" 처럼 시장을 앞에 붙여 키를 만든다.
+DICTS = {"jp": companies, "us": companies_us, "hk": companies_hk}
 
 # 결산종별 표기를 짧게. 원문은 第１/第２/第３/本.
 KIND_MAP = {"第１": "1Q", "第２": "2Q", "第３": "3Q", "本": "본결산"}
 
-# 업종 36종 — 닫힌 집합이라 전부 한글로 옮긴다.
-SECTOR_KO = {
-    "その他製造": "기타제조", "その他金融": "기타금융", "ガス": "가스", "ゴム": "고무",
-    "サービス": "서비스", "パルプ・紙": "펄프·종이", "不動産": "부동산", "保険": "보험",
-    "倉庫": "창고", "化学": "화학", "医薬品": "의약품", "商社": "상사",
-    "小売業": "소매업", "建設": "건설", "機械": "기계", "水産": "수산",
-    "海運": "해운", "石油": "석유", "空運": "항공", "窯業": "요업",
-    "精密機器": "정밀기기", "繊維": "섬유", "自動車": "자동차", "証券": "증권",
-    "輸送用機器": "운송용기기", "通信": "통신", "造船": "조선",
-    "鉄道・バス": "철도·버스", "鉄鋼": "철강", "鉱業": "광업", "銀行": "은행",
-    "陸運": "육운", "電力": "전력", "電気機器": "전기기기",
-    "非鉄金属製品": "비철금속제품", "食品": "식품",
-}
-MARKET_KO = {"東証": "도쿄", "名証": "나고야", "札証": "삿포로", "福証": "후쿠오카"}
-
-HOLIDAY_KO = {
-    "元日": "새해 첫날", "成人の日": "성인의 날", "建国記念の日": "건국기념일",
-    "天皇誕生日": "천황탄생일", "春分の日": "춘분", "昭和の日": "쇼와의 날",
-    "憲法記念日": "헌법기념일", "みどりの日": "녹색의 날", "こどもの日": "어린이날",
-    "振替休日": "대체휴일", "海の日": "바다의 날", "山の日": "산의 날",
-    "敬老の日": "경로의 날", "国民の休日": "국민의 휴일", "秋分の日": "추분",
-    "スポーツの日": "스포츠의 날", "文化の日": "문화의 날",
-    "勤労感謝の日": "근로감사의 날", "大納会後休場": "연말 휴장",
-}
-
-# 2026년 일본 증시 휴장일(국민의 축일). 발표가 0건인 날이 주말인지
-# 공휴일인지 구분해줘야 "이 날은 원래 없는 날"임이 읽힌다.
-HOLIDAYS = {
-    "2026-01-01": "元日", "2026-01-12": "成人の日",
-    "2026-02-11": "建国記念の日", "2026-02-23": "天皇誕生日",
-    "2026-03-20": "春分の日", "2026-04-29": "昭和の日",
-    "2026-05-03": "憲法記念日", "2026-05-04": "みどりの日",
-    "2026-05-05": "こどもの日", "2026-05-06": "振替休日",
-    "2026-07-20": "海の日", "2026-08-11": "山の日",
-    "2026-09-21": "敬老の日", "2026-09-22": "国民の休日",
-    "2026-09-23": "秋分の日", "2026-10-12": "スポーツの日",
-    "2026-11-03": "文化の日", "2026-11-23": "勤労感謝の日",
-    "2026-12-31": "大納会後休場",
-}
 
 
 def monday_of(d: date) -> date:
     return d - timedelta(days=d.weekday())
 
 
+def load(mkt: str):
+    """시장 하나치 수집 결과를 읽는다. 없으면 None — 있는 것만 싣는다."""
+    path = HERE / "data" / MARKETS[mkt]["data"]
+    if not path.exists():
+        return None
+    try:
+        raw = json.loads(path.read_text(encoding="utf-8"))
+    except (ValueError, OSError) as e:
+        print(f"  ! {path.name} 읽기 실패: {e}")
+        return None
+    raw.setdefault("rows", [])
+    raw.setdefault("ok_days", sorted({r["date"] for r in raw["rows"]}))
+    return raw
+
+
+# ── 시장별 행 다듬기 ───────────────────────────────────────────────
+# 어느 시장이든 결과는 같은 모양으로 나온다:
+#   [날짜, 코드, 한글명, 결산기, 분기, 업종, 거래소, 원문, 변환등급, 시장, 발표시각, 시총]
+# 뒤 세 칸(시장·발표시각·시총)이 이번에 늘어난 자리다. 시각과 시총은 미국만 있다.
+
+def pack_jp(r):
+    """일본만 기계 변환을 거친다. 원본이 일본어라 그대로는 훑어보기가 안 된다."""
+    ko, lvl = to_korean(r["name"], companies.NOTABLE.get(r["code"], ("",))[0])
+    return [r["date"], r["code"], ko,
+            r.get("fy", "").replace("月期", "월 결산"),
+            KIND_MAP.get(r.get("kind", ""), r.get("kind", "")),
+            SECTOR_KO.get(r.get("sector", ""), r.get("sector", "")),
+            MARKET_KO.get(r.get("market", ""), r.get("market", "")),
+            r["name"], lvl, "jp", "", 0]
+
+
+def pack_en(r, mkt):
+    """미국·홍콩은 원본이 영문이라 그대로도 읽힌다. 사전에 있으면 한글명을 쓰고
+    없으면 영문명을 그대로 둔다 — 억지 음차는 오히려 못 알아보게 만든다.
+    지어낸 표기가 아니므로 '기계 변환'(등급 0) 점선은 붙지 않는다."""
+    cur = DICTS[mkt].NOTABLE.get(r["code"])
+    name = r.get("name", "")
+    return [r["date"], r["code"], cur[0] if cur else name,
+            r.get("fy", ""), r.get("kind", ""),
+            r.get("sector", ""),
+            MARKET_KO.get(r.get("market", ""), r.get("market", "")),
+            name, 2, mkt,
+            TIMING_KO.get(r.get("time", ""), ""),
+            r.get("cap", 0) or 0]
+
+
 def build():
-    raw = json.loads(DATA.read_text(encoding="utf-8"))
-    rows = raw["rows"]
-    ok_days = raw.get("ok_days", sorted({r["date"] for r in rows}))
+    data = {m: load(m) for m in MARKET_ORDER}
+    have = [m for m in MARKET_ORDER if data[m]]
+    if not have:
+        raise SystemExit("data/ 에 수집 결과가 하나도 없습니다. scrape*.py 를 먼저 돌리세요.")
 
-    # 행을 배열로 눕혀 담는다. 키 이름이 3천 번 반복되면 파일만 커진다.
-    # [날짜, 코드, 한글명, 결산기, 분기, 업종, 시장, 원문, 변환등급]
-    packed = []
-    for r in sorted(rows, key=lambda x: (x["date"], x["code"])):
-        ko, lvl = to_korean(r["name"], NOTABLE.get(r["code"], ("",))[0])
-        fy = r["fy"].replace("月期", "월 결산")
-        packed.append([r["date"], r["code"], ko, fy,
-                       KIND_MAP.get(r["kind"], r["kind"]),
-                       SECTOR_KO.get(r["sector"], r["sector"]),
-                       MARKET_KO.get(r["market"], r["market"]),
-                       r["name"], lvl])
+    packed, ok_days, sources, mkt_meta = [], {}, [], []
+    for m in MARKET_ORDER:
+        raw = data[m]
+        cfg = MARKETS[m]
+        rows = raw["rows"] if raw else []
+        packed += [pack_jp(r) if m == "jp" else pack_en(r, m) for r in rows]
+        ok_days[m] = raw["ok_days"] if raw else []
+        if raw:
+            sources.append({
+                "mkt": m, "name": raw.get("source", ""),
+                "url": raw.get("source_url", ""), "count": len(rows),
+                "range": ([ok_days[m][0], ok_days[m][-1]] if ok_days[m] else []),
+            })
+        mkt_meta.append({
+            "id": m, "ko": cfg["ko"], "flag": cfg["flag"], "accent": cfg["accent"],
+            "count": len(rows), "note": cfg["note"], "scraper": cfg["scraper"],
+            "has": bool(raw),
+        })
 
-    per_day = Counter(r["date"] for r in rows)
-    sectors = sorted({p[5] for p in packed if p[5]})
-    markets = sorted({p[6] for p in packed if p[6]})
-    lvl_counts = Counter(p[8] for p in packed)
-    notable_hits = sum(1 for r in rows if r["code"] in NOTABLE)
-    busiest = max(per_day.items(), key=lambda kv: kv[1]) if per_day else ("-", 0)
+    # 한 날짜 안에서는 시장 순 -> 시총 큰 순 -> 코드 순.
+    # 시총은 미국만 있어서 나머지 시장은 자연히 코드 순으로 남는다.
+    # 하루 700건씩 쏟아지는 미국에서 앞 12개만 펼쳐 보일 때 큰 게 먼저 오게 하려는 것.
+    order = {m: i for i, m in enumerate(MARKET_ORDER)}
+    packed.sort(key=lambda p: (p[0], order[p[9]], -p[11], p[1]))
+
+    notable = {}
+    for m in MARKET_ORDER:
+        for code, v in DICTS[m].NOTABLE.items():
+            notable[m + ":" + code] = list(v)
+
+    per_day = Counter(p[0] for p in packed)
+    notable_hits = sum(1 for p in packed if p[9] + ":" + p[1] in notable)
+    all_ok = sorted({d for m in ok_days for d in ok_days[m]})
 
     # 데이터가 있는 주만 네비게이션에 노출한다.
-    weeks = sorted({monday_of(date.fromisoformat(d)).isoformat() for d in ok_days})
+    weeks = sorted({monday_of(date.fromisoformat(d)).isoformat() for d in all_ok})
 
     today = date.today().isoformat()
     default_week = monday_of(date.fromisoformat(today)).isoformat()
@@ -100,39 +136,55 @@ def build():
 
     payload = {
         "rows": packed,
-        "notable": {k: list(v) for k, v in NOTABLE.items()},
-        "groupOrder": GROUP_ORDER,
-        "holidays": {d: HOLIDAY_KO.get(n, n) for d, n in HOLIDAYS.items()},
+        "notable": notable,
+        "groupOrder": {m: DICTS[m].GROUP_ORDER for m in MARKET_ORDER},
+        "holidays": {m: {d: holiday_ko(n) for d, n in HOLIDAYS[m].items()}
+                     for m in MARKET_ORDER},
         "okDays": ok_days,
+        "markets": mkt_meta,
         "weeks": weeks,
         "defaultWeek": default_week,
         "today": today,
-        "sectors": sectors,
-        "markets": markets,
-        "source": raw.get("source", ""),
-        "sourceUrl": raw.get("source_url", ""),
+        "sources": sources,
     }
 
     stamp = datetime.now().strftime("%Y-%m-%d %H:%M KST")
-    head = (f'전 기간 <b>{len(rows):,}건</b> · 주목종목 <b>{notable_hits}건</b> · '
-            f'수집 <b>{ok_days[0]} ~ {ok_days[-1]}</b> · 갱신 {stamp}')
-    verified = lvl_counts[2] + lvl_counts[1]
-    tl_note = (f'회사명 {len(packed):,}건 중 <b>{verified:,}건</b>은 사전 표기, '
-               f'<b>{lvl_counts[0]:,}건</b>은 기계 변환입니다.')
+    parts = " · ".join(f'{MARKETS[m]["flag"]} {MARKETS[m]["ko"]} <b>{len(data[m]["rows"]):,}</b>'
+                       for m in have)
+    head = (f'{parts} · 합계 <b>{len(packed):,}건</b> · '
+            f'수집 <b>{all_ok[0]} ~ {all_ok[-1]}</b> · 갱신 {stamp}'
+            if all_ok else f'{parts} · 갱신 {stamp}')
+
+    # 기계 변환은 일본에만 해당한다. 미국·홍콩은 영문 원문을 그대로 쓴다.
+    jp_lvl = Counter(p[8] for p in packed if p[9] == "jp")
+    jp_total = sum(jp_lvl.values())
+    tl_note = (f'일본 회사명 {jp_total:,}건 중 <b>{jp_lvl[2] + jp_lvl[1]:,}건</b>은 사전 표기, '
+               f'<b>{jp_lvl[0]:,}건</b>은 기계 변환입니다. '
+               f'미국·홍콩은 원본이 영문이라 사전에 있으면 한글명, 없으면 영문명을 그대로 씁니다.'
+               if jp_total else
+               '미국·홍콩은 원본이 영문이라 사전에 있으면 한글명, 없으면 영문명을 그대로 씁니다.')
+
+    # 시장 색은 markets.py 한 군데서만 정한다. CSS 변수로 흘려보낸다.
+    mkt_css = "\n".join(
+        f'.m-{m} {{ --mk:{MARKETS[m]["accent"]}; }}' for m in MARKET_ORDER)
 
     html = TEMPLATE.replace("__HEAD__", head) \
-                   .replace("__CARD_TOTAL__", f"{len(rows):,}") \
-                   .replace("__CARD_DAYS__", str(len([d for d in ok_days if per_day[d]]))) \
-                   .replace("__CARD_BUSY__", f"{busiest[0]} · {busiest[1]:,}건") \
-                   .replace("__CARD_NOTABLE__", f"{notable_hits:,}") \
-                   .replace("__SOURCE__", "니혼게이자이신문 「결산발표 스케줄」 (QUICK 제공)") \
                    .replace("__TLNOTE__", tl_note) \
+                   .replace("__MKTCSS__", mkt_css) \
                    .replace("__DATA__", json.dumps(payload, ensure_ascii=False,
                                                    separators=(",", ":")))
     OUT.write_text(html, encoding="utf-8")
     kb = OUT.stat().st_size / 1024
     print(f"{OUT}  ({kb:,.0f} KB)")
-    print(f"  {len(rows):,}건 / {len(ok_days)}일 / 주목 {notable_hits}건 / {len(weeks)}주")
+    for m in MARKET_ORDER:
+        n = len(data[m]["rows"]) if data[m] else 0
+        days = len(ok_days[m])
+        state = f"{n:>6,}건 / {days:>3}일" if data[m] else "     미수집 — " + MARKETS[m]["scraper"]
+        print(f"  {MARKETS[m]['flag']} {MARKETS[m]['ko']:<3} {state}")
+    print(f"  합계 {len(packed):,}건 / 주목 {notable_hits:,}건 / {len(weeks)}주")
+    if per_day:
+        busiest = max(per_day.items(), key=lambda kv: kv[1])
+        print(f"  최다 {busiest[0]} {busiest[1]:,}건")
 
 
 TEMPLATE = r"""<!DOCTYPE html>
@@ -189,6 +241,30 @@ h2 .n { color:var(--a3); margin-right:10px; }
 .card .k { color:var(--mute); font-size:18px; }
 .card .v { font-size:30px; font-weight:800; color:var(--a1); }
 .card .v.sm { font-size:22px; }
+
+/* ── 시장 탭 ───────────────────────────────────────────────── */
+/* --mk 는 시장 강조색. markets.py 가 유일한 출처고 여기로 흘러온다. */
+__MKTCSS__
+.mtabs { display:flex; flex-wrap:wrap; gap:10px; margin:20px 0 4px; }
+.mtab {
+  display:flex; align-items:center; gap:9px; background:var(--panel);
+  border:1px solid var(--line); border-bottom:3px solid transparent;
+  border-radius:10px; padding:10px 18px; cursor:pointer;
+  font-family:inherit; color:var(--fg); font-size:19px; font-weight:700;
+  line-height:1.2;
+}
+.mtab:hover { border-color:#31414f; }
+.mtab .fl { font-size:21px; }
+.mtab .n {
+  color:var(--mute); font-weight:600; font-size:17px;
+  font-variant-numeric:tabular-nums;
+}
+.mtab.m-all { --mk:#93a4b1; }
+.mtab.on { background:#1b2530; border-bottom-color:var(--mk,var(--a2)); }
+.mtab.on .n { color:var(--fg); }
+/* 아직 수집하지 않은 시장. 눌러서 사유를 볼 수 있게 죽이지는 않는다. */
+.mtab.empty { opacity:.55; }
+.mtab.empty .n { color:#6b7b88; font-weight:400; }
 
 .note {
   background:#1a2129; border:1px solid var(--line); border-left:5px solid var(--a3);
@@ -286,16 +362,35 @@ button.btn:disabled:hover { border-color:var(--line); color:var(--fg); }
   letter-spacing:.02em;
 }
 .dsec.star { color:var(--a3); }
+.dsec.gap { color:#8a6d3b; font-weight:600; border-top:1px dashed #3a3222;
+            padding-top:6px; margin-top:8px; }
+/* 수집 전인 시장의 자리 */
+.cal.none { display:block; }
+.nodata {
+  background:var(--panel); border:1px dashed #3a4550; border-radius:10px;
+  padding:38px 26px; text-align:center; font-size:21px; color:#c9d6e0;
+}
+.nodata span { display:block; margin-top:10px; font-size:18px; color:var(--mute); }
+.nodata b { color:var(--a3); font-weight:700; }
 .empty { color:#55636e; font-size:18px; padding:16px 4px; text-align:center; }
 .empty .why { display:block; color:var(--mute); font-size:17px; margin-top:4px; }
 
-/* 종목 칩 */
+/* 종목 칩 — 왼쪽 띠 색이 시장이다. 세 시장을 한 칸에 섞어 놓아도 구분된다. */
 .chip {
   display:flex; align-items:center; gap:7px; width:100%;
   background:#0f1620; border:1px solid #1e2831; border-radius:7px;
-  padding:7px 9px; margin-bottom:5px; cursor:pointer; text-align:left;
+  padding:7px 9px 7px 12px; margin-bottom:5px; cursor:pointer; text-align:left;
   font-family:inherit; color:var(--fg); font-size:17px; line-height:1.3;
+  box-shadow:inset 3px 0 0 0 var(--mk,transparent);
 }
+.chip .fl { flex:0 0 auto; font-size:15px; }
+/* 발표 시각 — 미국만 원본에 있다. 장전/장후는 미국 실적을 볼 때 제일 먼저 보는 값. */
+.chip .tm, .tm {
+  flex:0 0 auto; font-size:13px; font-weight:700; border-radius:4px;
+  padding:1px 5px; white-space:nowrap;
+}
+.tm.pre { color:var(--a3); border:1px solid #4a3a1c; }
+.tm.post { color:var(--ok); border:1px solid #24463a; }
 .chip:hover { border-color:var(--a2); background:#16202b; }
 .chip.big { background:#1d1418; border-color:#43242c; }
 .chip.big:hover { border-color:var(--a1); }
@@ -359,12 +454,18 @@ td.dim { color:var(--mute); font-size:18px; }
   padding:1px 6px; color:var(--mute);
 }
 .qtag.q4 { color:var(--a3); border-color:#4a3a1c; }
+/* 표의 시장 칸 — 왼쪽 띠로 캘린더 칩과 같은 색을 쓴다 */
+.mcell { white-space:nowrap; box-shadow:inset 3px 0 0 0 var(--mk,transparent); }
 
 /* ── 주목종목 그룹 ─────────────────────────────────────────── */
 .groups { display:grid; grid-template-columns:repeat(auto-fit,minmax(min(380px,100%),1fr));
           gap:16px; margin-top:14px; }
 .gbox { background:var(--panel); border:1px solid var(--line); border-radius:10px;
-        padding:12px 14px 10px; min-width:0; }
+        padding:12px 14px 10px; min-width:0;
+        border-top:3px solid var(--mk,var(--line)); }
+/* 전체 보기에서 시장별 묶음 머리 */
+.gmkt { font-size:22px; font-weight:800; margin:26px 0 2px;
+        padding-left:12px; border-left:5px solid var(--mk,var(--a2)); }
 .gbox h3 { font-size:20px; margin:2px 0 10px; font-weight:700; }
 .gbox h3 .gn { color:var(--mute); font-size:17px; font-weight:400; margin-left:8px; }
 .grow { display:flex; align-items:center; gap:9px; padding:6px 2px;
@@ -411,15 +512,11 @@ svg.bars rect.b:hover { fill:var(--a3); }
 <div class="wrap">
 
 <div class="topline">__HEAD__</div>
-<h1>일본 결산발표 캘린더 <span class="jp">by CB</span></h1>
-<p class="sub">주간 결산발표 일정 — 누가 언제 발표하는지, 관심종목은 알림까지</p>
+<h1>글로벌 실적발표 캘린더 <span class="jp">by CB</span></h1>
+<p class="sub">미국 · 일본 · 홍콩 주간 실적발표 일정 — 누가 언제 발표하는지, 관심종목은 알림까지</p>
 
-<div class="cards">
-  <div class="card"><div class="k">수집 발표</div><div class="v">__CARD_TOTAL__</div></div>
-  <div class="card"><div class="k">발표일 수</div><div class="v">__CARD_DAYS__</div></div>
-  <div class="card"><div class="k">주목종목 발표</div><div class="v">__CARD_NOTABLE__</div></div>
-  <div class="card"><div class="k">최다 발표일</div><div class="v sm">__CARD_BUSY__</div></div>
-</div>
+<div class="mtabs" id="mtabs"></div>
+<div class="cards" id="cards"></div>
 
 <h2><span class="n">1</span>관심종목 알림</h2>
 <div id="alertbar" class="alertbar none"></div>
@@ -430,7 +527,7 @@ svg.bars rect.b:hover { fill:var(--a3); }
   <span class="count">★ 를 눌러 담으면 브라우저에 저장됩니다</span>
 </div>
 
-<h2><span class="n">2</span>주간 캘린더 <span class="meta">일본 상장사 결산발표 예정</span></h2>
+<h2><span class="n">2</span>주간 캘린더 <span class="meta" id="calMeta"></span></h2>
 <div class="weeknav">
   <button class="btn" id="wPrev">← 이전 주</button>
   <div>
@@ -443,16 +540,17 @@ svg.bars rect.b:hover { fill:var(--a3); }
   <select id="wPick"></select>
   <label class="chk"><input type="checkbox" id="onlyBig">주목종목만</label>
   <label class="chk"><input type="checkbox" id="onlyWatch">관심종목만</label>
-  <label class="chk"><input type="checkbox" id="jpToggle">원문(일본어)</label>
+  <label class="chk"><input type="checkbox" id="jpToggle">원문 보기</label>
 </div>
 <div class="cal" id="cal"></div>
 
 <h2><span class="n">3</span>주목종목 발표일 <span class="meta" id="gMeta"></span></h2>
 <div class="note">
-  대만 AI서버 공급망 표와 짝이 맞도록, 일본 쪽 강점인 <b>장비·소재·부품</b>을 앞에 두고
-  일반 대형주를 뒤에 붙였습니다. 수집 기간 안에 발표 일정이 잡힌 종목만 나옵니다.
+  테마는 <b>AI 공급망</b>을 앞에 두고 일반 대형주를 뒤에 붙였습니다. 미국은 반도체·빅테크,
+  일본은 장비·소재·부품, 홍콩은 인터넷 플랫폼이 앞에 옵니다.
+  수집 기간 안에 발표 일정이 잡힌 종목만 나옵니다.
 </div>
-<div class="groups" id="groups"></div>
+<div id="groups"></div>
 
 <h2><span class="n">4</span>일자별 발표 건수 <span class="meta">막대를 누르면 그 주로 이동</span></h2>
 <div class="chartbox"><svg class="bars" id="bars" viewBox="0 0 1400 260"
@@ -460,10 +558,16 @@ svg.bars rect.b:hover { fill:var(--a3); }
 
 <h2><span class="n">5</span>전체 종목 표</h2>
 <div class="tools">
-  <input type="search" id="q" placeholder="한글·원문·영문·코드 검색 — 소니 / ソニー / Sony / 6758" autocomplete="off">
+  <input type="search" id="q" placeholder="한글·원문·영문·코드 검색 — 엔비디아 / NVDA / 소니 / ソニー / 텐센트 / 00700" autocomplete="off">
   <select id="fSector"><option value="">전체 업종</option></select>
-  <select id="fMarket"><option value="">전체 시장</option></select>
+  <select id="fMarket"><option value="">전체 거래소</option></select>
   <select id="fKind"><option value="">전체 분기</option></select>
+  <select id="fCap" hidden>
+    <option value="0">전체 시총</option>
+    <option value="10">100억 달러 이상</option>
+    <option value="50">500억 달러 이상</option>
+    <option value="200">2000억 달러 이상</option>
+  </select>
   <label class="chk"><input type="checkbox" id="tBig">주목종목만</label>
   <label class="chk"><input type="checkbox" id="tWatch">관심종목만</label>
   <label class="chk"><input type="checkbox" id="tFuture">오늘 이후만</label>
@@ -474,25 +578,29 @@ svg.bars rect.b:hover { fill:var(--a3); }
     <thead><tr>
       <th class="nos" style="width:44px">★</th>
       <th data-k="0">발표일<span class="ar">▾</span></th>
+      <th data-k="9">시장<span class="ar">▾</span></th>
       <th data-k="1">코드<span class="ar">▾</span></th>
       <th data-k="2">회사명<span class="ar">▾</span></th>
       <th data-k="7">원문<span class="ar">▾</span></th>
+      <th data-k="10">시각<span class="ar">▾</span></th>
       <th data-k="4">분기<span class="ar">▾</span></th>
       <th data-k="3">결산기<span class="ar">▾</span></th>
       <th data-k="5">업종<span class="ar">▾</span></th>
-      <th data-k="6">시장<span class="ar">▾</span></th>
+      <th data-k="6">거래소<span class="ar">▾</span></th>
     </tr></thead>
     <tbody id="tBody"></tbody>
   </table>
 </div>
 
 <div class="foot">
-  출처 __SOURCE__ · <span id="srcLink"></span><br>
-  __TLNOTE__ 지명·인명 한자는 훈독이라(小田原=오다와라) 기계 변환이 틀릴 수 있습니다.
+  <span id="srcLink"></span>
+  __TLNOTE__ 일본 지명·인명 한자는 훈독이라(小田原=오다와라) 기계 변환이 틀릴 수 있습니다.
   점선이 그어진 이름이 기계 변환분이고, 마우스를 올리면 원문이 뜹니다.
-  캘린더의 <b>원문(일본어)</b> 체크로 통째로 바꿔 볼 수도 있습니다.<br>
-  발표일은 예정일이며 회사 사정으로 바뀔 수 있습니다. 발표 시각은 원본에 없어 표기하지 않았습니다
-  (일본은 대부분 장 마감 후 15시 전후 발표).<br>
+  캘린더의 <b>원문 보기</b> 체크로 통째로 바꿔 볼 수도 있습니다.<br>
+  발표일은 예정일이며 회사 사정으로 바뀔 수 있습니다.
+  발표 시각은 <b>미국만</b> 원본에 있습니다(장전 BMO / 장후 AMC).
+  일본은 대부분 장 마감 후 15시 전후, 홍콩은 이사회 당일 장 마감 후 공시입니다.<br>
+  날짜는 각 시장의 <b>현지 날짜</b>입니다. 미국 장후 발표는 한국 시각으로 다음 날 새벽이 됩니다.<br>
   <span id="gapNote"></span>
   관심종목은 이 브라우저에만 저장되며 서버로 전송되지 않습니다.
 </div>
@@ -505,8 +613,8 @@ svg.bars rect.b:hover { fill:var(--a3); }
     <dl id="mdList"></dl>
     <div class="mact">
       <button class="btn pri" id="mdStar">★ 관심종목</button>
-      <a class="btn" id="mdNikkei" target="_blank" rel="noopener">닛케이 종목정보</a>
-      <a class="btn" id="mdIr" target="_blank" rel="noopener">적시공시</a>
+      <a class="btn" id="mdLink1" target="_blank" rel="noopener">종목정보</a>
+      <a class="btn" id="mdLink2" target="_blank" rel="noopener">공시</a>
       <button class="btn" id="mdClose">닫기 (ESC)</button>
     </div>
   </div>
@@ -515,30 +623,78 @@ svg.bars rect.b:hover { fill:var(--a3); }
 <script id="payload" type="application/json">__DATA__</script>
 <script>
 /* ══════════════════════════════════════════════════════════════
-   일본 결산발표 캘린더 — 렌더링
-   행은 [date, code, name, fy, kind, sector, market] 배열로 들어온다.
+   글로벌 실적발표 캘린더 — 렌더링
+   행은 배열로 들어온다. 자리 뜻:
+     0 날짜  1 코드  2 한글명  3 결산기  4 분기  5 업종  6 거래소
+     7 원문  8 변환등급  9 시장(jp/us/hk)  10 발표시각  11 시총(십억$)
+   종목 하나를 가리키는 열쇠는 코드가 아니라 '시장:코드' 다.
+   일본 8035 와 홍콩 08035 는 다른 회사다.
    ══════════════════════════════════════════════════════════════ */
 const D = JSON.parse(document.getElementById('payload').textContent);
-const ROWS = D.rows, NOTE = D.notable, HOL = D.holidays;
+const ROWS = D.rows, NOTE = D.notable;
+const MKTS = D.markets, MKT = Object.fromEntries(MKTS.map(m => [m.id, m]));
+const LIVE = MKTS.filter(m => m.has).map(m => m.id);
 const DOW = ['월','화','수','목','금','토','일'];
 const LS_KEY = 'jpEarnWatch';
 
-const byDate = new Map();
-for (const r of ROWS) {
-  if (!byDate.has(r[0])) byDate.set(r[0], []);
-  byDate.get(r[0]).push(r);
+const keyOf = r => r[9] + ':' + r[1];
+const noteOf = r => NOTE[keyOf(r)];
+
+/* 보고 있는 시장. '' 이면 전체. */
+let mkt = '';
+const inMkt = r => !mkt || r[9] === mkt;
+
+/* 지금 시장에 해당하는 행만. 시장을 바꿀 때마다 다시 만든다. */
+let VIEW = [], byDate = new Map();
+function reslice() {
+  VIEW = mkt ? ROWS.filter(r => r[9] === mkt) : ROWS;
+  byDate = new Map();
+  for (const r of VIEW) {
+    if (!byDate.has(r[0])) byDate.set(r[0], []);
+    byDate.get(r[0]).push(r);
+  }
 }
-const okDays = new Set(D.okDays);
+
+/* 수집에 성공한 날 — 시장별로 따로 본다. 미국은 받았는데 일본은 못 받은 날이
+   그냥 '발표 없음'으로 보이면 안 된다. */
+const okSet = {};
+for (const m of LIVE) okSet[m] = new Set(D.okDays[m] || []);
+/* 그 날 아직 못 받은 시장들. 비어 있으면 구멍이 없다는 뜻. */
+function missing(d) {
+  return (mkt ? [mkt] : LIVE).filter(m => okSet[m] && !okSet[m].has(d));
+}
+/* 그 날의 휴장 사정. all=true 면 보고 있는 시장이 전부 쉰다.
+   전체 보기에서 일본만 쉬는 날을 '휴장'이라 적으면 거짓말이 된다 —
+   미국은 그날 멀쩡히 연다. 그래서 누가 쉬는지를 같이 적는다. */
+function holidayInfo(d) {
+  const ms = mkt ? [mkt] : LIVE;
+  const hit = ms.filter(m => D.holidays[m] && D.holidays[m][d]);
+  if (!hit.length) return { text: '', all: false };
+  const label = [...new Set(hit.map(m => D.holidays[m][d]))].join(' · ');
+  if (hit.length === ms.length) return { text: label + ' · 휴장', all: true };
+  return { text: hit.map(m => MKT[m].ko).join('·') + ' 휴장 (' + label + ')', all: false };
+}
+
+/* 원문 사명과 사전 영문명이 같은 경우가 흔하다. 같은 이름을 두 번 쓰지 않는다. */
+function altOf(r) {
+  const nt = NOTE[keyOf(r)];
+  return [...new Set([r[7], nt ? nt[1] : ''])].filter(s => s && s !== r[2]);
+}
 
 /* 관심종목 — localStorage. 사파리 프라이빗 모드처럼 쓰기가 막힌 환경에서도
    페이지 전체가 죽지는 않게 감싼다. */
 let watch = new Set();
 try { watch = new Set(JSON.parse(localStorage.getItem(LS_KEY) || '[]')); } catch (e) {}
+/* 예전에는 일본밖에 없어서 코드만 담았다. 이미 담아둔 것을 잃지 않도록 옮긴다. */
+if ([...watch].some(k => !k.includes(':'))) {
+  watch = new Set([...watch].map(k => k.includes(':') ? k : 'jp:' + k));
+  try { localStorage.setItem(LS_KEY, JSON.stringify([...watch])); } catch (e) {}
+}
 function saveWatch() {
   try { localStorage.setItem(LS_KEY, JSON.stringify([...watch])); } catch (e) {}
 }
-function toggleWatch(code) {
-  watch.has(code) ? watch.delete(code) : watch.add(code);
+function toggleWatch(k) {
+  watch.has(k) ? watch.delete(k) : watch.add(k);
   saveWatch(); renderAll();
 }
 
@@ -549,22 +705,22 @@ const addDays = (s, n) => { const d = parse(s); d.setDate(d.getDate() + n); retu
 const esc = s => String(s).replace(/[&<>"]/g, c =>
   ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
 
-/* r[2]=한글명, r[7]=일본어 원문, r[8]=변환등급(2 사전·1 단어사전·0 기계).
-   '원문 보기'를 켜면 일본어를 그대로 보여준다. */
+/* r[2]=한글명, r[7]=원문, r[8]=변환등급(2 사전·1 단어사전·0 기계).
+   '원문 보기'를 켜면 원문을 그대로 보여준다. 미국처럼 원문이 곧 한글명인
+   (= 사전에 없어 영문을 그대로 쓴) 종목은 둘이 같으므로 한 번만 보인다. */
 let showJp = false;
-const nameOf = r => showJp ? r[7] : r[2];
-const bothOf = r => r[2] + ' · ' + r[7];
+const nameOf = r => (showJp && r[7]) ? r[7] : r[2];
+const bothOf = r => r[2] === r[7] ? r[2] : r[2] + ' · ' + r[7];
 
 let week = D.defaultWeek;
 
 /* ── 주 네비게이션 ────────────────────────────────────────── */
 const wPick = document.getElementById('wPick');
-for (const w of D.weeks) {
-  const o = document.createElement('option');
-  o.value = w;
-  const cnt = countWeek(w);
-  o.textContent = fmtWeek(w) + '  (' + cnt + '건)';
-  wPick.appendChild(o);
+/* 주별 건수는 시장을 바꾸면 달라지므로 매번 다시 채운다. */
+function fillWeeks() {
+  wPick.innerHTML = D.weeks.map(w =>
+    '<option value="' + w + '">' + esc(fmtWeek(w)) + '  (' + countWeek(w) + '건)</option>'
+  ).join('');
 }
 function weekDays(w) {
   const out = [];
@@ -589,13 +745,29 @@ function go(w) { week = w; renderAll(); }
 const CHIP_LIMIT = 12;
 const expanded = new Set();
 
+/* 시총은 십억 달러 단위로 들어온다. 한국식으로 억/조 달러로 고쳐 읽는다.
+   1 십억 달러 = 10억 달러, 1000 십억 달러 = 1조 달러. */
+function capKo(b) {
+  if (!b) return '';
+  return b >= 1000 ? (b / 1000).toFixed(2) + '조 달러'
+                   : Math.round(b * 10).toLocaleString() + '억 달러';
+}
+
+/* 발표 시각 배지. 미국만 값이 있다. */
+function timeTag(r) {
+  if (!r[10]) return '';
+  return '<span class="tm ' + (r[10] === '장전' ? 'pre' : 'post') + '">' + r[10] + '</span>';
+}
+
 function chip(r, big) {
-  const on = watch.has(r[1]);
-  return '<button class="chip' + (big ? ' big' : '') + (on ? ' watch' : '') +
-         '" data-code="' + esc(r[1]) + '" data-date="' + r[0] + '">' +
+  const k = keyOf(r), on = watch.has(k);
+  return '<button class="chip m-' + r[9] + (big ? ' big' : '') + (on ? ' watch' : '') +
+         '" data-key="' + esc(k) + '" data-date="' + r[0] + '">' +
+         (mkt ? '' : '<span class="fl">' + MKT[r[9]].flag + '</span>') +
          '<span class="cd">' + esc(r[1]) + '</span>' +
          '<span class="cn' + (r[8] === 0 ? ' guess' : '') + '" title="' + esc(bothOf(r)) +
          '">' + esc(nameOf(r)) + '</span>' +
+         timeTag(r) +
          '<span class="cq">' + esc(r[4]) + '</span>' +
          '<span class="st' + (on ? ' on' : '') + '">' + (on ? '★' : '☆') + '</span>' +
          '</button>';
@@ -604,6 +776,24 @@ function chip(r, big) {
 function renderCal() {
   const onlyBig = document.getElementById('onlyBig').checked;
   const onlyWatch = document.getElementById('onlyWatch').checked;
+
+  /* 아직 한 번도 수집하지 않은 시장. 빈 칸 일곱 개를 늘어놓으면 '발표가 없는 주'로
+     읽힌다. 그건 사실이 아니므로 칸 대신 사유를 낸다. */
+  if (mkt && !MKT[mkt].has) {
+    const cal = document.getElementById('cal');
+    cal.className = 'cal none';
+    cal.innerHTML = '<div class="nodata">' + MKT[mkt].flag + ' ' + esc(MKT[mkt].ko) +
+      ' 일정은 아직 수집하지 않았습니다.' +
+      '<span>저장소에서 <b>python ' + esc(MKT[mkt].scraper) + '</b> 을 돌린 뒤 ' +
+      '<b>python build.py</b> 로 다시 만들면 이 자리에 채워집니다.</span></div>';
+    document.getElementById('wLabel').textContent = fmtWeek(week);
+    document.getElementById('wSum').textContent = '미수집';
+    wPick.value = D.weeks.includes(week) ? week : '';
+    document.getElementById('wPrev').disabled = false;
+    document.getElementById('wNext').disabled = false;
+    return;
+  }
+
   const days = weekDays(week);
   // 주말은 발표가 잡혀 있을 때만 칸을 내준다.
   const showWeekend = (byDate.get(days[5]) || []).length || (byDate.get(days[6]) || []).length;
@@ -615,18 +805,18 @@ function renderCal() {
   cal.innerHTML = shown.map(d => {
     let list = byDate.get(d) || [];
     total += list.length;
-    bigTotal += list.filter(r => NOTE[r[1]]).length;
-    watchTotal += list.filter(r => watch.has(r[1])).length;
-    if (onlyBig) list = list.filter(r => NOTE[r[1]]);
-    if (onlyWatch) list = list.filter(r => watch.has(r[1]));
+    bigTotal += list.filter(noteOf).length;
+    watchTotal += list.filter(r => watch.has(keyOf(r))).length;
+    if (onlyBig) list = list.filter(noteOf);
+    if (onlyWatch) list = list.filter(r => watch.has(keyOf(r)));
 
     const dt = parse(d), dow = (dt.getDay() + 6) % 7;
     const isToday = d === D.today;
-    const hol = HOL[d], weekend = dow >= 5;
-    const closed = (hol || weekend) && !list.length;
+    const hol = holidayInfo(d), weekend = dow >= 5;
+    const closed = (hol.all || weekend) && !list.length;
 
-    const big = list.filter(r => NOTE[r[1]]);
-    const rest = list.filter(r => !NOTE[r[1]]);
+    const big = list.filter(noteOf);
+    const rest = list.filter(r => !noteOf(r));
     const key = week + d;
     const open = expanded.has(key);
     const restShown = open ? rest : rest.slice(0, CHIP_LIMIT);
@@ -634,19 +824,27 @@ function renderCal() {
     let body;
     if (!list.length) {
       let why = '';
-      if (hol) why = '<span class="why">' + esc(hol) + ' · 휴장</span>';
+      const miss = missing(d);
+      if (hol.text) why = '<span class="why">' + esc(hol.text) + '</span>';
       else if (weekend) why = '<span class="why">주말 · 휴장</span>';
-      else if (!okDays.has(d)) why = '<span class="why">미수집 구간</span>';
+      else if (miss.length) why = '<span class="why">미수집 구간 · ' +
+        miss.map(m => MKT[m].ko).join('·') + '</span>';
       body = '<div class="empty">발표 없음' + why + '</div>';
     } else {
-      body = (big.length ? '<div class="dsec star">★ 주목종목 ' + big.length + '</div>' +
+      const miss = missing(d);
+      body = (hol.text ? '<div class="dsec gap">' + esc(hol.text) + '</div>' : '') +
+             (big.length ? '<div class="dsec star">★ 주목종목 ' + big.length + '</div>' +
                            big.map(r => chip(r, true)).join('') : '') +
              (rest.length ? '<div class="dsec">그 외 ' + rest.length + '</div>' +
                             restShown.map(r => chip(r, false)).join('') : '') +
              (rest.length > CHIP_LIMIT
                ? '<button class="more" data-key="' + key + '">' +
                  (open ? '접기' : '+' + (rest.length - CHIP_LIMIT) + '개 더 보기') + '</button>'
-               : '');
+               : '') +
+             /* 한 시장은 받았고 다른 시장은 못 받은 날. 목록이 차 있어도
+                다 받은 날처럼 보이면 안 된다. */
+             (miss.length ? '<div class="dsec gap">' +
+                miss.map(m => MKT[m].ko).join('·') + ' 미수집</div>' : '');
     }
 
     return '<div class="day' + (isToday ? ' today' : '') + (closed ? ' closed' : '') + '">' +
@@ -679,17 +877,20 @@ function renderAlert() {
       '실제 알림도 받을 수 있습니다.</div>';
     return;
   }
-  // 오늘 이후 예정만, 가까운 순으로.
-  const up = ROWS.filter(r => watch.has(r[1]) && r[0] >= D.today)
+  // 오늘 이후 예정만, 가까운 순으로. 알림은 시장 탭과 무관하게 전부 보여준다 —
+  // 관심종목은 시장을 가려 담는 게 아니다.
+  const up = ROWS.filter(r => watch.has(keyOf(r)) && r[0] >= D.today)
                  .sort((a, b) => a[0] < b[0] ? -1 : 1);
   const inWeek = up.filter(r => weekDays(week).includes(r[0]));
   el.className = 'alertbar' + (up.length ? '' : ' none');
   const ddays = up.slice(0, 10).map(r => {
     const dd = Math.round((parse(r[0]) - parse(D.today)) / 86400000);
     const tag = dd === 0 ? '오늘' : 'D-' + dd;
-    return '<button class="chip big" data-code="' + esc(r[1]) + '" data-date="' + r[0] +
-           '" style="width:auto"><span class="cd">' + tag + '</span>' +
-           '<span class="cn">' + esc(nameOf(r)) + '</span>' +
+    return '<button class="chip big m-' + r[9] + '" data-key="' + esc(keyOf(r)) +
+           '" data-date="' + r[0] + '" style="width:auto">' +
+           '<span class="fl">' + MKT[r[9]].flag + '</span>' +
+           '<span class="cd">' + tag + '</span>' +
+           '<span class="cn">' + esc(nameOf(r)) + '</span>' + timeTag(r) +
            '<span class="cq">' + r[0].slice(5) + '</span></button>';
   }).join('');
 
@@ -704,42 +905,59 @@ function renderAlert() {
 
 /* ── 주목종목 그룹 ────────────────────────────────────────── */
 function renderGroups() {
-  const perGroup = {};
-  for (const g of D.groupOrder) perGroup[g] = [];
   // 종목마다 한 줄만 남긴다. 오늘 이후 일정이 있으면 그 중 가장 이른 것,
-  // 없으면 가장 최근 과거 일정. ROWS가 날짜 오름차순이라 한 번만 훑으면 된다.
+  // 없으면 가장 최근 과거 일정. VIEW가 날짜 오름차순이라 한 번만 훑으면 된다.
   const first = new Map();
-  for (const r of ROWS) {
-    if (!NOTE[r[1]]) continue;
-    const cur = first.get(r[1]);
-    if (!cur || (cur[0] < D.today && (r[0] >= D.today || r[0] > cur[0]))) first.set(r[1], r);
+  for (const r of VIEW) {
+    if (!noteOf(r)) continue;
+    const k = keyOf(r), cur = first.get(k);
+    if (!cur || (cur[0] < D.today && (r[0] >= D.today || r[0] > cur[0]))) first.set(k, r);
   }
-  for (const [code, r] of first) {
-    const g = NOTE[code][2];
-    if (perGroup[g]) perGroup[g].push(r);
+  // 시장을 가로질러 보는 중이면 시장별로 묶어서 낸다. 테마 이름이 시장마다
+  // 겹치므로(둘 다 '금융'이 있다) 한 통에 부으면 섞여버린다.
+  const shownMkts = mkt ? [mkt] : LIVE;
+  let shown = 0, dictTotal = 0, html = '';
+  for (const m of shownMkts) {
+    const order = D.groupOrder[m] || [];
+    const perGroup = {};
+    for (const g of order) perGroup[g] = [];
+    for (const [k, r] of first) {
+      if (r[9] !== m) continue;
+      const g = NOTE[k][2];
+      if (perGroup[g]) perGroup[g].push(r);
+    }
+    const boxes = order.filter(g => perGroup[g].length).map(g => {
+      const rs = perGroup[g].sort((a, b) => a[0] < b[0] ? -1 : 1);
+      shown += rs.length;
+      return '<div class="gbox m-' + m + '"><h3>' + esc(g) +
+        '<span class="gn">' + rs.length + '종목</span></h3>' +
+        rs.map(r => {
+          const nt = NOTE[keyOf(r)], past = r[0] < D.today;
+          return '<div class="grow"><span class="gc">' + esc(r[1]) + '</span>' +
+            '<span class="gk">' + esc(nt[0]) +
+            ' <span class="ge">' + esc(nt[1]) + '</span></span>' +
+            '<span class="gd' + (past ? ' past' : '') + '">' + r[0].slice(5) +
+            ' <span class="qtag">' + esc(r[4]) + '</span></span></div>';
+        }).join('') + '</div>';
+    }).join('');
+    dictTotal += Object.keys(NOTE).filter(k => k.startsWith(m + ':')).length;
+    if (!boxes) continue;
+    if (!mkt) html += '<h3 class="gmkt m-' + m + '">' + MKT[m].flag + ' ' +
+                      esc(MKT[m].ko) + '</h3>';
+    html += '<div class="groups">' + boxes + '</div>';
   }
-  let shown = 0;
-  const html = D.groupOrder.filter(g => perGroup[g].length).map(g => {
-    const rs = perGroup[g].sort((a, b) => a[0] < b[0] ? -1 : 1);
-    shown += rs.length;
-    return '<div class="gbox"><h3>' + esc(g) + '<span class="gn">' + rs.length + '종목</span></h3>' +
-      rs.map(r => {
-        const past = r[0] < D.today;
-        return '<div class="grow"><span class="gc">' + esc(r[1]) + '</span>' +
-          '<span class="gk">' + esc(NOTE[r[1]][0]) +
-          ' <span class="ge">' + esc(NOTE[r[1]][1]) + '</span></span>' +
-          '<span class="gd' + (past ? ' past' : '') + '">' + r[0].slice(5) +
-          ' <span class="qtag">' + esc(r[4]) + '</span></span></div>';
-      }).join('') + '</div>';
-  }).join('');
-  document.getElementById('groups').innerHTML = html;
+  document.getElementById('groups').innerHTML =
+    html || '<div class="empty">수집된 주목종목 일정이 없습니다.</div>';
   document.getElementById('gMeta').textContent =
-    shown + '종목 / 사전 등재 ' + Object.keys(NOTE).length + '종목';
+    shown + '종목 / 사전 등재 ' + dictTotal + '종목';
 }
 
 /* ── 일자별 막대 ──────────────────────────────────────────── */
 function renderBars() {
-  const days = D.okDays.filter(d => (byDate.get(d) || []).length);
+  const src = mkt ? (D.okDays[mkt] || [])
+                  : [...new Set(LIVE.flatMap(m => D.okDays[m] || []))].sort();
+  const days = src.filter(d => (byDate.get(d) || []).length);
+  if (!days.length) { document.getElementById('bars').innerHTML = ''; return; }
   const W = 1400, H = 260, PAD_L = 8, PAD_B = 46, PAD_T = 24;
   const n = days.length || 1;
   const bw = (W - PAD_L * 2) / n;
@@ -774,15 +992,18 @@ function renderTable() {
   const tw = document.getElementById('tWatch').checked;
   const tf = document.getElementById('tFuture').checked;
 
-  let list = ROWS.filter(r => {
+  const fc = +document.getElementById('fCap').value || 0;
+
+  let list = VIEW.filter(r => {
     if (fs && r[5] !== fs) return false;
     if (fm && r[6] !== fm) return false;
     if (fk && r[4] !== fk) return false;
-    if (tb && !NOTE[r[1]]) return false;
-    if (tw && !watch.has(r[1])) return false;
+    if (fc && r[11] < fc) return false;
+    if (tb && !noteOf(r)) return false;
+    if (tw && !watch.has(keyOf(r))) return false;
     if (tf && r[0] < D.today) return false;
     if (q) {
-      const en = NOTE[r[1]] ? NOTE[r[1]][1] : '';
+      const nt = noteOf(r), en = nt ? nt[1] : '';
       if (!(r[1] + r[2] + r[7] + en).toLowerCase().includes(q)) return false;
     }
     return true;
@@ -796,14 +1017,16 @@ function renderTable() {
 
   const CAP = 600;
   document.getElementById('tBody').innerHTML = list.slice(0, CAP).map(r => {
-    const nt = NOTE[r[1]], on = watch.has(r[1]);
-    return '<tr data-code="' + esc(r[1]) + '" data-date="' + r[0] + '">' +
-      '<td><button class="sbtn' + (on ? ' on' : '') + '" data-star="' + esc(r[1]) + '">' +
+    const k = keyOf(r), nt = NOTE[k], on = watch.has(k);
+    return '<tr class="m-' + r[9] + '" data-key="' + esc(k) + '" data-date="' + r[0] + '">' +
+      '<td><button class="sbtn' + (on ? ' on' : '') + '" data-star="' + esc(k) + '">' +
       (on ? '★' : '☆') + '</button></td>' +
       '<td class="dim">' + r[0] + '</td>' +
+      '<td class="mcell">' + MKT[r[9]].flag + ' ' + esc(MKT[r[9]].ko) + '</td>' +
       '<td class="code' + (nt ? ' big' : '') + '">' + esc(r[1]) + '</td>' +
       '<td class="' + (r[8] === 0 ? 'guess' : '') + '">' + esc(r[2]) + '</td>' +
-      '<td class="jp">' + esc(r[7]) + '</td>' +
+      '<td class="jp">' + (r[7] === r[2] ? '' : esc(r[7])) + '</td>' +
+      '<td>' + timeTag(r) + '</td>' +
       '<td><span class="qtag' + (r[4] === '본결산' ? ' q4' : '') + '">' + esc(r[4]) + '</span></td>' +
       '<td class="dim">' + esc(r[3]) + '</td>' +
       '<td class="dim">' + esc(r[5]) + '</td>' +
@@ -815,36 +1038,59 @@ function renderTable() {
 }
 
 /* ── 상세 모달 ────────────────────────────────────────────── */
-let mdCode = null;
-function openModal(code, dt) {
-  const r = (byDate.get(dt) || []).find(x => x[1] === code) ||
-            ROWS.find(x => x[1] === code);
+let mdKey = null;
+
+/* 시장마다 볼 곳이 다르다. [종목정보 이름, URL, 공시 이름, URL] */
+function links(m, code) {
+  if (m === 'jp') return ['닛케이 종목정보', 'https://www.nikkei.com/nkd/company/?scode=' + code,
+                          '적시공시', 'https://www.nikkei.com/nkd/company/kigyo/?scode=' + code];
+  if (m === 'us') return ['나스닥 종목정보',
+                          'https://www.nasdaq.com/market-activity/stocks/' + code.toLowerCase(),
+                          'SEC 공시',
+                          'https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&ticker=' +
+                          code + '&type=10-&dateb=&owner=include&count=40'];
+  return ['HKEX 종목정보',
+          'https://www.hkex.com.hk/Market-Data/Securities-Prices/Equities/Equities-Quote?sym=' +
+          String(code).replace(/^0+/, '') + '&sc_lang=en',
+          '홍콩 공시(HKEXnews)',
+          'https://www1.hkexnews.hk/search/titlesearch.xhtml?lang=en'];
+}
+
+function openModal(k, dt) {
+  const r = (byDate.get(dt) || []).find(x => keyOf(x) === k) ||
+            ROWS.find(x => keyOf(x) === k);
   if (!r) return;
-  mdCode = code;
-  const nt = NOTE[code];
-  document.getElementById('mdTitle').textContent = r[2] + ' (' + code + ')';
+  mdKey = k;
+  const nt = NOTE[k], m = r[9], code = r[1];
+  document.getElementById('mdTitle').textContent =
+    MKT[m].flag + ' ' + r[2] + ' (' + code + ')';
   document.getElementById('mdSub').textContent =
-    r[7] + (nt ? ' · ' + nt[1] : '') + (r[8] === 0 ? ' · 한글 표기는 기계 변환' : '');
+    altOf(r).concat(r[8] === 0 ? ['한글 표기는 기계 변환'] : []).join(' · ');
   const dd = Math.round((parse(r[0]) - parse(D.today)) / 86400000);
   document.getElementById('mdList').innerHTML =
     '<dt>발표 예정일</dt><dd>' + r[0] + ' (' + DOW[(parse(r[0]).getDay()+6)%7] + ') ' +
     (dd === 0 ? '· 오늘' : dd > 0 ? '· D-' + dd : '· ' + (-dd) + '일 전') + '</dd>' +
-    '<dt>분기</dt><dd>' + esc(r[4]) + ' · ' + esc(r[3]) + '</dd>' +
-    '<dt>업종</dt><dd>' + esc(r[5]) + '</dd>' +
-    '<dt>시장</dt><dd>' + esc(r[6]) + '</dd>' +
+    (r[10] ? '<dt>발표 시각</dt><dd>' + esc(r[10]) +
+             (r[10] === '장전' ? ' (Before Open)' : ' (After Close)') + '</dd>' : '') +
+    '<dt>분기</dt><dd>' + esc([r[4], r[3]].filter(Boolean).join(' · ') || '—') + '</dd>' +
+    (r[11] ? '<dt>시가총액</dt><dd>' + capKo(r[11]) + '</dd>' : '') +
+    (r[5] ? '<dt>업종</dt><dd>' + esc(r[5]) + '</dd>' : '') +
+    '<dt>시장</dt><dd>' + esc(MKT[m].ko) + (r[6] ? ' · ' + esc(r[6]) : '') + '</dd>' +
     (nt ? '<dt>테마</dt><dd>' + esc(nt[2]) + '</dd>' : '');
-  document.getElementById('mdNikkei').href = 'https://www.nikkei.com/nkd/company/?scode=' + code;
-  document.getElementById('mdIr').href = 'https://www.nikkei.com/nkd/company/kigyo/?scode=' + code;
+  const L = links(m, code);
+  const a1 = document.getElementById('mdLink1'), a2 = document.getElementById('mdLink2');
+  a1.textContent = L[0]; a1.href = L[1];
+  a2.textContent = L[2]; a2.href = L[3];
   const sb = document.getElementById('mdStar');
-  sb.textContent = watch.has(code) ? '★ 관심종목 해제' : '☆ 관심종목 담기';
+  sb.textContent = watch.has(k) ? '★ 관심종목 해제' : '☆ 관심종목 담기';
   document.getElementById('mdBack').hidden = false;
 }
-function closeModal() { document.getElementById('mdBack').hidden = true; mdCode = null; }
+function closeModal() { document.getElementById('mdBack').hidden = true; mdKey = null; }
 document.getElementById('mdClose').onclick = closeModal;
 document.getElementById('mdBack').onclick = e => {
   if (e.target.id === 'mdBack') closeModal();
 };
-document.getElementById('mdStar').onclick = () => { if (mdCode) { toggleWatch(mdCode); closeModal(); } };
+document.getElementById('mdStar').onclick = () => { if (mdKey) { toggleWatch(mdKey); closeModal(); } };
 document.addEventListener('keydown', e => { if (e.key === 'Escape') closeModal(); });
 
 /* ── .ics 내보내기 ────────────────────────────────────────── */
@@ -871,26 +1117,33 @@ function icsFold(line) {
 
 function makeIcs(rows, calName) {
   const stamp = new Date().toISOString().replace(/[-:]/g, '').split('.')[0] + 'Z';
-  const L = ['BEGIN:VCALENDAR', 'VERSION:2.0', 'PRODID:-//CB//JP Earnings Calendar//KO',
+  const L = ['BEGIN:VCALENDAR', 'VERSION:2.0',
+             'PRODID:-//CB//Global Earnings Calendar//KO',
              'CALSCALE:GREGORIAN', 'METHOD:PUBLISH',
-             'X-WR-CALNAME:' + icsEscape(calName), 'X-WR-TIMEZONE:Asia/Tokyo'];
+             'X-WR-CALNAME:' + icsEscape(calName)];
   for (const r of rows) {
     const d = r[0].replace(/-/g, '');
     const end = addDays(r[0], 1).replace(/-/g, '');
-    const nt = NOTE[r[1]];
+    const k = keyOf(r), nt = NOTE[k], m = r[9];
+    /* 날짜는 각 시장의 현지 날짜다. 종일 일정으로 넣어 시차를 건드리지 않는다 —
+       구독하는 쪽 표준시로 환산하면 미국 장후 발표가 하루 밀려 보인다. */
     L.push('BEGIN:VEVENT',
-      'UID:jpe-' + r[1] + '-' + d + '@cb-earnings',
+      'UID:' + m + '-' + r[1] + '-' + d + '@cb-earnings',
       'DTSTAMP:' + stamp,
       'DTSTART;VALUE=DATE:' + d,
       'DTEND;VALUE=DATE:' + end,
-      'SUMMARY:' + icsEscape('[결산] ' + r[2] + ' ' + r[1] + ' · ' + r[4]),
+      'SUMMARY:' + icsEscape(
+        '[' + MKT[m].ko + '] ' + r[2] + ' ' + r[1] +
+        (r[4] ? ' · ' + r[4] : '') + (r[10] ? ' · ' + r[10] : '')),
       'DESCRIPTION:' + icsEscape(
-        r[7] + (nt ? ' / ' + nt[1] : '') + '\n' +
-        r[4] + ' · ' + r[3] + ' · ' + r[5] + ' · ' + r[6] + '증시' +
-        '\nhttps://www.nikkei.com/nkd/company/?scode=' + r[1]),
+        altOf(r).join(' / ') +
+        '\n' + [r[4], r[3], r[5], r[6]].filter(Boolean).join(' · ') +
+        (r[10] ? '\n발표 시각: ' + r[10] : '') +
+        (r[11] ? '\n시가총액: ' + capKo(r[11]) : '') +
+        '\n' + links(m, r[1])[1]),
       'TRANSP:TRANSPARENT',
       'BEGIN:VALARM', 'TRIGGER:-P1D', 'ACTION:DISPLAY',
-      'DESCRIPTION:' + icsEscape('내일 결산발표 — ' + r[2]),
+      'DESCRIPTION:' + icsEscape('내일 실적발표 — ' + r[2] + ' (' + MKT[m].ko + ')'),
       'END:VALARM', 'END:VEVENT');
   }
   L.push('END:VCALENDAR');
@@ -905,15 +1158,17 @@ function download(name, text) {
   setTimeout(() => URL.revokeObjectURL(a.href), 1000);
 }
 document.getElementById('icsWatch').onclick = () => {
-  const rows = ROWS.filter(r => watch.has(r[1]));
+  const rows = ROWS.filter(r => watch.has(keyOf(r)));
   if (!rows.length) { alert('관심종목이 없습니다. ☆ 를 눌러 먼저 담아주세요.'); return; }
-  download('jp-earnings-watchlist.ics', makeIcs(rows, '일본 결산발표 — 관심종목'));
+  download('earnings-watchlist.ics', makeIcs(rows, '글로벌 실적발표 — 관심종목'));
 };
 document.getElementById('icsWeek').onclick = () => {
   const days = new Set(weekDays(week));
-  const rows = ROWS.filter(r => days.has(r[0]));
+  const rows = VIEW.filter(r => days.has(r[0]));
+  const who = mkt ? MKT[mkt].ko : '글로벌';
   if (!rows.length) { alert('이번 주에는 발표 일정이 없습니다.'); return; }
-  download('jp-earnings-' + week + '.ics', makeIcs(rows, '일본 결산발표 ' + fmtWeek(week)));
+  download('earnings-' + (mkt || 'all') + '-' + week + '.ics',
+           makeIcs(rows, who + ' 실적발표 ' + fmtWeek(week)));
 };
 document.getElementById('clearWatch').onclick = () => {
   if (!watch.size) return;
@@ -933,15 +1188,18 @@ document.addEventListener('click', e => {
   const star = e.target.closest('[data-star]');
   if (star) { e.stopPropagation(); toggleWatch(star.dataset.star); return; }
 
+  const tab = e.target.closest('.mtab');
+  if (tab) { setMarket(tab.dataset.mkt); return; }
+
   const chipEl = e.target.closest('.chip');
   if (chipEl) {
     // 칩 안의 ★ 영역을 누르면 담기, 나머지는 상세 열기
-    if (e.target.closest('.st')) toggleWatch(chipEl.dataset.code);
-    else openModal(chipEl.dataset.code, chipEl.dataset.date);
+    if (e.target.closest('.st')) toggleWatch(chipEl.dataset.key);
+    else openModal(chipEl.dataset.key, chipEl.dataset.date);
     return;
   }
   const tr = e.target.closest('#tBody tr');
-  if (tr) { openModal(tr.dataset.code, tr.dataset.date); return; }
+  if (tr) { openModal(tr.dataset.key, tr.dataset.date); return; }
 
   const bar = e.target.closest('rect.b');
   if (bar) {
@@ -963,37 +1221,110 @@ document.querySelectorAll('#tAll thead th[data-k]').forEach(th => {
   };
 });
 
-for (const [id, arr] of [['fSector', D.sectors], ['fMarket', D.markets],
-                         ['fKind', ['1Q','2Q','3Q','본결산']]]) {
-  const sel = document.getElementById(id);
-  for (const v of arr) {
-    const o = document.createElement('option'); o.value = o.textContent = v; sel.appendChild(o);
+/* 업종·거래소·분기 후보는 지금 보고 있는 시장의 데이터에서 뽑는다.
+   일본 업종 36종을 미국 탭에서 고르게 두면 아무것도 안 걸린다. */
+function fillFilters() {
+  const opts = i => [...new Set(VIEW.map(r => r[i]).filter(Boolean))].sort();
+  for (const [id, arr, all] of [['fSector', opts(5), '전체 업종'],
+                                ['fMarket', opts(6), '전체 거래소'],
+                                ['fKind', opts(4), '전체 분기']]) {
+    const sel = document.getElementById(id), keep = sel.value;
+    sel.innerHTML = '<option value="">' + all + '</option>' +
+      arr.map(v => '<option value="' + esc(v) + '">' + esc(v) + '</option>').join('');
+    if (arr.includes(keep)) sel.value = keep;
+    sel.hidden = !arr.length;
   }
-  sel.onchange = renderTable;
+  // 시총은 미국 소스에만 있다. 다른 시장에서 걸어봐야 전부 걸러질 뿐이다.
+  const cap = document.getElementById('fCap');
+  cap.hidden = !VIEW.some(r => r[11]);
+  if (cap.hidden) cap.value = '0';
 }
+for (const id of ['fSector','fMarket','fKind','fCap'])
+  document.getElementById(id).onchange = renderTable;
 document.getElementById('q').oninput = renderTable;
 for (const id of ['tBig','tWatch','tFuture']) document.getElementById(id).onchange = renderTable;
 for (const id of ['onlyBig','onlyWatch']) document.getElementById(id).onchange = renderCal;
 document.getElementById('jpToggle').onchange = e => { showJp = e.target.checked; renderCal(); };
 
-document.getElementById('srcLink').innerHTML =
-  '<a href="' + D.sourceUrl + '" target="_blank" rel="noopener">' + D.sourceUrl + '</a>';
+/* ── 시장 탭 ──────────────────────────────────────────────── */
+function setMarket(m) {
+  mkt = m;
+  expanded.clear();
+  reslice();
+  fillFilters();
+  fillWeeks();
+  renderAll();
+}
+function renderTabs() {
+  const tabs = [{ id: '', flag: '🌐', ko: '전체', n: ROWS.length, has: true }]
+    .concat(MKTS.map(m => ({ id: m.id, flag: m.flag, ko: m.ko, n: m.count, has: m.has })));
+  document.getElementById('mtabs').innerHTML = tabs.map(t =>
+    '<button class="mtab m-' + (t.id || 'all') + (t.id === mkt ? ' on' : '') +
+    (t.has ? '' : ' empty') + '" data-mkt="' + t.id + '">' +
+    '<span class="fl">' + t.flag + '</span>' + esc(t.ko) +
+    '<span class="n">' + (t.has ? t.n.toLocaleString() + '건' : '미수집') + '</span></button>'
+  ).join('');
+}
 
+/* ── 요약 카드 ────────────────────────────────────────────── */
+function renderCards() {
+  const days = [...byDate.keys()].filter(d => byDate.get(d).length);
+  const busiest = days.reduce((a, d) =>
+    byDate.get(d).length > (a ? byDate.get(a).length : 0) ? d : a, '');
+  const big = VIEW.filter(noteOf).length;
+  const cards = [
+    ['수집 발표', VIEW.length.toLocaleString(), ''],
+    ['발표일 수', days.length.toLocaleString(), ''],
+    ['주목종목 발표', big.toLocaleString(), ''],
+    ['최다 발표일', busiest
+      ? busiest + ' · ' + byDate.get(busiest).length.toLocaleString() + '건' : '—', 'sm'],
+  ];
+  document.getElementById('cards').innerHTML = cards.map(c =>
+    '<div class="card"><div class="k">' + c[0] + '</div>' +
+    '<div class="v ' + c[2] + '">' + c[1] + '</div></div>').join('');
+
+  const cur = mkt ? MKT[mkt] : null;
+  document.getElementById('calMeta').textContent = cur
+    ? cur.ko + ' 상장사 실적발표 예정 — ' + cur.note
+    : '미국 · 일본 · 홍콩 상장사 실적발표 예정';
+}
+
+/* ── 출처와 수집 구멍 ─────────────────────────────────────── */
 /* 수집 구간에 구멍이 있으면 숨기지 않고 적는다. 빈 칸이 '발표가 없는 날'인지
    '아직 못 받은 날'인지 구분되지 않으면 캘린더를 믿을 수 없다. */
-(function () {
-  const gaps = [];
-  for (let d = D.okDays[0]; d <= D.okDays[D.okDays.length - 1]; d = addDays(d, 1)) {
-    if (!okDays.has(d)) gaps.push(d);
-  }
-  document.getElementById('gapNote').innerHTML = gaps.length
-    ? '미수집 ' + gaps.length + '일 (' + gaps.join(', ') + ') — 캘린더에 ' +
-      '<b>미수집 구간</b>으로 표시됩니다. 다시 수집하면 채워집니다.<br>'
-    : '';
-})();
+function renderFoot() {
+  document.getElementById('srcLink').innerHTML =
+    '출처 ' + D.sources.map(s => MKT[s.mkt].flag + ' ' + esc(s.name) +
+      ' <a href="' + esc(s.url) + '" target="_blank" rel="noopener">↗</a>').join(' · ') +
+    '<br>';
 
-function renderAll() { renderCal(); renderAlert(); renderGroups(); renderBars(); renderTable(); }
-renderAll();
+  let out = '';
+  for (const m of LIVE) {
+    const ds = D.okDays[m];
+    if (!ds || !ds.length) continue;
+    const gaps = [];
+    for (let d = ds[0]; d <= ds[ds.length - 1]; d = addDays(d, 1)) {
+      if (!okSet[m].has(d)) gaps.push(d);
+    }
+    if (gaps.length) {
+      out += MKT[m].flag + ' ' + MKT[m].ko + ' 미수집 ' + gaps.length + '일 (' +
+        (gaps.length > 12 ? gaps.slice(0, 12).join(', ') + ' 외 ' + (gaps.length - 12) + '일'
+                          : gaps.join(', ')) + ')<br>';
+    }
+  }
+  for (const m of MKTS.filter(x => !x.has)) {
+    out += m.flag + ' ' + m.ko + ' — 아직 수집하지 않았습니다. <b>python ' +
+           m.scraper + '</b> 을 돌리면 채워집니다.<br>';
+  }
+  document.getElementById('gapNote').innerHTML = out
+    ? out + '캘린더에는 <b>미수집 구간</b>으로 표시됩니다.<br>' : '';
+}
+
+function renderAll() {
+  renderTabs(); renderCards();
+  renderCal(); renderAlert(); renderGroups(); renderBars(); renderTable();
+}
+reslice(); fillFilters(); fillWeeks(); renderFoot(); renderAll();
 </script>
 </body>
 </html>
