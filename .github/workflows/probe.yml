@@ -26,18 +26,29 @@ jobs:
         continue-on-error: true
         run: python scrape_fin_intl.py --probe
 
-      - name: 🇺🇸 SEC — 태그를 갈아탄 회사가 이어 붙는지
+      - name: 🇺🇸 SEC — 외국 기업(IFRS)·은행·태그 갈아탄 회사
         continue-on-error: true
         run: |
           python - <<'PY'
           import scrape_fin as sf
-          # 엔비디아(1045810). 옛 태그에는 2020년까지만 있어서, 첫 태그에서 멈추면
-          # 6분기밖에 안 나온다. 합쳐서 26분기가 나와야 고쳐진 것이다.
-          for name, cik in (("NVDA", 1045810), ("AAPL", 320193), ("SE", 1703399)):
-              s = sf.series(cik)
+          # 앞 셋은 미국 기준(us-gaap), 뒤 여섯은 국제 기준(IFRS)으로 내는 회사들.
+          # 전에는 us-gaap 만 물어서 도요타·소니·HSBC 가 통째로 비었다.
+          # KO·XOM·V·AMT 는 분기가 두세 개밖에 안 나왔던 것들이다.
+          budget = [50]     # companyfacts 호출 한도
+          who = [("NVDA", 1045810), ("AAPL", 320193), ("SE", 1703399),
+                 ("KO", 21344), ("XOM", 34088), ("V", 1403161), ("AMT", 1053507),
+                 ("TM 도요타", 1094517), ("SONY 소니", 313838),
+                 ("HSBC", 1089113), ("SHEL 셸", 1306965),
+                 ("NVO 노보노디스크", 353278), ("UBS", 1610520)]
+          for name, cik in who:
+              try:
+                  s = sf.series(cik, budget)
+              except Exception as e:
+                  print(f"{name}: 실패 {e}"); continue
               if not s:
                   print(f"{name}: 없음"); continue
               p = s["points"]
-              print(f"{name}: {s['freq']} {len(p)}개  {p[0]['label']} ~ {p[-1]['label']}"
-                    f"  최근 매출 {p[-1]['rev']/1e9:.1f}B")
+              print(f"{name}: {s['freq']} {s['cur']} {len(p)}개  "
+                    f"{p[0]['label']} ~ {p[-1]['label']}  최근 {p[-1]['rev']:,.0f}")
+          print(f"항목 이름을 직접 찾아본 종목 {50 - budget[0]}개")
           PY
