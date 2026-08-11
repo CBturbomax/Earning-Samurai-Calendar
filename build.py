@@ -125,6 +125,21 @@ def load_extra():
 CAPS, SECTORS = load_extra()
 
 
+def load_fin():
+    """따로 받아둔 실적 수치(매출·영업이익 시계열, 발표 완료 여부)."""
+    p = HERE / "data" / "financials.json"
+    if not p.exists():
+        return {}
+    try:
+        return json.loads(p.read_text(encoding="utf-8")).get("stocks", {})
+    except (ValueError, OSError) as e:
+        print(f"  ! financials.json 읽기 실패: {e}")
+        return {}
+
+
+FIN = load_fin()
+
+
 def pack_jp(r):
     """일본만 기계 변환을 거친다. 원본이 일본어라 그대로는 훑어보기가 안 된다."""
     ko, lvl = to_korean(r["name"], companies.NOTABLE.get(r["code"], ("",))[0])
@@ -229,6 +244,9 @@ def build():
         "usdKrw": USD_KRW,
         # 시총 데이터가 있는 시장. 없는 시장에는 규모 필터를 적용할 수 없다.
         "capMarkets": sorted({p[9] for p in packed if p[11]}),
+        # 실적 수치. 캘린더에 실린 미국 종목 것만 실어 파일이 부풀지 않게 한다.
+        "fin": {s: v for s, v in FIN.items()
+                if s in {p[1] for p in packed if p[9] == "us"}},
     }
 
     stamp = datetime.now().strftime("%Y-%m-%d %H:%M KST")
@@ -408,14 +426,16 @@ input[type=search]:focus { outline:2px solid var(--a1); border-color:var(--a1); 
 .count { margin-left:auto; color:var(--mute); font-size:19px; }
 .count b { color:var(--a1); font-size:22px; }
 
-button.btn {
+/* button 과 a 를 함께 받는다. 예전에는 button.btn 으로만 잡아서
+   모달의 <a class="btn"> 링크가 맨 파란 글씨로 나왔다. */
+.btn {
   background:#0b1015; color:var(--fg); border:1px solid var(--line);
   border-radius:8px; padding:11px 16px; font-size:19px; font-family:inherit;
-  cursor:pointer;
+  cursor:pointer; text-decoration:none; display:inline-block; line-height:1.2;
 }
-button.btn:hover { border-color:var(--a1); color:var(--a1); }
-button.btn.pri { background:var(--a1); border-color:var(--a1); color:#fff; font-weight:700; }
-button.btn.pri:hover { filter:brightness(1.12); color:#fff; }
+.btn:hover { border-color:var(--a1); color:var(--a1); }
+.btn.pri { background:var(--a1); border-color:var(--a1); color:#fff; font-weight:700; }
+.btn.pri:hover { filter:brightness(1.12); color:#fff; }
 button.btn:disabled { opacity:.4; cursor:default; }
 button.btn:disabled:hover { border-color:var(--line); color:var(--fg); }
 
@@ -562,6 +582,36 @@ td.dim { color:var(--mute); font-size:18px; }
   padding:1px 6px; color:var(--mute);
 }
 .qtag.q4 { color:var(--a3); border-color:#4a3a1c; }
+
+/* ── 실적 시계열 ───────────────────────────────────────────── */
+#mdFin { margin-top:18px; }
+.finnote { color:var(--mute); font-size:17px; margin:10px 0 0; }
+.finwrap { border-top:1px solid var(--line); padding-top:14px; }
+.finhead { font-size:18px; font-weight:700; margin-bottom:8px; }
+.finhead .warn { color:var(--a3); font-weight:400; font-size:16px; margin-left:10px; }
+.finsvg { width:100%; height:auto; display:block; }
+.finsvg .fb { fill:#5B9BD5; }
+.finsvg .fl { fill:none; stroke-width:2; }
+.finsvg .fl.opm { stroke:#ED7D31; }
+.finsvg .fl.yoy { stroke:#7FD1A4; }
+.finsvg .fz { stroke:#3a4550; stroke-dasharray:3 3; }
+.finsvg .fx { fill:var(--mute); font-size:12px; }
+.finlegend { display:flex; gap:14px; flex-wrap:wrap; font-size:15px; color:var(--mute);
+             margin-top:6px; align-items:center; }
+.finlegend .lg::before { content:'■'; margin-right:4px; }
+.finlegend .rev::before { color:#5B9BD5; }
+.finlegend .opm::before { color:#ED7D31; }
+.finlegend .yoy::before { color:#7FD1A4; }
+.finlegend .src { margin-left:auto; font-size:14px; }
+.epsrow { display:flex; gap:8px; flex-wrap:wrap; margin-bottom:12px; }
+.epsbox { background:#141c24; border:1px solid var(--line); border-radius:7px;
+          padding:7px 11px; font-size:15px; }
+.epsbox b { display:block; color:var(--mute); font-size:13px; font-weight:600; }
+.epsbox i { color:var(--mute); font-style:normal; }
+.epsbox em { font-style:normal; margin-left:5px; font-weight:700; }
+.epsbox em.up { color:var(--ok); }
+.epsbox em.dn { color:var(--a1); }
+.epsbox.next { border-style:dashed; color:var(--mute); }
 /* 표의 시장 칸 — 왼쪽 띠로 캘린더 칩과 같은 색을 쓴다 */
 .mcell { white-space:nowrap; box-shadow:inset 3px 0 0 0 var(--mk,transparent); }
 
@@ -601,15 +651,15 @@ svg.bars rect.b:hover { fill:var(--a3); }
           display:flex; align-items:center; justify-content:center; padding:24px; }
 .mdback[hidden] { display:none; }
 .md { background:var(--panel); border:1px solid var(--line); border-radius:12px;
-      max-width:620px; width:100%; padding:22px 24px; }
+      max-width:1000px; width:100%; padding:22px 24px;
+      max-height:88vh; overflow-y:auto; }
 .md .mt { font-size:26px; font-weight:800; margin:0 0 4px; }
 .md .ms { color:var(--mute); font-size:18px; margin:0 0 14px; }
 .md dl { display:grid; grid-template-columns:auto 1fr; gap:8px 16px; margin:0 0 18px;
          font-size:19px; }
 .md dt { color:var(--mute); }
 .md dd { margin:0; }
-.md .mact { display:flex; gap:10px; flex-wrap:wrap; }
-.md a.btn { text-decoration:none; display:inline-block; }
+.md .mact { margin-top:18px; padding-top:14px; border-top:1px solid var(--line); display:flex; gap:10px; flex-wrap:wrap; }
 
 .foot { color:var(--mute); font-size:17px; margin-top:56px; line-height:1.7;
         border-top:1px solid var(--line); padding-top:18px; }
@@ -720,6 +770,7 @@ svg.bars rect.b:hover { fill:var(--a3); }
     <p class="mt" id="mdTitle"></p>
     <p class="ms" id="mdSub"></p>
     <dl id="mdList"></dl>
+    <div id="mdFin"></div>
     <div class="mact">
       <button class="btn pri" id="mdStar">★ 관심종목</button>
       <a class="btn" id="mdLink1" target="_blank" rel="noopener">종목정보</a>
@@ -1232,7 +1283,80 @@ function openModal(k, dt) {
   a2.textContent = L[2]; a2.href = L[3];
   const sb = document.getElementById('mdStar');
   sb.textContent = watch.has(k) ? '★ 관심종목 해제' : '☆ 관심종목 담기';
+  document.getElementById('mdFin').innerHTML = finBlock(m, code);
   document.getElementById('mdBack').hidden = false;
+}
+
+/* ── 실적 시계열 ──────────────────────────────────────────────
+   매출 막대 + 영업이익률 선 + YoY. 수치는 SEC 가 받은 공식 재무제표다.
+   미국 국내 기업만 분기가 있다 — 외국 기업(SEA·알리바바 등)은 SEC 에 연 1회만
+   내므로 연간 막대가 나온다. 없는 분기를 지어내지 않고 그렇게 적는다. */
+function finBlock(m, code) {
+  if (m !== 'us') return '<p class="finnote">실적 수치는 아직 미국 종목만 있습니다.</p>';
+  const f = D.fin[code];
+  if (!f) return '<p class="finnote">이 종목은 아직 실적 수치를 받지 않았습니다. ' +
+                 '시가총액 큰 종목부터 채우는 중입니다.</p>';
+  let html = '';
+  if (f.eps) {
+    const u = f.eps.upcoming, d = f.eps.done.slice(-4);
+    html += '<div class="epsrow">' +
+      d.map(x => '<span class="epsbox"><b>' + esc(x.period) + '</b>' +
+        'EPS ' + x.actual + (x.consensus ? ' <i>(예상 ' + x.consensus + ')</i>' : '') +
+        (x.consensus ? '<em class="' + (x.actual >= x.consensus ? 'up' : 'dn') + '">' +
+          (x.actual >= x.consensus ? '▲' : '▼') +
+          Math.abs(((x.actual - x.consensus) / Math.abs(x.consensus)) * 100).toFixed(0) +
+          '%</em>' : '') + '</span>').join('') +
+      (u ? '<span class="epsbox next"><b>' + esc(u.period) + '</b>아직 발표 전' +
+           (u.consensus ? ' <i>(예상 ' + u.consensus + ')</i>' : '') + '</span>' : '') +
+      '</div>';
+  }
+  if (f.points && f.points.length) html += finChart(f);
+  return html || '<p class="finnote">받아둔 수치가 없습니다.</p>';
+}
+
+function finChart(f) {
+  const pts = f.points.slice(-30);
+  const W = 900, H = 260, L = 52, R = 46, T = 22, B = 40;
+  const max = Math.max(...pts.map(p => p.rev), 1);
+  const bw = (W - L - R) / pts.length;
+  const y = v => H - B - (H - T - B) * v / max;
+  const money = v => Math.abs(v) >= 1e9 ? (v / 1e9).toFixed(1) + 'B'
+                   : Math.abs(v) >= 1e6 ? (v / 1e6).toFixed(0) + 'M' : v;
+
+  let bars = '', opm = [], yoy = [];
+  pts.forEach((p, i) => {
+    const x = L + i * bw, h = Math.max(H - B - y(p.rev), 1);
+    bars += '<rect class="fb" x="' + (x + bw * .15).toFixed(1) + '" y="' + y(p.rev).toFixed(1) +
+      '" width="' + (bw * .7).toFixed(1) + '" height="' + h.toFixed(1) + '"><title>' +
+      p.label + ' 매출 ' + money(p.rev) + '</title></rect>';
+    if (i % Math.ceil(pts.length / 15) === 0)
+      bars += '<text class="fx" x="' + (x + bw / 2).toFixed(1) + '" y="' + (H - B + 15) +
+        '" text-anchor="middle">' + p.label + '</text>';
+    if (p.opi != null && p.rev) opm.push([x + bw / 2, p.opi / p.rev, p.label]);
+    // 분기는 4개 전, 연간은 1개 전과 비교한다
+    const back = f.freq === 'Q' ? 4 : 1, prev = pts[i - back];
+    if (prev && prev.rev) yoy.push([x + bw / 2, p.rev / prev.rev - 1, p.label]);
+  });
+  // 오른쪽 축은 -30%~+60% 로 고정한다. 자동이면 한 분기 튀는 값에 전체가 눌린다.
+  const pct = v => H - B - (H - T - B) * ((Math.max(-0.3, Math.min(0.6, v)) + 0.3) / 0.9);
+  const path = a => a.map((p, i) => (i ? 'L' : 'M') + p[0].toFixed(1) + ',' + pct(p[1]).toFixed(1)).join(' ');
+
+  return '<div class="finwrap"><div class="finhead">' +
+    (f.freq === 'Q' ? '분기' : '연간') + ' 매출 · 영업이익률 · 성장률' +
+    (f.freq === 'A' ? '<span class="warn">이 회사는 SEC에 연 1회만 제출해 분기가 없습니다</span>' : '') +
+    '</div><svg viewBox="0 0 ' + W + ' ' + H + '" class="finsvg">' +
+    '<line class="fz" x1="' + L + '" y1="' + pct(0) + '" x2="' + (W - R) + '" y2="' + pct(0) + '"/>' +
+    bars +
+    (opm.length ? '<path class="fl opm" d="' + path(opm) + '"/>' : '') +
+    (yoy.length ? '<path class="fl yoy" d="' + path(yoy) + '"/>' : '') +
+    '<text class="fx" x="4" y="' + (T + 4) + '">' + money(max) + '</text>' +
+    '<text class="fx" x="' + (W - R + 6) + '" y="' + pct(0.6) + '">+60%</text>' +
+    '<text class="fx" x="' + (W - R + 6) + '" y="' + pct(0) + '">0%</text>' +
+    '<text class="fx" x="' + (W - R + 6) + '" y="' + pct(-0.3) + '">-30%</text>' +
+    '</svg><div class="finlegend">' +
+    '<span class="lg rev">매출</span><span class="lg opm">영업이익률</span>' +
+    '<span class="lg yoy">' + (f.freq === 'Q' ? 'YoY (전년 동분기)' : 'YoY (전년)') + '</span>' +
+    '<span class="src">출처 SEC 공식 재무제표</span></div></div>';
 }
 function closeModal() { document.getElementById('mdBack').hidden = true; mdKey = null; }
 document.getElementById('mdClose').onclick = closeModal;
