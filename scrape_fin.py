@@ -173,17 +173,40 @@ def one(cik, ns, tag):
     raise Throttled(f"{tag}: 네 번 다 실패")
 
 
-def merged(cik, ns, tags, enough=0):
+def compatible(base, add):
+    """두 태그가 같은 것을 재고 있나. 겹치는 기간의 값이 맞으면 같은 줄로 본다.
+
+    태그를 마구 합치면 엉뚱한 줄이 섞여 들어온다(부문 매출이나 다른 정의).
+    겹치는 데가 있는데 값이 어긋나면 그 태그는 통째로 버린다. 겹치는 데가
+    아예 없으면(옛 태그와 새 태그가 시기를 나눠 갖는 경우) 받아들인다 —
+    엔비디아가 그 경우다.
+    """
+    shared = [k for k in add if k in base]
+    if not shared:
+        return True
+    for k in shared:
+        b, a = base[k], add[k]
+        if not b:
+            continue
+        if abs(a - b) / abs(b) > 0.05:
+            return False
+    return True
+
+
+def merged(cik, ns, tags, into=None, enough=0):
     """여러 태그를 훑어 합친다. 먼저 걸리는 하나만 쓰면 안 된다 —
     회사가 도중에 태그를 갈아타기 때문이다. 엔비디아가 그랬다: 옛 태그에는
     2020년까지만 있어서, 첫 태그에서 멈추니 6분기밖에 안 나왔다.
     이미 채워진 분기는 건드리지 않는다(앞 태그가 더 정확한 표현이다).
 
-    enough 를 주면 그만큼 모였을 때 남은 태그를 건너뛴다. 흔한 회사에
-    쓸데없는 요청을 여러 번 하지 않으려는 것이다."""
-    mq, ma, cur = {}, {}, ""
+    into 를 주면 거기에 이어 붙인다 — 회계 기준을 갈아탄 회사는 us-gaap 과
+    IFRS 를 한 줄로 이어야 한다.
+    enough 를 주면 그만큼 모였을 때 남은 태그를 건너뛴다."""
+    mq, ma, cur = into if into else ({}, {}, "")
     for tag in tags:
         q, a, c = one(cik, ns, tag)
+        if not compatible(mq, q) or not compatible(ma, a):
+            continue                       # 다른 것을 재는 태그다. 섞지 않는다.
         cur = cur or c
         for k, v in q.items():
             mq.setdefault(k, v)
@@ -194,32 +217,47 @@ def merged(cik, ns, tags, enough=0):
     return mq, ma, cur
 
 
+def thin(rev_q, rev_a):
+    """더 찾아볼 만큼 얇은가. 분기 12개(3년) 또는 연간 6개면 충분하다고 본다."""
+    return len(rev_q) < 12 and len(rev_a) < 6
+
+
 def series(cik):
     """한 종목의 분기 매출·영업이익·순이익 시계열.
 
-    미국 기준(us-gaap)으로 먼저 묻고, 없으면 국제 기준(IFRS)으로 다시 묻는다.
+    미국 기준(us-gaap)과 국제 기준(IFRS)을 **둘 다** 본다. 없으면 넘어가는 게
+    아니라, 모자라면 더 찾는다 — 회사가 도중에 기준을 갈아타기 때문이다.
+    도요타는 2021년에, 소니는 2022년에 IFRS 로 옮겼다. us-gaap 에서 몇 개
+    건졌다고 거기서 멈추면 그 뒤 몇 해가 통째로 빈다(실제로 도요타가
+    2019~2020 두 해만 나왔다).
     """
-    ns = "us-gaap"
-    rev_q, rev_a, cur = merged(cik, ns, REV_CORE, enough=24)
-    if len(rev_q) < 12:
-        q2, a2, c2 = merged(cik, ns, REV_MORE, enough=24)
-        for k, v in q2.items():
-            rev_q.setdefault(k, v)
-        for k, v in a2.items():
-            rev_a.setdefault(k, v)
-        cur = cur or c2
-    if not rev_q and not rev_a:
-        ns = "ifrs-full"
-        rev_q, rev_a, cur = merged(cik, ns, IFRS_REV, enough=24)
+    got = merged(cik, "us-gaap", REV_CORE, enough=24)
+    if thin(got[0], got[1]):
+        got = merged(cik, "us-gaap", REV_MORE, into=got, enough=24)   # 은행 등
+    used_ifrs = False
+    if thin(got[0], got[1]):
+        before = (len(got[0]), len(got[1]))
+        got = merged(cik, "ifrs-full", IFRS_REV, into=got, enough=24)
+        used_ifrs = (len(got[0]), len(got[1])) != before
+    rev_q, rev_a, cur = got
     if not rev_q and not rev_a:
         return None
 
-    opi_tag, ni_tag = (OPI_TAG, NI_TAG) if ns == "us-gaap" else (IFRS_OPI, IFRS_NI)
-    opi_q, opi_a, _ = one(cik, ns, opi_tag)
-    ni_q, ni_a, _ = one(cik, ns, ni_tag)
+    # 영업이익·순이익도 매출을 찾은 쪽 기준으로 묻고, 기준을 갈아탄 회사는 둘 다.
+    opi_q, opi_a, _ = one(cik, "us-gaap", OPI_TAG)
+    ni_q, ni_a, _ = one(cik, "us-gaap", NI_TAG)
+    if used_ifrs:
+        for tag, tq, ta in ((IFRS_OPI, opi_q, opi_a), (IFRS_NI, ni_q, ni_a)):
+            q2, a2, _ = one(cik, "ifrs-full", tag)
+            for k, v in q2.items():
+                tq.setdefault(k, v)
+            for k, v in a2.items():
+                ta.setdefault(k, v)
 
     # 분기가 있으면 분기로, 없으면(20-F 만 내는 외국 기업) 연간으로 낸다.
-    use_q = bool(rev_q)
+    # 다만 분기가 어쩌다 두어 개 섞여 있는 회사가 있다 — 그걸 붙잡으면 8년치
+    # 연간을 버리고 막대 두 개짜리 그림을 그리게 된다. 분기는 여섯 개는 돼야 쓴다.
+    use_q = len(rev_q) >= 6 or (bool(rev_q) and not rev_a)
     rev, opi, ni = (rev_q, opi_q, ni_q) if use_q else (rev_a, opi_a, ni_a)
     ends = sorted(rev)
     if not ends:
