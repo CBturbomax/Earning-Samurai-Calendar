@@ -12,8 +12,9 @@ scrape.py      ──> data/earnings.json     ┐   '언제 발표하나'
 scrape_us.py   ──> data/earnings_us.json  │
 scrape_hk.py   ──> data/earnings_hk.json  ├─> build.py ──> index.html
 scrape_caps.py ──> data/caps.json         │   (+ markets.py
-scrape_fin.py  ──> data/financials.json   ┘    + companies*.py
-(닛케이/나스닥/HKEXnews/야후/SEC)               + translit.py)
+scrape_fin.py  ──> data/financials.json   │    + companies*.py
+scrape_fin_intl.py ─> financials_intl.json┘    + translit.py)
+(닛케이/나스닥/HKEXnews/야후/SEC)
                  '얼마나 큰가' '무엇을 발표했나'
 ```
 
@@ -40,6 +41,8 @@ python scrape_us.py 2026-07-20 2026-09-30   # 미국 일정
 python scrape_hk.py 2026-07-20 2026-09-30   # 홍콩 공시
 python scrape_caps.py                       # 일본·홍콩 시가총액 (범위 없음)
 python scrape_fin.py                        # 미국 실적 수치 (범위 없음)
+python scrape_fin_intl.py                   # 일본·홍콩 실적 수치 (범위 없음)
+python scrape_fin_intl.py --probe           # 응답 생김새만 떠보기
 ```
 
 **`data/` 에 있는 것만 실린다.** 세 시장이 다 없어도 빌드는 된다. 없는 시장은
@@ -58,7 +61,9 @@ python scrape_fin.py                        # 미국 실적 수치 (범위 없�
 | 시장을 하나 더 붙인다 | `markets.py` 항목 추가 → `scrape_*.py` → `companies_*.py` → `build.py`의 `DICTS` |
 | 규모 필터 눈금·환율 | `markets.py`의 `CAP_STEPS` / `USD_KRW` |
 | 발표 시각을 옮기는 규칙 | `markets.py`의 `US_BMO`/`US_AMC`/`JP_TYPICAL`, `build.py`의 `to_kst` |
-| 실적 수치를 더 받는다 | `scrape_fin.py` — 매출 태그는 `REV_TAGS` |
+| 미국 실적 수치를 더 받는다 | `scrape_fin.py` — 매출 태그는 `REV_TAGS` |
+| 일본·홍콩 실적 수치 | `scrape_fin_intl.py` |
+| 차트 모양·통화 표기 | `build.py`의 `finChart` / `CUR` |
 
 `index.html`은 **직접 고치지 않는다.** `build.py`가 덮어쓴다.
 
@@ -151,6 +156,29 @@ HKEXnews에서 **이미 공시된 실적**을 모은다. 성격이 다른 걸 �
 - 종목이 4천 개라 한 번에 다 못 받는다. 시총 큰 순으로 조금씩 채우고, 발표일
   언저리 종목은 매일·나머지는 7일마다 다시 받는다(`queue()`). 받는 방식을 고치면
   `FIN_VER` 를 올린다 — 그래야 이미 받아둔 헌 기록도 다시 받는다.
+
+**일본·홍콩 차트는 짧다. 그걸 숨기지 않는다.** `scrape_fin_intl.py` (야후).
+
+- 미국처럼 공짜로 열린 공식 재무 API 가 없다. EDINET 은 2024년부터 신청키를
+  요구하고, HKEXnews 는 공시를 PDF 로 올린다.
+- 야후는 **최근 연간 4개 / 분기 5개**까지만 준다. period1 을 2018년으로 줘도 더
+  안 준다(확인함: 텐센트 1개, 소니 5개, 청쿵 4개). 미국은 1Q19 부터 다 나오는데
+  일본·홍콩은 안 된다. **분기를 쪼개 채워 넣지 말 것** — 대신 차트에 "받을 수
+  있었던 건 N개뿐입니다"라고 적는다.
+- 홍콩은 반기(6M)가 많다. 야후가 기간 종류(3M/6M/12M)를 주므로 그걸 믿고
+  반기 막대로 낸다. 한 회사에 3M 과 6M 이 섞여 오면 많은 쪽만 남긴다 — 섞으면
+  반기 막대가 분기의 두 배로 솟아 추세가 거짓말이 된다.
+- **통화를 환산하지 않는다.** 도요타는 엔, 텐센트는 위안 그대로 담고 화면에
+  통화를 적는다. 몇 년치를 오늘 환율로 환산하면 매출 추세가 아니라 환율 추세가 된다.
+
+**수집 워크플로는 main 에서만 돈다.** 기능 브랜치에서도 돌게 두었더니 두 브랜치가
+각자 자료를 받아 서로 다른 `data/` 를 커밋했고, 그게 매번 충돌로 돌아왔다.
+
+**되커밋에 `git pull --rebase` 를 쓰지 않는다.** 부딪히는 파일은 늘 `data/` 와
+`index.html` — 우리가 방금 만든 것들이다. 리베이스는 충돌 상태로 멈추고, 재시도
+반복문이 그 위에서 또 pull 을 불러 네 번 다 실패한다(실제로 20분치 수집을 버렸다).
+지금은 merge 로 합치고 부딪히면 우리 것을 택한 뒤 **합친 코드로 페이지를 다시
+만든다**. 코드가 부딪히면 조용히 덮지 않고 실패시킨다.
 
 **날짜는 각 시장의 현지 날짜다.** 미국 장후 발표는 한국 시각으로 다음 날 새벽이다.
 전체 보기에서 세 시장을 같은 칸에 놓는 건 근사고, 푸터에 그렇게 적어두었다.

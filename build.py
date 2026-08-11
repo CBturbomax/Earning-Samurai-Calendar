@@ -126,15 +126,26 @@ CAPS, SECTORS = load_extra()
 
 
 def load_fin():
-    """따로 받아둔 실적 수치(매출·영업이익 시계열, 발표 완료 여부)."""
-    p = HERE / "data" / "financials.json"
-    if not p.exists():
-        return {}
-    try:
-        return json.loads(p.read_text(encoding="utf-8")).get("stocks", {})
-    except (ValueError, OSError) as e:
-        print(f"  ! financials.json 읽기 실패: {e}")
-        return {}
+    """따로 받아둔 실적 수치(매출·영업이익 시계열, 발표 완료 여부).
+
+    출처가 둘이다. 미국은 SEC(financials.json), 일본·홍콩은 야후
+    (financials_intl.json). 열쇠는 `시장:코드` 로 맞춘다 — 일본 8035 와
+    홍콩 08035 는 다른 회사이므로 코드만으로는 가를 수 없다.
+    """
+    out = {}
+    for name, prefix in (("financials.json", "us:"), ("financials_intl.json", "")):
+        p = HERE / "data" / name
+        if not p.exists():
+            continue
+        try:
+            got = json.loads(p.read_text(encoding="utf-8")).get("stocks", {})
+        except (ValueError, OSError) as e:
+            print(f"  ! {name} 읽기 실패: {e}")
+            continue
+        for k, v in got.items():
+            # 예전 financials.json 은 열쇠가 'AAPL' 이었다. 'us:' 를 붙여 옮긴다.
+            out[k if ":" in k else prefix + k] = v
+    return out
 
 
 FIN = load_fin()
@@ -244,14 +255,15 @@ def build():
         "usdKrw": USD_KRW,
         # 시총 데이터가 있는 시장. 없는 시장에는 규모 필터를 적용할 수 없다.
         "capMarkets": sorted({p[9] for p in packed if p[11]}),
-        # 실적 수치. 캘린더에 실린 미국 종목 것만, 그중에서도 알맹이가 있는 것만
+        # 실적 수치. 캘린더에 실린 종목 것만, 그중에서도 알맹이가 있는 것만
         # 싣는다. 수집 쪽에는 '두드려 봤지만 자료가 없더라'는 표시만 남은 기록도
         # 있는데(v/ts/none), 그건 다음에 또 두드릴지 정하는 데만 쓰고 화면에는
         # 필요 없다. 그대로 실으면 index.html 만 몇 배로 부푼다.
-        "fin": {s: {k: v for k, v in rec.items() if k in ("freq", "points", "eps")}
+        "fin": {s: {k: v for k, v in rec.items()
+                    if k in ("freq", "points", "eps", "cur", "src")}
                 for s, rec in FIN.items()
                 if (rec.get("points") or rec.get("eps"))
-                and s in {p[1] for p in packed if p[9] == "us"}},
+                and s in {p[9] + ":" + p[1] for p in packed}},
     }
 
     stamp = datetime.now().strftime("%Y-%m-%d %H:%M KST")
@@ -1015,7 +1027,7 @@ function epsKey(p) {
 }
 function doneInfo(r) {
   if (r[9] !== 'us') return null;
-  const f = D.fin[r[1]];
+  const f = D.fin['us:' + r[1]];
   if (!f || !f.eps || !f.eps.done) return null;
   const want = fyKey(r[3]);
   if (!want) return null;
@@ -1380,9 +1392,19 @@ function openModal(k, dt) {
    매출 막대 + 영업이익률 선 + YoY. 수치는 SEC 가 받은 공식 재무제표다.
    미국 국내 기업만 분기가 있다 — 외국 기업(SEA·알리바바 등)은 SEC 에 연 1회만
    내므로 연간 막대가 나온다. 없는 분기를 지어내지 않고 그렇게 적는다. */
+/* 통화별 자릿수. 엔·원은 자릿수가 커서 달러와 같은 눈금을 쓰면 못 읽는다.
+   환산하지 않고 원래 통화 그대로 적는다 — 몇 년치를 오늘 환율로 환산하면
+   매출 추세가 아니라 환율 추세가 된다. */
+const CUR = {
+  USD: { ko: '달러', steps: [[1e9, 'B'], [1e6, 'M'], [1e3, 'K']] },
+  JPY: { ko: '엔',   steps: [[1e12, '조'], [1e8, '억'], [1e4, '만']] },
+  HKD: { ko: '홍콩달러', steps: [[1e9, 'B'], [1e6, 'M'], [1e3, 'K']] },
+  CNY: { ko: '위안', steps: [[1e8, '억'], [1e4, '만']] },
+  EUR: { ko: '유로', steps: [[1e9, 'B'], [1e6, 'M'], [1e3, 'K']] },
+};
+
 function finBlock(m, code) {
-  if (m !== 'us') return '<p class="finnote">실적 수치는 아직 미국 종목만 있습니다.</p>';
-  const f = D.fin[code];
+  const f = D.fin[m + ':' + code];
   if (!f) return '<p class="finnote">이 종목은 아직 실적 수치를 받지 않았습니다. ' +
                  '시가총액 큰 종목부터 채우는 중입니다.</p>';
   let html = '';
@@ -1405,32 +1427,50 @@ function finChart(f) {
   const pts = f.points.slice(-30);
   const W = 900, H = 260, L = 52, R = 46, T = 22, B = 40;
   const max = Math.max(...pts.map(p => p.rev), 1);
-  const bw = (W - L - R) / pts.length;
+  // 막대가 4~5개뿐일 때(일본·홍콩) 폭을 그대로 나누면 한 칸이 200px 이 된다.
+  // 폭을 묶고 가운데로 모은다 — 자료가 적은 걸 크게 그려 많아 보이게 하지 않는다.
+  const bw = Math.min((W - L - R) / pts.length, 64);
+  const x0 = L + ((W - L - R) - bw * pts.length) / 2;
   const y = v => H - B - (H - T - B) * v / max;
-  const money = v => Math.abs(v) >= 1e9 ? (v / 1e9).toFixed(1) + 'B'
-                   : Math.abs(v) >= 1e6 ? (v / 1e6).toFixed(0) + 'M' : v;
+  // 통화가 시장마다 다르다. 엔·위안은 자릿수가 커서 조(兆) 단위가 읽기 좋다.
+  const U = CUR[f.cur || 'USD'] || CUR.USD;
+  const money = v => {
+    const a = Math.abs(v);
+    for (const [n, u] of U.steps) if (a >= n) return (v / n).toFixed(a / n >= 100 ? 0 : 1) + u;
+    return Math.round(v).toLocaleString();
+  };
 
   let bars = '', opm = [], yoy = [];
+  const every = Math.ceil(pts.length / 15);
   pts.forEach((p, i) => {
-    const x = L + i * bw, h = Math.max(H - B - y(p.rev), 1);
+    const x = x0 + i * bw, h = Math.max(H - B - y(p.rev), 1);
     bars += '<rect class="fb" x="' + (x + bw * .15).toFixed(1) + '" y="' + y(p.rev).toFixed(1) +
       '" width="' + (bw * .7).toFixed(1) + '" height="' + h.toFixed(1) + '"><title>' +
       p.label + ' 매출 ' + money(p.rev) + '</title></rect>';
-    if (i % Math.ceil(pts.length / 15) === 0)
+    if (i % every === 0)
       bars += '<text class="fx" x="' + (x + bw / 2).toFixed(1) + '" y="' + (H - B + 15) +
         '" text-anchor="middle">' + p.label + '</text>';
     if (p.opi != null && p.rev) opm.push([x + bw / 2, p.opi / p.rev, p.label]);
-    // 분기는 4개 전, 연간은 1개 전과 비교한다
-    const back = f.freq === 'Q' ? 4 : 1, prev = pts[i - back];
+    // 분기는 4개 전, 반기는 2개 전, 연간은 1개 전과 비교한다
+    const back = f.freq === 'Q' ? 4 : f.freq === 'H' ? 2 : 1, prev = pts[i - back];
     if (prev && prev.rev) yoy.push([x + bw / 2, p.rev / prev.rev - 1, p.label]);
   });
   // 오른쪽 축은 -30%~+60% 로 고정한다. 자동이면 한 분기 튀는 값에 전체가 눌린다.
   const pct = v => H - B - (H - T - B) * ((Math.max(-0.3, Math.min(0.6, v)) + 0.3) / 0.9);
   const path = a => a.map((p, i) => (i ? 'L' : 'M') + p[0].toFixed(1) + ',' + pct(p[1]).toFixed(1)).join(' ');
+  const per = f.freq === 'Q' ? '분기' : f.freq === 'H' ? '반기' : '연간';
+
+  // 짧으면 짧다고 적는다. 미국은 SEC 가 1Q19 부터 다 주지만 일본·홍콩은
+  // 공짜로 열린 소스가 최근 것만 준다. 조용히 짧게 그려 놓으면
+  // "이 회사는 옛날에 없던 회사인가" 하고 잘못 읽는다.
+  const notes = [];
+  if (f.freq === 'A' && f.src !== 'yahoo') notes.push('SEC에 연 1회만 제출해 분기가 없습니다');
+  if (f.freq === 'H') notes.push('홍콩은 반기 보고입니다');
+  if (pts.length < 8) notes.push('받을 수 있었던 건 ' + pts.length + '개뿐입니다');
 
   return '<div class="finwrap"><div class="finhead">' +
-    (f.freq === 'Q' ? '분기' : '연간') + ' 매출 · 영업이익률 · 성장률' +
-    (f.freq === 'A' ? '<span class="warn">이 회사는 SEC에 연 1회만 제출해 분기가 없습니다</span>' : '') +
+    per + ' 매출 · 영업이익률 · 성장률' +
+    (notes.length ? '<span class="warn">' + notes.join(' · ') + '</span>' : '') +
     '</div><svg viewBox="0 0 ' + W + ' ' + H + '" class="finsvg">' +
     '<line class="fz" x1="' + L + '" y1="' + pct(0) + '" x2="' + (W - R) + '" y2="' + pct(0) + '"/>' +
     bars +
@@ -1441,9 +1481,10 @@ function finChart(f) {
     '<text class="fx" x="' + (W - R + 6) + '" y="' + pct(0) + '">0%</text>' +
     '<text class="fx" x="' + (W - R + 6) + '" y="' + pct(-0.3) + '">-30%</text>' +
     '</svg><div class="finlegend">' +
-    '<span class="lg rev">매출</span><span class="lg opm">영업이익률</span>' +
-    '<span class="lg yoy">' + (f.freq === 'Q' ? 'YoY (전년 동분기)' : 'YoY (전년)') + '</span>' +
-    '<span class="src">출처 SEC 공식 재무제표</span></div></div>';
+    '<span class="lg rev">매출 (' + U.ko + ')</span><span class="lg opm">영업이익률</span>' +
+    '<span class="lg yoy">전년 대비</span>' +
+    '<span class="src">출처 ' + (f.src === 'yahoo' ? 'Yahoo Finance' : 'SEC 공식 재무제표') +
+    '</span></div></div>';
 }
 function closeModal() { document.getElementById('mdBack').hidden = true; mdKey = null; }
 document.getElementById('mdClose').onclick = closeModal;
