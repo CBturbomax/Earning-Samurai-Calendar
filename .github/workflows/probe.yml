@@ -24,3 +24,31 @@ jobs:
       - name: 📊 stockanalysis — 새 수집기가 실제로 뽑아내는가
         continue-on-error: true
         run: python scrape_fin_intl.py --probe
+
+      - name: 🔎 더 깊이 받을 수 있나 (기간 옵션 떠보기)
+        continue-on-error: true
+        run: |
+          python - <<'PY'
+          import scrape_fin_intl as si
+          # 기본은 20분기였다. 옵션을 붙이면 더 오는지 본다. 1Q19 까지 가면 좋다.
+          base = "https://stockanalysis.com/stocks/se/financials/__data.json"
+          jp   = "https://stockanalysis.com/quote/tyo/7203/financials/__data.json"
+          tries = [
+            ("기본",            base + "?p=quarterly"),
+            ("range=10Y",      base + "?p=quarterly&range=10Y"),
+            ("range=20Y",      base + "?p=quarterly&range=20Y"),
+            ("period=quarterly", base + "?period=quarterly"),
+            ("i=trailing",     base + "?p=quarterly&i=trailing"),
+            ("도요타 기본",      jp + "?p=quarterly"),
+            ("도요타 range=10Y", jp + "?p=quarterly&range=10Y"),
+          ]
+          for label, u in tries:
+              try:
+                  s = si.series(u)
+              except Exception as e:
+                  print(f"  {label:<18} 실패 {e}"); continue
+              if not s:
+                  print(f"  {label:<18} 자료 없음"); continue
+              p = s["points"]
+              print(f"  {label:<18} 분기 {len(p):>2}개  {p[0]['label']} ~ {p[-1]['label']}  {s['cur']}")
+          PY
