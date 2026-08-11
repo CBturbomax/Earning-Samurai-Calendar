@@ -244,9 +244,14 @@ def build():
         "usdKrw": USD_KRW,
         # 시총 데이터가 있는 시장. 없는 시장에는 규모 필터를 적용할 수 없다.
         "capMarkets": sorted({p[9] for p in packed if p[11]}),
-        # 실적 수치. 캘린더에 실린 미국 종목 것만 실어 파일이 부풀지 않게 한다.
-        "fin": {s: v for s, v in FIN.items()
-                if s in {p[1] for p in packed if p[9] == "us"}},
+        # 실적 수치. 캘린더에 실린 미국 종목 것만, 그중에서도 알맹이가 있는 것만
+        # 싣는다. 수집 쪽에는 '두드려 봤지만 자료가 없더라'는 표시만 남은 기록도
+        # 있는데(v/ts/none), 그건 다음에 또 두드릴지 정하는 데만 쓰고 화면에는
+        # 필요 없다. 그대로 실으면 index.html 만 몇 배로 부푼다.
+        "fin": {s: {k: v for k, v in rec.items() if k in ("freq", "points", "eps")}
+                for s, rec in FIN.items()
+                if (rec.get("points") or rec.get("eps"))
+                and s in {p[1] for p in packed if p[9] == "us"}},
     }
 
     stamp = datetime.now().strftime("%Y-%m-%d %H:%M KST")
@@ -449,6 +454,18 @@ button.btn:disabled:hover { border-color:var(--line); color:var(--fg); }
 .weeknav .wsum { color:var(--mute); font-size:18px; }
 .weeknav .spacer { margin-left:auto; }
 
+/* 나라 고르기 — 위쪽 탭과 같은 것을 캘린더 옆에도 둔다. 주를 넘기다가
+   나라를 바꾸려고 맨 위까지 올라갔다 오지 않게. 둘은 늘 같이 움직인다. */
+.mpick { display:flex; gap:6px; flex-wrap:wrap; }
+.mpick .mp {
+  font:inherit; font-size:17px; font-weight:700; cursor:pointer;
+  background:#141c24; color:var(--mute); border:1px solid var(--line);
+  border-radius:999px; padding:5px 13px; line-height:1.3;
+}
+.mpick .mp:hover:not(:disabled) { border-color:var(--a2); color:var(--fg); }
+.mpick .mp.on { background:var(--a2); border-color:var(--a2); color:#0b1116; }
+.mpick .mp:disabled { opacity:.4; cursor:not-allowed; }
+
 /* ── 주간 캘린더 ───────────────────────────────────────────── */
 .cal {
   display:grid; grid-template-columns:repeat(5,minmax(0,1fr)); gap:14px;
@@ -515,6 +532,9 @@ button.btn:disabled:hover { border-color:var(--line); color:var(--fg); }
 /* 한국 시간 표기. 원본에 실제 시각이 있으면 또렷하게, 어림한 것은 흐리게. */
 .tm.exact { color:var(--ok); border:1px solid #24463a; font-variant-numeric:tabular-nums; }
 .tm.approx { color:var(--mute); border:1px solid var(--line); font-variant-numeric:tabular-nums; }
+/* 발표가 이미 나온 것. 예정 시각보다 '나왔다'가 더 중요한 소식이라 이걸 덮어쓴다. */
+.tm.ok { color:#0b1116; background:var(--ok); border:1px solid var(--ok);
+         font-variant-numeric:tabular-nums; }
 /* 칩의 시총 표기 */
 .chip .cc {
   flex:0 0 auto; font-size:13px; color:#8fb8dc; font-variant-numeric:tabular-nums;
@@ -536,6 +556,17 @@ button.btn:disabled:hover { border-color:var(--line); color:var(--fg); }
 .chip .st { flex:0 0 auto; font-size:16px; color:#3d4852; }
 .chip .st.on { color:var(--a3); }
 .chip.watch { border-color:var(--a3); }
+
+/* 이미 실적이 나온 종목. 눌러보면 숫자가 있다는 뜻이라 눈에 띄어야 한다. */
+.chip.done { border-color:#27503c; }
+.donetag {
+  display:inline-block; background:#173026; border:1px solid #27503c; color:var(--ok);
+  border-radius:5px; padding:1px 8px; font-size:15px; font-weight:700; margin-left:6px;
+}
+.dim { color:var(--mute); }
+.dim em { font-style:normal; font-weight:700; margin-left:4px; }
+.dim em.up { color:var(--ok); }
+.dim em.dn { color:var(--a1); }
 .more {
   width:100%; background:transparent; border:1px dashed var(--line);
   color:var(--mute); border-radius:7px; padding:7px; font-size:16px;
@@ -697,6 +728,7 @@ svg.bars rect.b:hover { fill:var(--a3); }
   <span class="spacer"></span>
   <button class="btn" id="wToday">오늘 주</button>
   <select id="wPick"></select>
+  <span class="mpick" id="calMkts" title="나라를 켜고 끕니다. 맨 위 탭과 같이 움직입니다."></span>
   <select id="fCap" title="시가총액으로 거릅니다. 캘린더와 표에 함께 적용됩니다."></select>
   <label class="chk"><input type="checkbox" id="kstToggle" checked>한국 시간</label>
   <label class="chk"><input type="checkbox" id="onlyWatch">관심종목만</label>
@@ -817,6 +849,10 @@ function syncMkt() {
   const on = [...picked];
   mkt = on.length === 1 ? on[0] : '';
 }
+/* 지금 켜 둔 시장들. 휴장·미수집·주목종목·막대가 전부 이걸 봐야 한다.
+   'mkt 아니면 전부'로 두면 미국+홍콩만 켠 상태에서 일본 휴장이 그대로 뜬다 —
+   보지도 않는 시장 때문에 "휴장"이라고 적히는 셈이라 거짓말이 된다. */
+function onMkts() { return MKTS.map(m => m.id).filter(id => picked.has(id)); }
 
 /* 지금 시장에 해당하는 행만. 시장을 바꿀 때마다 다시 만든다. */
 let VIEW = [], byDate = new Map();
@@ -843,13 +879,13 @@ const okSet = {};
 for (const m of LIVE) okSet[m] = new Set(D.okDays[m] || []);
 /* 그 날 아직 못 받은 시장들. 비어 있으면 구멍이 없다는 뜻. */
 function missing(d) {
-  return (mkt ? [mkt] : LIVE).filter(m => okSet[m] && !okSet[m].has(d));
+  return onMkts().filter(m => okSet[m] && !okSet[m].has(d));
 }
 /* 그 날의 휴장 사정. all=true 면 보고 있는 시장이 전부 쉰다.
    전체 보기에서 일본만 쉬는 날을 '휴장'이라 적으면 거짓말이 된다 —
    미국은 그날 멀쩡히 연다. 그래서 누가 쉬는지를 같이 적는다. */
 function holidayInfo(d) {
-  const ms = mkt ? [mkt] : LIVE;
+  const ms = onMkts();
   const hit = ms.filter(m => D.holidays[m] && D.holidays[m][d]);
   if (!hit.length) return { text: '', all: false };
   const label = [...new Set(hit.map(m => D.holidays[m][d]))].join(' · ');
@@ -958,16 +994,64 @@ function timeTag(r) {
   return '<span class="tm ' + (r[10] === '장전' ? 'pre' : 'post') + '">' + r[10] + '</span>';
 }
 
+/* ── 발표가 이미 나왔는가 ─────────────────────────────────────
+   날짜로 어림잡지 않는다. 장후 발표는 예정일 저녁에야 나오므로 '날짜가 지났으니
+   발표했겠지'로 치면 반나절을 틀린다. 대신 나스닥이 준 **실제 EPS 가 찍힌 분기**와
+   그 행의 결산기를 맞춰본다. 숫자가 나왔으면 발표된 것이다.
+   자료가 있는 건 미국뿐이라 일본·홍콩에는 배지를 달지 않는다 — 모르는 걸 안다고
+   적지 않는다. (홍콩은 애초에 '이미 나온 공시'만 모으므로 전부 지나간 발표다.) */
+const MON = { jan:1, feb:2, mar:3, apr:4, may:5, jun:6,
+              jul:7, aug:8, sep:9, oct:10, nov:11, dec:12 };
+/* '2026년 6월 분기' -> '2026-6' */
+function fyKey(fy) {
+  const m = /(\d{4})\D+(\d{1,2})\s*월/.exec(fy || '');
+  return m ? m[1] + '-' + (+m[2]) : '';
+}
+/* 'Jun 2026' -> '2026-6' */
+function epsKey(p) {
+  const m = /([A-Za-z]{3})\D*(\d{4})/.exec(p || '');
+  const n = m && MON[m[1].toLowerCase()];
+  return n ? m[2] + '-' + n : '';
+}
+function doneInfo(r) {
+  if (r[9] !== 'us') return null;
+  const f = D.fin[r[1]];
+  if (!f || !f.eps || !f.eps.done) return null;
+  const want = fyKey(r[3]);
+  if (!want) return null;
+  return f.eps.done.find(x => epsKey(x.period) === want) || null;
+}
+
+/* EPS 가 '$1.85' 처럼 기호를 달고 올 때가 있다. 숫자만 뽑는다. */
+function num(v) {
+  const n = parseFloat(String(v == null ? '' : v).replace(/[^0-9.\-]/g, ''));
+  return isFinite(n) ? n : null;
+}
+/* 예상 대비 몇 %. 예상이 0 이면 나눌 수 없으니 비운다. */
+function surprise(a, c) {
+  a = num(a); c = num(c);
+  if (a === null || !c) return '';
+  const p = ((a - c) / Math.abs(c)) * 100;
+  return '<em class="' + (p >= 0 ? 'up' : 'dn') + '">' + (p >= 0 ? '▲' : '▼') +
+         Math.abs(p).toFixed(0) + '%</em>';
+}
+
 function chip(r, big) {
   const k = keyOf(r), on = watch.has(k), t = timeOf(r);
+  const dn = doneInfo(r);
+  // 발표가 끝났으면 ✓ 를 시각 자리에 넣는다. 칸을 하나 더 만들면 그만큼 회사 이름이
+  // 잘려서, 정작 무슨 회사인지 안 보이게 된다.
+  const badge = dn
+    ? '<span class="tm ok" title="실적이 나왔습니다. 눌러보세요.">✓' + (t ? ' ' + t : '') + '</span>'
+    : t ? '<span class="tm ' + (r[14] ? 'exact' : 'approx') + '">' + t + '</span>'
+        : timeTag(r);
   return '<button class="chip m-' + r[9] + (big ? ' big' : '') + (on ? ' watch' : '') +
+         (dn ? ' done' : '') +
          '" data-key="' + esc(k) + '" data-date="' + dateOf(r) + '">' +
          (mkt ? '' : '<span class="fl">' + MKT[r[9]].flag + '</span>') +
          '<span class="cd">' + esc(r[1]) + '</span>' +
          '<span class="cn' + (r[8] === 0 ? ' guess' : '') + '" title="' + esc(bothOf(r)) +
-         '">' + esc(nameOf(r)) + '</span>' +
-         (t ? '<span class="tm ' + (r[14] ? 'exact' : 'approx') + '">' + t + '</span>'
-            : timeTag(r)) +
+         '">' + esc(nameOf(r)) + '</span>' + badge +
          (r[11] ? '<span class="cc">' + capShort(r[11]) + '</span>' : '') +
          '<span class="st' + (on ? ' on' : '') + '">' + (on ? '★' : '☆') + '</span>' +
          '</button>';
@@ -1117,7 +1201,7 @@ function renderGroups() {
   }
   // 시장을 가로질러 보는 중이면 시장별로 묶어서 낸다. 테마 이름이 시장마다
   // 겹치므로(둘 다 '금융'이 있다) 한 통에 부으면 섞여버린다.
-  const shownMkts = mkt ? [mkt] : LIVE;
+  const shownMkts = onMkts();
   let shown = 0, dictTotal = 0, html = '';
   for (const m of shownMkts) {
     const order = D.groupOrder[m] || [];
@@ -1156,8 +1240,7 @@ function renderGroups() {
 
 /* ── 일자별 막대 ──────────────────────────────────────────── */
 function renderBars() {
-  const src = mkt ? (D.okDays[mkt] || [])
-                  : [...new Set(LIVE.flatMap(m => D.okDays[m] || []))].sort();
+  const src = [...new Set(onMkts().flatMap(m => D.okDays[m] || []))].sort();
   const days = src.filter(d => (byDate.get(d) || []).length);
   if (!days.length) { document.getElementById('bars').innerHTML = ''; return; }
   const W = 1400, H = 260, PAD_L = 8, PAD_B = 46, PAD_T = 24;
@@ -1267,9 +1350,15 @@ function openModal(k, dt) {
   document.getElementById('mdSub').textContent =
     altOf(r).concat(r[8] === 0 ? ['한글 표기는 기계 변환'] : []).join(' · ');
   const dd = Math.round((parse(r[0]) - parse(D.today)) / 86400000);
+  const dn = doneInfo(r);
   document.getElementById('mdList').innerHTML =
-    '<dt>발표 예정일</dt><dd>' + r[0] + ' (' + DOW[(parse(r[0]).getDay()+6)%7] + ') ' +
-    (dd === 0 ? '· 오늘' : dd > 0 ? '· D-' + dd : '· ' + (-dd) + '일 전') + '</dd>' +
+    '<dt>' + (dn ? '발표일' : '발표 예정일') + '</dt><dd>' +
+    r[0] + ' (' + DOW[(parse(r[0]).getDay()+6)%7] + ') ' +
+    (dd === 0 ? '· 오늘' : dd > 0 ? '· D-' + dd : '· ' + (-dd) + '일 전') +
+    (dn ? ' <span class="donetag">✓ 발표 완료</span>' +
+          (dn.actual ? ' <span class="dim">EPS ' + esc(String(dn.actual)) +
+                       ' ' + surprise(dn.actual, dn.consensus) + '</span>' : '')
+        : '') + '</dd>' +
     (r[10] ? '<dt>발표 시각</dt><dd>' + esc(r[10]) +
              (r[10] === '장전' ? ' (Before Open)' : ' (After Close)') + '</dd>' : '') +
     '<dt>분기</dt><dd>' + esc([r[4], r[3]].filter(Boolean).join(' · ') || '—') + '</dd>' +
@@ -1301,11 +1390,9 @@ function finBlock(m, code) {
     const u = f.eps.upcoming, d = f.eps.done.slice(-4);
     html += '<div class="epsrow">' +
       d.map(x => '<span class="epsbox"><b>' + esc(x.period) + '</b>' +
-        'EPS ' + x.actual + (x.consensus ? ' <i>(예상 ' + x.consensus + ')</i>' : '') +
-        (x.consensus ? '<em class="' + (x.actual >= x.consensus ? 'up' : 'dn') + '">' +
-          (x.actual >= x.consensus ? '▲' : '▼') +
-          Math.abs(((x.actual - x.consensus) / Math.abs(x.consensus)) * 100).toFixed(0) +
-          '%</em>' : '') + '</span>').join('') +
+        'EPS ' + esc(String(x.actual)) +
+        (x.consensus ? ' <i>(예상 ' + esc(String(x.consensus)) + ')</i>' : '') +
+        surprise(x.actual, x.consensus) + '</span>').join('') +
       (u ? '<span class="epsbox next"><b>' + esc(u.period) + '</b>아직 발표 전' +
            (u.consensus ? ' <i>(예상 ' + u.consensus + ')</i>' : '') + '</span>' : '') +
       '</div>';
@@ -1520,7 +1607,7 @@ capSel.onchange = () => { expanded.clear(); renderAll(); };
    조용히 빠져나가게 두면 '걸렀는데 왜 아직 많냐'가 된다. */
 function renderCapNote() {
   const el = document.getElementById('capNote');
-  const shown = mkt ? [mkt] : LIVE;
+  const shown = onMkts();
   const blind = shown.filter(m => !D.capMarkets.includes(m));
   if (!capMin() || !blind.length) { el.hidden = true; return; }
   el.hidden = false;
@@ -1568,6 +1655,12 @@ function renderTabs() {
     '<span class="fl">' + t.flag + '</span>' + esc(t.ko) +
     '<span class="n">' + (t.has ? t.n.toLocaleString() + '건' : '미수집') + '</span></div>'
   ).join('');
+
+  // 캘린더 옆에도 같은 것을 둔다. 같은 data-mchk 를 쓰므로 어느 쪽을 눌러도 같다.
+  document.getElementById('calMkts').innerHTML = MKTS.map(m =>
+    '<button class="mp' + (picked.has(m.id) ? ' on' : '') + '" data-mchk="' + m.id + '"' +
+    (m.has ? '' : ' disabled title="아직 수집하지 않았습니다"') + '>' +
+    m.flag + ' ' + esc(m.ko) + '</button>').join('');
 }
 
 /* ── 요약 카드 ────────────────────────────────────────────── */
