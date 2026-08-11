@@ -210,6 +210,17 @@ SECTOR_KO = {
 }
 
 # 거래소 표기. 시장(region) 안에서 다시 갈리는 층이다.
+# 미국 업종 — 나스닥 스크리너가 주는 값. 닫힌 집합이라 전량 대역한다.
+US_SECTOR_KO = {
+    "Technology": "기술", "Health Care": "헬스케어", "Finance": "금융",
+    "Consumer Discretionary": "경기소비재", "Consumer Staples": "필수소비재",
+    "Energy": "에너지", "Industrials": "산업재", "Basic Materials": "소재",
+    "Real Estate": "부동산", "Telecommunications": "통신",
+    "Utilities": "유틸리티", "Consumer Services": "소비서비스",
+    "Capital Goods": "자본재", "Public Utilities": "유틸리티",
+    "Transportation": "운송", "Miscellaneous": "기타",
+}
+
 MARKET_KO = {
     # 일본
     "東証": "도쿄", "名証": "나고야", "札証": "삿포로", "福証": "후쿠오카",

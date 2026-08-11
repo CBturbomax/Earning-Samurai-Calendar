@@ -21,7 +21,8 @@ import companies_hk
 import companies_us
 from markets import (CAP_STEPS, HK_TYPICAL, HKT, HOLIDAYS, JP_TYPICAL, KST,
                      MARKET_KO, MARKET_ORDER, MARKETS, SECTOR_KO, TIMING_KO,
-                     US_AMC, US_BMO, US_EDT, US_EST, USD_KRW, holiday_ko)
+                     US_AMC, US_BMO, US_EDT, US_EST, US_SECTOR_KO, USD_KRW,
+                     holiday_ko)
 from translit import to_korean
 
 HERE = Path(__file__).parent
@@ -108,18 +109,20 @@ def load(mkt: str):
 
 # 일본·홍콩 시총. 원본 소스가 안 줘서 따로 받아둔 것(scrape_caps.py).
 # 없으면 0 — 그 시장에는 규모 필터가 걸리지 않고, 화면이 그렇게 적는다.
-def load_caps():
+def load_extra():
+    """따로 받아둔 시총·업종. 원본 소스가 안 주는 것들이다."""
     p = HERE / "data" / "caps.json"
     if not p.exists():
-        return {}
+        return {}, {}
     try:
-        return json.loads(p.read_text(encoding="utf-8")).get("caps", {})
+        d = json.loads(p.read_text(encoding="utf-8"))
+        return d.get("caps", {}), d.get("sectors", {})
     except (ValueError, OSError) as e:
         print(f"  ! caps.json 읽기 실패: {e}")
-        return {}
+        return {}, {}
 
 
-CAPS = load_caps()
+CAPS, SECTORS = load_extra()
 
 
 def pack_jp(r):
@@ -144,9 +147,11 @@ def pack_en(r, mkt):
     raw_time = r.get("time", "")
     timing = TIMING_KO.get(raw_time, "") if mkt == "us" else ""
     hhmm = raw_time if mkt == "hk" else ""
+    # 업종은 원본에 없다. 미국은 나스닥 스크리너에서 따로 받아둔 것을 붙인다.
+    sec = r.get("sector", "") or SECTORS.get(mkt + ":" + r["code"], "")
     return [r["date"], r["code"], cur[0] if cur else name,
             r.get("fy", ""), r.get("kind", ""),
-            r.get("sector", ""),
+            US_SECTOR_KO.get(sec, sec),
             MARKET_KO.get(r.get("market", ""), r.get("market", "")),
             name, 2, mkt, timing,
             # 미국은 나스닥이 시총을 같이 주고, 홍콩은 따로 받아둔 것을 붙인다.
@@ -349,6 +354,7 @@ __MKTCSS__
   line-height:1.2;
 }
 .mtab:hover { border-color:#31414f; }
+.mtab .mchk { width:17px; height:17px; accent-color:var(--mk,var(--a2)); cursor:pointer; margin:0; }
 .mtab .fl { font-size:21px; }
 .mtab .n {
   color:var(--mute); font-weight:600; font-size:17px;
@@ -649,11 +655,11 @@ svg.bars rect.b:hover { fill:var(--a3); }
 <div class="capnote" id="capNote" hidden></div>
 <div class="cal" id="cal"></div>
 
-<h2><span class="n">3</span>주목종목 발표일 <span class="meta" id="gMeta"></span></h2>
+<h2><span class="n">3</span>테마별 관심 종목 <span class="meta" id="gMeta"></span></h2>
 <div class="note">
-  테마는 <b>AI 공급망</b>을 앞에 두고 일반 대형주를 뒤에 붙였습니다. 미국은 반도체·빅테크,
-  일본은 장비·소재·부품, 홍콩은 인터넷 플랫폼이 앞에 옵니다.
-  수집 기간 안에 발표 일정이 잡힌 종목만 나옵니다.
+  여기는 <b>직접 골라 넣은 목록</b>이라 빠진 회사가 있습니다. 캘린더와 표의 순서·필터는
+  이 목록이 아니라 <b>시가총액</b>을 기준으로 하니, 큰 회사를 빠짐없이 보시려면
+  위의 <b>규모 필터</b>를 쓰세요. 이 칸은 테마별로 묶어보고 싶을 때만 참고용입니다.
 </div>
 <div id="groups"></div>
 
@@ -752,14 +758,20 @@ let useKst = true;
 const dateOf = r => (useKst && r[12]) ? r[12] : r[0];
 const timeOf = r => (useKst && r[13]) ? r[13] + (r[14] ? '' : '경') : '';
 
-/* 보고 있는 시장. '' 이면 전체. */
-let mkt = '';
-const inMkt = r => !mkt || r[9] === mkt;
+/* 보고 있는 시장. 여러 개를 동시에 켤 수 있다 — '미국+홍콩만' 같은 조합이 되도록.
+   mkt 는 탭 하나만 켠 상태를 가리키는 값으로 남겨둔다(설명문·안내문이 이걸 본다). */
+let picked = new Set(LIVE);
+let mkt = '';                       // 딱 한 시장만 켜져 있으면 그 id, 아니면 ''
+function syncMkt() {
+  const on = [...picked];
+  mkt = on.length === 1 ? on[0] : '';
+}
 
 /* 지금 시장에 해당하는 행만. 시장을 바꿀 때마다 다시 만든다. */
 let VIEW = [], byDate = new Map();
 function reslice() {
-  VIEW = mkt ? ROWS.filter(r => r[9] === mkt) : ROWS;
+  syncMkt();
+  VIEW = picked.size === LIVE.length ? ROWS : ROWS.filter(r => picked.has(r[9]));
   byDate = new Map();
   for (const r of VIEW) {
     const d = dateOf(r);
@@ -1325,6 +1337,8 @@ document.addEventListener('click', e => {
   const star = e.target.closest('[data-star]');
   if (star) { e.stopPropagation(); toggleWatch(star.dataset.star); return; }
 
+  const chk = e.target.closest('[data-mchk]');
+  if (chk) { toggleMarket(chk.dataset.mchk); return; }
   const tab = e.target.closest('.mtab');
   if (tab) { setMarket(tab.dataset.mkt); return; }
 
@@ -1403,22 +1417,32 @@ document.getElementById('kstToggle').onchange = e => {
 document.getElementById('jpToggle').onchange = e => { showJp = e.target.checked; renderCal(); };
 
 /* ── 시장 탭 ──────────────────────────────────────────────── */
+/* 탭을 누르면 그 시장만 켠다. 여러 시장을 같이 보려면 체크박스를 쓴다. */
 function setMarket(m) {
-  mkt = m;
-  expanded.clear();
-  reslice();
-  fillFilters();
-  fillWeeks();
-  renderAll();
+  picked = m ? new Set([m]) : new Set(LIVE);
+  refresh();
+}
+function toggleMarket(m) {
+  picked.has(m) ? picked.delete(m) : picked.add(m);
+  if (!picked.size) picked = new Set(LIVE);   // 전부 끄면 아무것도 안 보이므로 되돌린다
+  refresh();
+}
+function refresh() {
+  expanded.clear(); reslice(); fillFilters(); fillWeeks(); renderAll();
 }
 function renderTabs() {
-  const tabs = [{ id: '', flag: '🌐', ko: '전체', n: ROWS.length, has: true }]
-    .concat(MKTS.map(m => ({ id: m.id, flag: m.flag, ko: m.ko, n: m.count, has: m.has })));
+  const all = picked.size === LIVE.length;
+  const tabs = [{ id: '', flag: '🌐', ko: '전체', n: ROWS.length, has: true, on: all }]
+    .concat(MKTS.map(m => ({ id: m.id, flag: m.flag, ko: m.ko, n: m.count,
+                             has: m.has, on: !all && picked.has(m.id) })));
   document.getElementById('mtabs').innerHTML = tabs.map(t =>
-    '<button class="mtab m-' + (t.id || 'all') + (t.id === mkt ? ' on' : '') +
+    '<div class="mtab m-' + (t.id || 'all') + (t.on ? ' on' : '') +
     (t.has ? '' : ' empty') + '" data-mkt="' + t.id + '">' +
+    (t.id ? '<input type="checkbox" class="mchk" data-mchk="' + t.id + '"' +
+            (picked.has(t.id) ? ' checked' : '') + (t.has ? '' : ' disabled') +
+            ' title="여러 시장을 같이 보려면 체크하세요">' : '') +
     '<span class="fl">' + t.flag + '</span>' + esc(t.ko) +
-    '<span class="n">' + (t.has ? t.n.toLocaleString() + '건' : '미수집') + '</span></button>'
+    '<span class="n">' + (t.has ? t.n.toLocaleString() + '건' : '미수집') + '</span></div>'
   ).join('');
 }
 

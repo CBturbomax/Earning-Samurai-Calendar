@@ -144,6 +144,38 @@ def load_codes(market, filename):
     return symbols_for(market, codes)
 
 
+NASDAQ_SCREENER = ("https://api.nasdaq.com/api/screener/stocks"
+                   "?tableonly=true&limit=10000&download=true")
+
+
+def us_sectors():
+    """미국 업종. 나스닥 스크리너가 전 종목을 한 번에 준다.
+
+    실적 캘린더 API 는 업종을 안 주는데, 같은 나스닥의 스크리너에는 들어 있다.
+    요청 한 번이면 끝나므로 시총 받는 김에 같이 받아둔다.
+    """
+    req = urllib.request.Request(NASDAQ_SCREENER, headers={
+        "User-Agent": UA, "Accept": "application/json, text/plain, */*",
+        "Referer": "https://www.nasdaq.com/market-activity/stocks/screener",
+    })
+    try:
+        with urllib.request.urlopen(req, timeout=60) as r:
+            body = json.loads(r.read().decode("utf-8", "replace"))
+    except Exception as e:
+        print(f"  ! 미국 업종 실패: {e}", file=sys.stderr)
+        return {}
+    rows = (((body.get("data") or {}).get("table") or {}).get("rows")
+            or (body.get("data") or {}).get("rows") or [])
+    out = {}
+    for r in rows:
+        sym = (r.get("symbol") or "").strip().upper()
+        sec = (r.get("sector") or "").strip()
+        if sym and sec and sec.lower() not in ("", "n/a", "miscellaneous"):
+            out["us:" + sym] = sec
+    print(f"  미국 업종 {len(out):,}종목 (전체 {len(rows):,}행)")
+    return out
+
+
 def main():
     OUT.parent.mkdir(parents=True, exist_ok=True)
     bootstrap()
@@ -191,11 +223,12 @@ def main():
         caps[f"{mkt}:{code}"] = round(cap / rates[cur] / 1e9, 3)
 
     payload = {
-        "source": "Yahoo Finance quote API",
+        "source": "Yahoo Finance quote API (시총) + Nasdaq screener (미국 업종)",
         "note": "십억 달러 단위. 현지 통화 시총을 당일 환율로 환산한 값이라 어림값이다.",
         "rates": {k: round(v, 4) for k, v in rates.items()},
         "count": len(caps),
         "caps": caps,
+        "sectors": us_sectors(),
     }
     tmp = OUT.with_suffix(".tmp")
     tmp.write_text(json.dumps(payload, ensure_ascii=False), encoding="utf-8")
