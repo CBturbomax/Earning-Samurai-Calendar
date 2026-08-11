@@ -89,7 +89,12 @@ def get(url: str, retries: int = 3) -> str:
     return ""
 
 
-def query(a: date, b: date, start: int = 0, rows: int = 500) -> str:
+# 하루에 올라오는 공시가 수백 건이라 넉넉히 잡는다. 이 수에 딱 맞게 돌아오면
+# 잘렸다는 뜻이므로 fetch_day 가 큰 소리로 알린다.
+ROW_CAP = 2000
+
+
+def query(a: date, b: date, rows: int = ROW_CAP) -> str:
     return SEARCH + "?" + urllib.parse.urlencode({
         "sortDir": 0, "sortByOptions": "DateTime", "category": 0,
         "market": "SEHK", "stockId": -1, "documentType": -1,
@@ -128,7 +133,15 @@ def kind_of(text: str) -> str:
     return "실적"
 
 
-def fetch_chunk(a: date, b: date, probe: bool = False):
+def fetch_day(day: date, probe: bool = False):
+    """하루치씩 받는다.
+
+    처음에는 주 단위로 묶어 받았는데, HKEXnews 는 하루에만 수백 건이 올라와서
+    한 주치를 한 번에 달라고 하면 응답이 앞에서 잘린다. 잘린 줄 모르고 넘어가면
+    텐센트 같은 큰 종목이 통째로 빠지는데(실제로 4개월치에서 하나도 안 잡혔다),
+    화면에는 '그날 발표가 없었다'로 보인다. 이 프로젝트가 제일 싫어하는 거짓말이다.
+    """
+    a = b = day
     for wait in BACKOFF:
         if wait:
             print(f"    throttled, {wait}s 대기 후 재시도", file=sys.stderr, flush=True)
@@ -147,9 +160,14 @@ def fetch_chunk(a: date, b: date, probe: bool = False):
             print(f"    파싱 실패 ({e}), 앞부분: {text[:200]!r}", file=sys.stderr, flush=True)
             continue
 
-        # 공시가 하루에도 수백 건이라, 진짜 0건인 구간은 거의 없다.
-        # 그래도 봉투가 정상이면 0건도 정상 응답으로 인정한다 —
-        # 막히면 JSON 이 아니거나 result 키 자체가 없으므로 위에서 걸러진다.
+        # 받은 건수가 한도에 딱 붙으면 잘린 것이다. 조용히 넘기지 않는다.
+        if len(raw) >= ROW_CAP:
+            raise ShapeChanged(
+                f"{day}: 공시 {len(raw)}건 = 한도({ROW_CAP})에 걸렸다. 응답이 잘렸다는 뜻이라\n"
+                f"  이 날은 기록하지 않는다. ROW_CAP 을 올리거나 반나절씩 끊어야 한다.")
+
+        # 봉투가 정상이면 0건도 정상 응답으로 인정한다 — 막히면 JSON 이 아니거나
+        # result 키 자체가 없으므로 위에서 걸러진다.
         out, seen = [], set()
         for r in raw:
             label = f"{r.get('LONG_TEXT','')} {r.get('TITLE','')}"
@@ -174,9 +192,9 @@ def fetch_chunk(a: date, b: date, probe: bool = False):
                 "market": "",
                 "link": "https://www1.hkexnews.hk" + (r.get("FILE_LINK") or ""),
             })
-        print(f"    {a}~{b}: 공시 {len(raw)}건 중 실적 {len(out)}건", flush=True)
+        print(f"{day} 공시 {len(raw):>4}건 중 실적 {len(out):>3}건", flush=True)
         return out
-    raise Throttled(f"{a}~{b}: 유효 응답 실패")
+    raise Throttled(f"{day}: 유효 응답 실패")
 
 
 def load_cache():
@@ -213,7 +231,7 @@ def save(by_day: dict, start: date, end: date):
 def main(start: date, end: date, probe: bool = False):
     OUT.parent.mkdir(parents=True, exist_ok=True)
     if probe:
-        fetch_chunk(start, min(start + timedelta(days=2), end), probe=True)
+        fetch_day(start, probe=True)
         return
 
     # 공시는 이미 나온 것만 있다. 미래 구간을 긁어봐야 빈다.
@@ -226,37 +244,32 @@ def main(start: date, end: date, probe: bool = False):
     by_day = load_cache()
     failed, streak = [], 0
 
-    # 주 단위로 끊는다. 오늘이 낀 주는 계속 새 공시가 붙으므로 캐시를 무시하고 다시 받는다.
-    a = start
-    while a <= end:
-        b = min(a + timedelta(days=6), end)
-        span = [(a + timedelta(days=i)).isoformat() for i in range((b - a).days + 1)]
-        fresh = b >= today - timedelta(days=1)
-        if not fresh and all(d in by_day for d in span):
-            print(f"{a}~{b} (캐시)", flush=True)
+    # 하루씩. 최근 이틀은 계속 새 공시가 붙으므로 캐시를 무시하고 다시 받는다.
+    day = start
+    while day <= end:
+        key = day.isoformat()
+        fresh = day >= today - timedelta(days=1)
+        if key in by_day and not fresh:
+            print(f"{key} {len(by_day[key]):>3}건 (캐시)", flush=True)
         else:
             try:
-                rows = fetch_chunk(a, b)
+                rows = fetch_day(day)
             except Exception as e:
-                failed += span
+                failed.append(key)
                 streak += 1
-                print(f"{a}~{b} 실패: {e}", file=sys.stderr, flush=True)
+                print(f"{key} 실패: {e}", file=sys.stderr, flush=True)
                 if streak >= GIVE_UP_AFTER:
                     print("연속 실패 — 여기서 멈춘다. 다시 돌리면 이어서 받는다.",
                           file=sys.stderr, flush=True)
                     break
             else:
                 streak = 0
-                # 받은 구간은 통째로 '수집 성공'으로 표시한다. 0건인 날도 마찬가지 —
+                # 받은 날은 0건이라도 '수집 성공'으로 표시한다.
                 # 그래야 '발표 없는 날'과 '못 받은 날'이 구분된다.
-                for d in span:
-                    by_day[d] = []
-                for r in rows:
-                    if r["date"] in by_day:
-                        by_day[r["date"]].append(r)
+                by_day[key] = rows
                 save(by_day, start, end)
-            time.sleep(1.5)
-        a = b + timedelta(days=1)
+            time.sleep(1.2)
+        day += timedelta(days=1)
 
     n, days = save(by_day, start, end)
     print(f"\n총 {n}건 / {days}일 -> {OUT}")
