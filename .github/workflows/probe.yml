@@ -1,11 +1,13 @@
 # 소스가 GitHub 러너에서 실제로 열리는지, 응답이 어떻게 생겼는지 확인한다.
 #
-# 수집 워크플로가 한 시장에서 몇 시간씩 붙들려 있으면 원인을 알 수가 없다.
-# 스크래퍼의 백오프는 '잠깐 막힌 것'을 견디려는 장치인데, 아예 주소가 틀렸거나
-# 차단된 상대에게는 그냥 시간만 태운다. 그 둘을 구분하려고 둔다.
+# 확인된 것:
+#   🇺🇸 나스닥  — 정상. 발표 없는 날도 제대로 0건으로 답한다.
+#   🇯🇵 닛케이  — 한 번은 열리지만 연속 요청은 데이터센터 IP 라 막힌다.
+#   🇭🇰 HKEX   — 이사회 캘린더 경로가 통째로 404. 통계 목차에도 항목이 없다.
+#      AAStocks — 200 이지만 표를 자바스크립트로 그려서 HTML 에 데이터가 없다.
+#      HKEXnews — 200, JSON 정상. 다만 '이미 나온 공시' 목록이라 앞일이 아니다.
 #
-# 지금 상태: 미국·일본은 확인 완료. 홍콩은 HKEX 이사회 캘린더 경로가 통째로
-# 404 라 대체 소스의 구조를 뜯어보는 중이다.
+# 지금 찾는 것: 홍콩의 '앞으로의' 실적발표 일정을 주는 곳.
 
 name: 소스 접근 확인
 
@@ -22,53 +24,39 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: 🇭🇰 HKEX 통계 페이지가 실제로 내놓는 목록
+      - name: 🇭🇰 HKEXnews 공시 분류표 (이사회 개최일 코드 찾기)
         continue-on-error: true
         run: |
           UA='Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
           curl -sS --max-time 25 -L -H "User-Agent: $UA" \
-            'https://www.hkex.com.hk/Market-Data/Statistics/Consolidated-Reports?sc_lang=en' -o idx.html \
+            'https://www1.hkexnews.hk/search/titlesearch.xhtml?lang=en' -o ts.html \
             -w 'HTTP %{http_code} / %{size_download}바이트\n'
-          echo '--- Consolidated-Reports 아래 링크들 ---'
-          grep -oE 'href="[^"]*Consolidated-Reports[^"]*"' idx.html | sort -u | head -30
-          echo '--- 이사회/실적 관련 낱말 ---'
-          grep -oiE '(board[ -]?meeting|results announcement|業績|董事會)[^"<]{0,30}' idx.html | sort -u | head -10 || echo '(없음)'
+          echo '--- 이사회 관련 분류 코드 ---'
+          grep -oiE '<option[^>]*value="[0-9]+"[^>]*>[^<]*(board meeting|results)[^<]*' ts.html | head -20 || echo '(없음)'
+          echo '--- 분류 JSON 파일 링크 ---'
+          grep -oE '[A-Za-z0-9/_.-]*(tier[12]|category|t2code)[A-Za-z0-9/_.-]*\.(json|js)' ts.html | sort -u | head -10 || echo '(없음)'
 
-      - name: 🇭🇰 AAStocks 실적발표 캘린더 구조
+      - name: 🇭🇰 앞으로의 일정을 주는 곳 후보
         continue-on-error: true
         run: |
           UA='Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
-          curl -sS --max-time 25 -L -H "User-Agent: $UA" \
-            'https://www.aastocks.com/en/stocks/market/company-results.aspx' -o aa.html \
-            -w 'HTTP %{http_code} / %{size_download}바이트\n'
-          echo '--- 표 헤더 ---'
-          python3 - <<'PY'
-          import re, html
-          t = open('aa.html', encoding='utf-8', errors='replace').read()
-          # 표를 찾아 앞쪽 행 몇 개를 셀 단위로 찍는다
-          for ti, tbl in enumerate(re.findall(r'<table.*?</table>', t, re.S)[:6]):
-              rows = re.findall(r'<tr.*?</tr>', tbl, re.S)
-              if len(rows) < 3:
-                  continue
-              print(f"[표 {ti}] {len(rows)}행")
-              for r in rows[:4]:
-                  cells = [html.unescape(re.sub(r'<[^>]+>', ' ', c)).strip()
-                           for c in re.findall(r'<t[dh][^>]*>(.*?)</t[dh]>', r, re.S)]
-                  cells = [c for c in cells if c]
-                  if cells:
-                      print('   ', ' | '.join(cells)[:200])
-              print()
-          # 종목코드처럼 보이는 것과 날짜 형식 확인
-          print('코드 후보:', re.findall(r'\b\d{5}\b', t)[:12])
-          print('날짜 후보:', re.findall(r'\d{4}/\d{2}/\d{2}|\d{2}/\d{2}/\d{4}', t)[:12])
-          PY
-
-      - name: 🇭🇰 HKEXnews 이사회 공시 검색 API
-        continue-on-error: true
-        run: |
-          UA='Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
-          # t2code 40100 = Date of Board Meeting (공시 분류)
-          U='https://www1.hkexnews.hk/search/titleSearchServlet.do?sortDir=0&sortByOptions=DateTime&category=0&market=SEHK&stockId=-1&documentType=-1&fromDate=20260801&toDate=20260831&title=&searchType=1&t1code=40000&t2Gcode=-2&t2code=40100&rowRange=20&lang=EN'
-          curl -sS --max-time 25 -L -H "User-Agent: $UA" -H 'Accept: application/json, */*' \
-            "$U" -o news.json -w 'HTTP %{http_code} / %{size_download}바이트\n'
-          echo '--- 앞 900자 ---'; head -c 900 news.json; echo
+          shot() {
+            code=$(curl -sS --max-time 20 -L -o /tmp/x -w '%{http_code}' \
+                   -H "User-Agent: $UA" -H 'Accept-Language: en-US,en;q=0.9' \
+                   ${3:+-H "$3"} ${2:+--data "$2"} "$1" 2>/dev/null || echo 000)
+            printf '%-5s %8s  %s\n' "$code" "$(wc -c </tmp/x)" "$1"
+            [ "$code" = "200" ] && head -c 260 /tmp/x | tr -d '\n' | sed 's/^/        /' && echo
+          }
+          echo '=== ETNet (홍콩 금융정보) ==='
+          shot 'https://www.etnet.com.hk/www/eng/stocks/schedule_result.php'
+          shot 'https://www.etnet.com.hk/www/eng/stocks/calendar_result.php'
+          echo '=== AAStocks 데이터피드 ==='
+          shot 'https://www.aastocks.com/en/resources/datafeed/getcompanyresult.ashx?t=1&page=1'
+          shot 'https://www.aastocks.com/en/stocks/market/company-results.aspx?t=2&s=0&o=0&p=1'
+          echo '=== Investing.com 실적 캘린더 (POST) ==='
+          shot 'https://www.investing.com/earnings-calendar/Service/getCalendarFilteredData' \
+               'country%5B%5D=39&currentTab=custom&dateFrom=2026-08-11&dateTo=2026-10-10&limit_from=0' \
+               'X-Requested-With: XMLHttpRequest'
+          echo '=== HKEX 상장사 공시 요약 페이지 ==='
+          shot 'https://www.hkexnews.hk/reports/prelisting/index.htm'
+          shot 'https://www1.hkexnews.hk/search/titlesearch.xhtml?lang=zh'
