@@ -1,9 +1,12 @@
-# 실적 '수치' 소스를 확인한다. 지금까지는 일정만 다뤘다.
+# 새 소스를 붙이기 전에 응답 생김새를 눈으로 본다.
 #
-# 알아볼 것:
-#   1) 발표 완료 여부 — 예정만 있으면 지났는지 알 수 없다
-#   2) 매출·영업이익 시계열 — 1Q19 부터 분기별로 쭉
-#   3) 부문별 매출(가레나/쇼피/머니 같은) 이 구조화돼 오는가
+# 여기서 확인되기 전에는 collect.yml 에 넣지 않는다. 모양을 짐작해서 짜 두면
+# 조용히 0건이 되고, 그게 제일 나쁘다(캘린더가 "발표 없음"이라고 거짓말한다).
+#
+# 지금 보는 것: 일본·홍콩 실적 시계열 (야후 fundamentals-timeseries)
+#   - 1Q19 까지 거슬러 오는가
+#   - 홍콩이 반기(6M)로 오는가
+#   - 통화가 뭐로 오는가
 name: 소스 접근 확인
 on:
   workflow_dispatch:
@@ -14,49 +17,27 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
-      - name: SEC EDGAR — 미국 공식 재무제표 (XBRL)
-        continue-on-error: true
-        run: |
-          UA='EarningSamurai/1.0 (cbpark@wisdomasset.co.kr)'
-          echo '--- 회사 목록(티커→CIK) ---'
-          curl -sS --max-time 30 -H "User-Agent: $UA" -o t.json \
-            'https://www.sec.gov/files/company_tickers.json' -w 'HTTP %{http_code} / %{size_download}바이트\n'
-          head -c 200 t.json; echo
-          echo '--- SEA(CIK 1703399) 분기 매출 시계열 ---'
-          curl -sS --max-time 30 -H "User-Agent: $UA" -o c.json \
-            'https://data.sec.gov/api/xbrl/companyconcept/CIK0001703399/us-gaap/Revenues.json' \
-            -w 'HTTP %{http_code} / %{size_download}바이트\n'
-          python3 - <<'PY'
-          import json
-          try: d=json.load(open('c.json'))
-          except Exception as e: print('읽기 실패', e); raise SystemExit
-          u=d.get('units',{}).get('USD',[])
-          q=[x for x in u if x.get('fp','').startswith('Q') or x.get('form')=='10-Q']
-          print(f"항목 {len(u)}건 / 분기 {len(q)}건")
-          for x in u[-6:]:
-              print(f"  {x.get('fy')} {x.get('fp')} {x.get('start')}~{x.get('end')} {x.get('val'):>15,} {x.get('form')}")
-          PY
-          echo '--- 애플 전체 팩트(어떤 항목이 오는지) ---'
-          curl -sS --max-time 40 -H "User-Agent: $UA" -o a.json \
-            'https://data.sec.gov/api/xbrl/companyfacts/CIK0000320193.json' \
-            -w 'HTTP %{http_code} / %{size_download}바이트\n'
-          python3 -c "
-          import json; d=json.load(open('a.json'))
-          g=d.get('facts',{}).get('us-gaap',{})
-          want=['Revenues','RevenueFromContractWithCustomerExcludingAssessedTax','OperatingIncomeLoss','GrossProfit','NetIncomeLoss','EarningsPerShareDiluted']
-          print('  주요 항목 존재:', {w: (w in g) for w in want})
-          print('  전체 항목 수:', len(g))"
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
 
-      - name: 나스닥 — 발표 완료·서프라이즈
+      - name: 🇯🇵🇭🇰 야후 재무 시계열
+        continue-on-error: true
+        run: python scrape_fin_intl.py --probe
+
+      - name: 🇺🇸 SEC — 태그를 갈아탄 회사가 이어 붙는지
         continue-on-error: true
         run: |
-          UA='Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
-          for u in \
-            'https://api.nasdaq.com/api/company/SE/earnings-surprise' \
-            'https://api.nasdaq.com/api/quote/SE/eps' \
-            'https://api.nasdaq.com/api/company/SE/financials?frequency=2' ; do
-            echo "--- $u"
-            curl -sS --max-time 25 -H "User-Agent: $UA" -H 'Accept: application/json' \
-              -o n.json "$u" -w 'HTTP %{http_code} / %{size_download}바이트\n' || true
-            head -c 450 n.json; echo
-          done
+          python - <<'PY'
+          import scrape_fin as sf
+          # 엔비디아(1045810). 옛 태그에는 2020년까지만 있어서, 첫 태그에서 멈추면
+          # 6분기밖에 안 나온다. 합쳐서 26분기가 나와야 고쳐진 것이다.
+          for name, cik in (("NVDA", 1045810), ("AAPL", 320193), ("SE", 1703399)):
+              s = sf.series(cik)
+              if not s:
+                  print(f"{name}: 없음"); continue
+              p = s["points"]
+              print(f"{name}: {s['freq']} {len(p)}개  {p[0]['label']} ~ {p[-1]['label']}"
+                    f"  최근 매출 {p[-1]['rev']/1e9:.1f}B")
+          PY
