@@ -29,6 +29,10 @@ OUT = Path(__file__).parent / "data" / "earnings.json"
 # 한 번 걸리면 꽤 오래 안 풀린다. 그래서 물러서는 폭을 넉넉히 잡았다.
 BACKOFF = (0, 15, 45, 120, 300)
 
+# 연속으로 이만큼 실패하면 접는다. 백오프는 '잠깐 막힌 것'을 견디는 장치지
+# '차단된 상대'를 뚫는 장치가 아니다. 받아둔 만큼은 저장돼 있고 다시 돌리면 이어받는다.
+GIVE_UP_AFTER = 3
+
 # 한 행이 통째로 <tr class="tr2"> ... </tr>. 셀 8개를 순서대로 뽑는다.
 ROW_RE = re.compile(r'<tr class="tr2">(.*?)</tr>', re.S)
 CELL_RE = re.compile(r'<t[hd][^>]*>(.*?)</t[hd]>', re.S)
@@ -175,7 +179,7 @@ def main(start: date, end: date):
     by_day = load_cache()
     failed = []
 
-    day = start
+    day, streak = start, 0
     while day <= end:
         key = day.isoformat()
         if key in by_day:
@@ -183,11 +187,20 @@ def main(start: date, end: date):
         else:
             try:
                 by_day[key] = scrape_day(day)
-                print(f"{key} {len(by_day[key]):>4}건", flush=True)
-                save(by_day, start, end)
             except Exception as e:          # 하루 실패가 전체를 죽이지 않게
                 failed.append(key)
+                streak += 1
                 print(f"{key} 실패: {e}", file=sys.stderr, flush=True)
+                # 다만 연속으로 계속 실패하면 레이트리밋에 제대로 걸린 것이다.
+                # 그때는 몇 시간씩 두들기지 말고 접는다. 다시 돌리면 이어받는다.
+                if streak >= GIVE_UP_AFTER:
+                    print(f"연속 {streak}일 실패 — 여기서 멈춘다. 받아둔 만큼은 저장돼 있고, "
+                          f"다시 돌리면 이어서 받는다.", file=sys.stderr, flush=True)
+                    break
+            else:
+                streak = 0
+                print(f"{key} {len(by_day[key]):>4}건", flush=True)
+                save(by_day, start, end)
             time.sleep(1.5)
         day += timedelta(days=1)
 

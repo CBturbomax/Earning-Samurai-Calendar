@@ -1,8 +1,10 @@
-# 세 소스가 GitHub 러너에서 실제로 열리는지만 확인한다. 몇 초면 끝난다.
+# 소스가 GitHub 러너에서 실제로 열리는지 확인한다. 몇 초면 끝난다.
 #
 # 수집 워크플로가 한 시장에서 몇 시간씩 붙들려 있으면 원인을 알 수가 없다.
-# 스크래퍼의 백오프(15/45/120/300초)는 '잠깐 막힌 것'을 견디려는 장치인데,
-# 아예 차단된 상대에게는 그냥 시간만 태운다. 그 둘을 구분하려고 둔다.
+# 스크래퍼의 백오프는 '잠깐 막힌 것'을 견디려는 장치인데, 아예 주소가 틀렸거나
+# 차단된 상대에게는 그냥 시간만 태운다. 그 둘을 구분하려고 둔다.
+#
+# 지금은 홍콩 주소를 찾는 중이다. HKEX 는 개편이 잦아 예전 경로가 404 가 된다.
 
 name: 소스 접근 확인
 
@@ -19,55 +21,58 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: 러너 위치
-        run: curl -s --max-time 20 https://ipinfo.io/json || true
-
-      - name: 🇺🇸 나스닥 실적 캘린더 API
+      - name: 🇭🇰 홍콩 — 후보 주소 훑기
         run: |
-          curl -sS --max-time 30 -o us.txt -w 'HTTP %{http_code} / %{size_download}바이트\n' \
-            -H 'User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36' \
-            -H 'Accept: application/json, text/plain, */*' \
-            -H 'Accept-Language: en-US,en;q=0.9' \
-            -H 'Referer: https://www.nasdaq.com/market-activity/earnings' \
-            'https://api.nasdaq.com/api/calendar/earnings?date=2026-08-12' || true
-          echo '--- 앞 600자 ---'; head -c 600 us.txt; echo
+          UA='Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
+          try() {
+            code=$(curl -sS --max-time 25 -L -o /tmp/p.html -w '%{http_code}' \
+                   -H "User-Agent: $UA" -H 'Accept-Language: en-US,en;q=0.9' "$1" 2>/dev/null || echo 000)
+            size=$(wc -c < /tmp/p.html 2>/dev/null || echo 0)
+            title=$(grep -oiE '<title>[^<]*' /tmp/p.html 2>/dev/null | head -1 | cut -c8-90)
+            printf '%-6s %8s  %s\n            제목: %s\n' "$code" "$size" "$1" "${title:-(없음)}"
+            if [ "$code" = "200" ]; then
+              grep -oiE 'board[- ]?meeting[^"<]{0,40}' /tmp/p.html | head -3 | sed 's/^/            힌트: /'
+              grep -oE 'token[=":][ "]*[A-Za-z0-9%_.=-]{16,}' /tmp/p.html | head -2 | sed 's/^/            토큰: /'
+            fi
+          }
+          echo '=== HKEX 본사이트 ==='
+          try 'https://www.hkex.com.hk/Market-Data/Statistics/Consolidated-Reports?sc_lang=en'
+          try 'https://www.hkex.com.hk/Market-Data/Statistics/Consolidated-Reports/Board-Meeting'
+          try 'https://www.hkex.com.hk/eng/stat/smstat/bmdiary/bmdiary.htm'
+          echo '=== HKEX 위젯 API (토큰 없이) ==='
+          try 'https://www1.hkex.com.hk/hkexwidget/data/getboardmeeting?lang=eng&qid=1&callback=cb'
+          echo '--- 위젯 응답 본문 ---'; head -c 400 /tmp/p.html; echo
+          echo '=== HKEXnews (공시 검색) ==='
+          try 'https://www1.hkexnews.hk/search/titlesearch.xhtml?lang=en'
+          try 'https://www.hkexnews.hk/'
+          echo '=== 대안 소스 ==='
+          try 'https://www.aastocks.com/en/stocks/market/company-results.aspx'
+          try 'https://www.etnet.com.hk/www/eng/stocks/report_calendar.php'
 
-      - name: 🇺🇸 나스닥 심볼 디렉터리
-        run: |
-          curl -sS --max-time 30 -o sym.txt -w 'HTTP %{http_code} / %{size_download}바이트\n' \
-            -H 'User-Agent: Mozilla/5.0' \
-            'https://www.nasdaqtrader.com/dynamic/SymDir/nasdaqlisted.txt' || true
-          echo '--- 앞 200자 ---'; head -c 200 sym.txt; echo
-
-      - name: 🇯🇵 닛케이 결산발표 스케줄
-        run: |
-          curl -sS --max-time 30 -o jp.txt -w 'HTTP %{http_code} / %{size_download}바이트\n' \
-            -H 'User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36' \
-            -H 'Accept-Language: ja,en;q=0.8' \
-            'https://www.nikkei.com/markets/kigyo/money-schedule/kessan/?ResultFlag=1&SearchDate1=2026%E5%B9%B408&SearchDate2=12&hm=1' || true
-          echo '--- 건수 표시 있나 ---'
-          grep -o '件目を表示([^)]*)' jp.txt | head -3 || echo '(없음)'
-          grep -c 'tr2' jp.txt || true
-
-      - name: 🇭🇰 HKEX 이사회 캘린더 페이지
-        run: |
-          curl -sS --max-time 30 -o hk.txt -w 'HTTP %{http_code} / %{size_download}바이트\n' \
-            -H 'User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36' \
-            'https://www.hkex.com.hk/Market-Data/Statistics/Consolidated-Reports/Board-Meeting?sc_lang=en' || true
-          echo '--- 토큰 후보 ---'
-          grep -oE 'token=[A-Za-z0-9%_.=-]{16,}' hk.txt | head -3 || echo '(없음)'
-          grep -oE '"token"\s*:\s*"[^"]{16,}"' hk.txt | head -3 || echo '(없음)'
-
-      - name: 파이썬 스크래퍼로 하루만 떠보기 (미국)
+      - name: 🇭🇰 HKEX 사이트 검색으로 경로 찾기
         continue-on-error: true
-        timeout-minutes: 3
+        run: |
+          UA='Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
+          for u in \
+            'https://www.hkex.com.hk/Global/Search?q=board+meeting&sc_lang=en' \
+            'https://www.hkex.com.hk/sitemap.xml' ; do
+            echo "--- $u"
+            curl -sS --max-time 25 -L -H "User-Agent: $UA" "$u" -o /tmp/s.txt \
+              -w 'HTTP %{http_code} / %{size_download}바이트\n' || true
+            grep -oiE '[A-Za-z0-9/_.-]*[Bb]oard[-_]?[Mm]eeting[A-Za-z0-9/_.-]*' /tmp/s.txt | sort -u | head -10 || echo '(없음)'
+          done
+
+      - name: 🇺🇸🇯🇵 고친 판정 로직으로 하루씩 떠보기
+        continue-on-error: true
+        timeout-minutes: 5
         run: |
           python - <<'PY'
-          import scrape_us, datetime, json
-          try:
-              rows = scrape_us.fetch_valid(datetime.date(2026, 8, 12))
-              print("받은 행:", len(rows))
-              if rows: print(json.dumps(rows[0], ensure_ascii=False)[:400])
-          except Exception as e:
-              print("실패:", type(e).__name__, e)
+          import datetime, scrape_us
+          # 발표가 있는 날과 원래 0건인 날(일요일)을 둘 다 확인한다.
+          for d in (datetime.date(2026, 8, 12), datetime.date(2026, 8, 16)):
+              try:
+                  rows = scrape_us.fetch_valid(d)
+                  print(f"미국 {d} ({'월화수목금토일'[d.weekday()]}): {len(rows)}행")
+              except Exception as e:
+                  print(f"미국 {d}: 실패 {type(e).__name__} {e}")
           PY

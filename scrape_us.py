@@ -35,7 +35,13 @@ OUT = Path(__file__).parent / "data" / "earnings_us.json"
 
 # 나스닥도 연속 요청을 오래 끌면 403이나 빈 껍데기를 돌려준다.
 # 닛케이만큼 사납지는 않지만 물러서는 폭은 같은 방식으로 잡았다.
-BACKOFF = (0, 15, 45, 120, 300)
+BACKOFF = (0, 15, 45, 120)
+
+# 연속으로 이만큼 실패하면 그 시장은 접는다.
+# 백오프는 '잠깐 막힌 것'을 견디는 장치지 '차단된 상대'를 뚫는 장치가 아니다.
+# 상대가 아예 막아버렸는데 계속 두들기면 몇 시간을 태우고 상대에게도 민폐다.
+# 받아둔 만큼은 저장돼 있으니, 다시 돌리면 못 받은 날부터 이어서 받는다.
+GIVE_UP_AFTER = 3
 
 # otherlisted.txt 의 Exchange 열 코드.
 EXCH = {"N": "NYSE", "A": "NYSE American", "P": "NYSE Arca",
@@ -70,12 +76,16 @@ def get(url: str, retries: int = 3) -> bytes:
 
 
 def fetch_valid(day: date):
-    """정상 응답이라는 증거가 하나는 있어야 한다.
+    """정상 응답이라는 증거가 있어야 한다. 없으면 물러섰다 다시 온다.
 
-    - rows 가 한 건이라도 있으면 정상.
-    - rows 가 비었더라도 status.rCode 가 200 이고 message 가 채워져 있으면
-      ("No earnings scheduled...") 진짜 0건이다.
-    둘 다 아니면 막힌 것으로 보고 물러섰다 다시 온다.
+    판정 기준은 **응답 봉투**다. status.rCode 가 200 으로 온 JSON 이면
+    나스닥이 질문을 받아 대답한 것이고, rows 가 비어 있으면 그 날은 진짜 0건이다.
+    막히면 HTTP 403 이나 JSON 아닌 본문, 혹은 rCode!=200 이 오므로 위에서 걸러진다.
+
+    처음에는 0건을 인정하는 조건으로 message 필드가 채워져 있을 것을 요구했는데,
+    나스닥은 발표가 없는 날 message 를 비워 보내기도 한다. 그 바람에 주말처럼
+    원래 0건인 날이 통째로 '수집 실패'로 기록되면서 하루당 8분씩 재시도를 태웠다.
+    발표가 없는 날을 못 받은 날로 적는 것도 캘린더가 거짓말을 하는 것이다.
     """
     url = BASE + "?" + urllib.parse.urlencode({"date": day.isoformat()})
     for wait in BACKOFF:
@@ -88,13 +98,11 @@ def fetch_valid(day: date):
             print(f"    응답 이상 ({e})", file=sys.stderr, flush=True)
             continue
 
-        data = body.get("data") or {}
-        rows = data.get("rows") or []
-        if rows:
-            return rows
         rcode = (body.get("status") or {}).get("rCode")
-        if rcode == 200 and (body.get("message") or "").strip():
-            return []
+        if rcode != 200:
+            print(f"    rCode={rcode!r} — 정상 응답이 아니다", file=sys.stderr, flush=True)
+            continue
+        return (body.get("data") or {}).get("rows") or []
     raise Throttled(f"{day}: 유효 응답 실패")
 
 
@@ -206,7 +214,7 @@ def main(start: date, end: date):
     exch = load_exchanges() if pending else {}
     failed = []
 
-    day = start
+    day, streak = start, 0
     while day <= end:
         key = day.isoformat()
         if key in by_day:
@@ -214,11 +222,18 @@ def main(start: date, end: date):
         else:
             try:
                 by_day[key] = scrape_day(day, exch)
-                print(f"{key} {len(by_day[key]):>4}건", flush=True)
-                save(by_day, start, end)
             except Exception as e:
                 failed.append(key)
+                streak += 1
                 print(f"{key} 실패: {e}", file=sys.stderr, flush=True)
+                if streak >= GIVE_UP_AFTER:
+                    print(f"연속 {streak}일 실패 — 여기서 멈춘다. 받아둔 만큼은 저장돼 있고, "
+                          f"다시 돌리면 이어서 받는다.", file=sys.stderr, flush=True)
+                    break
+            else:
+                streak = 0
+                print(f"{key} {len(by_day[key]):>4}건", flush=True)
+                save(by_day, start, end)
             time.sleep(1.2)
         day += timedelta(days=1)
 
