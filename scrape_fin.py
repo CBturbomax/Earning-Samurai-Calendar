@@ -38,36 +38,71 @@ NAS_UA = ("Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 "
           "(KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36")
 
 TICKERS = "https://www.sec.gov/files/company_tickers.json"
-CONCEPT = "https://data.sec.gov/api/xbrl/companyconcept/CIK{cik:010d}/us-gaap/{tag}.json"
+CONCEPT = "https://data.sec.gov/api/xbrl/companyconcept/CIK{cik:010d}/{ns}/{tag}.json"
 NAS_EPS = "https://api.nasdaq.com/api/quote/{sym}/eps"
 
 # 매출 태그는 회사마다 다르다. 게다가 한 회사가 도중에 바꾸기도 한다.
-# 그래서 하나만 고르지 않고 **넷을 다 받아 합친다**(아래 series 참고).
+# 그래서 하나만 고르지 않고 **여러 개를 받아 합친다**(아래 series 참고).
 # 앞에 적은 것이 더 정확한 표현이라 겹치는 분기는 앞의 것을 남긴다.
-REV_TAGS = ["RevenueFromContractWithCustomerExcludingAssessedTax",
+#
+# 앞 넷은 늘 받고, 그래도 분기가 모자랄 때만 뒤엣것까지 간다. 뒤엣것은 업종이
+# 특수한 회사들(은행의 '이자 차감 후 순수익' 같은)이라 흔하지 않다.
+REV_CORE = ["RevenueFromContractWithCustomerExcludingAssessedTax",
             "Revenues",
             "RevenueFromContractWithCustomerIncludingAssessedTax",
             "SalesRevenueNet"]
+REV_MORE = ["RevenuesNetOfInterestExpense",     # 은행
+            "SalesRevenueGoodsNet",
+            "SalesRevenueServicesNet"]
+REV_TAGS = REV_CORE + REV_MORE                  # probe 에서 통째로 쓸 때용
 OPI_TAG = "OperatingIncomeLoss"
 NI_TAG = "NetIncomeLoss"
+
+# **외국 기업은 회계 언어가 다르다.** 도요타·소니·HSBC·셸·노보노디스크는 미국
+# 기준(us-gaap)이 아니라 국제 기준(IFRS)으로 낸다. us-gaap 만 물으면 이 회사들은
+# 통째로 빈다 — 실제로 59종목이 그렇게 비었다. 못 찾으면 IFRS 로 한 번 더 묻는다.
+IFRS_REV = ["Revenue", "RevenueFromContractsWithCustomers"]
+IFRS_OPI = "ProfitLossFromOperatingActivities"
+IFRS_NI = "ProfitLoss"
 
 PER_RUN = int(os.environ.get("FIN_PER_RUN", "250"))   # 한 번에 받을 종목 수
 SINCE = "2018-10-01"                                  # 1Q19 부터 보려면 조금 앞부터
 
 # 저장 형식 번호. 받는 방식을 고치면 이 번호를 올린다. 그러면 이미 받아둔 기록도
-# 헌 것으로 쳐서 다시 받는다. (2 -> 3: 매출 태그를 합치도록 고친 판. 그 전에는
-# 첫 태그에서 멈춰 엔비디아가 6분기밖에 안 나왔다.)
-FIN_VER = 3
+# 헌 것으로 쳐서 다시 받는다.
+#   2 -> 3  매출 태그를 합치도록. 그 전에는 첫 태그에서 멈춰 엔비디아가 6분기.
+#   3 -> 4  IFRS(외국 기업) + 달러 아닌 통화 + 막힌 것과 없는 것을 가름.
+FIN_VER = 4
+
+BACKOFF = (0, 5, 20, 60)   # SEC 가 막으면 쉬었다 다시. 없는 태그(404)는 재시도 않는다.
+GIVE_UP_AFTER = 5          # 연속 이만큼 막히면 이번 실행은 접는다
 
 # 다시 받는 주기. 발표일 언저리 종목은 매일, 나머지는 이 간격으로.
 NEAR_DAYS = int(os.environ.get("FIN_NEAR_DAYS", "4"))     # 발표일 ±4일이면 '언저리'
 STALE_DAYS = int(os.environ.get("FIN_STALE_DAYS", "7"))   # 그 밖은 7일마다
 
 
+class Throttled(Exception):
+    """SEC 가 막았다. '그 회사에 자료가 없다'와 전혀 다른 일이다."""
+
+
 def get(url, ua, timeout=30):
+    """404 는 None(그 태그를 안 쓰는 회사), 그 밖의 실패는 Throttled.
+
+    예전에는 모든 실패를 똑같이 '없음'으로 삼켰다. 그러면 SEC 가 잠깐 막았을
+    뿐인데 그 종목을 '자료 없음'으로 찍어 두고 28일간 다시 안 물어본다.
+    막힌 것과 없는 것은 반드시 갈라야 한다.
+    """
     req = urllib.request.Request(url, headers={"User-Agent": ua, "Accept": "application/json"})
-    with urllib.request.urlopen(req, timeout=timeout) as r:
-        return json.loads(r.read().decode("utf-8", "replace"))
+    try:
+        with urllib.request.urlopen(req, timeout=timeout) as r:
+            return json.loads(r.read().decode("utf-8", "replace"))
+    except urllib.error.HTTPError as e:
+        if e.code == 404:
+            return None
+        raise Throttled(f"HTTP {e.code}")
+    except (urllib.error.URLError, TimeoutError, OSError, ValueError) as e:
+        raise Throttled(str(e))
 
 
 def quarters(units):
@@ -101,42 +136,89 @@ def label_of(end):
     return f"{(d.month - 1) // 3 + 1}Q{d.year % 100:02d}"
 
 
-def one(cik, tag):
-    """태그 하나를 받아 (분기, 연간) 으로 돌려준다. 없으면 빈 것."""
-    try:
-        d = get(CONCEPT.format(cik=cik, tag=tag), SEC_UA)
-    except Exception:
-        return {}, {}
-    finally:
-        time.sleep(0.15)   # SEC 는 초당 10건까지. 넉넉히 아래로 둔다.
-    return quarters(d.get("units", {}).get("USD", []))
+def biggest_unit(d):
+    """어느 통화로 담긴 값을 쓸지 고른다.
+
+    미국 국내 기업은 USD 뿐이지만 **외국 기업은 본국 통화로 낸다** — 도요타는
+    JPY, 노보노디스크는 DKK. USD 만 들여다보면 그 회사들이 통째로 빈다.
+    (환산하지 않는다. 몇 년치를 오늘 환율로 바꾸면 매출 추세가 아니라
+    환율 추세가 된다.) 값이 가장 많은 통화를 쓴다 — 외국 기업의 USD 는
+    맨 뒷해만 붙여 주는 참고 환산인 경우가 많아서다.
+    """
+    best, cur = [], ""
+    for k, v in (d.get("units") or {}).items():
+        if len(v) > len(best):
+            best, cur = v, k
+    return best, cur
 
 
-def merged(cik, tags):
+def one(cik, ns, tag):
+    """태그 하나 -> (분기, 연간, 통화). 그 회사가 안 쓰는 태그면 빈 것."""
+    for wait in BACKOFF:
+        if wait:
+            print(f"      SEC 가 막았다. {wait}초 쉬고 다시 ({tag})",
+                  file=sys.stderr, flush=True)
+            time.sleep(wait)
+        try:
+            d = get(CONCEPT.format(cik=cik, ns=ns, tag=tag), SEC_UA)
+        except Throttled:
+            continue
+        finally:
+            time.sleep(0.15)   # SEC 는 초당 10건까지. 넉넉히 아래로 둔다.
+        if d is None:
+            return {}, {}, ""              # 404 — 이 회사는 이 태그를 안 쓴다
+        units, cur = biggest_unit(d)
+        q, a = quarters(units)
+        return q, a, cur
+    raise Throttled(f"{tag}: 네 번 다 실패")
+
+
+def merged(cik, ns, tags, enough=0):
     """여러 태그를 훑어 합친다. 먼저 걸리는 하나만 쓰면 안 된다 —
     회사가 도중에 태그를 갈아타기 때문이다. 엔비디아가 그랬다: 옛 태그에는
     2020년까지만 있어서, 첫 태그에서 멈추니 6분기밖에 안 나왔다.
-    이미 채워진 분기는 건드리지 않는다(앞 태그가 더 정확한 표현이다)."""
-    mq, ma = {}, {}
+    이미 채워진 분기는 건드리지 않는다(앞 태그가 더 정확한 표현이다).
+
+    enough 를 주면 그만큼 모였을 때 남은 태그를 건너뛴다. 흔한 회사에
+    쓸데없는 요청을 여러 번 하지 않으려는 것이다."""
+    mq, ma, cur = {}, {}, ""
     for tag in tags:
-        q, a = one(cik, tag)
+        q, a, c = one(cik, ns, tag)
+        cur = cur or c
         for k, v in q.items():
             mq.setdefault(k, v)
         for k, v in a.items():
             ma.setdefault(k, v)
-    return mq, ma
+        if enough and len(mq) >= enough:
+            break
+    return mq, ma, cur
 
 
 def series(cik):
-    """한 종목의 분기 매출·영업이익·순이익 시계열."""
-    rev_q, rev_a = merged(cik, REV_TAGS)
+    """한 종목의 분기 매출·영업이익·순이익 시계열.
+
+    미국 기준(us-gaap)으로 먼저 묻고, 없으면 국제 기준(IFRS)으로 다시 묻는다.
+    """
+    ns = "us-gaap"
+    rev_q, rev_a, cur = merged(cik, ns, REV_CORE, enough=24)
+    if len(rev_q) < 12:
+        q2, a2, c2 = merged(cik, ns, REV_MORE, enough=24)
+        for k, v in q2.items():
+            rev_q.setdefault(k, v)
+        for k, v in a2.items():
+            rev_a.setdefault(k, v)
+        cur = cur or c2
+    if not rev_q and not rev_a:
+        ns = "ifrs-full"
+        rev_q, rev_a, cur = merged(cik, ns, IFRS_REV, enough=24)
     if not rev_q and not rev_a:
         return None
 
-    opi_q, opi_a = one(cik, OPI_TAG)
-    ni_q, ni_a = one(cik, NI_TAG)
+    opi_tag, ni_tag = (OPI_TAG, NI_TAG) if ns == "us-gaap" else (IFRS_OPI, IFRS_NI)
+    opi_q, opi_a, _ = one(cik, ns, opi_tag)
+    ni_q, ni_a, _ = one(cik, ns, ni_tag)
 
-    # 분기가 있으면 분기로, 없으면(외국 기업) 연간으로 낸다.
+    # 분기가 있으면 분기로, 없으면(20-F 만 내는 외국 기업) 연간으로 낸다.
     use_q = bool(rev_q)
     rev, opi, ni = (rev_q, opi_q, ni_q) if use_q else (rev_a, opi_a, ni_a)
     ends = sorted(rev)
@@ -145,6 +227,8 @@ def series(cik):
     return {
         "v": FIN_VER,
         "freq": "Q" if use_q else "A",
+        "cur": cur or "USD",
+        "src": "sec",
         "points": [{
             "label": label_of(e) if use_q else str(date.fromisoformat(e).year),
             "end": e,
@@ -256,15 +340,28 @@ def main():
 
     today = date.today().isoformat()
     stocks = dict(old)
-    got = 0
+    got, blocked, streak = 0, 0, 0
     for i, sym in enumerate(todo):
         rec = {}
         cik = cikmap.get(re.sub(r"[^A-Z.]", "", sym.upper()))
         if cik:
             try:
                 s = series(cik)
+                streak = 0
                 if s:
                     rec.update(s)
+            except Throttled as e:
+                # 막힌 것은 '자료 없음'이 아니다. 기록을 건드리지 않고 넘어가
+                # 다음 실행에서 다시 물어본다. 여기서 ts 를 찍어 버리면
+                # 잠깐 막혔을 뿐인 종목을 이레 동안 안 물어보게 된다.
+                blocked += 1
+                streak += 1
+                print(f"    {sym} SEC 가 막았다: {e}", file=sys.stderr, flush=True)
+                if streak >= GIVE_UP_AFTER:
+                    print(f"  연속 {streak}종목이 막혔다. 이번 실행은 여기서 접는다.",
+                          file=sys.stderr, flush=True)
+                    break
+                continue
             except Exception as e:
                 print(f"    {sym} 재무 실패: {e}", file=sys.stderr)
         r = reported(sym)
@@ -303,6 +400,8 @@ def main():
     na = sum(1 for v in have.values() if v.get("freq") == "A")
     ne = sum(1 for v in have.values() if v.get("eps"))
     print(f"\n{len(have):,}종목 -> {OUT} (자료 없는 종목 {len(stocks)-len(have):,} 표시만)")
+    if blocked:
+        print(f"  SEC 가 막아서 못 받은 종목 {blocked:,}개 — 다음 실행에서 다시 받는다")
     print(f"  분기 시계열 {nq:,} · 연간만 {na:,} · EPS(발표완료) {ne:,}")
 
     # 눈으로 한 번 본다. 태그를 갈아탄 회사를 놓치면 여기서 짧게 나온다.
