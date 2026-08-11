@@ -23,6 +23,7 @@ AAStocks 는 표를 자바스크립트로 그려서 HTML 에 데이터가 없다
 
 결과: data/earnings_hk.json
 """
+import html
 import json
 import re
 import sys
@@ -204,8 +205,12 @@ def fetch_day(day: date, probe: bool = False):
                 "time": hhmm,                  # 홍콩 현지 시각 (HKT)
                 "code": code,
                 "name": first_field(r.get("STOCK_NAME")),
-                # 공시 제목에 줄바꿈이 그대로 들어 있다. 한 줄로 눕힌다.
-                "fy": re.sub(r"\s+", " ", r.get("TITLE") or "").strip()[:60],
+                # 공시 제목에 줄바꿈과 HTML 기호(&#x2f; 등)가 그대로 들어 있다.
+                # 한 줄로 눕히고 기호를 풀어 둔다. 예전에는 60자에서 잘랐는데,
+                # 하필 끝에 붙는 연도가 잘려 나가서 build.py 가 기간을 못 읽었다
+                # ('...FOR THE YEAR ENDED 31 MARCH 2'). 길이는 넉넉히 둔다.
+                "fy": html.unescape(
+                    re.sub(r"\s+", " ", r.get("TITLE") or "")).strip()[:160],
                 "kind": kind_of(label),
                 "sector": "",
                 "market": "",
@@ -216,12 +221,27 @@ def fetch_day(day: date, probe: bool = False):
     raise Throttled(f"{day}: 유효 응답 실패")
 
 
+# 담는 형식 번호. 행에 담는 내용을 바꾸면 올린다 — 그래야 이미 받아둔 날도 다시 받는다.
+# (1 -> 2: 공시 제목을 60자에서 자르던 것을 풀고 HTML 기호를 풀었다.)
+HK_VER = 2
+
+
 def load_cache():
+    """이미 받아둔 날은 다시 받지 않는다 — 다만 담는 형식이 바뀌었으면 예외다.
+
+    형식을 고쳐 놓고 캐시를 그대로 두면 새 형식이 새로 받는 날에만 적용돼서,
+    화면에 옛 모양과 새 모양이 섞인다. 실제로 겪었다: 공시 제목을 60자에서
+    자르던 걸 풀었는데 이미 받은 날은 계속 잘린 채였다. HK_VER 를 올리면
+    통째로 다시 받는다.
+    """
     if not OUT.exists():
         return {}
     try:
         old = json.loads(OUT.read_text(encoding="utf-8"))
     except (ValueError, OSError):
+        return {}
+    if old.get("v") != HK_VER:
+        print(f"  담는 형식이 바뀌었다(v{old.get('v')} -> v{HK_VER}). 처음부터 다시 받는다.")
         return {}
     by_day = {d: [] for d in old.get("ok_days", [])}
     for r in old.get("rows", []):
@@ -233,6 +253,7 @@ def save(by_day: dict, start: date, end: date):
     ok_days = sorted(by_day)
     rows = [r for d in ok_days for r in by_day[d]]
     payload = {
+        "v": HK_VER,
         "source": "HKEXnews 상장사 공시 (실적 공시 기준)",
         "source_url": PAGE,
         "range": [start.isoformat(), end.isoformat()],
