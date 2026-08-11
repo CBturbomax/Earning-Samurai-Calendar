@@ -74,7 +74,9 @@ SINCE = "2018-10-01"                                  # 1Q19 부터 보려면 �
 #   3 -> 4  IFRS(외국 기업) + 달러 아닌 통화 + 막힌 것과 없는 것을 가름.
 #   4 -> 5  뼈대 태그를 개수로 가리도록. 그 전에는 날짜만 봐서 점 두 개짜리가
 #           스물두 개짜리를 이겼다(엑슨이 실행마다 22개와 2개를 오갔다).
-FIN_VER = 5
+#   5 -> 6  영업이익·순이익도 companyfacts 에서 같이 꺼낸다. 그 전에는 매출만
+#           찾아서 코카콜라·비자·아메리칸타워에 영업이익률 선이 없었다.
+FIN_VER = 6
 
 BACKOFF = (0, 5, 20, 60)   # SEC 가 막으면 쉬었다 다시. 없는 태그(404)는 재시도 않는다.
 GIVE_UP_AFTER = 5          # 연속 이만큼 막히면 이번 실행은 접는다
@@ -314,36 +316,56 @@ REV_NO = re.compile(r"deferred|unearned|remaining|obligation|"
                     r"policy|textblock|table|axis|member|domain", re.I)
 
 
-def discover(cik, budget):
-    """그 회사가 실제로 쓰는 매출 항목을 찾아 (분기, 연간, 통화) 로.
+# 영업이익·순이익도 이름이 갈린다. companyfacts 를 이미 받아 왔으니 같은 응답에서
+# 같이 꺼낸다 — 매출만 찾아 놓으면 영업이익률 선이 빠진 차트가 된다(코카콜라·비자·
+# 아메리칸타워가 그랬다).
+OPI_NAMES = ["OperatingIncomeLoss", "ProfitLossFromOperatingActivities",
+             "OperatingIncomeLossIncludingEquityMethodInvestments"]
+NI_NAMES = ["NetIncomeLoss", "ProfitLoss",
+            "NetIncomeLossAvailableToCommonStockholdersBasic"]
 
-    budget 은 남은 호출 수를 담은 한 칸짜리 리스트다(0이면 안 부른다).
-    """
-    if budget[0] <= 0:
-        return {}, {}, ""
-    budget[0] -= 1
-    try:
-        d = get(FACTS.format(cik=cik), SEC_UA, timeout=90)
-    except Throttled:
-        return {}, {}, ""
-    finally:
-        time.sleep(0.3)
-    if not d:
-        return {}, {}, ""
 
+def pick_best(facts, names=None, ok=None, no=None):
+    """항목들 중 '최근까지 오면서 점이 많은' 것을 고른다."""
     best = ({}, {}, "")
     for ns in ("us-gaap", "ifrs-full"):
-        for name, node in ((d.get("facts") or {}).get(ns, {}).items()):
-            if not REV_OK.search(name) or REV_NO.search(name):
+        for name, node in (facts.get(ns) or {}).items():
+            if names is not None:
+                if name not in names:
+                    continue
+            elif not ok.search(name) or no.search(name):
                 continue
             units, cur = biggest_unit(node)
             q, a = quarters(units)
-            # 최근까지 오면서 점이 많은 것을 고른다.
             key = (reaches(q) or reaches(a), len(q), len(a))
             cmp = (reaches(best[0]) or reaches(best[1]), len(best[0]), len(best[1]))
             if key > cmp:
                 best = (q, a, cur)
     return best
+
+
+def discover(cik, budget):
+    """그 회사가 실제로 쓰는 매출·영업이익·순이익 항목을 찾는다.
+
+    budget 은 남은 호출 수를 담은 한 칸짜리 리스트다(0이면 안 부른다).
+    """
+    empty = ({}, {}, "")
+    if budget[0] <= 0:
+        return empty, empty, empty
+    budget[0] -= 1
+    try:
+        d = get(FACTS.format(cik=cik), SEC_UA, timeout=90)
+    except Throttled:
+        return empty, empty, empty
+    finally:
+        time.sleep(0.3)
+    if not d:
+        return empty, empty, empty
+
+    facts = d.get("facts") or {}
+    return (pick_best(facts, ok=REV_OK, no=REV_NO),
+            pick_best(facts, names=OPI_NAMES),
+            pick_best(facts, names=NI_NAMES))
 
 
 def series(cik, budget=None):
@@ -365,8 +387,9 @@ def series(cik, budget=None):
         used_ifrs = (len(got[0]), len(got[1])) != before
     # 여기까지 와서도 얇으면 태그 이름을 짐작하는 게 안 통한 것이다.
     # 그 회사가 실제로 쓰는 항목을 찾아본다(무거워서 마지막에만).
+    found_opi = found_ni = None
     if budget is not None and thin(got[0], got[1]):
-        q3, a3, c3 = discover(cik, budget)
+        (q3, a3, c3), found_opi, found_ni = discover(cik, budget)
         # 분기와 연간을 각각 더 긴 쪽으로. 통째로 갈아치우면 안 된다 —
         # 이름을 보고 찾은 줄이 엉뚱할 때 그걸 가려낼 잣대(믿을 만한 연간)까지
         # 같이 버리게 된다. UBS 가 그랬다.
@@ -382,8 +405,16 @@ def series(cik, budget=None):
         return None
 
     # 영업이익·순이익도 매출을 찾은 쪽 기준으로 묻고, 기준을 갈아탄 회사는 둘 다.
-    opi_q, opi_a, _ = one(cik, "us-gaap", OPI_TAG)
-    ni_q, ni_a, _ = one(cik, "us-gaap", NI_TAG)
+    # companyfacts 를 이미 받아 온 종목은 거기서 꺼낸 것을 쓴다 — 요청도 아끼고,
+    # 매출만 찾고 영업이익을 못 찾아 영업이익률 선이 빠지는 일도 없다.
+    if found_opi and (found_opi[0] or found_opi[1]):
+        opi_q, opi_a = found_opi[0], found_opi[1]
+    else:
+        opi_q, opi_a, _ = one(cik, "us-gaap", OPI_TAG)
+    if found_ni and (found_ni[0] or found_ni[1]):
+        ni_q, ni_a = found_ni[0], found_ni[1]
+    else:
+        ni_q, ni_a, _ = one(cik, "us-gaap", NI_TAG)
     if used_ifrs:
         for tag, tq, ta in ((IFRS_OPI, opi_q, opi_a), (IFRS_NI, ni_q, ni_a)):
             q2, a2, _ = one(cik, "ifrs-full", tag)

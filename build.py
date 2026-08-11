@@ -1481,7 +1481,15 @@ function finBlock(m, code) {
            (u.consensus ? ' <i>(예상 ' + u.consensus + ')</i>' : '') + '</span>' : '') +
       '</div>';
   }
-  if (f.points && f.points.length) html += finChart(f);
+  // 점이 하나뿐이면 그리지 않는다. 막대 하나짜리는 추세가 아니라 그냥 숫자 하나다.
+  // (텐센트가 그렇다 — 야후가 최근 한 분기만 준다.)
+  if (f.points && f.points.length >= 2) html += finChart(f);
+  else if (f.points && f.points.length === 1) {
+    const p = f.points[0], U = curOf(f.cur);
+    html += '<p class="finnote">받을 수 있었던 실적 수치가 <b>' + esc(p.label) +
+            '</b> 한 개뿐이라 추세를 그리지 못했습니다. ' +
+            '(매출 ' + p.rev.toLocaleString() + ' ' + esc(U.ko) + ' · 출처 Yahoo Finance)</p>';
+  }
   return html || '<p class="finnote">받아둔 수치가 없습니다.</p>';
 }
 
