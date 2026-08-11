@@ -247,9 +247,34 @@ def main():
             print(f"  {i+len(chunk):>5}/{len(syms)}  누적 {len(raw):,}건", flush=True)
         time.sleep(1.0)
 
+    # 큰 묶음이 통째로 실패하면 그 안의 멀쩡한 종목까지 같이 빠진다.
+    # 아직 답을 못 받은 종목만 작은 묶음으로 한 번 더 물어본다.
+    seen = {r.get("symbol") for r in raw}
+    retry = [s for s in syms if s not in seen]
+    if retry:
+        print(f"  답이 안 온 {len(retry)}종목을 작은 묶음으로 다시 물어본다")
+        for i in range(0, len(retry), 10):
+            try:
+                raw += fetch(retry[i:i + 10])
+            except Throttled as e:
+                print(f"    재시도 실패: {e}", file=sys.stderr, flush=True)
+            time.sleep(1.0)
+
     rates = fx_rates({r.get("currency") for r in raw})
 
-    caps, skipped = {}, 0
+    # **이미 받아둔 시총을 이어 쓴다.** 예전에는 매 실행 처음부터 새로 만들었다.
+    # 그러면 이번에 실패한 묶음의 종목들은 지난번에 잘 받아 뒀어도 통째로 사라진다.
+    # 실제로 그렇게 80종목이 비었고, 그중에 히로세전기(시총 8,800억엔)·SHOEI·
+    # 청산상사가 있었다. 규모 필터에서 조용히 빠지는 회사가 생기면 안 된다.
+    old_caps = {}
+    if OUT.exists():
+        try:
+            old_caps = json.loads(OUT.read_text(encoding="utf-8")).get("caps", {})
+        except (ValueError, OSError):
+            pass
+
+    caps, skipped = dict(old_caps), 0
+    fresh = 0
     for r in raw:
         sym = r.get("symbol") or ""
         if sym not in todo:
@@ -260,6 +285,7 @@ def main():
             skipped += 1
             continue
         caps[f"{mkt}:{code}"] = round(cap / rates[cur] / 1e9, 3)
+        fresh += 1
 
     # 업종은 이미 받아둔 것을 이어 쓴다. 홍콩은 종목당 요청이라 한 번에 다 못 받는다.
     known = {}
@@ -285,7 +311,16 @@ def main():
     tmp.write_text(json.dumps(payload, ensure_ascii=False), encoding="utf-8")
     tmp.replace(OUT)
 
-    print(f"\n시총 {len(caps):,}종목 -> {OUT}")
+    # 지금 캘린더에 없는 종목은 들고 있어 봐야 무겁기만 하다. 다만 이번에 못 받은
+    # 종목은 남긴다 — 그게 위에서 말한 '조용히 사라지는' 사고를 막는 부분이다.
+    live = {f"{m}:{c}" for m, c in todo.values()}
+    caps = {k: v for k, v in caps.items() if k in live}
+
+    missing = sorted(live - set(caps))
+
+    print(f"\n시총 {len(caps):,}종목 -> {OUT} (이번에 새로 받은 것 {fresh:,})")
+    if missing:
+        print(f"  아직 시총을 못 받은 종목 {len(missing):,}개: {missing[:12]}")
     if skipped:
         print(f"  시총·통화를 못 읽어 건너뛴 종목 {skipped:,}개")
     if failed:
