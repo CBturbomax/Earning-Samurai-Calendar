@@ -1,0 +1,9 @@
+__pycache__/
+*.pyc
+
+# 수집 로그 — 실행할 때마다 새로 쌓인다
+*.log
+
+# 스크래퍼가 저장 중 쓰는 임시 파일
+data/*.tmp
+data/_snapshot_*.json
