@@ -197,7 +197,9 @@ TEMPLATE = r"""<!DOCTYPE html>
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
 <meta http-equiv="Pragma" content="no-cache">
 <meta http-equiv="Expires" content="0">
-<title>일본 결산발표 캘린더 by CB</title>
+<title>Earning Samurai — 글로벌 실적발표 캘린더</title>
+<!-- 대표 아이콘. 외부 파일을 받지 않도록 SVG를 그대로 심는다 (투구 + 선글라스). -->
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='13' fill='%230f1419'/%3E%3Cpath d='M13 27C10 13 16 6 21 5c-1 9 4 13 8 15z' fill='%23FFC01E'/%3E%3Cpath d='M51 27c3-14-3-21-8-22 1 9-4 13-8 15z' fill='%23FFC01E'/%3E%3Cpath d='M32 12c-11 0-19 8-19 18h38c0-10-8-18-19-18z' fill='%231b1b1b'/%3E%3Ccircle cx='32' cy='39' r='17' fill='%23FFC01E'/%3E%3Crect x='15' y='33' width='34' height='4' rx='2' fill='%23111'/%3E%3Crect x='16' y='33' width='13' height='10' rx='3.5' fill='%23111'/%3E%3Crect x='35' y='33' width='13' height='10' rx='3.5' fill='%23111'/%3E%3Cpath d='M25 47q7 5 14 0' stroke='%23111' stroke-width='2.6' fill='none' stroke-linecap='round'/%3E%3C/svg%3E">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=42dot+Sans:wght@300..800&display=swap"
@@ -223,8 +225,15 @@ body {
   border-left:5px solid var(--a1); display:inline-block;
 }
 .topline b { color:var(--fg); }
-h1 { font-size:38px; font-weight:800; margin:0 0 6px; letter-spacing:-.5px; }
-h1 .jp { color:var(--a1); }
+h1 { font-size:38px; font-weight:800; margin:0 0 6px; letter-spacing:-.5px;
+     display:flex; align-items:center; gap:12px; flex-wrap:wrap; }
+h1 .jp { color:var(--a3); }
+h1 .byline { font-size:20px; font-weight:600; color:var(--mute); letter-spacing:0; }
+/* 투구 아이콘 — 파비콘과 같은 그림. 외부 파일을 받지 않게 SVG를 심는다. */
+h1 .mark {
+  width:44px; height:44px; flex:0 0 auto; border-radius:10px;
+  background:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='13' fill='%23161d24'/%3E%3Cpath d='M13 27C10 13 16 6 21 5c-1 9 4 13 8 15z' fill='%23FFC01E'/%3E%3Cpath d='M51 27c3-14-3-21-8-22 1 9-4 13-8 15z' fill='%23FFC01E'/%3E%3Cpath d='M32 12c-11 0-19 8-19 18h38c0-10-8-18-19-18z' fill='%231b1b1b'/%3E%3Ccircle cx='32' cy='39' r='17' fill='%23FFC01E'/%3E%3Crect x='15' y='33' width='34' height='4' rx='2' fill='%23111'/%3E%3Crect x='16' y='33' width='13' height='10' rx='3.5' fill='%23111'/%3E%3Crect x='35' y='33' width='13' height='10' rx='3.5' fill='%23111'/%3E%3Cpath d='M25 47q7 5 14 0' stroke='%23111' stroke-width='2.6' fill='none' stroke-linecap='round'/%3E%3C/svg%3E") center/contain no-repeat;
+}
 h2 {
   font-size:26px; font-weight:700; margin:52px 0 14px;
   padding-left:14px; border-left:6px solid var(--a3);
@@ -512,7 +521,8 @@ svg.bars rect.b:hover { fill:var(--a3); }
 <div class="wrap">
 
 <div class="topline">__HEAD__</div>
-<h1>글로벌 실적발표 캘린더 <span class="jp">by CB</span></h1>
+<h1><span class="mark" aria-hidden="true"></span>Earning <span class="jp">Samurai</span>
+    <span class="byline">by CB</span></h1>
 <p class="sub">미국 · 일본 · 홍콩 주간 실적발표 일정 — 누가 언제 발표하는지, 관심종목은 알림까지</p>
 
 <div class="mtabs" id="mtabs"></div>
@@ -601,6 +611,10 @@ svg.bars rect.b:hover { fill:var(--a3); }
   발표 시각은 <b>미국만</b> 원본에 있습니다(장전 BMO / 장후 AMC).
   일본은 대부분 장 마감 후 15시 전후, 홍콩은 이사회 당일 장 마감 후 공시입니다.<br>
   날짜는 각 시장의 <b>현지 날짜</b>입니다. 미국 장후 발표는 한국 시각으로 다음 날 새벽이 됩니다.<br>
+  🇭🇰 홍콩만 성격이 다릅니다. 미국·일본은 회사가 미리 신고한 <b>발표 예정일</b>이지만,
+  홍콩은 그 제도가 약하고 거래소가 내던 이사회 캘린더도 없어져서
+  <b>이미 공시된 실적</b>을 모읍니다. 즉 홍콩 탭에는 앞으로의 예정이 아니라
+  지나간 발표가 실립니다.<br>
   <span id="gapNote"></span>
   관심종목은 이 브라우저에만 저장되며 서버로 전송되지 않습니다.
 </div>
@@ -1285,8 +1299,8 @@ function renderCards() {
 
   const cur = mkt ? MKT[mkt] : null;
   document.getElementById('calMeta').textContent = cur
-    ? cur.ko + ' 상장사 실적발표 예정 — ' + cur.note
-    : '미국 · 일본 · 홍콩 상장사 실적발표 예정';
+    ? cur.flag + ' ' + cur.ko + ' 상장사 — ' + cur.note
+    : '미국 · 일본 상장사 발표 예정 + 홍콩 공시';
 }
 
 /* ── 출처와 수집 구멍 ─────────────────────────────────────── */
