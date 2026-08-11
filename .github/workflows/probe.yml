@@ -3,10 +3,9 @@
 # 여기서 확인되기 전에는 collect.yml 에 넣지 않는다. 모양을 짐작해서 짜 두면
 # 조용히 0건이 되고, 그게 제일 나쁘다(캘린더가 "발표 없음"이라고 거짓말한다).
 #
-# 지금 보는 것: 일본·홍콩 실적 시계열 (야후 fundamentals-timeseries)
-#   - 1Q19 까지 거슬러 오는가
-#   - 홍콩이 반기(6M)로 오는가
-#   - 통화가 뭐로 오는가
+# 지금 알아볼 것:
+#   1) 일본·홍콩 **분기** 실적을 몇 개나 주는 곳이 있나 (야후는 4~5개가 한계였다)
+#   2) 야후가 시총을 안 준 80종목은 왜 그런가 (히로세전기 같은 대기업이 섞여 있다)
 name: 소스 접근 확인
 on:
   workflow_dispatch:
@@ -15,40 +14,75 @@ on:
 jobs:
   probe:
     runs-on: ubuntu-latest
-    timeout-minutes: 10
+    timeout-minutes: 15
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
         with:
           python-version: '3.12'
 
-      - name: 🇯🇵🇭🇰 야후 재무 시계열
-        continue-on-error: true
-        run: python scrape_fin_intl.py --probe
-
-      - name: 🇺🇸 SEC — 외국 기업(IFRS)·은행·태그 갈아탄 회사
+      # 분기 시계열을 깊게 주는 곳을 찾는다. 후보를 한 번에 떠본다.
+      - name: 📊 분기 실적 — 어디가 얼마나 깊이 주나
         continue-on-error: true
         run: |
           python - <<'PY'
-          import scrape_fin as sf
-          # 앞 셋은 미국 기준(us-gaap), 뒤 여섯은 국제 기준(IFRS)으로 내는 회사들.
-          # 전에는 us-gaap 만 물어서 도요타·소니·HSBC 가 통째로 비었다.
-          # KO·XOM·V·AMT 는 분기가 두세 개밖에 안 나왔던 것들이다.
-          budget = [50]     # companyfacts 호출 한도
-          who = [("NVDA", 1045810), ("AAPL", 320193), ("SE", 1703399),
-                 ("KO", 21344), ("XOM", 34088), ("V", 1403161), ("AMT", 1053507),
-                 ("TM 도요타", 1094517), ("SONY 소니", 313838),
-                 ("HSBC", 1089113), ("SHEL 셸", 1306965),
-                 ("NVO 노보노디스크", 353278), ("UBS", 1610520)]
-          for name, cik in who:
+          import json, re, urllib.request, urllib.error
+          UA = ("Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 "
+                "(KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36")
+
+          def get(url, headers=None, timeout=25):
+              h = {"User-Agent": UA, "Accept": "*/*",
+                   "Accept-Language": "en-US,en;q=0.9"}
+              h.update(headers or {})
+              req = urllib.request.Request(url, headers=h)
               try:
-                  s = sf.series(cik, budget)
+                  with urllib.request.urlopen(req, timeout=timeout) as r:
+                      return r.status, r.read()
+              except urllib.error.HTTPError as e:
+                  return e.code, (e.read()[:400] if e.fp else b"")
               except Exception as e:
-                  print(f"{name}: 실패 {e}"); continue
-              if not s:
-                  print(f"{name}: 없음"); continue
-              p = s["points"]
-              print(f"{name}: {s['freq']} {s['cur']} {len(p)}개  "
-                    f"{p[0]['label']} ~ {p[-1]['label']}  최근 {p[-1]['rev']:,.0f}")
-          print(f"항목 이름을 직접 찾아본 종목 {50 - budget[0]}개")
+                  return 0, str(e).encode()
+
+          # (이름, URL) — 도요타/텐센트를 같은 잣대로 떠본다.
+          CAND = [
+            ("stockanalysis JP 목록", "https://stockanalysis.com/quote/tyo/7203/financials/"),
+            ("stockanalysis JP data", "https://stockanalysis.com/quote/tyo/7203/financials/__data.json?p=quarterly"),
+            ("stockanalysis api JP",  "https://api.stockanalysis.com/api/symbol/q/TYO:7203/financials/income-statement?p=quarterly"),
+            ("stockanalysis HK data", "https://stockanalysis.com/quote/hkg/0700/financials/__data.json?p=quarterly"),
+            ("stockanalysis US data", "https://stockanalysis.com/stocks/se/financials/__data.json?p=quarterly"),
+            ("wsj JP",                "https://www.wsj.com/market-data/quotes/JP/XTKS/7203/financials/quarter/income-statement"),
+            ("marketwatch JP",        "https://www.marketwatch.com/investing/stock/7203/financials/income/quarter?countrycode=jp"),
+            ("investing api",         "https://api.investing.com/api/financialdata/8236/financial-summary?ratio-type=income-statement&period-type=quarterly"),
+            ("tradingview scanner",   "https://scanner.tradingview.com/japan/scan"),
+            ("irbank JP",             "https://irbank.net/E01739/results"),
+            ("kabutan JP",            "https://kabutan.jp/stock/finance?code=7203"),
+            ("aastocks HK",           "http://www.aastocks.com/en/stocks/analysis/company-fundamental/financial-ratios?symbol=00700"),
+          ]
+          for name, url in CAND:
+              code, body = get(url)
+              peek = body[:150].decode("utf-8", "replace").replace("\n", " ")
+              print(f"{name:<24} HTTP {code:<4} {len(body):>8,}바이트  {peek}")
+          PY
+
+      # 야후가 시총을 안 준 종목들. 히로세전기(6806)는 시총 1조엔대 대기업이다.
+      - name: 💰 시총이 비는 종목 — 야후는 뭐라고 답하나
+        continue-on-error: true
+        run: |
+          python - <<'PY'
+          import json
+          import scrape_caps as sc
+          sc.bootstrap()
+          # 앞 넷은 시총이 비어 있던 종목, 뒤 둘은 잘 받아지던 종목(대조군).
+          syms = ["6806.T", "7839.T", "8219.T", "2928.T", "0811.HK", "7203.T", "0700.HK"]
+          rows = sc.fetch(syms)
+          got = {r.get("symbol"): r for r in rows}
+          print(f"물어본 {len(syms)}개 중 답이 온 것 {len(rows)}개")
+          for s in syms:
+              r = got.get(s)
+              if not r:
+                  print(f"  {s:<9} 응답에 없음")
+                  continue
+              print(f"  {s:<9} marketCap={r.get('marketCap')!r:>16} "
+                    f"cur={r.get('currency')!r} type={r.get('quoteType')!r} "
+                    f"name={str(r.get('shortName'))[:24]!r}")
           PY
