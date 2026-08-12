@@ -1,11 +1,10 @@
 # 새 소스를 붙이기 전에 응답 생김새를 눈으로 본다.
 #
-# 여기서 확인되기 전에는 collect.yml 에 넣지 않는다. 모양을 짐작해서 짜 두면
-# 조용히 0건이 되고, 그게 제일 나쁘다(캘린더가 "발표 없음"이라고 거짓말한다).
-#
-# 앞선 확인에서 stockanalysis 만 세 시장 다 200 을 줬다(WSJ·마켓워치 401,
-# 인베스팅·IR뱅크 403, 가부탄 405). 이제 그 응답 속을 뜯어본다 —
-# **분기를 몇 개나 주는가**가 관건이다. 야후는 4~5개가 한계였다.
+# 지금 찾는 것: **일본·홍콩 분기 실적을 20개보다 깊게 주는 곳.**
+# stockanalysis 는 20분기(5년)가 무료 한도였다. 미국은 SEC 로 1Q19 부터 나오는데
+# 일본·홍콩만 짧다. 영어권 금융 사이트는 대부분 막혀 있으니(WSJ·마켓워치 401,
+# 인베스팅 403) 이번에는 **현지 사이트**를 훑는다 — 일본은 야후재팬·닛케이·
+# 가부탄·미차쿠·IR뱅크, 홍콩은 이스트머니·시나·텐센트·AA스탁스.
 name: 소스 접근 확인
 on:
   workflow_dispatch:
@@ -21,34 +20,68 @@ jobs:
         with:
           python-version: '3.12'
 
-      - name: 📊 stockanalysis — 새 수집기가 실제로 뽑아내는가
-        continue-on-error: true
-        run: python scrape_fin_intl.py --probe
-
-      - name: 🔎 더 깊이 받을 수 있나 (기간 옵션 떠보기)
+      - name: 🇯🇵🇭🇰 현지 사이트 — 분기를 몇 개나 주나
         continue-on-error: true
         run: |
           python - <<'PY'
-          import scrape_fin_intl as si
-          # 기본은 20분기였다. 옵션을 붙이면 더 오는지 본다. 1Q19 까지 가면 좋다.
-          base = "https://stockanalysis.com/stocks/se/financials/__data.json"
-          jp   = "https://stockanalysis.com/quote/tyo/7203/financials/__data.json"
-          tries = [
-            ("기본",            base + "?p=quarterly"),
-            ("range=10Y",      base + "?p=quarterly&range=10Y"),
-            ("range=20Y",      base + "?p=quarterly&range=20Y"),
-            ("period=quarterly", base + "?period=quarterly"),
-            ("i=trailing",     base + "?p=quarterly&i=trailing"),
-            ("도요타 기본",      jp + "?p=quarterly"),
-            ("도요타 range=10Y", jp + "?p=quarterly&range=10Y"),
-          ]
-          for label, u in tries:
+          import json, re, urllib.request, urllib.error
+          UA = ("Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 "
+                "(KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36")
+
+          def get(url, hdr=None, data=None, timeout=25):
+              h = {"User-Agent": UA, "Accept": "*/*",
+                   "Accept-Language": "ja,en-US;q=0.9,en;q=0.8"}
+              h.update(hdr or {})
+              req = urllib.request.Request(url, headers=h, data=data)
               try:
-                  s = si.series(u)
+                  with urllib.request.urlopen(req, timeout=timeout) as r:
+                      return r.status, r.read()
+              except urllib.error.HTTPError as e:
+                  return e.code, (e.read()[:300] if e.fp else b"")
               except Exception as e:
-                  print(f"  {label:<18} 실패 {e}"); continue
-              if not s:
-                  print(f"  {label:<18} 자료 없음"); continue
-              p = s["points"]
-              print(f"  {label:<18} 분기 {len(p):>2}개  {p[0]['label']} ~ {p[-1]['label']}  {s['cur']}")
+                  return 0, str(e).encode()
+
+          def count_quarters(body):
+              """응답 안에 분기처럼 보이는 것이 몇 개나 있나 — 거칠게 센다."""
+              t = body.decode("utf-8", "replace")
+              pats = {
+                "YYYY-MM-DD": len(set(re.findall(r"20\d\d-\d\d-\d\d", t))),
+                "YYYY/MM": len(set(re.findall(r"20\d\d/\d\d", t))),
+                "YYYY年MM月": len(set(re.findall(r"20\d\d年\d{1,2}月", t))),
+                "REPORTDATE": len(set(re.findall(r'"REPORT_DATE":"(20\d\d-\d\d-\d\d)', t))),
+              }
+              return ", ".join(f"{k} {v}" for k, v in pats.items() if v)
+
+          CAND = [
+            # ── 일본 ─────────────────────────────────────────────
+            ("야후재팬 실적",   "https://finance.yahoo.co.jp/quote/7203.T/performance", None, None),
+            ("닛케이 결산",     "https://www.nikkei.com/nkd/company/kessan/?scode=7203", None, None),
+            ("가부탄 재무",     "https://kabutan.jp/stock/finance?code=7203&mode=b", None, None),
+            ("가부탄 top",      "https://kabutan.jp/stock/?code=7203", None, None),
+            ("미나부",         "https://minkabu.jp/stock/7203/settlement", None, None),
+            ("IR뱅크",         "https://irbank.net/7203/results", None, None),
+            ("울렛",           "https://www.ullet.com/7203.html", None, None),
+            # ── 홍콩 ─────────────────────────────────────────────
+            ("이스트머니 HK",
+             "https://datacenter.eastmoney.com/securities/api/data/v1/get?"
+             "reportName=RPT_HKF10_FN_MAININDICATOR&columns=ALL&quoteColumns=&"
+             "filter=(SECUCODE%3D%2200700.HK%22)&pageNumber=1&pageSize=50&sortTypes=-1&"
+             "sortColumns=STD_REPORT_DATE&source=F10&client=PC", None, None),
+            ("시나 HK",
+             "https://stock.finance.sina.com.cn/hkstock/api/jsonp.php/x/"
+             "HK_StockService.getHKFinance?symbol=00700&type=zyzb", None, None),
+            ("AA스탁스 HK",
+             "http://www.aastocks.com/en/stocks/analysis/company-fundamental/"
+             "financial-ratios?symbol=00700", None, None),
+            ("텐센트증권 HK",
+             "https://proxy.finance.qq.com/ifzqgtimg/appstock/app/HkFinanceData/"
+             "getFinanceData?symbol=hk00700&type=report", None, None),
+          ]
+          for name, url, hdr, data in CAND:
+              code, body = get(url, hdr, data)
+              info = count_quarters(body) if code == 200 else ""
+              peek = body[:110].decode("utf-8", "replace").replace("\n", " ")
+              print(f"{name:<14} HTTP {code:<4} {len(body):>9,}B  {info}")
+              if code != 200:
+                  print(f"                {peek}")
           PY
