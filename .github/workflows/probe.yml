@@ -28,9 +28,10 @@ jobs:
 
       # 목록은 잘 열리는데 우리 정규식이 0건을 냈다. 생김새를 안 보고 정규식을
       # 고치는 건 점치는 것이다. 표 한 줄을 그대로 찍는다.
-      - name: 🇯🇵 TDnet 표 한 줄 원문
+      # zip 은 잘 받아지는데 XBRL 을 못 읽었다. 안에 무엇이 들었는지 찍어 본다.
+      - name: 🇯🇵 결산단신 zip 속을 본다
         continue-on-error: true
-        run: python scrape_fin_jp.py --rows
+        run: python scrape_fin_jp.py --zip
 
       - name: 🇯🇵 TDnet 결산단신을 읽을 수 있는가
         continue-on-error: true

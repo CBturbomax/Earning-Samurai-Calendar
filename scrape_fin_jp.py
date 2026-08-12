@@ -277,6 +277,53 @@ def dump_rows():
         return
 
 
+def dump_zip():
+    """결산단신 zip **안에 무엇이 들었는지** 그대로 찍는다.
+
+    zip 은 잘 받아지는데(44~75KB) XBRL 을 못 읽었다. 파일 이름이 다른지,
+    XML 이 깨진 건지, 안 보고는 알 수 없다.
+    """
+    for back in range(4):
+        day = (date.today() - timedelta(days=back)).isoformat()
+        try:
+            rows = listing(day, 1)
+        except Throttled as e:
+            print(f"{day} 목록 실패: {e}")
+            continue
+        tan = [r for r in rows
+               if TANSHIN.search(r["title"]) and not NOT_TANSHIN.search(r["title"])
+               and r["zip"]]
+        if not tan:
+            continue
+        r = tan[0]
+        print(f"\n===== {day} {r['code']} {r['name'][:14]} · {r['zip']}")
+        blob = raw("https://www.release.tdnet.info/inbs/" + r["zip"], binary=True)
+        if not blob:
+            continue
+        try:
+            z = zipfile.ZipFile(io.BytesIO(blob))
+        except zipfile.BadZipFile as e:
+            print("  zip 이 아니다:", e)
+            print("  앞 60바이트:", blob[:60])
+            continue
+        print("  안에 든 파일:")
+        for n in z.namelist():
+            print(f"    {n}")
+        cands = [n for n in z.namelist() if n.lower().endswith(".xbrl")]
+        if not cands:
+            print("  .xbrl 이 없다")
+            return
+        body = z.read(cands[0])
+        print(f"\n  {cands[0]} 앞 700자:")
+        print("   ", body[:700].decode("utf-8", "replace").replace("\n", " ")[:700])
+        try:
+            root = ElementTree.fromstring(body)
+            print(f"\n  XML 읽힘. 최상위 {local(root.tag)}, 자식 {len(list(root))}개")
+        except ElementTree.ParseError as e:
+            print("\n  XML 파싱 실패:", e)
+        return
+
+
 def survey():
     """일본 실적을 **발표 당일에** 주는 곳을 찾는다. 되는 곳만 골라 쓴다."""
     day = date.today().strftime("%Y%m%d")
@@ -359,6 +406,8 @@ def main():
         return survey()
     if "--rows" in sys.argv:
         return dump_rows()
+    if "--zip" in sys.argv:
+        return dump_zip()
     if "--probe" in sys.argv:
         n = [a for a in sys.argv[1:] if a.isdigit()]
         return probe(int(n[0]) if n else 3)
