@@ -73,7 +73,8 @@ SEC_UA = os.environ.get("SEC_UA", "Earning Samurai Calendar (cbpark@wisdomasset.
 TICKERS = "https://www.sec.gov/files/company_tickers.json"
 
 # 2: 아래 축을 하나만 고른다 · 종류주에 전부 실어 준다 · 소계는 넷 이상일 때만 뺀다
-SEG_SEC_VER = 2
+# 3: 한 축짜리 행이 몇 줄 섞여 있어도 두 축 행을 버리지 않는다(엑슨)
+SEG_SEC_VER = 3
 # 열두 분기(3년)면 화면에 그리는 스물두 칸의 절반을 넘고, 큰 종목은
 # stockanalysis 가 스무 분기를 채워 준다. 한 분기 zip 이 85MB 라 열여섯으로
 # 늘리면 한 번에 1.4GB 다 — 남의 서버에서 그만큼 받을 이유가 없다.
@@ -345,7 +346,7 @@ def scan(blob, want_cik, facts, pairs):
                 if old is None or filed > old[1]:   # 나중에 낸 서류가 이긴다
                     slot[key] = (val, filed)
                     kept += 1
-            elif axis not in facts.get(cik, {}):
+            else:
                 # 아래 축(제품·지역)으로 갈린 값들. **서류 한 장 안에서** 더해야
                 # 부문 합계가 된다 — 서류가 다르면 같은 분기를 두 번 더한다.
                 # 그렇다고 (접수번호, 종료일, 길이)로 담으면 서류 수만큼 늘어나
@@ -354,8 +355,11 @@ def scan(blob, want_cik, facts, pairs):
                 # num.txt 는 접수번호 순이라 한 서류의 줄이 붙어 있고, zip 도
                 # 오래된 분기부터 넣으므로 나중 서류가 늘 뒤에 온다.
                 #
-                # 부문만 남는 행이 이미 있는 회사는 아예 담지 않는다 — 그런
-                # 회사에는 쓸 일이 없다.
+                # 처음에는 '한 축짜리 행이 이미 있으면 담지 않는다'로 걸렀는데,
+                # 그러면 엑슨이 통째로 빠진다 — 어느 한 분기에 한 축짜리 행이
+                # 몇 줄 섞여 있으면 그 뒤로 두 축 행을 하나도 안 담고, 그 몇
+                # 줄로는 부문이 둘도 안 나온다. 지금은 다 담고 **쓸지 말지는
+                # 아래에서** 가린다.
                 #
                 # **아래 축마다 따로 담는다.** 한 회사가 같은 부문을 제품으로도,
                 # 지역으로도 갈라 낸다(록히드마틴). 한 칸에 다 더하면 부문 매출이
@@ -510,67 +514,60 @@ def series_of(members):
     return drop_subtotals(series)
 
 
-def pick_axis(by_axis):
-    """축 하나를 고른다. 사업부문 > 제품 > 지역, 같은 등급이면 분기가 많은 쪽."""
-    best = None
-    for axis, members in by_axis.items():
-        series = series_of(members)
-        if len(series) < 2:
-            continue                          # 부문이 하나뿐이면 나눌 게 없다
-        ends = set()
-        for s in series.values():
-            ends |= set(s)
-        if len(ends) < MIN_PTS:
-            continue
-        key = (axis_rank(axis), len(ends), len(series))
-        if best is None or key > best[0]:
-            best = (key, axis, series, sorted(ends))
-    return best
+def usable(series):
+    """쓸 만한 부문 묶음인가. (분기 수, 부문 수) 를 돌려준다. 아니면 None."""
+    if len(series) < 2:
+        return None                           # 부문이 하나뿐이면 나눌 게 없다
+    ends = set()
+    for s in series.values():
+        ends |= set(s)
+    if len(ends) < MIN_PTS:
+        return None
+    return len(ends), len(series), sorted(ends)
 
 
-def pair_candidates(by_pair, taken):
-    """아래 축을 **하나만** 골라 부문별 값을 만든다.
+def candidates(by_axis, by_pair):
+    """축마다 쓸 만한 부문 묶음 하나씩. {축: (series, 종료일들)}
 
-    엑슨은 부문만 남는 행이 아예 없고 늘 `BusinessSegments;Geographical` 로 온다.
-    록히드마틴은 거기에 제품/서비스까지 겹쳐 있다 — 셋을 다 더하면 매출이
-    세 배가 된다. 축마다 가장 잘 덮는 아래 축 하나만 쓴다.
+    한 축짜리 행이 있으면 그쪽이 맞다. 없거나 **부문이 둘도 안 될 때**만 두 축
+    행을 쓴다 — 엑슨은 어느 분기에 한 축짜리 행이 몇 줄 섞여 있는데, 그것만으로
+    가리면 그 몇 줄 때문에 진짜 사업부문(업스트림·에너지제품·화학)을 통째로
+    버리게 된다.
+
+    두 축 행은 **아래 축을 하나만** 고른다. 록히드마틴은 같은 부문을 제품으로도
+    지역으로도 갈라 내므로 다 더하면 매출이 곱절이 된다.
     """
     out = {}
+    for axis, members in by_axis.items():
+        s = series_of(members)
+        got = usable(s)
+        if got:
+            out[axis] = (s, got)
+
     for axis, subs in by_pair.items():
-        if axis in taken:
-            continue                         # 한 축짜리 행이 있으면 그쪽이 맞다
+        if axis in out:
+            continue
         best = None
         for _sub, members in subs.items():
-            flat = {m: {t: {k: (v[0], v[1]) for k, v in raw.items()}
-                        for t, raw in by_tag.items()}
-                    for m, by_tag in members.items()}
-            s = series_of(flat)
-            if len(s) < 2:
-                continue
-            ends = set()
-            for x in s.values():
-                ends |= set(x)
-            key = (len(ends), len(s))
-            if best is None or key > best[0]:
-                best = (key, flat)
+            s = series_of({m: {t: {k: (v[0], v[1]) for k, v in raw.items()}
+                               for t, raw in by_tag.items()}
+                           for m, by_tag in members.items()})
+            got = usable(s)
+            if got and (best is None or got[:2] > best[1][:2]):
+                best = (s, got)
         if best:
-            out[axis] = best[1]
+            out[axis] = best
     return out
 
 
 def build_stock(by_axis, by_pair):
-    """부문만 남는 행이 없으면(엑슨·록히드마틴) 아래 축으로 더한 값을 쓴다.
-
-    예전에는 **아무것도 못 만들었을 때만** 그쪽을 봤는데, 그러면 엑슨처럼
-    한 축짜리 지역 행이 몇 줄 있는 회사가 지역별로 그려지고 진짜 사업부문
-    (업스트림·에너지제품·화학)은 버려진다. 지금은 둘을 나란히 놓고 고른다.
-    """
-    cand = dict(by_axis)
-    cand.update(pair_candidates(by_pair, set(by_axis)))
-    got = pick_axis(cand)
-    if not got:
+    """축 하나를 고른다. 사업부문 > 제품 > 지역, 같은 등급이면 분기가 많은 쪽."""
+    cand = candidates(by_axis, by_pair)
+    if not cand:
         return None
-    (rank, _, _), _axis, series, ends = got
+    axis = max(cand, key=lambda a: (axis_rank(a), cand[a][1][0], cand[a][1][1]))
+    series, (_n, _m, ends) = cand[axis]
+    rank = axis_rank(axis)
 
     # 마지막 분기의 값이 큰 순으로 놓는다 — 쌓은 막대의 아래쪽이 큰 부문이 된다.
     last = ends[-1]

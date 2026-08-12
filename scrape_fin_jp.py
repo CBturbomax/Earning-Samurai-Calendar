@@ -809,13 +809,15 @@ def collect():
     # **이미 뜯어본 공시는 다시 내려받지 않는다.** 열흘치를 훑으므로 이게 없으면
     # 매 실행마다 사백 건을 다시 받는다. 공시 번호는 문서마다 하나뿐이라 열쇠로 쓴다.
     #
-    # 다만 **부문 수집기를 새로 붙이거나 고치면 한 바퀴는 다시 봐야 한다.** 그
-    # 표시가 `segments_jp.json` 의 `v` 다 — 그것이 없거나 헌 것이면 이번 한 번은
-    # 열흘치를 통째로 다시 받는다. 안 그러면 이번 결산 시즌 것을 통째로 놓친다
-    # (수치는 이미 뽑아 뒀으므로 공시가 done 에 들어 있다).
-    done = set(load_done()) if seg_ready() else set()
-    if not done:
-        print("  부문 자료가 없다. 열흘치를 다시 뜯는다.", flush=True)
+    # **본 것을 두 가지로 나눠 적는다.** 수치를 뽑은 공시와 부문을 뽑은 공시는
+    # 다르다. 부문 수집기를 뒤에 붙였으므로 이번 시즌 공시는 수치 쪽에만 들어
+    # 있고, 그대로 두면 부문은 앞으로 들어올 공시부터만 쌓여 이번 시즌을 통째로
+    # 놓친다. 한 벌만 적었다가 실제로 그럴 뻔했다 — 파일이 생기는 순간 다시
+    # 훑기가 멈춘다. **둘 다 본 공시만** 건너뛴다.
+    seg_done = set(load_seg_done())
+    if len(done - seg_done) > 50:
+        print(f"  부문을 아직 안 본 공시가 {len(done - seg_done):,}건 있다. 다시 뜯는다.",
+              flush=True)
 
     got = skipped = streak = 0
     for back in range(BACK_DAYS):
@@ -830,9 +832,11 @@ def collect():
         print(f"  {day}: 결산단신 {len(rows)}건", flush=True)
         for r in rows:
             key = "jp:" + r["code"]
-            if r["zip"] in done:
-                continue                    # 지난 실행에서 이미 봤다
+            if r["zip"] in done and r["zip"] in seg_done:
+                continue                    # 지난 실행에서 둘 다 봤다
+            fresh = r["zip"] not in done
             done.add(r["zip"])
+            seg_done.add(r["zip"])
             try:
                 blob = get("https://www.release.tdnet.info/inbs/" + r["zip"], binary=True)
                 streak = 0
@@ -841,7 +845,7 @@ def collect():
                 print(f"    {r['code']} 막힘: {e}", file=sys.stderr, flush=True)
                 if streak >= GIVE_UP_AFTER:
                     print("  연속으로 막혔다. 여기서 접는다.", file=sys.stderr, flush=True)
-                    return save(stocks, done, got, skipped, segs)
+                    return save(stocks, done, got, skipped, segs, seg_done)
                 continue
             time.sleep(PAUSE)
             if not blob:
@@ -850,6 +854,8 @@ def collect():
             for st, en, row in read_segments(blob):
                 segs.setdefault(key, {})[st + "/" + en] = row
 
+            if not fresh:
+                continue            # 수치는 지난번에 이미 뽑았다. 부문만 보러 왔다.
             vals = read_summary(blob)
             if not vals:
                 skipped += 1
@@ -873,9 +879,12 @@ def collect():
             # 실행되지 않아 받은 것을 통째로 잃는다. 실제로 첫 실행이 그랬다 —
             # 5분에서 잘려 197종목을 담고도 파일이 안 생겼다.
             if got % 20 == 0:
-                save(stocks, done, got, skipped, segs, quiet=True)
+                save(stocks, done, got, skipped, segs, seg_done, quiet=True)
                 print(f"    ...{got}건", flush=True)
-    return save(stocks, done, got, skipped, segs)
+        # 부문만 보러 온 실행은 got 이 안 늘어 위 저장이 안 걸린다. 하루치를
+        # 끝낼 때마다 써 둔다 — 시간 제한에 잘려도 받은 만큼은 남는다.
+        save(stocks, done, got, skipped, segs, seg_done, quiet=True)
+    return save(stocks, done, got, skipped, segs, seg_done)
 
 
 def load_done():
@@ -902,9 +911,10 @@ def load_seg_raw():
     return _seg_file().get("raw", {})
 
 
-def seg_ready():
-    """지금 방식으로 뽑아둔 부문 자료가 이미 있는가."""
-    return _seg_file().get("v") == SEG_JP_VER
+def load_seg_done():
+    """**부문까지** 뜯어본 공시 번호. 수치 쪽(`docs`)과 따로 적는다."""
+    d = _seg_file()
+    return d.get("docs", []) if d.get("v") == SEG_JP_VER else []
 
 
 # 부문 이름이 그대로 남아 있는 누계 점은 종목당 이만큼만 들고 있는다. 스무 분기면
@@ -912,7 +922,7 @@ def seg_ready():
 SEG_KEEP_RAW = 24
 
 
-def save_segments(raw, quiet=False):
+def save_segments(raw, seg_done=(), quiet=False):
     """누계 점을 분기로 되돌려 화면용 자료를 만든다. 원자료도 같이 남긴다."""
     stocks = {}
     for key, spans in raw.items():
@@ -943,6 +953,7 @@ def save_segments(raw, quiet=False):
                  "커진다. 누계로 실리므로 같은 시작일의 앞 누계를 빼 분기로 되돌린다."),
         "v": SEG_JP_VER,
         "count": len(stocks),
+        "docs": sorted(seg_done)[-6000:],
         "raw": {k: dict(sorted(v.items())[-SEG_KEEP_RAW:]) for k, v in raw.items()},
         "stocks": stocks,
     }
@@ -954,7 +965,7 @@ def save_segments(raw, quiet=False):
               f"(누계 점을 가진 종목 {len(raw):,})")
 
 
-def save(stocks, done, got, skipped, segs=None, quiet=False):
+def save(stocks, done, got, skipped, segs=None, seg_done=(), quiet=False):
     payload = {
         "source": "TDnet 適時開示 결산단신 (inline XBRL)",
         "note": ("발표 당일에 올라온다. 누계로 실리므로 앞 분기를 빼 분기값으로 "
@@ -968,7 +979,7 @@ def save(stocks, done, got, skipped, segs=None, quiet=False):
     tmp.write_text(json.dumps(payload, ensure_ascii=False), encoding="utf-8")
     tmp.replace(OUT)
     if segs is not None:
-        save_segments(segs, quiet=quiet)
+        save_segments(segs, seg_done, quiet=quiet)
     if not quiet:
         print(f"\n{len(stocks):,}종목 -> {OUT}  (이번에 담은 분기 {got}개 · "
               f"되돌리지 못해 건너뛴 것 {skipped}개)")
