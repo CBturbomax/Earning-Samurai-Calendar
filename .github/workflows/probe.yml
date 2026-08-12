@@ -1,10 +1,9 @@
 # 새 소스를 붙이기 전에 응답 생김새를 눈으로 본다.
 #
-# 앞선 확인 결과:
-#   홍콩  이스트머니가 리포트 기간 50개를 준다 (stockanalysis 20개보다 깊다)
-#   일본  가부탄 405 · 미나부/IR뱅크/울렛 403 · 야후재팬 12개 · 닛케이는 표 모양 확인 필요
-#
-# 이번에 볼 것: 이스트머니가 실제로 무슨 값을 주는가, 닛케이 표는 파싱이 되는가.
+# 지금 볼 것: **사업부별 매출(세그먼트)**.
+# SEC 의 companyfacts/companyconcept 는 부문 축(dimension)을 떨어뜨리고 연결
+# 합계만 준다 — 그래서 거기서는 부문별을 못 뽑는다. stockanalysis 에는
+# revenue-by-segment 페이지가 따로 있으니 그 응답을 뜯어본다.
 name: 소스 접근 확인
 on:
   workflow_dispatch:
@@ -20,80 +19,67 @@ jobs:
         with:
           python-version: '3.12'
 
-      - name: 🇭🇰 이스트머니 — 무슨 값을 몇 개나 주나
+      - name: 🧩 사업부별 매출 — 받아지나
         continue-on-error: true
         run: |
           python - <<'PY'
           import json, urllib.request, urllib.error
-          UA = ("Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 "
-                "(KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36")
-          BASE = ("https://datacenter.eastmoney.com/securities/api/data/v1/get"
-                  "?reportName={rpt}&columns=ALL&quoteColumns=&filter=(SECUCODE%3D%22{code}%22)"
-                  "&pageNumber=1&pageSize=60&sortTypes=-1&sortColumns={sort}"
-                  "&source=F10&client=PC")
-
-          def get(url):
-              req = urllib.request.Request(url, headers={"User-Agent": UA, "Accept": "*/*"})
-              try:
-                  with urllib.request.urlopen(req, timeout=30) as r:
-                      return json.loads(r.read().decode("utf-8", "replace"))
-              except urllib.error.HTTPError as e:
-                  print("   HTTP", e.code); return None
-              except Exception as e:
-                  print("   실패", e); return None
-
-          for rpt, sort in (("RPT_HKF10_FN_MAININDICATOR", "STD_REPORT_DATE"),
-                            ("RPT_HKF10_FN_INCOME", "STD_REPORT_DATE"),
-                            ("RPT_HKF10_FN_GINCOME", "STD_REPORT_DATE")):
-              for code in ("00700.HK", "09988.HK", "00005.HK"):
-                  print(f"\n=== {rpt} {code}")
-                  d = get(BASE.format(rpt=rpt, code=code, sort=sort))
-                  if not d:
-                      continue
-                  res = (d.get("result") or {}).get("data")
-                  if not res:
-                      print("   data 없음:", str(d)[:180]); continue
-                  print(f"   {len(res)}건 · 열 {len(res[0])}개")
-                  keys = [k for k in res[0] if any(w in k for w in
-                          ("DATE", "OPERATE", "INCOME", "REVENUE", "PROFIT", "CURRENCY", "TYPE"))]
-                  print("   쓸 만한 열:", keys[:14])
-                  for r in res[:2] + res[-1:]:
-                      print("    ", {k: r.get(k) for k in keys[:8]})
-                  break
-          PY
-
-      - name: 🇯🇵 닛케이·야후재팬 — 표가 파싱되는가
-        continue-on-error: true
-        run: |
-          python - <<'PY'
-          import re, urllib.request, urllib.error
-          UA = ("Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 "
-                "(KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36")
+          import scrape_fin_intl as si     # unflatten 을 그대로 쓴다
 
           def get(url):
               req = urllib.request.Request(url, headers={
-                  "User-Agent": UA, "Accept-Language": "ja,en;q=0.8"})
+                  "User-Agent": si.UA, "Accept": "application/json, text/plain, */*"})
               try:
                   with urllib.request.urlopen(req, timeout=30) as r:
-                      return r.read().decode("utf-8", "replace")
+                      return r.status, r.read().decode("utf-8", "replace")
+              except urllib.error.HTTPError as e:
+                  return e.code, (e.read().decode("utf-8", "replace")[:200] if e.fp else "")
               except Exception as e:
-                  return f"실패 {e}"
+                  return 0, str(e)
 
-          for name, url in (
-              ("닛케이 결산", "https://www.nikkei.com/nkd/company/kessan/?scode=7203"),
-              ("야후재팬 실적", "https://finance.yahoo.co.jp/quote/7203.T/performance"),
-          ):
-              t = get(url)
-              print(f"\n===== {name}  {len(t):,}자")
-              # 분기 표기를 찾는다 — 연22.3 / 22.4-6 / 2022年4-6月 같은 꼴
-              for pat, lab in ((r"(?:連|単)\d\d\.\d{1,2}", "連22.3 꼴"),
-                               (r"\d\d\.\d{1,2}-\d{1,2}", "22.4-6 꼴"),
-                               (r"20\d\d年\d{1,2}-\d{1,2}月", "2022年4-6月 꼴"),
-                               (r"20\d\d/\d{1,2}", "2022/4 꼴")):
-                  m = sorted(set(re.findall(pat, t)))
-                  if m:
-                      print(f"  {lab}: {len(m)}개  {m[:6]} … {m[-3:]}")
-              # 표 구조
-              tabs = re.findall(r'<table[^>]*class="([^"]*)"', t)
-              print("  표 class:", sorted(set(tabs))[:8])
+          def look(label, url):
+              code, txt = get(url)
+              print(f"\n===== {label}  HTTP {code}  {len(txt):,}B")
+              if code != 200:
+                  print("  ", txt[:180]); return
+              try:
+                  body = json.loads(txt)
+              except Exception as e:
+                  print("  JSON 아님:", e); return
+              for node in body.get("nodes") or []:
+                  if not isinstance(node, dict) or node.get("type") != "data":
+                      continue
+                  arr = node.get("data")
+                  if not isinstance(arr, list):
+                      continue
+                  tree = si.unflatten(arr)
+
+                  def walk(o, path="", depth=0):
+                      if depth > 7:
+                          return
+                      if isinstance(o, dict):
+                          ks = list(o)
+                          # 부문 표처럼 보이는 것
+                          if any(k in ("segments", "rows", "data", "datekey", "labels") for k in ks):
+                              print(f"  {path or '.'}  키({len(ks)}): {ks[:12]}")
+                              for k in ("datekey", "labels", "segments"):
+                                  v = o.get(k)
+                                  if isinstance(v, list):
+                                      print(f"      {k}({len(v)}): {v[:8]}")
+                          for k in ks[:40]:
+                              walk(o[k], f"{path}.{k}", depth + 1)
+                      elif isinstance(o, list) and o and depth <= 4:
+                          walk(o[0], f"{path}[0]", depth + 1)
+                  walk(tree)
+
+          B = "https://stockanalysis.com"
+          for label, url in [
+            ("RKLB 부문 매출", f"{B}/stocks/rklb/metrics/revenue-by-segment/__data.json"),
+            ("AAPL 부문 매출", f"{B}/stocks/aapl/metrics/revenue-by-segment/__data.json"),
+            ("SE 부문 매출",   f"{B}/stocks/se/metrics/revenue-by-segment/__data.json"),
+            ("도요타 부문",    f"{B}/quote/tyo/7203/metrics/revenue-by-segment/__data.json"),
+            ("텐센트 부문",    f"{B}/quote/hkg/0700/metrics/revenue-by-segment/__data.json"),
+            ("RKLB 지역별",    f"{B}/stocks/rklb/metrics/revenue-by-geography/__data.json"),
+          ]:
+              look(label, url)
           PY

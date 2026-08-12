@@ -173,7 +173,44 @@ def load_fin():
             continue
         for k, v in got.items():
             # 예전 financials.json 은 열쇠가 'AAPL' 이었다. 'us:' 를 붙여 옮긴다.
-            out[k if ":" in k else prefix + k] = v
+            key = k if ":" in k else prefix + k
+            out[key] = merge_fin(out.get(key), v)
+    return out
+
+
+def last_end(rec):
+    pts = (rec or {}).get("points") or []
+    return pts[-1].get("end", "") if pts else ""
+
+
+def merge_fin(a, b):
+    """한 종목에 두 소스가 있으면 합친다.
+
+    SEC 는 1Q19 까지 깊지만 **실적 발표가 아니라 10-Q 가 올라와야** 값이 생긴다.
+    그 사이가 며칠에서 몇 주다 — 루멘텀은 8/11 에 6월 분기를 발표했는데 SEC 쪽은
+    3월 분기에서 멈춰 있었다. stockanalysis 는 발표 당일 반영되지만 20분기뿐이다.
+
+    그래서 갈아치우지 않고 **깊은 쪽을 뼈대로 삼고 빠진 최근 분기를 메운다.**
+    겹치는 분기는 공식 자료(SEC)를 남긴다. 통화가 다르면 섞지 않는다 — 그건
+    같은 회사의 다른 보고 기준이라 한 막대그래프에 올리면 안 된다.
+    """
+    if not a:
+        return b
+    if not b:
+        return a
+    if a.get("freq") != b.get("freq") or (a.get("cur") or "") != (b.get("cur") or ""):
+        return a if last_end(a) >= last_end(b) else b
+
+    base, extra = (a, b) if a.get("src") == "sec" else (b, a)
+    by_end = {p["end"]: p for p in extra.get("points") or [] if p.get("end")}
+    by_end.update({p["end"]: p for p in base.get("points") or [] if p.get("end")})
+    pts = [by_end[e] for e in sorted(by_end)]
+    mixed = len(pts) > len(base.get("points") or [])
+    out = dict(base)
+    out["points"] = pts
+    out["src"] = "mix" if mixed else base.get("src")
+    if not out.get("eps") and extra.get("eps"):
+        out["eps"] = extra["eps"]
     return out
 
 
@@ -1616,7 +1653,8 @@ function finBlock(m, code) {
   return html || '<p class="finnote">받아둔 수치가 없습니다.</p>';
 }
 
-const SRC_KO = { sec: 'SEC 공식 재무제표', sa: 'stockanalysis.com', yahoo: 'Yahoo Finance' };
+const SRC_KO = { sec: 'SEC 공식 재무제표', sa: 'stockanalysis.com', yahoo: 'Yahoo Finance',
+                 mix: 'SEC 공식 재무제표 + stockanalysis.com' };
 
 /* 숫자에서 단위를 뗀다. 막대마다 '억'·'B' 를 붙이면 자릿수가 눈에 안 들어온다.
    대신 눈금 하나를 골라 제목에 '(단위: bil JPY)' 로 한 번만 적는다.
