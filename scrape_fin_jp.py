@@ -814,6 +814,7 @@ def collect():
     # 있고, 그대로 두면 부문은 앞으로 들어올 공시부터만 쌓여 이번 시즌을 통째로
     # 놓친다. 한 벌만 적었다가 실제로 그럴 뻔했다 — 파일이 생기는 순간 다시
     # 훑기가 멈춘다. **둘 다 본 공시만** 건너뛴다.
+    done = set(load_done())
     seg_done = set(load_seg_done())
     if len(done - seg_done) > 50:
         print(f"  부문을 아직 안 본 공시가 {len(done - seg_done):,}건 있다. 다시 뜯는다.",
