@@ -145,20 +145,38 @@ def q_label(end, mid="", q=""):
     return f"{(d.month - 1) // 3 + 1}Q{d.year % 100:02d}"
 
 
-def q_index(label):
-    """'2Q26' -> 정수. 분기끼리 앞뒤를 견주려면 숫자여야 한다."""
+def h_label(end, mid=""):
+    """'1H26'. **반기만 내는 회사는 반기답게 적는다.**
+
+    홍콩에는 분기를 안 내고 반기만 내는 회사가 많다(695종목 중 215). 그걸
+    2Q25·4Q25 처럼 분기 이름으로 적으면 사이가 빈 것처럼 보여 헷갈린다.
+
+    한가운데를 담아 준 소스는 그걸 쓰고, 없으면 종료일에서 석 달을 되짚는다
+    (반기의 한가운데다). stockanalysis 는 종료일만 준다.
+    """
+    d = (date.fromisoformat(mid) if mid
+         else date.fromisoformat(end) - timedelta(days=90))
+    return f"{1 if d.month <= 6 else 2}H{d.year % 100:02d}"
+
+
+def per_index(label):
+    """'2Q26'·'1H26' -> 정수. 앞뒤를 견주려면 숫자여야 한다."""
     try:
-        q, y = label.split("Q")
-        return (2000 + int(y)) * 4 + int(q) - 1
-    except (ValueError, AttributeError):
+        n, kind, y = label[0], label[1], label[2:]
+        slots = 4 if kind == "Q" else 2 if kind == "H" else 0
+        if not slots:
+            return None
+        return (2000 + int(y)) * slots + int(n) - 1
+    except (ValueError, IndexError, AttributeError):
         return None
 
 
-def q_name(i):
-    return f"{i % 4 + 1}Q{(i // 4) % 100:02d}"
+def per_name(i, kind):
+    slots = 4 if kind == "Q" else 2
+    return f"{i % slots + 1}{kind}{(i // slots) % 100:02d}"
 
 
-def unstack(labels):
+def unstack(labels, kind="Q"):
     """겹친 분기 이름을 뒤로 밀어 하나씩 떨어뜨린다.
 
     회계 분기가 달력과 여섯 주쯤 어긋나면 두 분기가 같은 달력 분기에 떨어진다.
@@ -173,13 +191,13 @@ def unstack(labels):
     """
     out, prev = [], None
     for lab in labels:
-        i = q_index(lab)
+        i = per_index(lab)
         if i is None:
             out.append(lab)
             continue
         if prev is not None and i <= prev:
             i = prev + 1
-        out.append(q_name(i))
+        out.append(per_name(i, kind))
         prev = i
     return out
 
@@ -193,11 +211,32 @@ def pack_fin(rec):
     out = {k: rec[k] for k in ("freq", "eps", "cur", "src") if rec.get(k)}
     if rec.get("freq") in ("Q", "H"):
         pts = rec.get("points") or []
-        labs = unstack([q_label(p["end"], p.get("mid", ""), p.get("q", ""))
-                        if p.get("end") else p["label"] for p in pts])
+        # **반기만 내는 회사는 반기답게 적는다.** 홍콩에 특히 많다. 점 사이가
+        # 반년쯤이면 반기 보고다 — 그걸 2Q25·4Q25 로 적으면 사이가 빈 것처럼
+        # 보여 헷갈린다. 화면 쪽은 이미 freq 가 'H' 면 「반기」로 쓰고 전년
+        # 대비도 두 기간 전과 견준다.
+        kind = "H" if half_yearly(pts) else "Q"
+        out["freq"] = kind
+        labs = unstack([(h_label(p["end"], p.get("mid", "")) if kind == "H"
+                         else q_label(p["end"], p.get("mid", ""), p.get("q", "")))
+                        if p.get("end") else p["label"] for p in pts], kind)
         out["points"] = [[lab, p["rev"], p.get("opi")]
                          for lab, p in zip(labs, pts)]
     return out
+
+
+def half_yearly(pts):
+    """점 사이가 반년쯤인가. 가운뎃값으로 본다 — 한두 군데 비어도 흔들리지 않게.
+
+    섞여 있는 회사가 있다(분기로 갈아탄 곳). 그럴 때는 분기로 둔다 — 반기로
+    적으면 최근에 낸 분기 둘이 한 칸에 겹친다.
+    """
+    ends = sorted(p["end"] for p in pts if p.get("end"))
+    if len(ends) < 3:
+        return False
+    gaps = sorted((date.fromisoformat(b) - date.fromisoformat(a)).days
+                  for a, b in zip(ends, ends[1:]))
+    return 150 <= gaps[len(gaps) // 2] <= 220
 
 
 def load_fin():
@@ -2050,7 +2089,8 @@ function finChart(f) {
 
   const per = f.freq === 'H' ? '반기' : '분기';
   const notes = [];
-  if (f.freq === 'H') notes.push('홍콩은 반기 보고입니다');
+  // 반기만 내는 회사다. 홍콩에 특히 많지만 홍콩만은 아니므로 시장을 못박지 않는다.
+  if (f.freq === 'H') notes.push('이 회사는 반기로만 공시합니다');
   if (pts.length < 8) notes.push('받을 수 있었던 건 ' + pts.length + '개뿐입니다');
 
   return '<div class="finwrap">' +
