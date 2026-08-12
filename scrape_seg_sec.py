@@ -617,9 +617,9 @@ def main():
         if not c:
             continue
         want[sym] = c
-        # 한 CIK 에 종류주가 여럿이면 시총 큰 쪽을 대표로 삼는다.
-        if c not in by_cik or cap > caps.get(by_cik[c], 0):
-            by_cik[c] = sym
+        # **한 CIK 에 종류주가 여럿이면 전부에 실어 준다.** 대표 하나만 골랐더니
+        # 버크셔 A 에는 부문이 뜨고 B 에는 안 떴다 — 같은 회사인데 화면이 갈렸다.
+        by_cik.setdefault(c, []).append(sym)
     print(f"  우리 종목 {len(caps):,}개 중 CIK 를 찾은 것 {len(want):,}개 "
           f"(회사 {len(by_cik):,}곳)")
 
@@ -653,8 +653,11 @@ def main():
     stocks = {}
     for cik in set(facts) | set(pairs):
         rec = build_stock(facts.get(cik, {}), pairs.get(cik, {}))
-        if rec:
-            stocks[by_cik[cik]] = dedupe_names(rec)
+        if not rec:
+            continue
+        rec = dedupe_names(rec)
+        for sym in by_cik.get(cik, []):
+            stocks[sym] = rec
 
     if probe:
         for sym in ("AAPL", "MSFT", "AMD", "RKLB", "KO", "WM", "JCI"):
