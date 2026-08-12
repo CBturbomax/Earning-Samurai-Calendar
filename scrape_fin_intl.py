@@ -53,15 +53,15 @@ SA_INTL = "https://stockanalysis.com/quote/{ex}/{code}/financials/__data.json?p=
 SA_US = "https://stockanalysis.com/stocks/{sym}/financials/__data.json?p=quarterly"
 EXCH = {"jp": "tyo", "hk": "hkg"}
 
-PER_RUN = int(os.environ.get("INTL_PER_RUN", "400"))     # 한 실행에 받을 종목 수
+PER_RUN = int(os.environ.get("INTL_PER_RUN", "600"))     # 한 실행에 받을 종목 수
 STALE_DAYS = int(os.environ.get("INTL_STALE_DAYS", "10"))
 NEAR_DAYS = int(os.environ.get("INTL_NEAR_DAYS", "4"))   # 발표일 언저리는 매일
 # 미국 종목 중 SEC 자료의 마지막 분기가 이보다 오래됐으면 여기서 메운다.
 # 한 분기(92일)에 발표까지 걸리는 시간을 더해 넉넉히 잡는다.
 STALE_QUARTER = int(os.environ.get("INTL_STALE_QUARTER", "150"))
 PAUSE = float(os.environ.get("INTL_PAUSE", "0.6"))       # 요청 사이 쉬는 시간
-# 400개 × 0.6초 = 4분 남짓. 시간당 400건이면 초당 0.11건이라 남의 서버에 무리는
-# 아니다. 옛 자료(야후 4~5분기)를 새 자료(20분기)로 갈아 끼우는 동안만 이 속도다.
+# 600개 × 0.6초 = 6분 남짓. 시간당 600건이면 초당 0.17건이라 남의 서버에 무리는
+# 아니다. 옛 자료를 갈아 끼우고 방금 발표한 종목을 따라잡는 동안만 이 속도다.
 
 # 저장 형식 번호. 받는 방식을 고치면 올린다 — 이미 받아둔 기록도 다시 받는다.
 #   1 -> 2  야후에서 stockanalysis 로. 분기 4~5개가 20개로 늘고, 연간은 안 담는다.
@@ -278,15 +278,56 @@ def us_needs_quarters():
     except (ValueError, OSError):
         return set()
     stale = (date.today() - timedelta(days=STALE_QUARTER)).isoformat()
+    reported = reported_quarters()
     out = set()
     for sym, rec in got.items():
+        code = sym.split(":")[-1]
         pts = rec.get("points") or []
         last = pts[-1].get("end", "") if pts else ""
-        # 분기가 아니거나, 너무 짧거나, **최근 분기가 오래됐으면** 메운다.
-        # 마지막 조건이 없으면 셸·UBS 처럼 분기는 열넷인데 2Q25 에서 끊긴
-        # 종목이 영영 그대로 남는다.
+        # 분기가 아니거나, 너무 짧거나, 최근 분기가 오래됐으면 메운다.
         if rec.get("freq") != "Q" or len(pts) < 8 or last < stale:
-            out.add(sym.split(":")[-1])
+            out.add(code)
+            continue
+        # **이미 발표한 분기가 차트에 없으면** 메운다. 이게 없으면 방금 발표한
+        # 회사가 며칠씩 옛 분기에 머문다 — SEC 는 실적 발표가 아니라 10-Q 가
+        # 올라와야 값이 생기는데 그 사이가 며칠에서 몇 주다. 루멘텀이 그랬다:
+        # 8/11 에 6월 분기를 발표했는데 차트는 3월 분기에서 멈춰 있었다.
+        done = reported.get(code)
+        if done and done > last:
+            out.add(code)
+    return out
+
+
+FY_RE = re.compile(r"(\d{4})\s*년\s*(\d{1,2})\s*월")
+
+
+def reported_quarters():
+    """{미국 코드: 이미 발표한 가장 최근 분기의 종료일}.
+
+    캘린더에 '지난 날짜 + 결산기'가 들어 있으므로, 회사가 무슨 분기를 발표했는지
+    알 수 있다. 발표일이 지났으면 그 분기는 세상에 나온 것이다.
+    """
+    p = HERE / "data" / "earnings_us.json"
+    if not p.exists():
+        return {}
+    try:
+        d = json.loads(p.read_text(encoding="utf-8"))
+    except (ValueError, OSError):
+        return {}
+    today = date.today().isoformat()
+    out = {}
+    for r in d.get("rows", []):
+        code, day = r.get("code"), r.get("date") or ""
+        if not code or not day or day > today:
+            continue
+        m = FY_RE.search(r.get("fy") or "")
+        if not m:
+            continue
+        y, mo = int(m.group(1)), int(m.group(2))
+        # 그 달의 끝 언저리. 회사마다 며칠씩 다르니 넉넉히 앞으로 잡는다.
+        end = date(y, mo, 20).isoformat()
+        if end > out.get(code, ""):
+            out[code] = end
     return out
 
 
