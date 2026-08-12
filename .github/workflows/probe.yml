@@ -19,53 +19,6 @@ jobs:
         with:
           python-version: '3.12'
 
-      - name: 🧩 사업부별 매출 — 표 속을 뜯어본다
+      - name: 🧩 사업부별 매출 — 수집기가 실제로 뽑아내는가
         continue-on-error: true
-        run: |
-          python - <<'PY'
-          import json, urllib.request
-          import scrape_fin_intl as si
-
-          def grab(url):
-              req = urllib.request.Request(url, headers={
-                  "User-Agent": si.UA, "Accept": "application/json, text/plain, */*"})
-              with urllib.request.urlopen(req, timeout=30) as r:
-                  return json.loads(r.read().decode("utf-8", "replace"))
-
-          def show(label, url):
-              print(f"\n===== {label}")
-              try:
-                  body = grab(url)
-              except Exception as e:
-                  print("  실패", e); return
-              for node in body.get("nodes") or []:
-                  if not isinstance(node, dict) or node.get("type") != "data":
-                      continue
-                  arr = node.get("data")
-                  if not isinstance(arr, list):
-                      continue
-                  t = si.unflatten(arr)
-                  d = (t.get("data") or {})
-                  if not isinstance(d, dict):
-                      continue
-                  print("  title:", d.get("title"), "| type:", d.get("type"),
-                        "| valueType:", d.get("valueType"))
-                  inner = d.get("data")
-                  print("  inner 종류:", type(inner).__name__,
-                        len(inner) if hasattr(inner, "__len__") else "")
-                  if isinstance(inner, dict):
-                      print("  inner 키:", list(inner)[:14])
-                      for k in list(inner)[:14]:
-                          v = inner[k]
-                          if isinstance(v, list):
-                              print(f"    {k}({len(v)}): {v[:6]}")
-                          else:
-                              print(f"    {k}: {str(v)[:80]}")
-                  elif isinstance(inner, list):
-                      for row in inner[:4]:
-                          print("   ", json.dumps(row, ensure_ascii=False)[:220])
-
-          B = "https://stockanalysis.com"
-          for label, code in (("RKLB", "rklb"), ("AAPL", "aapl"), ("SE", "se")):
-              show(label, f"{B}/stocks/{code}/metrics/revenue-by-segment/__data.json")
-          PY
+        run: python scrape_fin_seg.py --probe
