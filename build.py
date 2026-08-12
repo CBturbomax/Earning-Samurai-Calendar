@@ -217,6 +217,30 @@ def merge_fin(a, b):
 FIN = load_fin()
 
 
+def load_seg():
+    """사업부별 매출. 열쇠는 미국 코드라 'us:' 를 붙여 맞춘다."""
+    p = HERE / "data" / "segments.json"
+    if not p.exists():
+        return {}
+    try:
+        got = json.loads(p.read_text(encoding="utf-8")).get("stocks", {})
+    except (ValueError, OSError) as e:
+        print(f"  ! segments.json 읽기 실패: {e}")
+        return {}
+    return {(k if ":" in k else "us:" + k): v for k, v in got.items() if v.get("names")}
+
+
+SEG = load_seg()
+
+
+def pack_seg(rec):
+    """[분기 라벨, 부문1, 부문2, …]. 라벨은 종료일에서 다시 매긴다."""
+    return {
+        "names": rec["names"],
+        "pts": [[q_label(r[0])] + r[1:] for r in rec.get("pts") or [] if r and r[0]],
+    }
+
+
 def pack_jp(r):
     """일본만 기계 변환을 거친다. 원본이 일본어라 그대로는 훑어보기가 안 된다."""
     ko, lvl = to_korean(r["name"], companies.NOTABLE.get(r["code"], ("",))[0])
@@ -403,6 +427,10 @@ def build():
         "fin": {s: pack_fin(rec) for s, rec in FIN.items()
                 if (rec.get("points") or rec.get("eps"))
                 and s in {p[9] + ":" + p[1] for p in packed}},
+        # 사업부별 매출. "매출이 늘었다"보다 "어디서 늘었다"가 중요할 때가 있다.
+        # 지금은 미국 종목만 — 일본·홍콩은 소스에 부문 페이지가 없다.
+        "seg": {s: pack_seg(rec) for s, rec in SEG.items()
+                if s in {p[9] + ":" + p[1] for p in packed}},
     }
 
     stamp = datetime.now().strftime("%Y-%m-%d %H:%M KST")
@@ -810,12 +838,14 @@ td.dim { color:var(--mute); font-size:18px; }
   paint-order:stroke fill;
 }
 .finsvg .vn.rev { fill:#dce9f5; }
+/* 쌓은 막대 조각 안에 적는 숫자. 조각 색이 다 다르니 흰 글씨에 어두운 테두리. */
+.finsvg .vn.seg { fill:#ffffff; stroke:rgba(0,0,0,.55); stroke-width:2.5px; font-size:11px; }
 .finsvg .vn.opm { fill:#ED7D31; }
 .finsvg .vn.yoy { fill:#8fc0ea; }
 .finlegend { display:flex; gap:14px; flex-wrap:wrap; font-size:15px; color:var(--mute);
              align-items:center;
              margin-top:6px; align-items:center; }
-.finlegend .lg::before { content:'■'; margin-right:4px; }
+.finlegend .lg::before { content:'■'; margin-right:4px; color:var(--c, inherit); }
 .finlegend .rev::before { color:#5B9BD5; }
 .finlegend .opm::before { color:#ED7D31; }
 .finlegend .yoy::before { color:#5B9BD5; }
@@ -1621,9 +1651,12 @@ function curOf(code) {
   return { ko: CUR[c] || c, steps: CUR_BIG[c] ? STEP_BIG : STEP_SM };
 }
 function finBlock(m, code) {
-  const f = D.fin[m + ':' + code];
-  if (!f) return '<p class="finnote">이 종목은 아직 실적 수치를 받지 않았습니다. ' +
-                 '시가총액 큰 종목부터 채우는 중입니다.</p>';
+  const key = m + ':' + code;
+  const f = D.fin[key], sg = D.seg[key];
+  if (!f) return sg
+    ? '<div class="finwrap">' + segChart(sg, 'USD') + '</div>'
+    : '<p class="finnote">이 종목은 아직 실적 수치를 받지 않았습니다. ' +
+      '시가총액 큰 종목부터 채우는 중입니다.</p>';
   let html = '';
   if (f.eps) {
     const u = f.eps.upcoming, d = f.eps.done.slice(-4);
@@ -1650,11 +1683,74 @@ function finBlock(m, code) {
             '추세를 그리지 못했습니다. (매출 ' + p[1].toLocaleString() + ' ' +
             esc(U.ko) + ')</p>';
   }
+  // 사업부별은 매출·성장률 아래에 붙인다. 큰 그림을 먼저 보고 쪼개 보는 순서다.
+  if (sg) html += segChart(sg, f.cur || 'USD');
   return html || '<p class="finnote">받아둔 수치가 없습니다.</p>';
 }
 
 const SRC_KO = { sec: 'SEC 공식 재무제표', sa: 'stockanalysis.com', yahoo: 'Yahoo Finance',
                  mix: 'SEC 공식 재무제표 + stockanalysis.com' };
+
+/* 부문 색. 여덟이면 웬만한 회사는 덮는다. 그 이상은 되풀이한다. */
+const SEG_COLORS = ['#5B9BD5', '#ED7D31', '#C0504D', '#4BA893', '#8E7CC3',
+                    '#D6A02F', '#7BA7CC', '#B0736F'];
+
+/* 사업부별 매출 — 쌓은 막대.
+   "매출이 늘었다"보다 "어디서 늘었다"가 중요할 때가 있다. 로켓랩은 발사 서비스와
+   우주 시스템이 따로 움직이고, SEA 는 쇼피·가레나·머니가 따로 논다.
+   조각마다 숫자를 적되, 조각이 얇으면 글자가 삐져나오므로 생략한다. */
+function segChart(sg, cur) {
+  const pts = (sg.pts || []).slice(-22);
+  if (pts.length < 2) return '';
+  const names = sg.names || [];
+  const tot = pts.map(r => r.slice(1).reduce((a, v) => a + (v || 0), 0));
+  const maxRaw = Math.max(...tot, 1);
+  const U = unitFor(maxRaw, cur);
+  const sc = v => v / U.div;
+  const rmax = niceMax(sc(maxRaw));
+
+  const n = pts.length;
+  const W = Math.max(880, n * 46), L = 66, R = 20, B = 42, T = 30, H = 340;
+  const BASE = H - B, step = (W - L - R) / n;
+  const cx = i => L + step * i + step / 2;
+  const y = v => BASE - (BASE - T) * v / rmax;
+
+  let body = '';
+  pts.forEach((r, i) => {
+    let acc = 0;
+    names.forEach((nm, j) => {
+      const v = r[j + 1];
+      if (!v) return;
+      const y0 = y(sc(acc)), y1 = y(sc(acc + v)), h = Math.max(y0 - y1, 0.6);
+      const x = cx(i) - step * 0.34;
+      body += '<rect x="' + x.toFixed(1) + '" y="' + y1.toFixed(1) +
+        '" width="' + (step * 0.68).toFixed(1) + '" height="' + h.toFixed(1) +
+        '" fill="' + SEG_COLORS[j % SEG_COLORS.length] + '"><title>' +
+        esc(nm) + ' ' + fmtN(sc(v)) + '</title></rect>';
+      // 조각이 얇으면 숫자가 삐져나온다. 넉넉할 때만 적는다.
+      if (h >= 15)
+        body += '<text class="vn seg" x="' + cx(i).toFixed(1) + '" y="' +
+          (y1 + h / 2 + 4).toFixed(1) + '" text-anchor="middle">' + fmtN(sc(v)) + '</text>';
+      acc += v;
+    });
+  });
+  const axis = [0, rmax / 2, rmax].map(v =>
+    '<line class="fz" x1="' + L + '" y1="' + y(v).toFixed(1) + '" x2="' + (W - R) +
+    '" y2="' + y(v).toFixed(1) + '"/>' +
+    '<text class="fx" x="' + (L - 8) + '" y="' + (y(v) + 4).toFixed(1) +
+    '" text-anchor="end">' + fmtN(v) + '</text>').join('');
+  const xlab = pts.map((r, i) =>
+    '<text class="fx' + (i === n - 1 ? ' now' : '') + '" x="' + cx(i).toFixed(1) +
+    '" y="' + (H - B + 18) + '" text-anchor="middle">' + r[0] + '</text>').join('');
+
+  return '<div class="finhead sub">사업부별 매출' +
+    '<span class="dim">(단위: ' + esc(U.ko) + ')</span></div>' +
+    '<div class="finbox"><svg viewBox="0 0 ' + W + ' ' + H + '" class="finsvg">' +
+    axis + body + xlab + '</svg></div>' +
+    '<div class="finlegend">' + names.map((nm, j) =>
+      '<span class="lg" style="--c:' + SEG_COLORS[j % SEG_COLORS.length] + '">' +
+      esc(nm) + '</span>').join('') + '</div>';
+}
 
 /* 숫자에서 단위를 뗀다. 막대마다 '억'·'B' 를 붙이면 자릿수가 눈에 안 들어온다.
    대신 눈금 하나를 골라 제목에 '(단위: bil JPY)' 로 한 번만 적는다.
@@ -1721,11 +1817,17 @@ function finChart(f) {
   const opm = pts.map((p, i) => (p[2] != null && p[1]) ? [i, p[2] / p[1]] : null).filter(Boolean);
   let oy = null;
   if (opm.length >= 2) {
-    const vs = opm.map(o => o[1]);
+    // 적자 회사는 이익률이 한 분기만 -989% 로 튀기도 한다. 그걸 축에 그대로
+    // 반영하면 나머지 스무 분기가 한 줄로 눌려 아무것도 안 보인다. 축은
+    // -100%~100% 안쪽 값들로만 잡고, 벗어난 점은 가장자리에 붙이되 **숫자는
+    // 실제 값을 적는다** — 눌러 담되 속이지는 않는다.
+    const all = opm.map(o => o[1]);
+    const inr = all.filter(v => v >= -1 && v <= 1);
+    const vs = inr.length >= 2 ? inr : all;
     const mn = Math.min(...vs), mx = Math.max(...vs);
     const span = (mx - mn) || 0.04;
     const lo = mn - span * 0.45, hi = mx + span * 0.12;
-    oy = v => BASE1 - (BASE1 - T1) * (v - lo) / (hi - lo);
+    oy = v => BASE1 - (BASE1 - T1) * (Math.max(lo, Math.min(hi, v)) - lo) / (hi - lo);
     oy.lo = lo; oy.hi = hi;
   }
   const opmAt = {};
