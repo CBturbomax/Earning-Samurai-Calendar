@@ -333,16 +333,18 @@ def load_seg():
 
     | 파일 | 소스 | 성격 |
     |---|---|---|
-    | `segments.json` | stockanalysis | 종목마다 요청 한 번. 이름이 곱고 최근 분기까지 온다 |
     | `segments_sec.json` | SEC 분기 벌크 | zip 하나로 **미국 전 종목**. 최근 한두 분기가 빈다 |
+    | `segments_jp.json` | TDnet 결산단신 첨부 | 일본. 실적 수치를 받는 그 zip 에서 같이 뽑는다 |
+    | `segments.json` | stockanalysis | 미국. 종목마다 요청 한 번. 이름이 곱고 최근 분기까지 온다 |
 
-    둘 다 있으면 **stockanalysis 를 쓴다.** 이름이 사람이 쓴 것이고
+    미국이 둘 다 있으면 **stockanalysis 를 쓴다.** 이름이 사람이 쓴 것이고
     ('Intelligent Cloud' 대 'IntelligentCloud'), 벌크가 아직 안 실은 최근
     분기까지 들어 있다. 벌크는 나머지 수천 종목을 메운다 — 그쪽이 없던 시절에는
     1,350종목을 두드려 223종목밖에 못 얻었다.
     """
     out = {}
-    for name in ("segments_sec.json", "segments.json"):   # 뒤엣것이 이긴다
+    for name in ("segments_sec.json", "segments_jp.json",
+                 "segments.json"):                        # 뒤엣것이 이긴다
         p = HERE / "data" / name
         if not p.exists():
             continue

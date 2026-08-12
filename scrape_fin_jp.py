@@ -40,6 +40,7 @@ from xml.etree import ElementTree
 
 HERE = Path(__file__).parent
 OUT = HERE / "data" / "financials_jp.json"
+SEG_OUT = HERE / "data" / "segments_jp.json"
 
 LIST_URL = "https://www.release.tdnet.info/inbs/I_list_{page:03d}_{day}.html"
 ZIP_URL = "https://www.release.tdnet.info/inbs/{doc}.zip"
@@ -52,6 +53,7 @@ PAUSE = float(os.environ.get("JP_PAUSE", "0.5"))
 BACK_DAYS = int(os.environ.get("JP_BACK_DAYS", "10"))   # 며칠치를 훑나
 GIVE_UP_AFTER = 6
 JP_VER = 1
+SEG_JP_VER = 1
 
 # 결산단신인지 가리는 말. '決算短信' 이 들어가면 실적 발표다.
 # (「業績予想の修正」 같은 것은 실적 발표가 아니라 예상 수정이라 뺀다.)
@@ -248,6 +250,149 @@ def read_summary(blob):
             v = -v
         vals.setdefault(name, []).append((cid, v, periods.get(cid, ("", ""))))
     return vals or None
+
+
+# ── 부문별 매출 ──────────────────────────────────────────────────────────
+#
+# 미국은 SEC 벌크에 부문 축이 그대로 있어 zip 하나로 전 종목을 받았다. 일본에는
+# 그런 벌크가 없다. 대신 **우리가 이미 받고 있는 결산단신 zip 안에** 들어 있다 —
+# 첨부(Attachment)의 세그먼트 정보 장(`…qcsg…-ixbrl.htm`)이 그것이다. 원문을
+# 열어 확인했다(NTT 2026년 1분기).
+#
+#   문맥 CurrentYTDDuration_tse-qcediffr-94320IntegratedICTBusinessReportableSegmentMember
+#   항목 TransactionsWithExternalCustomersIFRS · InterSegmentTransactionsIFRS
+#        OperatingRevenuesIFRS · OperatingProfitLossIFRS
+#
+# 그래서 **요청을 한 번도 더 하지 않는다.** 실적 수치를 뽑는 그 zip 에서 같이
+# 뽑는다. 남의 서버를 두 배로 두드릴 이유가 없다.
+SEG_CTX = re.compile(r"(Segment|Reportable)", re.I)
+SEG_TOTAL = re.compile(r"^(Reportable)?Segments?(Total)?Member$", re.I)
+SEG_SKIP = re.compile(r"Elimination|Adjustment|Reconcil|Total|Consolidated|"
+                      r"InterSegment|Other[A-Z]*Adjust", re.I)
+# 부문 이름 앞에 붙는 회사별 접두사. `tse-qcediffr-94320IntegratedICT…` 처럼
+# 스키마 이름과 증권코드가 통째로 붙어 온다.
+SEG_PREFIX = re.compile(r"^[a-z]+-[a-z0-9]+-\d+")
+SEG_SUFFIX = re.compile(r"(Reportable)?Segments?Member$|Member$")
+
+# **외부 고객 매출을 쓴다.** 부문 매출에는 부문끼리 주고받은 것(InterSegment)이
+# 섞여 있어, 그걸 더하면 회사 총매출보다 커진다. 외부 매출만 더해야 총매출이 된다.
+SEG_REV = ["TransactionsWithExternalCustomersIFRS",
+           "NetSalesToOutsideCustomers",
+           "NetSalesToExternalCustomers",
+           "SalesToExternalCustomers",
+           "RevenueFromExternalCustomers",
+           "TransactionsWithExternalCustomers",
+           # 외부 매출이 따로 없는 회사는 부문 매출(내부 포함)을 쓴다.
+           "OperatingRevenuesIFRS", "RevenueIFRS", "NetSales", "OperatingRevenues"]
+SEG_REV_RANK = {t: i for i, t in enumerate(SEG_REV)}
+
+
+def seg_name(member):
+    """'tse-qcediffr-94320IntegratedICTBusinessReportableSegmentMember'
+       -> 'Integrated ICT Business'. 못 다듬으면 원래 이름."""
+    m = SEG_PREFIX.sub("", member.split(":")[-1])
+    m = SEG_SUFFIX.sub("", m) or m
+    out = re.sub(r"(?<=[a-z0-9])(?=[A-Z])|(?<=[A-Z])(?=[A-Z][a-z])", " ", m).strip()
+    return out or member
+
+
+def read_segments(blob):
+    """결산단신 zip -> [(시작일, 종료일, {부문: 매출})]. 없으면 [].
+
+    첨부에는 이번 기간과 **전년 같은 기간**이 함께 실린다(Prior1YTDDuration).
+    둘 다 담으면 공시 한 건으로 두 점을 얻는다. 예상(Forecast)은 안 쓴다.
+    """
+    try:
+        z = zipfile.ZipFile(io.BytesIO(blob))
+    except zipfile.BadZipFile:
+        return []
+    names = [n for n in z.namelist()
+             if "Attachment" in n and n.lower().endswith(("ixbrl.htm", ".xbrl"))]
+
+    out = {}
+    for n in names:
+        try:
+            txt = z.read(n).decode("utf-8", "replace")
+        except (KeyError, OSError):
+            continue
+        if not SEG_CTX.search(txt):
+            continue
+
+        periods = {}
+        for cid, body in CTX_RE.findall(txt):
+            st = en = ""
+            for kind, val in DATE_TAG.findall(body):
+                if kind.lower() == "startdate":
+                    st = val
+                elif kind.lower() == "enddate":
+                    en = val
+            if st and en:
+                periods[cid] = (st, en)
+
+        for attrs, inner in IX_FACT.findall(txt):
+            a = dict(IX_ATTR.findall(attrs))
+            name = (a.get("name") or "").rsplit(":", 1)[-1]
+            cid = a.get("contextRef") or ""
+            rank = SEG_REV_RANK.get(name)
+            if rank is None or a.get("xsi:nil") == "true":
+                continue
+            if FORECAST_CTX.search(cid) or cid not in periods:
+                continue
+            # 문맥 이름은 '기간_부문' 이다. 부문 쪽만 떼어 본다.
+            member = cid.split("_", 1)[1] if "_" in cid else ""
+            if not member or SEG_TOTAL.match(member) or SEG_SKIP.search(member):
+                continue
+            digits = re.sub(r"[^\d.-]", "", TAGS.sub("", inner))
+            if not re.fullmatch(r"-?\d+(\.\d+)?", digits or ""):
+                continue
+            v = float(digits)
+            try:
+                v *= 10 ** int(a.get("scale") or 0)
+            except ValueError:
+                pass
+            if a.get("sign") == "-":
+                v = -v
+            if v <= 0:
+                continue
+            slot = out.setdefault(periods[cid], {})
+            old = slot.get(seg_name(member))
+            # 더 정확한 항목(외부 고객 매출)이 이긴다.
+            if old is None or rank < old[1]:
+                slot[seg_name(member)] = (v, rank)
+
+    return [(st, en, {k: v[0] for k, v in segs.items()})
+            for (st, en), segs in sorted(out.items()) if len(segs) >= 2]
+
+
+def seg_quarters(points):
+    """누계 점들 -> {종료일: {부문: 값}}. 같은 시작일의 앞 누계를 뺀다.
+
+    결산단신의 부문 표는 **누계**다(1분기는 그 분기, 2분기는 상반기…).
+    총매출에서 하던 것과 같다 — 다만 여기서는 시작일이 같이 실려 있으므로
+    회계연도를 짐작할 필요가 없다.
+    """
+    by_start = {}
+    for st, en, segs in points:
+        by_start.setdefault(st, {})[en] = segs
+
+    out = {}
+    for st, ends in by_start.items():
+        order = sorted(ends)
+        for i, en in enumerate(order):
+            days = (date.fromisoformat(en) - date.fromisoformat(st)).days
+            if i == 0:
+                if days <= 125:               # 첫 누계가 곧 1분기
+                    out[en] = dict(ends[en])
+                continue
+            prev = ends[order[i - 1]]
+            gap = (date.fromisoformat(en) - date.fromisoformat(order[i - 1])).days
+            if not 60 <= gap <= 125:
+                continue                      # 사이가 한 분기가 아니다
+            cut = {k: ends[en][k] - prev.get(k, 0) for k in ends[en]
+                   if ends[en][k] - prev.get(k, 0) > 0}
+            if len(cut) >= 2:
+                out[en] = cut
+    return out
 
 
 def pick(vals, names):
@@ -657,9 +802,20 @@ def collect():
     prior = base_series()
     stocks = {k: dict(v) for k, v in old.items()}
     seen = {k: {p["end"] for p in v.get("points") or []} for k, v in stocks.items()}
+    # 부문별 매출은 **같은 zip 에서** 뽑는다. 요청을 한 번도 더 하지 않는다.
+    # 담아 두는 것은 누계 점이고(시작일·종료일·부문별 값), 분기로 되돌리는 것은
+    # 저장할 때 한다 — 그래야 다음 분기가 들어왔을 때 앞엣것과 이어서 뺄 수 있다.
+    segs = load_seg_raw()
     # **이미 뜯어본 공시는 다시 내려받지 않는다.** 열흘치를 훑으므로 이게 없으면
     # 매 실행마다 사백 건을 다시 받는다. 공시 번호는 문서마다 하나뿐이라 열쇠로 쓴다.
-    done = set(load_done())
+    #
+    # 다만 **부문 수집기를 새로 붙이거나 고치면 한 바퀴는 다시 봐야 한다.** 그
+    # 표시가 `segments_jp.json` 의 `v` 다 — 그것이 없거나 헌 것이면 이번 한 번은
+    # 열흘치를 통째로 다시 받는다. 안 그러면 이번 결산 시즌 것을 통째로 놓친다
+    # (수치는 이미 뽑아 뒀으므로 공시가 done 에 들어 있다).
+    done = set(load_done()) if seg_ready() else set()
+    if not done:
+        print("  부문 자료가 없다. 열흘치를 다시 뜯는다.", flush=True)
 
     got = skipped = streak = 0
     for back in range(BACK_DAYS):
@@ -685,11 +841,15 @@ def collect():
                 print(f"    {r['code']} 막힘: {e}", file=sys.stderr, flush=True)
                 if streak >= GIVE_UP_AFTER:
                     print("  연속으로 막혔다. 여기서 접는다.", file=sys.stderr, flush=True)
-                    return save(stocks, done, got, skipped)
+                    return save(stocks, done, got, skipped, segs)
                 continue
             time.sleep(PAUSE)
             if not blob:
                 continue
+
+            for st, en, row in read_segments(blob):
+                segs.setdefault(key, {})[st + "/" + en] = row
+
             vals = read_summary(blob)
             if not vals:
                 skipped += 1
@@ -713,9 +873,9 @@ def collect():
             # 실행되지 않아 받은 것을 통째로 잃는다. 실제로 첫 실행이 그랬다 —
             # 5분에서 잘려 197종목을 담고도 파일이 안 생겼다.
             if got % 20 == 0:
-                save(stocks, done, got, skipped, quiet=True)
+                save(stocks, done, got, skipped, segs, quiet=True)
                 print(f"    ...{got}건", flush=True)
-    return save(stocks, done, got, skipped)
+    return save(stocks, done, got, skipped, segs)
 
 
 def load_done():
@@ -728,7 +888,73 @@ def load_done():
         return []
 
 
-def save(stocks, done, got, skipped, quiet=False):
+def _seg_file():
+    if not SEG_OUT.exists():
+        return {}
+    try:
+        return json.loads(SEG_OUT.read_text(encoding="utf-8"))
+    except (ValueError, OSError):
+        return {}
+
+
+def load_seg_raw():
+    """받아둔 누계 점. {종목: {'시작/종료': {부문: 값}}}"""
+    return _seg_file().get("raw", {})
+
+
+def seg_ready():
+    """지금 방식으로 뽑아둔 부문 자료가 이미 있는가."""
+    return _seg_file().get("v") == SEG_JP_VER
+
+
+# 부문 이름이 그대로 남아 있는 누계 점은 종목당 이만큼만 들고 있는다. 스무 분기면
+# 화면에 그리는 스물두 칸을 거의 채우고, 그 이상은 파일만 무거워진다.
+SEG_KEEP_RAW = 24
+
+
+def save_segments(raw, quiet=False):
+    """누계 점을 분기로 되돌려 화면용 자료를 만든다. 원자료도 같이 남긴다."""
+    stocks = {}
+    for key, spans in raw.items():
+        pts = []
+        for span, row in spans.items():
+            st, _, en = span.partition("/")
+            if st and en:
+                pts.append((st, en, row))
+        q = seg_quarters(pts)
+        if len(q) < 2:
+            continue
+        ends = sorted(q)[-20:]
+        names = {}
+        for e in ends:
+            for n, v in q[e].items():
+                names[n] = names.get(n, 0) + v
+        order = sorted(names, key=lambda n: -names[n])[:10]
+        if len(order) < 2:
+            continue
+        stocks[key] = {
+            "v": SEG_JP_VER, "axis": "사업부문", "names": order,
+            "pts": [[e] + [q[e].get(n) for n in order] for e in ends],
+        }
+
+    payload = {
+        "source": "TDnet 결산단신 첨부 (세그먼트 정보, inline XBRL)",
+        "note": ("외부 고객 매출을 쓴다 — 부문끼리 주고받은 것을 더하면 총매출보다 "
+                 "커진다. 누계로 실리므로 같은 시작일의 앞 누계를 빼 분기로 되돌린다."),
+        "v": SEG_JP_VER,
+        "count": len(stocks),
+        "raw": {k: dict(sorted(v.items())[-SEG_KEEP_RAW:]) for k, v in raw.items()},
+        "stocks": stocks,
+    }
+    tmp = SEG_OUT.with_suffix(".tmp")
+    tmp.write_text(json.dumps(payload, ensure_ascii=False), encoding="utf-8")
+    tmp.replace(SEG_OUT)
+    if not quiet:
+        print(f"{len(stocks):,}종목 부문별 매출 -> {SEG_OUT} "
+              f"(누계 점을 가진 종목 {len(raw):,})")
+
+
+def save(stocks, done, got, skipped, segs=None, quiet=False):
     payload = {
         "source": "TDnet 適時開示 결산단신 (inline XBRL)",
         "note": ("발표 당일에 올라온다. 누계로 실리므로 앞 분기를 빼 분기값으로 "
@@ -741,6 +967,8 @@ def save(stocks, done, got, skipped, quiet=False):
     tmp = OUT.with_suffix(".tmp")
     tmp.write_text(json.dumps(payload, ensure_ascii=False), encoding="utf-8")
     tmp.replace(OUT)
+    if segs is not None:
+        save_segments(segs, quiet=quiet)
     if not quiet:
         print(f"\n{len(stocks):,}종목 -> {OUT}  (이번에 담은 분기 {got}개 · "
               f"되돌리지 못해 건너뛴 것 {skipped}개)")
