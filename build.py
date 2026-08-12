@@ -14,7 +14,7 @@ data/earnings*.json  ->  index.html (단일 파일, 외부 의존 없음)
 import json
 import re
 from collections import Counter
-from datetime import date, datetime, timedelta
+from datetime import date, datetime, timedelta, timezone
 from pathlib import Path
 
 import companies
@@ -560,7 +560,11 @@ def build():
         "seg": seg,
     }
 
-    stamp = datetime.now().strftime("%Y-%m-%d %H:%M KST")
+    # **러너는 UTC 로 돈다.** 예전에는 datetime.now() 에 "KST" 만 붙였는데,
+    # 그러면 화면에 늘 아홉 시간 뒤처진 시각이 뜬다 — 오후 5시에 봤는데
+    # "갱신 07:49 KST" 라고 적혀 있으니 하루 종일 안 돌아간 것처럼 보인다.
+    stamp = (datetime.now(timezone.utc) + timedelta(hours=9)
+             ).strftime("%Y-%m-%d %H:%M KST")
     parts = " · ".join(f'{MARKETS[m]["flag"]} {MARKETS[m]["ko"]} <b>{len(data[m]["rows"]):,}</b>'
                        for m in have)
     head = (f'{parts} · 합계 <b>{len(packed):,}건</b> · '

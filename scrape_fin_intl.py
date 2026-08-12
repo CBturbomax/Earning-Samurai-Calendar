@@ -40,7 +40,7 @@ import sys
 import time
 import urllib.error
 import urllib.request
-from datetime import date, timedelta
+from datetime import date, datetime, timedelta, timezone
 from pathlib import Path
 
 HERE = Path(__file__).parent
@@ -405,10 +405,39 @@ def announcements():
     return out
 
 
+def now_stamp():
+    """UTC 로 분까지. 날짜 문자열과 견줘도 앞뒤가 맞다(ISO 라 사전순 = 시간순)."""
+    return datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M")
+
+
+def missing_announced(rec, last_ann):
+    """발표는 났는데 그 분기가 우리 기록에 없나.
+
+    **'언제 받았나'로 따지면 안 된다.** 예전에는 받아둔 날짜가 발표일보다
+    앞서는지만 봤는데, 날짜끼리 견주니 **같은 날이면 앞뒤를 가릴 수가 없다.**
+    일본 회사는 오후 3시(한국 시각)에 발표하는데 우리는 그날 아침에 이미 받아
+    뒀으므로 '오늘 받았다'가 되어 열흘 동안 다시 안 받았다. 회원님이 오후에
+    보면 3월 분기에 멈춰 있었다.
+
+    그래서 **'무엇을 가졌나'로 따진다.** 발표일 두어 달 앞에서 끝난 분기가
+    우리에게 없으면 그 발표는 안 담긴 것이다. 시장마다 결산기 표기가 제각각인데
+    (일본 '3月期 第１', 홍콩 영어 한 문장) 이 방법은 그걸 안 읽어도 된다.
+    """
+    pts = (rec or {}).get("points") or []
+    if not pts:
+        return True
+    last = pts[-1].get("end") or ""
+    try:
+        want = (date.fromisoformat(last_ann) - timedelta(days=100)).isoformat()
+    except ValueError:
+        return False
+    return last < want
+
+
 def queue(old, cand, ann):
     """받을 순서.
 
-    -1순위 **방금 발표했는데 우리 기록이 그보다 앞선 것** — 새치기시킨다.
+    -1순위 **발표는 났는데 그 분기가 우리 기록에 없는 것** — 새치기시킨다.
            이게 없으면 어제 발표한 회사가 삼천 개 대기줄 뒤에 서서 몇 시간을
            기다린다(루멘텀이 그랬다).
      0순위 아직 못 받았거나 저장 형식이 헌 것
@@ -421,12 +450,15 @@ def queue(old, cand, ann):
     stale = (date.today() - timedelta(days=STALE_DAYS)).isoformat()
     cold = (date.today() - timedelta(days=STALE_DAYS * 6)).isoformat()
     recent = (date.today() - timedelta(days=45)).isoformat()
+    # 소스가 발표 당일 바로 싣지 않을 때가 있다. 그렇다고 매 실행마다 다시
+    # 두드리면 그 몇백 종목이 대기줄을 통째로 차지한다. 세 시간에 한 번씩만.
+    retry = (datetime.now(timezone.utc) - timedelta(hours=3)).strftime("%Y-%m-%dT%H:%M")
     picks = []
     for k, cap in cand.items():
         rec = old.get(k)
         gap, last_ann = ann.get(k, (9999, ""))
-        # 최근에 발표했는데 우리가 그 전에 받아둔 것 -> 그 발표가 안 담겨 있다.
-        if last_ann >= recent and (not rec or (rec.get("ts") or "") < last_ann):
+        if (last_ann >= recent and missing_announced(rec, last_ann)
+                and (rec.get("ts") if rec else "") < retry):
             picks.append((-1, -cap, k))
             continue
         if not rec or rec.get("v") != INTL_VER:
@@ -513,7 +545,8 @@ def main():
             rec = dict(stocks.get(k) or {})
             rec["none"] = 1           # 두드려 봤지만 없더라는 표시
         rec["v"] = INTL_VER
-        rec["ts"] = today
+        # 날짜만 남기면 '발표 직전에 받은 것'과 '발표 뒤에 받은 것'을 못 가른다.
+        rec["ts"] = now_stamp()
         stocks[k] = rec
         if i % 25 == 24:
             print(f"    {i+1}/{len(todo)} (확보 {got})", flush=True)
