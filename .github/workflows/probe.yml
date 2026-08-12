@@ -17,58 +17,47 @@ jobs:
         with:
           python-version: '3.12'
 
-      # 시총 큰 종목인데 부문이 안 잡힌 회사가 무슨 태그를 쓰는지 본다.
-      # 짐작으로 태그를 늘리지 않는다 — zip 하나(85MB)만 받아 원문을 센다.
-      - name: 🔎 부문이 안 잡힌 큰 종목은 무슨 태그를 쓰나
+      # 엑슨이 계속 안 잡힌다. 수집기 코드를 그대로 태워 어디서 떨어지는지 본다.
+      - name: 🔎 엑슨은 어디서 떨어지나
         timeout-minutes: 8
         env:
           SEC_UA: 'Earning Samurai Calendar (cbpark@wisdomasset.co.kr)'
         run: |
           python - <<'EOF'
-          import io, json, urllib.request, zipfile, collections
+          import collections, io, zipfile
           import scrape_seg_sec as s
 
-          # 엑슨·록히드마틴·제너럴다이내믹스·유나이티드헬스
-          WANT = {34088: "XOM", 936468: "LMT", 40533: "GD", 731766: "UNH"}
-          blob = s.fetch(s.BULK.format(q="2026q1"))
-          z = zipfile.ZipFile(io.BytesIO(blob))
+          CIK = {34088: "XOM", 93410: "CVX", 87347: "SLB"}
+          facts, pairs = {}, {}
+          for q in ("2025q2", "2025q3", "2025q4", "2026q1"):
+              blob = s.fetch(s.BULK.format(q=q))
+              if not blob:
+                  print(q, "못 받음"); continue
+              n = s.scan(blob, set(CIK), facts, pairs)
+              print(f"{q}: 담은 행 {n:,}")
+              del blob
 
-          subs = {}
-          with z.open("sub.txt") as f:
-              cols = f.readline().decode().rstrip("\r\n").split("\t")
-              ia, ic, ifm = (cols.index(c) for c in ("adsh", "cik", "form"))
-              for raw in f:
-                  p = raw.decode("utf-8", "replace").rstrip("\r\n").split("\t")
-                  try: cik = int(p[ic])
-                  except (ValueError, IndexError): continue
-                  if cik in WANT:
-                      subs[p[ia]] = (WANT[cik], p[ifm])
-
-          print("찾은 서류:", sorted(set(subs.values())))
-          seen = collections.defaultdict(collections.Counter)
-          axes = collections.defaultdict(collections.Counter)
-          with z.open("num.txt") as f:
-              cols = f.readline().decode().rstrip("\r\n").split("\t")
-              ia, it, isg, iu, iv = (cols.index(c) for c in
-                                     ("adsh", "tag", "segments", "uom", "value"))
-              for raw in f:
-                  p = raw.decode("utf-8", "replace").rstrip("\r\n").split("\t")
-                  if len(p) <= iv or not p[isg]: continue
-                  hit = subs.get(p[ia])
-                  if not hit or p[iu] != "USD": continue
-                  sym = hit[0]
-                  if "Revenu" in p[it] or "Sales" in p[it]:
-                      seen[sym][p[it]] += 1
-                  axes[sym][";".join(sorted(
-                      q.split("=")[0] for q in p[isg].split(";") if q))] += 1
-
-          for sym in sorted(seen) or sorted(axes):
-              print(f"\n===== {sym}")
-              print("  부문 축이 달린 매출/매상 태그:")
-              for t, n in seen[sym].most_common(10):
-                  mark = "  <- 우리가 받는 태그" if t in s.REV_RANK else ""
-                  print(f"    {n:>6,}  {t}{mark}")
-              print("  축 조합 (매출 말고 전부):")
-              for a, n in axes[sym].most_common(8):
-                  print(f"    {n:>6,}  {a}")
+          for cik, sym in CIK.items():
+              print(f"\n===== {sym} (CIK {cik})")
+              fa, pa = facts.get(cik, {}), pairs.get(cik, {})
+              print("  한 축짜리 축:", {a: len(m) for a, m in fa.items()} or "없음")
+              print("  두 축 축:", {a: {sub: len(m) for sub, m in subs.items()}
+                                    for a, subs in pa.items()} or "없음")
+              for axis, members in fa.items():
+                  ser = s.series_of(members)
+                  print(f"    [solo {axis}] 부문 {len(ser)} -> {list(ser)[:6]}")
+                  for m, x in list(ser.items())[:3]:
+                      print(f"        {m}: {len(x)}분기 {sorted(x)[-2:]}")
+              for axis, subs in pa.items():
+                  for sub, members in subs.items():
+                      flat = {m: {t: {k: (v[0], v[1]) for k, v in raw.items()}
+                                  for t, raw in by_tag.items()}
+                              for m, by_tag in members.items()}
+                      ser = s.series_of(flat)
+                      print(f"    [pair {axis} x {sub}] 원래 부문 {len(members)} "
+                            f"-> 남은 부문 {len(ser)} {list(ser)[:6]}")
+                      for m, by_tag in list(members.items())[:4]:
+                          allk = [(t, sorted(r)[:3], len(r)) for t, r in by_tag.items()]
+                          print(f"        {m}: {allk}")
+              print("  build_stock ->", (s.build_stock(fa, pa) or {}).get("names", "없음"))
           EOF
