@@ -808,7 +808,14 @@ def collect():
     segs = load_seg_raw()
     # **이미 뜯어본 공시는 다시 내려받지 않는다.** 열흘치를 훑으므로 이게 없으면
     # 매 실행마다 사백 건을 다시 받는다. 공시 번호는 문서마다 하나뿐이라 열쇠로 쓴다.
-    done = set(load_done())
+    #
+    # 다만 **부문 수집기를 새로 붙이거나 고치면 한 바퀴는 다시 봐야 한다.** 그
+    # 표시가 `segments_jp.json` 의 `v` 다 — 그것이 없거나 헌 것이면 이번 한 번은
+    # 열흘치를 통째로 다시 받는다. 안 그러면 이번 결산 시즌 것을 통째로 놓친다
+    # (수치는 이미 뽑아 뒀으므로 공시가 done 에 들어 있다).
+    done = set(load_done()) if seg_ready() else set()
+    if not done:
+        print("  부문 자료가 없다. 열흘치를 다시 뜯는다.", flush=True)
 
     got = skipped = streak = 0
     for back in range(BACK_DAYS):
@@ -881,14 +888,23 @@ def load_done():
         return []
 
 
-def load_seg_raw():
-    """받아둔 누계 점. {종목: {'시작/종료': {부문: 값}}}"""
+def _seg_file():
     if not SEG_OUT.exists():
         return {}
     try:
-        return json.loads(SEG_OUT.read_text(encoding="utf-8")).get("raw", {})
+        return json.loads(SEG_OUT.read_text(encoding="utf-8"))
     except (ValueError, OSError):
         return {}
+
+
+def load_seg_raw():
+    """받아둔 누계 점. {종목: {'시작/종료': {부문: 값}}}"""
+    return _seg_file().get("raw", {})
+
+
+def seg_ready():
+    """지금 방식으로 뽑아둔 부문 자료가 이미 있는가."""
+    return _seg_file().get("v") == SEG_JP_VER
 
 
 # 부문 이름이 그대로 남아 있는 누계 점은 종목당 이만큼만 들고 있는다. 스무 분기면
@@ -925,6 +941,7 @@ def save_segments(raw, quiet=False):
         "source": "TDnet 결산단신 첨부 (세그먼트 정보, inline XBRL)",
         "note": ("외부 고객 매출을 쓴다 — 부문끼리 주고받은 것을 더하면 총매출보다 "
                  "커진다. 누계로 실리므로 같은 시작일의 앞 누계를 빼 분기로 되돌린다."),
+        "v": SEG_JP_VER,
         "count": len(stocks),
         "raw": {k: dict(sorted(v.items())[-SEG_KEEP_RAW:]) for k, v in raw.items()},
         "stocks": stocks,
