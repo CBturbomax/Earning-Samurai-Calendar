@@ -1,4 +1,4 @@
-# 새 소스나 고친 수집기를 전체에 풀기 전에 떠본다.
+# 새 소스나 고친 수집기를 전체에 풀기 전에 떠본다. **저장소에 아무것도 안 쓴다.**
 #
 # 지금 볼 것: **일본 실적을 발표 당일에 받을 수 있는가.**
 # stockanalysis 는 며칠 뒤에 싣는다(소니 12일, 도요타 8일, 오늘 발표분 0건).
@@ -6,7 +6,6 @@
 #
 # 훑어본 결과: TDnet 200 · 야후재팬 200 · 닛케이 결산 200 · JPX 200,
 #            EDINET 401(열쇠 필요) · 가부탄 405 · 민카부 403 · IR뱅크 403.
-# TDnet 이 열리므로 이제 표 생김새만 맞추면 된다.
 name: 소스 접근 확인
 on:
   workflow_dispatch:
@@ -26,13 +25,39 @@ jobs:
         with:
           python-version: '3.12'
 
-      # 목록은 잘 열리는데 우리 정규식이 0건을 냈다. 생김새를 안 보고 정규식을
-      # 고치는 건 점치는 것이다. 표 한 줄을 그대로 찍는다.
-      # zip 은 잘 받아지는데 XBRL 을 못 읽었다. 안에 무엇이 들었는지 찍어 본다.
-      - name: 🇯🇵 결산단신 zip 속을 본다
+      # 수집기를 그대로 돌려 본다. 이틀치만 — 오늘 발표분이 실제로 담기는지 본다.
+      - name: 🇯🇵 TDnet 수집기를 그대로 돌려 본다
         continue-on-error: true
-        run: python scrape_fin_jp.py --zip
+        timeout-minutes: 10
+        env:
+          JP_BACK_DAYS: '2'
+        run: python scrape_fin_jp.py
 
-      - name: 🇯🇵 TDnet 결산단신을 읽을 수 있는가
+      # 담긴 것을 눈으로 확인한다. 오늘 발표한 회사가 6월 분기를 갖고 있어야 한다.
+      - name: 🇯🇵 담긴 결과 확인
         continue-on-error: true
-        run: python scrape_fin_jp.py --probe ${{ inputs.syms }}
+        run: |
+          python - <<'PY'
+          import json, pathlib
+          p = pathlib.Path("data/financials_jp.json")
+          if not p.exists():
+              print("파일이 안 생겼다"); raise SystemExit
+          d = json.loads(p.read_text(encoding="utf-8"))
+          st = d.get("stocks", {})
+          print(f"종목 {len(st):,} · 본 공시 {len(d.get('docs', [])):,}")
+          for k in sorted(st)[:12]:
+              pts = st[k].get("points") or []
+              last = pts[-1] if pts else {}
+              opi = last.get("opi")
+              print(f"  {k}: {len(pts)}분기 · 마지막 {last.get('label','-')} "
+                    f"({last.get('end','-')}) 매출 {last.get('rev') or 0:,.0f} "
+                    f"영업익 {opi if opi is not None else '-'}")
+          fresh = sum(1 for v in st.values()
+                      if (v.get("points") or [{}])[-1].get("end", "") >= "2026-06-01")
+          print(f"\n6월 이후 분기를 가진 종목: {fresh:,}")
+          PY
+
+      # 수치가 제대로 뽑히는지 한 건씩 자세히 (원문 대조용)
+      - name: 🇯🇵 결산단신 낱건 확인
+        continue-on-error: true
+        run: python scrape_fin_jp.py --probe 1
