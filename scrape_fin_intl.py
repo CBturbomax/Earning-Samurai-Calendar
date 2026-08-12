@@ -485,9 +485,14 @@ def main():
     OUT.parent.mkdir(parents=True, exist_ok=True)
 
     if probe:
-        for label, market, code in (("도요타", "jp", "7203"), ("소니", "jp", "6758"),
-                                    ("텐센트", "hk", "00700"), ("알리바바", "hk", "09988"),
-                                    ("SEA", "us", "SE"), ("알리바바 ADR", "us", "BABA")):
+        # 인자로 '시장:코드' 를 주면 그것만 본다. 오늘 발표한 회사가 소스에
+        # 실렸는지 확인할 때 쓴다.
+        want = [a for a in sys.argv[1:] if ":" in a and not a.startswith("-")]
+        picks = ([(c, *c.split(":", 1)) for c in want] or
+                 [("도요타", "jp", "7203"), ("소니", "jp", "6758"),
+                  ("텐센트", "hk", "00700"), ("알리바바", "hk", "09988"),
+                  ("SEA", "us", "SE"), ("알리바바 ADR", "us", "BABA")])
+        for label, market, code in picks:
             u = url_for(market, code)
             print(f"\n===== {label} {market}:{code}\n  {u}")
             try:

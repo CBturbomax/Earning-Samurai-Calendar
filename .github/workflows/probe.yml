@@ -26,8 +26,8 @@ jobs:
         with:
           python-version: '3.12'
 
-      - name: 📈 결산 분기가 메워지는가 (SEC)
+      # 오늘 발표한 일본 회사가 소스에 실렸는지 본다. 안 실렸으면 우리가
+      # 아무리 자주 두드려도 안 나온다 — 그건 주기 문제가 아니다.
+      - name: 📉 오늘 발표분이 소스에 실렸는가 (stockanalysis)
         continue-on-error: true
-        env:
-          SEC_UA: 'Earning Samurai Calendar (cbpark@wisdomasset.co.kr)'
-        run: python scrape_fin.py --probe ${{ inputs.syms }}
+        run: python scrape_fin_intl.py --probe ${{ inputs.syms }}
