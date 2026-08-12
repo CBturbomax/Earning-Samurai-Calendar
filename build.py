@@ -145,6 +145,45 @@ def q_label(end, mid="", q=""):
     return f"{(d.month - 1) // 3 + 1}Q{d.year % 100:02d}"
 
 
+def q_index(label):
+    """'2Q26' -> 정수. 분기끼리 앞뒤를 견주려면 숫자여야 한다."""
+    try:
+        q, y = label.split("Q")
+        return (2000 + int(y)) * 4 + int(q) - 1
+    except (ValueError, AttributeError):
+        return None
+
+
+def q_name(i):
+    return f"{i % 4 + 1}Q{(i // 4) % 100:02d}"
+
+
+def unstack(labels):
+    """겹친 분기 이름을 뒤로 밀어 하나씩 떨어뜨린다.
+
+    회계 분기가 달력과 여섯 주쯤 어긋나면 두 분기가 같은 달력 분기에 떨어진다.
+    코스트코가 그렇다 — 11월~2월 분기와 2월~5월 분기가 둘 다 1Q26 이 됐다.
+    SEC 프레임으로도 안 풀린다. SEC 는 잘 맞아떨어지는 분기에만 프레임을
+    매기므로 코스트코는 넷 중 셋만 프레임이 있고, 그 셋만으로는 나머지 하나가
+    갈 자리가 없다.
+
+    자료는 종료일 순으로 정렬돼 있으니 **분기 이름도 반드시 뒤로 갈수록 커야
+    한다.** 앞엣것보다 작거나 같으면 바로 다음 분기로 민다. 중간이 비어 있는
+    것(수집이 덜 된 구간)은 그대로 둔다 — 없는 분기를 지어내지 않는다.
+    """
+    out, prev = [], None
+    for lab in labels:
+        i = q_index(lab)
+        if i is None:
+            out.append(lab)
+            continue
+        if prev is not None and i <= prev:
+            i = prev + 1
+        out.append(q_name(i))
+        prev = i
+    return out
+
+
 def pack_fin(rec):
     """화면에 실을 것만 골라 담는다. 점은 [라벨, 매출, 영업이익].
 
@@ -153,10 +192,11 @@ def pack_fin(rec):
     """
     out = {k: rec[k] for k in ("freq", "eps", "cur", "src") if rec.get(k)}
     if rec.get("freq") in ("Q", "H"):
-        out["points"] = [[q_label(p["end"], p.get("mid", ""), p.get("q", ""))
-                          if p.get("end") else p["label"],
-                          p["rev"], p.get("opi")]
-                         for p in rec.get("points") or []]
+        pts = rec.get("points") or []
+        labs = unstack([q_label(p["end"], p.get("mid", ""), p.get("q", ""))
+                        if p.get("end") else p["label"] for p in pts])
+        out["points"] = [[lab, p["rev"], p.get("opi")]
+                         for lab, p in zip(labs, pts)]
     return out
 
 

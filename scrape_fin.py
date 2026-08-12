@@ -623,7 +623,9 @@ def probe(syms):
             print("  CIK 를 못 찾음")
             continue
         try:
-            rec = series(c)
+            # budget 을 줘야 companyfacts 로 항목을 찾는 길까지 간다. 안 주면
+            # 코카콜라·존슨컨트롤스처럼 흔한 태그를 안 쓰는 회사가 빈 채로 나온다.
+            rec = series(c, [3])
         except Throttled as e:
             print("  막힘:", e)
             continue
