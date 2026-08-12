@@ -183,11 +183,16 @@ def axis_rank(a):
     return AXIS_PRI.get(a, 0)
 
 
-def one_axis(segments):
-    """'A=x;ConsolidationItems=OperatingSegments;' -> ('A', 'x'). 아니면 None.
+def parse_seg(segments):
+    """'A=x;ConsolidationItems=OperatingSegments;' -> ('A', 'x', 'solo').
 
-    축이 둘 걸린 행(BusinessSegments=Gaming;ProductOrService=Gaming)은 부문 안의
-    다시 쪼갠 값이라 그대로 쌓으면 겹친다. 버린다.
+    축이 둘 걸린 행(BusinessSegments=Gaming;ProductOrService=Gaming)은 부문 안을
+    다시 쪼갠 값이라 그대로 쌓으면 겹친다. 그래서 따로 담아('pair') **부문만
+    남는 행이 아예 없는 회사**에만 쓴다 — 록히드마틴이 그렇다. 부문별 매출을
+    전부 '제품/서비스'로 한 번 더 갈라 내서, 한 축짜리 행이 하나도 없다.
+    아래 축(제품·지역)으로 더하면 부문 합계가 나온다.
+
+    못 쓰는 행이면 None.
     """
     pairs = []
     for part in segments.split(";"):
@@ -203,12 +208,21 @@ def one_axis(segments):
                 return None
             continue
         pairs.append((k, v.split(":")[-1]))
-    if len(pairs) != 1:
+
+    if len(pairs) == 1:
+        axis, member = pairs[0]
+        if not axis_rank(axis) or BAD_MEMBER.search(member):
+            return None
+        return axis, member, "solo"
+
+    if len(pairs) != 2:
         return None
-    axis, member = pairs[0]
-    if not axis_rank(axis) or BAD_MEMBER.search(member):
+    a, b = sorted(pairs, key=lambda p: -axis_rank(p[0]))
+    if axis_rank(a[0]) <= axis_rank(b[0]):
+        return None                          # 어느 쪽이 위인지 못 가른다
+    if BAD_MEMBER.search(a[1]) or BAD_MEMBER.search(b[1]):
         return None
-    return axis, member
+    return a[0], a[1], "pair"
 
 
 def pretty(member):
@@ -242,10 +256,16 @@ def iso(ds):
 
 # ── zip 하나 훑기 ────────────────────────────────────────────────────────
 
-def scan(blob, want_cik, facts):
-    """zip 한 덩이에서 부문별 매출 행을 뽑아 facts 에 쌓는다.
+def scan(blob, want_cik, facts, pairs):
+    """zip 한 덩이에서 부문별 매출 행을 뽑아 쌓는다.
 
-    facts[cik][axis][member][(ddate, qtrs)] = (value, filed, tag_rank)
+    facts[cik][axis][member][tag][(ddate, qtrs)] = (value, filed)
+    pairs[cik][axis][member][tag][(adsh, ddate, qtrs)] = 합계
+
+    **태그를 섞지 않는다.** 한 회사가 도중에 매출 태그를 갈아타기도 하고, 두
+    태그가 같은 분기를 다르게 적기도 한다. 섞어 놓고 누계를 빼면 엉뚱한 값이
+    나온다 — 웨이스트매니지먼트의 4분기가 두 배로 튀었다.
+
     같은 값이 여러 서류에 실린다(10-K 가 지난해 것을 다시 싣는다). **나중에
     낸 서류**를 남긴다 — 정정하면 그쪽이 맞다.
     """
@@ -298,25 +318,35 @@ def scan(blob, want_cik, facts):
                 continue
             if qtrs < 1 or qtrs > 4 or val <= 0:
                 continue
-            got = one_axis(seg)
+            got = parse_seg(seg)
             if not got:
                 continue
-            axis, member = got
+            axis, member, kind = got
             cik, filed = sub
-            slot = facts.setdefault(cik, {}).setdefault(axis, {}).setdefault(member, {})
-            key = (p[idd], qtrs)
-            old = slot.get(key)
-            # 나중에 낸 서류가 이긴다. 같은 날 냈으면 더 정확한 태그가 이긴다.
-            if old is None or (filed, -rank) > (old[1], -old[2]):
-                slot[key] = (val, filed, rank)
-                kept += 1
+            tag = p[it]
+            if kind == "solo":
+                slot = (facts.setdefault(cik, {}).setdefault(axis, {})
+                        .setdefault(member, {}).setdefault(tag, {}))
+                key = (p[idd], qtrs)
+                old = slot.get(key)
+                if old is None or filed > old[1]:   # 나중에 낸 서류가 이긴다
+                    slot[key] = (val, filed)
+                    kept += 1
+            else:
+                # 아래 축(제품·지역)으로 갈린 값들. 서류 한 장 안에서 더해야
+                # 부문 합계가 된다 — 서류가 다르면 같은 분기를 두 번 더한다.
+                slot = (pairs.setdefault(cik, {}).setdefault(axis, {})
+                        .setdefault(member, {}).setdefault(tag, {}))
+                key = (p[ia], p[idd], qtrs)
+                cur = slot.get(key)
+                slot[key] = ((cur[0] if cur else 0.0) + val, filed)
     return kept
 
 
 # ── 쌓은 것을 분기 값으로 ────────────────────────────────────────────────
 
 def quarterly(raw):
-    """{(ddate, qtrs): (값, …)} -> {ddate: 값}. 누계는 빼서 되돌린다."""
+    """{(ddate, qtrs): (값, 접수일)} -> {ddate: 값}. 누계는 빼서 되돌린다."""
     plain = {k[0]: v[0] for k, v in raw.items() if k[1] == 1}
 
     # 누계 − 같은 날 시작한 한 분기 짧은 누계. 12개월 − 9개월 = 결산 분기.
@@ -337,12 +367,121 @@ def quarterly(raw):
     return plain
 
 
+def quarterly_merged(by_tag):
+    """태그마다 따로 되돌린 뒤 합친다. 점이 가장 많은 태그가 뼈대다.
+
+    태그를 섞어 놓고 누계를 빼면 안 된다 — 3분기는 A 태그로, 연간은 B 태그로
+    적힌 회사에서 '연간 − 앞 세 분기'가 엉뚱한 값을 낸다. 뼈대 태그가 비운
+    분기만 다른 태그로 메운다.
+    """
+    got = []
+    for tag, raw in by_tag.items():
+        s = quarterly(raw)
+        if s:
+            got.append((-len(s), REV_RANK.get(tag, 99), s))
+    got.sort(key=lambda t: t[:2])
+    out = {}
+    for _n, _r, s in got:
+        for k, v in s.items():
+            out.setdefault(k, v)
+    return out
+
+
+NORM_DROP = re.compile(r"[^a-z0-9]|and")
+
+
+def norm_name(m):
+    """이름만 바뀐 같은 부문을 알아보는 열쇠.
+
+    회사가 XBRL 이름을 슬쩍 고친다 — AMD 는 `DataCenter` 를 `Datacenter` 로,
+    P&G 는 `FabricHomeCare` 를 `FabricandHomeCare` 로 바꿨다. 그러면 같은
+    부문이 두 줄로 갈라지고, **새 이름에는 결산 분기 값만 있어서 되돌릴 앞
+    분기가 없다** — AMD 의 데이터센터 4분기가 그렇게 통째로 비었다.
+    대소문자·띄어쓰기·'and' 를 지운 것으로 같은 것인지 본다.
+    """
+    return NORM_DROP.sub("", pretty(m).lower())
+
+
+def merge_members(members):
+    """이름만 바뀐 부문을 하나로 합친다. 값이 어긋나면 합치지 않는다."""
+    groups = {}
+    for m, by_tag in members.items():
+        groups.setdefault(norm_name(m), []).append((m, by_tag))
+
+    out = {}
+    for _key, items in groups.items():
+        if len(items) == 1:
+            out[items[0][0]] = items[0][1]
+            continue
+        # 점이 많은 쪽 이름을 남긴다 — 회사가 오래 쓴 이름이다.
+        items.sort(key=lambda it: -sum(len(r) for r in it[1].values()))
+        head, rest = items[0], items[1:]
+        merged = {t: dict(r) for t, r in head[1].items()}
+        for _m, by_tag in rest:
+            for tag, raw in by_tag.items():
+                slot = merged.setdefault(tag, {})
+                for k, v in raw.items():
+                    old = slot.get(k)
+                    if old and abs(old[0] - v[0]) > abs(old[0]) * 0.01:
+                        continue              # 값이 다르다. 같은 부문이 아니다.
+                    if old is None or v[1] > old[1]:
+                        slot[k] = v
+        out[head[0]] = merged
+    return out
+
+
+def drop_subtotals(series):
+    """다른 부문을 다 더한 것과 같은 줄은 소계다. 쌓으면 매출이 두 배가 된다.
+
+    코스트코가 그렇다 — 'Product' 한 줄이 'Foods and Sundries'·'Non Foods'·
+    'Fresh Foods'·'Other' 를 더한 값인데 표에 나란히 실린다. build.py 의
+    `seg_fit` 이 나중에 걸러내기는 하지만, 그러면 **그 종목의 부문 차트가
+    통째로 사라진다.** 소계 줄만 빼면 남길 수 있다.
+    """
+    for _ in range(2):
+        names = list(series)
+        if len(names) < 3:
+            break
+        worst = None
+        for m in names:
+            hit = tot = 0
+            for e, v in series[m].items():
+                others = sum(series[o].get(e) or 0 for o in names if o != m)
+                if not v or not others:
+                    continue
+                tot += 1
+                if abs(v - others) / v < 0.05:
+                    hit += 1
+            if tot >= 4 and hit / tot >= 0.6 and (worst is None or hit > worst[0]):
+                worst = (hit, m)
+        if not worst:
+            break
+        del series[worst[1]]
+    return series
+
+
+MIN_MEMBER_PTS = 3       # 분기가 이보다 적은 부문은 조각이라 싣지 않는다
+MAX_MEMBERS = 10         # 색이 여덟이고, 열 줄이 넘으면 쌓은 막대를 못 읽는다
+
+
+def series_of(members):
+    """부문별 원자료 -> {부문: {종료일: 값}}. 합치고 거르는 일이 다 여기 있다."""
+    series = {}
+    for m, by_tag in merge_members(members).items():
+        s = quarterly_merged(by_tag)
+        if len(s) >= MIN_MEMBER_PTS:
+            series[m] = s
+    if len(series) > MAX_MEMBERS:
+        big = sorted(series, key=lambda m: -sum(series[m].values()))[:MAX_MEMBERS]
+        series = {m: series[m] for m in big}
+    return drop_subtotals(series)
+
+
 def pick_axis(by_axis):
     """축 하나를 고른다. 사업부문 > 제품 > 지역, 같은 등급이면 분기가 많은 쪽."""
     best = None
     for axis, members in by_axis.items():
-        series = {m: quarterly(raw) for m, raw in members.items()}
-        series = {m: s for m, s in series.items() if s}
+        series = series_of(members)
         if len(series) < 2:
             continue                          # 부문이 하나뿐이면 나눌 게 없다
         ends = set()
@@ -356,14 +495,28 @@ def pick_axis(by_axis):
     return best
 
 
-def build_stock(by_axis):
+def build_stock(by_axis, by_pair):
+    """부문만 남는 행이 없으면(록히드마틴) 아래 축으로 더한 값을 쓴다."""
     got = pick_axis(by_axis)
+    if not got and by_pair:
+        # {(adsh, ddate, qtrs): 합} 을 {(ddate, qtrs): (값, 접수일)} 로 눕힌다.
+        # 같은 분기가 여러 서류에 실리면 나중 것을 쓴다.
+        flat = {}
+        for axis, members in by_pair.items():
+            for m, by_tag in members.items():
+                for tag, raw in by_tag.items():
+                    slot = (flat.setdefault(axis, {}).setdefault(m, {})
+                            .setdefault(tag, {}))
+                    for (_adsh, ds, q), v in raw.items():
+                        old = slot.get((ds, q))
+                        if old is None or v[1] > old[1]:
+                            slot[(ds, q)] = v
+        got = pick_axis(flat)
     if not got:
         return None
-    (rank, _, _), axis, series, ends = got
+    (rank, _, _), _axis, series, ends = got
 
-    # 이름은 최근까지 값이 있는 부문부터. 화면에서 아래쪽이 큰 부문이 되도록
-    # 마지막 분기의 값이 큰 순으로 놓는다.
+    # 마지막 분기의 값이 큰 순으로 놓는다 — 쌓은 막대의 아래쪽이 큰 부문이 된다.
     last = ends[-1]
     names = sorted(series, key=lambda m: (-(series[m].get(last) or 0), m))
     pts = [[iso(e)] + [series[m].get(e) for m in names] for e in ends]
@@ -372,7 +525,7 @@ def build_stock(by_axis):
 
 
 def dedupe_names(rec):
-    """다듬은 이름이 겹치면(‥SegmentMember 와 ‥Member) 뒤엣것에 원래 이름을 붙인다."""
+    """다듬은 이름이 그래도 겹치면 뒤엣것에 번호를 붙인다."""
     seen, names = {}, []
     for n in rec["names"]:
         if n in seen:
@@ -472,7 +625,7 @@ def main():
         print("  새로 나온 분기가 없다. 아무것도 안 한다.")
         return
 
-    facts = {}
+    facts, pairs = {}, {}
     for q in quarters:
         blob = None
         for wait in BACKOFF:
@@ -483,13 +636,13 @@ def main():
                 break
         if not blob:
             raise SystemExit(f"  {q} 를 못 받았다. 이번 실행은 접는다.")
-        n = scan(blob, set(by_cik), facts)
+        n = scan(blob, set(by_cik), facts, pairs)
         print(f"    {q}  {len(blob)/1e6:,.0f}MB  부문 행 {n:,}", flush=True)
         del blob
 
     stocks = {}
-    for cik, by_axis in facts.items():
-        rec = build_stock(by_axis)
+    for cik in set(facts) | set(pairs):
+        rec = build_stock(facts.get(cik, {}), pairs.get(cik, {}))
         if rec:
             stocks[by_cik[cik]] = dedupe_names(rec)
 
