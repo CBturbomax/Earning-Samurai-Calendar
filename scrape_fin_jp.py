@@ -147,6 +147,13 @@ def announcements(day):
 
 # XBRL 안에서 찾을 항목. namespace 는 업종마다 다르므로 **끝 이름만** 본다.
 # IFRS 로 내는 일본 회사도 늘고 있어 그쪽 이름도 같이 본다.
+#
+# **금융사 이름을 더 넣어도 소용없다 — 확인했다.** 도쿄해상·크레디세존·라이프넷
+# 생명의 결산단신을 열어 보니 요약에 **매출 항목이 아예 없다.** 들어 있는 것은
+# ProfitBeforeTaxIFRS · ProfitIFRS · ProfitAttributableToOwnersOfParentIFRS ·
+# 주식수 · EPS 뿐이다. IFRS 금융사는 요약을 이익부터 시작한다.
+# 없는 값을 다른 항목으로 대신 채우지 말 것 — 세전이익을 매출이라 적는 셈이다.
+# 이 회사들은 stockanalysis 가 며칠 뒤에 매출을 실어 주므로 그때 메워진다.
 NAME_REV = ("NetSales", "NetSalesIFRS", "Sales", "SalesIFRS", "Revenue", "RevenueIFRS",
             "OperatingRevenues", "OperatingRevenuesIFRS",
             "NetSalesOfCompletedConstructionContracts",
@@ -362,6 +369,55 @@ def dump_zip():
         except ElementTree.ParseError as e:
             print("\n  XML 파싱 실패:", e)
         return
+
+
+def dump_names(codes):
+    """어떤 항목 이름을 쓰는지 **그 회사 공시에서 직접 뽑는다.**
+
+    금융사는 `NetSales` 를 안 쓴다. 은행은 경상수익, 보험은 또 다른 이름이다.
+    이름을 짐작해서 목록에 넣는 건 점치는 것이라, 실제 공시를 열어 본다.
+    """
+    want = set(codes)
+    seen = set()
+    for back in range(BACK_DAYS):
+        if not want - seen:
+            break
+        day = (date.today() - timedelta(days=back)).isoformat()
+        try:
+            rows = announcements(day)
+        except Throttled as e:
+            print(f"{day} 목록 실패: {e}")
+            continue
+        for r in rows:
+            if r["code"] not in want or r["code"] in seen:
+                continue
+            seen.add(r["code"])
+            print(f"\n===== {r['code']} {r['name'][:18]} | {r['title'][:44]}")
+            try:
+                blob = get("https://www.release.tdnet.info/inbs/" + r["zip"], binary=True)
+            except Throttled as e:
+                print("  실패:", e)
+                continue
+            time.sleep(PAUSE)
+            vals = read_summary(blob) if blob else None
+            if not vals:
+                print("  요약 XBRL 을 못 읽었다")
+                continue
+            # 이번 기간 실적 문맥에 값이 있는 항목만, 큰 것부터
+            rows_out = []
+            for name, facts in vals.items():
+                for cid, v, (st, en) in facts:
+                    if (PRI_CTX.search(cid) or FORECAST_CTX.search(cid)
+                            or not DUR_CTX.search(cid) or not CUR_CTX.search(cid)):
+                        continue
+                    rows_out.append((abs(v), name, v, st, en, cid))
+                    break
+            rows_out.sort(reverse=True)
+            for _a, name, v, st, en, cid in rows_out[:14]:
+                mark = ("  <- 매출로 잡힘" if name in NAME_REV else
+                        "  <- 영업익" if name in NAME_OPI else
+                        "  <- 순이익" if name in NAME_NI else "")
+                print(f"    {name:46s} {v:>18,.0f}  {st}~{en}{mark}")
 
 
 def survey():
@@ -632,6 +688,9 @@ def main():
         return dump_rows()
     if "--zip" in sys.argv:
         return dump_zip()
+    if "--names" in sys.argv:
+        i = sys.argv.index("--names")
+        return dump_names([a for a in sys.argv[i + 1:] if not a.startswith("-")])
     if "--probe" in sys.argv:
         n = [a for a in sys.argv[1:] if a.isdigit()]
         return probe(int(n[0]) if n else 3)

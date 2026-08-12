@@ -25,39 +25,11 @@ jobs:
         with:
           python-version: '3.12'
 
-      # 수집기를 그대로 돌려 본다. 이틀치만 — 오늘 발표분이 실제로 담기는지 본다.
-      - name: 🇯🇵 TDnet 수집기를 그대로 돌려 본다
+      # 금융사는 NetSales 를 안 쓴다. 어떤 이름을 쓰는지 공시에서 직접 뽑는다.
+      # 8766 도쿄해상 · 8253 크레디세존 · 7157 라이프넷생명 · 9214 · 6291 등
+      - name: 🇯🇵 금융사가 쓰는 항목 이름 뽑기
         continue-on-error: true
-        timeout-minutes: 10
+        timeout-minutes: 8
         env:
-          JP_BACK_DAYS: '2'
-        run: python scrape_fin_jp.py
-
-      # 담긴 것을 눈으로 확인한다. 오늘 발표한 회사가 6월 분기를 갖고 있어야 한다.
-      - name: 🇯🇵 담긴 결과 확인
-        continue-on-error: true
-        run: |
-          python - <<'PY'
-          import json, pathlib
-          p = pathlib.Path("data/financials_jp.json")
-          if not p.exists():
-              print("파일이 안 생겼다"); raise SystemExit
-          d = json.loads(p.read_text(encoding="utf-8"))
-          st = d.get("stocks", {})
-          print(f"종목 {len(st):,} · 본 공시 {len(d.get('docs', [])):,}")
-          for k in sorted(st)[:12]:
-              pts = st[k].get("points") or []
-              last = pts[-1] if pts else {}
-              opi = last.get("opi")
-              print(f"  {k}: {len(pts)}분기 · 마지막 {last.get('label','-')} "
-                    f"({last.get('end','-')}) 매출 {last.get('rev') or 0:,.0f} "
-                    f"영업익 {opi if opi is not None else '-'}")
-          fresh = sum(1 for v in st.values()
-                      if (v.get("points") or [{}])[-1].get("end", "") >= "2026-06-01")
-          print(f"\n6월 이후 분기를 가진 종목: {fresh:,}")
-          PY
-
-      # 수치가 제대로 뽑히는지 한 건씩 자세히 (원문 대조용)
-      - name: 🇯🇵 결산단신 낱건 확인
-        continue-on-error: true
-        run: python scrape_fin_jp.py --probe 1
+          JP_BACK_DAYS: '4'
+        run: python scrape_fin_jp.py --names 8766 8253 7157 9214 6291 2667 3416 4222
