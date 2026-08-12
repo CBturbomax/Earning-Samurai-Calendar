@@ -152,9 +152,12 @@ NAME_REV = ("NetSales", "NetSalesIFRS", "Sales", "SalesIFRS", "Revenue", "Revenu
             "NetSalesOfCompletedConstructionContracts",
             "OrdinaryIncomeBanks", "GrossOperatingRevenues")
 NAME_OPI = ("OperatingIncome", "OperatingIncomeIFRS", "OperatingIncomeLoss",
-            "ProfitFromOperatingActivitiesIFRS", "OrdinaryIncome")
+            "ProfitFromOperatingActivitiesIFRS", "OperatingProfitLossIFRS",
+            "BusinessProfitIFRS", "OrdinaryIncome", "OrdinaryIncomeLoss")
 NAME_NI = ("ProfitAttributableToOwnersOfParent",
-           "ProfitAttributableToOwnersOfParentIFRS", "NetIncome", "ProfitLoss")
+           "ProfitAttributableToOwnersOfParentIFRS",
+           "NetIncome", "NetIncomeLoss", "ProfitLoss",
+           "ProfitLossAttributableToOwnersOfParent")
 
 # 문맥 이름. 결산단신 한 장에 여러 기간이 함께 실린다.
 #   CurrentAccumulatedQ1Duration_ConsolidatedMember_ResultMember   <- 이번 분기 실적
@@ -438,6 +441,183 @@ def probe(days=3):
             time.sleep(PAUSE)
 
 
+def q_label(mid):
+    d = date.fromisoformat(mid)
+    return f"{(d.month - 1) // 3 + 1}Q{d.year % 100:02d}"
+
+
+def base_series():
+    """이미 가진 일본 분기 시계열. 누적값을 분기로 되돌릴 때 밑절미가 된다."""
+    out = {}
+    for name in ("financials_intl.json", "financials_jp.json"):
+        p = HERE / "data" / name
+        if not p.exists():
+            continue
+        try:
+            got = json.loads(p.read_text(encoding="utf-8")).get("stocks", {})
+        except (ValueError, OSError):
+            continue
+        for k, rec in got.items():
+            if not k.startswith("jp:"):
+                continue
+            for pt in rec.get("points") or []:
+                if pt.get("end") and pt.get("rev") is not None:
+                    out.setdefault(k, {})[pt["end"]] = pt
+    return out
+
+
+def quarter_from(vals, prior):
+    """결산단신의 **누계**를 분기값으로 되돌린다. 못 되돌리면 None.
+
+    결산단신은 누계를 싣는다. 1분기는 그 분기 자체지만 2분기는 상반기,
+    3분기는 9개월, 결산은 1년치다. 그대로 막대에 올리면 분기가 아니라 누계
+    그래프가 된다 — 미국 SEC 에서 겪은 것과 같은 문제다.
+
+    되돌리는 법은 하나뿐이다. **같은 회계연도에서 앞서 끝난 분기들을 뺀다.**
+    그 분기들이 우리에게 없거나 개수가 안 맞으면 **지어내지 않고 건너뛴다.**
+    stockanalysis 가 지난 20분기를 이미 채워 두므로 대개는 갖고 있다.
+    """
+    rev = pick(vals, NAME_REV)
+    if not rev:
+        return None
+    _s, ytd_rev, start, end = rev
+    try:
+        ds, de = date.fromisoformat(start), date.fromisoformat(end)
+    except ValueError:
+        return None
+    days = (de - ds).days + 1
+    if days < 60 or days > 400:
+        return None
+
+    def same_span(names):
+        """같은 기간으로 신고된 값만 쓴다. 기간이 다르면 뺄셈이 어긋난다."""
+        got = pick(vals, names)
+        return got[1] if got and got[2] == start and got[3] == end else None
+
+    if days <= 125:                       # 1분기 — 누계가 곧 분기다
+        q_start = ds
+        rq = ytd_rev
+        oq, nq = same_span(NAME_OPI), same_span(NAME_NI)
+    else:
+        past = sorted((p for e, p in prior.items() if start <= e < end),
+                      key=lambda p: p["end"])
+        want = round((days - 91) / 91)    # 빼야 할 분기 수
+        if want < 1 or len(past) != want:
+            return None                   # 구멍이 있다. 어림하지 않는다.
+        rq = ytd_rev - sum(p["rev"] for p in past)
+
+        def cut(names, whole):
+            v = same_span(names)
+            parts = [p.get(whole) for p in past]
+            if v is None or any(x is None for x in parts):
+                return None
+            return v - sum(parts)
+
+        oq, nq = cut(NAME_OPI, "opi"), cut(NAME_NI, "ni")
+        q_start = date.fromisoformat(past[-1]["end"]) + timedelta(days=1)
+
+    if rq is None or q_start > de:
+        return None
+    mid = (q_start + (de - q_start) / 2).isoformat()
+    return {"label": q_label(mid), "end": end, "mid": mid,
+            "rev": rq, "opi": oq, "ni": nq}
+
+
+def collect():
+    """최근 며칠치 결산단신을 훑어 분기 수치를 담는다."""
+    OUT.parent.mkdir(parents=True, exist_ok=True)
+    old = {}
+    if OUT.exists():
+        try:
+            old = json.loads(OUT.read_text(encoding="utf-8")).get("stocks", {})
+        except (ValueError, OSError):
+            pass
+
+    prior = base_series()
+    stocks = {k: dict(v) for k, v in old.items()}
+    seen = {k: {p["end"] for p in v.get("points") or []} for k, v in stocks.items()}
+    # **이미 뜯어본 공시는 다시 내려받지 않는다.** 열흘치를 훑으므로 이게 없으면
+    # 매 실행마다 사백 건을 다시 받는다. 공시 번호는 문서마다 하나뿐이라 열쇠로 쓴다.
+    done = set(load_done())
+
+    got = skipped = streak = 0
+    for back in range(BACK_DAYS):
+        day = (date.today() - timedelta(days=back)).isoformat()
+        try:
+            rows = announcements(day)
+        except Throttled as e:
+            print(f"  {day} 목록 실패: {e}", file=sys.stderr, flush=True)
+            continue
+        if not rows:
+            continue
+        print(f"  {day}: 결산단신 {len(rows)}건", flush=True)
+        for r in rows:
+            key = "jp:" + r["code"]
+            if r["zip"] in done:
+                continue                    # 지난 실행에서 이미 봤다
+            done.add(r["zip"])
+            try:
+                blob = get("https://www.release.tdnet.info/inbs/" + r["zip"], binary=True)
+                streak = 0
+            except Throttled as e:
+                streak += 1
+                print(f"    {r['code']} 막힘: {e}", file=sys.stderr, flush=True)
+                if streak >= GIVE_UP_AFTER:
+                    print("  연속으로 막혔다. 여기서 접는다.", file=sys.stderr, flush=True)
+                    return save(stocks, done, got, skipped)
+                continue
+            time.sleep(PAUSE)
+            if not blob:
+                continue
+            vals = read_summary(blob)
+            if not vals:
+                skipped += 1
+                continue
+            pt = quarter_from(vals, prior.get(key, {}))
+            if not pt:
+                skipped += 1
+                continue
+            if pt["end"] in seen.get(key, set()):
+                continue
+            rec = stocks.setdefault(key, {"v": JP_VER, "freq": "Q", "cur": "JPY",
+                                          "src": "tdnet", "points": []})
+            rec["points"] = sorted([p for p in rec["points"] if p["end"] != pt["end"]] + [pt],
+                                   key=lambda p: p["end"])[-8:]
+            rec["ts"] = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M")
+            rec["v"] = JP_VER
+            seen.setdefault(key, set()).add(pt["end"])
+            prior.setdefault(key, {})[pt["end"]] = pt
+            got += 1
+    return save(stocks, done, got, skipped)
+
+
+def load_done():
+    """지난 실행에서 이미 뜯어본 공시 번호."""
+    if not OUT.exists():
+        return []
+    try:
+        return json.loads(OUT.read_text(encoding="utf-8")).get("docs", [])
+    except (ValueError, OSError):
+        return []
+
+
+def save(stocks, done, got, skipped):
+    payload = {
+        "source": "TDnet 適時開示 결산단신 (inline XBRL)",
+        "note": ("발표 당일에 올라온다. 누계로 실리므로 앞 분기를 빼 분기값으로 "
+                 "되돌린다 — 되돌릴 밑절미가 없으면 담지 않는다."),
+        "count": len(stocks),
+        # 이미 본 공시. TDnet 은 한 달치만 남기므로 이만큼이면 넉넉하다.
+        "docs": sorted(done)[-6000:],
+        "stocks": stocks,
+    }
+    tmp = OUT.with_suffix(".tmp")
+    tmp.write_text(json.dumps(payload, ensure_ascii=False), encoding="utf-8")
+    tmp.replace(OUT)
+    print(f"\n{len(stocks):,}종목 -> {OUT}  (이번에 담은 분기 {got}개 · "
+          f"되돌리지 못해 건너뛴 것 {skipped}개)")
+
+
 def main():
     if "--survey" in sys.argv:
         return survey()
@@ -448,7 +628,7 @@ def main():
     if "--probe" in sys.argv:
         n = [a for a in sys.argv[1:] if a.isdigit()]
         return probe(int(n[0]) if n else 3)
-    print("아직 수집 본체는 없다. --probe 로 소스부터 확인한다.")
+    return collect()
 
 
 if __name__ == "__main__":

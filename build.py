@@ -203,12 +203,15 @@ def pack_fin(rec):
 def load_fin():
     """따로 받아둔 실적 수치(매출·영업이익 시계열, 발표 완료 여부).
 
-    출처가 둘이다. 미국은 SEC(financials.json), 일본·홍콩은 야후
-    (financials_intl.json). 열쇠는 `시장:코드` 로 맞춘다 — 일본 8035 와
+    출처가 셋이다. 미국은 SEC(financials.json), 일본·홍콩은 stockanalysis
+    (financials_intl.json), 그리고 일본은 **발표 당일치를 TDnet**에서 따로
+    받는다(financials_jp.json). 열쇠는 `시장:코드` 로 맞춘다 — 일본 8035 와
     홍콩 08035 는 다른 회사이므로 코드만으로는 가를 수 없다.
     """
     out = {}
-    for name, prefix in (("financials.json", "us:"), ("financials_intl.json", "")):
+    for name, prefix in (("financials.json", "us:"),
+                         ("financials_intl.json", ""),
+                         ("financials_jp.json", "")):
         p = HERE / "data" / name
         if not p.exists():
             continue
@@ -245,11 +248,27 @@ def merge_fin(a, b):
     if not b:
         return a
     if a.get("freq") != b.get("freq") or (a.get("cur") or "") != (b.get("cur") or ""):
-        return a if last_end(a) >= last_end(b) else b
+        # 섞지 않는다 — 통화나 주기가 다르면 같은 막대그래프에 못 올린다.
+        # 고를 때는 **점이 많은 쪽**이 먼저다. 최신만 보면 방금 받은 한 분기짜리가
+        # 스무 분기짜리를 밀어낸다.
+        ka = (len(a.get("points") or []), last_end(a))
+        kb = (len(b.get("points") or []), last_end(b))
+        return a if ka >= kb else b
 
-    base, extra = (a, b) if a.get("src") == "sec" else (b, a)
-    by_end = {p["end"]: p for p in extra.get("points") or [] if p.get("end")}
-    by_end.update({p["end"]: p for p in base.get("points") or [] if p.get("end")})
+    # 뼈대는 **점이 많은 쪽**, 겹치는 분기는 **공식 자료 쪽**을 남긴다.
+    #   sec   미국 공식 재무제표
+    #   tdnet 일본 공식 결산단신 — 발표 당일에 나온다
+    #   sa    stockanalysis — 20분기로 깊지만 일본은 며칠 늦는다
+    # 예전에는 'sec 이면 뼈대' 하나로만 갈랐는데, 일본은 sec 이 없어서 그 규칙이
+    # 아무 일도 안 했다. 그러면 TDnet 이 방금 받아온 새 분기가 stockanalysis 의
+    # 헌 줄에 덮여 사라진다.
+    rank = {"sec": 3, "tdnet": 2, "mix": 1, "sa": 1, "yahoo": 0}
+    pa, pb = rank.get(a.get("src"), 0), rank.get(b.get("src"), 0)
+    base, extra = (a, b) if len(a.get("points") or []) >= len(b.get("points") or []) else (b, a)
+    win = a if pa >= pb else b               # 겹치는 분기를 가져갈 쪽
+    lose = b if win is a else a
+    by_end = {p["end"]: p for p in lose.get("points") or [] if p.get("end")}
+    by_end.update({p["end"]: p for p in win.get("points") or [] if p.get("end")})
     pts = [by_end[e] for e in sorted(by_end)]
     mixed = len(pts) > len(base.get("points") or [])
     out = dict(base)
@@ -1820,6 +1839,7 @@ function finBlock(m, code) {
 }
 
 const SRC_KO = { sec: 'SEC 공식 재무제표', sa: 'stockanalysis.com', yahoo: 'Yahoo Finance',
+                 tdnet: 'TDnet 결산단신 (공식 공시)',
                  mix: 'SEC 공식 재무제표 + stockanalysis.com' };
 
 /* 부문 색. 여덟이면 웬만한 회사는 덮는다. 그 이상은 되풀이한다. */
