@@ -46,8 +46,10 @@ permissions:
   contents: write
 
 # 앞선 실행이 아직 돌고 있으면 기다린다. 같은 파일에 동시에 쓰지 않도록.
+# numbers.yml(실적 수치만 20분마다)과 **같은 그룹**을 쓴다 — 둘이 겹쳐 돌면
+# 같은 data/ 와 index.html 에 함께 쓰게 된다.
 concurrency:
-  group: collect-${{ github.ref }}
+  group: collect-${{ github.ref_name }}
   cancel-in-progress: false
 
 jobs:
