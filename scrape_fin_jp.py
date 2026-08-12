@@ -588,6 +588,12 @@ def collect():
             seen.setdefault(key, set()).add(pt["end"])
             prior.setdefault(key, {})[pt["end"]] = pt
             got += 1
+            # **중간중간 써둔다.** 단계가 시간 제한에 걸려 죽으면 맨 끝의 저장이
+            # 실행되지 않아 받은 것을 통째로 잃는다. 실제로 첫 실행이 그랬다 —
+            # 5분에서 잘려 197종목을 담고도 파일이 안 생겼다.
+            if got % 20 == 0:
+                save(stocks, done, got, skipped, quiet=True)
+                print(f"    ...{got}건", flush=True)
     return save(stocks, done, got, skipped)
 
 
@@ -601,7 +607,7 @@ def load_done():
         return []
 
 
-def save(stocks, done, got, skipped):
+def save(stocks, done, got, skipped, quiet=False):
     payload = {
         "source": "TDnet 適時開示 결산단신 (inline XBRL)",
         "note": ("발표 당일에 올라온다. 누계로 실리므로 앞 분기를 빼 분기값으로 "
@@ -614,8 +620,9 @@ def save(stocks, done, got, skipped):
     tmp = OUT.with_suffix(".tmp")
     tmp.write_text(json.dumps(payload, ensure_ascii=False), encoding="utf-8")
     tmp.replace(OUT)
-    print(f"\n{len(stocks):,}종목 -> {OUT}  (이번에 담은 분기 {got}개 · "
-          f"되돌리지 못해 건너뛴 것 {skipped}개)")
+    if not quiet:
+        print(f"\n{len(stocks):,}종목 -> {OUT}  (이번에 담은 분기 {got}개 · "
+              f"되돌리지 못해 건너뛴 것 {skipped}개)")
 
 
 def main():
