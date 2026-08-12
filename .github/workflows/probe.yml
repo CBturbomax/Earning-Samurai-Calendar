@@ -25,6 +25,62 @@ jobs:
         with:
           python-version: '3.12'
 
+      # **SEC 벌크 재무데이터에 부문 축이 살아 있는가.**
+      # companyfacts API 는 부문(dimension)을 떨어뜨리고 연결 합계만 준다. 그런데
+      # SEC 가 분기마다 내는 Financial Statement Data Sets 에는 num.txt 의
+      # `segments` 칸에 축이 그대로 실린다고 알려져 있다. 사실이면 미국 전 종목의
+      # 부문별 매출을 공식 자료로 받을 수 있다 — stockanalysis 는 17%밖에 안 준다.
+      - name: 🧩 SEC 벌크에 부문 축이 있는가
+        continue-on-error: true
+        timeout-minutes: 12
+        run: |
+          python - <<'EOF'
+          import io, json, re, urllib.request, zipfile
+          UA = "Earning Samurai Calendar (cbpark@wisdomasset.co.kr)"
+          def get(url):
+              req = urllib.request.Request(url, headers={"User-Agent": UA})
+              try:
+                  with urllib.request.urlopen(req, timeout=120) as r:
+                      return r.status, r.read()
+              except Exception as e:
+                  return getattr(e, "code", 0), str(e).encode()
+
+          for q in ("2026q2", "2026q1", "2025q4"):
+              url = f"https://www.sec.gov/files/dera/data/financial-statement-data-sets/{q}.zip"
+              st, body = get(url)
+              print(f"\n===== {q}: {st} · {len(body):,} 바이트")
+              if st != 200 or len(body) < 100000:
+                  print("   ", body[:200])
+                  continue
+              try:
+                  z = zipfile.ZipFile(io.BytesIO(body))
+              except zipfile.BadZipFile:
+                  print("    zip 이 아니다"); continue
+              print("    안에 든 파일:", z.namelist())
+              # num.txt 머리글과 부문 축이 실린 줄을 본다
+              with z.open("num.txt") as f:
+                  head = f.readline().decode("utf-8", "replace").rstrip("\r\n")
+                  cols = head.split("\t")
+                  print("    num.txt 열:", cols)
+                  si = cols.index("segments") if "segments" in cols else -1
+                  ti = cols.index("tag"); vi = cols.index("value"); ai = cols.index("adsh")
+                  print("    segments 칸:", "있음" if si >= 0 else "없음")
+                  if si < 0:
+                      break
+                  seen = 0
+                  for raw in f:
+                      p = raw.decode("utf-8", "replace").rstrip("\r\n").split("\t")
+                      if len(p) <= max(si, ti, vi) or not p[si]:
+                          continue
+                      if "Revenue" not in p[ti]:
+                          continue
+                      print(f"      {p[ai]} {p[ti][:44]:46s} seg={p[si][:60]:62s} {p[vi][:14]}")
+                      seen += 1
+                      if seen >= 12:
+                          break
+              break
+          EOF
+
       # 회사가 무엇을 파는지 한 줄로 적어 주려면 소스가 있어야 한다.
       # 나스닥 회사 소개 · 닛케이 결산 페이지의 【…】 요약 · stockanalysis 를 떠본다.
       - name: 🏷️ 사업 설명 소스 떠보기
