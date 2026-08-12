@@ -19,67 +19,53 @@ jobs:
         with:
           python-version: '3.12'
 
-      - name: 🧩 사업부별 매출 — 받아지나
+      - name: 🧩 사업부별 매출 — 표 속을 뜯어본다
         continue-on-error: true
         run: |
           python - <<'PY'
-          import json, urllib.request, urllib.error
-          import scrape_fin_intl as si     # unflatten 을 그대로 쓴다
+          import json, urllib.request
+          import scrape_fin_intl as si
 
-          def get(url):
+          def grab(url):
               req = urllib.request.Request(url, headers={
                   "User-Agent": si.UA, "Accept": "application/json, text/plain, */*"})
-              try:
-                  with urllib.request.urlopen(req, timeout=30) as r:
-                      return r.status, r.read().decode("utf-8", "replace")
-              except urllib.error.HTTPError as e:
-                  return e.code, (e.read().decode("utf-8", "replace")[:200] if e.fp else "")
-              except Exception as e:
-                  return 0, str(e)
+              with urllib.request.urlopen(req, timeout=30) as r:
+                  return json.loads(r.read().decode("utf-8", "replace"))
 
-          def look(label, url):
-              code, txt = get(url)
-              print(f"\n===== {label}  HTTP {code}  {len(txt):,}B")
-              if code != 200:
-                  print("  ", txt[:180]); return
+          def show(label, url):
+              print(f"\n===== {label}")
               try:
-                  body = json.loads(txt)
+                  body = grab(url)
               except Exception as e:
-                  print("  JSON 아님:", e); return
+                  print("  실패", e); return
               for node in body.get("nodes") or []:
                   if not isinstance(node, dict) or node.get("type") != "data":
                       continue
                   arr = node.get("data")
                   if not isinstance(arr, list):
                       continue
-                  tree = si.unflatten(arr)
-
-                  def walk(o, path="", depth=0):
-                      if depth > 7:
-                          return
-                      if isinstance(o, dict):
-                          ks = list(o)
-                          # 부문 표처럼 보이는 것
-                          if any(k in ("segments", "rows", "data", "datekey", "labels") for k in ks):
-                              print(f"  {path or '.'}  키({len(ks)}): {ks[:12]}")
-                              for k in ("datekey", "labels", "segments"):
-                                  v = o.get(k)
-                                  if isinstance(v, list):
-                                      print(f"      {k}({len(v)}): {v[:8]}")
-                          for k in ks[:40]:
-                              walk(o[k], f"{path}.{k}", depth + 1)
-                      elif isinstance(o, list) and o and depth <= 4:
-                          walk(o[0], f"{path}[0]", depth + 1)
-                  walk(tree)
+                  t = si.unflatten(arr)
+                  d = (t.get("data") or {})
+                  if not isinstance(d, dict):
+                      continue
+                  print("  title:", d.get("title"), "| type:", d.get("type"),
+                        "| valueType:", d.get("valueType"))
+                  inner = d.get("data")
+                  print("  inner 종류:", type(inner).__name__,
+                        len(inner) if hasattr(inner, "__len__") else "")
+                  if isinstance(inner, dict):
+                      print("  inner 키:", list(inner)[:14])
+                      for k in list(inner)[:14]:
+                          v = inner[k]
+                          if isinstance(v, list):
+                              print(f"    {k}({len(v)}): {v[:6]}")
+                          else:
+                              print(f"    {k}: {str(v)[:80]}")
+                  elif isinstance(inner, list):
+                      for row in inner[:4]:
+                          print("   ", json.dumps(row, ensure_ascii=False)[:220])
 
           B = "https://stockanalysis.com"
-          for label, url in [
-            ("RKLB 부문 매출", f"{B}/stocks/rklb/metrics/revenue-by-segment/__data.json"),
-            ("AAPL 부문 매출", f"{B}/stocks/aapl/metrics/revenue-by-segment/__data.json"),
-            ("SE 부문 매출",   f"{B}/stocks/se/metrics/revenue-by-segment/__data.json"),
-            ("도요타 부문",    f"{B}/quote/tyo/7203/metrics/revenue-by-segment/__data.json"),
-            ("텐센트 부문",    f"{B}/quote/hkg/0700/metrics/revenue-by-segment/__data.json"),
-            ("RKLB 지역별",    f"{B}/stocks/rklb/metrics/revenue-by-geography/__data.json"),
-          ]:
-              look(label, url)
+          for label, code in (("RKLB", "rklb"), ("AAPL", "aapl"), ("SE", "se")):
+              show(label, f"{B}/stocks/{code}/metrics/revenue-by-segment/__data.json")
           PY
