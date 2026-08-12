@@ -552,6 +552,26 @@ def reported(sym):
     return {"done": done[-8:], "upcoming": upcoming} if (done or upcoming) else None
 
 
+def cik_of(cikmap, sym):
+    """티커 -> CIK. **점과 붙임표를 맞춰 준다.**
+
+    나스닥은 `BRK.B`, SEC 는 `BRK-B` 로 쓴다. 그대로 찾으면 못 찾는다 — 실제로
+    버크셔·브라운포먼·헤이코·레나·모그 같은 복수의결권 회사가 통째로 빠져 있었다
+    (기본 화면에 뜨는 1조원 이상 중 수치 없는 76종목의 대부분이 이것이었다).
+
+    차례로 본다: 그대로 -> 점을 붙임표로 -> 밑동만 -> 밑동의 다른 종류주.
+    **복수의결권 주식은 같은 회사이고 CIK 도 하나다.** SEC 에 MOG-A 만 있고
+    MOG-B 가 없어도 같은 회사이므로 A 를 찾아 쓴다.
+    """
+    up = re.sub(r"[^A-Z.\-]", "", sym.upper())
+    stem = up.split(".")[0].split("-")[0]
+    for cand in (up, up.replace(".", "-"), stem,
+                 stem + "-A", stem + "-B"):
+        if cand and cand in cikmap:
+            return cikmap[cand]
+    return None
+
+
 def targets():
     """{종목: (시총, 오늘까지 며칠)} — '며칠'은 가장 가까운 발표일까지의 거리다.
 
@@ -675,7 +695,7 @@ def main():
     budget = [FACTS_PER_RUN]      # 무거운 companyfacts 호출은 이만큼만
     for i, sym in enumerate(todo):
         rec = {}
-        cik = cikmap.get(re.sub(r"[^A-Z.]", "", sym.upper()))
+        cik = cik_of(cikmap, sym)
         if cik:
             try:
                 s = series(cik, budget)
