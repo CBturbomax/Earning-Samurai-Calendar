@@ -126,6 +126,15 @@ def load_extra():
 CAPS, SECTORS = load_extra()
 
 
+def pack_fin(rec):
+    """화면에 실을 것만 골라 담는다. 점은 [라벨, 매출, 영업이익]."""
+    out = {k: rec[k] for k in ("freq", "eps", "cur", "src") if rec.get(k)}
+    if rec.get("freq") in ("Q", "H"):
+        out["points"] = [[p["label"], p["rev"], p.get("opi")]
+                         for p in rec.get("points") or []]
+    return out
+
+
 def load_fin():
     """따로 받아둔 실적 수치(매출·영업이익 시계열, 발표 완료 여부).
 
@@ -291,6 +300,13 @@ def build():
         default_week = min(weeks, key=lambda w: abs(
             (date.fromisoformat(w) - date.fromisoformat(today)).days))
 
+    # 시장별 시총 수집률 (종목 단위로 센다 — 한 종목이 여러 날 나올 수 있다)
+    cap_cover = {}
+    for m in MARKET_ORDER:
+        codes = {p[1]: p[11] for p in packed if p[9] == m}
+        if codes:
+            cap_cover[m] = round(sum(1 for v in codes.values() if v) / len(codes), 4)
+
     payload = {
         "rows": packed,
         "notable": notable,
@@ -309,13 +325,26 @@ def build():
         "usdKrw": USD_KRW,
         # 시총 데이터가 있는 시장. 없는 시장에는 규모 필터를 적용할 수 없다.
         "capMarkets": sorted({p[9] for p in packed if p[11]}),
+        "capCover": cap_cover,
+        # **시총이 캘린더 원본에 같이 오는 시장.** 규모 필터에서 '시총을 모르는
+        # 종목'을 감춰도 되는지는 수집률이 아니라 이걸로 갈라야 한다.
+        # 미국은 나스닥이 시총을 같이 주므로 비어 있으면 정말 값이 없는 종목이다.
+        # 일본·홍콩은 따로 받아 붙이는 거라 비어 있으면 '아직 못 받았다'는 뜻이고,
+        # 거기엔 히로세전기(8,828억엔) 같은 회사가 섞여 있다 — 지우면 안 된다.
+        # (수집률로 갈랐다면 일본 97.6%·홍콩 99.2%라 오히려 그쪽이 지워졌을 것이다.)
+        "capInline": [m for m in MARKET_ORDER if MARKETS[m].get("cap")],
         # 실적 수치. 캘린더에 실린 종목 것만, 그중에서도 알맹이가 있는 것만
         # 싣는다. 수집 쪽에는 '두드려 봤지만 자료가 없더라'는 표시만 남은 기록도
         # 있는데(v/ts/none), 그건 다음에 또 두드릴지 정하는 데만 쓰고 화면에는
         # 필요 없다. 그대로 실으면 index.html 만 몇 배로 부푼다.
-        "fin": {s: {k: v for k, v in rec.items()
-                    if k in ("freq", "points", "eps", "cur", "src")}
-                for s, rec in FIN.items()
+        # 연간 수치는 **점을 싣지 않는다.** 화면에 그리지 않기로 했으므로 실어봐야
+        # 파일만 무거워진다. 다만 'freq' 는 남겨서 "분기를 못 구했다"와
+        # "아직 안 받았다"를 화면에서 가려 말할 수 있게 한다.
+        #
+        # 점은 [라벨, 매출, 영업이익] 배열로 눕힌다. 이름표를 종목마다 스무 번씩
+        # 되풀이하면 그것만으로 파일이 반 메가 늘어난다. 종료일과 순이익은
+        # 화면에서 안 쓰므로 빼고, 자료 파일에는 그대로 남겨 둔다.
+        "fin": {s: pack_fin(rec) for s, rec in FIN.items()
                 if (rec.get("points") or rec.get("eps"))
                 and s in {p[9] + ":" + p[1] for p in packed}},
     }
@@ -1051,8 +1080,18 @@ const capSel = document.getElementById('fCap');
 capSel.innerHTML = '<option value="0">전체 규모</option>' +
   D.capSteps.map(s => '<option value="' + s.usdB + '">시총 ' + s.jo + '조원 이상</option>').join('');
 const capMin = () => +capSel.value || 0;
-/* 시총을 아는 행만 거른다. 모르는 행(일본·홍콩)은 그대로 통과. */
-const passCap = r => !capMin() || !r[11] || r[11] >= capMin();
+
+/* 시총을 모르는 행을 어떻게 할 것인가 — 여기서 한 번 크게 뒤집혔다.
+   전부 통과시키면 규모 필터를 켜도 껍데기 회사가 그대로 남는다. 그렇다고 전부
+   지우면 회사가 조용히 사라진다 — 실제로 히로세전기(시총 8,828억엔)가 그렇게
+   빠질 뻔했다.
+   가르는 기준은 **시총이 어디서 왔는가**다. 미국은 나스닥이 캘린더와 함께 시총을
+   주므로, 비어 있으면 정말 값이 없는 종목이다(SPAC·껍데기). 일본·홍콩은 따로
+   받아 붙이는 거라 비어 있으면 '아직 못 받았다'는 뜻이다.
+   수집률로 가르면 안 된다 — 일본 97.6%·홍콩 99.2%, 미국 85.7% 이라 거꾸로 된다. */
+const CAP_INLINE = new Set(D.capInline || []);
+const passCap = r => !capMin() ||
+      (r[11] ? r[11] >= capMin() : !CAP_INLINE.has(r[9]));
 
 /* 발표 시각 배지. 미국만 값이 있다. */
 function timeTag(r) {
@@ -1481,22 +1520,30 @@ function finBlock(m, code) {
            (u.consensus ? ' <i>(예상 ' + u.consensus + ')</i>' : '') + '</span>' : '') +
       '</div>';
   }
-  // 점이 하나뿐이면 그리지 않는다. 막대 하나짜리는 추세가 아니라 그냥 숫자 하나다.
-  // (텐센트가 그렇다 — 야후가 최근 한 분기만 준다.)
-  if (f.points && f.points.length >= 2) html += finChart(f);
-  else if (f.points && f.points.length === 1) {
-    const p = f.points[0], U = curOf(f.cur);
-    html += '<p class="finnote">받을 수 있었던 실적 수치가 <b>' + esc(p.label) +
-            '</b> 한 개뿐이라 추세를 그리지 못했습니다. ' +
-            '(매출 ' + p.rev.toLocaleString() + ' ' + esc(U.ko) + ' · 출처 Yahoo Finance)</p>';
+  // **연간 막대는 그리지 않는다.** 연간으로는 "이번 분기가 작년 같은 분기보다
+  // 나아졌나"를 볼 수 없어서 애초에 보려던 그림이 아니다. 분기(또는 홍콩 반기)만 낸다.
+  const pts = (f.points || []).filter(() => f.freq === 'Q' || f.freq === 'H');
+  if (pts.length >= 2) html += finChart(f);
+  else if (f.freq === 'A')
+    html += '<p class="finnote">이 종목은 <b>분기 실적을 못 구했습니다.</b> ' +
+            '연 1회만 공시하는 회사이거나 아직 분기 자료를 받지 못한 경우입니다. ' +
+            '(연간 수치는 추세를 볼 수 없어 싣지 않습니다.)</p>';
+  else if (pts.length === 1) {
+    const p = pts[0], U = curOf(f.cur);
+    html += '<p class="finnote">받은 분기가 <b>' + esc(p[0]) + '</b> 하나뿐이라 ' +
+            '추세를 그리지 못했습니다. (매출 ' + p[1].toLocaleString() + ' ' +
+            esc(U.ko) + ')</p>';
   }
   return html || '<p class="finnote">받아둔 수치가 없습니다.</p>';
 }
 
+const SRC_KO = { sec: 'SEC 공식 재무제표', sa: 'stockanalysis.com', yahoo: 'Yahoo Finance' };
+
 function finChart(f) {
   const pts = f.points.slice(-30);
   const W = 900, H = 260, L = 52, R = 46, T = 22, B = 40;
-  const max = Math.max(...pts.map(p => p.rev), 1);
+  // 점 하나는 [라벨, 매출, 영업이익] 이다(파일을 가볍게 하려고 눕혀서 싣는다).
+  const max = Math.max(...pts.map(p => p[1]), 1);
   // 막대가 4~5개뿐일 때(일본·홍콩) 폭을 그대로 나누면 한 칸이 200px 이 된다.
   // 폭을 묶고 가운데로 모은다 — 자료가 적은 걸 크게 그려 많아 보이게 하지 않는다.
   const bw = Math.min((W - L - R) / pts.length, 64);
@@ -1513,17 +1560,17 @@ function finChart(f) {
   let bars = '', opm = [], yoy = [];
   const every = Math.ceil(pts.length / 15);
   pts.forEach((p, i) => {
-    const x = x0 + i * bw, h = Math.max(H - B - y(p.rev), 1);
-    bars += '<rect class="fb" x="' + (x + bw * .15).toFixed(1) + '" y="' + y(p.rev).toFixed(1) +
+    const x = x0 + i * bw, h = Math.max(H - B - y(p[1]), 1);
+    bars += '<rect class="fb" x="' + (x + bw * .15).toFixed(1) + '" y="' + y(p[1]).toFixed(1) +
       '" width="' + (bw * .7).toFixed(1) + '" height="' + h.toFixed(1) + '"><title>' +
-      p.label + ' 매출 ' + money(p.rev) + '</title></rect>';
+      p[0] + ' 매출 ' + money(p[1]) + '</title></rect>';
     if (i % every === 0)
       bars += '<text class="fx" x="' + (x + bw / 2).toFixed(1) + '" y="' + (H - B + 15) +
-        '" text-anchor="middle">' + p.label + '</text>';
-    if (p.opi != null && p.rev) opm.push([x + bw / 2, p.opi / p.rev, p.label]);
-    // 분기는 4개 전, 반기는 2개 전, 연간은 1개 전과 비교한다
-    const back = f.freq === 'Q' ? 4 : f.freq === 'H' ? 2 : 1, prev = pts[i - back];
-    if (prev && prev.rev) yoy.push([x + bw / 2, p.rev / prev.rev - 1, p.label]);
+        '" text-anchor="middle">' + p[0] + '</text>';
+    if (p[2] != null && p[1]) opm.push([x + bw / 2, p[2] / p[1], p[0]]);
+    // 분기는 4개 전, 반기는 2개 전과 비교한다
+    const back = f.freq === 'H' ? 2 : 4, prev = pts[i - back];
+    if (prev && prev[1]) yoy.push([x + bw / 2, p[1] / prev[1] - 1, p[0]]);
   });
   // 오른쪽 축은 -30%~+60% 로 고정한다. 자동이면 한 분기 튀는 값에 전체가 눌린다.
   const pct = v => H - B - (H - T - B) * ((Math.max(-0.3, Math.min(0.6, v)) + 0.3) / 0.9);
@@ -1534,7 +1581,6 @@ function finChart(f) {
   // 공짜로 열린 소스가 최근 것만 준다. 조용히 짧게 그려 놓으면
   // "이 회사는 옛날에 없던 회사인가" 하고 잘못 읽는다.
   const notes = [];
-  if (f.freq === 'A' && f.src !== 'yahoo') notes.push('SEC에 연 1회만 제출해 분기가 없습니다');
   if (f.freq === 'H') notes.push('홍콩은 반기 보고입니다');
   if (pts.length < 8) notes.push('받을 수 있었던 건 ' + pts.length + '개뿐입니다');
 
@@ -1553,8 +1599,7 @@ function finChart(f) {
     '</svg><div class="finlegend">' +
     '<span class="lg rev">매출 (' + U.ko + ')</span><span class="lg opm">영업이익률</span>' +
     '<span class="lg yoy">전년 대비</span>' +
-    '<span class="src">출처 ' + (f.src === 'yahoo' ? 'Yahoo Finance' : 'SEC 공식 재무제표') +
-    '</span></div></div>';
+    '<span class="src">출처 ' + SRC_KO[f.src || 'sec'] + '</span></div></div>';
 }
 function closeModal() { document.getElementById('mdBack').hidden = true; mdKey = null; }
 document.getElementById('mdClose').onclick = closeModal;
@@ -1718,13 +1763,24 @@ capSel.onchange = () => { expanded.clear(); renderAll(); };
    조용히 빠져나가게 두면 '걸렀는데 왜 아직 많냐'가 된다. */
 function renderCapNote() {
   const el = document.getElementById('capNote');
+  if (!capMin()) { el.hidden = true; return; }
   const shown = onMkts();
-  const blind = shown.filter(m => !D.capMarkets.includes(m));
-  if (!capMin() || !blind.length) { el.hidden = true; return; }
+  // 규모 필터가 무엇을 감췄고 무엇을 통과시켰는지 적는다. 조용히 지우지 않는다.
+  const hid = {}, thru = {};
+  for (const r of ROWS) {
+    if (!shown.includes(r[9]) || r[11]) continue;
+    (CAP_INLINE.has(r[9]) ? hid : thru)[r[9]] = ((CAP_INLINE.has(r[9]) ? hid : thru)[r[9]] || new Set()).add(r[1]);
+  }
+  const bits = [];
+  for (const m of shown) {
+    if (hid[m]) bits.push(MKT[m].flag + ' ' + MKT[m].ko + ' <b>' + hid[m].size +
+      '종목</b>은 원본에 시총이 없어 숨겼습니다');
+    if (thru[m]) bits.push(MKT[m].flag + ' ' + MKT[m].ko + ' <b>' + thru[m].size +
+      '종목</b>은 시총을 아직 못 받아 <b>그대로 보입니다</b>');
+  }
+  if (!bits.length) { el.hidden = true; return; }
   el.hidden = false;
-  el.innerHTML = '규모 필터는 시가총액이 있는 시장에만 걸립니다. ' +
-    blind.map(m => MKT[m].flag + ' ' + MKT[m].ko).join(' · ') +
-    '은 원본에 시총이 없어 그대로 보입니다 — 이 시장은 <b>주목종목만</b> 으로 좁혀보세요.' +
+  el.innerHTML = bits.join(' · ') +
     ' <span class="dim">(1조원 ≈ $' + (1e12 / D.usdKrw / 1e9).toFixed(2) +
     'B, 환율 ' + D.usdKrw.toLocaleString() + '원 어림)</span>';
 }

@@ -112,10 +112,11 @@ jobs:
           SEC_UA: 'Earning Samurai Calendar (cbpark@wisdomasset.co.kr)'
         run: python scrape_fin.py
 
-      # 일본·홍콩 실적 수치. 미국과 달리 공짜로 열려 있는 공식 재무 API 가 없어서
-      # 야후에서 받는다. 야후는 최근 4개 연간 / 5개 분기까지만 준다 — 미국처럼
-      # 1Q19 까지 거슬러 가지 않는다. 짧은 대로 담고 화면에 몇 개인지 적는다.
-      - name: 📉 일본·홍콩 실적 수치 (야후)
+      # 분기 실적 — 일본·홍콩, 그리고 SEC 로 분기를 못 구한 미국 종목.
+      # 소스 여덟 곳을 떠본 끝에 stockanalysis 만 세 시장을 다 줬다(WSJ·마켓워치
+      # 401, 인베스팅·IR뱅크 403). 야후는 분기 4~5개가 한계였는데 여기는 20개다.
+      # 남의 서버라 시총 큰 순으로 150종목씩만, 요청 사이를 띄워서 받는다.
+      - name: 📉 분기 실적 (stockanalysis)
         continue-on-error: true
         timeout-minutes: 20
         run: python scrape_fin_intl.py
