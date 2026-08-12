@@ -233,12 +233,106 @@ def load_seg():
 SEG = load_seg()
 
 
-def pack_seg(rec):
+def _median(xs):
+    s = sorted(xs)
+    return s[len(s) // 2] if s else 0.0
+
+
+def seg_fit(rec, fin_rec):
+    """부문 합을 **총매출과 맞춰본다.** 안 맞으면 고치거나, 못 고치면 버린다.
+
+    회사가 부문 이름을 바꾸면 소스가 옛 이름과 새 이름을 **둘 다** 준다. 겹치는
+    구간이 있으면 쌓은 막대가 총매출보다 커진다 — SEA 가 그렇다(Shopee/Ecommerce,
+    Garena/Digital Entertainment 가 같은 사업의 옛·새 이름이다). 그대로 그리면
+    "이 분기 매출 7.1B" 짜리 그림을 실어놓고 실제로는 5.9B 인 셈이 된다.
+
+    수집기의 `dedupe()` 는 **값이 한 푼도 다르지 않을 때만** 하나로 친다. 그건
+    안전하지만 반올림이 다르거나 재분류가 섞이면 못 잡는다. 그래서 마지막에
+    이미 가지고 있는 총매출로 한 번 더 거른다.
+
+    부문 하나씩 빼보며 가장 잘 맞는 조합을 찾고, 그래도 5% 넘게 웃돌면 그 종목의
+    부문 차트는 **아예 싣지 않는다. 틀린 그림보다 없는 게 낫다.**
+
+    돌려주는 값: (남긴 이름, 남긴 점, 총매출 대비 비율) — 못 쓰겠으면 None.
+    비율이 None 이면 총매출이 없어 맞춰보지 못했다는 뜻이다.
+    """
+    names = list(rec.get("names") or [])
+    pts = [r for r in rec.get("pts") or [] if r and r[0]]
+    if len(names) < 2 or len(pts) < 2:
+        return None
+
+    rev = {p["end"]: p["rev"] for p in (fin_rec or {}).get("points") or []
+           if p.get("end") and p.get("rev")}
+    shared = [r for r in pts if rev.get(r[0])]
+    if len(shared) < 3:
+        # 맞춰볼 총매출이 없다. 없는 근거로 지우지는 않는다 — 그대로 싣되
+        # 비율은 모른다고 적는다.
+        return names, pts, None
+
+    def ratios(keep):
+        idx = [names.index(n) + 1 for n in keep]
+        return [sum(r[i] or 0 for i in idx) / rev[r[0]] for r in shared]
+
+    # **넘치는 분기가 몇이냐**로 본다. 중앙값으로 보면 안 된다 — 이름이 겹치는
+    # 구간이 절반이면 나머지 절반이 median 을 1.0 으로 끌어내려 그냥 통과한다
+    # (실제로 그렇게 놓칠 뻔했다). 한 분기라도 총매출을 5% 넘게 웃돌면 그 분기는
+    # 두 번 세어진 것이다.
+    #
+    # 넘치는 분기 수만으로는 부족해서 '얼마나 넘치는지'를 함께 본다. 겹친 이름이
+    # 둘이면(Shopee/Ecommerce 와 Garena/Digital Entertainment) 하나만 빼서는
+    # 넘치는 분기 수가 그대로라 한 발도 못 떼고 멈춘다 — 넘치는 양은 줄어드니
+    # 그걸로 방향을 잡는다.
+    def score(keep):
+        rs = ratios(keep)
+        return (sum(1 for x in rs if x > 1.05),
+                round(sum(max(x - 1.0, 0.0) for x in rs), 6))
+
+    # 부문마다 '마지막으로 값이 있던 분기'. 뺄 것을 고를 때의 갈림길이 된다.
+    last_seen = {}
+    for r in pts:
+        for j, n in enumerate(names):
+            if j + 1 < len(r) and r[j + 1]:
+                last_seen[n] = max(last_seen.get(n, ""), r[0])
+
+    keep = list(names)
+    now = score(keep)
+    while now[0] and len(keep) > 2:
+        # 하나씩 빼보고 가장 잘 맞는 것을 뺀다. 맞는 정도가 같으면 **일찍 끊긴
+        # 쪽**을 뺀다 — 그게 회사가 더 안 쓰는 옛 이름이다. 숫자만 보고 고르면
+        # 살아 있는 부문(Garena)을 빼고 옛 이름(Digital Entertainment)을 남기는
+        # 일이 생긴다.
+        best = min((score([n for n in keep if n != drop]), last_seen.get(drop, ""), drop)
+                   for drop in keep)
+        if best[0] >= now:
+            break                              # 빼도 나아지지 않는다
+        keep.remove(best[2])
+        now = best[0]
+
+    if now[0]:
+        return None                            # 못 맞춘다. 싣지 않는다.
+    med = _median(ratios(keep))
+
+    idx = [0] + [names.index(n) + 1 for n in keep]
+    trimmed = [[r[i] if i < len(r) else None for i in idx] for r in pts]
+    # 남은 부문이 한 분기도 값을 못 내면 그 분기는 뺀다(빈 막대가 된다).
+    trimmed = [r for r in trimmed if any(v for v in r[1:])]
+    if len(trimmed) < 2:
+        return None
+    return keep, trimmed, med
+
+
+def pack_seg(rec, fin_rec):
     """[분기 라벨, 부문1, 부문2, …]. 라벨은 종료일에서 다시 매긴다."""
-    return {
-        "names": rec["names"],
-        "pts": [[q_label(r[0])] + r[1:] for r in rec.get("pts") or [] if r and r[0]],
-    }
+    fit = seg_fit(rec, fin_rec)
+    if not fit:
+        return None
+    names, pts, med = fit
+    out = {"names": names, "pts": [[q_label(r[0])] + r[1:] for r in pts]}
+    # 총매출의 몇 %를 덮는지. 부문이 전부를 설명하지 않는 회사가 흔하다
+    # (본사 몫·기타). 막대 높이를 총매출로 오해하지 않도록 적어둔다.
+    if med is not None and med < 0.95:
+        out["cov"] = round(med * 100)
+    return out
 
 
 def pack_jp(r):
@@ -387,6 +481,28 @@ def build():
         if codes:
             cap_cover[m] = round(sum(1 for v in codes.values() if v) / len(codes), 4)
 
+    # 사업부별 매출은 총매출과 맞춰본 뒤에 싣는다. 안 맞는 것은 조용히 지우지 않고
+    # 몇 종목이 손질됐고 몇 종목이 빠졌는지 수집 기록에 적는다.
+    on_screen = {p[9] + ":" + p[1] for p in packed}
+    seg, trimmed, tossed = {}, 0, 0
+    for s, rec in SEG.items():
+        if s not in on_screen:
+            continue
+        got = pack_seg(rec, FIN.get(s))
+        if not got:
+            tossed += 1
+            continue
+        if len(got["names"]) < len(rec.get("names") or []):
+            trimmed += 1
+        seg[s] = got
+    if SEG:
+        note = f"  사업부별 매출 {len(seg):,}종목"
+        if trimmed:
+            note += f" (이름만 바뀐 부문을 뺀 종목 {trimmed})"
+        if tossed:
+            note += f" · 합이 총매출과 안 맞아 뺀 종목 {tossed}"
+        print(note)
+
     payload = {
         "rows": packed,
         "notable": notable,
@@ -429,8 +545,8 @@ def build():
                 and s in {p[9] + ":" + p[1] for p in packed}},
         # 사업부별 매출. "매출이 늘었다"보다 "어디서 늘었다"가 중요할 때가 있다.
         # 지금은 미국 종목만 — 일본·홍콩은 소스에 부문 페이지가 없다.
-        "seg": {s: pack_seg(rec) for s, rec in SEG.items()
-                if s in {p[9] + ":" + p[1] for p in packed}},
+        # 합이 총매출과 안 맞는 종목은 여기서 걸러진다(seg_fit).
+        "seg": seg,
     }
 
     stamp = datetime.now().strftime("%Y-%m-%d %H:%M KST")
@@ -1743,8 +1859,11 @@ function segChart(sg, cur) {
     '<text class="fx' + (i === n - 1 ? ' now' : '') + '" x="' + cx(i).toFixed(1) +
     '" y="' + (H - B + 18) + '" text-anchor="middle">' + r[0] + '</text>').join('');
 
+  // 부문이 매출 전부를 설명하지 않는 회사가 흔하다(본사 몫·기타·조정). 그럴 때
+  // 막대 높이를 총매출로 읽으면 틀린다. 얼마를 덮는지 적어둔다.
   return '<div class="finhead sub">사업부별 매출' +
-    '<span class="dim">(단위: ' + esc(U.ko) + ')</span></div>' +
+    '<span class="dim">(단위: ' + esc(U.ko) +
+    (sg.cov ? ' · 총매출의 ' + sg.cov + '%' : '') + ')</span></div>' +
     '<div class="finbox"><svg viewBox="0 0 ' + W + ' ' + H + '" class="finsvg">' +
     axis + body + xlab + '</svg></div>' +
     '<div class="finlegend">' + names.map((nm, j) =>
