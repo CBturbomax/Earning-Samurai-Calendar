@@ -147,6 +147,13 @@ def announcements(day):
 
 # XBRL 안에서 찾을 항목. namespace 는 업종마다 다르므로 **끝 이름만** 본다.
 # IFRS 로 내는 일본 회사도 늘고 있어 그쪽 이름도 같이 본다.
+#
+# **금융사 이름을 더 넣어도 소용없다 — 확인했다.** 도쿄해상·크레디세존·라이프넷
+# 생명의 결산단신을 열어 보니 요약에 **매출 항목이 아예 없다.** 들어 있는 것은
+# ProfitBeforeTaxIFRS · ProfitIFRS · ProfitAttributableToOwnersOfParentIFRS ·
+# 주식수 · EPS 뿐이다. IFRS 금융사는 요약을 이익부터 시작한다.
+# 없는 값을 다른 항목으로 대신 채우지 말 것 — 세전이익을 매출이라 적는 셈이다.
+# 이 회사들은 stockanalysis 가 며칠 뒤에 매출을 실어 주므로 그때 메워진다.
 NAME_REV = ("NetSales", "NetSalesIFRS", "Sales", "SalesIFRS", "Revenue", "RevenueIFRS",
             "OperatingRevenues", "OperatingRevenuesIFRS",
             "NetSalesOfCompletedConstructionContracts",
