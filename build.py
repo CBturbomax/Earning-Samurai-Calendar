@@ -126,11 +126,30 @@ def load_extra():
 CAPS, SECTORS = load_extra()
 
 
+def q_label(end):
+    """분기말 날짜 -> '2Q26'. **끝난 날이 아니라 기간의 한가운데**로 가른다.
+
+    회계 분기는 달력에 딱 맞지 않는다. 끝난 날로 가르면 이렇게 어긋난다.
+
+      코카콜라  1~3월 분기가 4월 3일에 끝난다  -> 2Q26 (틀림, 1Q26 이 맞다)
+      모토로라  4~6월 분기가 7월 4일에 끝난다  -> 3Q26 (틀림, 2Q26 이 맞다)
+
+    끝나기 45일 전, 즉 기간 한가운데를 보면 제대로 갈린다.
+    """
+    d = date.fromisoformat(end) - timedelta(days=45)
+    return f"{(d.month - 1) // 3 + 1}Q{d.year % 100:02d}"
+
+
 def pack_fin(rec):
-    """화면에 실을 것만 골라 담는다. 점은 [라벨, 매출, 영업이익]."""
+    """화면에 실을 것만 골라 담는다. 점은 [라벨, 매출, 영업이익].
+
+    라벨은 받아둔 값을 쓰지 않고 여기서 다시 매긴다 — 종료일만 있으면 되므로
+    표기 규칙을 고칠 때 4천 종목을 다시 받지 않아도 된다.
+    """
     out = {k: rec[k] for k in ("freq", "eps", "cur", "src") if rec.get(k)}
     if rec.get("freq") in ("Q", "H"):
-        out["points"] = [[p["label"], p["rev"], p.get("opi")]
+        out["points"] = [[q_label(p["end"]) if p.get("end") else p["label"],
+                          p["rev"], p.get("opi")]
                          for p in rec.get("points") or []]
     return out
 
@@ -566,9 +585,8 @@ button.btn:disabled:hover { border-color:var(--line); color:var(--fg); }
   display:grid; grid-template-columns:repeat(5,minmax(0,1fr)); gap:14px;
   align-items:start;
 }
-.cal.wk7 { grid-template-columns:repeat(7,minmax(0,1fr)); }
-@media (max-width:1400px) { .cal, .cal.wk7 { grid-template-columns:repeat(3,minmax(0,1fr)); } }
-@media (max-width:900px)  { .cal, .cal.wk7 { grid-template-columns:minmax(0,1fr); } }
+@media (max-width:1400px) { .cal { grid-template-columns:repeat(3,minmax(0,1fr)); } }
+@media (max-width:900px)  { .cal { grid-template-columns:minmax(0,1fr); } }
 
 .day {
   background:var(--panel); border:1px solid var(--line); border-radius:10px;
@@ -654,6 +672,12 @@ button.btn:disabled:hover { border-color:var(--line); color:var(--fg); }
 
 /* 이미 실적이 나온 종목. 눌러보면 숫자가 있다는 뜻이라 눈에 띄어야 한다. */
 .chip.done { border-color:#27503c; }
+/* 주말에 나온 발표. 칸은 월요일에 얹었지만 실제 요일을 밝힌다 — 버크셔는
+   원래 토요일 아침에 발표한다. 없는 일로 만들면 안 된다. */
+.chip .we {
+  flex:0 0 auto; font-size:13px; font-weight:800; border-radius:4px;
+  padding:1px 5px; color:#f0b45a; border:1px solid #4a3a1c; white-space:nowrap;
+}
 .donetag {
   display:inline-block; background:#173026; border:1px solid #27503c; color:var(--ok);
   border-radius:5px; padding:1px 8px; font-size:15px; font-weight:700; margin-left:6px;
@@ -936,6 +960,18 @@ let useKst = true;
 const dateOf = r => (useKst && r[12]) ? r[12] : r[0];
 const timeOf = r => (useKst && r[13]) ? r[13] + (r[14] ? '' : '경') : '';
 
+/* 캘린더에서 이 발표가 놓일 칸.
+   주말은 칸을 내주지 않는다 — 한 주에 열네 건 남짓 있을 뿐인데 칸 두 개가
+   늘 비어 있어 화면만 넓어진다. 대신 **다음 월요일 칸**에 얹고 칩에
+   「토」「일」을 붙여 실제로는 주말에 나온 것임을 밝힌다.
+   (버크셔는 원래 토요일 아침에 발표한다. 없는 일로 만들면 안 된다.) */
+const DOW_KO = ['월', '화', '수', '목', '금', '토', '일'];
+function dowOf(d) { return (parse(d).getDay() + 6) % 7; }
+function slotOf(r) {
+  const d = dateOf(r), w = dowOf(d);
+  return w < 5 ? d : addDays(d, 7 - w);
+}
+
 /* 보고 있는 시장. 여러 개를 동시에 켤 수 있다 — '미국+홍콩만' 같은 조합이 되도록.
    mkt 는 탭 하나만 켠 상태를 가리키는 값으로 남겨둔다(설명문·안내문이 이걸 본다). */
 let picked = new Set(LIVE);
@@ -956,7 +992,7 @@ function reslice() {
   VIEW = picked.size === LIVE.length ? ROWS : ROWS.filter(r => picked.has(r[9]));
   byDate = new Map();
   for (const r of VIEW) {
-    const d = dateOf(r);
+    const d = slotOf(r);
     if (!byDate.has(d)) byDate.set(d, []);
     byDate.get(d).push(r);
   }
@@ -1035,9 +1071,10 @@ function fillWeeks() {
     '<option value="' + w + '">' + esc(fmtWeek(w)) + '  (' + countWeek(w) + '건)</option>'
   ).join('');
 }
+/* 한 주는 월~금 다섯 칸이다. 주말 발표는 slotOf 가 다음 월요일로 옮겨 놓았다. */
 function weekDays(w) {
   const out = [];
-  for (let i = 0; i < 7; i++) out.push(addDays(w, i));
+  for (let i = 0; i < 5; i++) out.push(addDays(w, i));
   return out;
 }
 function countWeek(w) {
@@ -1112,6 +1149,15 @@ function fyKey(fy) {
   const m = /(\d{4})\D+(\d{1,2})\s*월/.exec(fy || '');
   return m ? m[1] + '-' + (+m[2]) : '';
 }
+/* 'Jun 2026' -> '2Q26'. 회원님이 보는 표기법으로 맞춘다 — 차트 축과 같은 말이어야
+   "이 분기가 저 막대구나"가 바로 보인다. 나스닥이 주는 'Jun 2026' 은 분기말 달이라
+   그 달이 속한 분기로 읽으면 된다. */
+function epsQ(p) {
+  const m = /([A-Za-z]{3})\D*(\d{4})/.exec(p || '');
+  const n = m && MON[m[1].toLowerCase()];
+  if (!n) return p || '';
+  return Math.floor((n - 1) / 3 + 1) + 'Q' + String(m[2]).slice(2);
+}
 /* 'Jun 2026' -> '2026-6' */
 function epsKey(p) {
   const m = /([A-Za-z]{3})\D*(\d{4})/.exec(p || '');
@@ -1150,10 +1196,15 @@ function chip(r, big) {
     ? '<span class="tm ok" title="실적이 나왔습니다. 눌러보세요.">✓' + (t ? ' ' + t : '') + '</span>'
     : t ? '<span class="tm ' + (r[14] ? 'exact' : 'approx') + '">' + t + '</span>'
         : timeTag(r);
+  // 주말 발표는 다음 월요일 칸에 얹혀 있다. 실제 요일을 칩에 적는다.
+  const wd = dowOf(dateOf(r));
+  const we = wd >= 5
+    ? '<span class="we" title="' + dateOf(r) + ' (' + DOW_KO[wd] + ') 발표">' +
+      DOW_KO[wd] + '</span>' : '';
   return '<button class="chip m-' + r[9] + (big ? ' big' : '') + (on ? ' watch' : '') +
          (dn ? ' done' : '') +
          '" data-key="' + esc(k) + '" data-date="' + dateOf(r) + '">' +
-         (mkt ? '' : '<span class="fl">' + MKT[r[9]].flag + '</span>') +
+         (mkt ? '' : '<span class="fl">' + MKT[r[9]].flag + '</span>') + we +
          '<span class="cd">' + esc(r[1]) + '</span>' +
          '<span class="cn' + (r[8] === 0 ? ' guess' : '') + '" title="' + esc(bothOf(r)) +
          '">' + esc(nameOf(r)) + '</span>' + badge +
@@ -1188,12 +1239,9 @@ function renderCal() {
     return;
   }
 
-  const days = weekDays(week);
-  // 주말은 발표가 잡혀 있을 때만 칸을 내준다.
-  const showWeekend = (byDate.get(days[5]) || []).length || (byDate.get(days[6]) || []).length;
-  const shown = showWeekend ? days : days.slice(0, 5);
+  const shown = weekDays(week);
   const cal = document.getElementById('cal');
-  cal.className = 'cal' + (showWeekend ? ' wk7' : '');
+  cal.className = 'cal';
 
   let total = 0, bigTotal = 0, watchTotal = 0;
   cal.innerHTML = shown.map(d => {
@@ -1204,10 +1252,10 @@ function renderCal() {
     watchTotal += list.filter(r => watch.has(keyOf(r))).length;
     if (onlyWatch) list = list.filter(r => watch.has(keyOf(r)));
 
-    const dt = parse(d), dow = (dt.getDay() + 6) % 7;
+    const dow = dowOf(d);
     const isToday = d === D.today;
-    const hol = holidayInfo(d), weekend = dow >= 5;
-    const closed = (hol.all || weekend) && !list.length;
+    const hol = holidayInfo(d);
+    const closed = hol.all && !list.length;
 
     // 시총 큰 순으로 이미 정렬돼 있다. 앞에서부터 자르면 큰 회사가 남는다.
     const key = week + d;
@@ -1219,7 +1267,6 @@ function renderCal() {
       let why = '';
       const miss = missing(d);
       if (hol.text) why = '<span class="why">' + esc(hol.text) + '</span>';
-      else if (weekend) why = '<span class="why">주말 · 휴장</span>';
       else if (miss.length) why = '<span class="why">미수집 구간 · ' +
         miss.map(m => MKT[m].ko).join('·') + '</span>';
       body = '<div class="empty">발표 없음' + why + '</div>';
@@ -1240,7 +1287,7 @@ function renderCal() {
 
     return '<div class="day' + (isToday ? ' today' : '') + (closed ? ' closed' : '') + '">' +
       '<div class="dh"><span class="dow">' + DOW[dow] + '</span>' +
-      '<span class="dnum">' + dt.getDate() + '</span>' +
+      '<span class="dnum">' + parse(d).getDate() + '</span>' +
       (isToday ? '<span class="todaytag">오늘</span>' : '') +
       '<span class="dcnt"><b>' + list.length + '</b>건</span></div>' +
       '<div class="dbody">' + body + '</div></div>';
@@ -1272,7 +1319,7 @@ function renderAlert() {
   // 관심종목은 시장을 가려 담는 게 아니다.
   const up = ROWS.filter(r => watch.has(keyOf(r)) && r[0] >= D.today)
                  .sort((a, b) => a[0] < b[0] ? -1 : 1);
-  const inWeek = up.filter(r => weekDays(week).includes(r[0]));
+  const inWeek = up.filter(r => weekDays(week).includes(slotOf(r)));
   el.className = 'alertbar' + (up.length ? '' : ' none');
   const ddays = up.slice(0, 10).map(r => {
     const dd = Math.round((parse(r[0]) - parse(D.today)) / 86400000);
@@ -1466,7 +1513,9 @@ function openModal(k, dt) {
         : '') + '</dd>' +
     (r[10] ? '<dt>발표 시각</dt><dd>' + esc(r[10]) +
              (r[10] === '장전' ? ' (Before Open)' : ' (After Close)') + '</dd>' : '') +
-    '<dt>분기</dt><dd>' + esc([r[4], r[3]].filter(Boolean).join(' · ') || '—') + '</dd>' +
+    '<dt>분기</dt><dd>' +
+      (dn ? '<b>' + esc(epsQ(dn.period)) + '</b> · ' : '') +
+      esc([r[4], r[3]].filter(Boolean).join(' · ') || '—') + '</dd>' +
     (r[11] ? '<dt>시가총액</dt><dd>' + capKo(r[11]) + '</dd>' : '') +
     (r[5] ? '<dt>업종</dt><dd>' + esc(r[5]) + '</dd>' : '') +
     '<dt>시장</dt><dd>' + esc(MKT[m].ko) + (r[6] ? ' · ' + esc(r[6]) : '') + '</dd>' +
@@ -1512,11 +1561,11 @@ function finBlock(m, code) {
   if (f.eps) {
     const u = f.eps.upcoming, d = f.eps.done.slice(-4);
     html += '<div class="epsrow">' +
-      d.map(x => '<span class="epsbox"><b>' + esc(x.period) + '</b>' +
+      d.map(x => '<span class="epsbox"><b>' + esc(epsQ(x.period)) + '</b>' +
         'EPS ' + esc(String(x.actual)) +
         (x.consensus ? ' <i>(예상 ' + esc(String(x.consensus)) + ')</i>' : '') +
         surprise(x.actual, x.consensus) + '</span>').join('') +
-      (u ? '<span class="epsbox next"><b>' + esc(u.period) + '</b>아직 발표 전' +
+      (u ? '<span class="epsbox next"><b>' + esc(epsQ(u.period)) + '</b>아직 발표 전' +
            (u.consensus ? ' <i>(예상 ' + u.consensus + ')</i>' : '') + '</span>' : '') +
       '</div>';
   }
@@ -1680,7 +1729,7 @@ document.getElementById('icsWatch').onclick = () => {
 };
 document.getElementById('icsWeek').onclick = () => {
   const days = new Set(weekDays(week));
-  const rows = VIEW.filter(r => days.has(r[0]));
+  const rows = VIEW.filter(r => days.has(slotOf(r)));
   const who = mkt ? MKT[mkt].ko : '글로벌';
   if (!rows.length) { alert('이번 주에는 발표 일정이 없습니다.'); return; }
   download('earnings-' + (mkt || 'all') + '-' + week + '.ics',

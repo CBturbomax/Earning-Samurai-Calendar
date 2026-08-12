@@ -56,6 +56,9 @@ EXCH = {"jp": "tyo", "hk": "hkg"}
 PER_RUN = int(os.environ.get("INTL_PER_RUN", "400"))     # 한 실행에 받을 종목 수
 STALE_DAYS = int(os.environ.get("INTL_STALE_DAYS", "10"))
 NEAR_DAYS = int(os.environ.get("INTL_NEAR_DAYS", "4"))   # 발표일 언저리는 매일
+# 미국 종목 중 SEC 자료의 마지막 분기가 이보다 오래됐으면 여기서 메운다.
+# 한 분기(92일)에 발표까지 걸리는 시간을 더해 넉넉히 잡는다.
+STALE_QUARTER = int(os.environ.get("INTL_STALE_QUARTER", "150"))
 PAUSE = float(os.environ.get("INTL_PAUSE", "0.6"))       # 요청 사이 쉬는 시간
 # 400개 × 0.6초 = 4분 남짓. 시간당 400건이면 초당 0.11건이라 남의 서버에 무리는
 # 아니다. 옛 자료(야후 4~5분기)를 새 자료(20분기)로 갈아 끼우는 동안만 이 속도다.
@@ -166,8 +169,16 @@ def num(v):
 
 
 def label_of(end):
-    """분기말 날짜 -> '2Q26'. 회원님이 보는 표기법이다(역년 기준)."""
-    d = date.fromisoformat(end)
+    """분기말 날짜 -> '2Q26'. **끝난 날이 아니라 기간의 한가운데**로 가른다.
+
+    회계 분기는 달력에 딱 맞지 않는다. 끝난 날로 가르면 이렇게 어긋난다.
+
+      코카콜라  1~3월 분기가 4월 3일에 끝난다  -> 2Q26 (틀림, 1Q26 이 맞다)
+      모토로라  4~6월 분기가 7월 4일에 끝난다  -> 3Q26 (틀림, 2Q26 이 맞다)
+
+    끝나기 45일 전, 즉 기간 한가운데를 보면 제대로 갈린다.
+    """
+    d = date.fromisoformat(end) - timedelta(days=45)
     return f"{(d.month - 1) // 3 + 1}Q{d.year % 100:02d}"
 
 
@@ -266,10 +277,15 @@ def us_needs_quarters():
         got = json.loads(p.read_text(encoding="utf-8")).get("stocks", {})
     except (ValueError, OSError):
         return set()
+    stale = (date.today() - timedelta(days=STALE_QUARTER)).isoformat()
     out = set()
     for sym, rec in got.items():
         pts = rec.get("points") or []
-        if rec.get("freq") != "Q" or len(pts) < 8:
+        last = pts[-1].get("end", "") if pts else ""
+        # 분기가 아니거나, 너무 짧거나, **최근 분기가 오래됐으면** 메운다.
+        # 마지막 조건이 없으면 셸·UBS 처럼 분기는 열넷인데 2Q25 에서 끊긴
+        # 종목이 영영 그대로 남는다.
+        if rec.get("freq") != "Q" or len(pts) < 8 or last < stale:
             out.add(sym.split(":")[-1])
     return out
 
