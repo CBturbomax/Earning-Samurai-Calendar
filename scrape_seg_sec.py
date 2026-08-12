@@ -33,8 +33,10 @@ AMD 한 분기에 `BusinessSegments=Datacenter`, `Geographical=US`,
 **두 축이 걸린 행은 따로 담아 두었다가 필요한 회사에만 쓴다.** 엑슨은 부문별
 매출이 늘 `BusinessSegments;Geographical` 로 오고 한 축짜리 행은 몇 줄뿐이다.
 록히드마틴은 거기에 제품/서비스·주요고객까지 겹쳐 있다. 그래서
-(1) 한 축짜리로 부문이 둘 이상 나오면 그쪽을 쓰고,
-(2) 아니면 두 축 행을 쓰되 **아래 축을 하나만** 골라 더한다(셋을 다 더하면 세 배),
+(1) 한 축짜리와 두 축짜리를 나란히 놓고 **더 잘게 쪼갠 쪽**을 쓴다. 셰브런은
+    한 축짜리에 '부문 합계'와 'All Other' 두 줄뿐인데 두 축 쪽에 업스트림·
+    다운스트림이 있다 — 한 축짜리라고 무조건 이기게 두면 안 된다.
+(2) 두 축 행은 **아래 축을 하나만** 골라 더한다(셋을 다 더하면 세 배).
 (3) 아래 축은 그 부문을 남김없이 나누는 것(제품·지역)만 쓴다 — 주요고객은 큰
     고객만 적은 것이라 더해도 합계가 안 된다.
 
@@ -89,7 +91,9 @@ TICKERS = "https://www.sec.gov/files/company_tickers.json"
 
 # 2: 아래 축을 하나만 고른다 · 종류주에 전부 실어 준다 · 소계는 넷 이상일 때만 뺀다
 # 3: 한 축짜리 행이 몇 줄 섞여 있어도 두 축 행을 버리지 않는다(엑슨)
-SEG_SEC_VER = 3
+# 4: 더 잘게 쪼갠 쪽을 쓴다 · '부문 합계' 줄을 뺀다(셰브런)
+# 5: 지주회사로 갈아탄 티커를 옛 CIK 에 이어 붙인다(엑슨)
+SEG_SEC_VER = 5
 # 열두 분기(3년)면 화면에 그리는 스물두 칸의 절반을 넘고, 큰 종목은
 # stockanalysis 가 스무 분기를 채워 준다. 한 분기 zip 이 85MB 라 열여섯으로
 # 늘리면 한 번에 1.4GB 다 — 남의 서버에서 그만큼 받을 이유가 없다.
@@ -123,8 +127,12 @@ AXIS_KO = {3: "사업부문", 2: "제품·서비스", 1: "지역"}
 SUB_AXES = {"ProductOrService", "Geographical"}
 
 # 부문이 아니라 조정·상계 줄. 담으면 매출이 부풀거나 음수가 섞인다.
+# `Aggregation` 은 셰브런이 쓴다 —
+# `ReportableSegmentAggregationBeforeOtherOperatingSegment` 는 부문이 아니라
+# **부문을 다 더한 값**이다. 그대로 두면 화면에 부문 대신 그 한 줄과
+# 'All Other' 만 뜬다. ('Aggregates' 는 안 걸린다 — 벌컨머티리얼즈의 골재 부문.)
 BAD_MEMBER = re.compile(
-    r"Elimination|Intersegment|Reconcil|Consolidat|SegmentTotal|"
+    r"Elimination|Intersegment|Reconcil|Consolidat|SegmentTotal|Aggregation|"
     r"TotalSegment|Unallocated|MaterialReconcilingItems", re.I)
 SMALL_WORDS = {"and", "or", "of", "the", "for", "in", "to", "a", "an"}
 CAMEL = re.compile(r"(?<=[a-z0-9])(?=[A-Z])|(?<=[A-Z])(?=[A-Z][a-z])")
@@ -559,15 +567,16 @@ def candidates(by_axis, by_pair):
             out[axis] = (s, got)
 
     for axis, subs in by_pair.items():
-        if axis in out:
-            continue
-        best = None
+        best = out.get(axis)
         for _sub, members in subs.items():
             s = series_of({m: {t: {k: (v[0], v[1]) for k, v in raw.items()}
                                for t, raw in by_tag.items()}
                            for m, by_tag in members.items()})
             got = usable(s)
-            if got and (best is None or got[:2] > best[1][:2]):
+            # **더 잘게 쪼갠 쪽을 쓴다.** 셰브런은 한 축짜리에 '부문 합계'와
+            # 'All Other' 두 줄뿐인데 두 축 쪽에는 업스트림·다운스트림이 있다.
+            # 한 축짜리라고 무조건 이기게 두면 화면에 아무 뜻 없는 두 줄이 뜬다.
+            if got and (best is None or (got[1], got[0]) > (best[1][1], best[1][0])):
                 best = (s, got)
         if best:
             out[axis] = best
@@ -631,9 +640,19 @@ def cik_map():
     return {v["ticker"].upper(): int(v["cik_str"]) for v in d.values()}
 
 
+# **지주회사로 갈아탄 회사는 티커가 새 CIK 를 가리킨다.**
+# 엑슨이 그랬다 — SEC 티커 목록은 XOM 을 2115436(ExxonMobil Holdings Corporation)
+# 으로 알려주는데, 재무제표는 아직 전부 옛 법인 34088(Exxon Mobil Corp) 이름으로
+# 접수돼 있다. 그래서 부문별 매출이 통째로 비었다. 새 법인에 서류가 쌓이기 전까지는
+# 손으로 이어 붙이는 수밖에 없다. 아래 '큰데 빈 종목' 안내에 걸리면 한 줄 더한다.
+CIK_ALIAS = {"XOM": 34088}
+
+
 def cik_of(cikmap, sym):
     """나스닥은 BRK.B, SEC 는 BRK-B. 복수의결권은 같은 회사이고 CIK 도 하나다."""
     up = re.sub(r"[^A-Z.\-]", "", sym.upper())
+    if up in CIK_ALIAS:
+        return CIK_ALIAS[up]
     stem = up.split(".")[0].split("-")[0]
     for cand in (up, up.replace(".", "-"), stem, stem + "-A", stem + "-B"):
         if cand and cand in cikmap:
@@ -755,6 +774,16 @@ def main():
     print(f"\n{len(stocks):,}종목 -> {OUT}  {per}")
     if n:
         print(f"  분기 수 중앙값 {n[len(n)//2]}개 (가장 적은 것 {n[0]} · 많은 것 {n[-1]})")
+
+    # **큰데 빈 종목을 적어 둔다.** 조용히 비면 왜 비었는지 영영 모른다.
+    # 엑슨이 그랬다 — 티커가 새 지주회사 CIK 를 가리켜 열두 분기를 통째로
+    # 헛짚고 있었는데, 화면에서만 보면 '부문을 안 나누는 회사'와 구별이 안 됐다.
+    # 대부분은 정말로 부문이 하나뿐인 회사(리츠·은행·바이오)다.
+    big = sorted(caps.items(), key=lambda kv: -kv[1])[:100]
+    empty = [s for s, _ in big if s not in stocks]
+    if empty:
+        print(f"  시총 상위 100 중 부문이 안 잡힌 종목 {len(empty)}: "
+              f"{', '.join(empty[:25])}")
 
 
 if __name__ == "__main__":

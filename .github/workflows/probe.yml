@@ -10,65 +10,36 @@ on:
 jobs:
   probe:
     runs-on: ubuntu-latest
-    timeout-minutes: 25
+    timeout-minutes: 10
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
         with:
           python-version: '3.12'
 
-      # 시총 큰 종목인데 부문이 안 잡힌 회사가 무슨 태그를 쓰는지 본다.
-      # 짐작으로 태그를 늘리지 않는다 — zip 하나(85MB)만 받아 원문을 센다.
-      - name: 🔎 부문이 안 잡힌 큰 종목은 무슨 태그를 쓰나
-        timeout-minutes: 8
+      # 같은 코드로 떠보면 엑슨이 나오는데 진짜 실행에서는 안 나온다. 남은
+      # 차이는 '우리가 그 CIK 를 대상에 넣었는가' 하나뿐이라 그것만 본다.
+      - name: 🔎 티커 -> CIK 가 되는가
         env:
           SEC_UA: 'Earning Samurai Calendar (cbpark@wisdomasset.co.kr)'
         run: |
           python - <<'EOF'
-          import io, json, urllib.request, zipfile, collections
           import scrape_seg_sec as s
+          cikmap = s.cik_map()
+          print(f"SEC 티커 목록 {len(cikmap):,}개")
+          for t in ("XOM", "CVX", "AAPL", "BRK.B", "PSX"):
+              print(f"  {t:6s} cikmap 에 있나 {t in cikmap}  cik_of -> {s.cik_of(cikmap, t)}")
 
-          # 엑슨·록히드마틴·제너럴다이내믹스·유나이티드헬스
-          WANT = {34088: "XOM", 936468: "LMT", 40533: "GD", 731766: "UNH"}
-          blob = s.fetch(s.BULK.format(q="2026q1"))
-          z = zipfile.ZipFile(io.BytesIO(blob))
+          caps = s.want_tickers()
+          print(f"\n캘린더 종목 {len(caps):,}개 · 'XOM' 들어 있나 {'XOM' in caps}")
+          miss = [t for t in caps if not s.cik_of(cikmap, t)]
+          print(f"CIK 를 못 찾은 종목 {len(miss):,}개 (앞 20): {sorted(miss)[:20]}")
 
-          subs = {}
-          with z.open("sub.txt") as f:
-              cols = f.readline().decode().rstrip("\r\n").split("\t")
-              ia, ic, ifm = (cols.index(c) for c in ("adsh", "cik", "form"))
-              for raw in f:
-                  p = raw.decode("utf-8", "replace").rstrip("\r\n").split("\t")
-                  try: cik = int(p[ic])
-                  except (ValueError, IndexError): continue
-                  if cik in WANT:
-                      subs[p[ia]] = (WANT[cik], p[ifm])
-
-          print("찾은 서류:", sorted(set(subs.values())))
-          seen = collections.defaultdict(collections.Counter)
-          axes = collections.defaultdict(collections.Counter)
-          with z.open("num.txt") as f:
-              cols = f.readline().decode().rstrip("\r\n").split("\t")
-              ia, it, isg, iu, iv = (cols.index(c) for c in
-                                     ("adsh", "tag", "segments", "uom", "value"))
-              for raw in f:
-                  p = raw.decode("utf-8", "replace").rstrip("\r\n").split("\t")
-                  if len(p) <= iv or not p[isg]: continue
-                  hit = subs.get(p[ia])
-                  if not hit or p[iu] != "USD": continue
-                  sym = hit[0]
-                  if "Revenu" in p[it] or "Sales" in p[it]:
-                      seen[sym][p[it]] += 1
-                  axes[sym][";".join(sorted(
-                      q.split("=")[0] for q in p[isg].split(";") if q))] += 1
-
-          for sym in sorted(seen) or sorted(axes):
-              print(f"\n===== {sym}")
-              print("  부문 축이 달린 매출/매상 태그:")
-              for t, n in seen[sym].most_common(10):
-                  mark = "  <- 우리가 받는 태그" if t in s.REV_RANK else ""
-                  print(f"    {n:>6,}  {t}{mark}")
-              print("  축 조합 (매출 말고 전부):")
-              for a, n in axes[sym].most_common(8):
-                  print(f"    {n:>6,}  {a}")
+          by_cik = {}
+          for sym in caps:
+              c = s.cik_of(cikmap, sym)
+              if c:
+                  by_cik.setdefault(c, []).append(sym)
+          print(f"회사 {len(by_cik):,}곳 · 34088(엑슨) 들어 있나 {34088 in by_cik}"
+                f" -> {by_cik.get(34088)}")
           EOF
