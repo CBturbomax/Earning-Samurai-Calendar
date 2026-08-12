@@ -444,7 +444,7 @@ svg.bars rect.b:hover { fill:var(--a3); }
 <body>
 <div class="wrap">
 
-<div class="topline">🇺🇸 미국 <b>4,166</b> · 🇯🇵 일본 <b>3,054</b> · 🇭🇰 홍콩 <b>1,059</b> · 합계 <b>8,279건</b> · 수집 <b>2026-04-13 ~ 2026-10-11</b> · 갱신 2026-08-12 06:29 KST</div>
+<div class="topline">🇺🇸 미국 <b>4,166</b> · 🇯🇵 일본 <b>3,054</b> · 🇭🇰 홍콩 <b>1,059</b> · 합계 <b>8,279건</b> · 수집 <b>2026-04-13 ~ 2026-10-11</b> · 갱신 2026-08-12 06:42 KST</div>
 <h1><span class="mark" aria-hidden="true"></span>Earning <span class="jp">Samurai</span>
     <span class="byline">by CB</span></h1>
 <p class="sub">미국 · 일본 · 홍콩 주간 실적발표 일정 — 누가 언제 발표하는지, 관심종목은 알림까지</p>
@@ -1271,8 +1271,11 @@ function segChart(sg, cur) {
     '<text class="fx' + (i === n - 1 ? ' now' : '') + '" x="' + cx(i).toFixed(1) +
     '" y="' + (H - B + 18) + '" text-anchor="middle">' + r[0] + '</text>').join('');
 
+  // 부문이 매출 전부를 설명하지 않는 회사가 흔하다(본사 몫·기타·조정). 그럴 때
+  // 막대 높이를 총매출로 읽으면 틀린다. 얼마를 덮는지 적어둔다.
   return '<div class="finhead sub">사업부별 매출' +
-    '<span class="dim">(단위: ' + esc(U.ko) + ')</span></div>' +
+    '<span class="dim">(단위: ' + esc(U.ko) +
+    (sg.cov ? ' · 총매출의 ' + sg.cov + '%' : '') + ')</span></div>' +
     '<div class="finbox"><svg viewBox="0 0 ' + W + ' ' + H + '" class="finsvg">' +
     axis + body + xlab + '</svg></div>' +
     '<div class="finlegend">' + names.map((nm, j) =>
