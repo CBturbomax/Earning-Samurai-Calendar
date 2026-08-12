@@ -332,19 +332,34 @@ td.dim { color:var(--mute); font-size:18px; }
 .finwrap { border-top:1px solid var(--line); padding-top:14px; }
 .finhead { font-size:18px; font-weight:700; margin-bottom:8px; }
 .finhead .warn { color:var(--a3); font-weight:400; font-size:16px; margin-left:10px; }
-.finsvg { width:100%; height:auto; display:block; }
+.finhead.sub { margin-top:14px; }
+.finhead .dim { font-weight:400; font-size:16px; }
+/* 분기가 스무 개 넘으면 900px 로는 숫자가 겹친다. 그림을 제 폭대로 그리고
+   좁으면 이 칸 안에서만 옆으로 밀리게 한다 — 페이지 전체가 밀리면 안 된다. */
+.finbox { overflow-x:auto; overflow-y:hidden; margin-bottom:6px; }
+.finsvg { height:auto; display:block; min-width:880px; }
 .finsvg .fb { fill:#5B9BD5; }
-.finsvg .fl { fill:none; stroke-width:2; }
+.finsvg .fl { fill:none; stroke-width:2.2; }
 .finsvg .fl.opm { stroke:#ED7D31; }
-.finsvg .fl.yoy { stroke:#7FD1A4; }
-.finsvg .fz { stroke:#3a4550; stroke-dasharray:3 3; }
+.finsvg .fl.yoy { stroke:#5B9BD5; }
+.finsvg .dot { stroke:#0f1419; stroke-width:1.2; }
+.finsvg .dot.opm { fill:#ED7D31; }
+.finsvg .dot.yoy { fill:#5B9BD5; }
+.finsvg .fz { stroke:#28323c; }
+.finsvg .fzero { stroke:#4a5661; }
 .finsvg .fx { fill:var(--mute); font-size:12px; }
+/* 막대와 점에 붙는 숫자. 이게 이 그림의 요점이다 — 모양만 보고 값을 짐작하게
+   두지 않는다. 색은 각 계열과 맞춘다. */
+.finsvg .vn { font-size:12px; font-weight:700; font-variant-numeric:tabular-nums; }
+.finsvg .vn.rev { fill:#cfe0f0; }
+.finsvg .vn.opm { fill:#ED7D31; }
+.finsvg .vn.yoy { fill:#8fc0ea; }
 .finlegend { display:flex; gap:14px; flex-wrap:wrap; font-size:15px; color:var(--mute);
              margin-top:6px; align-items:center; }
 .finlegend .lg::before { content:'■'; margin-right:4px; }
 .finlegend .rev::before { color:#5B9BD5; }
 .finlegend .opm::before { color:#ED7D31; }
-.finlegend .yoy::before { color:#7FD1A4; }
+.finlegend .yoy::before { color:#5B9BD5; }
 .finlegend .src { margin-left:auto; font-size:14px; }
 .epsrow { display:flex; gap:8px; flex-wrap:wrap; margin-bottom:12px; }
 .epsbox { background:#141c24; border:1px solid var(--line); border-radius:7px;
@@ -412,7 +427,7 @@ svg.bars rect.b:hover { fill:var(--a3); }
 <body>
 <div class="wrap">
 
-<div class="topline">🇺🇸 미국 <b>4,166</b> · 🇯🇵 일본 <b>3,054</b> · 🇭🇰 홍콩 <b>1,057</b> · 합계 <b>8,277건</b> · 수집 <b>2026-04-13 ~ 2026-10-11</b> · 갱신 2026-08-12 05:05 KST</div>
+<div class="topline">🇺🇸 미국 <b>4,166</b> · 🇯🇵 일본 <b>3,054</b> · 🇭🇰 홍콩 <b>1,057</b> · 합계 <b>8,277건</b> · 수집 <b>2026-04-13 ~ 2026-10-11</b> · 갱신 2026-08-12 05:16 KST</div>
 <h1><span class="mark" aria-hidden="true"></span>Earning <span class="jp">Samurai</span>
     <span class="byline">by CB</span></h1>
 <p class="sub">미국 · 일본 · 홍콩 주간 실적발표 일정 — 누가 언제 발표하는지, 관심종목은 알림까지</p>
@@ -1182,65 +1197,129 @@ function finBlock(m, code) {
 const SRC_KO = { sec: 'SEC 공식 재무제표', sa: 'stockanalysis.com', yahoo: 'Yahoo Finance' };
 
 function finChart(f) {
-  const pts = f.points.slice(-30);
-  const W = 900, H = 260, L = 52, R = 46, T = 22, B = 40;
-  // 점 하나는 [라벨, 매출, 영업이익] 이다(파일을 가볍게 하려고 눕혀서 싣는다).
-  const max = Math.max(...pts.map(p => p[1]), 1);
-  // 막대가 4~5개뿐일 때(일본·홍콩) 폭을 그대로 나누면 한 칸이 200px 이 된다.
-  // 폭을 묶고 가운데로 모은다 — 자료가 적은 걸 크게 그려 많아 보이게 하지 않는다.
-  const bw = Math.min((W - L - R) / pts.length, 64);
-  const x0 = L + ((W - L - R) - bw * pts.length) / 2;
-  const y = v => H - B - (H - T - B) * v / max;
-  // 통화가 시장마다 다르다. 엔·위안은 자릿수가 커서 조(兆) 단위가 읽기 좋다.
+  /* 그림을 **둘로 나눈다.**
+       (1) 매출 막대 + 영업이익률 선
+       (2) 매출 전년 대비 성장률 선
+     한 그림에 이익률과 성장률을 같이 그리면 오른쪽 축 하나를 나눠 써야 해서
+     둘 다 납작해진다. 이익률은 15% 언저리에서 조금씩 움직이고 성장률은 -20~50%
+     로 크게 뛰는데, 같은 자로 재면 이익률 변화가 아예 안 보인다.
+
+     그리고 **막대와 점마다 숫자를 적는다.** 그림만 보고 "저게 몇이지?" 하고
+     다시 표를 찾게 만들지 않는다. */
+  const all = f.points;
+  const back = f.freq === 'H' ? 2 : 4;
+  // 성장률은 자르기 전에 계산한다 — 자른 뒤 계산하면 앞 네 분기가 빈다.
+  const yoyAll = all.map((p, i) => {
+    const prev = all[i - back];
+    return (prev && prev[1]) ? p[1] / prev[1] - 1 : null;
+  });
+  const N = 22;                       // 이보다 촘촘하면 숫자가 서로 겹친다
+  const pts = all.slice(-N), yoy = yoyAll.slice(-N);
   const U = curOf(f.cur);
   const money = v => {
-    const a = Math.abs(v);
-    for (const [n, u] of U.steps) if (a >= n) return (v / n).toFixed(a / n >= 100 ? 0 : 1) + u;
+    const x = Math.abs(v);
+    for (const [n, u] of U.steps) if (x >= n) return (v / n).toFixed(x / n >= 100 ? 0 : 1) + u;
     return Math.round(v).toLocaleString();
   };
+  const pc = v => (v * 100).toFixed(0) + '%';
 
-  let bars = '', opm = [], yoy = [];
-  const every = Math.ceil(pts.length / 15);
+  const n = pts.length;
+  const W = Math.max(880, n * 46), L = 62, R = 56, B = 44;
+  const step = (W - L - R) / n;
+  const cx = i => L + step * i + step / 2;
+  const xlab = (H) => pts.map((p, i) =>
+    '<text class="fx" x="' + cx(i).toFixed(1) + '" y="' + (H - B + 18) +
+    '" text-anchor="middle">' + p[0] + '</text>').join('');
+
+  /* ── (1) 매출 + 영업이익률 ───────────────────────────────── */
+  const H1 = 330, T1 = 34, BASE1 = H1 - B;
+  const PH = BASE1 - T1;
+  // 막대는 아래 66%, 영업이익률 선은 위 28% 를 쓴다. 같은 자리에 겹쳐 그리면
+  // 막대 위 숫자와 선 위 숫자가 서로 가려 둘 다 못 읽는다.
+  const RB = BASE1 - PH * 0.66;         // 막대가 닿을 수 있는 맨 위
+  const rmax = Math.max(...pts.map(p => p[1]), 1);
+  const ry = v => BASE1 - (BASE1 - RB) * v / rmax;
+
+  let bars = '';
   pts.forEach((p, i) => {
-    const x = x0 + i * bw, h = Math.max(H - B - y(p[1]), 1);
-    bars += '<rect class="fb" x="' + (x + bw * .15).toFixed(1) + '" y="' + y(p[1]).toFixed(1) +
-      '" width="' + (bw * .7).toFixed(1) + '" height="' + h.toFixed(1) + '"><title>' +
-      p[0] + ' 매출 ' + money(p[1]) + '</title></rect>';
-    if (i % every === 0)
-      bars += '<text class="fx" x="' + (x + bw / 2).toFixed(1) + '" y="' + (H - B + 15) +
-        '" text-anchor="middle">' + p[0] + '</text>';
-    if (p[2] != null && p[1]) opm.push([x + bw / 2, p[2] / p[1], p[0]]);
-    // 분기는 4개 전, 반기는 2개 전과 비교한다
-    const back = f.freq === 'H' ? 2 : 4, prev = pts[i - back];
-    if (prev && prev[1]) yoy.push([x + bw / 2, p[1] / prev[1] - 1, p[0]]);
+    const h = Math.max(BASE1 - ry(p[1]), 1), x = cx(i) - step * 0.34;
+    bars += '<rect class="fb" x="' + x.toFixed(1) + '" y="' + ry(p[1]).toFixed(1) +
+      '" width="' + (step * 0.68).toFixed(1) + '" height="' + h.toFixed(1) + '"/>' +
+      '<text class="vn rev" x="' + cx(i).toFixed(1) + '" y="' + (ry(p[1]) - 6).toFixed(1) +
+      '" text-anchor="middle">' + money(p[1]) + '</text>';
   });
-  // 오른쪽 축은 -30%~+60% 로 고정한다. 자동이면 한 분기 튀는 값에 전체가 눌린다.
-  const pct = v => H - B - (H - T - B) * ((Math.max(-0.3, Math.min(0.6, v)) + 0.3) / 0.9);
-  const path = a => a.map((p, i) => (i ? 'L' : 'M') + p[0].toFixed(1) + ',' + pct(p[1]).toFixed(1)).join(' ');
-  const per = f.freq === 'Q' ? '분기' : f.freq === 'H' ? '반기' : '연간';
 
-  // 짧으면 짧다고 적는다. 미국은 SEC 가 1Q19 부터 다 주지만 일본·홍콩은
-  // 공짜로 열린 소스가 최근 것만 준다. 조용히 짧게 그려 놓으면
-  // "이 회사는 옛날에 없던 회사인가" 하고 잘못 읽는다.
+  // 영업이익률은 제 눈금을 따로 쓴다. 값이 있는 것만.
+  const opm = pts.map((p, i) => (p[2] != null && p[1]) ? [i, p[2] / p[1]] : null).filter(Boolean);
+  let opmSvg = '', opmAxis = '';
+  if (opm.length >= 2) {
+    const vs = opm.map(o => o[1]);
+    let lo = Math.min(0, ...vs), hi = Math.max(...vs);
+    const pad = (hi - lo) * 0.25 || 0.02;
+    lo -= pad; hi += pad;
+    const OT = T1 + 14, OB = BASE1 - PH * 0.72;   // 선이 노는 위쪽 띠
+    const oy = v => OB - (OB - OT) * (v - lo) / (hi - lo);
+    opmSvg = '<path class="fl opm" d="' +
+      opm.map((o, j) => (j ? 'L' : 'M') + cx(o[0]).toFixed(1) + ',' + oy(o[1]).toFixed(1)).join(' ') +
+      '"/>' + opm.map(o =>
+      '<circle class="dot opm" cx="' + cx(o[0]).toFixed(1) + '" cy="' + oy(o[1]).toFixed(1) + '" r="3"/>' +
+      '<text class="vn opm" x="' + cx(o[0]).toFixed(1) + '" y="' + (oy(o[1]) - 8).toFixed(1) +
+      '" text-anchor="middle">' + pc(o[1]) + '</text>').join('');
+    opmAxis = [lo, (lo + hi) / 2, hi].map(v =>
+      '<text class="fx" x="' + (W - R + 8) + '" y="' + (oy(v) + 4).toFixed(1) + '">' +
+      pc(v) + '</text>').join('');
+  }
+  const rAxis = [0, rmax / 2, rmax].map(v =>
+    '<text class="fx ar" x="' + (L - 8) + '" y="' + (ry(v) + 4).toFixed(1) +
+    '" text-anchor="end">' + money(v) + '</text>' +
+    '<line class="fz" x1="' + L + '" y1="' + ry(v).toFixed(1) + '" x2="' + (W - R) +
+    '" y2="' + ry(v).toFixed(1) + '"/>').join('');
+
+  /* ── (2) 전년 대비 성장률 ────────────────────────────────── */
+  const have = yoy.map((v, i) => v == null ? null : [i, v]).filter(Boolean);
+  let yoySvg = '';
+  if (have.length >= 2) {
+    const H2 = 210, T2 = 30, BASE2 = H2 - B;
+    const vs = have.map(o => o[1]);
+    let lo = Math.min(0, ...vs), hi = Math.max(0, ...vs);
+    const pad = (hi - lo) * 0.22 || 0.05;
+    lo -= pad; hi += pad;
+    const gy = v => BASE2 - (BASE2 - T2) * (v - lo) / (hi - lo);
+    // 0 이 범위 안에 있으면 눈금으로 삼는다 — 성장인지 역성장인지가 한눈에 갈린다.
+    const ticks = (lo < 0 && hi > 0) ? [lo, 0, hi] : [lo, (lo + hi) / 2, hi];
+    const axis = ticks.map(v =>
+      '<text class="fx ar" x="' + (L - 8) + '" y="' + (gy(v) + 4).toFixed(1) +
+      '" text-anchor="end">' + pc(v) + '</text>' +
+      '<line class="fz" x1="' + L + '" y1="' + gy(v).toFixed(1) + '" x2="' + (W - R) +
+      '" y2="' + gy(v).toFixed(1) + '"/>').join('');
+    yoySvg = '<div class="finhead sub">매출 성장률 <span class="dim">(전년 같은 ' +
+      (f.freq === 'H' ? '반기' : '분기') + ' 대비)</span></div>' +
+      '<div class="finbox"><svg viewBox="0 0 ' + W + ' ' + H2 + '" class="finsvg">' + axis +
+      (lo < 0 && hi > 0 ? '<line class="fzero" x1="' + L + '" y1="' + gy(0).toFixed(1) +
+        '" x2="' + (W - R) + '" y2="' + gy(0).toFixed(1) + '"/>' : '') +
+      '<path class="fl yoy" d="' +
+      have.map((o, j) => (j ? 'L' : 'M') + cx(o[0]).toFixed(1) + ',' + gy(o[1]).toFixed(1)).join(' ') +
+      '"/>' + have.map(o =>
+        '<circle class="dot yoy" cx="' + cx(o[0]).toFixed(1) + '" cy="' + gy(o[1]).toFixed(1) + '" r="3"/>' +
+        '<text class="vn yoy" x="' + cx(o[0]).toFixed(1) + '" y="' + (gy(o[1]) - 8).toFixed(1) +
+        '" text-anchor="middle">' + pc(o[1]) + '</text>').join('') +
+      xlab(H2) + '</svg></div>';
+  }
+
+  const per = f.freq === 'Q' ? '분기' : f.freq === 'H' ? '반기' : '연간';
   const notes = [];
   if (f.freq === 'H') notes.push('홍콩은 반기 보고입니다');
   if (pts.length < 8) notes.push('받을 수 있었던 건 ' + pts.length + '개뿐입니다');
 
-  return '<div class="finwrap"><div class="finhead">' +
-    per + ' 매출 · 영업이익률 · 성장률' +
-    (notes.length ? '<span class="warn">' + notes.join(' · ') + '</span>' : '') +
-    '</div><svg viewBox="0 0 ' + W + ' ' + H + '" class="finsvg">' +
-    '<line class="fz" x1="' + L + '" y1="' + pct(0) + '" x2="' + (W - R) + '" y2="' + pct(0) + '"/>' +
-    bars +
-    (opm.length ? '<path class="fl opm" d="' + path(opm) + '"/>' : '') +
-    (yoy.length ? '<path class="fl yoy" d="' + path(yoy) + '"/>' : '') +
-    '<text class="fx" x="4" y="' + (T + 4) + '">' + money(max) + '</text>' +
-    '<text class="fx" x="' + (W - R + 6) + '" y="' + pct(0.6) + '">+60%</text>' +
-    '<text class="fx" x="' + (W - R + 6) + '" y="' + pct(0) + '">0%</text>' +
-    '<text class="fx" x="' + (W - R + 6) + '" y="' + pct(-0.3) + '">-30%</text>' +
-    '</svg><div class="finlegend">' +
-    '<span class="lg rev">매출 (' + U.ko + ')</span><span class="lg opm">영업이익률</span>' +
-    '<span class="lg yoy">전년 대비</span>' +
+  return '<div class="finwrap">' +
+    '<div class="finhead">' + per + ' 매출 · 영업이익률 <span class="dim">(' +
+    esc(U.ko) + ')</span>' +
+    (notes.length ? '<span class="warn">' + notes.join(' · ') + '</span>' : '') + '</div>' +
+    '<div class="finbox"><svg viewBox="0 0 ' + W + ' ' + H1 + '" class="finsvg">' +
+    rAxis + bars + opmSvg + opmAxis + xlab(H1) + '</svg></div>' +
+    yoySvg +
+    '<div class="finlegend"><span class="lg rev">매출</span>' +
+    '<span class="lg opm">영업이익률</span><span class="lg yoy">성장률</span>' +
     '<span class="src">출처 ' + SRC_KO[f.src || 'sec'] + '</span></div></div>';
 }
 function closeModal() { document.getElementById('mdBack').hidden = true; mdKey = null; }
