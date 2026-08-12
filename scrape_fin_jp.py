@@ -224,6 +224,33 @@ def raw(url, binary=False):
     return None
 
 
+def dump_rows():
+    """TDnet 목록의 **표 한 줄이 실제로 어떻게 생겼는지** 그대로 찍는다.
+
+    목록은 200 으로 잘 열리는데 우리 정규식이 0건을 냈다. 생김새를 안 보고
+    정규식을 고치는 건 점치는 것이다.
+    """
+    for back in range(4):
+        day = (date.today() - timedelta(days=back)).strftime("%Y%m%d")
+        url = LIST_URL.format(page=1, day=day)
+        print(f"\n===== {day}\n  {url}")
+        body = raw(url)
+        if not body:
+            continue
+        txt = body.decode("utf-8", "replace")
+        i = txt.find("kjTitle")
+        if i < 0:
+            print("    kjTitle 이 없다. 그날은 공시가 없었을 수 있다.")
+            continue
+        # 그 줄이 시작하는 <tr> 부터 끝나는 </tr> 까지
+        s = txt.rfind("<tr", 0, i)
+        e = txt.find("</tr>", i)
+        print("    --- 한 줄 원문 ---")
+        print(txt[max(s, 0):e + 5][:1600])
+        print("    --- 여기까지 ---")
+        return
+
+
 def survey():
     """일본 실적을 **발표 당일에** 주는 곳을 찾는다. 되는 곳만 골라 쓴다."""
     day = date.today().strftime("%Y%m%d")
@@ -303,6 +330,8 @@ def probe(days=3):
 def main():
     if "--survey" in sys.argv:
         return survey()
+    if "--rows" in sys.argv:
+        return dump_rows()
     if "--probe" in sys.argv:
         n = [a for a in sys.argv[1:] if a.isdigit()]
         return probe(int(n[0]) if n else 3)
