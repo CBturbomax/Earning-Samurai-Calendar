@@ -295,7 +295,8 @@ def plausible(rev_q, rev_a):
     """
     if not rev_a or len(rev_q) < 2:
         return True
-    for end, (year_val, _mid) in rev_a.items():
+    for end, av in rev_a.items():
+        year_val = av[0]
         if not year_val:
             continue
         y_end = date.fromisoformat(end)
