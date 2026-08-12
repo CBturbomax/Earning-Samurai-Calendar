@@ -239,22 +239,27 @@ def _median(xs):
 
 
 def seg_fit(rec, fin_rec):
-    """부문 합을 **총매출과 맞춰본다.** 안 맞으면 고치거나, 못 고치면 버린다.
+    """부문 합을 총매출과 대보고, **두 배로 부푼 것만** 걸러낸다.
 
-    회사가 부문 이름을 바꾸면 소스가 옛 이름과 새 이름을 **둘 다** 준다. 겹치는
-    구간이 있으면 쌓은 막대가 총매출보다 커진다 — SEA 가 그렇다(Shopee/Ecommerce,
-    Garena/Digital Entertainment 가 같은 사업의 옛·새 이름이다). 그대로 그리면
-    "이 분기 매출 7.1B" 짜리 그림을 실어놓고 실제로는 5.9B 인 셈이 된다.
+    처음에는 안 맞는 부문을 하나씩 빼서 총매출에 맞추게 했다. 그게 더 나빴다.
+    실제 자료를 대보니 어긋나는 이유가 넷인데 셋은 부문 잘못이 아니었다.
 
-    수집기의 `dedupe()` 는 **값이 한 푼도 다르지 않을 때만** 하나로 친다. 그건
-    안전하지만 반올림이 다르거나 재분류가 섞이면 못 잡는다. 그래서 마지막에
-    이미 가지고 있는 총매출로 한 번 더 거른다.
+    - 웨이스트매니지먼트: 부문을 **상계 전 총액**으로 낸다. 늘 8% 넘친다. 정상이다.
+    - 존슨컨트롤스: 부문은 멀쩡한데 **총매출 쪽이 틀렸다**(6,442 -> 1,004 -> 447).
+    - 캐터필러: 부문 이름이 깔끔히 바뀐 정상 케이스인데 총매출 오류에 휘말렸다.
+    - 버텍스: 같은 이름이 표에 두 줄 있어 정확히 두 배가 됐다. 이건 진짜 잘못인데
+      **수집기에서 고쳤다**(`parse()` 가 이름 중복을 걸러낸다).
 
-    부문 하나씩 빼보며 가장 잘 맞는 조합을 찾고, 그래도 5% 넘게 웃돌면 그 종목의
-    부문 차트는 **아예 싣지 않는다. 틀린 그림보다 없는 게 낫다.**
+    맞추려 든 결과 웨이스트매니지먼트는 가장 큰 부문(Collection)이 빠져 37%만
+    남았다. 매출 대부분이 사라진 그림이 어긋난 그림보다 나을 리 없다.
 
-    돌려주는 값: (남긴 이름, 남긴 점, 총매출 대비 비율) — 못 쓰겠으면 None.
-    비율이 None 이면 총매출이 없어 맞춰보지 못했다는 뜻이다.
+    그래서 지금은 **부문을 지우지 않는다.** 총매출을 25% 넘게 웃도는 분기가
+    과반이면 — 같은 줄이 두 번 실린 신호다 — 그 종목만 통째로 싣지 않는다.
+    총매출 자체가 못 미더울 수 있으므로 어림한 어긋남으로는 판단하지 않는다.
+
+    돌려주는 값: (이름, 점, 총매출 대비 비율) — 못 쓰겠으면 None.
+    비율은 분기마다 고르게 나올 때만 준다. 들쭉날쭉하면 대볼 총매출이 못 미더운
+    것이라 None 이다.
     """
     names = list(rec.get("names") or [])
     pts = [r for r in rec.get("pts") or [] if r and r[0]]
@@ -264,61 +269,24 @@ def seg_fit(rec, fin_rec):
     rev = {p["end"]: p["rev"] for p in (fin_rec or {}).get("points") or []
            if p.get("end") and p.get("rev")}
     shared = [r for r in pts if rev.get(r[0])]
-    if len(shared) < 3:
-        # 맞춰볼 총매출이 없다. 없는 근거로 지우지는 않는다 — 그대로 싣되
-        # 비율은 모른다고 적는다.
-        return names, pts, None
+    if len(shared) < 4:
+        return names, pts, None                # 대볼 총매출이 없다. 그대로 싣는다.
 
-    def ratios(keep):
-        idx = [names.index(n) + 1 for n in keep]
-        return [sum(r[i] or 0 for i in idx) / rev[r[0]] for r in shared]
+    rs = sorted(sum(v or 0 for v in r[1:]) / rev[r[0]] for r in shared)
+    # 한 분기가 튀는 것으로 판을 뒤집지 않도록 위아래를 조금 깎고 본다.
+    lo, hi = rs[len(rs) // 10], rs[-1 - len(rs) // 10]
+    med = _median(rs)
 
-    # **넘치는 분기가 몇이냐**로 본다. 중앙값으로 보면 안 된다 — 이름이 겹치는
-    # 구간이 절반이면 나머지 절반이 median 을 1.0 으로 끌어내려 그냥 통과한다
-    # (실제로 그렇게 놓칠 뻔했다). 한 분기라도 총매출을 5% 넘게 웃돌면 그 분기는
-    # 두 번 세어진 것이다.
-    #
-    # 넘치는 분기 수만으로는 부족해서 '얼마나 넘치는지'를 함께 본다. 겹친 이름이
-    # 둘이면(Shopee/Ecommerce 와 Garena/Digital Entertainment) 하나만 빼서는
-    # 넘치는 분기 수가 그대로라 한 발도 못 떼고 멈춘다 — 넘치는 양은 줄어드니
-    # 그걸로 방향을 잡는다.
-    def score(keep):
-        rs = ratios(keep)
-        return (sum(1 for x in rs if x > 1.05),
-                round(sum(max(x - 1.0, 0.0) for x in rs), 6))
+    # **높이보다 고르기가 갈라준다.** 같은 줄이 두 번 실렸으면 비율이 분기마다
+    # 비슷하게 높다(버텍스 1.72~2.00, 메르카도리브레 1.00~1.46). 반대로 총매출
+    # 쪽이 망가진 경우는 널을 뛴다(존슨컨트롤스 1.00~42.56) — 그건 부문 잘못이
+    # 아니므로 부문 차트까지 뺏을 이유가 없다.
+    if med > 1.25 and hi - lo < 1.0:
+        return None                            # 부풀었다. 싣지 않는다.
 
-    # 부문마다 '마지막으로 값이 있던 분기'. 뺄 것을 고를 때의 갈림길이 된다.
-    last_seen = {}
-    for r in pts:
-        for j, n in enumerate(names):
-            if j + 1 < len(r) and r[j + 1]:
-                last_seen[n] = max(last_seen.get(n, ""), r[0])
-
-    keep = list(names)
-    now = score(keep)
-    while now[0] and len(keep) > 2:
-        # 하나씩 빼보고 가장 잘 맞는 것을 뺀다. 맞는 정도가 같으면 **일찍 끊긴
-        # 쪽**을 뺀다 — 그게 회사가 더 안 쓰는 옛 이름이다. 숫자만 보고 고르면
-        # 살아 있는 부문(Garena)을 빼고 옛 이름(Digital Entertainment)을 남기는
-        # 일이 생긴다.
-        best = min((score([n for n in keep if n != drop]), last_seen.get(drop, ""), drop)
-                   for drop in keep)
-        if best[0] >= now:
-            break                              # 빼도 나아지지 않는다
-        keep.remove(best[2])
-        now = best[0]
-
-    if now[0]:
-        return None                            # 못 맞춘다. 싣지 않는다.
-    med = _median(ratios(keep))
-
-    idx = [0] + [names.index(n) + 1 for n in keep]
-    trimmed = [[r[i] if i < len(r) else None for i in idx] for r in pts]
-    # 남은 부문이 한 분기도 값을 못 내면 그 분기는 뺀다(빈 막대가 된다).
-    trimmed = [r for r in trimmed if any(v for v in r[1:])]
-    if len(trimmed) < 2:
-        return None
-    return keep, trimmed, med
+    # "총매출의 몇 %" 는 두 수치가 서로 아귀가 맞을 때만 적는다. 흔들리는데
+    # 적으면 틀린 근거로 적는 셈이다.
+    return names, pts, (med if hi - lo < 0.10 else None)
 
 
 def pack_seg(rec, fin_rec):
@@ -481,26 +449,23 @@ def build():
         if codes:
             cap_cover[m] = round(sum(1 for v in codes.values() if v) / len(codes), 4)
 
-    # 사업부별 매출은 총매출과 맞춰본 뒤에 싣는다. 안 맞는 것은 조용히 지우지 않고
-    # 몇 종목이 손질됐고 몇 종목이 빠졌는지 수집 기록에 적는다.
+    # 사업부별 매출은 총매출과 대본 뒤에 싣는다. 두 배로 부푼 종목은 조용히
+    # 지우지 않고 몇 종목을 뺐는지 수집 기록에 적는다.
     on_screen = {p[9] + ":" + p[1] for p in packed}
-    seg, trimmed, tossed = {}, 0, 0
+    seg, tossed = {}, []
     for s, rec in SEG.items():
         if s not in on_screen:
             continue
         got = pack_seg(rec, FIN.get(s))
-        if not got:
-            tossed += 1
-            continue
-        if len(got["names"]) < len(rec.get("names") or []):
-            trimmed += 1
-        seg[s] = got
+        if got:
+            seg[s] = got
+        else:
+            tossed.append(s.split(":")[-1])
     if SEG:
         note = f"  사업부별 매출 {len(seg):,}종목"
-        if trimmed:
-            note += f" (이름만 바뀐 부문을 뺀 종목 {trimmed})"
         if tossed:
-            note += f" · 합이 총매출과 안 맞아 뺀 종목 {tossed}"
+            note += (f" · 합이 총매출보다 고르게 부풀어 뺀 종목 {len(tossed)}"
+                     f" ({', '.join(sorted(tossed)[:6])})")
         print(note)
 
     payload = {

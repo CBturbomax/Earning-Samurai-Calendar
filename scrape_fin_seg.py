@@ -10,7 +10,7 @@ SEC 로는 못 한다. companyfacts/companyconcept 는 부문 축(dimension)을 
 stockanalysis 에는 부문 페이지가 따로 있어서 거기서 받는다. **미국 종목만** 있다
 (일본·홍콩은 404).
 
-조심할 것이 둘 있다.
+조심할 것이 셋 있다. 셋 다 **매출을 부풀리는** 쪽으로 틀린다.
 
 1) **0 은 '없음'이지 '0원'이 아니다.** 회사가 부문 이름을 바꾸면 옛 이름은 그
    시점부터, 새 이름은 그 이전이 0으로 채워져 온다. 그대로 쌓으면 없던 사업이
@@ -19,6 +19,14 @@ stockanalysis 에는 부문 페이지가 따로 있어서 거기서 받는다. *
 2) **이름만 바뀐 같은 부문이 둘로 온다.** SEA 의 'Other Services' 와 'Monee' 는
    2021~2025 값이 한 푼도 다르지 않다 — 이름만 갈렸다. 둘 다 쌓으면 매출이
    부풀어 총매출과 안 맞는다. 같은 분기에 값이 똑같으면 하나로 본다.
+
+3) **같은 이름이 표에 두 줄 오기도 한다.** 버텍스가 그렇다 —
+   'Trikafta and Kaftrio' 가 두 번 실려 매출이 정확히 두 배가 됐다(2.0배로
+   눌러앉아 있어 눈에 띄었다). 이름은 한 번만 담는다.
+
+그래도 놓치는 것이 있어 `build.py` 의 `seg_fit()` 이 마지막에 총매출과 대본다.
+다만 **거기서 부문을 지우지는 않는다** — 어긋나는 이유의 대부분이 부문 잘못이
+아니었다(자세한 것은 그 함수 주석에).
 
 결과: data/segments.json
 """
@@ -41,7 +49,7 @@ PER_RUN = int(os.environ.get("SEG_PER_RUN", "200"))    # 한 실행에 받을 �
 STALE_DAYS = int(os.environ.get("SEG_STALE_DAYS", "20"))
 TOP_N = int(os.environ.get("SEG_TOP_N", "1500"))       # 시총 상위 이만큼만
 PAUSE = float(os.environ.get("SEG_PAUSE", "0.6"))
-SEG_VER = 1
+SEG_VER = 2          # 이름 중복을 걸러낸다(버텍스). 헌 기록도 다시 받는다.
 GIVE_UP_AFTER = 6
 
 
@@ -84,6 +92,12 @@ def parse(txt):
         for s in segs:
             name = (s.get("name") or "").strip()
             if not name:
+                continue
+            # **같은 이름이 두 번 오는 회사가 있다.** 버텍스가 그렇다 — 표에
+            # 'Trikafta and Kaftrio' 가 두 줄로 들어 있다. 아래 by_end 는 이름을
+            # 열쇠로 쓰는 dict 라 값은 한 번만 담기는데, order 에 이름이 둘이면
+            # 나중에 같은 값을 두 번 꺼내 쓰게 되어 **매출이 정확히 두 배가 된다.**
+            if name in order:
                 continue
             order.append(name)
             for v in s.get("values") or []:
