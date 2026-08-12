@@ -53,10 +53,12 @@ SA_INTL = "https://stockanalysis.com/quote/{ex}/{code}/financials/__data.json?p=
 SA_US = "https://stockanalysis.com/stocks/{sym}/financials/__data.json?p=quarterly"
 EXCH = {"jp": "tyo", "hk": "hkg"}
 
-PER_RUN = int(os.environ.get("INTL_PER_RUN", "150"))     # 한 실행에 받을 종목 수
+PER_RUN = int(os.environ.get("INTL_PER_RUN", "400"))     # 한 실행에 받을 종목 수
 STALE_DAYS = int(os.environ.get("INTL_STALE_DAYS", "10"))
 NEAR_DAYS = int(os.environ.get("INTL_NEAR_DAYS", "4"))   # 발표일 언저리는 매일
-PAUSE = float(os.environ.get("INTL_PAUSE", "0.8"))       # 요청 사이 쉬는 시간
+PAUSE = float(os.environ.get("INTL_PAUSE", "0.6"))       # 요청 사이 쉬는 시간
+# 400개 × 0.6초 = 4분 남짓. 시간당 400건이면 초당 0.11건이라 남의 서버에 무리는
+# 아니다. 옛 자료(야후 4~5분기)를 새 자료(20분기)로 갈아 끼우는 동안만 이 속도다.
 
 # 저장 형식 번호. 받는 방식을 고치면 올린다 — 이미 받아둔 기록도 다시 받는다.
 #   1 -> 2  야후에서 stockanalysis 로. 분기 4~5개가 20개로 늘고, 연간은 안 담는다.
