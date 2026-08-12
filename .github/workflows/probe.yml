@@ -25,6 +25,57 @@ jobs:
         with:
           python-version: '3.12'
 
+      # 회사가 무엇을 파는지 한 줄로 적어 주려면 소스가 있어야 한다.
+      # 나스닥 회사 소개 · 닛케이 결산 페이지의 【…】 요약 · stockanalysis 를 떠본다.
+      - name: 🏷️ 사업 설명 소스 떠보기
+        continue-on-error: true
+        timeout-minutes: 6
+        run: |
+          python - <<'EOF'
+          import json, re, urllib.request, urllib.error
+          UA = ("Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 "
+                "(KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36")
+          def get(url, hdr=None):
+              h = {"User-Agent": UA, "Accept": "*/*"}
+              h.update(hdr or {})
+              try:
+                  with urllib.request.urlopen(urllib.request.Request(url, headers=h), timeout=25) as r:
+                      return r.status, r.read().decode("utf-8", "replace")
+              except urllib.error.HTTPError as e:
+                  return e.code, ""
+              except Exception as e:
+                  return 0, str(e)
+
+          print("=== 나스닥 회사 소개 (미국)")
+          for sym in ("AAPL", "PLTR", "RKLB"):
+              st, body = get(f"https://api.nasdaq.com/api/company/{sym}/company-profile")
+              desc = ""
+              if st == 200:
+                  try:
+                      d = json.loads(body).get("data") or {}
+                      desc = ((d.get("CompanyDescription") or {}).get("value") or "")
+                  except ValueError:
+                      pass
+              print(f"  {sym}: {st} · {len(desc)}자")
+              if desc:
+                  print("     ", desc[:200].replace("\n", " "))
+
+          print("\n=== 닛케이 결산 페이지 (일본)")
+          for code in ("1379", "7203", "6758"):
+              st, body = get(f"https://www.nikkei.com/nkd/company/kessan/?scode={code}")
+              m = re.search(r"【([^】]{2,40})】([^\"<]{0,120})", body)
+              print(f"  {code}: {st} · {'찾음' if m else '못 찾음'}")
+              if m:
+                  print("     【" + m.group(1) + "】" + m.group(2)[:100])
+
+          print("\n=== stockanalysis (홍콩)")
+          for ex, code in (("hkg", "0700"), ("hkg", "0005")):
+              st, body = get(f"https://stockanalysis.com/quote/{ex}/{code}/company/")
+              m = re.search(r'name="description" content="([^"]{40,300})"', body)
+              print(f"  {ex}:{code}: {st} · {'찾음' if m else '못 찾음'}")
+              if m:
+                  print("     ", m.group(1)[:180])
+          EOF
       # 금융사는 NetSales 를 안 쓴다. 어떤 이름을 쓰는지 공시에서 직접 뽑는다.
       # 8766 도쿄해상 · 8253 크레디세존 · 7157 라이프넷생명 · 9214 · 6291 등
       - name: 🇯🇵 금융사가 쓰는 항목 이름 뽑기
