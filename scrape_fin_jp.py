@@ -146,16 +146,29 @@ def announcements(day):
 
 
 # XBRL 안에서 찾을 항목. namespace 는 업종마다 다르므로 **끝 이름만** 본다.
-NAME_REV = ("NetSales", "OperatingRevenues", "Revenue", "NetSalesOfCompletedConstructionContracts",
-            "OrdinaryIncomeBanks", "OperatingRevenuesSpecific", "GrossOperatingRevenues")
-NAME_OPI = ("OperatingIncome", "OperatingIncomeLoss", "OrdinaryIncome")
-NAME_NI = ("ProfitAttributableToOwnersOfParent", "NetIncome", "ProfitLoss")
+# IFRS 로 내는 일본 회사도 늘고 있어 그쪽 이름도 같이 본다.
+NAME_REV = ("NetSales", "NetSalesIFRS", "Sales", "SalesIFRS", "Revenue", "RevenueIFRS",
+            "OperatingRevenues", "OperatingRevenuesIFRS",
+            "NetSalesOfCompletedConstructionContracts",
+            "OrdinaryIncomeBanks", "GrossOperatingRevenues")
+NAME_OPI = ("OperatingIncome", "OperatingIncomeIFRS", "OperatingIncomeLoss",
+            "ProfitFromOperatingActivitiesIFRS", "OrdinaryIncome")
+NAME_NI = ("ProfitAttributableToOwnersOfParent",
+           "ProfitAttributableToOwnersOfParentIFRS", "NetIncome", "ProfitLoss")
 
-# 문맥 이름. 결산단신은 '당기'와 '전년동기'를 함께 싣는다. 당기만 쓴다.
-CUR_CTX = re.compile(r"CurrentAccumulatedQ|CurrentYTD|CurrentQuarter|CurrentYear", re.I)
+# 문맥 이름. 결산단신 한 장에 여러 기간이 함께 실린다.
+#   CurrentAccumulatedQ1Duration_ConsolidatedMember_ResultMember   <- 이번 분기 실적
+#   PriorAccumulatedQ1Duration_ConsolidatedMember_ResultMember     <- 전년 같은 분기
+#   CurrentYearDuration_ConsolidatedMember_ForecastMember          <- 회사의 연간 예상
+#
+# **예상을 실적으로 쓰면 안 된다.** 회사가 내놓은 전망이 그대로 매출 막대에
+# 올라가면 지어낸 숫자를 싣는 셈이다. Forecast 는 무조건 버린다.
+CUR_CTX = re.compile(r"Current", re.I)
 PRI_CTX = re.compile(r"Prior|Previous", re.I)
-# 연결이 있으면 연결(Consolidated)을 쓴다. 없으면 단체(NonConsolidated).
-CONS_CTX = re.compile(r"Consolidated", re.I)
+FORECAST_CTX = re.compile(r"Forecast|Upper|Lower", re.I)
+RESULT_CTX = re.compile(r"Result", re.I)
+DUR_CTX = re.compile(r"Duration", re.I)
+CONS_CTX = re.compile(r"(?<!Non)Consolidated", re.I)
 NONCONS_CTX = re.compile(r"NonConsolidated", re.I)
 
 
@@ -163,71 +176,95 @@ def local(tag):
     return tag.rsplit("}", 1)[-1]
 
 
-def read_summary(blob):
-    """결산단신 zip -> {항목: 값} + 기간 정보.
+# 결산단신 zip 안에는 `.xbrl` 인스턴스가 **없다**. 원문을 찍어 보고 알았다.
+#
+#   XBRLData/Summary/tse-qcedjpsm-332A0-...-ixbrl.htm   <- 요약은 여기
+#   XBRLData/Attachment/...-ixbrl.htm                    <- 재무제표 본문
+#
+# 즉 **inline XBRL** 이다 — 수치가 XHTML 안에 `<ix:nonFraction>` 으로 박혀 있고
+# 자릿수는 `scale`, 부호는 `sign` 속성에 따로 적힌다(scale="6" 이면 백만 단위).
+# XML 파서를 그대로 걸면 HTML 실체참조에 걸려 깨지므로 필요한 것만 집어낸다.
+IX_FACT = re.compile(r"<ix:nonFraction\b([^>]*)>(.*?)</ix:nonFraction>", re.S | re.I)
+IX_ATTR = re.compile(r'([\w:-]+)\s*=\s*"([^"]*)"')
+CTX_RE = re.compile(r'<(?:\w+:)?context\b[^>]*\bid="([^"]+)"(.*?)</(?:\w+:)?context>',
+                    re.S | re.I)
+DATE_TAG = re.compile(r"<(?:\w+:)?(startDate|endDate|instant)>\s*([\d-]+)\s*</", re.I)
 
-    zip 안에 `Summary/` 폴더가 있고 그 안에 요약 XBRL 인스턴스가 들어 있다.
-    첨부 재무제표(Attachment/)는 회사마다 제각각이라 요약만 본다.
+
+def read_summary(blob):
+    """결산단신 zip -> {항목: [(문맥, 값, (시작일, 종료일))]}.
+
+    요약(Summary)만 본다 — 첨부(Attachment)는 회사마다 표가 제각각이다.
     """
     try:
         z = zipfile.ZipFile(io.BytesIO(blob))
     except zipfile.BadZipFile:
         return None
     names = [n for n in z.namelist()
-             if "Summary" in n and n.endswith(".xbrl")]
-    if not names:
-        names = [n for n in z.namelist() if n.endswith(".xbrl")]
+             if "Summary" in n and n.lower().endswith(("ixbrl.htm", ".xbrl"))]
     if not names:
         return None
     try:
-        root = ElementTree.fromstring(z.read(names[0]))
-    except ElementTree.ParseError:
+        txt = z.read(names[0]).decode("utf-8", "replace")
+    except (KeyError, OSError):
         return None
 
-    # 문맥(context) -> 기간
     periods = {}
-    for ctx in root.iter():
-        if local(ctx.tag) != "context":
-            continue
-        cid = ctx.get("id") or ""
-        s = e = ""
-        for node in ctx.iter():
-            t = local(node.tag)
-            if t == "startDate":
-                s = (node.text or "").strip()
-            elif t == "endDate":
-                e = (node.text or "").strip()
-            elif t == "instant":
-                e = (node.text or "").strip()
-        periods[cid] = (s, e)
+    for cid, body in CTX_RE.findall(txt):
+        st = en = ""
+        for kind, val in DATE_TAG.findall(body):
+            if kind.lower() == "startdate":
+                st = val
+            else:
+                en = val
+        periods[cid] = (st, en)
 
     vals = {}
-    for node in root.iter():
-        cid = node.get("contextRef")
-        if not cid or node.text is None:
+    for attrs, inner in IX_FACT.findall(txt):
+        a = dict(IX_ATTR.findall(attrs))
+        name = (a.get("name") or "").rsplit(":", 1)[-1]
+        cid = a.get("contextRef") or ""
+        if not name or not cid or a.get("xsi:nil") == "true":
             continue
-        name = local(node.tag)
-        txt = (node.text or "").strip().replace(",", "")
-        if not re.fullmatch(r"-?\d+(\.\d+)?", txt):
+        digits = re.sub(r"[^\d.-]", "", TAGS.sub("", inner))
+        if not re.fullmatch(r"-?\d+(\.\d+)?", digits or ""):
             continue
-        vals.setdefault(name, []).append((cid, float(txt), periods.get(cid, ("", ""))))
-    return vals
+        v = float(digits)
+        try:
+            v *= 10 ** int(a.get("scale") or 0)
+        except ValueError:
+            pass
+        if a.get("sign") == "-":
+            v = -v
+        vals.setdefault(name, []).append((cid, v, periods.get(cid, ("", ""))))
+    return vals or None
 
 
 def pick(vals, names):
-    """당기 연결 값을 고른다. 없으면 단체. 전년동기는 쓰지 않는다."""
+    """이번 기간 **실적**(예상 아님) 연결 값을 고른다.
+
+    점수로 고른다. 예상(Forecast)은 아예 쓰지 않는다 — 회사 전망을 실적이라고
+    싣는 것은 지어내는 것이다. 시점 값(Instant)도 뺀다 — 그건 재무상태다.
+    """
     best = None
     for name in names:
-        for cid, v, (s, e) in vals.get(name, []):
-            if PRI_CTX.search(cid) or not e:
+        for cid, v, (st, en) in vals.get(name, []):
+            if PRI_CTX.search(cid) or FORECAST_CTX.search(cid) or not en:
                 continue
-            score = (2 if CONS_CTX.search(cid) else
-                     1 if not NONCONS_CTX.search(cid) else 0)
+            if not DUR_CTX.search(cid):
+                continue
+            score = 0
             if CUR_CTX.search(cid):
+                score += 8
+            if RESULT_CTX.search(cid):
                 score += 4
+            if CONS_CTX.search(cid):
+                score += 2
+            elif not NONCONS_CTX.search(cid):
+                score += 1
             if best is None or score > best[0]:
-                best = (score, v, s, e)
-        if best and best[0] >= 6:
+                best = (score, v, st, en)
+        if best and best[0] >= 14:
             break
     return best
 
