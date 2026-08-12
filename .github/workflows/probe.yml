@@ -1,10 +1,10 @@
 # 새 소스를 붙이기 전에 응답 생김새를 눈으로 본다.
 #
-# 지금 찾는 것: **일본·홍콩 분기 실적을 20개보다 깊게 주는 곳.**
-# stockanalysis 는 20분기(5년)가 무료 한도였다. 미국은 SEC 로 1Q19 부터 나오는데
-# 일본·홍콩만 짧다. 영어권 금융 사이트는 대부분 막혀 있으니(WSJ·마켓워치 401,
-# 인베스팅 403) 이번에는 **현지 사이트**를 훑는다 — 일본은 야후재팬·닛케이·
-# 가부탄·미차쿠·IR뱅크, 홍콩은 이스트머니·시나·텐센트·AA스탁스.
+# 앞선 확인 결과:
+#   홍콩  이스트머니가 리포트 기간 50개를 준다 (stockanalysis 20개보다 깊다)
+#   일본  가부탄 405 · 미나부/IR뱅크/울렛 403 · 야후재팬 12개 · 닛케이는 표 모양 확인 필요
+#
+# 이번에 볼 것: 이스트머니가 실제로 무슨 값을 주는가, 닛케이 표는 파싱이 되는가.
 name: 소스 접근 확인
 on:
   workflow_dispatch:
@@ -20,68 +20,80 @@ jobs:
         with:
           python-version: '3.12'
 
-      - name: 🇯🇵🇭🇰 현지 사이트 — 분기를 몇 개나 주나
+      - name: 🇭🇰 이스트머니 — 무슨 값을 몇 개나 주나
         continue-on-error: true
         run: |
           python - <<'PY'
-          import json, re, urllib.request, urllib.error
+          import json, urllib.request, urllib.error
+          UA = ("Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 "
+                "(KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36")
+          BASE = ("https://datacenter.eastmoney.com/securities/api/data/v1/get"
+                  "?reportName={rpt}&columns=ALL&quoteColumns=&filter=(SECUCODE%3D%22{code}%22)"
+                  "&pageNumber=1&pageSize=60&sortTypes=-1&sortColumns={sort}"
+                  "&source=F10&client=PC")
+
+          def get(url):
+              req = urllib.request.Request(url, headers={"User-Agent": UA, "Accept": "*/*"})
+              try:
+                  with urllib.request.urlopen(req, timeout=30) as r:
+                      return json.loads(r.read().decode("utf-8", "replace"))
+              except urllib.error.HTTPError as e:
+                  print("   HTTP", e.code); return None
+              except Exception as e:
+                  print("   실패", e); return None
+
+          for rpt, sort in (("RPT_HKF10_FN_MAININDICATOR", "STD_REPORT_DATE"),
+                            ("RPT_HKF10_FN_INCOME", "STD_REPORT_DATE"),
+                            ("RPT_HKF10_FN_GINCOME", "STD_REPORT_DATE")):
+              for code in ("00700.HK", "09988.HK", "00005.HK"):
+                  print(f"\n=== {rpt} {code}")
+                  d = get(BASE.format(rpt=rpt, code=code, sort=sort))
+                  if not d:
+                      continue
+                  res = (d.get("result") or {}).get("data")
+                  if not res:
+                      print("   data 없음:", str(d)[:180]); continue
+                  print(f"   {len(res)}건 · 열 {len(res[0])}개")
+                  keys = [k for k in res[0] if any(w in k for w in
+                          ("DATE", "OPERATE", "INCOME", "REVENUE", "PROFIT", "CURRENCY", "TYPE"))]
+                  print("   쓸 만한 열:", keys[:14])
+                  for r in res[:2] + res[-1:]:
+                      print("    ", {k: r.get(k) for k in keys[:8]})
+                  break
+          PY
+
+      - name: 🇯🇵 닛케이·야후재팬 — 표가 파싱되는가
+        continue-on-error: true
+        run: |
+          python - <<'PY'
+          import re, urllib.request, urllib.error
           UA = ("Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 "
                 "(KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36")
 
-          def get(url, hdr=None, data=None, timeout=25):
-              h = {"User-Agent": UA, "Accept": "*/*",
-                   "Accept-Language": "ja,en-US;q=0.9,en;q=0.8"}
-              h.update(hdr or {})
-              req = urllib.request.Request(url, headers=h, data=data)
+          def get(url):
+              req = urllib.request.Request(url, headers={
+                  "User-Agent": UA, "Accept-Language": "ja,en;q=0.8"})
               try:
-                  with urllib.request.urlopen(req, timeout=timeout) as r:
-                      return r.status, r.read()
-              except urllib.error.HTTPError as e:
-                  return e.code, (e.read()[:300] if e.fp else b"")
+                  with urllib.request.urlopen(req, timeout=30) as r:
+                      return r.read().decode("utf-8", "replace")
               except Exception as e:
-                  return 0, str(e).encode()
+                  return f"실패 {e}"
 
-          def count_quarters(body):
-              """응답 안에 분기처럼 보이는 것이 몇 개나 있나 — 거칠게 센다."""
-              t = body.decode("utf-8", "replace")
-              pats = {
-                "YYYY-MM-DD": len(set(re.findall(r"20\d\d-\d\d-\d\d", t))),
-                "YYYY/MM": len(set(re.findall(r"20\d\d/\d\d", t))),
-                "YYYY年MM月": len(set(re.findall(r"20\d\d年\d{1,2}月", t))),
-                "REPORTDATE": len(set(re.findall(r'"REPORT_DATE":"(20\d\d-\d\d-\d\d)', t))),
-              }
-              return ", ".join(f"{k} {v}" for k, v in pats.items() if v)
-
-          CAND = [
-            # ── 일본 ─────────────────────────────────────────────
-            ("야후재팬 실적",   "https://finance.yahoo.co.jp/quote/7203.T/performance", None, None),
-            ("닛케이 결산",     "https://www.nikkei.com/nkd/company/kessan/?scode=7203", None, None),
-            ("가부탄 재무",     "https://kabutan.jp/stock/finance?code=7203&mode=b", None, None),
-            ("가부탄 top",      "https://kabutan.jp/stock/?code=7203", None, None),
-            ("미나부",         "https://minkabu.jp/stock/7203/settlement", None, None),
-            ("IR뱅크",         "https://irbank.net/7203/results", None, None),
-            ("울렛",           "https://www.ullet.com/7203.html", None, None),
-            # ── 홍콩 ─────────────────────────────────────────────
-            ("이스트머니 HK",
-             "https://datacenter.eastmoney.com/securities/api/data/v1/get?"
-             "reportName=RPT_HKF10_FN_MAININDICATOR&columns=ALL&quoteColumns=&"
-             "filter=(SECUCODE%3D%2200700.HK%22)&pageNumber=1&pageSize=50&sortTypes=-1&"
-             "sortColumns=STD_REPORT_DATE&source=F10&client=PC", None, None),
-            ("시나 HK",
-             "https://stock.finance.sina.com.cn/hkstock/api/jsonp.php/x/"
-             "HK_StockService.getHKFinance?symbol=00700&type=zyzb", None, None),
-            ("AA스탁스 HK",
-             "http://www.aastocks.com/en/stocks/analysis/company-fundamental/"
-             "financial-ratios?symbol=00700", None, None),
-            ("텐센트증권 HK",
-             "https://proxy.finance.qq.com/ifzqgtimg/appstock/app/HkFinanceData/"
-             "getFinanceData?symbol=hk00700&type=report", None, None),
-          ]
-          for name, url, hdr, data in CAND:
-              code, body = get(url, hdr, data)
-              info = count_quarters(body) if code == 200 else ""
-              peek = body[:110].decode("utf-8", "replace").replace("\n", " ")
-              print(f"{name:<14} HTTP {code:<4} {len(body):>9,}B  {info}")
-              if code != 200:
-                  print(f"                {peek}")
+          for name, url in (
+              ("닛케이 결산", "https://www.nikkei.com/nkd/company/kessan/?scode=7203"),
+              ("야후재팬 실적", "https://finance.yahoo.co.jp/quote/7203.T/performance"),
+          ):
+              t = get(url)
+              print(f"\n===== {name}  {len(t):,}자")
+              # 분기 표기를 찾는다 — 연22.3 / 22.4-6 / 2022年4-6月 같은 꼴
+              for pat, lab in ((r"(?:連|単)\d\d\.\d{1,2}", "連22.3 꼴"),
+                               (r"\d\d\.\d{1,2}-\d{1,2}", "22.4-6 꼴"),
+                               (r"20\d\d年\d{1,2}-\d{1,2}月", "2022年4-6月 꼴"),
+                               (r"20\d\d/\d{1,2}", "2022/4 꼴")):
+                  m = sorted(set(re.findall(pat, t)))
+                  if m:
+                      print(f"  {lab}: {len(m)}개  {m[:6]} … {m[-3:]}")
+              # 표 구조
+              tabs = re.findall(r'<table[^>]*class="([^"]*)"', t)
+              print("  표 class:", sorted(set(tabs))[:8])
           PY
