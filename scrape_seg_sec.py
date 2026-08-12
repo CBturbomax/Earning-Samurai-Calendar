@@ -102,6 +102,8 @@ REV_RANK = {t: i for i, t in enumerate(REV_TAGS)}
 # BusinessSegments). 그래도 다른 형태로 올 때를 대비해 한 번 더 다듬는다.
 AXIS_PRI = {"ProductOrService": 2, "Geographical": 1, "StatementGeographical": 1}
 AXIS_KO = {3: "사업부문", 2: "제품·서비스", 1: "지역"}
+# 부문을 **남김없이** 나누는 아래 축. 이것으로만 더해 부문 합계를 만든다.
+SUB_AXES = {"ProductOrService", "Geographical"}
 
 # 부문이 아니라 조정·상계 줄. 담으면 매출이 부풀거나 음수가 섞인다.
 BAD_MEMBER = re.compile(
@@ -224,9 +226,15 @@ def parse_seg(segments):
     a, b = sorted(pairs, key=lambda p: -axis_rank(p[0]))
     if axis_rank(a[0]) <= axis_rank(b[0]):
         return None                          # 어느 쪽이 위인지 못 가른다
+    # **아래 축은 빠짐없이 갈라야 한다.** 제품/서비스와 지역은 그 부문을 남김없이
+    # 나눈 것이라 더하면 부문 합계가 된다. `MajorCustomers`(주요 고객)는 큰
+    # 고객만 적은 것이라 더해도 합계가 안 되고, 그걸 부문 매출이라 적으면
+    # 실제보다 작게 나온다. 록히드마틴에 그 축이 섞여 있었다.
+    if b[0] not in SUB_AXES:
+        return None
     if BAD_MEMBER.search(a[1]) or BAD_MEMBER.search(b[1]):
         return None
-    return a[0], a[1], "pair"
+    return a[0], a[1], b[0]
 
 
 def pretty(member):
@@ -325,10 +333,10 @@ def scan(blob, want_cik, facts, pairs):
             got = parse_seg(seg)
             if not got:
                 continue
-            axis, member, kind = got
+            axis, member, sub_axis = got
             cik, filed = sub
             tag = p[it]
-            if kind == "solo":
+            if sub_axis == "solo":
                 slot = (facts.setdefault(cik, {}).setdefault(axis, {})
                         .setdefault(member, {}).setdefault(tag, {}))
                 key = (p[idd], qtrs)
@@ -347,7 +355,12 @@ def scan(blob, want_cik, facts, pairs):
                 #
                 # 부문만 남는 행이 이미 있는 회사는 아예 담지 않는다 — 그런
                 # 회사에는 쓸 일이 없다.
+                #
+                # **아래 축마다 따로 담는다.** 한 회사가 같은 부문을 제품으로도,
+                # 지역으로도 갈라 낸다(록히드마틴). 한 칸에 다 더하면 부문 매출이
+                # 곱절이 된다.
                 slot = (pairs.setdefault(cik, {}).setdefault(axis, {})
+                        .setdefault(sub_axis, {})
                         .setdefault(member, {}).setdefault(tag, {}))
                 key = (p[idd], qtrs)
                 cur = slot.get(key)
@@ -455,7 +468,11 @@ def drop_subtotals(series):
     """
     for _ in range(2):
         names = list(series)
-        if len(names) < 3:
+        # **부문이 셋뿐이면 손대지 않는다.** 셋이면 '하나가 나머지 둘의 합'이
+        # 우연히 맞을 수 있는데(엑슨의 업스트림이 그랬다), 그걸 소계로 보고
+        # 빼면 진짜 부문이 조용히 사라진다. 이 저장소에서 제일 하면 안 되는 일이다.
+        # 남겨서 매출이 부풀면 `seg_fit` 이 그 종목을 안 실을 뿐이다.
+        if len(names) < 4:
             break
         worst = None
         for m in names:
@@ -510,16 +527,46 @@ def pick_axis(by_axis):
     return best
 
 
-def build_stock(by_axis, by_pair):
-    """부문만 남는 행이 없으면(록히드마틴) 아래 축으로 더한 값을 쓴다."""
-    got = pick_axis(by_axis)
-    if not got and by_pair:
-        # 담을 때 이미 서류별로 갈라 더해 두었다. 접수번호만 떼면 된다.
-        flat = {a: {m: {t: {k: (v[0], v[1]) for k, v in raw.items()}
+def pair_candidates(by_pair, taken):
+    """아래 축을 **하나만** 골라 부문별 값을 만든다.
+
+    엑슨은 부문만 남는 행이 아예 없고 늘 `BusinessSegments;Geographical` 로 온다.
+    록히드마틴은 거기에 제품/서비스까지 겹쳐 있다 — 셋을 다 더하면 매출이
+    세 배가 된다. 축마다 가장 잘 덮는 아래 축 하나만 쓴다.
+    """
+    out = {}
+    for axis, subs in by_pair.items():
+        if axis in taken:
+            continue                         # 한 축짜리 행이 있으면 그쪽이 맞다
+        best = None
+        for _sub, members in subs.items():
+            flat = {m: {t: {k: (v[0], v[1]) for k, v in raw.items()}
                         for t, raw in by_tag.items()}
                     for m, by_tag in members.items()}
-                for a, members in by_pair.items()}
-        got = pick_axis(flat)
+            s = series_of(flat)
+            if len(s) < 2:
+                continue
+            ends = set()
+            for x in s.values():
+                ends |= set(x)
+            key = (len(ends), len(s))
+            if best is None or key > best[0]:
+                best = (key, flat)
+        if best:
+            out[axis] = best[1]
+    return out
+
+
+def build_stock(by_axis, by_pair):
+    """부문만 남는 행이 없으면(엑슨·록히드마틴) 아래 축으로 더한 값을 쓴다.
+
+    예전에는 **아무것도 못 만들었을 때만** 그쪽을 봤는데, 그러면 엑슨처럼
+    한 축짜리 지역 행이 몇 줄 있는 회사가 지역별로 그려지고 진짜 사업부문
+    (업스트림·에너지제품·화학)은 버려진다. 지금은 둘을 나란히 놓고 고른다.
+    """
+    cand = dict(by_axis)
+    cand.update(pair_candidates(by_pair, set(by_axis)))
+    got = pick_axis(cand)
     if not got:
         return None
     (rank, _, _), _axis, series, ends = got
