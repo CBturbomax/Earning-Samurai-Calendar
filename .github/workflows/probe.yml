@@ -1,11 +1,10 @@
 # 새 소스를 붙이기 전에 응답 생김새를 눈으로 본다.
 #
-# 여기서 확인되기 전에는 collect.yml 에 넣지 않는다. 모양을 짐작해서 짜 두면
-# 조용히 0건이 되고, 그게 제일 나쁘다(캘린더가 "발표 없음"이라고 거짓말한다).
+# 앞선 확인 결과:
+#   홍콩  이스트머니가 리포트 기간 50개를 준다 (stockanalysis 20개보다 깊다)
+#   일본  가부탄 405 · 미나부/IR뱅크/울렛 403 · 야후재팬 12개 · 닛케이는 표 모양 확인 필요
 #
-# 앞선 확인에서 stockanalysis 만 세 시장 다 200 을 줬다(WSJ·마켓워치 401,
-# 인베스팅·IR뱅크 403, 가부탄 405). 이제 그 응답 속을 뜯어본다 —
-# **분기를 몇 개나 주는가**가 관건이다. 야후는 4~5개가 한계였다.
+# 이번에 볼 것: 이스트머니가 실제로 무슨 값을 주는가, 닛케이 표는 파싱이 되는가.
 name: 소스 접근 확인
 on:
   workflow_dispatch:
@@ -21,34 +20,80 @@ jobs:
         with:
           python-version: '3.12'
 
-      - name: 📊 stockanalysis — 새 수집기가 실제로 뽑아내는가
-        continue-on-error: true
-        run: python scrape_fin_intl.py --probe
-
-      - name: 🔎 더 깊이 받을 수 있나 (기간 옵션 떠보기)
+      - name: 🇭🇰 이스트머니 — 무슨 값을 몇 개나 주나
         continue-on-error: true
         run: |
           python - <<'PY'
-          import scrape_fin_intl as si
-          # 기본은 20분기였다. 옵션을 붙이면 더 오는지 본다. 1Q19 까지 가면 좋다.
-          base = "https://stockanalysis.com/stocks/se/financials/__data.json"
-          jp   = "https://stockanalysis.com/quote/tyo/7203/financials/__data.json"
-          tries = [
-            ("기본",            base + "?p=quarterly"),
-            ("range=10Y",      base + "?p=quarterly&range=10Y"),
-            ("range=20Y",      base + "?p=quarterly&range=20Y"),
-            ("period=quarterly", base + "?period=quarterly"),
-            ("i=trailing",     base + "?p=quarterly&i=trailing"),
-            ("도요타 기본",      jp + "?p=quarterly"),
-            ("도요타 range=10Y", jp + "?p=quarterly&range=10Y"),
-          ]
-          for label, u in tries:
+          import json, urllib.request, urllib.error
+          UA = ("Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 "
+                "(KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36")
+          BASE = ("https://datacenter.eastmoney.com/securities/api/data/v1/get"
+                  "?reportName={rpt}&columns=ALL&quoteColumns=&filter=(SECUCODE%3D%22{code}%22)"
+                  "&pageNumber=1&pageSize=60&sortTypes=-1&sortColumns={sort}"
+                  "&source=F10&client=PC")
+
+          def get(url):
+              req = urllib.request.Request(url, headers={"User-Agent": UA, "Accept": "*/*"})
               try:
-                  s = si.series(u)
+                  with urllib.request.urlopen(req, timeout=30) as r:
+                      return json.loads(r.read().decode("utf-8", "replace"))
+              except urllib.error.HTTPError as e:
+                  print("   HTTP", e.code); return None
               except Exception as e:
-                  print(f"  {label:<18} 실패 {e}"); continue
-              if not s:
-                  print(f"  {label:<18} 자료 없음"); continue
-              p = s["points"]
-              print(f"  {label:<18} 분기 {len(p):>2}개  {p[0]['label']} ~ {p[-1]['label']}  {s['cur']}")
+                  print("   실패", e); return None
+
+          for rpt, sort in (("RPT_HKF10_FN_MAININDICATOR", "STD_REPORT_DATE"),
+                            ("RPT_HKF10_FN_INCOME", "STD_REPORT_DATE"),
+                            ("RPT_HKF10_FN_GINCOME", "STD_REPORT_DATE")):
+              for code in ("00700.HK", "09988.HK", "00005.HK"):
+                  print(f"\n=== {rpt} {code}")
+                  d = get(BASE.format(rpt=rpt, code=code, sort=sort))
+                  if not d:
+                      continue
+                  res = (d.get("result") or {}).get("data")
+                  if not res:
+                      print("   data 없음:", str(d)[:180]); continue
+                  print(f"   {len(res)}건 · 열 {len(res[0])}개")
+                  keys = [k for k in res[0] if any(w in k for w in
+                          ("DATE", "OPERATE", "INCOME", "REVENUE", "PROFIT", "CURRENCY", "TYPE"))]
+                  print("   쓸 만한 열:", keys[:14])
+                  for r in res[:2] + res[-1:]:
+                      print("    ", {k: r.get(k) for k in keys[:8]})
+                  break
+          PY
+
+      - name: 🇯🇵 닛케이·야후재팬 — 표가 파싱되는가
+        continue-on-error: true
+        run: |
+          python - <<'PY'
+          import re, urllib.request, urllib.error
+          UA = ("Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 "
+                "(KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36")
+
+          def get(url):
+              req = urllib.request.Request(url, headers={
+                  "User-Agent": UA, "Accept-Language": "ja,en;q=0.8"})
+              try:
+                  with urllib.request.urlopen(req, timeout=30) as r:
+                      return r.read().decode("utf-8", "replace")
+              except Exception as e:
+                  return f"실패 {e}"
+
+          for name, url in (
+              ("닛케이 결산", "https://www.nikkei.com/nkd/company/kessan/?scode=7203"),
+              ("야후재팬 실적", "https://finance.yahoo.co.jp/quote/7203.T/performance"),
+          ):
+              t = get(url)
+              print(f"\n===== {name}  {len(t):,}자")
+              # 분기 표기를 찾는다 — 연22.3 / 22.4-6 / 2022年4-6月 같은 꼴
+              for pat, lab in ((r"(?:連|単)\d\d\.\d{1,2}", "連22.3 꼴"),
+                               (r"\d\d\.\d{1,2}-\d{1,2}", "22.4-6 꼴"),
+                               (r"20\d\d年\d{1,2}-\d{1,2}月", "2022年4-6月 꼴"),
+                               (r"20\d\d/\d{1,2}", "2022/4 꼴")):
+                  m = sorted(set(re.findall(pat, t)))
+                  if m:
+                      print(f"  {lab}: {len(m)}개  {m[:6]} … {m[-3:]}")
+              # 표 구조
+              tabs = re.findall(r'<table[^>]*class="([^"]*)"', t)
+              print("  표 class:", sorted(set(tabs))[:8])
           PY
