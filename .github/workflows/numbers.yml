@@ -62,9 +62,13 @@ jobs:
       # 🇯🇵 일본은 **공시에서 직접** 받는다. stockanalysis 는 일본 실적을 며칠
       # 뒤에 싣는다(소니 12일·도요타 8일, 발표 당일치는 0건). TDnet 은 회사가
       # 발표하는 그 순간 결산단신 XBRL 을 올리므로 여기가 가장 빠르다.
+      # 첫 실행은 열흘치 사백 건이라 한 번에 다 못 받는다. 중간중간 써두므로
+      # 시간이 차서 잘려도 받은 만큼은 남고 다음 실행이 이어받는다.
       - name: 🇯🇵 일본 결산단신 (TDnet 공시)
         continue-on-error: true
         timeout-minutes: 5
+        env:
+          JP_BACK_DAYS: '6'
         run: python scrape_fin_jp.py
 
       # SEC 에 아직 없는 분기를 여기서 메운다. 발표 당일 반영된다.
