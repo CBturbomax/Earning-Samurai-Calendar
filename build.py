@@ -329,16 +329,36 @@ FIN = load_fin()
 
 
 def load_seg():
-    """사업부별 매출. 열쇠는 미국 코드라 'us:' 를 붙여 맞춘다."""
-    p = HERE / "data" / "segments.json"
-    if not p.exists():
-        return {}
-    try:
-        got = json.loads(p.read_text(encoding="utf-8")).get("stocks", {})
-    except (ValueError, OSError) as e:
-        print(f"  ! segments.json 읽기 실패: {e}")
-        return {}
-    return {(k if ":" in k else "us:" + k): v for k, v in got.items() if v.get("names")}
+    """사업부별 매출. 두 곳에서 온다. 열쇠는 미국 코드라 'us:' 를 붙여 맞춘다.
+
+    | 파일 | 소스 | 성격 |
+    |---|---|---|
+    | `segments.json` | stockanalysis | 종목마다 요청 한 번. 이름이 곱고 최근 분기까지 온다 |
+    | `segments_sec.json` | SEC 분기 벌크 | zip 하나로 **미국 전 종목**. 최근 한두 분기가 빈다 |
+
+    둘 다 있으면 **stockanalysis 를 쓴다.** 이름이 사람이 쓴 것이고
+    ('Intelligent Cloud' 대 'IntelligentCloud'), 벌크가 아직 안 실은 최근
+    분기까지 들어 있다. 벌크는 나머지 수천 종목을 메운다 — 그쪽이 없던 시절에는
+    1,350종목을 두드려 223종목밖에 못 얻었다.
+    """
+    out = {}
+    for name in ("segments_sec.json", "segments.json"):   # 뒤엣것이 이긴다
+        p = HERE / "data" / name
+        if not p.exists():
+            continue
+        try:
+            got = json.loads(p.read_text(encoding="utf-8")).get("stocks", {})
+        except (ValueError, OSError) as e:
+            print(f"  ! {name} 읽기 실패: {e}")
+            continue
+        n = 0
+        for k, v in got.items():
+            if not v.get("names"):
+                continue
+            out[k if ":" in k else "us:" + k] = v
+            n += 1
+        print(f"  {name}: {n:,}종목")
+    return out
 
 
 SEG = load_seg()
@@ -362,6 +382,50 @@ DESC = load_desc()
 def _median(xs):
     s = sorted(xs)
     return s[len(s) // 2] if s else 0.0
+
+
+SEG_SNAP = 20        # 부문 종료일과 총매출 종료일이 이만큼 안이면 같은 분기로 본다
+
+
+def seg_align(pts, fin_rec):
+    """부문 점마다 (분기 이름, 그 분기 총매출) 을 붙인다.
+
+    **종료일이 소스마다 며칠씩 어긋난다.** SEC 벌크는 ddate 를 월말로 반올림해
+    싣는다 — 엔비디아의 1월 28일 결산이 1월 31일로 온다. 그대로 대보면 총매출
+    쪽 점과 하나도 안 맞아서 검산도 못 하고 이름도 따로 매기게 된다.
+
+    스무 날 안에 있는 총매출 점을 같은 분기로 보고, **그쪽이 이미 매긴 이름을
+    그대로 쓴다.** 그 이름은 SEC 프레임과 unstack 까지 거친 것이라 여기서 다시
+    어림하는 것보다 옳다. 맞는 점이 없으면 종료일에서 어림해 매긴다.
+    """
+    fp = []
+    for p in (fin_rec or {}).get("points") or []:
+        if not p.get("end"):
+            continue
+        try:
+            fp.append((date.fromisoformat(p["end"]), p))
+        except ValueError:
+            pass
+    fp.sort()
+
+    out = []
+    for r in pts:
+        try:
+            d = date.fromisoformat(r[0])
+        except (ValueError, TypeError):
+            out.append((str(r[0]), None))
+            continue
+        best = None
+        for fd, p in fp:
+            gap = abs((fd - d).days)
+            if gap <= SEG_SNAP and (best is None or gap < best[0]):
+                best = (gap, p)
+        if best:
+            p = best[1]
+            out.append((p.get("label") or q_label(r[0]), p.get("rev")))
+        else:
+            out.append((q_label(r[0]), None))
+    return out
 
 
 def seg_fit(rec, fin_rec):
@@ -392,13 +456,12 @@ def seg_fit(rec, fin_rec):
     if len(names) < 2 or len(pts) < 2:
         return None
 
-    rev = {p["end"]: p["rev"] for p in (fin_rec or {}).get("points") or []
-           if p.get("end") and p.get("rev")}
-    shared = [r for r in pts if rev.get(r[0])]
+    aligned = seg_align(pts, fin_rec)
+    shared = [(r, rev) for r, (_lab, rev) in zip(pts, aligned) if rev]
     if len(shared) < 4:
-        return names, pts, None                # 대볼 총매출이 없다. 그대로 싣는다.
+        return names, pts, aligned, None       # 대볼 총매출이 없다. 그대로 싣는다.
 
-    rs = sorted(sum(v or 0 for v in r[1:]) / rev[r[0]] for r in shared)
+    rs = sorted(sum(v or 0 for v in r[1:]) / rev for r, rev in shared)
     # 한 분기가 튀는 것으로 판을 뒤집지 않도록 위아래를 조금 깎고 본다.
     lo, hi = rs[len(rs) // 10], rs[-1 - len(rs) // 10]
     med = _median(rs)
@@ -412,16 +475,27 @@ def seg_fit(rec, fin_rec):
 
     # "총매출의 몇 %" 는 두 수치가 서로 아귀가 맞을 때만 적는다. 흔들리는데
     # 적으면 틀린 근거로 적는 셈이다.
-    return names, pts, (med if hi - lo < 0.10 else None)
+    return names, pts, aligned, (med if hi - lo < 0.10 else None)
+
+
+SEG_KEEP = 20        # 화면에 그리는 것이 스물두 분기라 그만큼만 싣는다
 
 
 def pack_seg(rec, fin_rec):
-    """[분기 라벨, 부문1, 부문2, …]. 라벨은 종료일에서 다시 매긴다."""
+    """[분기 라벨, 부문1, 부문2, …]. 라벨은 총매출 쪽 것을 빌려 온다."""
     fit = seg_fit(rec, fin_rec)
     if not fit:
         return None
-    names, pts, med = fit
-    out = {"names": names, "pts": [[q_label(r[0])] + r[1:] for r in pts]}
+    names, pts, aligned, med = fit
+    # 값은 정수로 눕힌다. 부문 수치는 원 단위까지 의미가 없는데 '10863000000.0'
+    # 처럼 실으면 종목마다 몇백 바이트씩 늘어난다.
+    rows = [[lab] + [int(v) if v else None for v in r[1:]]
+            for r, (lab, _rev) in zip(pts, aligned)][-SEG_KEEP:]
+    out = {"names": names, "pts": rows}
+    # 어느 축으로 쪼갠 것인가. 사업부문이 없어 제품이나 지역으로 내려간 회사가
+    # 있다(애플의 영업부문은 지역이다). 화면 제목이 이걸로 갈린다.
+    if rec.get("axis") and rec["axis"] != "사업부문":
+        out["ax"] = rec["axis"]
     # 총매출의 몇 %를 덮는지. 부문이 전부를 설명하지 않는 회사가 흔하다
     # (본사 몫·기타). 막대 높이를 총매출로 오해하지 않도록 적어둔다.
     if med is not None and med < 0.95:
@@ -1985,7 +2059,9 @@ function segChart(sg, cur) {
 
   // 부문이 매출 전부를 설명하지 않는 회사가 흔하다(본사 몫·기타·조정). 그럴 때
   // 막대 높이를 총매출로 읽으면 틀린다. 얼마를 덮는지 적어둔다.
-  return '<div class="finhead sub">사업부별 매출' +
+  // 사업부문이 없어 제품이나 지역으로 쪼갠 회사가 있다(애플의 영업부문은 지역).
+  // 제목을 그대로 '사업부별'이라 쓰면 거짓말이라 축을 그대로 적는다.
+  return '<div class="finhead sub">' + esc(sg.ax || '사업부') + '별 매출' +
     '<span class="dim">(단위: ' + esc(U.ko) +
     (sg.cov ? ' · 총매출의 ' + sg.cov + '%' : '') + ')</span></div>' +
     '<div class="finbox"><svg viewBox="0 0 ' + W + ' ' + H + '" class="finsvg">' +

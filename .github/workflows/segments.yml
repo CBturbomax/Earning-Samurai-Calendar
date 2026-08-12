@@ -1,0 +1,112 @@
+# 사업부별 매출 뼈대 — SEC 분기 벌크에서 미국 전 종목을 한꺼번에.
+#
+# stockanalysis 는 **종목마다 요청 한 번**이라 시총 상위부터 조금씩 채울 수밖에
+# 없었다. 1,350종목을 두드려 223종목. 회원님이 열어 보는 종목은 거의 늘 비었다.
+#
+# SEC 가 분기마다 내는 벌크 zip(85MB)에는 부문 축이 그대로 살아 있다 —
+# 우리가 쓰던 companyfacts API 가 축을 떨어뜨렸을 뿐이다. zip 하나에 그 분기에
+# 접수된 모든 서류가 들어 있어 **분기당 요청 한 번**으로 전 종목이 들어온다.
+#
+# **왜 워크플로를 따로 뒀나.** 열여섯 분기를 훑으면 1.4GB · 4분이 걸린다.
+# 20분마다 도는 numbers.yml 에 끼우면 그날 하루 그 워크플로가 시간을 넘겨
+# 되커밋까지 못 간다. 그래서 저장소 규칙대로 **건드리는 파일을 갈라** 뗐다.
+#
+#   collect.yml   1시간   data/earnings*.json · data/caps.json
+#   numbers.yml   20분    data/financials*.json · data/segments.json
+#   여기          하루    data/segments_sec.json
+#
+# 겹치는 건 만들어진 index.html 뿐이고, 그건 합친 자료로 다시 만들면 그만이다.
+#
+# 대개 아무 일도 안 한다. SEC 는 이 zip 을 분기에 한 번 내므로 "다음 분기가
+# 나왔나"만 요청 한 번으로 보고 곧장 끝낸다. 넉 달에 한 번만 진짜로 일한다.
+
+name: 사업부별 매출 (SEC 벌크)
+
+on:
+  workflow_dispatch:
+  # 하루 한 번. 새 zip 이 나왔는지만 본다 — 요청 한 번이면 끝난다.
+  schedule:
+    - cron: '20 19 * * *'      # 04:20 KST
+  push:
+    branches: [main]
+    paths:
+      - 'scrape_seg_sec.py'
+      - '.github/workflows/segments.yml'
+
+permissions:
+  contents: write
+
+concurrency:
+  group: segments-${{ github.ref_name }}
+  cancel-in-progress: false
+
+jobs:
+  segments:
+    runs-on: ubuntu-latest
+    if: github.ref_name == 'main'
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: 🧩 SEC 벌크에서 부문별 매출
+        timeout-minutes: 15
+        env:
+          SEC_UA: 'Earning Samurai Calendar (cbpark@wisdomasset.co.kr)'
+        run: |
+          python scrape_seg_sec.py | tee seg.log
+          {
+            echo '### 사업부별 매출 (SEC 벌크)'
+            echo '```'
+            cat seg.log
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: 페이지 다시 만들기
+        run: python build.py > /dev/null
+
+      # 되커밋 방식은 다른 둘과 같다 — 만들어진 파일은 방금 받은 우리 것이
+      # 최신이므로 부딪히면 우리 것을 택하고, 합친 코드로 페이지를 다시 만든다.
+      # rebase 는 쓰지 않는다(충돌 상태로 멈춰 재시도가 전부 실패한다).
+      - name: 저장소에 반영
+        run: |
+          set -u
+          git config user.name  "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          rm -f seg.log
+          git add data/ index.html
+          if git diff --cached --quiet; then
+            echo "달라진 게 없다. 커밋하지 않는다."
+            exit 0
+          fi
+          git commit -m "사업부별 매출 갱신 $(date -u +%F' '%H:%M) [skip ci]"
+
+          for i in 1 2 3 4 5; do
+            git merge --abort 2>/dev/null || true
+            git fetch origin main || { sleep $((2**i)); continue; }
+
+            if ! git merge --no-edit origin/main; then
+              stuck=$(git diff --name-only --diff-filter=U)
+              others=$(echo "$stuck" | grep -v -e '^data/' -e '^index\.html$' || true)
+              if [ -n "$others" ]; then
+                echo "코드가 부딪혔다. 손으로 봐야 한다:"; echo "$others"; exit 1
+              fi
+              # shellcheck disable=SC2086
+              git checkout --ours -- $stuck
+              git add $stuck
+              if git diff --name-only --diff-filter=U | grep -q .; then
+                echo "충돌을 못 풀었다:"; git diff --name-only --diff-filter=U; exit 1
+              fi
+              git commit --no-edit
+            fi
+
+            python build.py > /dev/null
+            git add index.html
+            git diff --cached --quiet || git commit -m "페이지 다시 만들기 [skip ci]"
+
+            git push origin HEAD:main && exit 0
+            echo "푸시 실패, $((2**i))초 뒤 재시도"; sleep $((2**i))
+          done
+          echo "푸시를 끝내 못 했다"; exit 1

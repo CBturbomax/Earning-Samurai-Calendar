@@ -29,6 +29,8 @@ import urllib.request
 from datetime import date, timedelta
 from pathlib import Path
 
+from descriptions import DESC_KO      # 한국어를 이미 써 둔 종목은 안 받는다
+
 HERE = Path(__file__).parent
 OUT = HERE / "data" / "desc.json"
 
@@ -161,11 +163,19 @@ def targets():
 
 
 def queue(old, cand):
-    """못 받은 것 -> 오래된 것. 같은 순위면 시총 큰 쪽."""
+    """못 받은 것 -> 오래된 것. 같은 순위면 시총 큰 쪽.
+
+    **한국어를 이미 써 둔 종목은 건너뛴다.** 화면은 한국어가 있으면 그걸 쓰고
+    원문은 안 쓴다(build.py 의 `desc` 는 `DESC_KO` 에 없는 것만 싣는다). 그런데
+    받는 순서가 시총 큰 순이라, 처음 쉰 종목을 받았더니 **쉰 개가 전부 이미
+    한국어가 있는 종목**이었다 — 화면에 하나도 안 늘었다. 지금은 빈칸부터 채운다.
+    """
     stale = (date.today() - timedelta(days=STALE_DAYS)).isoformat()
     cold = (date.today() - timedelta(days=STALE_DAYS * 3)).isoformat()
     picks = []
     for k, cap in cand.items():
+        if k in DESC_KO:
+            continue
         rec = old.get(k)
         if not rec or rec.get("v") != DESC_VER:
             pri = 0
