@@ -447,7 +447,7 @@ svg.bars rect.b:hover { fill:var(--a3); }
 <body>
 <div class="wrap">
 
-<div class="topline">🇺🇸 미국 <b>4,166</b> · 🇯🇵 일본 <b>3,054</b> · 🇭🇰 홍콩 <b>1,084</b> · 합계 <b>8,304건</b> · 수집 <b>2026-04-13 ~ 2026-10-11</b> · 갱신 2026-08-13 03:32 KST</div>
+<div class="topline">🇺🇸 미국 <b>4,166</b> · 🇯🇵 일본 <b>3,054</b> · 🇭🇰 홍콩 <b>1,084</b> · 합계 <b>8,304건</b> · 수집 <b>2026-04-13 ~ 2026-10-11</b> · 갱신 2026-08-13 03:35 KST</div>
 <h1><span class="mark" aria-hidden="true"></span>Earning <span class="jp">Samurai</span>
     <span class="byline">by CB</span></h1>
 <p class="sub">미국 · 일본 · 홍콩 주간 실적발표 일정 — 누가 언제 무엇을 발표했는지</p>
@@ -1204,8 +1204,11 @@ function finBlock(m, code) {
   const key = m + ':' + code;
   const f = D.fin[key], sg = D.seg[key];
   const biz = bizLine(m, code);
+  // 실적 수치가 없어도 부문은 있을 수 있다. 그때 통화를 'USD' 로 박아 두면
+  // 일본 회사의 엔화 막대에 '단위: bil USD' 라고 적히는 거짓말이 된다.
+  const MKT_CUR = { jp: 'JPY', hk: 'HKD' };
   if (!f) return biz + (sg
-    ? '<div class="finwrap">' + segChart(sg, 'USD') + '</div>'
+    ? '<div class="finwrap">' + segChart(sg, MKT_CUR[m] || 'USD') + '</div>'
     : '<p class="finnote">이 종목은 아직 실적 수치를 받지 않았습니다. ' +
       '시가총액 큰 종목부터 채우는 중입니다.</p>');
   let html = biz;

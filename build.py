@@ -1968,8 +1968,11 @@ function finBlock(m, code) {
   const key = m + ':' + code;
   const f = D.fin[key], sg = D.seg[key];
   const biz = bizLine(m, code);
+  // 실적 수치가 없어도 부문은 있을 수 있다. 그때 통화를 'USD' 로 박아 두면
+  // 일본 회사의 엔화 막대에 '단위: bil USD' 라고 적히는 거짓말이 된다.
+  const MKT_CUR = { jp: 'JPY', hk: 'HKD' };
   if (!f) return biz + (sg
-    ? '<div class="finwrap">' + segChart(sg, 'USD') + '</div>'
+    ? '<div class="finwrap">' + segChart(sg, MKT_CUR[m] || 'USD') + '</div>'
     : '<p class="finnote">이 종목은 아직 실적 수치를 받지 않았습니다. ' +
       '시가총액 큰 종목부터 채우는 중입니다.</p>');
   let html = biz;
