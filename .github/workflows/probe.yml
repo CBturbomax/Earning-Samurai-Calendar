@@ -10,62 +10,36 @@ on:
 jobs:
   probe:
     runs-on: ubuntu-latest
-    timeout-minutes: 25
+    timeout-minutes: 10
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
         with:
           python-version: '3.12'
 
-      # 네 분기로 태우면 엑슨·슐룸베르거가 나오는데 열두 분기로 태우면 사라진다.
-      # 실제 설정 그대로(열두 분기) 몇 종목만 태워 어디서 떨어지는지 본다.
-      - name: 🔎 분기를 늘리면 왜 사라지나
-        timeout-minutes: 12
+      # 같은 코드로 떠보면 엑슨이 나오는데 진짜 실행에서는 안 나온다. 남은
+      # 차이는 '우리가 그 CIK 를 대상에 넣었는가' 하나뿐이라 그것만 본다.
+      - name: 🔎 티커 -> CIK 가 되는가
         env:
           SEC_UA: 'Earning Samurai Calendar (cbpark@wisdomasset.co.kr)'
         run: |
           python - <<'EOF'
           import scrape_seg_sec as s
+          cikmap = s.cik_map()
+          print(f"SEC 티커 목록 {len(cikmap):,}개")
+          for t in ("XOM", "CVX", "AAPL", "BRK.B", "PSX"):
+              print(f"  {t:6s} cikmap 에 있나 {t in cikmap}  cik_of -> {s.cik_of(cikmap, t)}")
 
-          CIK = {34088: "XOM", 87347: "SLB", 93410: "CVX"}
-          facts, pairs = {}, {}
-          for q in s.recent_quarters(12):
-              blob = s.fetch(s.BULK.format(q=q))
-              if not blob:
-                  print(q, "못 받음"); continue
-              s.scan(blob, set(CIK), facts, pairs)
-              del blob
-          print("받기 끝\n")
+          caps = s.want_tickers()
+          print(f"\n캘린더 종목 {len(caps):,}개 · 'XOM' 들어 있나 {'XOM' in caps}")
+          miss = [t for t in caps if not s.cik_of(cikmap, t)]
+          print(f"CIK 를 못 찾은 종목 {len(miss):,}개 (앞 20): {sorted(miss)[:20]}")
 
-          for cik, sym in CIK.items():
-              print(f"===== {sym}")
-              fa, pa = facts.get(cik, {}), pairs.get(cik, {})
-              for axis, members in fa.items():
-                  merged = s.merge_members(members)
-                  ser = {m: s.quarterly_merged(bt) for m, bt in merged.items()}
-                  keep = {m: x for m, x in ser.items() if len(x) >= s.MIN_MEMBER_PTS}
-                  after = s.series_of(members)
-                  print(f"  [solo {axis}] 원래 {len(members)} · 합친 뒤 {len(merged)} · "
-                        f"3분기 이상 {len(keep)} · 소계 뺀 뒤 {len(after)}")
-                  print(f"      3분기 미만이라 빠진 것: "
-                        f"{[m for m in ser if len(ser[m]) < s.MIN_MEMBER_PTS][:8]}")
-                  print(f"      소계로 빠진 것: {sorted(set(keep) - set(after))}")
-                  print(f"      남은 것: {list(after)[:10]}")
-              for axis, subs in pa.items():
-                  for sub, members in subs.items():
-                      flat = {m: {t: {k: (v[0], v[1]) for k, v in raw.items()}
-                                  for t, raw in by_tag.items()}
-                              for m, by_tag in members.items()}
-                      merged = s.merge_members(flat)
-                      ser = {m: s.quarterly_merged(bt) for m, bt in merged.items()}
-                      after = s.series_of(flat)
-                      print(f"  [pair {axis} x {sub}] 원래 {len(flat)} · 합친 뒤 "
-                            f"{len(merged)} · 끝 {len(after)}")
-                      print(f"      분기 수: "
-                            f"{ {m: len(x) for m, x in list(ser.items())[:8]} }")
-                      print(f"      소계로 빠진 것: "
-                            f"{sorted(set(m for m in ser if len(ser[m]) >= 3) - set(after))}")
-              cand = s.candidates(fa, pa)
-              print(f"  후보 축: { {a: (v[1][0], v[1][1]) for a, v in cand.items()} }")
-              print(f"  build_stock -> {(s.build_stock(fa, pa) or {}).get('names', '없음')}\n")
+          by_cik = {}
+          for sym in caps:
+              c = s.cik_of(cikmap, sym)
+              if c:
+                  by_cik.setdefault(c, []).append(sym)
+          print(f"회사 {len(by_cik):,}곳 · 34088(엑슨) 들어 있나 {34088 in by_cik}"
+                f" -> {by_cik.get(34088)}")
           EOF
