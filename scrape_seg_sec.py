@@ -73,8 +73,12 @@ SEC_UA = os.environ.get("SEC_UA", "Earning Samurai Calendar (cbpark@wisdomasset.
 TICKERS = "https://www.sec.gov/files/company_tickers.json"
 
 SEG_SEC_VER = 1
-QUARTERS = int(os.environ.get("SEG_SEC_QUARTERS", "16"))   # 몇 분기치 zip 을 훑나
+# 열두 분기(3년)면 화면에 그리는 스물두 칸의 절반을 넘고, 큰 종목은
+# stockanalysis 가 스무 분기를 채워 준다. 한 분기 zip 이 85MB 라 열여섯으로
+# 늘리면 한 번에 1.4GB 다 — 남의 서버에서 그만큼 받을 이유가 없다.
+QUARTERS = int(os.environ.get("SEG_SEC_QUARTERS", "12"))
 MIN_PTS = int(os.environ.get("SEG_SEC_MIN_PTS", "4"))      # 이보다 적으면 안 싣는다
+ZIP_PAUSE = float(os.environ.get("SEG_SEC_PAUSE", "2"))    # zip 사이 쉬는 시간
 BACKOFF = (0, 10, 45)
 
 # 매출 태그. scrape_fin.py 의 것과 같은 얼개인데, 부문 행에서 실제로 많이 쓰이는
@@ -630,8 +634,10 @@ def main():
         return
 
     facts, pairs = {}, {}
-    for q in quarters:
+    for i, q in enumerate(quarters):
         blob = None
+        if i:
+            time.sleep(ZIP_PAUSE)            # 남의 서버다. 몰아치지 않는다.
         for wait in BACKOFF:
             if wait:
                 time.sleep(wait)

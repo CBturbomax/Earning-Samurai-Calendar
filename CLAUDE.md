@@ -10,19 +10,22 @@ GitHub Pages로 그대로 서비스한다. 서버·빌드툴·의존 패키지�
 ```
 scrape.py      ──> data/earnings.json     ┐   '언제 발표하나'
 scrape_us.py   ──> data/earnings_us.json  │
-scrape_hk.py   ──> data/earnings_hk.json  ├─> build.py ──> index.html
-scrape_caps.py ──> data/caps.json         │   (+ markets.py
-scrape_fin.py  ──> data/financials.json   │    + companies*.py
-scrape_fin_intl.py ─> financials_intl.json┘    + translit.py)
-(닛케이/나스닥/HKEXnews/야후/SEC)
-                 '얼마나 큰가' '무엇을 발표했나'
+scrape_hk.py   ──> data/earnings_hk.json  │
+scrape_caps.py ──> data/caps.json         ├─> build.py ──> index.html
+scrape_fin.py  ──> data/financials.json   │   (+ markets.py
+scrape_fin_intl.py ─> financials_intl.json│    + companies*.py
+scrape_fin_jp.py  ─> financials_jp.json   │    + descriptions.py
+scrape_fin_seg.py ─> segments.json        │    + translit.py)
+scrape_seg_sec.py ─> segments_sec.json    │
+scrape_desc.py    ─> desc.json            ┘
+(닛케이/나스닥/HKEXnews/야후/SEC/TDnet/stockanalysis)
+                 '얼마나 큰가' '무엇을 발표했나' '무엇을 파는가'
 ```
 
 표준 라이브러리만 쓴다. `pip install` 필요 없음.
 
-**아무도 손으로 돌리지 않는다.** `.github/workflows/collect.yml`이 한 시간마다
-다섯 스크래퍼를 돌리고 `build.py`까지 해서 저장소에 되커밋한다. 회원님은 로컬에서
-아무것도 실행하지 않는다 — 코드를 고쳐 `main`에 올리면 그걸로 끝이다.
+**아무도 손으로 돌리지 않는다.** 워크플로 셋이 저장소에서 돌고 되커밋한다.
+회원님은 로컬에서 아무것도 실행하지 않는다 — 코드를 고쳐 `main`에 올리면 끝이다.
 
 ## 자주 하는 일
 
@@ -43,6 +46,11 @@ python scrape_caps.py                       # 일본·홍콩 시가총액 (범�
 python scrape_fin.py                        # 미국 실적 수치 (범위 없음)
 python scrape_fin_intl.py                   # 일본·홍콩 실적 수치 (범위 없음)
 python scrape_fin_intl.py --probe           # 응답 생김새만 떠보기
+python scrape_fin_jp.py                     # 일본 결산단신 (TDnet, 발표 당일)
+python scrape_fin_jp.py --seg 6758          # 첨부에 부문 정보가 있는지 원문 확인
+python scrape_seg_sec.py                    # 미국 부문별 매출 (SEC 분기 벌크)
+python scrape_fin_seg.py                    # 미국 부문별 매출 (최근 분기 보충)
+python scrape_desc.py                       # 사업 설명 원문
 ```
 
 **`data/` 에 있는 것만 실린다.** 세 시장이 다 없어도 빌드는 된다. 없는 시장은
@@ -63,8 +71,11 @@ python scrape_fin_intl.py --probe           # 응답 생김새만 떠보기
 | 규모 필터 눈금·환율 | `markets.py`의 `CAP_STEPS` / `USD_KRW` |
 | 발표 시각을 옮기는 규칙 | `markets.py`의 `US_BMO`/`US_AMC`/`JP_TYPICAL`, `build.py`의 `to_kst` |
 | 미국 실적 수치를 더 받는다 | `scrape_fin.py` — 매출 태그는 `REV_TAGS` |
-| 일본·홍콩 실적 수치 | `scrape_fin_intl.py` |
-| 차트 모양·통화 표기 | `build.py`의 `finChart` / `CUR` |
+| 일본·홍콩 실적 수치 | `scrape_fin_intl.py`, 일본 당일치는 `scrape_fin_jp.py` |
+| 부문별 매출 | `scrape_seg_sec.py`(뼈대) · `scrape_fin_seg.py`(최근 분기) |
+| 부문을 어느 축으로 가를까 | `scrape_seg_sec.py`의 `axis_rank` / `AXIS_KO` |
+| 회사 사업 설명(한국어) | `descriptions.py`의 `DESC_KO` — 원문 수집은 `scrape_desc.py` |
+| 차트 모양·통화 표기 | `build.py`의 `finChart` / `segChart` / `CUR` |
 
 `index.html`은 **직접 고치지 않는다.** `build.py`가 덮어쓴다.
 
@@ -235,6 +246,50 @@ HKEXnews에서 **이미 공시된 실적**을 모은다. 성격이 다른 걸 �
 - **남의 서버다.** 4천 종목을 매시간 두드리지 않는다 — 시총 큰 순 150개씩,
   종목당 요청 한 번, 0.8초 간격, 받아둔 것은 열흘 쓴다(발표일 언저리는 매일).
 
+**부문별 매출의 뼈대는 SEC 분기 벌크다 — API 가 아니다.** 오래 "SEC 로는 못 한다"고
+적어 두었는데 그건 **API 얘기**였다. `companyfacts`·`companyconcept` 는 부문
+축(dimension)을 떨어뜨리고 연결 합계만 준다. 그런데 SEC 가 분기마다 내는
+**Financial Statement Data Sets** zip(85MB)의 `num.txt` 에는 `segments` 칸이
+그대로 있다.
+
+```
+https://www.sec.gov/files/dera/data/financial-statement-data-sets/2026q1.zip
+num.txt 열: adsh tag version ddate qtrs uom segments coreg value footnote
+segments 예: BusinessSegments=Datacenter;ConsolidationItems=OperatingSegments;
+```
+
+종목마다 요청 한 번이 아니라 **분기당 요청 한 번**이라 미국 전 종목이 한꺼번에
+들어온다. stockanalysis 로는 1,350종목을 두드려 223종목이었는데 벌크로는
+**2,300종목**이 된다. 열두 분기를 훑는 데 2분이다.
+
+- **축을 섞지 않는다.** 같은 회사가 사업부문·제품·지역으로 여러 번 쪼개 낸다.
+  AMD 한 분기에 `BusinessSegments=Datacenter`, `Geographical=US`,
+  `BusinessSegments=Gaming;ProductOrService=Gaming` 이 다 있다. 섞어 쌓으면
+  매출이 두세 배가 된다. 축 하나만 쓰고 차례는 사업부문 → 제품 → 지역이다.
+  어느 축을 썼는지 화면 제목에 적는다(애플의 영업부문은 지역이다).
+- **부문만 남는 행이 아예 없는 회사가 있다.** 록히드마틴은 부문별 매출을 전부
+  제품/서비스로 한 번 더 갈라 내서 한 축짜리 행이 하나도 없다. 그런 회사에만
+  아래 축으로 더한 값을 쓴다 — 다른 회사에 쓰면 겹쳐서 두 배가 된다.
+- **이름만 바꾼 부문을 합친다.** AMD 가 `DataCenter` 를 `Datacenter` 로, P&G 가
+  `FabricHomeCare` 를 `FabricandHomeCare` 로 고쳤다. 그러면 같은 부문이 두 줄로
+  갈리는데, **새 이름에는 결산 분기 연간값만 있어 되돌릴 앞 분기가 없다** —
+  AMD 데이터센터의 4분기가 통째로 비었다. 대소문자·띄어쓰기·`and` 를 지운 것으로
+  같은 것인지 보고 합친다(값이 어긋나면 합치지 않는다).
+- **태그를 섞지 않는다.** 3분기는 A 태그, 연간은 B 태그로 적힌 회사에서
+  '연간 − 앞 세 분기'가 엉뚱한 값을 냈다. 태그마다 따로 되돌리고 점이 많은
+  태그를 뼈대로 삼는다.
+- **소계 줄을 뺀다.** 코스트코의 `Product` 한 줄이 나머지 넷을 더한 값인데 표에
+  나란히 실린다. 그냥 두면 아래 `seg_fit` 이 그 종목을 통째로 버린다.
+- **누계를 분기로 되돌린다.** `qtrs` 가 기간 길이다(1=분기, 4=연간). 총매출에서
+  겪은 것과 같은 문제라 같은 방법을 쓴다 — 12개월 − 같은 날 시작한 9개월,
+  그것이 없으면 연간 − 앞 세 분기.
+- **벌크는 접수 분기 기준이라 최근 한두 분기가 없다**(2026-08-12 현재 2026q2 는
+  404). 그 구간은 stockanalysis 쪽(`scrape_fin_seg.py`)이 메운다. 그래서 둘 다
+  있으면 stockanalysis 를 쓴다 — 이름도 사람이 쓴 것이라 곱다.
+- **종료일이 월말로 반올림돼 온다.** 엔비디아의 1월 28일 결산이 1월 31일로 온다.
+  총매출 점과 스무 날 안이면 같은 분기로 보고 **그쪽이 매긴 이름을 그대로 쓴다**
+  (`build.py` 의 `seg_align`) — SEC 프레임과 `unstack` 을 거친 이름이라 옳다.
+
 **부문별 매출은 총매출과 대보되, 그걸 근거로 부문을 지우지는 않는다.**
 쌓은 막대가 총매출보다 커지는 종목이 있어서 안 맞는 부문을 빼 맞추게 해봤다.
 더 나빴다 — 웨이스트매니지먼트는 가장 큰 부문(Collection)이 빠져 매출의 37%만
@@ -265,10 +320,16 @@ HKEXnews에서 **이미 공시된 실적**을 모은다. 성격이 다른 걸 �
 | 워크플로 | 주기 | 쓰는 파일 |
 |---|---|---|
 | `collect.yml` | 1시간 | `data/earnings*.json` · `data/caps.json` |
-| `numbers.yml` | 20분 | `data/financials*.json` · `data/segments.json` |
+| `numbers.yml` | 20분 | `data/financials*.json` · `data/segments.json` · `data/desc.json` |
+| `segments.yml` | 하루 | `data/segments_sec.json` |
 
 겹치는 건 만들어진 `index.html` 뿐이고, 그건 합친 자료로 다시 만들면 그만이다.
 새 수집기를 붙일 때도 **어느 쪽이 그 파일의 주인인지 먼저 정하고** 한쪽에만 넣는다.
+
+`segments.yml` 을 따로 뗀 것도 같은 이유다. SEC 벌크를 훑으면 4분이 걸리는데
+20분짜리 `numbers.yml` 에 끼우면 그날 하루 되커밋까지 못 간다. 대신 **평소에는
+아무 일도 안 한다** — SEC 는 이 zip 을 분기에 한 번 내므로 "다음 분기가 나왔나"만
+요청 한 번으로 보고 곧장 끝낸다. 넉 달에 한 번만 진짜로 일한다.
 
 **되커밋에 `git pull --rebase` 를 쓰지 않는다.** 부딪히는 파일은 늘 `data/` 와
 `index.html` — 우리가 방금 만든 것들이다. 리베이스는 충돌 상태로 멈추고, 재시도
