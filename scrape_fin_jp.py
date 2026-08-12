@@ -420,6 +420,71 @@ def dump_names(codes):
                 print(f"    {name:46s} {v:>18,.0f}  {st}~{en}{mark}")
 
 
+def dump_segments(codes):
+    """**부문별 매출이 결산단신 안에 있는가**를 원문으로 확인한다.
+
+    미국은 SEC 벌크에 부문 축이 그대로 있어 전 종목을 한꺼번에 받았다. 일본에도
+    같은 것이 있는지 봐야 하는데, 요약(Summary)에는 확실히 없다 — 거기엔 연결
+    합계만 있다. 첨부(Attachment)에 세그먼트 정보 표가 실리는데, 그것이
+    inline XBRL 로 태그돼 있는지 아니면 그냥 HTML 표인지는 **열어 봐야 안다.**
+    짐작으로 파서를 쓰지 않는다.
+    """
+    want = set(codes)
+    seen = set()
+    for back in range(BACK_DAYS):
+        if not want - seen:
+            break
+        day = (date.today() - timedelta(days=back)).isoformat()
+        try:
+            rows = announcements(day)
+        except Throttled as e:
+            print(f"{day} 목록 실패: {e}")
+            continue
+        for r in rows:
+            if (want and r["code"] not in want) or r["code"] in seen:
+                continue
+            seen.add(r["code"])
+            print(f"\n===== {r['code']} {r['name'][:18]} | {r['title'][:44]}")
+            try:
+                blob = get("https://www.release.tdnet.info/inbs/" + r["zip"], binary=True)
+            except Throttled as e:
+                print("  실패:", e)
+                continue
+            time.sleep(PAUSE)
+            if not blob:
+                continue
+            try:
+                z = zipfile.ZipFile(io.BytesIO(blob))
+            except zipfile.BadZipFile as e:
+                print("  zip 이 아니다:", e)
+                continue
+            att = [n for n in z.namelist() if "Attachment" in n]
+            print(f"  첨부 파일 {len(att)}개: {att[:6]}")
+            for n in att:
+                if not n.lower().endswith((".htm", ".html", ".xbrl")):
+                    continue
+                txt = z.read(n).decode("utf-8", "replace")
+                facts = IX_FACT.findall(txt)
+                seg_ctx, names = set(), {}
+                for attrs, _inner in facts:
+                    a = dict(IX_ATTR.findall(attrs))
+                    cid = a.get("contextRef") or ""
+                    nm = (a.get("name") or "").rsplit(":", 1)[-1]
+                    if re.search(r"Segment|Reportable|セグメント", cid, re.I):
+                        seg_ctx.add(cid)
+                        names[nm] = names.get(nm, 0) + 1
+                print(f"    {n.split('/')[-1][:52]:54s} ix {len(facts):>4}건 "
+                      f"· 세그먼트 문맥 {len(seg_ctx)}")
+                for cid in sorted(seg_ctx)[:8]:
+                    print(f"        문맥 {cid}")
+                for nm, c in sorted(names.items(), key=lambda kv: -kv[1])[:8]:
+                    print(f"        항목 {nm}  {c}건")
+                if "セグメント" in txt and not seg_ctx:
+                    i = txt.find("セグメント")
+                    print("        (세그먼트 글자는 있는데 태그가 없다) "
+                          + TAGS.sub(" ", txt[i:i + 160]).replace("\n", " "))
+
+
 def survey():
     """일본 실적을 **발표 당일에** 주는 곳을 찾는다. 되는 곳만 골라 쓴다."""
     day = date.today().strftime("%Y%m%d")
@@ -691,6 +756,9 @@ def main():
     if "--names" in sys.argv:
         i = sys.argv.index("--names")
         return dump_names([a for a in sys.argv[i + 1:] if not a.startswith("-")])
+    if "--seg" in sys.argv:
+        i = sys.argv.index("--seg")
+        return dump_segments([a for a in sys.argv[i + 1:] if not a.startswith("-")])
     if "--probe" in sys.argv:
         n = [a for a in sys.argv[1:] if a.isdigit()]
         return probe(int(n[0]) if n else 3)

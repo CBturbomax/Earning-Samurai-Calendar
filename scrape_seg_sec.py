@@ -332,14 +332,25 @@ def scan(blob, want_cik, facts, pairs):
                 if old is None or filed > old[1]:   # 나중에 낸 서류가 이긴다
                     slot[key] = (val, filed)
                     kept += 1
-            else:
-                # 아래 축(제품·지역)으로 갈린 값들. 서류 한 장 안에서 더해야
+            elif axis not in facts.get(cik, {}):
+                # 아래 축(제품·지역)으로 갈린 값들. **서류 한 장 안에서** 더해야
                 # 부문 합계가 된다 — 서류가 다르면 같은 분기를 두 번 더한다.
+                # 그렇다고 (접수번호, 종료일, 길이)로 담으면 서류 수만큼 늘어나
+                # 자료가 몇 배로 부푼다(실제로 실행이 메모리에 눌려 기어갔다).
+                # 그래서 칸 하나만 두고 **더 나중 서류가 오면 그 자리를 비운다.**
+                # num.txt 는 접수번호 순이라 한 서류의 줄이 붙어 있고, zip 도
+                # 오래된 분기부터 넣으므로 나중 서류가 늘 뒤에 온다.
+                #
+                # 부문만 남는 행이 이미 있는 회사는 아예 담지 않는다 — 그런
+                # 회사에는 쓸 일이 없다.
                 slot = (pairs.setdefault(cik, {}).setdefault(axis, {})
                         .setdefault(member, {}).setdefault(tag, {}))
-                key = (p[ia], p[idd], qtrs)
+                key = (p[idd], qtrs)
                 cur = slot.get(key)
-                slot[key] = ((cur[0] if cur else 0.0) + val, filed)
+                if cur is None or filed > cur[1]:
+                    slot[key] = (val, filed, p[ia])
+                elif cur[2] == p[ia]:
+                    slot[key] = (cur[0] + val, cur[1], cur[2])
     return kept
 
 
@@ -499,18 +510,11 @@ def build_stock(by_axis, by_pair):
     """부문만 남는 행이 없으면(록히드마틴) 아래 축으로 더한 값을 쓴다."""
     got = pick_axis(by_axis)
     if not got and by_pair:
-        # {(adsh, ddate, qtrs): 합} 을 {(ddate, qtrs): (값, 접수일)} 로 눕힌다.
-        # 같은 분기가 여러 서류에 실리면 나중 것을 쓴다.
-        flat = {}
-        for axis, members in by_pair.items():
-            for m, by_tag in members.items():
-                for tag, raw in by_tag.items():
-                    slot = (flat.setdefault(axis, {}).setdefault(m, {})
-                            .setdefault(tag, {}))
-                    for (_adsh, ds, q), v in raw.items():
-                        old = slot.get((ds, q))
-                        if old is None or v[1] > old[1]:
-                            slot[(ds, q)] = v
+        # 담을 때 이미 서류별로 갈라 더해 두었다. 접수번호만 떼면 된다.
+        flat = {a: {m: {t: {k: (v[0], v[1]) for k, v in raw.items()}
+                        for t, raw in by_tag.items()}
+                    for m, by_tag in members.items()}
+                for a, members in by_pair.items()}
         got = pick_axis(flat)
     if not got:
         return None
