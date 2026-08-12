@@ -10,36 +10,16 @@ on:
 jobs:
   probe:
     runs-on: ubuntu-latest
-    timeout-minutes: 10
+    timeout-minutes: 12
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
         with:
           python-version: '3.12'
 
-      # 같은 코드로 떠보면 엑슨이 나오는데 진짜 실행에서는 안 나온다. 남은
-      # 차이는 '우리가 그 CIK 를 대상에 넣었는가' 하나뿐이라 그것만 본다.
-      - name: 🔎 티커 -> CIK 가 되는가
+      # 481건을 훑고 0건을 얻었다. 진짜 파서를 태워 어디서 떨어지는지 본다.
+      - name: 🇯🇵 결산단신에서 부문이 뽑히나
+        timeout-minutes: 8
         env:
-          SEC_UA: 'Earning Samurai Calendar (cbpark@wisdomasset.co.kr)'
-        run: |
-          python - <<'EOF'
-          import scrape_seg_sec as s
-          cikmap = s.cik_map()
-          print(f"SEC 티커 목록 {len(cikmap):,}개")
-          for t in ("XOM", "CVX", "AAPL", "BRK.B", "PSX"):
-              print(f"  {t:6s} cikmap 에 있나 {t in cikmap}  cik_of -> {s.cik_of(cikmap, t)}")
-
-          caps = s.want_tickers()
-          print(f"\n캘린더 종목 {len(caps):,}개 · 'XOM' 들어 있나 {'XOM' in caps}")
-          miss = [t for t in caps if not s.cik_of(cikmap, t)]
-          print(f"CIK 를 못 찾은 종목 {len(miss):,}개 (앞 20): {sorted(miss)[:20]}")
-
-          by_cik = {}
-          for sym in caps:
-              c = s.cik_of(cikmap, sym)
-              if c:
-                  by_cik.setdefault(c, []).append(sym)
-          print(f"회사 {len(by_cik):,}곳 · 34088(엑슨) 들어 있나 {34088 in by_cik}"
-                f" -> {by_cik.get(34088)}")
-          EOF
+          JP_BACK_DAYS: '8'
+        run: python scrape_fin_jp.py --seg 9432 6758 7203 8035
