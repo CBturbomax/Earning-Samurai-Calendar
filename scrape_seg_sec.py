@@ -72,7 +72,8 @@ BULK = "https://www.sec.gov/files/dera/data/financial-statement-data-sets/{q}.zi
 SEC_UA = os.environ.get("SEC_UA", "Earning Samurai Calendar (cbpark@wisdomasset.co.kr)")
 TICKERS = "https://www.sec.gov/files/company_tickers.json"
 
-SEG_SEC_VER = 1
+# 2: 아래 축을 하나만 고른다 · 종류주에 전부 실어 준다 · 소계는 넷 이상일 때만 뺀다
+SEG_SEC_VER = 2
 # 열두 분기(3년)면 화면에 그리는 스물두 칸의 절반을 넘고, 큰 종목은
 # stockanalysis 가 스무 분기를 채워 준다. 한 분기 zip 이 85MB 라 열여섯으로
 # 늘리면 한 번에 1.4GB 다 — 남의 서버에서 그만큼 받을 이유가 없다.
