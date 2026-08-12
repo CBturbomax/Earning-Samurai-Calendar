@@ -371,9 +371,14 @@ def targets():
     return out
 
 
-def near_days():
-    """{시장:코드: 발표일까지 며칠}. 발표 언저리 종목은 값이 지금 바뀐다."""
+def announcements():
+    """{시장:코드: (가장 가까운 발표일까지 며칠, 이미 지난 마지막 발표일)}.
+
+    뒤엣값이 중요하다. **우리가 받아둔 시점이 그 발표보다 앞서면** 우리 기록은
+    그 발표를 못 담은 것이다 — 지금 당장 다시 받아야 한다.
+    """
     today = date.today()
+    tstr = today.isoformat()
     out = {}
     for market, fn in (("jp", "earnings.json"), ("hk", "earnings_hk.json"),
                        ("us", "earnings_us.json")):
@@ -393,18 +398,37 @@ def near_days():
             except ValueError:
                 continue
             k = f"{market}:{c}"
-            out[k] = min(out.get(k, 9999), gap)
+            cur = out.get(k, (9999, ""))
+            day = r.get("date") or ""
+            out[k] = (min(cur[0], gap),
+                      max(cur[1], day) if day <= tstr else cur[1])
     return out
 
 
-def queue(old, cand, gaps):
-    """받을 순서. 못 받은 것 -> 발표 언저리 -> 오래된 것. 모두 시총 큰 순."""
+def queue(old, cand, ann):
+    """받을 순서.
+
+    -1순위 **방금 발표했는데 우리 기록이 그보다 앞선 것** — 새치기시킨다.
+           이게 없으면 어제 발표한 회사가 삼천 개 대기줄 뒤에 서서 몇 시간을
+           기다린다(루멘텀이 그랬다).
+     0순위 아직 못 받았거나 저장 형식이 헌 것
+     1순위 발표일 언저리인데 오늘 아직 안 받은 것
+     2순위 받은 지 오래된 것
+     3순위 여기에도 자료가 없던 것 — 아주 가끔만
+    같은 순위 안에서는 시가총액이 큰 쪽부터.
+    """
     today = date.today().isoformat()
     stale = (date.today() - timedelta(days=STALE_DAYS)).isoformat()
     cold = (date.today() - timedelta(days=STALE_DAYS * 6)).isoformat()
+    recent = (date.today() - timedelta(days=45)).isoformat()
     picks = []
     for k, cap in cand.items():
         rec = old.get(k)
+        gap, last_ann = ann.get(k, (9999, ""))
+        # 최근에 발표했는데 우리가 그 전에 받아둔 것 -> 그 발표가 안 담겨 있다.
+        if last_ann >= recent and (not rec or (rec.get("ts") or "") < last_ann):
+            picks.append((-1, -cap, k))
+            continue
         if not rec or rec.get("v") != INTL_VER:
             pri = 0
         else:
@@ -413,7 +437,7 @@ def queue(old, cand, gaps):
                 if ts >= cold:
                     continue          # 여기에도 없는 종목. 자주 두드리지 않는다.
                 pri = 3
-            elif gaps.get(k, 9999) <= NEAR_DAYS and ts < today:
+            elif gap <= NEAR_DAYS and ts < today:
                 pri = 1
             elif ts < stale:
                 pri = 2
@@ -458,8 +482,8 @@ def main():
             pass
 
     cand = targets()
-    gaps = near_days()
-    pending = queue(old, cand, gaps)
+    ann = announcements()
+    pending = queue(old, cand, ann)
     todo = pending[:PER_RUN]
     print(f"  받아야 할 종목 {len(pending):,}개 중 이번에 {len(todo)}개 "
           f"(가진 것 {len(old):,}개 / 후보 {len(cand):,}개)")
