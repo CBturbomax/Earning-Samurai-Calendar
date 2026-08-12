@@ -20,6 +20,7 @@ from pathlib import Path
 import companies
 import companies_hk
 import companies_us
+from descriptions import DESC_KO
 from markets import (CAP_STEPS, HK_TYPICAL, HKT, HOLIDAYS, JP_TYPICAL, KST,
                      MARKET_KO, MARKET_ORDER, MARKETS, SECTOR_KO, TIMING_KO,
                      US_AMC, US_BMO, US_EDT, US_EST, US_SECTOR_KO, USD_KRW,
@@ -343,6 +344,21 @@ def load_seg():
 SEG = load_seg()
 
 
+def load_desc():
+    """받아둔 사업 설명 원문. 한국어가 없는 종목에만 쓴다."""
+    p = HERE / "data" / "desc.json"
+    if not p.exists():
+        return {}
+    try:
+        return json.loads(p.read_text(encoding="utf-8")).get("stocks", {})
+    except (ValueError, OSError) as e:
+        print(f"  ! desc.json 읽기 실패: {e}")
+        return {}
+
+
+DESC = load_desc()
+
+
 def _median(xs):
     s = sorted(xs)
     return s[len(s) // 2] if s else 0.0
@@ -618,6 +634,11 @@ def build():
         "fin": {s: pack_fin(rec) for s, rec in FIN.items()
                 if (rec.get("points") or rec.get("eps"))
                 and s in {p[9] + ":" + p[1] for p in packed}},
+        # 무엇을 파는 회사인가. 한국어는 사람이 쓴 것(descriptions.py), 원문은
+        # 받아온 것(desc.json). 화면에 실린 종목 것만 싣는다.
+        "descKo": {k: v for k, v in DESC_KO.items() if k in on_screen},
+        "desc": {k: v["t"] for k, v in DESC.items()
+                 if v.get("t") and k in on_screen and k not in DESC_KO},
         # 사업부별 매출. "매출이 늘었다"보다 "어디서 늘었다"가 중요할 때가 있다.
         # 지금은 미국 종목만 — 일본·홍콩은 소스에 부문 페이지가 없다.
         # 합이 총매출과 안 맞는 종목은 여기서 걸러진다(seg_fit).
@@ -899,6 +920,18 @@ button.btn:disabled:hover { border-color:var(--line); color:var(--fg); }
 /* 발표일은 지났는데 수치를 아직 못 받은 것. 발표된 건 확실하므로 ✓ 를 달되,
    눌러도 볼 게 없으니 흐리게 둔다 — 진한 ✓ 와 한눈에 갈려야 한다. */
 .tm.over { color:var(--ok); border:1px solid #24463a; opacity:.55; }
+/* 무엇을 파는 회사인가 — 팝업 맨 위 한 줄 */
+.biz {
+  margin:0 0 14px; padding:12px 14px; border-radius:10px;
+  background:#141c24; border-left:3px solid var(--a1);
+  font-size:19px; line-height:1.55; color:var(--fg);
+}
+.biz.raw { border-left-color:var(--line); color:var(--mute); font-size:17px; }
+.biz .tagx {
+  display:inline-block; margin-right:8px; padding:1px 7px; border-radius:5px;
+  background:#1e2a35; color:#8fb8dc; font-size:13px; vertical-align:1px;
+}
+
 /* 칩의 시총 표기 */
 .chip .cc {
   flex:0 0 auto; font-size:13px; color:#8fb8dc; font-variant-numeric:tabular-nums;
@@ -1843,14 +1876,27 @@ function curOf(code) {
   const c = code || 'USD';
   return { ko: CUR[c] || c, steps: CUR_BIG[c] ? STEP_BIG : STEP_SM };
 }
+/* **무엇을 파는 회사인가.** 업종 이름만으로는 안 보인다 — 'ONEOK 에너지'라고
+   적어봐야 뭘 파는지 모른다. 한국어 설명이 있으면 그걸 쓰고, 아직 안 쓴 종목은
+   받아온 원문을 그대로 보인다. 원문은 영어·일본어라 「원문」이라고 적어 둔다. */
+function bizLine(m, code) {
+  const key = m + ':' + code;
+  const ko = D.descKo && D.descKo[key];
+  if (ko) return '<p class="biz">' + esc(ko) + '</p>';
+  const raw = D.desc && D.desc[key];
+  if (!raw) return '';
+  return '<p class="biz raw"><span class="tagx">원문</span>' + esc(raw) + '</p>';
+}
+
 function finBlock(m, code) {
   const key = m + ':' + code;
   const f = D.fin[key], sg = D.seg[key];
-  if (!f) return sg
+  const biz = bizLine(m, code);
+  if (!f) return biz + (sg
     ? '<div class="finwrap">' + segChart(sg, 'USD') + '</div>'
     : '<p class="finnote">이 종목은 아직 실적 수치를 받지 않았습니다. ' +
-      '시가총액 큰 종목부터 채우는 중입니다.</p>';
-  let html = '';
+      '시가총액 큰 종목부터 채우는 중입니다.</p>');
+  let html = biz;
   if (f.eps) {
     const u = f.eps.upcoming, d = f.eps.done.slice(-4);
     html += '<div class="epsrow">' +
