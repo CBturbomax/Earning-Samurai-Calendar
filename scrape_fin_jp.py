@@ -318,11 +318,23 @@ def seg_member(cid):
     return rest[-1] if rest else ""
 
 
+# 회계기준이 정해 둔 '그 밖' 바구니. 이름이 그대로 나오면 범례 한 줄이 화면을
+# 가로지른다. 뜻은 「보고부문에 넣지 않은 사업」이라 '기타'가 맞다.
+SEG_RENAME = {
+    "OperatingSegmentsNotIncludedInReportableSegmentsAndOther"
+    "RevenueGeneratingBusinessActivities": "Other",
+    "OtherOperatingSegments": "Other",
+    "AllOtherSegments": "Other",
+}
+
+
 def seg_name(member):
     """'tse-qcediffr-94320IntegratedICTBusinessReportableSegmentMember'
        -> 'Integrated ICT Business'. 못 다듬으면 원래 이름."""
     m = SEG_PREFIX.sub("", member.split(":")[-1])
     m = SEG_SUFFIX.sub("", m) or m
+    if m in SEG_RENAME:
+        return SEG_RENAME[m]
     out = re.sub(r"(?<=[a-z0-9])(?=[A-Z])|(?<=[A-Z])(?=[A-Z][a-z])", " ", m).strip()
     return out or member
 
