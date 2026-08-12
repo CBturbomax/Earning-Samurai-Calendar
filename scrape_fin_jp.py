@@ -53,7 +53,8 @@ PAUSE = float(os.environ.get("JP_PAUSE", "0.5"))
 BACK_DAYS = int(os.environ.get("JP_BACK_DAYS", "10"))   # 며칠치를 훑나
 GIVE_UP_AFTER = 6
 JP_VER = 1
-SEG_JP_VER = 1
+# 2: 문맥을 zip 전체에서 모은다 · 수식어를 부문으로 읽지 않는다
+SEG_JP_VER = 2
 
 # 결산단신인지 가리는 말. '決算短信' 이 들어가면 실적 발표다.
 # (「業績予想の修正」 같은 것은 실적 발표가 아니라 예상 수정이라 뺀다.)
@@ -267,8 +268,14 @@ def read_summary(blob):
 # 뽑는다. 남의 서버를 두 배로 두드릴 이유가 없다.
 SEG_CTX = re.compile(r"(Segment|Reportable)", re.I)
 SEG_TOTAL = re.compile(r"^(Reportable)?Segments?(Total)?Member$", re.I)
-SEG_SKIP = re.compile(r"Elimination|Adjustment|Reconcil|Total|Consolidated|"
-                      r"InterSegment|Other[A-Z]*Adjust", re.I)
+# **`Consolidated` 를 여기 넣으면 안 된다.** TDnet 문맥 이름의 `ConsolidatedMember`
+# 는 '조정 항목'이 아니라 **연결 기준**이라는 뜻이다. 넣었더니 부문 행이 통째로
+# 걸러졌다. 마찬가지로 `Total` 은 SEG_TOTAL 이 이름 전체로 가려 준다.
+SEG_SKIP = re.compile(r"Elimination|Adjustment|Reconcil|InterSegment|"
+                      r"Other[A-Z]*Adjust", re.I)
+# 문맥 이름은 '기간_수식어_부문' 이다. 수식어(연결·실적 구분)를 부문으로 읽지 않는다.
+SEG_QUALIFIER = re.compile(
+    r"^(Non)?Consolidated(Member)?$|^Result(Member)?$|^Member$", re.I)
 # 부문 이름 앞에 붙는 회사별 접두사. `tse-qcediffr-94320IntegratedICT…` 처럼
 # 스키마 이름과 증권코드가 통째로 붙어 온다.
 SEG_PREFIX = re.compile(r"^[a-z]+-[a-z0-9]+-\d+")
@@ -285,6 +292,21 @@ SEG_REV = ["TransactionsWithExternalCustomersIFRS",
            # 외부 매출이 따로 없는 회사는 부문 매출(내부 포함)을 쓴다.
            "OperatingRevenuesIFRS", "RevenueIFRS", "NetSales", "OperatingRevenues"]
 SEG_REV_RANK = {t: i for i, t in enumerate(SEG_REV)}
+
+
+def seg_member(cid):
+    """문맥 이름에서 **부문 쪽만** 떼어낸다. 아니면 빈 문자열.
+
+    'CurrentYTDDuration_ConsolidatedMember_tse-…IntegratedICTBusinessReportableSegmentMember'
+    처럼 앞에 기간과 수식어가 붙는다. 첫 밑줄 뒤를 통째로 부문으로 읽으면
+    'ConsolidatedMember_…' 가 되어 걸러진다.
+    """
+    parts = cid.split("_")[1:]
+    for p in parts:
+        if SEG_CTX.search(p) and not SEG_QUALIFIER.match(p):
+            return p
+    rest = [p for p in parts if not SEG_QUALIFIER.match(p)]
+    return rest[-1] if rest else ""
 
 
 def seg_name(member):
@@ -306,20 +328,23 @@ def read_segments(blob):
         z = zipfile.ZipFile(io.BytesIO(blob))
     except zipfile.BadZipFile:
         return []
-    names = [n for n in z.namelist()
-             if "Attachment" in n and n.lower().endswith(("ixbrl.htm", ".xbrl"))]
-
-    out = {}
-    for n in names:
+    docs = {}
+    for n in z.namelist():
+        if not n.lower().endswith(("ixbrl.htm", ".xbrl")):
+            continue
         try:
-            txt = z.read(n).decode("utf-8", "replace")
+            docs[n] = z.read(n).decode("utf-8", "replace")
         except (KeyError, OSError):
-            continue
-        if not SEG_CTX.search(txt):
-            continue
+            pass
 
-        periods = {}
+    # **문맥은 zip 전체에서 모은다.** 결산단신의 첨부는 여러 장이 한 벌인데
+    # `<xbrli:context>` 정의는 그중 한 장에만 들어 있다. 세그먼트 장만 읽으면
+    # 문맥을 하나도 못 찾아 모든 값이 버려진다 — 실제로 481건을 훑고 0건을 얻었다.
+    periods = {}
+    for txt in docs.values():
         for cid, body in CTX_RE.findall(txt):
+            if cid in periods:
+                continue
             st = en = ""
             for kind, val in DATE_TAG.findall(body):
                 if kind.lower() == "startdate":
@@ -328,6 +353,11 @@ def read_segments(blob):
                     en = val
             if st and en:
                 periods[cid] = (st, en)
+
+    out = {}
+    for n, txt in docs.items():
+        if "Attachment" not in n or not SEG_CTX.search(txt):
+            continue
 
         for attrs, inner in IX_FACT.findall(txt):
             a = dict(IX_ATTR.findall(attrs))
@@ -338,8 +368,7 @@ def read_segments(blob):
                 continue
             if FORECAST_CTX.search(cid) or cid not in periods:
                 continue
-            # 문맥 이름은 '기간_부문' 이다. 부문 쪽만 떼어 본다.
-            member = cid.split("_", 1)[1] if "_" in cid else ""
+            member = seg_member(cid)
             if not member or SEG_TOTAL.match(member) or SEG_SKIP.search(member):
                 continue
             digits = re.sub(r"[^\d.-]", "", TAGS.sub("", inner))
@@ -603,8 +632,19 @@ def dump_segments(codes):
             except zipfile.BadZipFile as e:
                 print("  zip 이 아니다:", e)
                 continue
+            # **진짜 파서를 태워 본다.** 눈으로 태그가 보이는 것과 우리 파서가
+            # 뽑아내는 것은 다른 일이다 — 실제로 첫 실행이 481건에서 0건을 얻었다.
+            got = read_segments(blob)
+            print(f"  read_segments -> 기간 {len(got)}개")
+            for st, en, row in got[:3]:
+                print(f"    {st}~{en} {list(row)[:6]}")
+
             att = [n for n in z.namelist() if "Attachment" in n]
             print(f"  첨부 파일 {len(att)}개: {att[:6]}")
+            ctx_here = sum(len(CTX_RE.findall(
+                z.read(n).decode('utf-8', 'replace'))) for n in att
+                if n.lower().endswith(("ixbrl.htm", ".xbrl")))
+            print(f"  첨부 안의 <context> 정의 {ctx_here}개")
             for n in att:
                 if not n.lower().endswith((".htm", ".html", ".xbrl")):
                     continue
