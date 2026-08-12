@@ -54,7 +54,8 @@ BACK_DAYS = int(os.environ.get("JP_BACK_DAYS", "10"))   # 며칠치를 훑나
 GIVE_UP_AFTER = 6
 JP_VER = 1
 # 2: 문맥을 zip 전체에서 모은다 · 수식어를 부문으로 읽지 않는다
-SEG_JP_VER = 2
+# 3: 합계 줄을 뺀다(전사 합계·보고부문 계) · 문자가 든 증권코드 접두사
+SEG_JP_VER = 3
 
 # 결산단신인지 가리는 말. '決算短信' 이 들어가면 실적 발표다.
 # (「業績予想の修正」 같은 것은 실적 발표가 아니라 예상 수정이라 뺀다.)
@@ -267,7 +268,12 @@ def read_summary(blob):
 # 그래서 **요청을 한 번도 더 하지 않는다.** 실적 수치를 뽑는 그 zip 에서 같이
 # 뽑는다. 남의 서버를 두 배로 두드릴 이유가 없다.
 SEG_CTX = re.compile(r"(Segment|Reportable)", re.I)
-SEG_TOTAL = re.compile(r"^(Reportable)?Segments?(Total)?Member$", re.I)
+# **결산단신의 세그먼트 표에는 합계 줄이 늘 들어 있다.** 그것도 두 벌씩이다 —
+# `TotalOfReportableSegmentsAndOthersMember`(보고부문 계)와 `EntityTotalMember`
+# (전사 합계). 부문으로 세면 매출이 두 배 세 배가 된다. 처음에 이름을
+# `^ReportableSegmentsMember$` 하나로만 걸렀다가 177종목에 그 두 줄이 다 실렸다.
+SEG_TOTAL = re.compile(r"^Total|EntityTotal|TotalOfReportableSegments|"
+                       r"^(Reportable)?Segments?(Total)?Member$", re.I)
 # **`Consolidated` 를 여기 넣으면 안 된다.** TDnet 문맥 이름의 `ConsolidatedMember`
 # 는 '조정 항목'이 아니라 **연결 기준**이라는 뜻이다. 넣었더니 부문 행이 통째로
 # 걸러졌다. 마찬가지로 `Total` 은 SEG_TOTAL 이 이름 전체로 가려 준다.
@@ -278,7 +284,10 @@ SEG_QUALIFIER = re.compile(
     r"^(Non)?Consolidated(Member)?$|^Result(Member)?$|^Member$", re.I)
 # 부문 이름 앞에 붙는 회사별 접두사. `tse-qcediffr-94320IntegratedICT…` 처럼
 # 스키마 이름과 증권코드가 통째로 붙어 온다.
-SEG_PREFIX = re.compile(r"^[a-z]+-[a-z0-9]+-\d+")
+# 접두사는 '스키마이름-스키마이름-증권코드5자리' 다. 증권코드는 숫자만이 아니다 —
+# 438A 같은 회사는 `tse-qcedjpsm-438A0` 이라, `\d+` 로 잡으면 `438` 까지만 떨어져
+# 부문 이름이 'A0 Merchant Platform Business' 로 나온다. 다섯 자리를 통째로 뗀다.
+SEG_PREFIX = re.compile(r"^[a-z]+-[a-z0-9]+-[0-9A-Za-z]{5}")
 SEG_SUFFIX = re.compile(r"(Reportable)?Segments?Member$|Member$")
 
 # **외부 고객 매출을 쓴다.** 부문 매출에는 부문끼리 주고받은 것(InterSegment)이
@@ -422,6 +431,40 @@ def seg_quarters(points):
             if len(cut) >= 2:
                 out[en] = cut
     return out
+
+
+def drop_totals(q):
+    """다른 부문을 다 더한 것과 같은 줄은 합계다 — 이름으로 못 거른 것을 값으로 잡는다.
+
+    이름 목록은 언제나 모자란다. 회사가 제 나름의 합계 멤버를 만들어 쓰면 그대로
+    부문으로 세어져 매출이 두 배가 된다. 그래서 마지막에 값으로 한 번 더 본다:
+    **모든 기간에서** 나머지를 다 더한 것과 3% 안으로 같으면 합계다.
+    한 기간이라도 어긋나면 손대지 않는다 — 진짜 부문을 지우는 쪽이 더 나쁘다.
+    """
+    for _ in range(2):
+        names = set()
+        for row in q.values():
+            names |= set(row)
+        if len(names) < 3:
+            break
+        hit_name = None
+        for m in names:
+            hit = tot = 0
+            for row in q.values():
+                v, others = row.get(m), sum(x for k, x in row.items() if k != m)
+                if not v or not others:
+                    continue
+                tot += 1
+                if abs(v - others) / v < 0.03:
+                    hit += 1
+            if tot >= 2 and hit == tot:
+                hit_name = m
+                break
+        if not hit_name:
+            break
+        for row in q.values():
+            row.pop(hit_name, None)
+    return {e: row for e, row in q.items() if len(row) >= 2}
 
 
 def pick(vals, names):
@@ -972,7 +1015,7 @@ def save_segments(raw, seg_done=(), quiet=False):
             st, _, en = span.partition("/")
             if st and en:
                 pts.append((st, en, row))
-        q = seg_quarters(pts)
+        q = drop_totals(seg_quarters(pts))
         if len(q) < 2:
             continue
         ends = sorted(q)[-20:]
