@@ -58,13 +58,26 @@ JP_VER = 1
 TANSHIN = re.compile(r"決算短信")
 NOT_TANSHIN = re.compile(r"予想|修正|訂正")
 
-# 목록 표의 한 줄. 시각·코드·회사명·제목·문서번호가 들어 있다.
+# 목록 표의 한 줄. 실제 생김새는 이렇다(원문을 찍어 확인했다).
+#
+#   <td class="oddnew-L kjTime" noWrap>18:30</td>
+#   <td class="oddnew-M kjCode" noWrap>389A0</td>
+#   <td class="oddnew-M kjName" noWrap>Ｐ－八光オート  </td>
+#   <td class="oddnew-M kjTitle" align="left"><a href="140120260812518506.pdf" ...>제목</a></td>
+#   <td class="oddnew-M kjXbrl" noWrap align="center"> </td>
+#
+# **클래스 이름이 둘씩 붙어 있다**(`oddnew-M kjTitle`). 처음에 `class="kjTitle"`
+# 로 잡았다가 하루 종일 0건을 봤다. 그리고 **XBRL 은 제목이 아니라 kjXbrl 칸**에
+# 따로 달린다 — 결산단신에만 있고 「업적예상 수정」 같은 것에는 없다.
 ROW_RE = re.compile(
-    r'<td class="kjTime">(?P<time>[\d:]+)</td>.*?'
-    r'<td class="kjCode">(?P<code>\w+)</td>.*?'
-    r'<td class="kjName">(?P<name>.*?)</td>.*?'
-    r'<td class="kjTitle"><a href="(?P<doc>[^"]+)\.pdf[^"]*">(?P<title>.*?)</a>',
+    r'<td class="[^"]*kjTime"[^>]*>(?P<time>[^<]*)</td>\s*'
+    r'<td class="[^"]*kjCode"[^>]*>(?P<code>[^<]*)</td>\s*'
+    r'<td class="[^"]*kjName"[^>]*>(?P<name>[^<]*)</td>\s*'
+    r'<td class="[^"]*kjTitle"[^>]*>(?P<titlecell>.*?)</td>\s*'
+    r'<td class="[^"]*kjXbrl"[^>]*>(?P<xbrlcell>.*?)</td>',
     re.S)
+LINK_RE = re.compile(r'href="([^"]+)"')
+ZIP_RE = re.compile(r'href="([^"]+\.zip)"')
 
 TAGS = re.compile(r"<[^>]+>")
 
@@ -93,16 +106,25 @@ def get(url, binary=False, timeout=30):
 
 
 def listing(day, page=1):
-    """하루치 목록 한 쪽 -> [{time, code, name, title, doc}]."""
+    """하루치 목록 한 쪽 -> [{time, code, name, title, zip}].
+
+    코드는 다섯 자리로 온다(`389A0`). 마지막 한 자리는 검사용이라 **앞 넉 자**가
+    우리가 쓰는 종목 코드다.
+    """
     txt = get(LIST_URL.format(page=page, day=day.replace("-", "")))
     if txt is None:
         return []
     out = []
     for m in ROW_RE.finditer(txt):
         d = m.groupdict()
-        d["name"] = TAGS.sub("", d["name"]).strip()
-        d["title"] = TAGS.sub("", d["title"]).strip()
-        out.append(d)
+        zip_m = ZIP_RE.search(d["xbrlcell"] or "")
+        out.append({
+            "time": d["time"].strip(),
+            "code": d["code"].strip()[:4],
+            "name": TAGS.sub("", d["name"]).strip(),
+            "title": TAGS.sub("", d["titlecell"]).strip(),
+            "zip": zip_m.group(1) if zip_m else "",
+        })
     return out
 
 
@@ -114,7 +136,8 @@ def announcements(day):
         if not rows:
             break
         for r in rows:
-            if TANSHIN.search(r["title"]) and not NOT_TANSHIN.search(r["title"]):
+            if (TANSHIN.search(r["title"]) and not NOT_TANSHIN.search(r["title"])
+                    and r["zip"]):
                 got.append(r)
         page += 1
         time.sleep(PAUSE)
@@ -238,7 +261,9 @@ def dump_rows():
         if not body:
             continue
         txt = body.decode("utf-8", "replace")
-        i = txt.find("kjTitle")
+        i = txt.find("決算短信")
+        if i < 0:
+            i = txt.find("kjTitle")
         if i < 0:
             print("    kjTitle 이 없다. 그날은 공시가 없었을 수 있다.")
             continue
@@ -303,9 +328,9 @@ def probe(days=3):
         if not tan:
             continue
         r = tan[0]
-        print(f"  -> XBRL 받아본다: {r['doc']}")
+        print(f"  -> XBRL 받아본다: {r['zip']}")
         try:
-            blob = get(ZIP_URL.format(doc=r["doc"]), binary=True)
+            blob = get("https://www.release.tdnet.info/inbs/" + r["zip"], binary=True)
         except Throttled as e:
             print("    zip 실패:", e)
             continue
