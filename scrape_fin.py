@@ -76,7 +76,10 @@ SINCE = "2018-10-01"                                  # 1Q19 부터 보려면 �
 #           스물두 개짜리를 이겼다(엑슨이 실행마다 22개와 2개를 오갔다).
 #   5 -> 6  영업이익·순이익도 companyfacts 에서 같이 꺼낸다. 그 전에는 매출만
 #           찾아서 코카콜라·비자·아메리칸타워에 영업이익률 선이 없었다.
-FIN_VER = 6
+#   6 -> 7  결산 분기를 누적값에서 빼서 되살린다. 그 전에는 회사마다 한 분기가
+#           매년 통째로 비었다(자료 있는 1,560종목 중 1,504종목). 분기로 보는
+#           길이도 60~125일로 넓혔다 — 코스트코의 16주 분기가 빠지고 있었다.
+FIN_VER = 7
 
 BACKOFF = (0, 5, 20, 60)   # SEC 가 막으면 쉬었다 다시. 없는 태그(404)는 재시도 않는다.
 GIVE_UP_AFTER = 5          # 연속 이만큼 막히면 이번 실행은 접는다
@@ -109,42 +112,112 @@ def get(url, ua, timeout=30):
         raise Throttled(str(e))
 
 
-def quarters(units):
-    """companyconcept 응답에서 분기 값·연간 값을 갈라 담는다.
+def mid_of(s, e):
+    """기간의 한가운데. 분기를 가르는 기준이다."""
+    return (s + (e - s) / 2).isoformat()
 
-    기간 길이로 가른다 — 80~100일이면 분기, 350~380일이면 연간이다.
+
+FRAME_RE = re.compile(r"^CY(\d{4})Q([1-4])$")
+
+
+def frame_q(frame):
+    """SEC 가 스스로 매긴 분기 이름('CY2025Q1' -> '1Q25'). 없으면 빈 문자열.
+
+    한가운데로 가르는 것도 회계 분기가 달력과 여섯 주쯤 어긋나면 빗나간다 —
+    코스트코는 2~5월 분기와 11~2월 분기가 둘 다 1분기로 떨어져 라벨이 겹쳤다.
+    SEC 가 프레임을 매겨 놨으면 그게 정답이다. 끝에 I 가 붙은 것(CY2025Q1I)은
+    시점 값이라 기간이 아니므로 쓰지 않는다.
+    """
+    m = FRAME_RE.match(str(frame or ""))
+    return f"{int(m.group(2))}Q{int(m.group(1)) % 100:02d}" if m else ""
+
+
+def quarters(units):
+    """companyconcept 응답 -> ({종료일: (값, 한가운데)}, 연간도 같은 꼴).
+
+    기간 길이로 가른다. 350~380일이면 연간이고, **60~125일이면 분기**다.
+    예전에는 80~100일만 분기로 봤는데 그러면 코스트코가 부서진다 — 4분기가
+    16주(112일)라 통째로 빠지고, 남은 분기도 라벨이 겹쳤다.
+
+    **결산 분기는 따로 신고되지 않는다.** 이게 컸다. 회사는 10-Q 를 세 번 내고
+    마지막 분기는 10-K 안에 **연간 값**으로만 싣는다. 그래서 길이로만 거르면
+    회사마다 한 분기가 매년 통째로 빈다.
+
+      애플    3Q(7~9월)가 매년 없었다      마이크로소프트  2Q가 매년 없었다
+      코카콜라 4Q가 매년 없었다            오라클        스물넷 중 여덟만 남았다
+
+    SEC 자료가 있는 미국 종목 1,560개 중 1,504개(96.4%)가 그랬다. 넉 잔 중 한 잔이
+    비어 있던 셈이다.
+
+    그래서 **누적값에서 빼서 되살린다.** 12개월치에서 같은 날 시작한 9개월치를
+    빼면 결산 분기가 나온다. 6개월에서 3개월을 빼면 2분기가 나온다. 52/53주
+    회계력이라 시작일이 며칠씩 어긋나므로 이레까지는 같은 시작으로 본다.
+    진짜로 신고된 분기 값이 있으면 그쪽이 우선이다 — 뺀 값은 어디까지나 유도한
+    값이다.
 
     열쇠는 **종료일 하나**다. 시작일까지 묶으면 안 된다: 태그마다, 또 매출과
     영업이익 사이에도 시작일이 하루씩 어긋날 때가 있어서 같은 분기가 둘로 갈라지고
-    영업이익이 매출에 안 붙는다.
+    영업이익이 매출에 안 붙는다. 대신 **기간 한가운데**를 값에 붙여 둔다 —
+    분기 이름은 끝난 날이 아니라 한가운데로 갈라야 하는데(코카콜라 1~3월 분기가
+    4월 3일에 끝난다), 길이가 제각각이면 '끝나기 45일 전'으로는 어림이 안 된다.
 
     같은 분기가 10-Q 와 나중의 10-K 에 중복해 실린다. 나중 제출본이 정정된 값이므로
     뒤에 나온 것으로 덮는다(응답이 제출 순서대로 온다).
     """
-    q, a = {}, {}
+    rows = []
     for x in units:
         s, e, v = x.get("start"), x.get("end"), x.get("val")
         if not s or not e or v is None or e < SINCE:
             continue
-        days = (date.fromisoformat(e) - date.fromisoformat(s)).days
-        if 80 <= days <= 100:
-            q[e] = v
+        try:
+            ds, de = date.fromisoformat(s), date.fromisoformat(e)
+        except ValueError:
+            continue
+        if de < ds:
+            continue
+        rows.append((ds, de, (de - ds).days + 1, float(v), frame_q(x.get("frame"))))
+
+    q, a = {}, {}
+    for ds, de, days, v, fr in rows:
+        if 60 <= days <= 125:
+            q[de.isoformat()] = (v, mid_of(ds, de), fr)
         elif 350 <= days <= 380:
-            a[e] = v
+            a[de.isoformat()] = (v, mid_of(ds, de), "")
+
+    # 누적값 - 그보다 짧은 같은 시작의 누적값 = 마지막 조각.
+    derived = {}
+    for ds, de, days, v, _fr in rows:
+        if days <= 125:
+            continue
+        prev = None
+        for ps, pe, _pd, pv, _pf in rows:
+            if pe >= de or abs((ps - ds).days) > 7:
+                continue
+            if not 55 <= (de - pe).days <= 125:
+                continue          # 남는 조각이 한 분기여야 한다
+            if prev is None or pe > prev[0]:
+                prev = (pe, pv)
+        if prev:
+            derived[de.isoformat()] = (v - prev[1],
+                                       mid_of(prev[0] + timedelta(days=1), de), "")
+    for k, val in derived.items():
+        q.setdefault(k, val)      # 신고된 분기 값이 있으면 그쪽이 우선
     return q, a
 
 
-def label_of(end):
-    """분기말 날짜 -> '2Q26'. **끝난 날이 아니라 기간의 한가운데**로 가른다.
+def label_of(mid):
+    """**기간 한가운데** 날짜 -> '2Q26'.
 
-    회계 분기는 달력에 딱 맞지 않는다. 끝난 날로 가르면 이렇게 어긋난다.
+    회계 분기는 달력에 딱 맞지 않아서 끝난 날로 가르면 어긋난다.
 
       코카콜라  1~3월 분기가 4월 3일에 끝난다  -> 2Q26 (틀림, 1Q26 이 맞다)
       모토로라  4~6월 분기가 7월 4일에 끝난다  -> 3Q26 (틀림, 2Q26 이 맞다)
 
-    끝나기 45일 전, 즉 기간 한가운데를 보면 제대로 갈린다.
+    한가운데를 보면 제대로 갈린다. 예전에는 '끝나기 45일 전'으로 어림했는데,
+    분기 길이가 회사마다 다르면(코스트코 4분기는 16주) 그 어림이 빗나가
+    라벨이 겹쳤다. 지금은 시작일·종료일로 실제 한가운데를 구해 넘긴다.
     """
-    d = date.fromisoformat(end) - timedelta(days=45)
+    d = date.fromisoformat(mid)
     return f"{(d.month - 1) // 3 + 1}Q{d.year % 100:02d}"
 
 
@@ -197,7 +270,7 @@ def compatible(base, add):
     if not shared:
         return True
     for k in shared:
-        b, a = base[k], add[k]
+        b, a = base[k][0], add[k][0]
         if not b:
             continue
         if abs(a - b) / abs(b) > 0.05:
@@ -222,12 +295,12 @@ def plausible(rev_q, rev_a):
     """
     if not rev_a or len(rev_q) < 2:
         return True
-    for end, year_val in rev_a.items():
+    for end, (year_val, _mid) in rev_a.items():
         if not year_val:
             continue
         y_end = date.fromisoformat(end)
         y_start = date(y_end.year - 1, y_end.month, 1)
-        qs = [v for e, v in rev_q.items() if y_start.isoformat() < e <= end]
+        qs = [v[0] for e, v in rev_q.items() if y_start.isoformat() < e <= end]
         # 그 해 분기가 다 모여 있지 않아도 된다. 평균 분기에 넷을 곱해 견준다 —
         # 넉 개가 다 있는 해만 따지면 중간중간 빠진 회사는 영영 못 걸러낸다
         # (UBS 가 그랬다: 분기가 띄엄띄엄 열넷이라 온전한 해가 없었다).
@@ -445,11 +518,17 @@ def series(cik, budget=None):
         "cur": cur or "USD",
         "src": "sec",
         "points": [{
-            "label": label_of(e) if use_q else str(date.fromisoformat(e).year),
+            "label": ((rev[e][2] or label_of(rev[e][1])) if use_q
+                      else str(date.fromisoformat(e).year)),
             "end": e,
-            "rev": rev[e],
-            "opi": opi.get(e),
-            "ni": ni.get(e),
+            # 기간 한가운데. 분기 이름은 이걸로 가른다 — 길이가 제각각이라
+            # '끝나기 45일 전'으로는 코스트코(16주 분기)가 어긋난다.
+            "mid": rev[e][1],
+            # SEC 가 스스로 매긴 분기가 있으면 그게 정답이다.
+            "q": rev[e][2],
+            "rev": rev[e][0],
+            "opi": (opi.get(e) or (None,))[0],
+            "ni": (ni.get(e) or (None,))[0],
         } for e in ends],
     }
 
@@ -532,7 +611,41 @@ def queue(old, cand):
     return [s for _, _, s in picks]
 
 
+def probe(syms):
+    """몇 종목만 떠본다 — 분기가 빠짐없이 나오는지 눈으로 본다."""
+    cik = {v["ticker"].upper(): v["cik_str"]
+           for v in get(TICKERS, SEC_UA).values()}
+    for sym in syms:
+        print(f"\n===== {sym}")
+        c = cik.get(sym)
+        if not c:
+            print("  CIK 를 못 찾음")
+            continue
+        try:
+            rec = series(c)
+        except Throttled as e:
+            print("  막힘:", e)
+            continue
+        if not rec:
+            print("  자료 없음")
+            continue
+        pts = rec["points"]
+        labs = [p["label"] for p in pts]
+        print(f"  {rec['freq']} {len(pts)}개 · {rec['cur']} · "
+              f"{pts[0]['end']} ~ {pts[-1]['end']}")
+        print("  라벨:", " ".join(labs[-14:]))
+        dup = [l for l in set(labs) if labs.count(l) > 1]
+        print("  겹친 라벨:", dup or "없음")
+        for p in pts[-3:]:
+            print(f"    {p['end']}  {p['label']}  매출 {p['rev']/1e6:>12,.0f}M  "
+                  f"영업익 {(p.get('opi') or 0)/1e6:>10,.0f}M"
+                  f"{'  [SEC 프레임]' if p.get('q') else ''}")
+
+
 def main():
+    if "--probe" in sys.argv:
+        rest = [a for a in sys.argv[2:] if not a.startswith("-")]
+        return probe(rest or ["AAPL", "MSFT", "KO", "COST", "ORCL", "JCI"])
     OUT.parent.mkdir(parents=True, exist_ok=True)
     old = {}
     if OUT.exists():

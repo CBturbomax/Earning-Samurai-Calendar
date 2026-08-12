@@ -1,24 +1,33 @@
-# 새 소스를 붙이기 전에 응답 생김새를 눈으로 본다.
+# 새 소스나 고친 수집기를 전체에 풀기 전에 몇 종목만 떠본다.
 #
-# 지금 볼 것: **사업부별 매출(세그먼트)**.
-# SEC 의 companyfacts/companyconcept 는 부문 축(dimension)을 떨어뜨리고 연결
-# 합계만 준다 — 그래서 거기서는 부문별을 못 뽑는다. stockanalysis 에는
-# revenue-by-segment 페이지가 따로 있으니 그 응답을 뜯어본다.
+# 지금 볼 것: **결산 분기 복원**.
+# 회사는 10-Q 를 세 번 내고 마지막 분기는 10-K 안에 연간 값으로만 싣는다. 기간
+# 길이로만 거르면 회사마다 한 분기가 매년 통째로 빠진다 — 애플은 3Q, 코카콜라는
+# 4Q 가 없었다. 누적값에서 빼서 되살리도록 고쳤으니 정말 메워지는지 본다.
+#
+# 코스트코는 4분기가 16주라 라벨이 겹쳤고, 오라클은 스물넷 중 여덟만 남았으며,
+# 존슨컨트롤스는 매출 태그 자체가 틀렸다. 그 넷을 같이 본다.
 name: 소스 접근 확인
 on:
   workflow_dispatch:
+    inputs:
+      syms:
+        description: '떠볼 종목 (빈칸이면 AAPL MSFT KO COST ORCL JCI)'
+        required: false
   push:
     paths: ['.github/workflows/probe.yml']
 jobs:
   probe:
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    timeout-minutes: 20
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
         with:
           python-version: '3.12'
 
-      - name: 🧩 사업부별 매출 — 수집기가 실제로 뽑아내는가
+      - name: 📈 결산 분기가 메워지는가 (SEC)
         continue-on-error: true
-        run: python scrape_fin_seg.py --probe
+        env:
+          SEC_UA: 'Earning Samurai Calendar (cbpark@wisdomasset.co.kr)'
+        run: python scrape_fin.py --probe ${{ inputs.syms }}

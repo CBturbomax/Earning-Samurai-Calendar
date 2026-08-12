@@ -126,7 +126,7 @@ def load_extra():
 CAPS, SECTORS = load_extra()
 
 
-def q_label(end):
+def q_label(end, mid="", q=""):
     """분기말 날짜 -> '2Q26'. **끝난 날이 아니라 기간의 한가운데**로 가른다.
 
     회계 분기는 달력에 딱 맞지 않는다. 끝난 날로 가르면 이렇게 어긋난다.
@@ -134,9 +134,14 @@ def q_label(end):
       코카콜라  1~3월 분기가 4월 3일에 끝난다  -> 2Q26 (틀림, 1Q26 이 맞다)
       모토로라  4~6월 분기가 7월 4일에 끝난다  -> 3Q26 (틀림, 2Q26 이 맞다)
 
-    끝나기 45일 전, 즉 기간 한가운데를 보면 제대로 갈린다.
+    수집기가 실제 한가운데(`mid`)를 담아 주면 그걸 쓴다. 없으면 끝나기 45일
+    전으로 어림한다 — 13주 분기에는 맞지만 코스트코의 16주 분기에서는 빗나가
+    라벨이 겹쳤다. 그래서 `mid` 가 있는 쪽이 옳다.
     """
-    d = date.fromisoformat(end) - timedelta(days=45)
+    if q:
+        return q                     # SEC 가 스스로 매긴 것. 그게 정답이다.
+    d = date.fromisoformat(mid) if mid else \
+        date.fromisoformat(end) - timedelta(days=45)
     return f"{(d.month - 1) // 3 + 1}Q{d.year % 100:02d}"
 
 
@@ -148,7 +153,8 @@ def pack_fin(rec):
     """
     out = {k: rec[k] for k in ("freq", "eps", "cur", "src") if rec.get(k)}
     if rec.get("freq") in ("Q", "H"):
-        out["points"] = [[q_label(p["end"]) if p.get("end") else p["label"],
+        out["points"] = [[q_label(p["end"], p.get("mid", ""), p.get("q", ""))
+                          if p.get("end") else p["label"],
                           p["rev"], p.get("opi")]
                          for p in rec.get("points") or []]
     return out
