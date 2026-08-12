@@ -290,6 +290,28 @@ segments 예: BusinessSegments=Datacenter;ConsolidationItems=OperatingSegments;
   총매출 점과 스무 날 안이면 같은 분기로 보고 **그쪽이 매긴 이름을 그대로 쓴다**
   (`build.py` 의 `seg_align`) — SEC 프레임과 `unstack` 을 거친 이름이라 옳다.
 
+**일본 부문별 매출은 이미 받고 있는 zip 안에 있다 — 요청을 더 하지 않는다.**
+일본에는 SEC 같은 벌크가 없지만, TDnet 결산단신 zip 의 **첨부**에 세그먼트 정보
+장(`…qcsg…-ixbrl.htm`)이 들어 있다. 원문을 열어 확인했다(NTT 2026년 1분기).
+
+```
+문맥 CurrentYTDDuration_tse-qcediffr-94320IntegratedICTBusinessReportableSegmentMember
+항목 TransactionsWithExternalCustomersIFRS · InterSegmentTransactionsIFRS
+     OperatingRevenuesIFRS · OperatingProfitLossIFRS
+```
+
+`scrape_fin_jp.py` 가 실적 수치를 뽑는 **그 zip 에서 같이** 뽑는다. 남의 서버를
+두 배로 두드릴 이유가 없다.
+
+- **외부 고객 매출을 쓴다.** 부문 매출에는 부문끼리 주고받은 것(InterSegment)이
+  섞여 있어 그대로 더하면 회사 총매출보다 커진다.
+- **누계를 분기로 되돌린다.** 첨부에는 시작일이 같이 실려 있으므로 회계연도를
+  짐작할 필요가 없다 — 같은 시작일의 앞 누계를 빼면 된다.
+- 공시 한 건에 **전년 같은 기간**도 함께 실린다(`Prior1YTDDuration`). 둘 다
+  담으므로 한 번 받을 때 두 점을 얻는다.
+- 원자료(누계 점)를 `data/segments_jp.json` 의 `raw` 에 남긴다. 다음 분기가
+  들어왔을 때 앞엣것과 이어서 빼야 하므로 버리면 안 된다.
+
 **부문별 매출은 총매출과 대보되, 그걸 근거로 부문을 지우지는 않는다.**
 쌓은 막대가 총매출보다 커지는 종목이 있어서 안 맞는 부문을 빼 맞추게 해봤다.
 더 나빴다 — 웨이스트매니지먼트는 가장 큰 부문(Collection)이 빠져 매출의 37%만
@@ -320,7 +342,7 @@ segments 예: BusinessSegments=Datacenter;ConsolidationItems=OperatingSegments;
 | 워크플로 | 주기 | 쓰는 파일 |
 |---|---|---|
 | `collect.yml` | 1시간 | `data/earnings*.json` · `data/caps.json` |
-| `numbers.yml` | 20분 | `data/financials*.json` · `data/segments.json` · `data/desc.json` |
+| `numbers.yml` | 20분 | `data/financials*.json` · `data/segments.json` · `data/segments_jp.json` · `data/desc.json` |
 | `segments.yml` | 하루 | `data/segments_sec.json` |
 
 겹치는 건 만들어진 `index.html` 뿐이고, 그건 합친 자료로 다시 만들면 그만이다.
