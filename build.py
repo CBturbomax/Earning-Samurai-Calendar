@@ -222,6 +222,12 @@ def pack_fin(rec):
                         if p.get("end") else p["label"] for p in pts], kind)
         out["points"] = [[lab, p["rev"], p.get("opi")]
                          for lab, p in zip(labs, pts)]
+        # 가장 최근 분기의 **종료일**. 점마다 날짜를 실으면 파일이 1MB 늘어나므로
+        # 종목당 한 칸만 담는다. 화면은 이걸로 '방금 발표한 분기를 우리가 갖고
+        # 있나'를 가린다 — ✓ 를 진하게 달지 말지가 여기서 갈린다.
+        last = [p["end"] for p in pts if p.get("end")]
+        if last:
+            out["last"] = max(last)
     return out
 
 
@@ -1471,6 +1477,23 @@ function pastDay(r) {
   return d && d < yesterday;
 }
 
+/* **방금 발표한 분기를 우리가 갖고 있나.**
+   ✓ 를 나스닥 EPS(`eps.done`)로만 갈랐더니, 차트 수치는 멀쩡히 있는데 흐린 ✓ 가
+   붙는 종목이 수두룩했다 — 나스닥은 외국 기업에 EPS 를 안 주고, 우리 수치는
+   SEC·stockanalysis·TDnet 에서 따로 오기 때문이다. 눌러서 볼 게 있는데 "수치는
+   아직"이라고 적는 건 거짓말이다.
+
+   발표한 분기는 발표일 두어 달 앞에서 끝난다. 그러니 **우리가 가진 마지막 분기가
+   발표일 100일 안쪽에서 끝났으면** 그 발표는 차트에 들어 있는 것이다. 시장마다
+   결산기 표기가 달라도(일본 '3월 결산', 홍콩 영어 한 문장) 이 방법은 통한다. */
+function haveNumbers(r) {
+  const f = D.fin[keyOf(r)];
+  if (!f || !f.last) return false;
+  const d = parse(dateOf(r));
+  d.setDate(d.getDate() - 100);
+  return f.last >= d.toISOString().slice(0, 10);
+}
+
 /* EPS 가 '$1.85' 처럼 기호를 달고 올 때가 있다. 숫자만 뽑는다. */
 function num(v) {
   const n = parseFloat(String(v == null ? '' : v).replace(/[^0-9.\-]/g, ''));
@@ -1490,10 +1513,13 @@ function chip(r, big) {
   const dn = doneInfo(r);
   // 발표가 끝났으면 ✓ 를 시각 자리에 넣는다. 칸을 하나 더 만들면 그만큼 회사 이름이
   // 잘려서, 정작 무슨 회사인지 안 보이게 된다.
-  const over = !dn && pastDay(r);
-  const badge = dn
+  const past = pastDay(r);
+  // 앞으로 발표할 것에 ✓ 를 달면 안 된다. 지난 분기 수치를 갖고 있다는 이유로
+  // 다음 주 발표에 ✓ 가 붙으면 그게 제일 헷갈린다. 날짜가 지난 것만 본다.
+  const got = dn || (past && haveNumbers(r));
+  const badge = got
     ? '<span class="tm ok" title="실적이 나왔습니다. 눌러보세요.">✓' + (t ? ' ' + t : '') + '</span>'
-    : over
+    : past
     ? '<span class="tm over" title="발표일이 지났습니다. 수치는 아직 못 받았습니다.">✓</span>'
     : t ? '<span class="tm ' + (r[14] ? 'exact' : 'approx') + '">' + t + '</span>'
         : timeTag(r);
@@ -1503,7 +1529,7 @@ function chip(r, big) {
     ? '<span class="we" title="' + dateOf(r) + ' (' + DOW_KO[wd] + ') 발표">' +
       DOW_KO[wd] + '</span>' : '';
   return '<button class="chip m-' + r[9] + (big ? ' big' : '') + (on ? ' watch' : '') +
-         (dn ? ' done' : '') +
+         (got ? ' done' : '') +
          '" data-key="' + esc(k) + '" data-date="' + dateOf(r) + '">' +
          (mkt ? '' : '<span class="fl">' + MKT[r[9]].flag + '</span>') + we +
          '<span class="cd">' + esc(r[1]) + '</span>' +
