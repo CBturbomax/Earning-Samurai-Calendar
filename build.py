@@ -764,18 +764,6 @@ __MKTCSS__
 }
 
 /* ── 알림 배너 ─────────────────────────────────────────────── */
-.alertbar {
-  background:linear-gradient(90deg,#2a1a20,#1a2129);
-  border:1px solid #4a2530; border-left:5px solid var(--a1);
-  border-radius:10px; padding:16px 20px; margin:16px 0;
-}
-.alertbar.none { border-left-color:var(--line); background:#151c23; }
-.alertbar .ah { font-size:21px; font-weight:700; margin-bottom:6px; }
-.alertbar .ah .cnt { color:var(--a1); }
-.alertbar .arow {
-  display:flex; flex-wrap:wrap; gap:8px; margin-top:10px;
-}
-.alertbar .hint { color:var(--mute); font-size:18px; }
 
 /* ── 툴바 ──────────────────────────────────────────────────── */
 .tools {
@@ -902,6 +890,9 @@ button.btn:disabled:hover { border-color:var(--line); color:var(--fg); }
 /* 발표가 이미 나온 것. 예정 시각보다 '나왔다'가 더 중요한 소식이라 이걸 덮어쓴다. */
 .tm.ok { color:#0b1116; background:var(--ok); border:1px solid var(--ok);
          font-variant-numeric:tabular-nums; }
+/* 발표일은 지났는데 수치를 아직 못 받은 것. 발표된 건 확실하므로 ✓ 를 달되,
+   눌러도 볼 게 없으니 흐리게 둔다 — 진한 ✓ 와 한눈에 갈려야 한다. */
+.tm.over { color:var(--ok); border:1px solid #24463a; opacity:.55; }
 /* 칩의 시총 표기 */
 .chip .cc {
   flex:0 0 auto; font-size:13px; color:#8fb8dc; font-variant-numeric:tabular-nums;
@@ -1108,21 +1099,12 @@ svg.bars rect.b:hover { fill:var(--a3); }
 <div class="topline">__HEAD__</div>
 <h1><span class="mark" aria-hidden="true"></span>Earning <span class="jp">Samurai</span>
     <span class="byline">by CB</span></h1>
-<p class="sub">미국 · 일본 · 홍콩 주간 실적발표 일정 — 누가 언제 발표하는지, 관심종목은 알림까지</p>
+<p class="sub">미국 · 일본 · 홍콩 주간 실적발표 일정 — 누가 언제 무엇을 발표했는지</p>
 
 <div class="mtabs" id="mtabs"></div>
 <div class="cards" id="cards"></div>
 
-<h2><span class="n">1</span>관심종목 알림</h2>
-<div id="alertbar" class="alertbar none"></div>
-<div class="tools">
-  <button class="btn pri" id="icsWatch">📅 관심종목 일정 내보내기 (.ics)</button>
-  <button class="btn" id="icsWeek">이번 주 전체 .ics</button>
-  <button class="btn" id="clearWatch">관심종목 비우기</button>
-  <span class="count">★ 를 눌러 담으면 브라우저에 저장됩니다</span>
-</div>
-
-<h2><span class="n">2</span>주간 캘린더 <span class="meta" id="calMeta"></span></h2>
+<h2><span class="n">1</span>주간 캘린더 <span class="meta" id="calMeta"></span></h2>
 <div class="weeknav">
   <button class="btn" id="wPrev">← 이전 주</button>
   <div>
@@ -1141,8 +1123,12 @@ svg.bars rect.b:hover { fill:var(--a3); }
 </div>
 <div class="capnote" id="capNote" hidden></div>
 <div class="cal" id="cal"></div>
+<div class="tools">
+  <button class="btn" id="icsWeek">📅 이번 주 일정 내보내기 (.ics)</button>
+  <span class="count">구글·아웃룩 캘린더에 넣을 수 있습니다</span>
+</div>
 
-<h2><span class="n">3</span>테마별 관심 종목 <span class="meta" id="gMeta"></span></h2>
+<h2><span class="n">2</span>테마별 관심 종목 <span class="meta" id="gMeta"></span></h2>
 <div class="note">
   여기는 <b>직접 골라 넣은 목록</b>이라 빠진 회사가 있습니다. 캘린더와 표의 순서·필터는
   이 목록이 아니라 <b>시가총액</b>을 기준으로 하니, 큰 회사를 빠짐없이 보시려면
@@ -1150,11 +1136,11 @@ svg.bars rect.b:hover { fill:var(--a3); }
 </div>
 <div id="groups"></div>
 
-<h2><span class="n">4</span>일자별 발표 건수 <span class="meta">막대를 누르면 그 주로 이동</span></h2>
+<h2><span class="n">3</span>일자별 발표 건수 <span class="meta">막대를 누르면 그 주로 이동</span></h2>
 <div class="chartbox"><svg class="bars" id="bars" viewBox="0 0 1400 260"
      preserveAspectRatio="xMinYMid meet"></svg></div>
 
-<h2><span class="n">5</span>전체 종목 표</h2>
+<h2><span class="n">4</span>전체 종목 표</h2>
 <div class="tools">
   <input type="search" id="q" placeholder="한글·원문·영문·코드 검색 — 엔비디아 / NVDA / 소니 / ソニー / 텐센트 / 00700" autocomplete="off">
   <select id="fSector"><option value="">전체 업종</option></select>
@@ -1399,9 +1385,20 @@ function capKo(b) {
    시총은 미국 소스에만 온다. 일본·홍콩은 원본에 없어서 거를 수가 없다.
    그 행들을 조용히 지워버리면 두 시장이 통째로 사라지므로 통과시키되,
    어느 시장에 적용되지 않는지 화면에 적는다. 없는 값을 지어내지 않는다. */
+/* 어제. '발표일이 지났다'를 가르는 금이다. 오늘·어제는 장후 발표가 아직
+   안 나왔을 수 있으므로 확실한 것으로 치지 않는다. */
+const yesterday = (() => {
+  const d = parse(D.today); d.setDate(d.getDate() - 1);
+  return d.toISOString().slice(0, 10);
+})();
+
 const capSel = document.getElementById('fCap');
-capSel.innerHTML = '<option value="0">전체 규모</option>' +
+capSel.innerHTML = '<option value="0">전체 보기 (규모 무관)</option>' +
   D.capSteps.map(s => '<option value="' + s.usdB + '">시총 ' + s.jo + '조원 이상</option>').join('');
+/* **1조원 이상을 기본으로 연다.** 전체를 열면 껍데기 회사가 화면을 뒤덮어
+   정작 볼 회사가 안 보인다. 작은 회사를 보고 싶으면 '전체 보기'를 고르면 된다. */
+const capDefault = (D.capSteps.find(s => s.jo === 1) || D.capSteps[0] || {}).usdB || 0;
+capSel.value = String(capDefault);
 const capMin = () => +capSel.value || 0;
 
 /* 시총을 모르는 행을 어떻게 할 것인가 — 여기서 한 번 크게 뒤집혔다.
@@ -1459,6 +1456,21 @@ function doneInfo(r) {
   return f.eps.done.find(x => epsKey(x.period) === want) || null;
 }
 
+/* **발표일이 지났으면 발표된 것이다.**
+   ✓ 는 '나스닥이 실제 EPS 를 실었나'로만 달고 있었다. 그런데 우리가 실적 수치를
+   아직 안 받은 종목, 외국 기업처럼 나스닥이 EPS 를 안 주는 종목이 훨씬 많아서
+   (지난주 미국 1,604건 중 ✓ 가 붙을 수 있는 건 832건뿐) **'우리가 모른다'와
+   '발표 안 했다'가 화면에서 똑같이 보였다.** 지난 주를 열어 놓고 절반이 안 끝난
+   것처럼 보이는 건 거짓말이다.
+
+   그렇다고 날짜만으로 어림잡으면 안 된다 — 장후 발표는 예정일 저녁에야 나오므로
+   당일에 '했겠지'로 치면 반나절을 틀린다. 그래서 **하루가 지난 날**만 확실한
+   것으로 본다. 그 사이는 여전히 실제 EPS 가 있을 때만 ✓ 다. */
+function pastDay(r) {
+  const d = dateOf(r);
+  return d && d < yesterday;
+}
+
 /* EPS 가 '$1.85' 처럼 기호를 달고 올 때가 있다. 숫자만 뽑는다. */
 function num(v) {
   const n = parseFloat(String(v == null ? '' : v).replace(/[^0-9.\-]/g, ''));
@@ -1478,8 +1490,11 @@ function chip(r, big) {
   const dn = doneInfo(r);
   // 발표가 끝났으면 ✓ 를 시각 자리에 넣는다. 칸을 하나 더 만들면 그만큼 회사 이름이
   // 잘려서, 정작 무슨 회사인지 안 보이게 된다.
+  const over = !dn && pastDay(r);
   const badge = dn
     ? '<span class="tm ok" title="실적이 나왔습니다. 눌러보세요.">✓' + (t ? ' ' + t : '') + '</span>'
+    : over
+    ? '<span class="tm over" title="발표일이 지났습니다. 수치는 아직 못 받았습니다.">✓</span>'
     : t ? '<span class="tm ' + (r[14] ? 'exact' : 'approx') + '">' + t + '</span>'
         : timeTag(r);
   // 주말 발표는 다음 월요일 칸에 얹혀 있다. 실제 요일을 칩에 적는다.
@@ -1588,43 +1603,6 @@ function renderCal() {
   const wi = D.weeks.indexOf(week);
   document.getElementById('wPrev').disabled = wi === 0;
   document.getElementById('wNext').disabled = wi === D.weeks.length - 1;
-}
-
-/* ── 알림 배너 ────────────────────────────────────────────── */
-function renderAlert() {
-  const el = document.getElementById('alertbar');
-  if (!watch.size) {
-    el.className = 'alertbar none';
-    el.innerHTML = '<div class="ah">관심종목이 비어 있습니다</div>' +
-      '<div class="hint">아래 캘린더나 표에서 ☆ 를 누르면 여기에 모이고, ' +
-      '발표일이 다가오면 D-day로 알려줍니다. .ics로 내보내 구글·아웃룩 캘린더에 넣으면 ' +
-      '실제 알림도 받을 수 있습니다.</div>';
-    return;
-  }
-  // 오늘 이후 예정만, 가까운 순으로. 알림은 시장 탭과 무관하게 전부 보여준다 —
-  // 관심종목은 시장을 가려 담는 게 아니다.
-  const up = ROWS.filter(r => watch.has(keyOf(r)) && r[0] >= D.today)
-                 .sort((a, b) => a[0] < b[0] ? -1 : 1);
-  const inWeek = up.filter(r => weekDays(week).includes(slotOf(r)));
-  el.className = 'alertbar' + (up.length ? '' : ' none');
-  const ddays = up.slice(0, 10).map(r => {
-    const dd = Math.round((parse(r[0]) - parse(D.today)) / 86400000);
-    const tag = dd === 0 ? '오늘' : 'D-' + dd;
-    return '<button class="chip big m-' + r[9] + '" data-key="' + esc(keyOf(r)) +
-           '" data-date="' + r[0] + '" style="width:auto">' +
-           '<span class="fl">' + MKT[r[9]].flag + '</span>' +
-           '<span class="cd">' + tag + '</span>' +
-           '<span class="cn">' + esc(nameOf(r)) + '</span>' + timeTag(r) +
-           '<span class="cq">' + r[0].slice(5) + '</span></button>';
-  }).join('');
-
-  el.innerHTML =
-    '<div class="ah">관심종목 <span class="cnt">' + watch.size + '</span>개 · ' +
-    '앞으로 예정 <span class="cnt">' + up.length + '</span>건' +
-    (inWeek.length ? ' · 이번 주 <span class="cnt">' + inWeek.length + '</span>건' : '') +
-    '</div>' +
-    (up.length ? '<div class="arow">' + ddays + '</div>'
-               : '<div class="hint">수집 기간 안에 남은 발표 일정이 없습니다.</div>');
 }
 
 /* ── 주목종목 그룹 ────────────────────────────────────────── */
@@ -2178,11 +2156,6 @@ function download(name, text) {
   document.body.appendChild(a); a.click(); a.remove();
   setTimeout(() => URL.revokeObjectURL(a.href), 1000);
 }
-document.getElementById('icsWatch').onclick = () => {
-  const rows = ROWS.filter(r => watch.has(keyOf(r)));
-  if (!rows.length) { alert('관심종목이 없습니다. ☆ 를 눌러 먼저 담아주세요.'); return; }
-  download('earnings-watchlist.ics', makeIcs(rows, '글로벌 실적발표 — 관심종목'));
-};
 document.getElementById('icsWeek').onclick = () => {
   const days = new Set(weekDays(week));
   const rows = VIEW.filter(r => days.has(slotOf(r)));
@@ -2191,12 +2164,6 @@ document.getElementById('icsWeek').onclick = () => {
   download('earnings-' + (mkt || 'all') + '-' + week + '.ics',
            makeIcs(rows, who + ' 실적발표 ' + fmtWeek(week)));
 };
-document.getElementById('clearWatch').onclick = () => {
-  if (!watch.size) return;
-  if (!confirm('관심종목 ' + watch.size + '개를 모두 비웁니다.')) return;
-  watch.clear(); saveWatch(); renderAll();
-};
-
 /* ── 이벤트 위임 ──────────────────────────────────────────── */
 document.addEventListener('click', e => {
   const more = e.target.closest('.more');
@@ -2391,7 +2358,7 @@ function renderFoot() {
 
 function renderAll() {
   renderTabs(); renderCards(); renderCapNote();
-  renderCal(); renderAlert(); renderGroups(); renderBars(); renderTable();
+  renderCal(); renderGroups(); renderBars(); renderTable();
 }
 reslice(); fillFilters(); fillWeeks(); renderFoot(); renderAll();
 </script>
