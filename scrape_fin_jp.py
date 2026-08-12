@@ -208,6 +208,52 @@ def pick(vals, names):
     return best
 
 
+def raw(url, binary=False):
+    """응답을 그대로 찍는다. **0건으로 넘기지 않는다** — 봉투가 깨졌으면 봐야 한다."""
+    req = urllib.request.Request(url, headers={
+        "User-Agent": UA, "Accept": "*/*", "Accept-Language": "ja,en;q=0.8"})
+    try:
+        with urllib.request.urlopen(req, timeout=25) as r:
+            body = r.read()
+            print(f"  {r.status} · {r.headers.get('Content-Type','?')} · {len(body):,} 바이트")
+            return body
+    except urllib.error.HTTPError as e:
+        print(f"  HTTP {e.code} {e.reason}")
+    except Exception as e:                      # noqa: BLE001 — 무엇이든 찍어야 한다
+        print(f"  실패: {type(e).__name__} {e}")
+    return None
+
+
+def survey():
+    """일본 실적을 **발표 당일에** 주는 곳을 찾는다. 되는 곳만 골라 쓴다."""
+    day = date.today().strftime("%Y%m%d")
+    cands = [
+        ("TDnet 목록",      f"https://www.release.tdnet.info/inbs/I_list_001_{day}.html"),
+        ("TDnet 첫 화면",   "https://www.release.tdnet.info/index.html"),
+        ("TDnet inbs",      "https://www.release.tdnet.info/inbs/I_main_00.html"),
+        ("EDINET v2",       "https://api.edinet-fsa.go.jp/api/v2/documents.json"
+                            f"?date={date.today().isoformat()}&type=2"),
+        ("야후재팬 실적",    "https://finance.yahoo.co.jp/quote/1379.T/performance"),
+        ("가부탄",          "https://kabutan.jp/stock/finance?code=1379"),
+        ("민카부",          "https://minkabu.jp/stock/1379/settlement"),
+        ("IR뱅크",          "https://irbank.net/1379/results"),
+        ("닛케이 결산",      "https://www.nikkei.com/nkd/company/kessan/?scode=1379"),
+        ("JPX",             "https://www.jpx.co.jp/"),
+    ]
+    for label, url in cands:
+        print(f"\n===== {label}\n  {url}")
+        body = raw(url)
+        if not body:
+            continue
+        txt = body.decode("utf-8", "replace")
+        # 결산단신·매출 같은 낱말이 실제로 들어 있나
+        for word in ("決算短信", "kjTitle", "売上高", "営業利益", "results"):
+            if word in txt:
+                print(f"    '{word}' 있음")
+        head = re.sub(r"\s+", " ", TAGS.sub(" ", txt[:1200])).strip()
+        print("    앞부분:", head[:300])
+
+
 def probe(days=3):
     """TDnet 이 열리는지, 결산단신이 잡히는지, XBRL 이 읽히는지 눈으로 본다."""
     today = date.today()
@@ -255,6 +301,8 @@ def probe(days=3):
 
 
 def main():
+    if "--survey" in sys.argv:
+        return survey()
     if "--probe" in sys.argv:
         n = [a for a in sys.argv[1:] if a.isdigit()]
         return probe(int(n[0]) if n else 3)
