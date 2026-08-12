@@ -1,0 +1,265 @@
+# -*- coding: utf-8 -*-
+"""
+일본 실적 수치 — 발표 당일에 받는다. 출처: TDnet(적시공시) 결산단신 XBRL
+
+**왜 따로 만드나.** stockanalysis 는 일본 실적을 며칠 뒤에 싣는다. 실제로 재봤다.
+
+    소니   7/31 발표 -> 8/12 에 2Q26 있음   (12일 뒤)
+    도요타 8/4  발표 -> 8/12 에 2Q26 있음   (8일 뒤)
+    오늘 발표한 208종목 -> 6월 분기가 들어온 것 **0건**
+
+수집 주기를 20분에서 1분으로 줄여도 소용없다. 소스에 없는 것은 못 가져온다.
+미국은 SEC 에서 직접 받으니 일본도 그렇게 해야 한다.
+
+**TDnet 이 일본판 EDGAR 다.** 회사가 실적을 발표하는 그 순간 결산단신(決算短信)을
+여기에 올리고, 요약 XBRL 이 같이 붙는다. 장 마감 15시 발표면 15시에 올라온다.
+
+  목록  https://www.release.tdnet.info/inbs/I_list_{쪽:03d}_{YYYYMMDD}.html
+  XBRL  https://www.release.tdnet.info/inbs/{문서번호}.zip
+
+요약 XBRL 은 `tse-ed-t`(일반사업)·`tse-re-t`(부동산)·`tse-qc-t` 같은 namespace 로
+`NetSales`, `OperatingIncome` 을 담는다. 누적값이라 미국과 같은 문제가 있다 —
+2분기 발표는 상반기 누적이므로 앞 분기를 빼야 분기 값이 된다.
+
+표준 라이브러리만 쓴다(zipfile · xml.etree).
+
+결과: data/financials_jp.json  (financials_intl.json 과 같은 꼴)
+"""
+import io
+import json
+import os
+import re
+import sys
+import time
+import urllib.error
+import urllib.request
+import zipfile
+from datetime import date, datetime, timedelta, timezone
+from pathlib import Path
+from xml.etree import ElementTree
+
+HERE = Path(__file__).parent
+OUT = HERE / "data" / "financials_jp.json"
+
+LIST_URL = "https://www.release.tdnet.info/inbs/I_list_{page:03d}_{day}.html"
+ZIP_URL = "https://www.release.tdnet.info/inbs/{doc}.zip"
+
+UA = ("Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 "
+      "(KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36")
+
+BACKOFF = (0, 5, 20, 60)
+PAUSE = float(os.environ.get("JP_PAUSE", "0.5"))
+BACK_DAYS = int(os.environ.get("JP_BACK_DAYS", "10"))   # 며칠치를 훑나
+GIVE_UP_AFTER = 6
+JP_VER = 1
+
+# 결산단신인지 가리는 말. '決算短信' 이 들어가면 실적 발표다.
+# (「業績予想の修正」 같은 것은 실적 발표가 아니라 예상 수정이라 뺀다.)
+TANSHIN = re.compile(r"決算短信")
+NOT_TANSHIN = re.compile(r"予想|修正|訂正")
+
+# 목록 표의 한 줄. 시각·코드·회사명·제목·문서번호가 들어 있다.
+ROW_RE = re.compile(
+    r'<td class="kjTime">(?P<time>[\d:]+)</td>.*?'
+    r'<td class="kjCode">(?P<code>\w+)</td>.*?'
+    r'<td class="kjName">(?P<name>.*?)</td>.*?'
+    r'<td class="kjTitle"><a href="(?P<doc>[^"]+)\.pdf[^"]*">(?P<title>.*?)</a>',
+    re.S)
+
+TAGS = re.compile(r"<[^>]+>")
+
+
+class Throttled(Exception):
+    """막혔다. '자료가 없다'와 다른 일이다."""
+
+
+def get(url, binary=False, timeout=30):
+    """404 는 None(그런 문서가 없다), 그 밖의 실패는 Throttled."""
+    req = urllib.request.Request(url, headers={
+        "User-Agent": UA,
+        "Accept": "*/*",
+        "Accept-Language": "ja,en;q=0.8",
+    })
+    try:
+        with urllib.request.urlopen(req, timeout=timeout) as r:
+            raw = r.read()
+            return raw if binary else raw.decode("utf-8", "replace")
+    except urllib.error.HTTPError as e:
+        if e.code == 404:
+            return None
+        raise Throttled(f"HTTP {e.code}")
+    except (urllib.error.URLError, TimeoutError, OSError, ValueError) as e:
+        raise Throttled(str(e))
+
+
+def listing(day, page=1):
+    """하루치 목록 한 쪽 -> [{time, code, name, title, doc}]."""
+    txt = get(LIST_URL.format(page=page, day=day.replace("-", "")))
+    if txt is None:
+        return []
+    out = []
+    for m in ROW_RE.finditer(txt):
+        d = m.groupdict()
+        d["name"] = TAGS.sub("", d["name"]).strip()
+        d["title"] = TAGS.sub("", d["title"]).strip()
+        out.append(d)
+    return out
+
+
+def announcements(day):
+    """그날 올라온 **결산단신**만. 쪽을 넘겨 가며 다 훑는다."""
+    got, page = [], 1
+    while page <= 40:
+        rows = listing(day, page)
+        if not rows:
+            break
+        for r in rows:
+            if TANSHIN.search(r["title"]) and not NOT_TANSHIN.search(r["title"]):
+                got.append(r)
+        page += 1
+        time.sleep(PAUSE)
+    return got
+
+
+# XBRL 안에서 찾을 항목. namespace 는 업종마다 다르므로 **끝 이름만** 본다.
+NAME_REV = ("NetSales", "OperatingRevenues", "Revenue", "NetSalesOfCompletedConstructionContracts",
+            "OrdinaryIncomeBanks", "OperatingRevenuesSpecific", "GrossOperatingRevenues")
+NAME_OPI = ("OperatingIncome", "OperatingIncomeLoss", "OrdinaryIncome")
+NAME_NI = ("ProfitAttributableToOwnersOfParent", "NetIncome", "ProfitLoss")
+
+# 문맥 이름. 결산단신은 '당기'와 '전년동기'를 함께 싣는다. 당기만 쓴다.
+CUR_CTX = re.compile(r"CurrentAccumulatedQ|CurrentYTD|CurrentQuarter|CurrentYear", re.I)
+PRI_CTX = re.compile(r"Prior|Previous", re.I)
+# 연결이 있으면 연결(Consolidated)을 쓴다. 없으면 단체(NonConsolidated).
+CONS_CTX = re.compile(r"Consolidated", re.I)
+NONCONS_CTX = re.compile(r"NonConsolidated", re.I)
+
+
+def local(tag):
+    return tag.rsplit("}", 1)[-1]
+
+
+def read_summary(blob):
+    """결산단신 zip -> {항목: 값} + 기간 정보.
+
+    zip 안에 `Summary/` 폴더가 있고 그 안에 요약 XBRL 인스턴스가 들어 있다.
+    첨부 재무제표(Attachment/)는 회사마다 제각각이라 요약만 본다.
+    """
+    try:
+        z = zipfile.ZipFile(io.BytesIO(blob))
+    except zipfile.BadZipFile:
+        return None
+    names = [n for n in z.namelist()
+             if "Summary" in n and n.endswith(".xbrl")]
+    if not names:
+        names = [n for n in z.namelist() if n.endswith(".xbrl")]
+    if not names:
+        return None
+    try:
+        root = ElementTree.fromstring(z.read(names[0]))
+    except ElementTree.ParseError:
+        return None
+
+    # 문맥(context) -> 기간
+    periods = {}
+    for ctx in root.iter():
+        if local(ctx.tag) != "context":
+            continue
+        cid = ctx.get("id") or ""
+        s = e = ""
+        for node in ctx.iter():
+            t = local(node.tag)
+            if t == "startDate":
+                s = (node.text or "").strip()
+            elif t == "endDate":
+                e = (node.text or "").strip()
+            elif t == "instant":
+                e = (node.text or "").strip()
+        periods[cid] = (s, e)
+
+    vals = {}
+    for node in root.iter():
+        cid = node.get("contextRef")
+        if not cid or node.text is None:
+            continue
+        name = local(node.tag)
+        txt = (node.text or "").strip().replace(",", "")
+        if not re.fullmatch(r"-?\d+(\.\d+)?", txt):
+            continue
+        vals.setdefault(name, []).append((cid, float(txt), periods.get(cid, ("", ""))))
+    return vals
+
+
+def pick(vals, names):
+    """당기 연결 값을 고른다. 없으면 단체. 전년동기는 쓰지 않는다."""
+    best = None
+    for name in names:
+        for cid, v, (s, e) in vals.get(name, []):
+            if PRI_CTX.search(cid) or not e:
+                continue
+            score = (2 if CONS_CTX.search(cid) else
+                     1 if not NONCONS_CTX.search(cid) else 0)
+            if CUR_CTX.search(cid):
+                score += 4
+            if best is None or score > best[0]:
+                best = (score, v, s, e)
+        if best and best[0] >= 6:
+            break
+    return best
+
+
+def probe(days=3):
+    """TDnet 이 열리는지, 결산단신이 잡히는지, XBRL 이 읽히는지 눈으로 본다."""
+    today = date.today()
+    for back in range(days):
+        day = (today - timedelta(days=back)).isoformat()
+        print(f"\n===== {day}")
+        try:
+            rows = listing(day, 1)
+        except Throttled as e:
+            print("  목록 실패:", e)
+            continue
+        print(f"  1쪽에 {len(rows)}건")
+        if not rows:
+            continue
+        tan = [r for r in rows
+               if TANSHIN.search(r["title"]) and not NOT_TANSHIN.search(r["title"])]
+        print(f"  그중 결산단신 {len(tan)}건")
+        for r in tan[:3]:
+            print(f"    {r['time']} {r['code']} {r['name'][:16]} | {r['title'][:40]}")
+        if not tan:
+            continue
+        r = tan[0]
+        print(f"  -> XBRL 받아본다: {r['doc']}")
+        try:
+            blob = get(ZIP_URL.format(doc=r["doc"]), binary=True)
+        except Throttled as e:
+            print("    zip 실패:", e)
+            continue
+        if blob is None:
+            print("    zip 이 없다")
+            continue
+        print(f"    zip {len(blob):,} 바이트")
+        vals = read_summary(blob)
+        if not vals:
+            print("    XBRL 을 못 읽었다")
+            continue
+        print(f"    항목 {len(vals)}가지")
+        for label, names in (("매출", NAME_REV), ("영업이익", NAME_OPI), ("순이익", NAME_NI)):
+            got = pick(vals, names)
+            if got:
+                _sc, v, s, e = got
+                print(f"      {label:5s} {v:>18,.0f}   {s} ~ {e}")
+            else:
+                print(f"      {label:5s} 못 찾음")
+
+
+def main():
+    if "--probe" in sys.argv:
+        n = [a for a in sys.argv[1:] if a.isdigit()]
+        return probe(int(n[0]) if n else 3)
+    print("아직 수집 본체는 없다. --probe 로 소스부터 확인한다.")
+
+
+if __name__ == "__main__":
+    main()

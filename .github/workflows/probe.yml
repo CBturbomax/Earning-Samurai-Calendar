@@ -1,18 +1,14 @@
 # 새 소스나 고친 수집기를 전체에 풀기 전에 몇 종목만 떠본다.
 #
-# 지금 볼 것: **결산 분기 복원**.
-# 회사는 10-Q 를 세 번 내고 마지막 분기는 10-K 안에 연간 값으로만 싣는다. 기간
-# 길이로만 거르면 회사마다 한 분기가 매년 통째로 빠진다 — 애플은 3Q, 코카콜라는
-# 4Q 가 없었다. 누적값에서 빼서 되살리도록 고쳤으니 정말 메워지는지 본다.
-#
-# 코스트코는 4분기가 16주라 라벨이 겹쳤고, 오라클은 스물넷 중 여덟만 남았으며,
-# 존슨컨트롤스는 매출 태그 자체가 틀렸다. 그 넷을 같이 본다.
+# 지금 볼 것: **일본 실적을 발표 당일에 받을 수 있는가.**
+# stockanalysis 는 며칠 뒤에 싣는다(소니 12일, 도요타 8일, 오늘 발표분 0건).
+# 미국은 SEC 에서 직접 받으니 일본도 TDnet 에서 직접 받아야 한다.
 name: 소스 접근 확인
 on:
   workflow_dispatch:
     inputs:
       syms:
-        description: '떠볼 종목 (빈칸이면 AAPL MSFT KO COST ORCL JCI)'
+        description: '떠볼 종목이나 일수'
         required: false
   push:
     paths: ['.github/workflows/probe.yml']
@@ -26,8 +22,8 @@ jobs:
         with:
           python-version: '3.12'
 
-      # 오늘 발표한 일본 회사가 소스에 실렸는지 본다. 안 실렸으면 우리가
-      # 아무리 자주 두드려도 안 나온다 — 그건 주기 문제가 아니다.
-      - name: 📉 오늘 발표분이 소스에 실렸는가 (stockanalysis)
+      # TDnet 이 일본판 EDGAR 다. 회사가 발표하는 그 순간 결산단신 XBRL 이 올라온다.
+      # 열리는지 · 결산단신이 잡히는지 · XBRL 에서 매출이 나오는지 셋을 본다.
+      - name: 🇯🇵 TDnet 결산단신을 읽을 수 있는가
         continue-on-error: true
-        run: python scrape_fin_intl.py --probe ${{ inputs.syms }}
+        run: python scrape_fin_jp.py --probe ${{ inputs.syms }}
