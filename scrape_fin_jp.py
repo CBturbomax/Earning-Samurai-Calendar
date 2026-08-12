@@ -56,7 +56,8 @@ JP_VER = 1
 # 결산단신인지 가리는 말. '決算短信' 이 들어가면 실적 발표다.
 # (「業績予想の修正」 같은 것은 실적 발표가 아니라 예상 수정이라 뺀다.)
 TANSHIN = re.compile(r"決算短信")
-NOT_TANSHIN = re.compile(r"予想|修正|訂正")
+NOT_TANSHIN = re.compile(r"予想|修正|訂正|延期|中止|取消")
+# 결산단신이라도 XBRL 이 없으면 수치를 못 뽑는다. zip 이 달린 줄만 쓴다.
 
 # 목록 표의 한 줄. 실제 생김새는 이렇다(원문을 찍어 확인했다).
 #
@@ -321,35 +322,36 @@ def probe(days=3):
         if not rows:
             continue
         tan = [r for r in rows
-               if TANSHIN.search(r["title"]) and not NOT_TANSHIN.search(r["title"])]
+               if TANSHIN.search(r["title"]) and not NOT_TANSHIN.search(r["title"])
+               and r["zip"]]
         print(f"  그중 결산단신 {len(tan)}건")
         for r in tan[:3]:
             print(f"    {r['time']} {r['code']} {r['name'][:16]} | {r['title'][:40]}")
         if not tan:
             continue
-        r = tan[0]
-        print(f"  -> XBRL 받아본다: {r['zip']}")
-        try:
-            blob = get("https://www.release.tdnet.info/inbs/" + r["zip"], binary=True)
-        except Throttled as e:
-            print("    zip 실패:", e)
-            continue
-        if blob is None:
-            print("    zip 이 없다")
-            continue
-        print(f"    zip {len(blob):,} 바이트")
-        vals = read_summary(blob)
-        if not vals:
-            print("    XBRL 을 못 읽었다")
-            continue
-        print(f"    항목 {len(vals)}가지")
-        for label, names in (("매출", NAME_REV), ("영업이익", NAME_OPI), ("순이익", NAME_NI)):
-            got = pick(vals, names)
-            if got:
-                _sc, v, s, e = got
-                print(f"      {label:5s} {v:>18,.0f}   {s} ~ {e}")
-            else:
-                print(f"      {label:5s} 못 찾음")
+        for r in tan[:4]:
+            print(f"  -> {r['code']} {r['name'][:14]} · {r['zip']}")
+            try:
+                blob = get("https://www.release.tdnet.info/inbs/" + r["zip"], binary=True)
+            except Throttled as e:
+                print("     zip 실패:", e)
+                continue
+            if blob is None:
+                print("     zip 이 없다")
+                continue
+            vals = read_summary(blob)
+            if not vals:
+                print(f"     zip {len(blob):,} 바이트인데 XBRL 을 못 읽었다")
+                continue
+            print(f"     zip {len(blob):,} 바이트 · 항목 {len(vals)}가지")
+            for label, names in (("매출", NAME_REV), ("영업익", NAME_OPI), ("순이익", NAME_NI)):
+                got = pick(vals, names)
+                if got:
+                    _sc, v, st, en = got
+                    print(f"       {label} {v:>16,.0f}   {st} ~ {en}")
+                else:
+                    print(f"       {label} 못 찾음")
+            time.sleep(PAUSE)
 
 
 def main():
