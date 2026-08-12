@@ -89,7 +89,8 @@ TICKERS = "https://www.sec.gov/files/company_tickers.json"
 
 # 2: 아래 축을 하나만 고른다 · 종류주에 전부 실어 준다 · 소계는 넷 이상일 때만 뺀다
 # 3: 한 축짜리 행이 몇 줄 섞여 있어도 두 축 행을 버리지 않는다(엑슨)
-SEG_SEC_VER = 3
+# 4: 더 잘게 쪼갠 쪽을 쓴다 · '부문 합계' 줄을 뺀다(셰브런)
+SEG_SEC_VER = 4
 # 열두 분기(3년)면 화면에 그리는 스물두 칸의 절반을 넘고, 큰 종목은
 # stockanalysis 가 스무 분기를 채워 준다. 한 분기 zip 이 85MB 라 열여섯으로
 # 늘리면 한 번에 1.4GB 다 — 남의 서버에서 그만큼 받을 이유가 없다.
@@ -123,8 +124,12 @@ AXIS_KO = {3: "사업부문", 2: "제품·서비스", 1: "지역"}
 SUB_AXES = {"ProductOrService", "Geographical"}
 
 # 부문이 아니라 조정·상계 줄. 담으면 매출이 부풀거나 음수가 섞인다.
+# `Aggregation` 은 셰브런이 쓴다 —
+# `ReportableSegmentAggregationBeforeOtherOperatingSegment` 는 부문이 아니라
+# **부문을 다 더한 값**이다. 그대로 두면 화면에 부문 대신 그 한 줄과
+# 'All Other' 만 뜬다. ('Aggregates' 는 안 걸린다 — 벌컨머티리얼즈의 골재 부문.)
 BAD_MEMBER = re.compile(
-    r"Elimination|Intersegment|Reconcil|Consolidat|SegmentTotal|"
+    r"Elimination|Intersegment|Reconcil|Consolidat|SegmentTotal|Aggregation|"
     r"TotalSegment|Unallocated|MaterialReconcilingItems", re.I)
 SMALL_WORDS = {"and", "or", "of", "the", "for", "in", "to", "a", "an"}
 CAMEL = re.compile(r"(?<=[a-z0-9])(?=[A-Z])|(?<=[A-Z])(?=[A-Z][a-z])")
@@ -559,15 +564,16 @@ def candidates(by_axis, by_pair):
             out[axis] = (s, got)
 
     for axis, subs in by_pair.items():
-        if axis in out:
-            continue
-        best = None
+        best = out.get(axis)
         for _sub, members in subs.items():
             s = series_of({m: {t: {k: (v[0], v[1]) for k, v in raw.items()}
                                for t, raw in by_tag.items()}
                            for m, by_tag in members.items()})
             got = usable(s)
-            if got and (best is None or got[:2] > best[1][:2]):
+            # **더 잘게 쪼갠 쪽을 쓴다.** 셰브런은 한 축짜리에 '부문 합계'와
+            # 'All Other' 두 줄뿐인데 두 축 쪽에는 업스트림·다운스트림이 있다.
+            # 한 축짜리라고 무조건 이기게 두면 화면에 아무 뜻 없는 두 줄이 뜬다.
+            if got and (best is None or (got[1], got[0]) > (best[1][1], best[1][0])):
                 best = (s, got)
         if best:
             out[axis] = best
