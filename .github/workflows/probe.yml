@@ -17,47 +17,55 @@ jobs:
         with:
           python-version: '3.12'
 
-      # 엑슨이 계속 안 잡힌다. 수집기 코드를 그대로 태워 어디서 떨어지는지 본다.
-      - name: 🔎 엑슨은 어디서 떨어지나
-        timeout-minutes: 8
+      # 네 분기로 태우면 엑슨·슐룸베르거가 나오는데 열두 분기로 태우면 사라진다.
+      # 실제 설정 그대로(열두 분기) 몇 종목만 태워 어디서 떨어지는지 본다.
+      - name: 🔎 분기를 늘리면 왜 사라지나
+        timeout-minutes: 12
         env:
           SEC_UA: 'Earning Samurai Calendar (cbpark@wisdomasset.co.kr)'
         run: |
           python - <<'EOF'
-          import collections, io, zipfile
           import scrape_seg_sec as s
 
-          CIK = {34088: "XOM", 93410: "CVX", 87347: "SLB"}
+          CIK = {34088: "XOM", 87347: "SLB", 93410: "CVX"}
           facts, pairs = {}, {}
-          for q in ("2025q2", "2025q3", "2025q4", "2026q1"):
+          for q in s.recent_quarters(12):
               blob = s.fetch(s.BULK.format(q=q))
               if not blob:
                   print(q, "못 받음"); continue
-              n = s.scan(blob, set(CIK), facts, pairs)
-              print(f"{q}: 담은 행 {n:,}")
+              s.scan(blob, set(CIK), facts, pairs)
               del blob
+          print("받기 끝\n")
 
           for cik, sym in CIK.items():
-              print(f"\n===== {sym} (CIK {cik})")
+              print(f"===== {sym}")
               fa, pa = facts.get(cik, {}), pairs.get(cik, {})
-              print("  한 축짜리 축:", {a: len(m) for a, m in fa.items()} or "없음")
-              print("  두 축 축:", {a: {sub: len(m) for sub, m in subs.items()}
-                                    for a, subs in pa.items()} or "없음")
               for axis, members in fa.items():
-                  ser = s.series_of(members)
-                  print(f"    [solo {axis}] 부문 {len(ser)} -> {list(ser)[:6]}")
-                  for m, x in list(ser.items())[:3]:
-                      print(f"        {m}: {len(x)}분기 {sorted(x)[-2:]}")
+                  merged = s.merge_members(members)
+                  ser = {m: s.quarterly_merged(bt) for m, bt in merged.items()}
+                  keep = {m: x for m, x in ser.items() if len(x) >= s.MIN_MEMBER_PTS}
+                  after = s.series_of(members)
+                  print(f"  [solo {axis}] 원래 {len(members)} · 합친 뒤 {len(merged)} · "
+                        f"3분기 이상 {len(keep)} · 소계 뺀 뒤 {len(after)}")
+                  print(f"      3분기 미만이라 빠진 것: "
+                        f"{[m for m in ser if len(ser[m]) < s.MIN_MEMBER_PTS][:8]}")
+                  print(f"      소계로 빠진 것: {sorted(set(keep) - set(after))}")
+                  print(f"      남은 것: {list(after)[:10]}")
               for axis, subs in pa.items():
                   for sub, members in subs.items():
                       flat = {m: {t: {k: (v[0], v[1]) for k, v in raw.items()}
                                   for t, raw in by_tag.items()}
                               for m, by_tag in members.items()}
-                      ser = s.series_of(flat)
-                      print(f"    [pair {axis} x {sub}] 원래 부문 {len(members)} "
-                            f"-> 남은 부문 {len(ser)} {list(ser)[:6]}")
-                      for m, by_tag in list(members.items())[:4]:
-                          allk = [(t, sorted(r)[:3], len(r)) for t, r in by_tag.items()]
-                          print(f"        {m}: {allk}")
-              print("  build_stock ->", (s.build_stock(fa, pa) or {}).get("names", "없음"))
+                      merged = s.merge_members(flat)
+                      ser = {m: s.quarterly_merged(bt) for m, bt in merged.items()}
+                      after = s.series_of(flat)
+                      print(f"  [pair {axis} x {sub}] 원래 {len(flat)} · 합친 뒤 "
+                            f"{len(merged)} · 끝 {len(after)}")
+                      print(f"      분기 수: "
+                            f"{ {m: len(x) for m, x in list(ser.items())[:8]} }")
+                      print(f"      소계로 빠진 것: "
+                            f"{sorted(set(m for m in ser if len(ser[m]) >= 3) - set(after))}")
+              cand = s.candidates(fa, pa)
+              print(f"  후보 축: { {a: (v[1][0], v[1][1]) for a, v in cand.items()} }")
+              print(f"  build_stock -> {(s.build_stock(fa, pa) or {}).get('names', '없음')}\n")
           EOF
