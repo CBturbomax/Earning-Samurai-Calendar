@@ -283,6 +283,16 @@ segments 예: BusinessSegments=Datacenter;ConsolidationItems=OperatingSegments;
 - **누계를 분기로 되돌린다.** `qtrs` 가 기간 길이다(1=분기, 4=연간). 총매출에서
   겪은 것과 같은 문제라 같은 방법을 쓴다 — 12개월 − 같은 날 시작한 9개월,
   그것이 없으면 연간 − 앞 세 분기.
+- **'부문 합계' 줄을 부문으로 세지 않는다.** 셰브런의 한 축짜리 행에는
+  `ReportableSegmentAggregationBeforeOtherOperatingSegment` 와 `AllOtherSegments`
+  둘뿐이라, 한 축짜리를 무조건 먼저 쓰던 시절에는 화면에 그 아무 뜻 없는 두 줄이
+  떴다. 지금은 한 축짜리와 두 축짜리를 나란히 놓고 **더 잘게 쪼갠 쪽**을 쓴다.
+- **지주회사로 갈아탄 회사는 티커가 새 CIK 를 가리킨다.** SEC 티커 목록이 XOM 을
+  `2115436`(ExxonMobil Holdings Corporation)으로 알려주는데 재무제표는 아직 전부
+  옛 법인 `34088` 이름으로 접수돼 있다. 그래서 엑슨의 부문이 통째로 비었고, 화면
+  에서는 '부문을 안 나누는 회사'와 구별이 안 됐다. `CIK_ALIAS` 에 손으로 이어
+  붙이고, **시총 상위 100 중 부문이 안 잡힌 종목을 실행 끝에 적는다** — 조용히
+  비면 왜 비었는지 영영 모른다.
 - **벌크는 접수 분기 기준이라 최근 한두 분기가 없다**(2026-08-12 현재 2026q2 는
   404). 그 구간은 stockanalysis 쪽(`scrape_fin_seg.py`)이 메운다. 그래서 둘 다
   있으면 stockanalysis 를 쓴다 — 이름도 사람이 쓴 것이라 곱다.
@@ -311,6 +321,11 @@ segments 예: BusinessSegments=Datacenter;ConsolidationItems=OperatingSegments;
   담으므로 한 번 받을 때 두 점을 얻는다.
 - 원자료(누계 점)를 `data/segments_jp.json` 의 `raw` 에 남긴다. 다음 분기가
   들어왔을 때 앞엣것과 이어서 빼야 하므로 버리면 안 된다.
+- **'본 공시'를 두 벌로 적는다.** 수치를 뽑은 공시(`financials_jp.json` 의 `docs`)
+  와 부문을 뽑은 공시(`segments_jp.json` 의 `docs`)는 다르다. 부문 수집기를 뒤에
+  붙였으므로 이번 시즌 공시는 수치 쪽에만 들어 있는데, 한 벌만 적으면 파일이
+  생기는 순간 다시 훑기가 멈춰 그 시즌을 통째로 놓친다. **둘 다 본 공시만**
+  건너뛴다.
 
 **부문별 매출은 총매출과 대보되, 그걸 근거로 부문을 지우지는 않는다.**
 쌓은 막대가 총매출보다 커지는 종목이 있어서 안 맞는 부문을 빼 맞추게 해봤다.
