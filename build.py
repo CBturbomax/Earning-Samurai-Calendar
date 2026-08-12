@@ -740,7 +740,12 @@ td.dim { color:var(--mute); font-size:18px; }
 .finhead { font-size:18px; font-weight:700; margin-bottom:8px; }
 .finhead .warn { color:var(--a3); font-weight:400; font-size:16px; margin-left:10px; }
 .finhead.sub { margin-top:14px; }
-.finhead .dim { font-weight:400; font-size:16px; }
+.finhead .dim { font-weight:400; font-size:16px; color:var(--mute); margin-left:8px; }
+/* 어디까지 발표된 건지. X축 맨 오른쪽 눈금과 같은 값이다. */
+.finhead .now {
+  margin-left:10px; font-size:15px; font-weight:700; color:var(--a2);
+  border:1px solid #2b4a63; background:#12212c; border-radius:5px; padding:1px 9px;
+}
 /* 분기가 스무 개 넘으면 900px 로는 숫자가 겹친다. 그림을 제 폭대로 그리고
    좁으면 이 칸 안에서만 옆으로 밀리게 한다 — 페이지 전체가 밀리면 안 된다. */
 .finbox { overflow-x:auto; overflow-y:hidden; margin-bottom:6px; }
@@ -755,13 +760,23 @@ td.dim { color:var(--mute); font-size:18px; }
 .finsvg .fz { stroke:#28323c; }
 .finsvg .fzero { stroke:#4a5661; }
 .finsvg .fx { fill:var(--mute); font-size:12px; }
+.finsvg .fx.opm { fill:#c98a4e; }
+/* 맨 오른쪽 = 가장 최근 발표 분기. 어디까지 나온 건지 한눈에 보이게 표시한다. */
+.finsvg .fx.now { fill:var(--fg); font-weight:800; }
 /* 막대와 점에 붙는 숫자. 이게 이 그림의 요점이다 — 모양만 보고 값을 짐작하게
    두지 않는다. 색은 각 계열과 맞춘다. */
-.finsvg .vn { font-size:12px; font-weight:700; font-variant-numeric:tabular-nums; }
-.finsvg .vn.rev { fill:#cfe0f0; }
+/* 막대와 점에 붙는 숫자. 서로 겹쳐도 읽히도록 바탕색 테두리를 두른다 —
+   테두리를 글자 아래에 깔아야(paint-order) 획이 굵어 보이지 않는다. */
+.finsvg .vn {
+  font-size:12px; font-weight:700; font-variant-numeric:tabular-nums;
+  stroke:var(--panel); stroke-width:3.5px; stroke-linejoin:round;
+  paint-order:stroke fill;
+}
+.finsvg .vn.rev { fill:#dce9f5; }
 .finsvg .vn.opm { fill:#ED7D31; }
 .finsvg .vn.yoy { fill:#8fc0ea; }
 .finlegend { display:flex; gap:14px; flex-wrap:wrap; font-size:15px; color:var(--mute);
+             align-items:center;
              margin-top:6px; align-items:center; }
 .finlegend .lg::before { content:'■'; margin-right:4px; }
 .finlegend .rev::before { color:#5B9BD5; }
@@ -1603,16 +1618,38 @@ function finBlock(m, code) {
 
 const SRC_KO = { sec: 'SEC 공식 재무제표', sa: 'stockanalysis.com', yahoo: 'Yahoo Finance' };
 
-function finChart(f) {
-  /* 그림을 **둘로 나눈다.**
-       (1) 매출 막대 + 영업이익률 선
-       (2) 매출 전년 대비 성장률 선
-     한 그림에 이익률과 성장률을 같이 그리면 오른쪽 축 하나를 나눠 써야 해서
-     둘 다 납작해진다. 이익률은 15% 언저리에서 조금씩 움직이고 성장률은 -20~50%
-     로 크게 뛰는데, 같은 자로 재면 이익률 변화가 아예 안 보인다.
+/* 숫자에서 단위를 뗀다. 막대마다 '억'·'B' 를 붙이면 자릿수가 눈에 안 들어온다.
+   대신 눈금 하나를 골라 제목에 '(단위: bil JPY)' 로 한 번만 적는다.
+   눈금은 제일 큰 값이 세 자리 이상 되는 것 중 가장 큰 것으로 고른다 —
+   도요타는 bil JPY(13,525), 산리오는 mil JPY(55,500) 가 된다. */
+const SCALES = [[1e12, 'tril'], [1e9, 'bil'], [1e6, 'mil'], [1e3, 'k'], [1, '']];
+function unitFor(max, cur) {
+  const hit = SCALES.find(([n]) => max / n >= 100) || SCALES[SCALES.length - 1];
+  return { div: hit[0], ko: (hit[1] ? hit[1] + ' ' : '') + (cur || 'USD') };
+}
+const fmtN = v => {
+  const a = Math.abs(v);
+  return a === 0   ? '0'
+       : a >= 100  ? Math.round(v).toLocaleString()
+       : a >= 10   ? v.toFixed(1)
+                   : v.toFixed(2);
+};
+/* 축 눈금은 딱 떨어지는 수로. 55,518 같은 값이 축에 적혀 있으면 읽는 데 방해만 된다. */
+function niceMax(v) {
+  const p = Math.pow(10, Math.floor(Math.log10(v || 1)));
+  for (const m of [1, 1.2, 1.5, 2, 2.5, 3, 4, 5, 6, 8]) if (p * m >= v) return p * m;
+  return p * 10;
+}
+const pcN = v => (v * 100).toFixed(0) + '%';
 
-     그리고 **막대와 점마다 숫자를 적는다.** 그림만 보고 "저게 몇이지?" 하고
-     다시 표를 찾게 만들지 않는다. */
+function finChart(f) {
+  /* 그림 둘.
+       (1) 매출 막대(왼쪽 축) + 영업이익률 선(오른쪽 축)  — 한 그래프에 겹쳐 그린다
+       (2) 매출 성장률(YoY)
+
+     영업이익률 축은 **그 종목의 값 언저리로 좁게** 잡는다. 0~100% 로 넓게 잡으면
+     15%~27% 짜리 등락이 한 줄로 눌려 보이질 않는다. 회원님이 보내준 그림도
+     오른쪽 축이 0~18% 로 좁게 잡혀 있어서 마진 흐름이 읽힌다. */
   const all = f.points;
   const back = f.freq === 'H' ? 2 : 4;
   // 성장률은 자르기 전에 계산한다 — 자른 뒤 계산하면 앞 네 분기가 빈다.
@@ -1622,111 +1659,117 @@ function finChart(f) {
   });
   const N = 22;                       // 이보다 촘촘하면 숫자가 서로 겹친다
   const pts = all.slice(-N), yoy = yoyAll.slice(-N);
-  const U = curOf(f.cur);
-  const money = v => {
-    const x = Math.abs(v);
-    for (const [n, u] of U.steps) if (x >= n) return (v / n).toFixed(x / n >= 100 ? 0 : 1) + u;
-    return Math.round(v).toLocaleString();
-  };
-  const pc = v => (v * 100).toFixed(0) + '%';
+  const latest = pts.length ? pts[pts.length - 1][0] : '';
+
+  const rmaxRaw = Math.max(...pts.map(p => p[1]), 1);
+  const U = unitFor(rmaxRaw, f.cur);
+  const sc = v => v / U.div;
 
   const n = pts.length;
-  const W = Math.max(880, n * 46), L = 62, R = 56, B = 44;
+  const W = Math.max(880, n * 46), L = 66, R = 60, B = 42;
   const step = (W - L - R) / n;
   const cx = i => L + step * i + step / 2;
   const xlab = (H) => pts.map((p, i) =>
-    '<text class="fx" x="' + cx(i).toFixed(1) + '" y="' + (H - B + 18) +
-    '" text-anchor="middle">' + p[0] + '</text>').join('');
+    '<text class="fx' + (i === n - 1 ? ' now' : '') + '" x="' + cx(i).toFixed(1) +
+    '" y="' + (H - B + 18) + '" text-anchor="middle">' + p[0] + '</text>').join('');
 
   /* ── (1) 매출 + 영업이익률 ───────────────────────────────── */
-  const H1 = 330, T1 = 34, BASE1 = H1 - B;
-  const PH = BASE1 - T1;
-  // 막대는 아래 66%, 영업이익률 선은 위 28% 를 쓴다. 같은 자리에 겹쳐 그리면
-  // 막대 위 숫자와 선 위 숫자가 서로 가려 둘 다 못 읽는다.
-  const RB = BASE1 - PH * 0.66;         // 막대가 닿을 수 있는 맨 위
-  const rmax = Math.max(...pts.map(p => p[1]), 1);
-  const ry = v => BASE1 - (BASE1 - RB) * v / rmax;
+  const H1 = 330, T1 = 40, BASE1 = H1 - B;
+  const rmax = niceMax(sc(rmaxRaw));
+  const ry = v => BASE1 - (BASE1 - T1) * v / rmax;
+
+  // 영업이익률 축을 먼저 정해 둔다 — 매출 숫자를 막대 위에 쓸지 안에 쓸지
+  // 정하려면 선이 어디를 지나는지 알아야 한다.
+  const opm = pts.map((p, i) => (p[2] != null && p[1]) ? [i, p[2] / p[1]] : null).filter(Boolean);
+  let oy = null;
+  if (opm.length >= 2) {
+    const vs = opm.map(o => o[1]);
+    const mn = Math.min(...vs), mx = Math.max(...vs);
+    const span = (mx - mn) || 0.04;
+    const lo = mn - span * 0.45, hi = mx + span * 0.12;
+    oy = v => BASE1 - (BASE1 - T1) * (v - lo) / (hi - lo);
+    oy.lo = lo; oy.hi = hi;
+  }
+  const opmAt = {};
+  opm.forEach(o => { opmAt[o[0]] = oy(o[1]); });
 
   let bars = '';
   pts.forEach((p, i) => {
-    const h = Math.max(BASE1 - ry(p[1]), 1), x = cx(i) - step * 0.34;
-    bars += '<rect class="fb" x="' + x.toFixed(1) + '" y="' + ry(p[1]).toFixed(1) +
+    const v = sc(p[1]), h = Math.max(BASE1 - ry(v), 1), x = cx(i) - step * 0.34;
+    // 이익률 선이 막대 꼭대기를 지나가는 자리에서는 숫자끼리 겹친다. 막대 안에
+    // 넣어 보려 했더니 막대가 글자보다 좁아 잘렸다. 글자에 바탕색 테두리를 둘러
+    // 무엇 위에 놓이든 읽히게 한다(paint-order).
+    const oyy = opmAt[i];
+    const ty = (oyy != null && Math.abs(oyy - ry(v)) < 20) ? ry(v) - 17 : ry(v) - 6;
+    bars += '<rect class="fb" x="' + x.toFixed(1) + '" y="' + ry(v).toFixed(1) +
       '" width="' + (step * 0.68).toFixed(1) + '" height="' + h.toFixed(1) + '"/>' +
-      '<text class="vn rev" x="' + cx(i).toFixed(1) + '" y="' + (ry(p[1]) - 6).toFixed(1) +
-      '" text-anchor="middle">' + money(p[1]) + '</text>';
+      '<text class="vn rev" x="' + cx(i).toFixed(1) +
+      '" y="' + ty.toFixed(1) + '" text-anchor="middle">' + fmtN(v) + '</text>';
   });
+  const rAxis = [0, rmax / 2, rmax].map(v =>
+    '<line class="fz" x1="' + L + '" y1="' + ry(v).toFixed(1) + '" x2="' + (W - R) +
+    '" y2="' + ry(v).toFixed(1) + '"/>' +
+    '<text class="fx" x="' + (L - 8) + '" y="' + (ry(v) + 4).toFixed(1) +
+    '" text-anchor="end">' + fmtN(v) + '</text>').join('');
 
-  // 영업이익률은 제 눈금을 따로 쓴다. 값이 있는 것만.
-  const opm = pts.map((p, i) => (p[2] != null && p[1]) ? [i, p[2] / p[1]] : null).filter(Boolean);
+  // 영업이익률 — 오른쪽 축. 값 언저리로 좁게 잡아야 등락이 보인다.
   let opmSvg = '', opmAxis = '';
-  if (opm.length >= 2) {
-    const vs = opm.map(o => o[1]);
-    let lo = Math.min(0, ...vs), hi = Math.max(...vs);
-    const pad = (hi - lo) * 0.25 || 0.02;
-    lo -= pad; hi += pad;
-    const OT = T1 + 14, OB = BASE1 - PH * 0.72;   // 선이 노는 위쪽 띠
-    const oy = v => OB - (OB - OT) * (v - lo) / (hi - lo);
+  if (oy) {
+    const lo = oy.lo, hi = oy.hi;
     opmSvg = '<path class="fl opm" d="' +
       opm.map((o, j) => (j ? 'L' : 'M') + cx(o[0]).toFixed(1) + ',' + oy(o[1]).toFixed(1)).join(' ') +
       '"/>' + opm.map(o =>
       '<circle class="dot opm" cx="' + cx(o[0]).toFixed(1) + '" cy="' + oy(o[1]).toFixed(1) + '" r="3"/>' +
-      '<text class="vn opm" x="' + cx(o[0]).toFixed(1) + '" y="' + (oy(o[1]) - 8).toFixed(1) +
-      '" text-anchor="middle">' + pc(o[1]) + '</text>').join('');
+      '<text class="vn opm" x="' + cx(o[0]).toFixed(1) + '" y="' + (oy(o[1]) - 9).toFixed(1) +
+      '" text-anchor="middle">' + pcN(o[1]) + '</text>').join('');
     opmAxis = [lo, (lo + hi) / 2, hi].map(v =>
-      '<text class="fx" x="' + (W - R + 8) + '" y="' + (oy(v) + 4).toFixed(1) + '">' +
-      pc(v) + '</text>').join('');
+      '<text class="fx opm" x="' + (W - R + 8) + '" y="' + (oy(v) + 4).toFixed(1) + '">' +
+      pcN(v) + '</text>').join('');
   }
-  const rAxis = [0, rmax / 2, rmax].map(v =>
-    '<text class="fx ar" x="' + (L - 8) + '" y="' + (ry(v) + 4).toFixed(1) +
-    '" text-anchor="end">' + money(v) + '</text>' +
-    '<line class="fz" x1="' + L + '" y1="' + ry(v).toFixed(1) + '" x2="' + (W - R) +
-    '" y2="' + ry(v).toFixed(1) + '"/>').join('');
 
-  /* ── (2) 전년 대비 성장률 ────────────────────────────────── */
+  /* ── (2) 매출 성장률 (YoY) ───────────────────────────────── */
   const have = yoy.map((v, i) => v == null ? null : [i, v]).filter(Boolean);
   let yoySvg = '';
   if (have.length >= 2) {
-    const H2 = 210, T2 = 30, BASE2 = H2 - B;
+    const H2 = 220, T2 = 32, BASE2 = H2 - B;
     const vs = have.map(o => o[1]);
     let lo = Math.min(0, ...vs), hi = Math.max(0, ...vs);
     const pad = (hi - lo) * 0.22 || 0.05;
     lo -= pad; hi += pad;
     const gy = v => BASE2 - (BASE2 - T2) * (v - lo) / (hi - lo);
-    // 0 이 범위 안에 있으면 눈금으로 삼는다 — 성장인지 역성장인지가 한눈에 갈린다.
     const ticks = (lo < 0 && hi > 0) ? [lo, 0, hi] : [lo, (lo + hi) / 2, hi];
     const axis = ticks.map(v =>
-      '<text class="fx ar" x="' + (L - 8) + '" y="' + (gy(v) + 4).toFixed(1) +
-      '" text-anchor="end">' + pc(v) + '</text>' +
-      '<line class="fz" x1="' + L + '" y1="' + gy(v).toFixed(1) + '" x2="' + (W - R) +
-      '" y2="' + gy(v).toFixed(1) + '"/>').join('');
-    yoySvg = '<div class="finhead sub">매출 성장률 <span class="dim">(전년 같은 ' +
-      (f.freq === 'H' ? '반기' : '분기') + ' 대비)</span></div>' +
+      '<line class="' + (v === 0 ? 'fzero' : 'fz') + '" x1="' + L + '" y1="' + gy(v).toFixed(1) +
+      '" x2="' + (W - R) + '" y2="' + gy(v).toFixed(1) + '"/>' +
+      '<text class="fx" x="' + (L - 8) + '" y="' + (gy(v) + 4).toFixed(1) +
+      '" text-anchor="end">' + pcN(v) + '</text>').join('');
+    yoySvg = '<div class="finhead sub">매출 성장률 <span class="dim">(YoY)</span></div>' +
       '<div class="finbox"><svg viewBox="0 0 ' + W + ' ' + H2 + '" class="finsvg">' + axis +
-      (lo < 0 && hi > 0 ? '<line class="fzero" x1="' + L + '" y1="' + gy(0).toFixed(1) +
-        '" x2="' + (W - R) + '" y2="' + gy(0).toFixed(1) + '"/>' : '') +
       '<path class="fl yoy" d="' +
       have.map((o, j) => (j ? 'L' : 'M') + cx(o[0]).toFixed(1) + ',' + gy(o[1]).toFixed(1)).join(' ') +
       '"/>' + have.map(o =>
         '<circle class="dot yoy" cx="' + cx(o[0]).toFixed(1) + '" cy="' + gy(o[1]).toFixed(1) + '" r="3"/>' +
-        '<text class="vn yoy" x="' + cx(o[0]).toFixed(1) + '" y="' + (gy(o[1]) - 8).toFixed(1) +
-        '" text-anchor="middle">' + pc(o[1]) + '</text>').join('') +
+        '<text class="vn yoy" x="' + cx(o[0]).toFixed(1) + '" y="' + (gy(o[1]) - 9).toFixed(1) +
+        '" text-anchor="middle">' + pcN(o[1]) + '</text>').join('') +
       xlab(H2) + '</svg></div>';
   }
 
-  const per = f.freq === 'Q' ? '분기' : f.freq === 'H' ? '반기' : '연간';
+  const per = f.freq === 'H' ? '반기' : '분기';
   const notes = [];
   if (f.freq === 'H') notes.push('홍콩은 반기 보고입니다');
   if (pts.length < 8) notes.push('받을 수 있었던 건 ' + pts.length + '개뿐입니다');
 
   return '<div class="finwrap">' +
-    '<div class="finhead">' + per + ' 매출 · 영업이익률 <span class="dim">(' +
-    esc(U.ko) + ')</span>' +
+    '<div class="finhead">' + per + ' 매출 · 영업이익률' +
+    '<span class="dim">(단위: ' + esc(U.ko) + ')</span>' +
+    (latest ? '<span class="now">최신 ' + esc(latest) + '</span>' : '') +
     (notes.length ? '<span class="warn">' + notes.join(' · ') + '</span>' : '') + '</div>' +
     '<div class="finbox"><svg viewBox="0 0 ' + W + ' ' + H1 + '" class="finsvg">' +
     rAxis + bars + opmSvg + opmAxis + xlab(H1) + '</svg></div>' +
+    '<div class="finlegend"><span class="lg rev">매출 (왼쪽)</span>' +
+    '<span class="lg opm">영업이익률 (오른쪽)</span></div>' +
     yoySvg +
-    '<div class="finlegend"><span class="lg rev">매출</span>' +
-    '<span class="lg opm">영업이익률</span><span class="lg yoy">성장률</span>' +
+    '<div class="finlegend"><span class="lg yoy">매출 성장률 (YoY)</span>' +
     '<span class="src">출처 ' + SRC_KO[f.src || 'sec'] + '</span></div></div>';
 }
 function closeModal() { document.getElementById('mdBack').hidden = true; mdKey = null; }
