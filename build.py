@@ -84,6 +84,53 @@ LOGO_SVG = f"""<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128">
 </svg>"""
 
 
+# ── 국기 ────────────────────────────────────────────────────────────────
+# **윈도우는 국기 이모지를 못 그린다.** 🇺🇸 는 문자 두 개(U+1F1FA U+1F1F8)를
+# 폰트가 합쳐서 국기로 보여주는 것인데, 윈도우 기본 폰트에는 그 합침이 없어서
+# 그냥 `US` 라는 글자 두 개로 뜬다. 맥·아이폰에서는 국기로 보이니 만든 사람은
+# 모르고 지나간다. 그래서 국기는 이모지가 아니라 **SVG 로 그려 넣는다.**
+#
+# 표에 만 줄이 넘게 들어가므로 SVG 를 줄마다 심으면 안 된다. 스타일시트에
+# 한 번만 담고 화면에서는 `<span class="fl fl-us">` 로 부른다.
+FLAG_SVG = {
+    "jp": ('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 21 15">'
+           '<rect width="21" height="15" fill="#fff"/>'
+           '<circle cx="10.5" cy="7.5" r="4.4" fill="#BC002D"/></svg>'),
+    "us": ('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 21 15">'
+           '<rect width="21" height="15" fill="#fff"/><g fill="#B22234">'
+           '<rect width="21" height="1.15"/><rect y="2.3" width="21" height="1.15"/>'
+           '<rect y="4.6" width="21" height="1.15"/><rect y="6.9" width="21" height="1.15"/>'
+           '<rect y="9.2" width="21" height="1.15"/><rect y="11.5" width="21" height="1.15"/>'
+           '<rect y="13.8" width="21" height="1.2"/></g>'
+           '<rect width="9" height="8.05" fill="#3C3B6E"/><g fill="#fff">'
+           '<circle cx="2" cy="2" r=".75"/><circle cx="4.5" cy="2" r=".75"/>'
+           '<circle cx="7" cy="2" r=".75"/><circle cx="3.25" cy="4" r=".75"/>'
+           '<circle cx="5.75" cy="4" r=".75"/><circle cx="2" cy="6" r=".75"/>'
+           '<circle cx="4.5" cy="6" r=".75"/><circle cx="7" cy="6" r=".75"/></g></svg>'),
+    # 홍콩기의 자형화(紫荊花)는 다섯 잎이다. 잎마다 별이 하나씩 더 있지만
+    # 16px 에서는 안 보이므로 잎만 그린다.
+    "hk": ('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 21 15">'
+           '<rect width="21" height="15" fill="#DE2910"/>'
+           '<g fill="#fff" transform="translate(10.5,7.5)">'
+           '<ellipse cx="0" cy="-3.3" rx="1.2" ry="2.2"/>'
+           '<ellipse cx="0" cy="-3.3" rx="1.2" ry="2.2" transform="rotate(72)"/>'
+           '<ellipse cx="0" cy="-3.3" rx="1.2" ry="2.2" transform="rotate(144)"/>'
+           '<ellipse cx="0" cy="-3.3" rx="1.2" ry="2.2" transform="rotate(216)"/>'
+           '<ellipse cx="0" cy="-3.3" rx="1.2" ry="2.2" transform="rotate(288)"/>'
+           '</g></svg>'),
+}
+
+
+def flag_css() -> str:
+    """국기 한 벌을 스타일시트에 담는다."""
+    return "\n".join(f'.fl-{m} {{ background-image:url("{data_uri(svg)}"); }}'
+                     for m, svg in FLAG_SVG.items())
+
+
+def flag_html(m: str) -> str:
+    return f'<span class="fl fl-{m}" role="img" aria-label="{MARKETS[m]["ko"]}"></span>'
+
+
 def data_uri(svg: str) -> str:
     """SVG 를 data: 주소로. `#` 과 따옴표만 바꾸면 브라우저가 그대로 읽는다."""
     one = " ".join(svg.split())
@@ -695,7 +742,7 @@ def build():
                 "range": ([ok_days[m][0], ok_days[m][-1]] if ok_days[m] else []),
             })
         mkt_meta.append({
-            "id": m, "ko": cfg["ko"], "flag": cfg["flag"], "accent": cfg["accent"],
+            "id": m, "ko": cfg["ko"], "accent": cfg["accent"],   # 국기는 CSS(.fl-*)로 그린다
             "count": len(rows), "note": cfg["note"], "scraper": cfg["scraper"],
             "has": bool(raw),
         })
@@ -813,7 +860,7 @@ def build():
     # "갱신 07:49 KST" 라고 적혀 있으니 하루 종일 안 돌아간 것처럼 보인다.
     stamp = (datetime.now(timezone.utc) + timedelta(hours=9)
              ).strftime("%Y-%m-%d %H:%M KST")
-    parts = " · ".join(f'{MARKETS[m]["flag"]} {MARKETS[m]["ko"]} <b>{len(data[m]["rows"]):,}</b>'
+    parts = " · ".join(f'{flag_html(m)} {MARKETS[m]["ko"]} <b>{len(data[m]["rows"]):,}</b>'
                        for m in have)
     head = (f'{parts} · 합계 <b>{len(packed):,}건</b> · '
             f'수집 <b>{all_ok[0]} ~ {all_ok[-1]}</b> · 갱신 {stamp}'
@@ -833,6 +880,7 @@ def build():
         f'.m-{m} {{ --mk:{MARKETS[m]["accent"]}; }}' for m in MARKET_ORDER)
 
     html = TEMPLATE.replace("__ICON__", logo_uri()) \
+                   .replace("__FLAGCSS__", flag_css()) \
                    .replace("__HEAD__", head) \
                    .replace("__TLNOTE__", tl_note) \
                    .replace("__MKTCSS__", mkt_css) \
@@ -941,7 +989,15 @@ __MKTCSS__
 }
 .mtab:hover { border-color:#31414f; }
 .mtab .mchk { width:17px; height:17px; accent-color:var(--mk,var(--a2)); cursor:pointer; margin:0; }
-.mtab .fl { font-size:21px; }
+/* 국기. 이모지가 아니라 그림이다 — 윈도우는 국기 이모지를 못 그린다. */
+.fl {
+  display:inline-block; width:1.42em; height:1em; vertical-align:-.14em;
+  border-radius:2px; background:center/100% 100% no-repeat;
+  box-shadow:0 0 0 1px rgba(255,255,255,.14) inset;
+}
+__FLAGCSS__
+.mtab .fl { width:1.5em; height:1.06em; }
+.gl { font-size:20px; line-height:1; }
 .mtab .n {
   color:var(--mute); font-weight:600; font-size:17px;
   font-variant-numeric:tabular-nums;
@@ -1415,7 +1471,7 @@ svg.bars rect.b:hover { fill:var(--a3); }
   발표 시각은 <b>미국만</b> 원본에 있습니다(장전 BMO / 장후 AMC).
   일본은 대부분 장 마감 후 15시 전후, 홍콩은 이사회 당일 장 마감 후 공시입니다.<br>
   날짜는 각 시장의 <b>현지 날짜</b>입니다. 미국 장후 발표는 한국 시각으로 다음 날 새벽이 됩니다.<br>
-  🇭🇰 홍콩만 성격이 다릅니다. 미국·일본은 회사가 미리 신고한 <b>발표 예정일</b>이지만,
+  <span class="fl fl-hk" role="img" aria-label="홍콩"></span> 홍콩만 성격이 다릅니다. 미국·일본은 회사가 미리 신고한 <b>발표 예정일</b>이지만,
   홍콩은 그 제도가 약하고 거래소가 내던 이사회 캘린더도 없어져서
   <b>이미 공시된 실적</b>을 모읍니다. 즉 홍콩 탭에는 앞으로의 예정이 아니라
   지나간 발표가 실립니다.<br>
@@ -1452,6 +1508,12 @@ svg.bars rect.b:hover { fill:var(--a3); }
 const D = JSON.parse(document.getElementById('payload').textContent);
 const ROWS = D.rows, NOTE = D.notable;
 const MKTS = D.markets, MKT = Object.fromEntries(MKTS.map(m => [m.id, m]));
+/* 국기. **이모지가 아니라 그림이다** — 윈도우 기본 폰트는 국기 이모지를 못
+   그려서 🇺🇸 가 그냥 'US' 라는 글자로 뜬다(맥에서는 국기로 보이니 만든 쪽은
+   모르고 지나간다). 그림은 스타일시트에 한 벌만 담고 여기서는 클래스만 붙인다 —
+   표에 만 줄이 넘게 들어가므로 줄마다 SVG 를 심으면 안 된다. */
+const FL = m => '<span class="fl fl-' + m + '" role="img" aria-label="' +
+                (MKT[m] ? MKT[m].ko : m) + '"></span>';
 const LIVE = MKTS.filter(m => m.has).map(m => m.id);
 const DOW = ['월','화','수','목','금','토','일'];
 const LS_KEY = 'jpEarnWatch';
@@ -1779,7 +1841,7 @@ function chip(r, big) {
   return '<button class="chip m-' + r[9] + (big ? ' big' : '') + (on ? ' watch' : '') +
          (got ? ' done' : '') +
          '" data-key="' + esc(k) + '" data-date="' + dateOf(r) + '">' +
-         (mkt ? '' : '<span class="fl">' + MKT[r[9]].flag + '</span>') + we +
+         (mkt ? '' : FL(r[9])) + we +
          '<span class="cd">' + esc(r[1]) + '</span>' +
          '<span class="cn' + (r[8] === 0 ? ' guess' : '') + '" title="' + esc(bothOf(r)) +
          '">' + esc(nameOf(r)) + '</span>' + badge +
@@ -1802,7 +1864,7 @@ function renderCal() {
   if (mkt && !MKT[mkt].has) {
     const cal = document.getElementById('cal');
     cal.className = 'cal none';
-    cal.innerHTML = '<div class="nodata">' + MKT[mkt].flag + ' ' + esc(MKT[mkt].ko) +
+    cal.innerHTML = '<div class="nodata">' + FL(mkt) + ' ' + esc(MKT[mkt].ko) +
       ' 일정은 아직 수집하지 않았습니다.' +
       '<span>저장소에서 <b>python ' + esc(MKT[mkt].scraper) + '</b> 을 돌린 뒤 ' +
       '<b>python build.py</b> 로 다시 만들면 이 자리에 채워집니다.</span></div>';
@@ -1918,7 +1980,7 @@ function renderGroups() {
     }).join('');
     dictTotal += Object.keys(NOTE).filter(k => k.startsWith(m + ':')).length;
     if (!boxes) continue;
-    if (!mkt) html += '<h3 class="gmkt m-' + m + '">' + MKT[m].flag + ' ' +
+    if (!mkt) html += '<h3 class="gmkt m-' + m + '">' + FL(m) + ' ' +
                       esc(MKT[m].ko) + '</h3>';
     html += '<div class="groups">' + boxes + '</div>';
   }
@@ -1995,7 +2057,7 @@ function renderTable() {
       '<td><button class="sbtn' + (on ? ' on' : '') + '" data-star="' + esc(k) + '">' +
       (on ? '★' : '☆') + '</button></td>' +
       '<td class="dim">' + r[0] + '</td>' +
-      '<td class="mcell">' + MKT[r[9]].flag + ' ' + esc(MKT[r[9]].ko) + '</td>' +
+      '<td class="mcell">' + FL(r[9]) + ' ' + esc(MKT[r[9]].ko) + '</td>' +
       '<td class="code' + (nt ? ' big' : '') + '">' + esc(r[1]) + '</td>' +
       '<td class="' + (r[8] === 0 ? 'guess' : '') + '">' + esc(r[2]) + '</td>' +
       '<td class="jp">' + (r[7] === r[2] ? '' : esc(r[7])) + '</td>' +
@@ -2035,8 +2097,8 @@ function openModal(k, dt) {
   if (!r) return;
   mdKey = k;
   const nt = NOTE[k], m = r[9], code = r[1];
-  document.getElementById('mdTitle').textContent =
-    MKT[m].flag + ' ' + r[2] + ' (' + code + ')';
+  document.getElementById('mdTitle').innerHTML =
+    FL(m) + ' ' + esc(r[2]) + ' (' + esc(code) + ')';
   document.getElementById('mdSub').textContent =
     altOf(r).concat(r[8] === 0 ? ['한글 표기는 기계 변환'] : []).join(' · ');
   const dd = Math.round((parse(r[0]) - parse(D.today)) / 86400000);
@@ -2537,9 +2599,9 @@ function renderCapNote() {
   }
   const bits = [];
   for (const m of shown) {
-    if (hid[m]) bits.push(MKT[m].flag + ' ' + MKT[m].ko + ' <b>' + hid[m].size +
+    if (hid[m]) bits.push(FL(m) + ' ' + MKT[m].ko + ' <b>' + hid[m].size +
       '종목</b>은 원본에 시총이 없어 숨겼습니다');
-    if (thru[m]) bits.push(MKT[m].flag + ' ' + MKT[m].ko + ' <b>' + thru[m].size +
+    if (thru[m]) bits.push(FL(m) + ' ' + MKT[m].ko + ' <b>' + thru[m].size +
       '종목</b>은 시총을 아직 못 받아 <b>그대로 보입니다</b>');
   }
   if (!bits.length) { el.hidden = true; return; }
@@ -2574,8 +2636,8 @@ function refresh() {
 }
 function renderTabs() {
   const all = picked.size === LIVE.length;
-  const tabs = [{ id: '', flag: '🌐', ko: '전체', n: ROWS.length, has: true, on: all }]
-    .concat(MKTS.map(m => ({ id: m.id, flag: m.flag, ko: m.ko, n: m.count,
+  const tabs = [{ id: '', ko: '전체', n: ROWS.length, has: true, on: all }]
+    .concat(MKTS.map(m => ({ id: m.id, ko: m.ko, n: m.count,
                              has: m.has, on: !all && picked.has(m.id) })));
   document.getElementById('mtabs').innerHTML = tabs.map(t =>
     '<div class="mtab m-' + (t.id || 'all') + (t.on ? ' on' : '') +
@@ -2583,7 +2645,7 @@ function renderTabs() {
     (t.id ? '<input type="checkbox" class="mchk" data-mchk="' + t.id + '"' +
             (picked.has(t.id) ? ' checked' : '') + (t.has ? '' : ' disabled') +
             ' title="여러 시장을 같이 보려면 체크하세요">' : '') +
-    '<span class="fl">' + t.flag + '</span>' + esc(t.ko) +
+    (t.id ? FL(t.id) : '<span class="gl">🌐</span>') + esc(t.ko) +
     '<span class="n">' + (t.has ? t.n.toLocaleString() + '건' : '미수집') + '</span></div>'
   ).join('');
 
@@ -2591,7 +2653,7 @@ function renderTabs() {
   document.getElementById('calMkts').innerHTML = MKTS.map(m =>
     '<button class="mp' + (picked.has(m.id) ? ' on' : '') + '" data-mchk="' + m.id + '"' +
     (m.has ? '' : ' disabled title="아직 수집하지 않았습니다"') + '>' +
-    m.flag + ' ' + esc(m.ko) + '</button>').join('');
+    FL(m.id) + ' ' + esc(m.ko) + '</button>').join('');
 }
 
 /* ── 요약 카드 ────────────────────────────────────────────── */
@@ -2613,7 +2675,7 @@ function renderCards() {
 
   const cur = mkt ? MKT[mkt] : null;
   document.getElementById('calMeta').textContent = cur
-    ? cur.flag + ' ' + cur.ko + ' 상장사 — ' + cur.note
+    ? cur.ko + ' 상장사 — ' + cur.note
     : '미국 · 일본 상장사 발표 예정 + 홍콩 공시';
 }
 
@@ -2622,7 +2684,7 @@ function renderCards() {
    '아직 못 받은 날'인지 구분되지 않으면 캘린더를 믿을 수 없다. */
 function renderFoot() {
   document.getElementById('srcLink').innerHTML =
-    '출처 ' + D.sources.map(s => MKT[s.mkt].flag + ' ' + esc(s.name) +
+    '출처 ' + D.sources.map(s => FL(s.mkt) + ' ' + esc(s.name) +
       ' <a href="' + esc(s.url) + '" target="_blank" rel="noopener">↗</a>').join(' · ') +
     '<br>';
 
@@ -2635,13 +2697,13 @@ function renderFoot() {
       if (!okSet[m].has(d)) gaps.push(d);
     }
     if (gaps.length) {
-      out += MKT[m].flag + ' ' + MKT[m].ko + ' 미수집 ' + gaps.length + '일 (' +
+      out += FL(m) + ' ' + MKT[m].ko + ' 미수집 ' + gaps.length + '일 (' +
         (gaps.length > 12 ? gaps.slice(0, 12).join(', ') + ' 외 ' + (gaps.length - 12) + '일'
                           : gaps.join(', ')) + ')<br>';
     }
   }
   for (const m of MKTS.filter(x => !x.has)) {
-    out += m.flag + ' ' + m.ko + ' — 아직 수집하지 않았습니다. <b>python ' +
+    out += FL(m.id) + ' ' + m.ko + ' — 아직 수집하지 않았습니다. <b>python ' +
            m.scraper + '</b> 을 돌리면 채워집니다.<br>';
   }
   document.getElementById('gapNote').innerHTML = out
@@ -2705,7 +2767,7 @@ function fqDraw() {
   fqList.innerHTML = fqHits.map((x, i) => {
     const r = x.r, dd = Math.round((parse(r[0]) - parse(D.today)) / 86400000);
     return '<div class="fqi' + (i === fqAt ? ' on' : '') + '" data-i="' + i + '">' +
-      '<span>' + MKT[r[9]].flag + '</span>' +
+      FL(r[9]) +
       '<span class="fqn">' + esc(r[2]) + '</span>' +
       '<span class="fqc">' + esc(r[1]) +
         (r[7] && r[7] !== r[2] ? ' · ' + esc(r[7]) : '') + '</span>' +
