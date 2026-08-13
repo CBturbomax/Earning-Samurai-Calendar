@@ -37,6 +37,59 @@ DICTS = {"jp": companies, "us": companies_us, "hk": companies_hk}
 # 결산종별 표기를 짧게. 원문은 第１/第２/第３/本.
 KIND_MAP = {"第１": "1Q", "第２": "2Q", "第３": "3Q", "本": "본결산"}
 
+# ── 로고 ────────────────────────────────────────────────────────────────
+# 회원님이 정한 어닝 사무라이 얼굴. **그림 파일을 두지 않고 SVG 로 그린다** —
+# 이 저장소의 산출물은 index.html 한 장뿐이라, 그림을 따로 두면 그 규칙이 깨지고
+# 캐시가 어긋났을 때 아이콘만 빈칸으로 뜬다. 한 군데서 만들어 파비콘과 제목 옆에
+# 같이 쓴다(전에는 같은 SVG 를 두 곳에 손으로 붙여 넣어 두 그림이 달라졌다).
+#
+#   투구(검정) · 쿠와가타 뿔 둘(금) · 가운데 금색 문장 안에 오르는 화살표
+#   노란 얼굴 · 검은 선글라스 · 웃는 입 · 양옆 어깨판(검정+금테)
+LOGO_BG = "#141C33"        # 남색 바탕
+LOGO_GOLD = "#F5B21C"
+LOGO_GOLD_D = "#D9930F"    # 금색 그늘
+LOGO_BLACK = "#17181C"
+LOGO_FACE = "#FFC62B"
+
+LOGO_SVG = f"""<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128">
+<rect width="128" height="128" rx="26" fill="{LOGO_BG}"/>
+<g fill="{LOGO_BLACK}" stroke="{LOGO_GOLD}" stroke-width="2.6">
+<rect x="7" y="54" width="20" height="56" rx="6"/>
+<rect x="101" y="54" width="20" height="56" rx="6"/>
+</g>
+<g fill="{LOGO_GOLD}">
+<rect x="7" y="54" width="20" height="7" rx="3.5"/>
+<rect x="101" y="54" width="20" height="7" rx="3.5"/>
+<circle cx="17" cy="73" r="4.6"/>
+<circle cx="111" cy="73" r="4.6"/>
+</g>
+<g fill="none" stroke="{LOGO_GOLD}" stroke-width="14" stroke-linecap="round">
+<path d="M46 56C30 46 16 30 14 9"/>
+<path d="M82 56c16-10 30-26 32-47"/>
+</g>
+<circle cx="64" cy="76" r="38" fill="{LOGO_FACE}"/>
+<path d="M23 62C23 37 41 21 64 21s41 16 41 41z" fill="{LOGO_BLACK}"/>
+<rect x="19" y="53" width="90" height="11" rx="5.5" fill="{LOGO_BLACK}"/>
+<circle cx="64" cy="39" r="13.5" fill="{LOGO_GOLD}"/>
+<circle cx="64" cy="39" r="10.5" fill="{LOGO_BLACK}"/>
+<path d="M56.5 43.5l5-5 3.5 3.5 5.5-7" fill="none" stroke="{LOGO_GOLD}"
+      stroke-width="2.8" stroke-linecap="round" stroke-linejoin="round"/>
+<path d="M73 32.5l-6.5.8 3.6 4.2z" fill="{LOGO_GOLD}"/>
+<rect x="27" y="75" width="74" height="7" rx="3.5" fill="{LOGO_BLACK}"/>
+<rect x="27" y="75" width="33" height="19" rx="8" fill="{LOGO_BLACK}"/>
+<rect x="68" y="75" width="33" height="19" rx="8" fill="{LOGO_BLACK}"/>
+<path d="M52 103q12 9 24 0" fill="none" stroke="{LOGO_GOLD_D}" stroke-width="4"
+      stroke-linecap="round"/>
+</svg>"""
+
+
+def data_uri(svg: str) -> str:
+    """SVG 를 data: 주소로. `#` 과 따옴표만 바꾸면 브라우저가 그대로 읽는다."""
+    one = " ".join(svg.split())
+    return ("data:image/svg+xml,"
+            + one.replace("#", "%23").replace('"', "'").replace("<", "%3C")
+                 .replace(">", "%3E").replace("&", "%26"))
+
 
 
 def monday_of(d: date) -> date:
@@ -749,7 +802,8 @@ def build():
     mkt_css = "\n".join(
         f'.m-{m} {{ --mk:{MARKETS[m]["accent"]}; }}' for m in MARKET_ORDER)
 
-    html = TEMPLATE.replace("__HEAD__", head) \
+    html = TEMPLATE.replace("__ICON__", data_uri(LOGO_SVG)) \
+                   .replace("__HEAD__", head) \
                    .replace("__TLNOTE__", tl_note) \
                    .replace("__MKTCSS__", mkt_css) \
                    .replace("__DATA__", json.dumps(payload, ensure_ascii=False,
@@ -779,8 +833,10 @@ TEMPLATE = r"""<!DOCTYPE html>
 <meta http-equiv="Pragma" content="no-cache">
 <meta http-equiv="Expires" content="0">
 <title>Earning Samurai — 글로벌 실적발표 캘린더</title>
-<!-- 대표 아이콘. 외부 파일을 받지 않도록 SVG를 그대로 심는다 (투구 + 선글라스). -->
-<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='13' fill='%230f1419'/%3E%3Cpath d='M13 27C10 13 16 6 21 5c-1 9 4 13 8 15z' fill='%23FFC01E'/%3E%3Cpath d='M51 27c3-14-3-21-8-22 1 9-4 13-8 15z' fill='%23FFC01E'/%3E%3Cpath d='M32 12c-11 0-19 8-19 18h38c0-10-8-18-19-18z' fill='%231b1b1b'/%3E%3Ccircle cx='32' cy='39' r='17' fill='%23FFC01E'/%3E%3Crect x='15' y='33' width='34' height='4' rx='2' fill='%23111'/%3E%3Crect x='16' y='33' width='13' height='10' rx='3.5' fill='%23111'/%3E%3Crect x='35' y='33' width='13' height='10' rx='3.5' fill='%23111'/%3E%3Cpath d='M25 47q7 5 14 0' stroke='%23111' stroke-width='2.6' fill='none' stroke-linecap='round'/%3E%3C/svg%3E">
+<!-- 대표 아이콘. 그림 파일을 따로 두지 않고 SVG 를 그대로 심는다.
+     제목 옆 로고와 **같은 곳(build.py 의 LOGO_SVG)** 에서 온다. -->
+<link rel="icon" href="__ICON__">
+<link rel="apple-touch-icon" href="__ICON__">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=42dot+Sans:wght@300..800&display=swap"
@@ -810,10 +866,11 @@ h1 { font-size:38px; font-weight:800; margin:0 0 6px; letter-spacing:-.5px;
      display:flex; align-items:center; gap:12px; flex-wrap:wrap; }
 h1 .jp { color:var(--a3); }
 h1 .byline { font-size:20px; font-weight:600; color:var(--mute); letter-spacing:0; }
-/* 투구 아이콘 — 파비콘과 같은 그림. 외부 파일을 받지 않게 SVG를 심는다. */
+/* 투구 아이콘 — 파비콘과 **같은 그림**. 둘 다 build.py 의 LOGO_SVG 에서 온다.
+   예전에는 같은 SVG 를 두 곳에 손으로 붙여 넣었더니 한쪽만 고쳐져 달라졌다. */
 h1 .mark {
-  width:44px; height:44px; flex:0 0 auto; border-radius:10px;
-  background:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='13' fill='%23161d24'/%3E%3Cpath d='M13 27C10 13 16 6 21 5c-1 9 4 13 8 15z' fill='%23FFC01E'/%3E%3Cpath d='M51 27c3-14-3-21-8-22 1 9-4 13-8 15z' fill='%23FFC01E'/%3E%3Cpath d='M32 12c-11 0-19 8-19 18h38c0-10-8-18-19-18z' fill='%231b1b1b'/%3E%3Ccircle cx='32' cy='39' r='17' fill='%23FFC01E'/%3E%3Crect x='15' y='33' width='34' height='4' rx='2' fill='%23111'/%3E%3Crect x='16' y='33' width='13' height='10' rx='3.5' fill='%23111'/%3E%3Crect x='35' y='33' width='13' height='10' rx='3.5' fill='%23111'/%3E%3Cpath d='M25 47q7 5 14 0' stroke='%23111' stroke-width='2.6' fill='none' stroke-linecap='round'/%3E%3C/svg%3E") center/contain no-repeat;
+  width:52px; height:52px; flex:0 0 auto; border-radius:12px;
+  background:url("__ICON__") center/contain no-repeat;
 }
 h2 {
   font-size:26px; font-weight:700; margin:52px 0 14px;
