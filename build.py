@@ -515,6 +515,98 @@ def merge_fin(a, b):
 FIN = load_fin()
 
 
+# ── 기준이 바뀐 부문 정리 ────────────────────────────────────────────
+# 회사는 사업부 구분을 통째로 갈아엎는다. HPE 가 Compute·Storage·Intelligent Edge
+# 를 Cloud&AI·Networking 으로 바꿨고, ADM·엔테그리스·메디목스도 그랬다. 그런데
+# 옛 이름과 새 이름이 한 표에 다 실려 오면 **막대에 열두 줄이 서고 그중 셋만
+# 최근 값이 있다.** 나머지 아홉은 뒤가 잘린 유령이라 색만 차지한다.
+# 재보니 부문 차트 2,327종목 중 **806종목(35%)**이 그랬다.
+#
+# 그래서 **지금 쓰는 기준만 남긴다.** 최근 두 분기에 값이 한 번도 없는 부문은
+# 옛 기준이므로 뺀다. 옛 기준으로만 채워지던 앞쪽 분기도 같이 잘라낸다 —
+# 안 자르면 새 기준 셋이 전부 빈 막대가 앞에 늘어선다.
+SEG_TAIL = 2         # 이 분기 수 안에 값이 없으면 '지금 안 쓰는 부문'
+SEG_MIN_FILL = 0.5   # 살아 있는 부문의 절반도 안 차는 앞 분기는 잘라낸다
+
+
+def current_basis(rec):
+    """지금 쓰는 부문 기준만 남긴다. 남길 게 없으면 None."""
+    names, pts = rec.get("names") or [], rec.get("pts") or []
+    if len(names) < 2 or not pts:
+        return rec
+    val = lambda r, i: r[i + 1] if i + 1 < len(r) else None
+
+    # 1) 상계·조정 줄. 값이 대부분 음수인 것은 부문이 아니다(쌓으면 막대가 파인다).
+    #    이름으로 거르지 않는 이유는 소스마다 표기가 달라서다 — 부호가 확실하다.
+    #    이건 기준이 바뀐 것이 아니므로 **앞 분기를 자르는 근거로 쓰지 않는다.**
+    keep = []
+    for i in range(len(names)):
+        vs = [v for v in (val(r, i) for r in pts) if v is not None]
+        if vs and sum(1 for v in vs if v < 0) * 2 >= len(vs):
+            continue
+        keep.append(i)
+
+    # 2) 최근 두 분기에 값이 없는 부문 = 옛 기준
+    tail = pts[-SEG_TAIL:]
+    live = [i for i in keep if any(val(r, i) is not None for r in tail)]
+    if len(live) < 2:
+        # 최근 분기가 통째로 빈 기록(꼬리를 아직 못 받은 종목)에는 손대지 않는다.
+        # 멀쩡한 차트를 지우는 쪽이 더 나쁘다.
+        live, dead = keep, []
+    else:
+        dead = [i for i in keep if i not in set(live)]
+    if len(live) < 2:
+        return None
+    if not dead and len(live) == len(names):
+        return rec
+
+    # 2b) **이름만 바꾼 부문 하나는 이어 붙인다.** 사라진 부문이 하나, 새로 생긴
+    #     부문이 하나이고 둘의 기간이 겹치지 않으면 같은 사업을 이름만 바꾼 것이다
+    #     (캐터필러의 'Energy and Transportation' -> 'Power & Energy'). 그걸 기준
+    #     변경으로 보고 잘라 버리면 멀쩡한 5년치가 두 칸으로 준다.
+    #     **둘 다 하나일 때만** 한다 — 여럿이 한꺼번에 갈리면 진짜 개편이라
+    #     어느 것이 어느 것의 후신인지 알 길이 없다(HPE 가 그랬다).
+    def span(i):
+        js = [j for j in range(len(pts)) if val(pts[j], i) is not None]
+        return (js[0], js[-1]) if js else None
+
+    if len(dead) == 1 and len(live) >= 2:
+        old = dead[0]
+        so = span(old)
+        fresh = [i for i in live if (sp := span(i)) and so and sp[0] > so[1]]
+        if so and len(fresh) == 1:
+            new = fresh[0]
+            merged = []
+            for r in pts:
+                a_, b_ = val(r, old), val(r, new)
+                merged.append(b_ if b_ is not None else a_)
+            names = list(names)
+            pts = [[r[0]] + [(merged[j] if i == new else val(r, i))
+                             for i in range(len(names))]
+                   for j, r in enumerate(pts)]
+            dead = []                       # 이어 붙였으니 자를 이유가 없다
+
+    # 3) **기준이 바뀐 지점에서 자른다.** 옛 부문이 마지막으로 값을 가진 분기까지가
+    #    옛 기준이다. 그 앞을 남겨 두면 새 부문 자리가 빈 채로 막대가 서고, 기준이
+    #    바뀌는 칸에서 높이가 껑충 뛴다(캐터필러가 그랬다 — 'Energy and
+    #    Transportation' 이 'Power & Energy' 로 바뀌면서 마지막 두 칸만 키가 컸다).
+    #
+    #    부문이 **없어지지 않고 새로 생기기만** 했으면 기준이 바뀐 게 아니다.
+    #    그때는 자르지 않는다 — 사업 하나가 늘어난 것뿐이라 옛 분기도 다 맞다.
+    start = 0
+    for i in dead:
+        for j in range(len(pts) - 1, -1, -1):
+            if val(pts[j], i) is not None:
+                start = max(start, j + 1)
+                break
+    rows = [[r[0]] + [val(r, i) for i in live] for r in pts[start:]]
+    # 새 기준으로 두 분기도 안 되면 그릴 것이 없다. 옛 기준을 섞어 그리느니
+    # 이번 분기는 비워 둔다 — 다음 분기가 쌓이면 저절로 살아난다.
+    if len(rows) < 2:
+        return None
+    return {**rec, "names": [names[i] for i in live], "pts": rows}
+
+
 def load_seg():
     """사업부별 매출. 두 곳에서 온다. 열쇠는 미국 코드라 'us:' 를 붙여 맞춘다.
 
@@ -573,6 +665,19 @@ def load_seg():
             added += bool(n_add)
         print(f"  segments_edgar.json: 최근 분기를 이어 붙인 종목 {added:,}"
               f" · 새로 생긴 종목 {new:,}")
+
+    # 기준이 바뀐 회사는 **지금 쓰는 기준만** 남긴다. 이어 붙인 뒤에 걸어야
+    # '최근 두 분기'가 실제 최근이 된다.
+    cut = gone = 0
+    for k in list(out):
+        got = current_basis(out[k])
+        if got is None:
+            del out[k]; gone += 1
+        elif got is not out[k]:
+            out[k] = got; cut += 1
+    if cut or gone:
+        print(f"  기준이 바뀐 종목 {cut:,}: 옛 부문을 뺐다"
+              + (f" · 남는 부문이 없어 뺀 종목 {gone:,}" if gone else ""))
     return out
 
 
