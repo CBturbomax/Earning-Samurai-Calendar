@@ -638,7 +638,11 @@ def build():
     weeks = sorted({monday_of(date.fromisoformat(d)).isoformat()
                     for d in set(all_ok) | kdays})
 
-    today = date.today().isoformat()
+    # **러너는 UTC 다.** date.today() 를 그대로 쓰면 한국 시각 0시~9시 사이에
+    # 만들어진 페이지의 '오늘'이 어제가 된다. 화면 쪽에서 브라우저 날짜로 다시
+    # 정하지만(D.today), 여기 값도 맞춰 둔다 — 자바스크립트가 막힌 자리에서도
+    # 하루 어긋난 페이지가 나가면 안 된다.
+    today = (datetime.now(timezone.utc) + timedelta(hours=9)).date().isoformat()
     default_week = monday_of(date.fromisoformat(today)).isoformat()
     if default_week not in weeks and weeks:
         default_week = min(weeks, key=lambda w: abs(
@@ -1448,6 +1452,22 @@ let showJp = false;
 const nameOf = r => (showJp && r[7]) ? r[7] : r[2];
 const bothOf = r => r[2] === r[7] ? r[2] : r[2] + ' · ' + r[7];
 
+/* **오늘은 화면을 열 때 정한다.** 만들 때 박아 넣으면 날이 바뀌어도 다음 빌드가
+   돌 때까지 어제로 남는다. 게다가 러너는 UTC 라, **한국 시각 0시~9시 사이에는
+   언제나 어제**였다 — 13일 새벽에 열었더니 12일 주가 열려 있었다.
+   여는 주도 여기서 다시 고른다. 그래야 빌드가 멈춰도 달력은 넘어간다. */
+D.today = iso(new Date());
+const mondayOf = s => {
+  const d = parse(s);
+  d.setDate(d.getDate() - ((d.getDay() + 6) % 7));
+  return iso(d);
+};
+if (D.weeks && D.weeks.length) {
+  const w = mondayOf(D.today);
+  D.defaultWeek = D.weeks.includes(w) ? w : D.weeks.reduce((a, b) =>
+    Math.abs(parse(b) - parse(D.today)) < Math.abs(parse(a) - parse(D.today)) ? b : a);
+}
+
 let week = D.defaultWeek;
 
 /* ── 주 네비게이션 ────────────────────────────────────────── */
@@ -1502,9 +1522,11 @@ function capKo(b) {
    어느 시장에 적용되지 않는지 화면에 적는다. 없는 값을 지어내지 않는다. */
 /* 어제. '발표일이 지났다'를 가르는 금이다. 오늘·어제는 장후 발표가 아직
    안 나왔을 수 있으므로 확실한 것으로 치지 않는다. */
+/* `toISOString()` 을 쓰면 안 된다 — parse() 가 만든 것은 **현지 자정**이라
+   UTC 로 옮기면 한국에서는 하루가 더 밀린다(어제가 그저께가 된다). iso() 로 적는다. */
 const yesterday = (() => {
   const d = parse(D.today); d.setDate(d.getDate() - 1);
-  return d.toISOString().slice(0, 10);
+  return iso(d);
 })();
 
 const capSel = document.getElementById('fCap');
