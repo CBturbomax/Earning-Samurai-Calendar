@@ -11,6 +11,7 @@ data/earnings*.json  ->  index.html (단일 파일, 외부 의존 없음)
 세 시장이 다 있어야 돌아가는 건 아니다. data/ 에 있는 것만 싣고, 없는 시장은
 "미수집"으로 적는다. 없는 걸 빈 화면으로 두면 '발표가 없는 것'처럼 보인다.
 """
+import base64
 import json
 import re
 from collections import Counter
@@ -89,6 +90,35 @@ def data_uri(svg: str) -> str:
     return ("data:image/svg+xml,"
             + one.replace("#", "%23").replace('"', "'").replace("<", "%3C")
                  .replace(">", "%3E").replace("&", "%26"))
+
+
+# 회원님이 그림 파일을 올려 두면 SVG 대신 그걸 쓴다. 저장소 맨 위에 `logo.png`
+# (또는 .svg/.webp/.jpg) 라는 이름으로 두면 된다 — GitHub 웹에서 끌어다 놓으면 끝.
+LOGO_TYPES = {".png": "image/png", ".svg": "image/svg+xml",
+              ".webp": "image/webp", ".jpg": "image/jpeg", ".jpeg": "image/jpeg"}
+
+
+def logo_uri() -> str:
+    """올려 둔 그림이 있으면 그것, 없으면 SVG 로 그린 것.
+
+    **그림도 index.html 안에 통째로 담는다.** 파일을 따로 두고 주소로 부르면
+    산출물이 한 장이 아니게 되고, 캐시가 어긋났을 때 아이콘만 빈칸으로 뜬다.
+    파비콘·제목 옆·홈화면 아이콘이 모두 이 한 곳에서 나온다.
+    """
+    for ext, mime in LOGO_TYPES.items():
+        p = HERE / ("logo" + ext)
+        if not p.exists():
+            continue
+        raw = p.read_bytes()
+        # 파비콘까지 이 그림 하나로 쓰므로 너무 크면 페이지가 무거워진다.
+        # 그래도 **말없이 무시하지는 않는다** — 회원님이 올린 것이 안 쓰이면
+        # 왜 안 바뀌었는지 알 길이 없다.
+        if len(raw) > 600_000:
+            print(f"  ! {p.name} 이 {len(raw)/1024:,.0f}KB 라 페이지가 무거워집니다. "
+                  f"그래도 그대로 씁니다.")
+        print(f"  로고: {p.name} ({len(raw)/1024:,.0f}KB)")
+        return f"data:{mime};base64," + base64.b64encode(raw).decode()
+    return data_uri(LOGO_SVG)
 
 
 
@@ -802,7 +832,7 @@ def build():
     mkt_css = "\n".join(
         f'.m-{m} {{ --mk:{MARKETS[m]["accent"]}; }}' for m in MARKET_ORDER)
 
-    html = TEMPLATE.replace("__ICON__", data_uri(LOGO_SVG)) \
+    html = TEMPLATE.replace("__ICON__", logo_uri()) \
                    .replace("__HEAD__", head) \
                    .replace("__TLNOTE__", tl_note) \
                    .replace("__MKTCSS__", mkt_css) \
