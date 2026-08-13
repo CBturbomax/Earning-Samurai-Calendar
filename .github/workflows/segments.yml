@@ -13,24 +13,34 @@
 #
 #   collect.yml   1시간   data/earnings*.json · data/caps.json
 #   numbers.yml   20분    data/financials*.json · data/segments.json
-#   여기          하루    data/segments_sec.json
+#   여기          3시간   data/segments_sec.json · data/segments_edgar.json
 #
 # 겹치는 건 만들어진 index.html 뿐이고, 그건 합친 자료로 다시 만들면 그만이다.
 #
-# 대개 아무 일도 안 한다. SEC 는 이 zip 을 분기에 한 번 내므로 "다음 분기가
-# 나왔나"만 요청 한 번으로 보고 곧장 끝낸다. 넉 달에 한 번만 진짜로 일한다.
+# **벌크만으로는 늘 두 분기 늦는다.** 벌크는 접수된 분기 기준이라, 6월 결산을
+# 7월에 신고하면 그 서류는 10월에 나오는 묶음에 들어간다. 재보니 부문 자료가
+# 있는 1,600종목 중 61%가 두 분기 뒤졌다 — 총매출은 2Q26 까지 그려지는데 부문
+# 막대는 4Q25 에서 끊겼다. 메우라고 붙여 둔 stockanalysis 는 1,784종목 중
+# 1,484종목이 빈 기록이었다.
+#
+# 그래서 두 단계로 돈다.
+#   1) 벌크 확인 — 대개 요청 한 번으로 끝난다(넉 달에 한 번만 진짜로 일한다)
+#   2) 제출 서류 — 분기 색인 한 장으로 최근 10-Q/10-K 를 찾아, 뒤진 종목부터
+#      인라인 XBRL 인스턴스를 뜯는다. 이미 본 서류는 접수번호로 건너뛴다.
 
-name: 사업부별 매출 (SEC 벌크)
+name: 사업부별 매출 (SEC 벌크 + 제출 서류)
 
 on:
   workflow_dispatch:
-  # 하루 한 번. 새 zip 이 나왔는지만 본다 — 요청 한 번이면 끝난다.
+  # 세 시간마다. 벌크 확인은 요청 한 번이고, 나머지는 제출 서류를 조금씩 따라간다.
+  # 다 따라잡으면 새 서류만 보므로 대부분의 실행이 몇 초에 끝난다.
   schedule:
-    - cron: '20 19 * * *'      # 04:20 KST
+    - cron: '20 */3 * * *'
   push:
     branches: [main]
     paths:
       - 'scrape_seg_sec.py'
+      - 'scrape_seg_edgar.py'
       - '.github/workflows/segments.yml'
 
 permissions:
@@ -44,7 +54,7 @@ jobs:
   segments:
     runs-on: ubuntu-latest
     if: github.ref_name == 'main'
-    timeout-minutes: 25
+    timeout-minutes: 50
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
@@ -64,6 +74,22 @@ jobs:
             echo '```'
           } >> "$GITHUB_STEP_SUMMARY"
 
+      # 벌크가 아직 안 실은 최근 분기를 제출 서류에서 직접 받는다.
+      # 서류 하나에 요청 두 번 · 300KB(gzip) 라, 한 번에 700건이면 8분쯤이다.
+      - name: 📄 제출 서류에서 최근 분기 부문 매출
+        continue-on-error: true
+        timeout-minutes: 25
+        env:
+          SEC_UA: 'Earning Samurai Calendar (cbpark@wisdomasset.co.kr)'
+        run: |
+          python scrape_seg_edgar.py | tee edgar.log
+          {
+            echo '### 사업부별 매출 (제출 서류)'
+            echo '```'
+            tail -30 edgar.log
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
+
       - name: 페이지 다시 만들기
         run: python build.py > /dev/null
 
@@ -75,7 +101,7 @@ jobs:
           set -u
           git config user.name  "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          rm -f seg.log
+          rm -f seg.log edgar.log
           git add data/ index.html
           if git diff --cached --quiet; then
             echo "달라진 게 없다. 커밋하지 않는다."

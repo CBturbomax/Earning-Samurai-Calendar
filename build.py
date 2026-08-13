@@ -547,7 +547,74 @@ def load_seg():
             out[k if ":" in k else "us:" + k] = v
             n += 1
         print(f"  {name}: {n:,}종목")
+
+    # 벌크는 **접수된 분기 기준**이라 구조적으로 두 분기쯤 늦는다. 실제로 재보니
+    # 부문 자료가 있는 1,600종목 중 61%가 두 분기 뒤졌다 — 총매출은 2Q26 까지
+    # 그려지는데 부문 막대는 4Q25 에서 끊겼다. `scrape_seg_edgar.py` 가 그 구간을
+    # 제출 서류에서 직접 받아 오므로, 여기서 **뒤쪽만 이어 붙인다.**
+    # 통째로 갈아치우지 않는 이유는 서류 몇 장으로는 몇 년치가 안 나오기 때문이다.
+    fresh = HERE / "data" / "segments_edgar.json"
+    if fresh.exists():
+        try:
+            got = json.loads(fresh.read_text(encoding="utf-8")).get("stocks", {})
+        except (ValueError, OSError) as e:
+            print(f"  ! segments_edgar.json 읽기 실패: {e}")
+            got = {}
+        added = new = 0
+        for k, v in got.items():
+            key = k if ":" in k else "us:" + k
+            base = out.get(key)
+            if base is None:
+                if v.get("names"):
+                    out[key] = v
+                    new += 1
+                continue
+            n_add = splice(base, v)
+            added += bool(n_add)
+        print(f"  segments_edgar.json: 최근 분기를 이어 붙인 종목 {added:,}"
+              f" · 새로 생긴 종목 {new:,}")
     return out
+
+
+SEG_NORM = re.compile(r"[^a-z0-9]|and")
+
+
+def seg_key(name: str) -> str:
+    """부문 이름을 맞춰 보는 열쇠. 대소문자·띄어쓰기·'and' 를 지운다.
+    수집기 쪽 `norm_name` 과 같은 규칙이다 — 한쪽만 고치면 안 붙는다."""
+    return SEG_NORM.sub("", name.lower())
+
+
+def splice(base, fresh):
+    """헌 기록 **뒤에** 새 기록의 최근 분기만 잇는다. 붙인 분기 수를 돌려준다.
+
+    통째로 바꾸지 않는 이유가 둘이다.
+      * 제출 서류 몇 장으로는 대여섯 분기밖에 안 나온다. 그걸로 갈아치우면
+        3년치 막대가 반토막 난다.
+      * 부문 이름이 소스마다 조금씩 다르다('Intelligent Cloud' 대
+        'IntelligentCloud'). 열쇠로 맞춰 보고, **맞는 게 적으면 아예 안 붙인다** —
+        다른 회사의 다른 축을 이어 붙이는 것이 제일 나쁘다.
+    """
+    if not base.get("names") or not fresh.get("names") or not fresh.get("pts"):
+        return 0
+    if base.get("axis") != fresh.get("axis"):
+        return 0
+    fi = {seg_key(n): i for i, n in enumerate(fresh["names"])}
+    hit = [fi.get(seg_key(n)) for n in base["names"]]
+    if sum(x is not None for x in hit) < max(2, len(base["names"]) * 0.6):
+        return 0
+    last = max(p[0] for p in base["pts"])
+    add = []
+    for p in sorted(fresh["pts"]):
+        if p[0] <= last:
+            continue
+        # 열은 늘 **헌 기록의 이름 차례**를 따른다. 새 기록에 없는 부문은 빈칸이다.
+        add.append([p[0]] + [(p[i + 1] if i is not None and i + 1 < len(p) else None)
+                             for i in hit])
+    if not add:
+        return 0
+    base["pts"] = base["pts"] + add
+    return len(add)
 
 
 SEG = load_seg()
