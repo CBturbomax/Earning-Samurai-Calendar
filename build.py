@@ -1043,14 +1043,6 @@ h2 .n { color:var(--a3); margin-right:10px; }
 /* ── 시장 탭 ───────────────────────────────────────────────── */
 /* --mk 는 시장 강조색. markets.py 가 유일한 출처고 여기로 흘러온다. */
 __MKTCSS__
-/* 규모 필터가 닿지 않는 시장 안내 */
-.capnote {
-  background:#1a2129; border:1px solid var(--line); border-left:5px solid var(--a3);
-  border-radius:8px; padding:11px 18px; margin:0 0 12px; color:#c9d6e0; font-size:18px;
-}
-.capnote b { color:var(--a3); }
-.capnote .dim { color:var(--mute); font-size:16px; }
-
 .mtabs { display:flex; flex-wrap:wrap; gap:10px; margin:20px 0 4px; }
 .mtab {
   display:flex; align-items:center; gap:9px; background:var(--panel);
@@ -1474,14 +1466,13 @@ svg.bars rect.b:hover { fill:var(--a3); }
   </div>
   <button class="btn" id="wNext">다음 주 →</button>
   <span class="spacer"></span>
-  <button class="btn" id="wToday">오늘 주</button>
+  <button class="btn" id="wToday">이번 주</button>
   <select id="wPick"></select>
   <span class="mpick" id="calMkts" title="나라를 켜고 끕니다. 맨 위 탭과 같이 움직입니다."></span>
   <select id="fCap" title="시가총액으로 거릅니다. 캘린더와 표에 함께 적용됩니다."></select>
   <label class="chk"><input type="checkbox" id="kstToggle" checked>한국 시간</label>
   <label class="chk"><input type="checkbox" id="jpToggle">원문 보기</label>
 </div>
-<div class="capnote" id="capNote" hidden></div>
 <div class="cal" id="cal"></div>
 <div class="tools">
   <button class="btn" id="icsWeek">📅 이번 주 일정 내보내기 (.ics)</button>
@@ -2666,31 +2657,24 @@ for (const id of ['fSector','fMarket','fKind'])
 /* 규모 필터는 캘린더·표에 함께 걸리므로 전체를 다시 그린다. */
 capSel.onchange = () => { expanded.clear(); renderAll(); };
 
-/* 시총 자료가 없어 규모 필터가 닿지 않는 시장을 적어준다.
-   조용히 빠져나가게 두면 '걸렀는데 왜 아직 많냐'가 된다. */
-function renderCapNote() {
-  const el = document.getElementById('capNote');
-  if (!capMin()) { el.hidden = true; return; }
-  const shown = onMkts();
-  // 규모 필터가 무엇을 감췄고 무엇을 통과시켰는지 적는다. 조용히 지우지 않는다.
-  const hid = {}, thru = {};
+/* 규모 필터가 무엇을 감췄고 무엇을 통과시켰는지 — **화면에는 안 낸다.**
+   회원님이 뜻을 알고 계셔서 지우라고 하셨다(그 줄 하나가 캘린더 위를 다 먹었다).
+   대신 콘솔에 남긴다. 조용히 없애지는 않는다 — 왜 걸렀는데 아직 많은지,
+   왜 껍데기 회사가 남아 있는지 따질 자리는 있어야 한다.
+   개발자 도구 콘솔에서 capReport() 를 치면 그때 숫자가 나온다. */
+function capReport() {
+  if (!capMin()) return '규모 필터가 꺼져 있습니다.';
+  const shown = onMkts(), hid = {}, thru = {};
   for (const r of ROWS) {
     if (!shown.includes(r[9]) || r[11]) continue;
-    (CAP_INLINE.has(r[9]) ? hid : thru)[r[9]] = ((CAP_INLINE.has(r[9]) ? hid : thru)[r[9]] || new Set()).add(r[1]);
+    const box = CAP_INLINE.has(r[9]) ? hid : thru;
+    (box[r[9]] = box[r[9]] || new Set()).add(r[1]);
   }
-  const bits = [];
-  for (const m of shown) {
-    if (hid[m]) bits.push(FL(m) + ' ' + MKT[m].ko + ' <b>' + hid[m].size +
-      '종목</b>은 원본에 시총이 없어 숨겼습니다');
-    if (thru[m]) bits.push(FL(m) + ' ' + MKT[m].ko + ' <b>' + thru[m].size +
-      '종목</b>은 시총을 아직 못 받아 <b>그대로 보입니다</b>');
-  }
-  if (!bits.length) { el.hidden = true; return; }
-  el.hidden = false;
-  el.innerHTML = bits.join(' · ') +
-    ' <span class="dim">(1조원 ≈ $' + (1e12 / D.usdKrw / 1e9).toFixed(2) +
-    'B, 환율 ' + D.usdKrw.toLocaleString() + '원 어림)</span>';
+  return shown.map(m =>
+    MKT[m].ko + ' 숨김 ' + (hid[m] ? hid[m].size : 0) +
+    '종목 · 시총 미수집이라 통과 ' + (thru[m] ? thru[m].size : 0) + '종목').join(' / ');
 }
+function renderCapNote() {}
 document.getElementById('q').oninput = renderTable;
 for (const id of ['tBig','tFuture']) document.getElementById(id).onchange = renderTable;
 /* 한국 시간으로 보면 미국 장후 발표가 다음 날 칸으로 옮겨간다.

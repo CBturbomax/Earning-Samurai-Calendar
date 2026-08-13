@@ -12,7 +12,8 @@
 `EARNINGS_GIVE_UP=1` 로 곧장 접게 해두었고, 그 결과 앞으로의 일정에도 구멍이 난다.
 
 TDnet 은 반대다. 회사가 발표하는 **그 순간** 결산단신이 올라오고, 목록은 한 달쯤
-남는다. 미국을 SEC 에서 받듯 일본은 TDnet 이다.
+남는다. 미국을 SEC 에서 받듯 일본은 TDnet 이다. 다만 **남는 기간이 한 달쯤이라
+그보다 앞선 발표는 이 경로로도 못 받는다** — 3093 은 사흘 차이로 창을 놓쳤다.
 
   목록  https://www.release.tdnet.info/inbs/I_list_{쪽:03d}_{YYYYMMDD}.html
 
@@ -25,7 +26,7 @@ TDnet 은 반대다. 회사가 발표하는 **그 순간** 결산단신이 올�
 **여기서 오는 것은 '지나간 발표'다.** 홍콩과 같은 성격이라 앞으로의 일정을 주지
 않는다. 앞일은 여전히 닛케이 몫이고, 둘을 합쳐야 캘린더가 온전해진다.
 
-  python scrape_jp_tdnet.py            # 최근 31일 (TDnet 이 남겨두는 만큼)
+  python scrape_jp_tdnet.py            # 최근 45일까지 두드려 본다
   python scrape_jp_tdnet.py 21         # 최근 21일만
   python scrape_jp_tdnet.py --probe    # 응답 생김새만 떠보기
 """
@@ -49,8 +50,12 @@ LIST_URL = "https://www.release.tdnet.info/inbs/I_list_{page:03d}_{day}.html"
 UA = ("Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 "
       "(KHTML, like Gecko) Chrome/124.0 Safari/537.36")
 
-# TDnet 이 목록을 남겨두는 기간. 이보다 앞은 받아도 빈다.
-BACK_DAYS = int(os.environ.get("JP_TDNET_BACK_DAYS", "31"))
+# TDnet 이 목록을 남겨두는 기간. 공식적으로는 31일인데 실제로 어디까지 주는지는
+# 두드려 봐야 안다. 넉넉히 잡고 **없다고 답하는 날은 그냥 건너뛴다** — 0건으로
+# 적으면 '그날 발표가 없었다'는 거짓말이 되고, 미수집으로 적으면 영영 못 받을 날을
+# 구멍이라고 계속 광고하게 된다. 한 번 사라진 날은 다시 나타나지 않으므로
+# `gone` 에 적어 두고 다음 실행부터는 두드리지도 않는다.
+BACK_DAYS = int(os.environ.get("JP_TDNET_BACK_DAYS", "45"))
 # 최근 며칠은 캐시를 무시하고 다시 받는다. 그날 안에도 공시가 계속 붙기 때문이다.
 FRESH_DAYS = 2
 PAUSE = 0.5
@@ -143,11 +148,17 @@ def listing(day: str, page: int):
 
 
 def fetch_day(day: str, probe: bool = False):
-    """그날 올라온 **결산단신**만 캘린더 줄로 만든다."""
+    """그날 올라온 **결산단신**만 캘린더 줄로 만든다.
+
+    첫 쪽부터 없으면 `None` — TDnet 이 그날을 더는 안 준다는 뜻이다.
+    '발표가 0건인 날'과 구별해야 한다. 0건으로 적으면 거짓말이 된다.
+    """
     got, page, seen = [], 1, set()
     while page <= MAX_PAGE:
         rows = listing(day, page)
         if rows is None:
+            if page == 1:
+                return None
             break
         if probe:
             print(f"  {day} {page}쪽 · 줄 {len(rows)}")
@@ -184,17 +195,17 @@ def load_cache():
     try:
         old = json.loads(OUT.read_text(encoding="utf-8"))
     except (ValueError, OSError):
-        return {}
+        return {}, set()
     if old.get("v") != TDNET_VER:
         print(f"  담는 형식이 바뀌었다(v{old.get('v')} -> v{TDNET_VER}). 처음부터 다시 받는다.")
-        return {}
+        return {}, set()
     by_day = {d: [] for d in old.get("ok_days", [])}
     for r in old.get("rows", []):
         by_day.setdefault(r["date"], []).append(r)
-    return by_day
+    return by_day, set(old.get("gone", []))
 
 
-def save(by_day: dict):
+def save(by_day: dict, gone: set):
     ok_days = sorted(by_day)
     rows = [r for d in ok_days for r in by_day[d]]
     payload = {
@@ -205,6 +216,9 @@ def save(by_day: dict):
         "count": len(rows),
         "ok_days": ok_days,
         "per_day": {d: len(by_day[d]) for d in ok_days},
+        # TDnet 이 더는 안 주는 날. 다시 두드리지 않으려고 적어 둔다.
+        # 이 날들은 '수집 성공'도 '미수집'도 아니다 — 받을 길이 없는 날이다.
+        "gone": sorted(gone),
         "rows": rows,
     }
     tmp = OUT.with_suffix(".tmp")
@@ -222,8 +236,8 @@ def main(back_days: int, probe: bool = False):
             fetch_day((today - timedelta(days=back)).isoformat(), probe=True)
         return
 
-    by_day = load_cache()
-    failed, streak = [], 0
+    by_day, gone = load_cache()
+    failed, streak, expired = [], 0, 0
     fresh_from = today - timedelta(days=FRESH_DAYS)
 
     # 오래된 쪽부터 훑는다. 도중에 접혀도 새 날짜가 남게 하려면 반대가 낫지만,
@@ -232,6 +246,8 @@ def main(back_days: int, probe: bool = False):
         day = today - timedelta(days=back)
         key = day.isoformat()
         if key in by_day and day < fresh_from:
+            continue
+        if key in gone:
             continue
         try:
             rows = fetch_day(key)
@@ -246,14 +262,25 @@ def main(back_days: int, probe: bool = False):
             time.sleep(BACKOFF[min(streak, len(BACKOFF) - 1)])
             continue
         streak = 0
+        if rows is None:
+            # TDnet 이 그날을 더는 안 준다. 0건으로 적으면 '발표가 없었다'는
+            # 거짓말이 되고, 미수집으로 적으면 받을 길 없는 날을 구멍이라고
+            # 계속 광고하게 된다. 둘 다 아니므로 따로 적어 두고 넘어간다.
+            gone.add(key)
+            expired += 1
+            save(by_day, gone)
+            continue
         # 0건도 '수집 성공'으로 남긴다. 그래야 '발표 없는 날'과 '못 받은 날'이
         # 구분된다 — 세 스크래퍼가 다 같은 규칙이다.
         by_day[key] = rows
-        save(by_day)
+        save(by_day, gone)
         print(f"{key} {len(rows):>4}건", flush=True)
 
-    n, days = save(by_day)
+    n, days = save(by_day, gone)
     print(f"\n총 {n}건 / {days}일 -> {OUT}")
+    if expired:
+        print(f"TDnet 이 더는 안 주는 날 {expired}일 (오늘 확인분). "
+              f"목록에 남는 기간을 넘어선 것이라 받을 길이 없다.")
     if failed:
         print(f"미수집 {len(failed)}일: {failed[0]} ~ {failed[-1]} (재실행하면 이어서 받는다)")
 
