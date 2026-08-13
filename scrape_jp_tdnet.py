@@ -44,7 +44,7 @@ HERE = Path(__file__).resolve().parent
 OUT = HERE / "data" / "earnings_jp_past.json"
 
 # 담는 형식이 바뀌면 올린다. 그래야 받아둔 헌 기록을 버리고 다시 받는다.
-TDNET_VER = 1
+TDNET_VER = 2
 
 LIST_URL = "https://www.release.tdnet.info/inbs/I_list_{page:03d}_{day}.html"
 UA = ("Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 "
@@ -89,6 +89,10 @@ Q_RE = re.compile(r"第\s*([0-9０-９])\s*四半期")
 MID_RE = re.compile(r"中間期?決算短信")
 
 ZEN = str.maketrans("０１２３４５６７８９", "0123456789")
+
+# TDnet 은 회사명 앞에 시장 구분을 한 글자로 붙인다 — `Ｐ－八光オート`(프라임),
+# `Ｇ－インフォメティス`(그로스). 회사 이름이 아니므로 떼어낸다.
+SECT_PREFIX = re.compile(r"^[ＰＳＧＥEPSG][－\-]\s*")
 
 
 class Throttled(Exception):
@@ -141,7 +145,8 @@ def listing(day: str, page: int):
         out.append({
             "time": d["time"].strip(),
             "code": d["code"].strip()[:4],
-            "name": TAGS.sub("", d["name"]).replace("　", " ").strip(),
+            "name": SECT_PREFIX.sub(
+                "", TAGS.sub("", d["name"]).replace("　", " ").strip()),
             "title": TAGS.sub("", d["titlecell"]).replace("　", " ").strip(),
         })
     return out
