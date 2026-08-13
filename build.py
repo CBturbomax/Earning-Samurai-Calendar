@@ -700,8 +700,14 @@ def hk_period(title):
 def pack_en(r, mkt):
     """미국·홍콩은 원본이 영문이라 그대로도 읽힌다. 사전에 있으면 한글명을 쓰고
     없으면 영문명을 그대로 둔다 — 억지 음차는 오히려 못 알아보게 만든다.
-    지어낸 표기가 아니므로 '기계 변환'(등급 0) 점선은 붙지 않는다."""
+    지어낸 표기가 아니므로 '기계 변환'(등급 0) 점선은 붙지 않는다.
+
+    다만 홍콩은 원본이 '영문명'이 아니라 거래소 약칭이다(`BABA-W`, `PSBC`,
+    `CMOC`). 그대로 두면 아는 회사도 못 알아보므로 NAMES 로 이름만 바꾼다."""
     cur = DICTS[mkt].NOTABLE.get(r["code"])
+    # NOTABLE 은 ★까지 붙는 목록이라 이름만 고치고 싶을 때 쓸 수가 없다.
+    # 그래서 시장마다 '이름만 바꾸는' NAMES 를 따로 둔다(없는 시장도 있다).
+    ko = cur[0] if cur else getattr(DICTS[mkt], "NAMES", {}).get(r["code"], "")
     name = r.get("name", "")
     # 미국의 time 은 장전/장후 구분, 홍콩의 time 은 실제 시각(HH:MM)이다.
     raw_time = r.get("time", "")
@@ -712,7 +718,7 @@ def pack_en(r, mkt):
     fy = r.get("fy", "")
     if mkt == "hk":
         fy = hk_period(fy) or fy
-    return [r["date"], r["code"], cur[0] if cur else name,
+    return [r["date"], r["code"], ko or name,
             fy, r.get("kind", ""),
             US_SECTOR_KO.get(sec, sec),
             MARKET_KO.get(r.get("market", ""), r.get("market", "")),
@@ -811,6 +817,10 @@ def build():
         "holidays": {m: {d: holiday_ko(n) for d, n in HOLIDAYS[m].items()}
                      for m in MARKET_ORDER},
         "okDays": ok_days,
+        # 홍콩은 '이미 나온 공시'만 모은다. 그래서 내일 칸이 비어 있는 것은
+        # 못 받아서가 아니라 아직 공시가 없어서다. 둘을 같은 말로 적으면
+        # "홍콩은 왜 내일부터 수집을 안 하나"로 읽힌다(실제로 그렇게 읽혔다).
+        "pastOnly": [m for m in MARKET_ORDER if MARKETS[m].get("past_only")],
         "markets": mkt_meta,
         "weeks": weeks,
         "defaultWeek": default_week,
@@ -1578,9 +1588,26 @@ function reslice() {
    그냥 '발표 없음'으로 보이면 안 된다. */
 const okSet = {};
 for (const m of LIVE) okSet[m] = new Set(D.okDays[m] || []);
+
+/* 홍콩은 '이미 나온 공시'만 모은다(D.pastOnly). 마지막으로 받은 날 뒤가
+   비어 있는 건 못 받아서가 아니라 **아직 공시가 없어서**다. 그걸 '미수집'이라
+   적으면 "홍콩은 왜 내일부터 수집을 안 하나"로 읽힌다. 그래서 그 구간은
+   미수집에서 빼고 '아직 공시 전'이라고 따로 적는다. */
+const PAST_ONLY = new Set(D.pastOnly || []);
+const lastOk = {};
+for (const m of LIVE) {
+  const ds = D.okDays[m] || [];
+  lastOk[m] = ds.length ? ds[ds.length - 1] : '';
+}
+const beyond = (m, d) => PAST_ONLY.has(m) && lastOk[m] && d > lastOk[m];
+
 /* 그 날 아직 못 받은 시장들. 비어 있으면 구멍이 없다는 뜻. */
 function missing(d) {
-  return onMkts().filter(m => okSet[m] && !okSet[m].has(d));
+  return onMkts().filter(m => okSet[m] && !okSet[m].has(d) && !beyond(m, d));
+}
+/* 아직 공시가 나올 차례가 아닌 시장들. 구멍이 아니라 성격이다. */
+function notYet(d) {
+  return onMkts().filter(m => okSet[m] && !okSet[m].has(d) && beyond(m, d));
 }
 /* 그 날의 휴장 사정. all=true 면 보고 있는 시장이 전부 쉰다.
    전체 보기에서 일본만 쉬는 날을 '휴장'이라 적으면 거짓말이 된다 —
@@ -1902,13 +1929,15 @@ function renderCal() {
     let body;
     if (!list.length) {
       let why = '';
-      const miss = missing(d);
+      const miss = missing(d), soon = notYet(d);
       if (hol.text) why = '<span class="why">' + esc(hol.text) + '</span>';
       else if (miss.length) why = '<span class="why">미수집 구간 · ' +
         miss.map(m => MKT[m].ko).join('·') + '</span>';
+      else if (soon.length) why = '<span class="why">' +
+        soon.map(m => MKT[m].ko).join('·') + ' 아직 공시 전</span>';
       body = '<div class="empty">발표 없음' + why + '</div>';
     } else {
-      const miss = missing(d);
+      const miss = missing(d), soon = notYet(d);
       // 시총 상위 몇 개는 크게, 나머지는 보통 크기로. 기준은 수기 목록이 아니라 시총이다.
       body = (hol.text ? '<div class="dsec gap">' + esc(hol.text) + '</div>' : '') +
              shownList.map((r, i) => chip(r, i < 3 && r[11] >= BIG_CAP)).join('') +
@@ -1919,7 +1948,9 @@ function renderCal() {
              /* 한 시장은 받았고 다른 시장은 못 받은 날. 목록이 차 있어도
                 다 받은 날처럼 보이면 안 된다. */
              (miss.length ? '<div class="dsec gap">' +
-                miss.map(m => MKT[m].ko).join('·') + ' 미수집</div>' : '');
+                miss.map(m => MKT[m].ko).join('·') + ' 미수집</div>' : '') +
+             (soon.length ? '<div class="dsec gap">' +
+                soon.map(m => MKT[m].ko).join('·') + ' 아직 공시 전</div>' : '');
     }
 
     return '<div class="day' + (isToday ? ' today' : '') + (closed ? ' closed' : '') + '">' +
@@ -2706,8 +2737,17 @@ function renderFoot() {
     out += FL(m.id) + ' ' + m.ko + ' — 아직 수집하지 않았습니다. <b>python ' +
            m.scraper + '</b> 을 돌리면 채워집니다.<br>';
   }
-  document.getElementById('gapNote').innerHTML = out
-    ? out + '캘린더에는 <b>미수집 구간</b>으로 표시됩니다.<br>' : '';
+  if (out) out += '캘린더에는 <b>미수집 구간</b>으로 표시됩니다.<br>';
+
+  // 홍콩이 '내일부터 텅 빈' 이유. 못 받은 게 아니라 아직 나오지 않은 것이다.
+  for (const m of LIVE) {
+    if (!PAST_ONLY.has(m) || !lastOk[m] || !picked.has(m)) continue;
+    // 시장 이름(일본·미국·홍콩)은 셋 다 받침으로 끝나므로 조사는 '은'이다.
+    out += FL(m) + ' ' + MKT[m].ko + '은 <b>이미 나온 공시</b>를 모읍니다. ' +
+      lastOk[m] + ' 까지가 지금 가진 전부이고, 그 뒤는 못 받은 게 아니라 ' +
+      '<b>아직 공시가 없는 것</b>입니다. 회사가 발표하면 그날 채워집니다.<br>';
+  }
+  document.getElementById('gapNote').innerHTML = out;
 }
 
 /* ── 종목 바로 찾기 ────────────────────────────────────────────

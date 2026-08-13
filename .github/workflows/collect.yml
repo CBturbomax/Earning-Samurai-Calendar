@@ -96,11 +96,19 @@ jobs:
           EARNINGS_GIVE_UP: '1'
         run: python scrape.py "${{ steps.range.outputs.from }}" "${{ steps.range.outputs.to }}"
 
-      # 홍콩은 '이미 나온 공시'라 과거만 의미가 있다. 넉넉히 뒤로 훑는다.
+      # 홍콩은 '이미 나온 공시'라 과거만 의미가 있다.
+      #
+      # 120일만 훑던 시절에 **팝마트(09992)가 통째로 없었다.** 3월 하순에 낸
+      # 연간 실적이 창 밖으로 밀려났고, 다음 반기 실적은 8월 하순이라 아직
+      # 안 나왔다. 그래서 그 사이 넉 달 내내 화면에 존재하지 않았다.
+      # 홍콩은 분기가 아니라 반기·연간만 내는 회사가 많아 120일로는 **한 회사도
+      # 빠짐없이 한 번씩 나오는 것을 보장하지 못한다.** 1년+로 잡아야 한다.
+      #
+      # 이미 받아둔 날은 캐시로 건너뛰므로, 늘리는 값은 처음 한 번만 치른다.
       - name: 🇭🇰 홍콩 (HKEXnews 공시)
         continue-on-error: true
-        timeout-minutes: 20
-        run: python scrape_hk.py "$(date -u -d '120 days ago' +%F)" "$(date -u +%F)"
+        timeout-minutes: 30
+        run: python scrape_hk.py "$(date -u -d '400 days ago' +%F)" "$(date -u +%F)"
 
       # 일본·홍콩 시가총액. 원본 소스가 안 줘서 따로 받는다.
       # 이게 있어야 '큰 회사만 보기'가 세 시장 모두에 걸린다.
