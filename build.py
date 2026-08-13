@@ -529,12 +529,55 @@ SEG_TAIL = 2         # 이 분기 수 안에 값이 없으면 '지금 안 쓰는
 SEG_MIN_FILL = 0.5   # 살아 있는 부문의 절반도 안 차는 앞 분기는 잘라낸다
 
 
+def _last_at(pts, val, i):
+    """그 부문이 마지막으로 값을 가진 칸의 자리. 없으면 -1."""
+    for j in range(len(pts) - 1, -1, -1):
+        if val(pts[j], i) is not None:
+            return j
+    return -1
+
+
 def current_basis(rec):
     """지금 쓰는 부문 기준만 남긴다. 남길 게 없으면 None."""
     names, pts = rec.get("names") or [], rec.get("pts") or []
     if len(names) < 2 or not pts:
         return rec
     val = lambda r, i: r[i + 1] if i + 1 < len(r) else None
+
+    # 0) **값이 똑같은 두 줄은 같은 부문이다.** 회사가 부문 이름을 바꾸는 동안
+    #    한동안 옛 이름과 새 이름이 둘 다 실린다. 아이하트미디어가 그랬다 —
+    #    1Q23~3Q23 의 여섯 줄 중 셋이 나머지 셋과 **원 단위까지 같은 값**이라
+    #    그 세 칸의 막대가 정확히 두 배였다. 겹치는 분기의 값이 하나도 안 어긋나면
+    #    같은 것으로 보고 합친다(값이 다르면 손대지 않는다 — 진짜 다른 부문이다).
+    same = {}
+    for i in range(len(names)):
+        for j in range(i + 1, len(names)):
+            both = [(val(r, i), val(r, j)) for r in pts
+                    if val(r, i) is not None and val(r, j) is not None]
+            if both and all(a_ == b_ for a_, b_ in both):
+                same.setdefault(i, []).append(j)
+    if same:
+        drop = set()
+        for i, js in same.items():
+            if i in drop:
+                continue
+            for j in js:
+                if j in drop:
+                    continue
+                # **최근까지 값이 있는 쪽 이름을 남긴다.** 이름을 바꿨으면 새
+                # 이름이 뒤까지 이어지므로, 그쪽이 지금 회사가 쓰는 표기다.
+                hi, lo = ((i, j) if _last_at(pts, val, i) >= _last_at(pts, val, j)
+                          else (j, i))
+                merged = [val(r, hi) if val(r, hi) is not None else val(r, lo) for r in pts]
+                pts = [[r[0]] + [(merged[k] if x == hi else val(r, x))
+                                 for x in range(len(names))]
+                       for k, r in enumerate(pts)]
+                drop.add(lo)
+        if drop:
+            live0 = [i for i in range(len(names)) if i not in drop]
+            names = [names[i] for i in live0]
+            pts = [[r[0]] + [val(r, i) for i in live0] for r in pts]
+            rec = {**rec, "names": names, "pts": pts}
 
     # 1) 상계·조정 줄. 값이 대부분 음수인 것은 부문이 아니다(쌓으면 막대가 파인다).
     #    이름으로 거르지 않는 이유는 소스마다 표기가 달라서다 — 부호가 확실하다.
@@ -557,6 +600,23 @@ def current_basis(rec):
         dead = [i for i in keep if i not in set(live)]
     if len(live) < 2:
         return None
+
+    # **개편과 수집 구멍을 가른다.** 옛 부문이 끊긴 것만 보면 둘이 똑같이 생겼다.
+    #   개편  — 옛 이름이 죽고 **새 이름이 그 자리에 선다**
+    #   구멍  — 옛 이름이 끊기기만 하고 새로 생긴 것이 없다(우리가 못 받았거나
+    #           그 사업을 팔았다)
+    # 구멍인데 개편으로 보고 자르면 멀쩡한 5년치가 두 칸이 된다. 셈프라가
+    # 그랬다 — 제출 서류에서 부문 둘만 잡혀 나머지 둘이 죽은 것처럼 보였다.
+    # 그래서 **새 이름이 실제로 등장할 때만** 옛 부문을 빼고 앞을 자른다.
+    if dead:
+        end = max((j for i in dead for j in range(len(pts) - 1, -1, -1)
+                   if val(pts[j], i) is not None), default=-1)
+        born = [i for i in live
+                if all(val(pts[j], i) is None for j in range(end + 1))]
+        if not born:
+            # 개편이 아니다. 끊긴 부문도 그대로 둔다 — 뒤가 빈 막대는 '그 사업이
+            # 거기서 끝났다'는 사실이고, 지우면 그 사실이 없어진다.
+            dead, live = [], keep
     if not dead and len(live) == len(names):
         return rec
 
@@ -706,7 +766,24 @@ def splice(base, fresh):
         return 0
     fi = {seg_key(n): i for i, n in enumerate(fresh["names"])}
     hit = [fi.get(seg_key(n)) for n in base["names"]]
-    if sum(x is not None for x in hit) < max(2, len(base["names"]) * 0.6):
+    # **잣대는 헌 기록의 이름 전부가 아니라 '지금 쓰는 것'이다.** 벌크 기록에는
+    # 옛 이름이 같이 실려 있는 일이 흔해서(아이하트미디어는 같은 부문 셋이 옛
+    # 이름으로도 들어 있어 여섯 줄이었다), 전부를 분모로 삼으면 멀쩡한 짝이
+    # 5할로 떨어져 거절당한다. 마지막 분기에 값이 있는 이름만 센다.
+    last_row = base["pts"][-1]
+    liveb = [i for i in range(len(base["names"]))
+             if i + 1 < len(last_row) and last_row[i + 1] is not None] or \
+            list(range(len(base["names"])))
+    cov = sum(hit[i] is not None for i in liveb)
+    bk = {seg_key(n) for n in base["names"]}
+    newborn = any(seg_key(n) not in bk for n in fresh["names"])
+    # **반쪽짜리 꼬리는 붙이지 않는다.** 새 자료가 헌 기록의 부문 일부만 담고
+    # 있으면, 이어 붙인 마지막 칸에서 나머지가 사라져 **막대가 뚝 떨어진다** —
+    # 매출이 준 것처럼 보인다. 셈프라가 그랬다(넷 중 둘만 잡혔다).
+    # 다만 **이름을 바꾼 경우**는 예외다. 그때는 덜 겹치는 게 당연하고
+    # (콜게이트 'Pet Nutrition' -> 'Hills Pet Nutrition'), 뒤에서 current_basis 가
+    # 정리한다. 하나도 안 겹치면 그건 이름 변경이 아니라 **다른 축**이다.
+    if not (cov == len(liveb) or (cov and newborn)):
         return 0
     last = max(p[0] for p in base["pts"])
     add = []
