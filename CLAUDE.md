@@ -18,6 +18,7 @@ scrape_fin_intl.py ─> financials_intl.json│    + companies*.py
 scrape_fin_jp.py  ─> financials_jp.json   │    + descriptions.py
 scrape_fin_seg.py ─> segments.json        │    + translit.py)
 scrape_seg_sec.py ─> segments_sec.json    │
+scrape_seg_edgar.py ─> segments_edgar.json│
 scrape_desc.py    ─> desc.json            ┘
 (닛케이/나스닥/HKEXnews/야후/SEC/TDnet/stockanalysis)
                  '얼마나 큰가' '무엇을 발표했나' '무엇을 파는가'
@@ -51,7 +52,9 @@ python scrape_fin_intl.py                   # 일본·홍콩 실적 수치 (범�
 python scrape_fin_intl.py --probe           # 응답 생김새만 떠보기
 python scrape_fin_jp.py                     # 일본 결산단신 (TDnet, 발표 당일)
 python scrape_fin_jp.py --seg 6758          # 첨부에 부문 정보가 있는지 원문 확인
-python scrape_seg_sec.py                    # 미국 부문별 매출 (SEC 분기 벌크)
+python scrape_seg_sec.py                    # 미국 부문별 매출 (SEC 분기 벌크·뼈대)
+python scrape_seg_edgar.py                  # 미국 부문별 매출 최근 분기 (제출 서류)
+python scrape_seg_edgar.py --probe          # 서류 한 장을 뜯어 생김새만 본다
 python scrape_fin_seg.py                    # 미국 부문별 매출 (최근 분기 보충)
 python scrape_desc.py                       # 사업 설명 원문
 ```
@@ -76,7 +79,7 @@ python scrape_desc.py                       # 사업 설명 원문
 | 발표 시각을 옮기는 규칙 | `markets.py`의 `US_BMO`/`US_AMC`/`JP_TYPICAL`, `build.py`의 `to_kst` |
 | 미국 실적 수치를 더 받는다 | `scrape_fin.py` — 매출 태그는 `REV_TAGS` |
 | 일본·홍콩 실적 수치 | `scrape_fin_intl.py`, 일본 당일치는 `scrape_fin_jp.py` |
-| 부문별 매출 | `scrape_seg_sec.py`(뼈대) · `scrape_fin_seg.py`(최근 분기) |
+| 부문별 매출 | `scrape_seg_sec.py`(뼈대) · `scrape_seg_edgar.py`(최근 분기) |
 | 부문을 어느 축으로 가를까 | `scrape_seg_sec.py`의 `axis_rank` / `AXIS_KO` |
 | 회사 사업 설명(한국어) | `descriptions.py`의 `DESC_KO` — 원문 수집은 `scrape_desc.py` |
 | 차트 모양·통화 표기 | `build.py`의 `finChart` / `segChart` / `CUR` |
@@ -394,9 +397,34 @@ segments 예: BusinessSegments=Datacenter;ConsolidationItems=OperatingSegments;
   에서는 '부문을 안 나누는 회사'와 구별이 안 됐다. `CIK_ALIAS` 에 손으로 이어
   붙이고, **시총 상위 100 중 부문이 안 잡힌 종목을 실행 끝에 적는다** — 조용히
   비면 왜 비었는지 영영 모른다.
-- **벌크는 접수 분기 기준이라 최근 한두 분기가 없다**(2026-08-12 현재 2026q2 는
-  404). 그 구간은 stockanalysis 쪽(`scrape_fin_seg.py`)이 메운다. 그래서 둘 다
-  있으면 stockanalysis 를 쓴다 — 이름도 사람이 쓴 것이라 곱다.
+- **벌크는 접수 분기 기준이라 늘 두 분기쯤 늦는다.** 6월 결산을 7월에 신고하면
+  그 서류는 10월에 나오는 묶음에 들어간다. 화면에서 재보니 부문 막대가 있는
+  2,056종목 중 **최신은 38%뿐이고 47%가 두 분기 뒤졌다** — 총매출은 2Q26 까지
+  그려지는데 부문은 4Q25 에서 끊겼다. 메우라고 붙여 둔 stockanalysis 는
+  1,784종목 중 **1,484종목이 빈 기록**이라 제 몫을 못 했다(그쪽에 부문 페이지가
+  있는 종목이 얼마 없다).
+
+  **서류 자체는 낸 그날 공개된다.** 벌크가 늦는 것이지 자료가 없는 게 아니다.
+  `scrape_seg_edgar.py` 가 분기 색인(`full-index/2026/QTR3/form.idx`) 한 장으로
+  최근 10-Q/10-K 를 찾아, 인라인 XBRL 인스턴스(`aapl-20260628_htm.xml`)를 직접
+  뜯는다. 문맥마다 부문 축이 그대로 붙어 있어 **벌크의 `segments` 칸과 같은 것**이
+  나온다. 그래서 축을 고르고 상계를 빼고 누계를 되돌리는 규칙은 `scrape_seg_sec.py`
+  의 함수를 그대로 불러 쓴다 — 같은 판단을 두 군데 적어 두면 반드시 갈라진다.
+
+  - **gzip 을 꼭 켠다.** XML 은 10:1 로 줄어 3MB 가 300KB 로 온다. 안 켜면 한 번
+    돌 때 몇 GB 를 받는다. 뜯는 값은 싸다 — 3.5MB 인스턴스 하나가 0.09초다.
+  - **이미 본 서류는 접수번호(`done`)로 건너뛴다.** 이게 없으면 매 실행마다
+    수천 건을 다시 받는다.
+  - **한 실행에 회사마다 두 장까지만** 본다. 10-Q 한 장에 이번 분기와 전년 같은
+    분기가 함께 실려 두 장이면 네댓 분기가 모인다. 이렇게 잘라야 첫 실행이 모든
+    회사의 가장 최근 서류부터 훑는다.
+  - **몇 분기부터 실을지는 여기서 낮춘다**(4 -> 3). 이 기록은 차트 전부가 아니라
+    벌크 뒤에 이어 붙일 **꼬리**다. 서류 두 장에서 네 분기가 안 나온다고 버리면
+    정작 메우려던 최근 분기를 못 메운다.
+  - **통째로 갈아치우지 않고 뒤만 잇는다.** `build.py` 의 `splice()` 가 부문 이름을
+    열쇠로 맞춰 보고, 맞는 게 6할이 안 되거나 축이 다르면 **아예 안 붙인다** —
+    다른 축을 이어 붙이는 것이 제일 나쁘다. 열 차례는 늘 헌 기록을 따르고,
+    새 기록에 없는 부문은 빈칸으로 둔다.
 - **종료일이 월말로 반올림돼 온다.** 엔비디아의 1월 28일 결산이 1월 31일로 온다.
   총매출 점과 스무 날 안이면 같은 분기로 보고 **그쪽이 매긴 이름을 그대로 쓴다**
   (`build.py` 의 `seg_align`) — SEC 프레임과 `unstack` 을 거친 이름이라 옳다.
@@ -459,7 +487,7 @@ segments 예: BusinessSegments=Datacenter;ConsolidationItems=OperatingSegments;
 |---|---|---|
 | `collect.yml` | 1시간 | `data/earnings*.json`(`earnings_jp_past.json` 포함) · `data/caps.json` |
 | `numbers.yml` | 20분 | `data/financials*.json` · `data/segments.json` · `data/segments_jp.json` · `data/desc.json` |
-| `segments.yml` | 하루 | `data/segments_sec.json` |
+| `segments.yml` | 3시간 | `data/segments_sec.json` · `data/segments_edgar.json` |
 
 겹치는 건 만들어진 `index.html` 뿐이고, 그건 합친 자료로 다시 만들면 그만이다.
 새 수집기를 붙일 때도 **어느 쪽이 그 파일의 주인인지 먼저 정하고** 한쪽에만 넣는다.
