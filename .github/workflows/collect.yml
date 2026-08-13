@@ -96,6 +96,16 @@ jobs:
           EARNINGS_GIVE_UP: '1'
         run: python scrape.py "${{ steps.range.outputs.from }}" "${{ steps.range.outputs.to }}"
 
+      # 닛케이는 발표를 마친 줄을 목록에서 지운다 — 과거 날짜를 넣어 되받아도
+      # 0건이다. 그래서 발표를 끝낸 회사는 다음 분기 일정이 잡힐 때까지 캘린더에서
+      # 사라진다(3093 트레져팩토리가 7월에 1분기를 내고 10월까지 없었다).
+      # TDnet 은 발표하는 그 순간 결산단신이 올라오고 목록이 한 달쯤 남는다.
+      # 받아둔 날은 캐시로 건너뛰므로 평소에는 이틀치만 다시 받는다.
+      - name: 🇯🇵 일본 발표 완료분 (TDnet 결산단신)
+        continue-on-error: true
+        timeout-minutes: 20
+        run: python scrape_jp_tdnet.py
+
       # 홍콩은 '이미 나온 공시'라 과거만 의미가 있다.
       #
       # 120일만 훑던 시절에 **팝마트(09992)가 통째로 없었다.** 3월 하순에 낸

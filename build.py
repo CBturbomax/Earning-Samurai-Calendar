@@ -196,6 +196,10 @@ def to_kst(mkt: str, day: str, hhmm: str, timing: str):
     d = date.fromisoformat(day)
     if mkt == "jp":
         # JST 와 KST 는 둘 다 UTC+9 라 시차가 없다. 날짜도 그대로다.
+        # TDnet 공시에는 실제 시각이 찍혀 온다 — 그럴 때만 정확도 1 이다.
+        # 닛케이 예정에는 시각이 없어 15시로 어림한다(정확도 0).
+        if hhmm:
+            return day, hhmm, 1
         return day, "%02d:%02d" % JP_TYPICAL, 0
     if mkt == "hk":
         if hhmm:
@@ -231,7 +235,52 @@ def load(mkt: str):
         return None
     raw.setdefault("rows", [])
     raw.setdefault("ok_days", sorted({r["date"] for r in raw["rows"]}))
+    if mkt == "jp":
+        merge_jp_past(raw)
     return raw
+
+
+# 일본만 소스가 둘이다. 닛케이는 **앞으로의 예정**을 주고 TDnet 은 **이미 나온
+# 공시**를 준다. 닛케이는 발표를 마친 줄을 목록에서 지워버리므로(과거 날짜를 넣어
+# 되받아도 0건이다) 닛케이만 보면 발표를 끝낸 회사가 다음 분기까지 사라진다 —
+# 트레져팩토리(3093)가 7월에 1분기를 내고 10월까지 사이트에서 없었다.
+#
+# 합칠 때 두 가지를 지킨다.
+#   * **같은 분기를 두 줄로 만들지 않는다.** TDnet 에 실제 공시가 있으면 그
+#     회사·그 결산기·그 분기의 닛케이 '예정' 줄은 지운다. 회사가 예정일을 옮겼을
+#     때 옛 예정과 실제 발표가 나란히 남는 것을 막는다. 남기는 쪽은 실제 쪽이다.
+#   * **수집한 날을 합친다.** 닛케이가 못 받은 날이라도 TDnet 이 받았으면 그 날은
+#     구멍이 아니다. 캘린더의 '미수집 구간' 표시가 그만큼 줄어든다.
+def merge_jp_past(raw: dict):
+    path = HERE / "data" / "earnings_jp_past.json"
+    if not path.exists():
+        return
+    try:
+        past = json.loads(path.read_text(encoding="utf-8"))
+    except (ValueError, OSError) as e:
+        print(f"  ! {path.name} 읽기 실패: {e}")
+        return
+    rows = past.get("rows", [])
+    if not rows:
+        return
+    done = {(r["code"], r.get("fy", ""), r.get("kind", "")) for r in rows}
+    kept = [r for r in raw["rows"]
+            if (r["code"], r.get("fy", ""), r.get("kind", "")) not in done]
+    dropped = len(raw["rows"]) - len(kept)
+    # TDnet 목록에는 업종·거래소가 없다. 같은 회사의 닛케이 줄에 있으면 옮겨 적는다
+    # (같은 회사의 같은 값이라 지어내는 것이 아니다). 없으면 빈칸으로 둔다.
+    side = {}
+    for r in raw["rows"]:
+        if r.get("sector") or r.get("market"):
+            side.setdefault(r["code"], (r.get("sector", ""), r.get("market", "")))
+    for r in rows:
+        if not r.get("sector") and not r.get("market"):
+            r["sector"], r["market"] = side.get(r["code"], ("", ""))
+    raw["rows"] = kept + rows
+    raw["ok_days"] = sorted(set(raw["ok_days"]) | set(past.get("ok_days", [])))
+    raw["source"] = (raw.get("source", "") + " + TDnet 결산단신(발표 완료분)").strip(" +")
+    print(f"  일본 TDnet 발표 완료 {len(rows):,}건 / {len(past.get('ok_days', []))}일"
+          f" · 닛케이 예정 {dropped:,}건을 실제 공시로 갈음")
 
 
 # ── 시장별 행 다듬기 ───────────────────────────────────────────────
@@ -644,7 +693,8 @@ def pack_jp(r):
             SECTOR_KO.get(r.get("sector", ""), r.get("sector", "")),
             MARKET_KO.get(r.get("market", ""), r.get("market", "")),
             r["name"], lvl, "jp", "", CAPS.get("jp:" + r["code"], 0)
-            ] + list(to_kst("jp", r["date"], "", ""))
+            # TDnet 줄에는 실제 공시 시각이 있다. 닛케이 줄에는 없어 빈칸이다.
+            ] + list(to_kst("jp", r["date"], r.get("time", ""), ""))
 
 
 # 홍콩 결산기는 원본이 공시 문서 제목이라 통째로 영어 한 문장이다.
@@ -914,7 +964,19 @@ TEMPLATE = r"""<!DOCTYPE html>
 <html lang="ko">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
+<!-- **폰에서도 PC 화면 그대로 그린다.** width=device-width 로 두면 폰 폭(390px 쯤)이
+     그대로 CSS 폭이 되어 @media 가 걸리고, 캘린더가 한 줄짜리로 쌓인다. 한 주를
+     나란히 놓고 보는 것이 이 화면의 전부인데 세로로 쌓이면 그게 없어진다.
+     폭을 1440 으로 못박으면 브라우저가 페이지 전체를 줄여 그리므로 데스크톱과
+     같은 다섯 칸이 나오고, 손가락으로 확대해서 본다.
+     좁은 화면에 맞춰 보고 싶으면 캘린더 아래 버튼으로 되돌린다(선택은 기억된다). -->
+<meta name="viewport" id="vp" content="width=1440">
+<script>
+try {
+  if (localStorage.getItem('esFit') === 'mobile')
+    document.getElementById('vp').content = 'width=device-width, initial-scale=1';
+} catch (e) {}
+</script>
 <!-- GitHub Pages는 같은 URL에 새 파일을 덮어쓴다. 캐시가 남으면 지난주 일정을
      이번주로 착각하게 되므로 매번 새로 받도록 강제한다. -->
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
@@ -1076,6 +1138,9 @@ input[type=search]:focus { outline:2px solid var(--a1); border-color:var(--a1); 
   border-radius:8px; padding:11px 16px; font-size:19px; font-family:inherit;
   cursor:pointer; text-decoration:none; display:inline-block; line-height:1.2;
 }
+/* .btn 의 display 가 브라우저 기본 [hidden] 규칙을 이겨서, hidden 을 걸어도
+   버튼이 그대로 보였다. 명시적으로 눌러 준다. */
+.btn[hidden] { display:none; }
 .btn:hover { border-color:var(--a1); color:var(--a1); }
 .btn.pri { background:var(--a1); border-color:var(--a1); color:#fff; font-weight:700; }
 .btn.pri:hover { filter:brightness(1.12); color:#fff; }
@@ -1205,9 +1270,6 @@ button.btn:disabled:hover { border-color:var(--line); color:var(--fg); }
   flex:0 0 auto; font-size:14px; color:var(--mute); border:1px solid var(--line);
   border-radius:4px; padding:1px 5px;
 }
-.chip .st { flex:0 0 auto; font-size:16px; color:#3d4852; }
-.chip .st.on { color:var(--a3); }
-.chip.watch { border-color:var(--a3); }
 
 /* 이미 실적이 나온 종목. 눌러보면 숫자가 있다는 뜻이라 눈에 띄어야 한다. */
 .chip.done { border-color:#27503c; }
@@ -1263,9 +1325,6 @@ td.jp { color:var(--mute); font-size:17px; }
 td.dim { color:var(--mute); font-size:18px; }
 /* 기계 변환한 한글 표기는 점선을 깔아 구분한다. 마우스를 올리면 원문이 뜬다. */
 .guess { border-bottom:1px dotted #3c4750; }
-.sbtn { background:none; border:0; cursor:pointer; font-size:19px; color:#3d4852;
-        padding:0 4px; font-family:inherit; }
-.sbtn.on { color:var(--a3); }
 .qtag {
   font-size:15px; border:1px solid var(--line); border-radius:4px;
   padding:1px 6px; color:var(--mute);
@@ -1420,7 +1479,6 @@ svg.bars rect.b:hover { fill:var(--a3); }
   <span class="mpick" id="calMkts" title="나라를 켜고 끕니다. 맨 위 탭과 같이 움직입니다."></span>
   <select id="fCap" title="시가총액으로 거릅니다. 캘린더와 표에 함께 적용됩니다."></select>
   <label class="chk"><input type="checkbox" id="kstToggle" checked>한국 시간</label>
-  <label class="chk"><input type="checkbox" id="onlyWatch">관심종목만</label>
   <label class="chk"><input type="checkbox" id="jpToggle">원문 보기</label>
 </div>
 <div class="capnote" id="capNote" hidden></div>
@@ -1428,6 +1486,7 @@ svg.bars rect.b:hover { fill:var(--a3); }
 <div class="tools">
   <button class="btn" id="icsWeek">📅 이번 주 일정 내보내기 (.ics)</button>
   <span class="count">구글·아웃룩 캘린더에 넣을 수 있습니다</span>
+  <button class="btn" id="fitBtn" hidden></button>
 </div>
 
 <h2><span class="n">2</span>테마별 관심 종목 <span class="meta" id="gMeta"></span></h2>
@@ -1449,14 +1508,12 @@ svg.bars rect.b:hover { fill:var(--a3); }
   <select id="fMarket"><option value="">전체 거래소</option></select>
   <select id="fKind"><option value="">전체 분기</option></select>
   <label class="chk"><input type="checkbox" id="tBig">주목종목만</label>
-  <label class="chk"><input type="checkbox" id="tWatch">관심종목만</label>
   <label class="chk"><input type="checkbox" id="tFuture">오늘 이후만</label>
   <span class="count" id="tCnt"></span>
 </div>
 <div class="scroll">
   <table id="tAll">
     <thead><tr>
-      <th class="nos" style="width:44px">★</th>
       <th data-k="0">발표일<span class="ar">▾</span></th>
       <th data-k="9">시장<span class="ar">▾</span></th>
       <th data-k="1">코드<span class="ar">▾</span></th>
@@ -1486,7 +1543,6 @@ svg.bars rect.b:hover { fill:var(--a3); }
   <b>이미 공시된 실적</b>을 모읍니다. 즉 홍콩 탭에는 앞으로의 예정이 아니라
   지나간 발표가 실립니다.<br>
   <span id="gapNote"></span>
-  관심종목은 이 브라우저에만 저장되며 서버로 전송되지 않습니다.
 </div>
 </div>
 
@@ -1497,7 +1553,6 @@ svg.bars rect.b:hover { fill:var(--a3); }
     <dl id="mdList"></dl>
     <div id="mdFin"></div>
     <div class="mact">
-      <button class="btn pri" id="mdStar">★ 관심종목</button>
       <a class="btn" id="mdLink1" target="_blank" rel="noopener">종목정보</a>
       <a class="btn" id="mdLink2" target="_blank" rel="noopener">공시</a>
       <button class="btn" id="mdClose">닫기 (ESC)</button>
@@ -1526,7 +1581,6 @@ const FL = m => '<span class="fl fl-' + m + '" role="img" aria-label="' +
                 (MKT[m] ? MKT[m].ko : m) + '"></span>';
 const LIVE = MKTS.filter(m => m.has).map(m => m.id);
 const DOW = ['월','화','수','목','금','토','일'];
-const LS_KEY = 'jpEarnWatch';
 
 const keyOf = r => r[9] + ':' + r[1];
 const noteOf = r => NOTE[keyOf(r)];
@@ -1627,22 +1681,9 @@ function altOf(r) {
   return [...new Set([r[7], nt ? nt[1] : ''])].filter(s => s && s !== r[2]);
 }
 
-/* 관심종목 — localStorage. 사파리 프라이빗 모드처럼 쓰기가 막힌 환경에서도
-   페이지 전체가 죽지는 않게 감싼다. */
-let watch = new Set();
-try { watch = new Set(JSON.parse(localStorage.getItem(LS_KEY) || '[]')); } catch (e) {}
-/* 예전에는 일본밖에 없어서 코드만 담았다. 이미 담아둔 것을 잃지 않도록 옮긴다. */
-if ([...watch].some(k => !k.includes(':'))) {
-  watch = new Set([...watch].map(k => k.includes(':') ? k : 'jp:' + k));
-  try { localStorage.setItem(LS_KEY, JSON.stringify([...watch])); } catch (e) {}
-}
-function saveWatch() {
-  try { localStorage.setItem(LS_KEY, JSON.stringify([...watch])); } catch (e) {}
-}
-function toggleWatch(k) {
-  watch.has(k) ? watch.delete(k) : watch.add(k);
-  saveWatch(); renderAll();
-}
+/* 관심종목(★ 담기)은 걷어냈다. 담아 봐야 하는 일이 없었고 — 칩·표·상세창·필터
+   네 군데에 ★ 를 두느라 정작 회사 이름이 잘렸다. 브라우저에만 저장되던 것이라
+   지운다고 서버에서 없어질 것도 없다. */
 
 const pad = n => String(n).padStart(2, '0');
 const iso = d => d.getFullYear() + '-' + pad(d.getMonth() + 1) + '-' + pad(d.getDate());
@@ -1846,7 +1887,7 @@ function surprise(a, c) {
 }
 
 function chip(r, big) {
-  const k = keyOf(r), on = watch.has(k), t = timeOf(r);
+  const k = keyOf(r), t = timeOf(r);
   const dn = doneInfo(r);
   // 발표가 끝났으면 ✓ 를 시각 자리에 넣는다. 칸을 하나 더 만들면 그만큼 회사 이름이
   // 잘려서, 정작 무슨 회사인지 안 보이게 된다.
@@ -1865,7 +1906,7 @@ function chip(r, big) {
   const we = wd >= 5
     ? '<span class="we" title="' + dateOf(r) + ' (' + DOW_KO[wd] + ') 발표">' +
       DOW_KO[wd] + '</span>' : '';
-  return '<button class="chip m-' + r[9] + (big ? ' big' : '') + (on ? ' watch' : '') +
+  return '<button class="chip m-' + r[9] + (big ? ' big' : '') +
          (got ? ' done' : '') +
          '" data-key="' + esc(k) + '" data-date="' + dateOf(r) + '">' +
          (mkt ? '' : FL(r[9])) + we +
@@ -1873,7 +1914,6 @@ function chip(r, big) {
          '<span class="cn' + (r[8] === 0 ? ' guess' : '') + '" title="' + esc(bothOf(r)) +
          '">' + esc(nameOf(r)) + '</span>' + badge +
          (r[11] ? '<span class="cc">' + capShort(r[11]) + '</span>' : '') +
-         '<span class="st' + (on ? ' on' : '') + '">' + (on ? '★' : '☆') + '</span>' +
          '</button>';
 }
 
@@ -1884,7 +1924,6 @@ function capShort(b) {
 }
 
 function renderCal() {
-  const onlyWatch = document.getElementById('onlyWatch').checked;
 
   /* 아직 한 번도 수집하지 않은 시장. 빈 칸 일곱 개를 늘어놓으면 '발표가 없는 주'로
      읽힌다. 그건 사실이 아니므로 칸 대신 사유를 낸다. */
@@ -1907,14 +1946,12 @@ function renderCal() {
   const cal = document.getElementById('cal');
   cal.className = 'cal';
 
-  let total = 0, bigTotal = 0, watchTotal = 0;
+  let total = 0, bigTotal = 0;
   cal.innerHTML = shown.map(d => {
     // 규모 필터를 제일 먼저 건다. 칸 위의 건수도 걸러진 뒤 숫자여야
     // '이 날 몇 건 보이는지'와 맞는다.
-    let list = (byDate.get(d) || []).filter(passCap);
+    const list = (byDate.get(d) || []).filter(passCap);
     total += list.length;
-    watchTotal += list.filter(r => watch.has(keyOf(r))).length;
-    if (onlyWatch) list = list.filter(r => watch.has(keyOf(r)));
 
     const dow = dowOf(d);
     const isToday = d === D.today;
@@ -1963,8 +2000,7 @@ function renderCal() {
 
   document.getElementById('wLabel').textContent = fmtWeek(week);
   document.getElementById('wSum').textContent =
-    total.toLocaleString() + '건' + (useKst ? ' · 한국 시간' : ' · 현지 시간') +
-    (watch.size ? ' · 관심 ' + watchTotal + '건' : '');
+    total.toLocaleString() + '건' + (useKst ? ' · 한국 시간' : ' · 현지 시간');
   wPick.value = D.weeks.includes(week) ? week : '';
 
   const wi = D.weeks.indexOf(week);
@@ -2057,7 +2093,6 @@ function renderTable() {
   const fm = document.getElementById('fMarket').value;
   const fk = document.getElementById('fKind').value;
   const tb = document.getElementById('tBig').checked;
-  const tw = document.getElementById('tWatch').checked;
   const tf = document.getElementById('tFuture').checked;
 
   let list = VIEW.filter(r => {
@@ -2066,7 +2101,6 @@ function renderTable() {
     if (fm && r[6] !== fm) return false;
     if (fk && r[4] !== fk) return false;
     if (tb && !noteOf(r)) return false;
-    if (tw && !watch.has(keyOf(r))) return false;
     if (tf && r[0] < D.today) return false;
     if (q) {
       const nt = noteOf(r), en = nt ? nt[1] : '';
@@ -2083,10 +2117,8 @@ function renderTable() {
 
   const CAP = 600;
   document.getElementById('tBody').innerHTML = list.slice(0, CAP).map(r => {
-    const k = keyOf(r), nt = NOTE[k], on = watch.has(k);
+    const k = keyOf(r), nt = NOTE[k];
     return '<tr class="m-' + r[9] + '" data-key="' + esc(k) + '" data-date="' + r[0] + '">' +
-      '<td><button class="sbtn' + (on ? ' on' : '') + '" data-star="' + esc(k) + '">' +
-      (on ? '★' : '☆') + '</button></td>' +
       '<td class="dim">' + r[0] + '</td>' +
       '<td class="mcell">' + FL(r[9]) + ' ' + esc(MKT[r[9]].ko) + '</td>' +
       '<td class="code' + (nt ? ' big' : '') + '">' + esc(r[1]) + '</td>' +
@@ -2155,8 +2187,6 @@ function openModal(k, dt) {
   const a1 = document.getElementById('mdLink1'), a2 = document.getElementById('mdLink2');
   a1.textContent = L[0]; a1.href = L[1];
   a2.textContent = L[2]; a2.href = L[3];
-  const sb = document.getElementById('mdStar');
-  sb.textContent = watch.has(k) ? '★ 관심종목 해제' : '☆ 관심종목 담기';
   document.getElementById('mdFin').innerHTML = finBlock(m, code);
   document.getElementById('mdBack').hidden = false;
 }
@@ -2474,7 +2504,6 @@ document.getElementById('mdClose').onclick = closeModal;
 document.getElementById('mdBack').onclick = e => {
   if (e.target.id === 'mdBack') closeModal();
 };
-document.getElementById('mdStar').onclick = () => { if (mdKey) { toggleWatch(mdKey); closeModal(); } };
 document.addEventListener('keydown', e => { if (e.key === 'Escape') closeModal(); });
 
 /* ── .ics 내보내기 ────────────────────────────────────────── */
@@ -2549,6 +2578,32 @@ document.getElementById('icsWeek').onclick = () => {
   download('earnings-' + (mkt || 'all') + '-' + week + '.ics',
            makeIcs(rows, who + ' 실적발표 ' + fmtWeek(week)));
 };
+
+/* ── 폰에서 화면 폭 고르기 ─────────────────────────────────────
+   기본은 PC 화면 그대로(폭 1440 고정)다. 한 주를 나란히 놓고 보는 것이 이 화면의
+   전부인데, 폰 폭에 맞추면 캘린더가 세로로 쌓여 그게 없어진다.
+   다만 글씨가 작아지므로 되돌릴 길을 남긴다. 버튼은 **좁은 기기에서만** 보인다 —
+   screen.width 는 viewport 를 고정해도 기기 폭 그대로라 이 판단에 쓸 수 있다. */
+const fitBtn = document.getElementById('fitBtn');
+function fitMode() {
+  try { return localStorage.getItem('esFit') === 'mobile' ? 'mobile' : 'pc'; }
+  catch (e) { return 'pc'; }
+}
+if (screen.width < 900) {
+  fitBtn.hidden = false;
+  const paint = () => {
+    fitBtn.textContent = fitMode() === 'pc' ? '📱 폰 화면에 맞추기' : '🖥 PC 화면으로 보기';
+  };
+  paint();
+  fitBtn.onclick = () => {
+    const next = fitMode() === 'pc' ? 'mobile' : 'pc';
+    try { localStorage.setItem('esFit', next); } catch (e) {}
+    document.getElementById('vp').content =
+      next === 'mobile' ? 'width=device-width, initial-scale=1' : 'width=1440';
+    paint();
+  };
+}
+
 /* ── 이벤트 위임 ──────────────────────────────────────────── */
 document.addEventListener('click', e => {
   const more = e.target.closest('.more');
@@ -2558,9 +2613,6 @@ document.addEventListener('click', e => {
     renderCal();
     return;
   }
-  const star = e.target.closest('[data-star]');
-  if (star) { e.stopPropagation(); toggleWatch(star.dataset.star); return; }
-
   const chk = e.target.closest('[data-mchk]');
   if (chk) { toggleMarket(chk.dataset.mchk); return; }
   const tab = e.target.closest('.mtab');
@@ -2568,9 +2620,7 @@ document.addEventListener('click', e => {
 
   const chipEl = e.target.closest('.chip');
   if (chipEl) {
-    // 칩 안의 ★ 영역을 누르면 담기, 나머지는 상세 열기
-    if (e.target.closest('.st')) toggleWatch(chipEl.dataset.key);
-    else openModal(chipEl.dataset.key, chipEl.dataset.date);
+    openModal(chipEl.dataset.key, chipEl.dataset.date);
     return;
   }
   const tr = e.target.closest('#tBody tr');
@@ -2642,8 +2692,7 @@ function renderCapNote() {
     'B, 환율 ' + D.usdKrw.toLocaleString() + '원 어림)</span>';
 }
 document.getElementById('q').oninput = renderTable;
-for (const id of ['tBig','tWatch','tFuture']) document.getElementById(id).onchange = renderTable;
-document.getElementById('onlyWatch').onchange = renderCal;
+for (const id of ['tBig','tFuture']) document.getElementById(id).onchange = renderTable;
 /* 한국 시간으로 보면 미국 장후 발표가 다음 날 칸으로 옮겨간다.
    날짜 묶음 자체가 달라지므로 다시 자른 뒤 전부 그린다. */
 document.getElementById('kstToggle').onchange = e => {
