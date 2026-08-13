@@ -267,15 +267,23 @@ def merge_jp_past(raw: dict):
     kept = [r for r in raw["rows"]
             if (r["code"], r.get("fy", ""), r.get("kind", "")) not in done]
     dropped = len(raw["rows"]) - len(kept)
-    # TDnet 목록에는 업종·거래소가 없다. 같은 회사의 닛케이 줄에 있으면 옮겨 적는다
-    # (같은 회사의 같은 값이라 지어내는 것이 아니다). 없으면 빈칸으로 둔다.
+    # TDnet 목록에는 업종·거래소가 없고, **회사명은 줄임말이다** — 三菱ＵＦＪ,
+    # アサヒ, ＯＢＣ. 그대로 두면 같은 회사가 지난주에는 「アサヒ」, 다음주에는
+    # 「アサヒグループホールディングス」로 뜬다(3,284건 중 1,391건이 그랬다).
+    # 같은 회사의 닛케이 줄에 있으면 그쪽 값을 옮겨 적는다. 지어내는 것이 아니라
+    # 같은 회사의 같은 값이다. 닛케이에 없으면(646건) TDnet 줄임말을 그대로 둔다.
     side = {}
     for r in raw["rows"]:
-        if r.get("sector") or r.get("market"):
-            side.setdefault(r["code"], (r.get("sector", ""), r.get("market", "")))
+        side.setdefault(r["code"], r)
     for r in rows:
+        ref = side.get(r["code"])
+        if not ref:
+            continue
+        if ref.get("name"):
+            r["name"] = ref["name"]
         if not r.get("sector") and not r.get("market"):
-            r["sector"], r["market"] = side.get(r["code"], ("", ""))
+            r["sector"] = ref.get("sector", "")
+            r["market"] = ref.get("market", "")
     raw["rows"] = kept + rows
     raw["ok_days"] = sorted(set(raw["ok_days"]) | set(past.get("ok_days", [])))
     raw["source"] = (raw.get("source", "") + " + TDnet 결산단신(발표 완료분)").strip(" +")
