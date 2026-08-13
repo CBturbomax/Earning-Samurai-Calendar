@@ -441,7 +441,8 @@ td.dim { color:var(--mute); font-size:18px; }
 .gbox h3 { font-size:20px; margin:2px 0 10px; font-weight:700; }
 .gbox h3 .gn { color:var(--mute); font-size:17px; font-weight:400; margin-left:8px; }
 .grow { display:flex; align-items:center; gap:9px; padding:6px 2px;
-        border-bottom:1px solid #1a222a; font-size:18px; }
+        border-bottom:1px solid #1a222a; font-size:18px; cursor:pointer; }
+.grow:hover { background:#141b22; }
 .grow:last-child { border-bottom:0; }
 .grow .gc { color:#8fb8dc; font-weight:700; font-size:16px; flex:0 0 46px; }
 .grow .gk { flex:1 1 auto; min-width:0; overflow:hidden; text-overflow:ellipsis;
@@ -483,7 +484,7 @@ svg.bars rect.b:hover { fill:var(--a3); }
 <body>
 <div class="wrap">
 
-<div class="topline"><span class="fl fl-us" role="img" aria-label="미국"></span> 미국 <b>8,170</b> · <span class="fl fl-jp" role="img" aria-label="일본"></span> 일본 <b>3,624</b> · <span class="fl fl-hk" role="img" aria-label="홍콩"></span> 홍콩 <b>6,831</b> · 합계 <b>18,625건</b> · 수집 <b>2025-07-09 ~ 2026-10-12</b> · 갱신 2026-08-14 01:37 KST</div>
+<div class="topline"><span class="fl fl-us" role="img" aria-label="미국"></span> 미국 <b>8,170</b> · <span class="fl fl-jp" role="img" aria-label="일본"></span> 일본 <b>3,624</b> · <span class="fl fl-hk" role="img" aria-label="홍콩"></span> 홍콩 <b>6,831</b> · 합계 <b>18,625건</b> · 수집 <b>2025-07-09 ~ 2026-10-12</b> · 갱신 2026-08-14 02:10 KST</div>
 <h1><span class="mark" aria-hidden="true"></span>Earning <span class="jp">Samurai</span>
     <span class="byline">by CB</span></h1>
 <p class="sub">미국 · 일본 · 홍콩 주간 실적발표 일정 — 누가 언제 무엇을 발표했는지</p>
@@ -517,17 +518,10 @@ svg.bars rect.b:hover { fill:var(--a3); }
 </div>
 <div class="cal" id="cal"></div>
 <div class="tools">
-  <button class="btn" id="icsWeek">📅 이번 주 일정 내보내기 (.ics)</button>
-  <span class="count">구글·아웃룩 캘린더에 넣을 수 있습니다</span>
   <button class="btn" id="fitBtn" hidden></button>
 </div>
 
-<h2><span class="n">2</span>테마별 관심 종목 <span class="meta" id="gMeta"></span></h2>
-<div class="note">
-  여기는 <b>직접 골라 넣은 목록</b>이라 빠진 회사가 있습니다. 캘린더와 표의 순서·필터는
-  이 목록이 아니라 <b>시가총액</b>을 기준으로 하니, 큰 회사를 빠짐없이 보시려면
-  위의 <b>규모 필터</b>를 쓰세요. 이 칸은 테마별로 묶어보고 싶을 때만 참고용입니다.
-</div>
+<h2><span class="n">2</span>테마별 주요 종목 실적발표일 <span class="meta" id="gMeta"></span></h2>
 <div id="groups"></div>
 
 <h2><span class="n">3</span>일자별 발표 건수 <span class="meta">막대를 누르면 그 주로 이동</span></h2>
@@ -1071,7 +1065,10 @@ function renderGroups() {
         '<span class="gn">' + rs.length + '종목</span></h3>' +
         rs.map(r => {
           const nt = NOTE[keyOf(r)], past = r[0] < D.today;
-          return '<div class="grow"><span class="gc">' + esc(r[1]) + '</span>' +
+          // 칩·표와 같은 data-key/data-date 를 달아 둔다. 이벤트 위임이 그대로
+          // 받아 같은 상세창을 연다 — 여기만 안 열리면 그게 더 헷갈린다.
+          return '<div class="grow" data-key="' + esc(keyOf(r)) +
+            '" data-date="' + r[0] + '"><span class="gc">' + esc(r[1]) + '</span>' +
             '<span class="gk">' + esc(nt[0]) +
             ' <span class="ge">' + esc(nt[1]) + '</span></span>' +
             '<span class="gd' + (past ? ' past' : '') + '">' + r[0].slice(5) +
@@ -1539,79 +1536,6 @@ document.getElementById('mdBack').onclick = e => {
 };
 document.addEventListener('keydown', e => { if (e.key === 'Escape') closeModal(); });
 
-/* ── .ics 내보내기 ────────────────────────────────────────── */
-function icsEscape(s) { return String(s).replace(/([,;\\])/g, '\\$1').replace(/\n/g, '\\n'); }
-
-/* RFC 5545는 한 줄을 75옥텟으로 제한하고, 넘치면 다음 줄을 공백 한 칸으로
-   시작해 잇게 한다. 한글·일본어는 글자당 3바이트라 DESCRIPTION이 쉽게 넘어간다.
-   너그러운 클라이언트도 많지만, 엄격한 파서에서 통째로 깨지는 걸 막는다.
-   바이트로 재되 글자 중간에서는 자르지 않는다. */
-const ICS_ENC = new TextEncoder();
-function icsFold(line) {
-  if (ICS_ENC.encode(line).length <= 75) return line;
-  const out = [];
-  let cur = '', len = 0;
-  for (const ch of line) {                 // 코드포인트 단위로 순회
-    const n = ICS_ENC.encode(ch).length;
-    const cap = out.length ? 74 : 75;      // 이어지는 줄은 공백 한 칸을 먹는다
-    if (len + n > cap) { out.push(cur); cur = ''; len = 0; }
-    cur += ch; len += n;
-  }
-  if (cur) out.push(cur);
-  return out[0] + out.slice(1).map(s => '\r\n ' + s).join('');
-}
-
-function makeIcs(rows, calName) {
-  const stamp = new Date().toISOString().replace(/[-:]/g, '').split('.')[0] + 'Z';
-  const L = ['BEGIN:VCALENDAR', 'VERSION:2.0',
-             'PRODID:-//CB//Global Earnings Calendar//KO',
-             'CALSCALE:GREGORIAN', 'METHOD:PUBLISH',
-             'X-WR-CALNAME:' + icsEscape(calName)];
-  for (const r of rows) {
-    const d = r[0].replace(/-/g, '');
-    const end = addDays(r[0], 1).replace(/-/g, '');
-    const k = keyOf(r), nt = NOTE[k], m = r[9];
-    /* 날짜는 각 시장의 현지 날짜다. 종일 일정으로 넣어 시차를 건드리지 않는다 —
-       구독하는 쪽 표준시로 환산하면 미국 장후 발표가 하루 밀려 보인다. */
-    L.push('BEGIN:VEVENT',
-      'UID:' + m + '-' + r[1] + '-' + d + '@cb-earnings',
-      'DTSTAMP:' + stamp,
-      'DTSTART;VALUE=DATE:' + d,
-      'DTEND;VALUE=DATE:' + end,
-      'SUMMARY:' + icsEscape(
-        '[' + MKT[m].ko + '] ' + r[2] + ' ' + r[1] +
-        (r[4] ? ' · ' + r[4] : '') + (r[10] ? ' · ' + r[10] : '')),
-      'DESCRIPTION:' + icsEscape(
-        altOf(r).join(' / ') +
-        '\n' + [r[4], r[3], r[5], r[6]].filter(Boolean).join(' · ') +
-        (r[10] ? '\n발표 시각: ' + r[10] : '') +
-        (r[11] ? '\n시가총액: ' + capKo(r[11]) : '') +
-        '\n' + links(m, r[1])[1]),
-      'TRANSP:TRANSPARENT',
-      'BEGIN:VALARM', 'TRIGGER:-P1D', 'ACTION:DISPLAY',
-      'DESCRIPTION:' + icsEscape('내일 실적발표 — ' + r[2] + ' (' + MKT[m].ko + ')'),
-      'END:VALARM', 'END:VEVENT');
-  }
-  L.push('END:VCALENDAR');
-  return L.map(icsFold).join('\r\n') + '\r\n';
-}
-function download(name, text) {
-  const blob = new Blob([text], { type: 'text/calendar;charset=utf-8' });
-  const a = document.createElement('a');
-  a.href = URL.createObjectURL(blob);
-  a.download = name;
-  document.body.appendChild(a); a.click(); a.remove();
-  setTimeout(() => URL.revokeObjectURL(a.href), 1000);
-}
-document.getElementById('icsWeek').onclick = () => {
-  const days = new Set(weekDays(week));
-  const rows = VIEW.filter(r => days.has(slotOf(r)));
-  const who = mkt ? MKT[mkt].ko : '글로벌';
-  if (!rows.length) { alert('이번 주에는 발표 일정이 없습니다.'); return; }
-  download('earnings-' + (mkt || 'all') + '-' + week + '.ics',
-           makeIcs(rows, who + ' 실적발표 ' + fmtWeek(week)));
-};
-
 /* ── 폰에서 화면 폭 고르기 ─────────────────────────────────────
    기본은 PC 화면 그대로(폭 1440 고정)다. 한 주를 나란히 놓고 보는 것이 이 화면의
    전부인데, 폰 폭에 맞추면 캘린더가 세로로 쌓여 그게 없어진다.
@@ -1658,6 +1582,9 @@ document.addEventListener('click', e => {
   }
   const tr = e.target.closest('#tBody tr');
   if (tr) { openModal(tr.dataset.key, tr.dataset.date); return; }
+
+  const grow = e.target.closest('.grow');
+  if (grow) { openModal(grow.dataset.key, grow.dataset.date); return; }
 
   const bar = e.target.closest('rect.b');
   if (bar) {
