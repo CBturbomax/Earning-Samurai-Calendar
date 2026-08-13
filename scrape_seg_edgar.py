@@ -88,10 +88,11 @@ EDGAR_VER = 1
 IDX = "https://www.sec.gov/Archives/edgar/full-index/{y}/QTR{q}/form.idx"
 FOLDER = "https://www.sec.gov/Archives/edgar/data/{cik}/{acc}"
 
-# 한 실행에 뜯어볼 서류 수. 서류 하나에 요청 두 번 + 300KB(gzip) 라
-# 700건이면 1,400요청 · 210MB · 8분쯤이다. 뜯는 데는 얼마 안 걸린다 —
-# 3.5MB 인스턴스 하나가 0.09초다(재봤다). 값은 거의 다 그물에서 치른다.
-PER_RUN = int(os.environ.get("SEG_EDGAR_PER_RUN", "700"))
+# 한 실행에 뜯어볼 서류 수. 실제로 재보니 **서류 하나에 0.4초**다(700건 4.7분).
+# 값은 거의 다 그물에서 치른다 — 뜯는 것 자체는 3.5MB 인스턴스가 0.09초다.
+# 처음 한 바퀴가 7,678건이라 700씩으로는 하루가 넘게 걸렸다. 2,200이면 15분이고
+# 단계 한도(25분) 안이며, SEC 초당 10건 제한에도 절반쯤(초당 5건)이다.
+PER_RUN = int(os.environ.get("SEG_EDGAR_PER_RUN", "2200"))
 # 색인을 몇 분기치 볼까. 3이면 아홉 달치 — 벌크가 늦는 폭(두 분기)을 넉넉히 덮는다.
 IDX_QUARTERS = int(os.environ.get("SEG_EDGAR_IDX_QUARTERS", "3"))
 # **한 실행에** 회사마다 몇 장까지 볼까. 10-Q 한 장에 이번 분기와 전년 같은
