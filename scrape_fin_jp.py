@@ -55,7 +55,8 @@ GIVE_UP_AFTER = 6
 JP_VER = 1
 # 2: 문맥을 zip 전체에서 모은다 · 수식어를 부문으로 읽지 않는다
 # 3: 합계 줄을 뺀다(전사 합계·보고부문 계) · 문자가 든 증권코드 접두사
-SEG_JP_VER = 3
+# 4: 원자료에 XBRL 이름을 그대로 담는다 — 이름 규칙을 고쳐도 다시 안 받는다
+SEG_JP_VER = 4
 
 # 결산단신인지 가리는 말. '決算短信' 이 들어가면 실적 발표다.
 # (「業績予想の修正」 같은 것은 실적 발표가 아니라 예상 수정이라 뺀다.)
@@ -389,8 +390,11 @@ def read_segments(blob):
                 continue
             if FORECAST_CTX.search(cid) or cid not in periods:
                 continue
+            # **원자료에는 XBRL 이름을 그대로 담는다.** 다듬은 이름을 담아 두면
+            # 합계 줄을 가리는 규칙이나 이름 줄이는 규칙을 고칠 때마다 열흘치를
+            # 다시 내려받아야 한다. 거르고 다듬는 일은 저장할 때 한다.
             member = seg_member(cid)
-            if not member or SEG_TOTAL.match(member) or SEG_SKIP.search(member):
+            if not member:
                 continue
             digits = re.sub(r"[^\d.-]", "", TAGS.sub("", inner))
             if not re.fullmatch(r"-?\d+(\.\d+)?", digits or ""):
@@ -405,13 +409,29 @@ def read_segments(blob):
             if v <= 0:
                 continue
             slot = out.setdefault(periods[cid], {})
-            old = slot.get(seg_name(member))
+            old = slot.get(member)
             # 더 정확한 항목(외부 고객 매출)이 이긴다.
             if old is None or rank < old[1]:
-                slot[seg_name(member)] = (v, rank)
+                slot[member] = (v, rank)
 
     return [(st, en, {k: v[0] for k, v in segs.items()})
             for (st, en), segs in sorted(out.items()) if len(segs) >= 2]
+
+
+def seg_clean(row):
+    """원자료 한 줄(XBRL 이름) -> 화면에 쓸 {부문: 값}. 합계·조정 줄을 뺀다.
+
+    거르고 다듬는 일이 여기 있는 까닭은, 규칙을 고칠 때 **다시 내려받지 않고**
+    빌드만 다시 하면 되게 하려는 것이다. 처음에는 받을 때 다듬어 담았다가
+    합계 줄 하나 빼려고 열흘치를 통째로 다시 받았다.
+    """
+    out = {}
+    for m, v in row.items():
+        if SEG_TOTAL.match(m) or SEG_SKIP.search(m):
+            continue
+        n = seg_name(m)
+        out[n] = out.get(n, 0) + v          # 다듬은 이름이 겹치면 '기타'끼리다
+    return out
 
 
 def seg_quarters(points):
@@ -1025,8 +1045,11 @@ def save_segments(raw, seg_done=(), quiet=False):
         pts = []
         for span, row in spans.items():
             st, _, en = span.partition("/")
-            if st and en:
-                pts.append((st, en, row))
+            if not (st and en):
+                continue
+            clean = seg_clean(row)
+            if len(clean) >= 2:
+                pts.append((st, en, clean))
         q = drop_totals(seg_quarters(pts))
         if len(q) < 2:
             continue
