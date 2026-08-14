@@ -17,8 +17,10 @@ jobs:
         with:
           python-version: '3.12'
 
-      # 7차 — 동화순이 뚫렸다. 主营构成分析 표의 실제 생김새(기간·축·단위)를 뜯어본다.
-      - name: 🇭🇰 동화순 주영구성 표 뜯어보기 (7차)
+      # 8차 — 일본 앞으로의 일정. 닛케이가 CI IP 를 막아 8/17 이후가 구멍이다.
+      # JPX(일본거래소)가 決算発表予定日 엑셀을 공식으로 낸다 — CI 에서 닿는지,
+      # 파일이 xlsx(zip, 표준 라이브러리로 읽힘)인지 xls(옛 바이너리)인지 본다.
+      - name: 🇯🇵 JPX 결산발표 예정일 엑셀 (8차)
         timeout-minutes: 6
         run: |
           python - <<'EOF'
@@ -26,26 +28,51 @@ jobs:
 
           UA = {"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
                               "AppleWebKit/537.36 Chrome/124.0 Safari/537.36",
-                "Accept": "*/*"}
+                "Accept": "*/*", "Accept-Language": "ja,en;q=0.8"}
 
           def get(url, timeout=25):
               req = urllib.request.Request(url, headers=UA)
               with urllib.request.urlopen(req, timeout=timeout) as r:
-                  return r.read().decode("utf-8", "replace")
+                  return r.read()
 
-          for code in ("HK0700", "HK9992", "HK3093"):
+          BASE = "https://www.jpx.co.jp"
+          page_url = BASE + "/listing/event-schedules/financial-announcement/index.html"
+          try:
+              body = get(page_url).decode("utf-8", "replace")
+          except Exception as e:
+              print("페이지 실패:", e); raise SystemExit
+          print(f"페이지 {len(body):,}B")
+          links = re.findall(r'href="([^"]+\.(?:xlsx?|csv|pdf))"', body)
+          print("파일 링크:")
+          for l in links[:20]:
+              print("  ", l)
+          # 엑셀부터 집어 내려받아 머리를 본다
+          xls = [l for l in links if re.search(r"\.xlsx?$", l)]
+          for l in xls[:3]:
+              url = l if l.startswith("http") else BASE + l
               try:
-                  body = get(f"https://basic.10jqka.com.cn/{code}/operate.html")
+                  data = get(url)
               except Exception as e:
-                  print(f"\n===== {code} 실패 {e}"); continue
-              i = body.find('id="income"')
-              if i < 0:
-                  print(f"\n===== {code}  income 섹션 없음 ({len(body):,}B)"); continue
-              chunk = body[i:i+9000]
-              # 표를 읽기 좋게 — 태그 사이에 구분자
-              txt = re.sub(r"</(td|th|tr)>", " | ", chunk)
-              txt = re.sub(r"<[^>]+>", " ", txt)
-              txt = re.sub(r"\s+", " ", txt)
-              print(f"\n===== {code}  전체 {len(body):,}B · income부터 {len(chunk):,}B")
-              print(txt[:3600])
+                  print(f"\n{url} 실패: {e}"); continue
+              magic = data[:4]
+              kind = ("xlsx(zip)" if magic[:2] == b"PK"
+                      else "xls(옛 바이너리)" if magic == b"\xd0\xcf\x11\xe0"
+                      else repr(magic))
+              print(f"\n{url}\n  {len(data):,}B · {kind}")
+              if magic[:2] == b"PK":
+                  import io, zipfile
+                  z = zipfile.ZipFile(io.BytesIO(data))
+                  names = z.namelist()
+                  print("  zip 안:", names[:8])
+                  # 첫 시트 원문 앞부분 — 열 구성 확인
+                  sheet = [n for n in names if n.startswith("xl/worksheets/")]
+                  if sheet:
+                      xml = z.read(sheet[0]).decode("utf-8", "replace")
+                      print("  시트 XML 머리 1200자:")
+                      print("  " + xml[:1200].replace("\n", " "))
+                  shared = [n for n in names if n.endswith("sharedStrings.xml")]
+                  if shared:
+                      s = z.read(shared[0]).decode("utf-8", "replace")
+                      texts = re.findall(r"<t[^>]*>([^<]{1,40})</t>", s)
+                      print("  공유 문자열 앞 40개:", texts[:40])
           EOF
