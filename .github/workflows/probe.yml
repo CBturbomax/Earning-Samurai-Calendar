@@ -17,79 +17,38 @@ jobs:
         with:
           python-version: '3.12'
 
-      # 2차 — 이스트머니의 진짜 report 이름을 저쪽 JS 번들에서 찾아내고,
-      # futu 1.2MB 본문에 부문 매출이 서버렌더로 실려 있는지 그렙한다.
-      - name: 🇭🇰 홍콩 부문 매출 소스 떠보기 (2차)
-        timeout-minutes: 8
+      # 3차 — 번들에서 발굴한 RPT_HKF10_ORG_BUSSINESS(주영구성, 오타까지 저쪽 것)를
+      # 실제로 두드려 스키마를 본다. 텐센트·팝마트·샤오미 셋.
+      - name: 🇭🇰 홍콩 부문 매출 소스 떠보기 (3차)
+        timeout-minutes: 6
         run: |
           python - <<'EOF'
-          import json, re, urllib.request, urllib.error
+          import json, urllib.request
 
           UA = {"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
                               "AppleWebKit/537.36 Chrome/124.0 Safari/537.36",
-                "Accept": "*/*"}
+                "Accept": "*/*", "Referer": "https://emweb.eastmoney.com/"}
 
-          def get(url, referer=""):
-              h = dict(UA)
-              if referer:
-                  h["Referer"] = referer
-              req = urllib.request.Request(url, headers=h)
+          def get(url):
+              req = urllib.request.Request(url, headers=UA)
               with urllib.request.urlopen(req, timeout=30) as r:
                   return r.read().decode("utf-8", "replace")
 
-          # ── 1) 이스트머니 HKF10 페이지 -> JS 번들 -> reportName 사전 발굴
-          try:
-              home = get("https://emweb.eastmoney.com/PC_HKF10/pages/home/index.html"
-                         "?code=00700&type=web&color=w")
-              srcs = re.findall(r'src="([^"]+\.js[^"]*)"', home)
-              print("JS 번들", len(srcs))
-              names = set()
-              for u in srcs[:12]:
-                  if u.startswith("//"): u = "https:" + u
-                  elif u.startswith("/"): u = "https://emweb.eastmoney.com" + u
-                  elif not u.startswith("http"):
-                      u = "https://emweb.eastmoney.com/PC_HKF10/pages/home/" + u
-                  try:
-                      js = get(u)
-                  except Exception as e:
-                      print("  번들 실패", u[:80], e); continue
-                  names |= set(re.findall(r"RPT_HK[A-Z0-9_]+", js))
-              print("발견한 report 이름:", sorted(names))
-          except Exception as e:
-              print("이스트머니 발굴 실패:", e)
-
-          # ── 2) 그럴듯한 이름 몇 개 직접 두드리기
-          for rn in ("RPT_HKF10_INDUSTRY_MAIN", "RPT_HKF10_MAINOP",
-                     "RPT_HKF10_BUSINESS_STRUCTURE", "RPT_HKF10_FN_INDUSTRYMAIN",
-                     "RPT_HKF10_INCOME_STRUCTURE"):
+          for code in ("00700", "09992", "01810"):
+              url = ("https://datacenter.eastmoney.com/securities/api/data/v1/get"
+                     "?reportName=RPT_HKF10_ORG_BUSSINESS&columns=ALL"
+                     f"&filter=(SECURITY_CODE%3D%22{code}%22)"
+                     "&pageSize=60&sortTypes=-1&sortColumns=REPORT_DATE")
+              body = get(url)
+              print(f"\n===== {code}  {len(body):,}B")
               try:
-                  body = get("https://datacenter.eastmoney.com/securities/api/data/v1/get"
-                             f"?reportName={rn}&columns=ALL"
-                             "&filter=(SECURITY_CODE%3D%2200700%22)&pageSize=8",
-                             referer="https://emweb.eastmoney.com/")
-                  print(f"\n== {rn}: {body[:300]}")
-              except Exception as e:
-                  print(f"\n== {rn}: 실패 {e}")
-
-          # ── 3) 이스트머니 옛 PageAjax 꼴
-          for mod in ("BusinessAnalysis", "OperatingAnalysis", "CompanyProfile"):
-              try:
-                  body = get("https://emweb.securities.eastmoney.com/PC_HKF10/"
-                             f"{mod}/PageAjax?code=00700")
-                  print(f"\n== PageAjax {mod}: {len(body):,}B  {body[:300]}")
-              except Exception as e:
-                  print(f"\n== PageAjax {mod}: 실패 {e}")
-
-          # ── 4) futu 본문에 부문 매출이 실려 오나
-          try:
-              body = get("https://www.futunn.com/en/stock/00700-HK/company-profile")
-              print(f"\nfutu 본문 {len(body):,}B")
-              for pat in ("evenue", "омposition", "构成", "ncome", "business_detail",
-                          "Value-added", "dvertis"):
-                  hits = [m.start() for m in re.finditer(pat, body)][:3]
-                  for h in hits:
-                      print(f"\n  [{pat} @{h}] …{body[max(0,h-120):h+320]}…"
-                            .replace("\n", " ")[:460])
-          except Exception as e:
-              print("futu 실패:", e)
+                  d = json.loads(body)
+                  data = ((d.get("result") or {}).get("data")) or []
+                  print("  행", len(data), "· count", (d.get("result") or {}).get("count"))
+                  if data:
+                      print("  열:", sorted(data[0].keys()))
+                      for row in data[:8]:
+                          print("   ", json.dumps(row, ensure_ascii=False)[:250])
+              except ValueError:
+                  print(body[:400])
           EOF
