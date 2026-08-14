@@ -106,6 +106,14 @@ jobs:
         timeout-minutes: 20
         run: python scrape_jp_tdnet.py
 
+      # 닛케이가 못 주는 '앞으로의 예정'을 JPX(일본거래소) 공식 엑셀로 받는다.
+      # 결산기말이 같은 달인 회사끼리 한 파일, 주 단위 컴파일 + 당일 갱신분.
+      # 파일 세 장에 300KB 라 매 실행 통째로 다시 받아도 싸다.
+      - name: 🇯🇵 일본 발표 예정 (JPX 공식)
+        continue-on-error: true
+        timeout-minutes: 5
+        run: python scrape_jp_sched.py
+
       # 홍콩은 '이미 나온 공시'라 과거만 의미가 있다.
       #
       # 120일만 훑던 시절에 **팝마트(09992)가 통째로 없었다.** 3월 하순에 낸

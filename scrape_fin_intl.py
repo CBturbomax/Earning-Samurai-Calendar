@@ -346,7 +346,7 @@ def targets():
     # 여기 빠져서 캘린더에는 뜨는데 실적 차트가 없었다. **캘린더에 뜨는 종목은
     # 전부 우주에 넣는다.**
     for market, fn in (("jp", "earnings.json"), ("jp", "earnings_jp_past.json"),
-                       ("hk", "earnings_hk.json")):
+                       ("jp", "earnings_jp_sched.json"), ("hk", "earnings_hk.json")):
         f = HERE / "data" / fn
         if not f.exists():
             continue
@@ -386,6 +386,7 @@ def announcements():
     tstr = today.isoformat()
     out = {}
     for market, fn in (("jp", "earnings.json"), ("jp", "earnings_jp_past.json"),
+                       ("jp", "earnings_jp_sched.json"),
                        ("hk", "earnings_hk.json"), ("us", "earnings_us.json")):
         f = HERE / "data" / fn
         if not f.exists():

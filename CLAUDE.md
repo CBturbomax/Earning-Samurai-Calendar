@@ -9,7 +9,8 @@ GitHub Pages로 그대로 서비스한다. 서버·빌드툴·의존 패키지�
 
 ```
 scrape.py      ──> data/earnings.json     ┐   '언제 발표하나'
-scrape_jp_tdnet.py ─> earnings_jp_past.json│   (일본은 소스가 둘이다)
+scrape_jp_tdnet.py ─> earnings_jp_past.json│   (일본은 소스가 셋이다)
+scrape_jp_sched.py ─> earnings_jp_sched.json│
 scrape_us.py   ──> data/earnings_us.json  │
 scrape_hk.py   ──> data/earnings_hk.json  │
 scrape_caps.py ──> data/caps.json         ├─> build.py ──> index.html
@@ -42,9 +43,11 @@ python build.py
 수집까지 다시 하려면 (네트워크 필요):
 
 ```bash
-python scrape.py    2026-07-20 2026-09-30   # 일본 일정 (앞으로의 예정)
+python scrape.py    2026-07-20 2026-09-30   # 일본 일정 (앞으로의 예정, 닛케이)
 python scrape_jp_tdnet.py                   # 일본 발표 완료분 (TDnet, 최근 한 달)
 python scrape_jp_tdnet.py --probe           # 목록 생김새만 떠보기
+python scrape_jp_sched.py                   # 일본 발표 예정 (JPX 공식 엑셀)
+python scrape_jp_sched.py --probe           # 파일·열 매핑만 떠보기
 python scrape_us.py 2026-07-20 2026-09-30   # 미국 일정
 python scrape_hk.py 2026-07-20 2026-09-30   # 홍콩 공시
 python scrape_caps.py                       # 일본·홍콩 시가총액 (범위 없음)
@@ -191,7 +194,31 @@ HKEXnews에서 **이미 공시된 실적**을 모은다. 성격이 다른 걸 �
   `past_only`를 `build.py`가 `pastOnly`로 내려보내고, 화면은 그 구간을 미수집에서
   빼고 **「홍콩 아직 공시 전」**으로 적는다. 푸터에도 한 줄 설명을 낸다.
 
-**일본만 소스가 둘이다 — 닛케이는 '앞일', TDnet 은 '지난 일'.**
+**일본은 소스가 셋이다 — 닛케이·JPX 는 '앞일', TDnet 은 '지난 일'.**
+
+**JPX 결산발표 예정일이 앞일의 공식 뼈대다.** 닛케이가 데이터센터 IP 를 막아
+CI 에서는 앞일이 자주 구멍이었다(8/17 이후가 통째로 「일본 미수집」으로 섰다).
+JPX(일본거래소)가 거래소에 신고된 전 종목 예정일을 공식 엑셀로 낸다 —
+결산기말이 같은 달인 회사끼리 한 파일(kessan06_0807.xlsx), 주 단위 컴파일에
+접미사 없는 kessan.xlsx 가 '오늘 발표하는 회사' 슬라이스다(probe 8·9차).
+xlsx 는 zip 속 XML 이라 표준 라이브러리로 읽힌다. 날짜는 엑셀 시리얼
+(1899-12-30 기준)로 온다.
+
+- **행 어휘를 닛케이 것에 맞춘다**(第１·3月期). merge 가 (code, fy, kind) 로
+  중복을 가리므로 여기가 어긋나면 같은 분기가 두 줄로 선다. 업종만은 도쿄증권
+  33업종 표기(サービス業)라 닛케이 표기(サービス)와 달라서, `markets.py` 의
+  `SECTOR_KO` 에 한글 표기를 따로 얹었다.
+- **이미 아는 줄을 이기지 못한다.** TDnet 은 실제 공시고 닛케이 예정은 닿을
+  때는 더 자주 갱신된다. `build.py` 의 `merge_jp_sched()` 는 merge_jp_past 뒤에
+  불려 아직 없는 (code, fy, kind) 만 더한다.
+- **ok 로 적는 날은 오늘부터 목록의 마지막 발표일까지다.** 그 사이 비는 날은
+  발표가 없는 날이지 구멍이 아니다 — 거래소의 전체 목록이 그렇게 말한 것이다.
+  목록 너머는 아직 신고가 안 쌓인 구간이라 ok 로 안 적는다.
+- JPX 에만 있는 종목도 캘린더에 오르므로 시총·실적·설명 우주
+  (scrape_caps · scrape_fin_intl · scrape_desc)에 earnings_jp_sched.json 을
+  넣었다 — 3093 이 TDnet 쪽에서 빠졌던 것과 같은 실수를 반복하지 않는다.
+
+**닛케이·TDnet 관계는 그대로다 — 닛케이는 '앞일', TDnet 은 '지난 일'.**
 닛케이는 **발표를 마친 줄을 목록에서 지운다.** 과거 날짜를 넣어 되받아도 0건이라
 (2026-05-01 부터 69일치를 되받아 전부 0건이었다) 발표를 끝낸 회사는 다음 분기
 일정이 잡힐 때까지 캘린더에서 통째로 사라진다 — 트레저팩토리(3093)가 7월 10일에
@@ -545,7 +572,7 @@ HPE 가 Compute·Storage·Intelligent Edge 를 Cloud&AI·Networking 으로 바�
 
 | 워크플로 | 주기 | 쓰는 파일 |
 |---|---|---|
-| `collect.yml` | 1시간 | `data/earnings*.json`(`earnings_jp_past.json` 포함) · `data/caps.json` |
+| `collect.yml` | 1시간 | `data/earnings*.json`(`earnings_jp_past.json` · `earnings_jp_sched.json` 포함) · `data/caps.json` |
 | `numbers.yml` | 30분 | `data/financials*.json` · `data/segments.json` · `data/segments_jp.json` · `data/segments_hk.json` · `data/desc.json` |
 | `segments.yml` | 3시간 | `data/segments_sec.json` · `data/segments_edgar.json` |
 

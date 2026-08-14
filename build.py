@@ -237,6 +237,7 @@ def load(mkt: str):
     raw.setdefault("ok_days", sorted({r["date"] for r in raw["rows"]}))
     if mkt == "jp":
         merge_jp_past(raw)
+        merge_jp_sched(raw)
     return raw
 
 
@@ -289,6 +290,36 @@ def merge_jp_past(raw: dict):
     raw["source"] = (raw.get("source", "") + " + TDnet 결산단신(발표 완료분)").strip(" +")
     print(f"  일본 TDnet 발표 완료 {len(rows):,}건 / {len(past.get('ok_days', []))}일"
           f" · 닛케이 예정 {dropped:,}건을 실제 공시로 갈음")
+
+
+# 일본의 셋째 소스 — JPX(일본거래소)의 결산발표 예정일 공식 엑셀.
+# 닛케이가 데이터센터 IP 를 막아 CI 에서는 앞일이 자주 구멍이었다(8/17 이후가
+# 통째로 「일본 미수집」으로 섰다). JPX 목록은 거래소에 신고된 전 종목 예정일이라
+# 앞일을 공식으로 메운다(scrape_jp_sched.py, probe 8·9차).
+#
+# **이미 아는 줄을 이기지 못한다.** TDnet 은 실제 공시고 닛케이 예정은 (닿을 때는)
+# 더 자주 갱신된다. 그래서 merge_jp_past 가 끝난 뒤에 불려, 아직 없는
+# (code, fy, kind) 만 더한다 — 어휘를 닛케이 것에 맞춰 둔 이유다.
+def merge_jp_sched(raw: dict):
+    path = HERE / "data" / "earnings_jp_sched.json"
+    if not path.exists():
+        return
+    try:
+        sched = json.loads(path.read_text(encoding="utf-8"))
+    except (ValueError, OSError) as e:
+        print(f"  ! {path.name} 읽기 실패: {e}")
+        return
+    rows = sched.get("rows", [])
+    if not rows:
+        return
+    have = {(r["code"], r.get("fy", ""), r.get("kind", "")) for r in raw["rows"]}
+    add = [r for r in rows
+           if (r["code"], r.get("fy", ""), r.get("kind", "")) not in have]
+    raw["rows"] += add
+    raw["ok_days"] = sorted(set(raw["ok_days"]) | set(sched.get("ok_days", [])))
+    raw["source"] = (raw.get("source", "") + " + JPX 발표 예정일").strip(" +")
+    print(f"  일본 JPX 예정 {len(rows):,}건 중 {len(add):,}건을 더함"
+          f" (나머지는 닛케이·TDnet 에 이미 있음)")
 
 
 # ── 시장별 행 다듬기 ───────────────────────────────────────────────
