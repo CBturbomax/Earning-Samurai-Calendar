@@ -19,6 +19,7 @@
 
 결과: data/briefs_us.json  {stocks: {SYM: {acc, date, quote, outlook, head}}}
 """
+import html
 import json
 import os
 import re
@@ -131,8 +132,12 @@ def press_release(cik, acc):
     if doc is None:
         return None
     txt = re.sub(r"(?is)<(script|style)\b.*?</\1>", " ", doc)
-    txt = re.sub(r"\s+", " ", TAGS.sub(" ", txt))
-    return txt
+    txt = TAGS.sub(" ", txt)
+    # EDGAR 문서는 따옴표·대시가 &#8220; 같은 실체참조로 온다. 안 풀면 인용문
+    # 정규식이 한 건도 못 문다(probe 10차에서 실제로 그랬다).
+    txt = html.unescape(txt)
+    txt = re.sub(r"[​﻿\xa0]", " ", txt)
+    return re.sub(r"\s+", " ", txt)
 
 
 def digest(txt):
@@ -178,6 +183,8 @@ def main():
             hit = latest_earnings_8k(cik)
             time.sleep(PAUSE)
             if not hit:
+                if probe:
+                    print(f"\n=== {sym} === 실적 8-K(Item 2.02)가 최근 목록에 없다")
                 continue
             acc, day = hit
             if not probe and (stocks.get(sym) or {}).get("acc") == acc:
@@ -193,9 +200,14 @@ def main():
                 break
             continue
         if not txt:
+            if probe:
+                print(f"\n=== {sym} ({day}) === 보도자료 exhibit 을 못 골랐다")
             continue
         d = digest(txt)
         if not d.get("quote") and not d.get("outlook"):
+            if probe:
+                print(f"\n=== {sym} ({day}) === 인용문도 가이던스도 없다 "
+                      f"(본문 {len(txt):,}자)")
             continue                        # 말이 없는 서류다(표만 있는 8-K)
         rec = {"acc": acc, "date": day, **d}
         stocks[sym] = rec
