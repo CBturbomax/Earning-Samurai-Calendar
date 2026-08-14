@@ -17,6 +17,36 @@ jobs:
         with:
           python-version: '3.12'
 
+      # 11차 — 아식스(7936) 결산단신에서 설명 절이 왜 안 뽑히나. 첨부 장 이름과
+      # 経営成績 머리글 언저리 원문, read_narrative 결과를 그대로 찍는다.
+      - name: 🇯🇵 아식스 설명 절 뜯어보기 (11차)
+        timeout-minutes: 5
+        run: |
+          python - <<'EOF'
+          import io, json, re, zipfile
+          import scrape_fin_jp as fj
+
+          rows = fj.announcements("2026-08-14")
+          hit = [r for r in rows if r["code"] == "7936"]
+          print("아식스 줄:", hit)
+          if not hit:
+              raise SystemExit("오늘 목록에 없다")
+          blob = fj.get("https://www.release.tdnet.info/inbs/" + hit[0]["zip"],
+                        binary=True)
+          z = zipfile.ZipFile(io.BytesIO(blob))
+          for n in z.namelist():
+              print("  ", n, z.getinfo(n).file_size)
+          for n in z.namelist():
+              if "Attachment" not in n or not n.lower().endswith(("ixbrl.htm", ".htm")):
+                  continue
+              txt = z.read(n).decode("utf-8", "replace")
+              plain = re.sub(r"\s+", " ", fj.TAGS.sub(" ", txt))
+              for m in fj.NARR_HEAD.finditer(plain):
+                  seg = plain[max(0, m.start()-60):m.end()+260]
+                  print(f"\n== {n.rsplit('/',1)[-1]} @{m.start()}\n   {seg}")
+          print("\nread_narrative ->", repr(fj.read_narrative(blob)[:200]))
+          EOF
+
       # 10차 — 미국 실적 보도자료(8-K EX-99). 브리핑 칸의 '회사가 한 말' 원문이
       # EDGAR 에서 뽑히는지, 인용문·가이던스 문단이 실제로 걸리는지 본다.
       - name: 🇺🇸 8-K 보도자료 발췌 확인 (10차)
