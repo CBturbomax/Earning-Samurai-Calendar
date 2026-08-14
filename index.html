@@ -503,7 +503,7 @@ svg.bars rect.b:hover { fill:var(--a3); }
 <body>
 <div class="wrap">
 
-<div class="topline"><span class="fl fl-us" role="img" aria-label="미국"></span> 미국 <b>8,170</b> · <span class="fl fl-jp" role="img" aria-label="일본"></span> 일본 <b>3,915</b> · <span class="fl fl-hk" role="img" aria-label="홍콩"></span> 홍콩 <b>6,834</b> · 합계 <b>18,919건</b> · 수집 <b>2025-07-09 ~ 2026-10-13</b> · 갱신 2026-08-14 12:45 KST</div>
+<div class="topline"><span class="fl fl-us" role="img" aria-label="미국"></span> 미국 <b>8,170</b> · <span class="fl fl-jp" role="img" aria-label="일본"></span> 일본 <b>3,915</b> · <span class="fl fl-hk" role="img" aria-label="홍콩"></span> 홍콩 <b>6,834</b> · 합계 <b>18,919건</b> · 수집 <b>2025-07-09 ~ 2026-10-13</b> · 갱신 2026-08-14 12:46 KST</div>
 <h1><span class="mark" aria-hidden="true"></span>Earning <span class="jp">Samurai</span>
     <span class="byline">by CB</span></h1>
 <p class="sub">미국 · 일본 · 홍콩 주간 실적발표 일정 — 누가 언제 무엇을 발표했는지</p>
@@ -1433,11 +1433,23 @@ function briefBlock(key, f, sg) {
     }
     lines.push(s);
   }
-  /* (6) 공시 원문에서 옮긴 한국어 코멘트 — 그 분기 것일 때만 낸다 */
+  /* (6) 공시 원문에서 옮긴 한국어 코멘트.
+     **그 종목의 가장 최근 발표에 대한 것일 때만 낸다.** 분기 라벨로 대조하면
+     회계연도가 어긋난 회사에서 깨진다(AMAT 의 '3분기'가 우리 라벨로는 2Q26).
+     발표일로 가른다 — 캘린더가 그 종목의 더 새로운 발표(오늘 이하)를 알고
+     있으면 이 코멘트는 지난 분기 이야기이므로 내리지 않는다. */
   const br = D.briefs && D.briefs[key];
-  if (br && br.ko && last && br.q === last[0])
-    lines.push('<span class="brko">' + esc(br.ko) + '</span> <i>(출처 ' +
-               esc(br.src || '실적 공시') + ')</i>');
+  if (br && br.ko && br.date) {
+    let newest = '';
+    ROWS.forEach(r => {
+      if (keyOf(r) === key && r[0] <= D.today && r[0] > newest) newest = r[0];
+    });
+    const gap = newest ? (new Date(newest) - new Date(br.date)) / 864e5 : 0;
+    if (gap <= 3)
+      lines.push('<span class="brko">' + esc(br.ko) + '</span> <i>(' +
+                 esc(br.date.slice(5).replace('-', '/')) + ' 발표 · 출처 ' +
+                 esc(br.src || '실적 공시 보도자료') + ')</i>');
+  }
   if (!lines.length) return '';
   return '<div class="brief"><h4>실적 브리핑' +
     (last ? ' <span class="tagx">' + esc(last[0]) + '</span>' : '') + '</h4><ul>' +
