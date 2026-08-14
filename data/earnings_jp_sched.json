@@ -1,13 +1,13 @@
 {
  "source": "JPX 결산발표 예정일",
  "source_url": "https://www.jpx.co.jp/listing/event-schedules/financial-announcement/index.html",
- "fetched": "2026-08-14T16:17+09:00",
+ "fetched": "2026-08-14T16:44+09:00",
  "files": [
   "kessan06_0807.xlsx",
   "kessan07_0807.xlsx",
   "kessan.xlsx"
  ],
- "count": 3210,
+ "count": 3209,
  "ok_days": [
   "2026-08-14",
   "2026-08-15",
@@ -25531,15 +25531,6 @@
    "name": "エンバイオ・ホールディングス",
    "fy": "3月期",
    "kind": "第１",
-   "sector": "サービス業",
-   "market": "東証"
-  },
-  {
-   "date": "2026-08-14",
-   "code": "6094",
-   "name": "フリークアウト・ホールディングス",
-   "fy": "9月期",
-   "kind": "第３",
    "sector": "サービス業",
    "market": "東証"
   },
