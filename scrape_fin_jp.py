@@ -904,6 +904,49 @@ def quarter_from(vals, prior):
             "rev": rq, "opi": oq, "ni": nq}
 
 
+def forecast_from(vals):
+    """회사의 통기 예상(가이던스)을 뽑는다 — 요약의 ForecastMember 문맥.
+
+    실적(points)에는 절대 섞지 않는다. 여기 따로 담고 화면이 「회사 통기
+    예상(공시)」이라고 적는다 — 회사가 공시한 수치지 우리의 추정이 아니다.
+    Upper/Lower(범위 예상)는 안 쓴다. 본결산 공시에는 다음 회계연도 예상
+    (NextYearDuration)이 실리므로 **종료일이 가장 늦은 문맥**을 고른다.
+    같은 종료일이면 연결(Consolidated)을 비연결보다 앞세운다.
+    """
+    def pick(names):
+        best = None
+        for nm in names:
+            for cid, v, (_st, en) in vals.get(nm, []):
+                if not (FORECAST_CTX.search(cid) and DUR_CTX.search(cid)):
+                    continue
+                if re.search(r"Upper|Lower", cid, re.I):
+                    continue
+                cons = 1 if CONS_CTX.search(cid) and not NONCONS_CTX.search(cid) else 0
+                rank = (en or "", cons)
+                if best is None or rank > best[0]:
+                    best = (rank, v, en)
+            if best:
+                break               # 실적과 같은 규칙 — 먼저 걸린 항목 이름을 쓴다
+        return best
+    r, o = pick(NAME_REV), pick(NAME_OPI)
+    if not r and not o:
+        return None
+    end = (r or o)[2]
+    if r and o and r[2] != o[2]:
+        # 매출과 영업이익의 회계연도가 다르면 늦은 쪽 하나만 남긴다. 섞으면
+        # 서로 다른 해의 예상을 한 줄에 적는 거짓말이 된다.
+        if r[2] > o[2]:
+            o = None
+        else:
+            r, end = None, o[2]
+    out = {"end": end}
+    if r:
+        out["rev"] = r[1]
+    if o:
+        out["opi"] = o[1]
+    return out
+
+
 def collect():
     """최근 며칠치 결산단신을 훑어 분기 수치를 담는다."""
     OUT.parent.mkdir(parents=True, exist_ok=True)
@@ -934,6 +977,12 @@ def collect():
     if len(done - seg_done) > 50:
         print(f"  부문을 아직 안 본 공시가 {len(done - seg_done):,}건 있다. 다시 뜯는다.",
               flush=True)
+    # 가이던스(통기 예상)도 부문과 같은 방식으로 나중에 붙었다 — 수치만 본 공시를
+    # 한 번 더 뜯어 예상란을 채운다. 세 벌 다 본 공시만 건너뛴다.
+    fcst_done = set(load_fcst_done())
+    if len(done - fcst_done) > 50:
+        print(f"  가이던스를 아직 안 본 공시가 {len(done - fcst_done):,}건 있다.",
+              flush=True)
 
     got = skipped = streak = 0
     for back in range(BACK_DAYS):
@@ -948,11 +997,13 @@ def collect():
         print(f"  {day}: 결산단신 {len(rows)}건", flush=True)
         for r in rows:
             key = "jp:" + r["code"]
-            if r["zip"] in done and r["zip"] in seg_done:
-                continue                    # 지난 실행에서 둘 다 봤다
+            if r["zip"] in done and r["zip"] in seg_done and r["zip"] in fcst_done:
+                continue                    # 지난 실행에서 셋 다 봤다
             fresh = r["zip"] not in done
+            fresh_fc = r["zip"] not in fcst_done
             done.add(r["zip"])
             seg_done.add(r["zip"])
+            fcst_done.add(r["zip"])
             try:
                 blob = get("https://www.release.tdnet.info/inbs/" + r["zip"], binary=True)
                 streak = 0
@@ -961,7 +1012,7 @@ def collect():
                 print(f"    {r['code']} 막힘: {e}", file=sys.stderr, flush=True)
                 if streak >= GIVE_UP_AFTER:
                     print("  연속으로 막혔다. 여기서 접는다.", file=sys.stderr, flush=True)
-                    return save(stocks, done, got, skipped, segs, seg_done)
+                    return save(stocks, done, got, skipped, segs, seg_done, fcst_done)
                 continue
             time.sleep(PAUSE)
             if not blob:
@@ -970,9 +1021,39 @@ def collect():
             for st, en, row in read_segments(blob):
                 segs.setdefault(key, {})[st + "/" + en] = row
 
+            vals = read_summary(blob) if (fresh or fresh_fc) else None
+            if vals and fresh_fc:
+                fc = forecast_from(vals)
+                if fc:
+                    fc["ts"] = day
+                    rec = stocks.setdefault(key, {"v": JP_VER, "freq": "Q",
+                                                  "cur": "JPY", "src": "tdnet",
+                                                  "points": []})
+                    old_fc = rec.get("fcst")
+                    if old_fc and (old_fc.get("ts") or "") > day:
+                        # 뒤로 훑으므로 옛 공시가 나중에 온다. 새 것을 덮지 않고,
+                        # 같은 회계연도의 다른 값이면 '직전 예상'으로만 채운다 —
+                        # 그게 상향/하향 폭의 밑절미다.
+                        if (old_fc.get("end") == fc["end"]
+                                and old_fc.get("prevRev") is None
+                                and old_fc.get("prevOpi") is None
+                                and (old_fc.get("rev"), old_fc.get("opi"))
+                                    != (fc.get("rev"), fc.get("opi"))):
+                            old_fc["prevRev"] = fc.get("rev")
+                            old_fc["prevOpi"] = fc.get("opi")
+                    else:
+                        if old_fc and old_fc.get("end") == fc["end"]:
+                            if (old_fc.get("rev"), old_fc.get("opi")) \
+                                    != (fc.get("rev"), fc.get("opi")):
+                                fc["prevRev"] = old_fc.get("rev")
+                                fc["prevOpi"] = old_fc.get("opi")
+                            else:           # 같은 값 재공시 — 이전 밑절미를 잇는다
+                                fc["prevRev"] = old_fc.get("prevRev")
+                                fc["prevOpi"] = old_fc.get("prevOpi")
+                        rec["fcst"] = fc
+
             if not fresh:
-                continue            # 수치는 지난번에 이미 뽑았다. 부문만 보러 왔다.
-            vals = read_summary(blob)
+                continue            # 수치는 지난번에 이미 뽑았다. 부문·예상만 보러 왔다.
             if not vals:
                 skipped += 1
                 continue
@@ -995,12 +1076,12 @@ def collect():
             # 실행되지 않아 받은 것을 통째로 잃는다. 실제로 첫 실행이 그랬다 —
             # 5분에서 잘려 197종목을 담고도 파일이 안 생겼다.
             if got % 20 == 0:
-                save(stocks, done, got, skipped, segs, seg_done, quiet=True)
+                save(stocks, done, got, skipped, segs, seg_done, fcst_done, quiet=True)
                 print(f"    ...{got}건", flush=True)
         # 부문만 보러 온 실행은 got 이 안 늘어 위 저장이 안 걸린다. 하루치를
         # 끝낼 때마다 써 둔다 — 시간 제한에 잘려도 받은 만큼은 남는다.
-        save(stocks, done, got, skipped, segs, seg_done, quiet=True)
-    return save(stocks, done, got, skipped, segs, seg_done)
+        save(stocks, done, got, skipped, segs, seg_done, fcst_done, quiet=True)
+    return save(stocks, done, got, skipped, segs, seg_done, fcst_done)
 
 
 def load_done():
@@ -1084,7 +1165,7 @@ def save_segments(raw, seg_done=(), quiet=False):
               f"(누계 점을 가진 종목 {len(raw):,})")
 
 
-def save(stocks, done, got, skipped, segs=None, seg_done=(), quiet=False):
+def save(stocks, done, got, skipped, segs=None, seg_done=(), fcst_done=(), quiet=False):
     payload = {
         "source": "TDnet 適時開示 결산단신 (inline XBRL)",
         "note": ("발표 당일에 올라온다. 누계로 실리므로 앞 분기를 빼 분기값으로 "
@@ -1092,6 +1173,9 @@ def save(stocks, done, got, skipped, segs=None, seg_done=(), quiet=False):
         "count": len(stocks),
         # 이미 본 공시. TDnet 은 한 달치만 남기므로 이만큼이면 넉넉하다.
         "docs": sorted(done)[-6000:],
+        # 가이던스(통기 예상)까지 뜯어본 공시. docs 와 따로 두는 이유는 부문의
+        # seg_done 과 같다 — 한 벌만 적으면 나중에 붙인 수집이 영영 안 돈다.
+        "fcst_docs": sorted(fcst_done)[-6000:],
         "stocks": stocks,
     }
     tmp = OUT.with_suffix(".tmp")

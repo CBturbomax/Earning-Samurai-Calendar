@@ -17,6 +17,12 @@ jobs:
         with:
           python-version: '3.12'
 
+      # 10차 — 미국 실적 보도자료(8-K EX-99). 브리핑 칸의 '회사가 한 말' 원문이
+      # EDGAR 에서 뽑히는지, 인용문·가이던스 문단이 실제로 걸리는지 본다.
+      - name: 🇺🇸 8-K 보도자료 발췌 확인 (10차)
+        timeout-minutes: 6
+        run: python scrape_pr_us.py --probe NVDA AAPL WMT DE
+
       # 9차 — 8차에서 JPX 가 CI 에 열려 있고 셋 다 xlsx(zip)인 것을 확인했다.
       # 이번에는 실제 파서(scrape_jp_sched.py --probe)를 돌려 열 매핑·날짜 범위·
       # 어휘(kind/fy/업종)가 닛케이 것과 맞는지 본다.

@@ -265,8 +265,15 @@ def merge_jp_past(raw: dict):
     if not rows:
         return
     done = {(r["code"], r.get("fy", ""), r.get("kind", "")) for r in rows}
+    # 같은 날 그 회사의 실제 공시가 있으면, 분기가 달라도 그날의 '예정' 줄은
+    # 지운다. 아사히(2502)가 랜섬웨어로 결산이 밀려 8/14 에 1분기를 냈는데
+    # 닛케이는 같은 날을 第２ 예정으로 갖고 있었다 — 분기가 달라 (code,fy,kind)
+    # 판별을 통과해 같은 회사가 같은 날 두 줄로 섰다. 그날 정말 다른 분기가
+    # 또 나오면 TDnet 이 실제 공시로 가져오므로 잃는 것이 없다.
+    done_days = {(r["code"], r["date"]) for r in rows}
     kept = [r for r in raw["rows"]
-            if (r["code"], r.get("fy", ""), r.get("kind", "")) not in done]
+            if (r["code"], r.get("fy", ""), r.get("kind", "")) not in done
+            and (r["code"], r["date"]) not in done_days]
     dropped = len(raw["rows"]) - len(kept)
     # TDnet 목록에는 업종·거래소가 없고, **회사명은 줄임말이다** — 三菱ＵＦＪ,
     # アサヒ, ＯＢＣ. 그대로 두면 같은 회사가 지난주에는 「アサヒ」, 다음주에는
@@ -313,8 +320,12 @@ def merge_jp_sched(raw: dict):
     if not rows:
         return
     have = {(r["code"], r.get("fy", ""), r.get("kind", "")) for r in raw["rows"]}
+    # 같은 회사가 이미 그날 줄을 갖고 있으면(실제든 예정이든) 더하지 않는다 —
+    # 두 예정 소스가 같은 날을 다른 분기로 적어 두 줄이 되는 것을 막는다.
+    have_days = {(r["code"], r["date"]) for r in raw["rows"]}
     add = [r for r in rows
-           if (r["code"], r.get("fy", ""), r.get("kind", "")) not in have]
+           if (r["code"], r.get("fy", ""), r.get("kind", "")) not in have
+           and (r["code"], r["date"]) not in have_days]
     raw["rows"] += add
     raw["ok_days"] = sorted(set(raw["ok_days"]) | set(sched.get("ok_days", [])))
     raw["source"] = (raw.get("source", "") + " + JPX 발표 예정일").strip(" +")
@@ -976,6 +987,35 @@ def load_desc():
 DESC = load_desc()
 
 
+def load_fcst():
+    """회사가 공시한 통기 예상(가이던스). 일본 결산단신 요약의 예상란에서 온다
+    (scrape_fin_jp.py 의 fcst) — 회사 자신이 공시한 수치지 우리의 추정이 아니다.
+    직전 예상(prev)이 같이 있으면 화면이 상향/하향 폭을 계산해 적는다."""
+    p = HERE / "data" / "financials_jp.json"
+    if not p.exists():
+        return {}
+    try:
+        stocks = json.loads(p.read_text(encoding="utf-8")).get("stocks", {})
+    except (ValueError, OSError) as e:
+        print(f"  ! financials_jp.json (fcst) 읽기 실패: {e}")
+        return {}
+    out = {}
+    for code, rec in stocks.items():
+        f = rec.get("fcst")
+        if f and (f.get("rev") or f.get("opi")):
+            out["jp:" + code] = f
+    return out
+
+
+# 공시 원문에서 옮긴 한국어 실적 코멘트. (종목, 분기) 열쇠 — 화면은 그 분기가
+# 최신일 때만 낸다. 원문 수집은 scrape_pr_us.py(미국 8-K 보도자료) 등이 하고,
+# 한국어는 descriptions.py 처럼 사람이(또는 세션에서 일괄로) 쓴다.
+try:
+    from briefs import BRIEFS
+except ImportError:
+    BRIEFS = {}
+
+
 def _median(xs):
     s = sorted(xs)
     return s[len(s) // 2] if s else 0.0
@@ -1276,6 +1316,16 @@ def build():
                      f" ({', '.join(sorted(tossed)[:6])})")
         print(note)
 
+    # 실적 브리핑 재료 둘. 회사가 공시한 통기 예상(일본 결산단신의 예상란)과
+    # 공시 원문에서 옮긴 한국어 코멘트(briefs.py). 코멘트는 (종목, 분기) 열쇠라
+    # 다음 분기가 오면 자동으로 내려간다 — 낡은 말이 새 분기에 붙는 것을 막는다.
+    fcst = {k: v for k, v in load_fcst().items() if k in on_screen}
+    briefs = {k: v for k, v in BRIEFS.items() if k in on_screen}
+    if fcst:
+        print(f"  회사 통기 예상(가이던스) {len(fcst):,}종목")
+    if briefs:
+        print(f"  실적 코멘트(한국어) {len(briefs):,}종목")
+
     payload = {
         "rows": packed,
         "notable": notable,
@@ -1299,6 +1349,8 @@ def build():
         # 시총 데이터가 있는 시장. 없는 시장에는 규모 필터를 적용할 수 없다.
         "capMarkets": sorted({p[9] for p in packed if p[11]}),
         "capCover": cap_cover,
+        "fcst": fcst,
+        "briefs": briefs,
         # **시총이 캘린더 원본에 같이 오는 시장.** 규모 필터에서 '시총을 모르는
         # 종목'을 감춰도 되는지는 수집률이 아니라 이걸로 갈라야 한다.
         # 미국은 나스닥이 시총을 같이 주므로 비어 있으면 정말 값이 없는 종목이다.
@@ -1659,6 +1711,25 @@ button.btn:disabled:hover { border-color:var(--line); color:var(--fg); }
   display:inline-block; margin-right:8px; padding:1px 7px; border-radius:5px;
   background:#1e2a35; color:#8fb8dc; font-size:13px; vertical-align:1px;
 }
+
+/* 실적 브리핑 — 차트를 글로 읽어주는 칸. 부문 차트 아래 선다. */
+.brief {
+  margin:16px 0 6px; padding:13px 16px 11px; border-radius:10px;
+  background:#141c24; border-left:3px solid var(--a3);
+}
+.brief h4 {
+  margin:0 0 8px; font-size:18px; color:var(--a3); font-weight:700;
+}
+.brief h4 .tagx {
+  display:inline-block; margin-left:8px; padding:1px 7px; border-radius:5px;
+  background:#1e2a35; color:#8fb8dc; font-size:13px; vertical-align:2px;
+}
+.brief ul { margin:0; padding-left:20px; }
+.brief li { font-size:18px; line-height:1.6; color:var(--fg); margin:3px 0; }
+.brief li i { color:var(--mute); font-style:normal; font-size:15px; }
+.brief b.up { color:var(--ok); }
+.brief b.dn, .brief span.dn { color:var(--a1); }
+.brief .brko { color:#dbe7f0; }
 
 /* 칩의 시총 표기 */
 .chip .cc {
@@ -2669,7 +2740,134 @@ function finBlock(m, code) {
   }
   // 사업부별은 매출·성장률 아래에 붙인다. 큰 그림을 먼저 보고 쪼개 보는 순서다.
   if (sg) html += segChart(sg, f.cur || 'USD');
+  // 맨 아래 실적 브리핑 — 차트를 못 읽고 지나가도 요점은 남게.
+  html += briefBlock(key, f, sg);
   return html || '<p class="finnote">받아둔 수치가 없습니다.</p>';
+}
+
+/* ── 실적 브리핑 ─────────────────────────────────────────────
+   차트를 글로 읽어주는 칸. 캘린더이자 스크리닝 화면이라는 목적에서 왔다 —
+   눌렀을 때 "얼마나, 어디가, 몇 분기째"가 한눈에 잡혀야 한다.
+
+   **가진 수치에서만 만든다.** 매출·영업이익·부문(위 차트와 같은 자료)의 요약은
+   기계가 만들고, 수치에 없는 것 — 왜 잘 됐는지, 회사가 뭐라고 했는지 — 은
+   공시에서 수집·번역된 것이 있을 때만(D.briefs · D.fcst) 출처를 달아 낸다.
+   없으면 그 줄이 안 나올 뿐, 지어내지 않는다.
+
+   한국어 코멘트는 (종목, 분기) 열쇠다. 다음 분기가 나오면 자동으로 내려간다 —
+   지난 분기 이야기가 새 분기 옆에 붙어 있는 것이 가장 나쁜 거짓말이라서다. */
+function briefMoney(v, cur) {
+  const U = curOf(cur);
+  const a = Math.abs(v);
+  const hit = U.steps.find(([n]) => a >= n);
+  const num = hit ? (a / hit[0] >= 100 ? Math.round(v / hit[0]).toLocaleString()
+                                       : (v / hit[0]).toFixed(1)) + hit[1]
+                  : fmtN(v);
+  return num + ' ' + U.ko;
+}
+const briefPct = r => (r >= 0 ? '+' : '') + Math.round(r * 100) + '%';
+const briefCls = r => r >= 0 ? 'up' : 'dn';
+/* '2Q26' -> '2Q25', '1H26' -> '1H25'. 전년 같은 기간의 이름. */
+function yearAgoLabel(lab) {
+  const m = /^(\d)([QH])(\d{2})$/.exec(lab);
+  return m ? m[1] + m[2] + String(+m[3] - 1).padStart(2, '0') : '';
+}
+function briefBlock(key, f, sg) {
+  const lines = [];
+  const pts = (f && f.points) || [];
+  const freqH = f && f.freq === 'H';
+  const unit = freqH ? '반기' : '분기';
+  const last = pts[pts.length - 1];
+  if (last) {
+    const back = freqH ? 2 : 4;
+    const prev = pts[pts.length - 1 - back];
+    /* (1) 최근 기간: 매출 YoY · 영업이익률 변화 */
+    let s = '매출 ' + briefMoney(last[1], f.cur);
+    if (prev && prev[1])
+      s += ' <b class="' + briefCls(last[1] / prev[1] - 1) + '">' +
+           briefPct(last[1] / prev[1] - 1) + '</b> (전년 같은 ' + unit + ' 대비)';
+    if (last[2] != null && last[1]) {
+      const mNow = last[2] / last[1];
+      s += ' · 영업이익률 ' + Math.round(mNow * 100) + '%';
+      if (prev && prev[2] != null && prev[1]) {
+        const mPrev = prev[2] / prev[1];
+        const d = Math.round((mNow - mPrev) * 100);
+        if (d) s += ' <b class="' + briefCls(d) + '">(' + (d > 0 ? '+' : '') + d + '%p)</b>';
+      }
+    }
+    lines.push(s);
+    /* (2) 흑자 전환 / 적자 전환 — 이익률 숫자보다 이 한마디가 먼저다 */
+    if (prev && last[2] != null && prev[2] != null) {
+      if (last[2] > 0 && prev[2] < 0) lines.push('<b class="up">영업이익 흑자 전환</b> (전년 같은 ' + unit + '은 적자)');
+      if (last[2] < 0 && prev[2] >= 0) lines.push('<b class="dn">영업적자 전환</b>');
+    }
+    /* (3) 흐름: 몇 분기째 늘고 있나 / 줄고 있나 */
+    let inc = 0, dec = 0;
+    for (let i = pts.length - 1; i - back >= 0; i--) {
+      const a = pts[i][1], b = pts[i - back][1];
+      if (!a || !b) break;
+      if (a > b && !dec) inc++;
+      else if (a < b && !inc) dec++;
+      else break;
+    }
+    if (inc >= 2) lines.push(inc + unit + ' 연속 증수' + (inc >= 4 ? ' — 흐름이 길다' : ''));
+    if (dec >= 2) lines.push('<span class="dn">' + dec + unit + ' 연속 감수</span>');
+    /* (4) 부문: 어디가 끌었나. 부문 차트의 같은 기간과 전년 같은 기간을 대본다. */
+    if (sg && sg.pts && sg.pts.length) {
+      const L = sg.pts[sg.pts.length - 1];
+      const want = yearAgoLabel(L[0]);
+      const P = want && sg.pts.find(r => r[0] === want);
+      if (P) {
+        let best = null, worst = null;
+        sg.names.forEach((n, i) => {
+          const a = L[i + 1], b = P[i + 1];
+          if (a == null || b == null || b <= 0) return;
+          const d = a - b, g = a / b - 1;
+          if (!best || d > best.d) best = { n, d, g };
+          if (!worst || d < worst.d) worst = { n, d, g };
+        });
+        if (best && best.d > 0) {
+          let s4 = '부문별 성장 주도: <b>' + esc(best.n) + '</b> ' +
+                   '<b class="up">' + briefPct(best.g) + '</b>';
+          if (worst && worst.d < 0 && worst.n !== best.n)
+            s4 += ' · 역성장: <b>' + esc(worst.n) + '</b> <b class="dn">' +
+                  briefPct(worst.g) + '</b>';
+          lines.push(s4 + ' <i>(' + esc(L[0]) + ')</i>');
+        }
+      }
+    }
+  }
+  /* (5) 회사 가이던스 — 일본 결산단신의 통기 예상. 회사가 공시한 수치다. */
+  const fc = D.fcst && D.fcst[key];
+  if (fc && (fc.rev || fc.opi)) {
+    let s = '회사 통기 예상(공시): ';
+    const parts = [];
+    if (fc.rev) parts.push('매출 ' + briefMoney(fc.rev, (f && f.cur) || 'JPY'));
+    if (fc.opi != null) parts.push('영업이익 ' + briefMoney(fc.opi, (f && f.cur) || 'JPY'));
+    s += parts.join(' · ');
+    if (fc.prevOpi && fc.opi != null) {
+      const g = fc.opi / fc.prevOpi - 1;
+      if (Math.round(g * 100))
+        s += ' — 직전 예상 대비 영업이익 <b class="' + briefCls(g) + '">' +
+             briefPct(g) + ' ' + (g > 0 ? '상향' : '하향') + '</b>';
+      else s += ' — 직전 예상 유지';
+    } else if (fc.prevRev && fc.rev) {
+      const g = fc.rev / fc.prevRev - 1;
+      if (Math.round(g * 100))
+        s += ' — 직전 예상 대비 매출 <b class="' + briefCls(g) + '">' +
+             briefPct(g) + ' ' + (g > 0 ? '상향' : '하향') + '</b>';
+    }
+    lines.push(s);
+  }
+  /* (6) 공시 원문에서 옮긴 한국어 코멘트 — 그 분기 것일 때만 낸다 */
+  const br = D.briefs && D.briefs[key];
+  if (br && br.ko && last && br.q === last[0])
+    lines.push('<span class="brko">' + esc(br.ko) + '</span> <i>(출처 ' +
+               esc(br.src || '실적 공시') + ')</i>');
+  if (!lines.length) return '';
+  return '<div class="brief"><h4>실적 브리핑' +
+    (last ? ' <span class="tagx">' + esc(last[0]) + '</span>' : '') + '</h4><ul>' +
+    lines.map(l => '<li>' + l + '</li>').join('') + '</ul></div>';
 }
 
 const SRC_KO = { sec: 'SEC 공식 재무제표', sa: 'stockanalysis.com', yahoo: 'Yahoo Finance',
