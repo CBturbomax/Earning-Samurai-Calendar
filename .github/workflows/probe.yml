@@ -17,75 +17,68 @@ jobs:
         with:
           python-version: '3.12'
 
-      # 5차 — 주영구성(主营构成) 표의 report 이름 최종 수색. 지연 청크는 webpack
-      # 해시 맵으로 조립되어 문자열 그렙에 안 걸린다. 맵을 재조립해 전 청크를 훑는다.
-      - name: 🇭🇰 홍콩 부문 매출 소스 떠보기 (5차)
-        timeout-minutes: 10
+      # 6차 — 이스트머니 웹 F10 에는 주영구성 표가 없었다. 서버렌더 HTML 을 주는
+      # 동화순(10jqka)과 쉐치우(xueqiu) F10 API, 이스트머니 앱 계열 이름을 떠본다.
+      - name: 🇭🇰 홍콩 부문 매출 소스 떠보기 (6차)
+        timeout-minutes: 8
         run: |
           python - <<'EOF'
-          import json, re, urllib.request
+          import json, re, urllib.request, http.cookiejar
 
-          UA = {"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
-                              "AppleWebKit/537.36 Chrome/124.0 Safari/537.36",
-                "Accept": "*/*", "Referer": "https://emweb.eastmoney.com/"}
+          jar = http.cookiejar.CookieJar()
+          opener = urllib.request.build_opener(urllib.request.HTTPCookieProcessor(jar))
+          opener.addheaders = [("User-Agent",
+              "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 "
+              "Chrome/124.0 Safari/537.36"), ("Accept", "*/*")]
 
           def get(url, timeout=25):
-              req = urllib.request.Request(url, headers=UA)
-              with urllib.request.urlopen(req, timeout=timeout) as r:
+              with opener.open(url, timeout=timeout) as r:
                   return r.read().decode("utf-8", "replace")
 
-          base = "https://emweb.eastmoney.com/PC_HKF10/pages/home/"
-          home = get(base + "index.html?code=00700&type=web&color=w")
-          names = set()
-          chunk_urls = set()
-          for u in re.findall(r'src="([^"]+\.js[^"]*)"', home):
-              if u.startswith("//"): full = "https:" + u
-              elif u.startswith("/"): full = "https://emweb.eastmoney.com" + u
-              elif not u.startswith("http"): full = base + u
-              else: full = u
-              try:
-                  js = get(full)
-              except Exception:
-                  continue
-              names |= set(re.findall(r"RPT_[A-Z0-9_]{4,60}", js))
-              # webpack 청크 맵: {13:"a1b2c3d4",...} + "static/js/" 접두
-              for m in re.finditer(r'"static/js/"\s*\+\s*(?:\(\{[^}]*\}\[\w\]\|\|\w\)|\w+)\s*\+\s*"\."\s*\+\s*\{([^}]+)\}', js):
-                  pairs = re.findall(r'(\d+):"([a-f0-9]{6,24})"', m.group(1))
-                  root = full.rsplit("/static/js/", 1)[0] if "/static/js/" in full \
-                         else "https://emweb.eastmoney.com/PC_HKF10"
-                  for cid, h in pairs:
-                      chunk_urls.add(f"{root}/static/js/{cid}.{h}.js")
-              # 못 맞춘 꼴 대비 — 맵 덩어리를 그대로 찍어 사람이 본다
-              for m in re.finditer(r'\{(?:\d+:"[a-f0-9]{6,24}",?){3,}\}', js):
-                  print("맵 후보:", m.group(0)[:180])
-          print("주 번들에서 이름", len(names), "· 청크 URL", len(chunk_urls))
-          for u in sorted(chunk_urls)[:60]:
-              try:
-                  js = get(u)
-              except Exception:
-                  continue
-              got = set(re.findall(r"RPT_[A-Z0-9_]{4,60}", js))
-              fresh = got - names
-              if fresh:
-                  print(" ", u.rsplit("/",1)[-1], "->", sorted(fresh))
-              names |= got
-          print("\n전체 이름:")
-          for n in sorted(names): print(" ", n)
+          # ── 1) 동화순 basic F10 — A주는 서버렌더 표를 준다. 홍콩도 주나?
+          for code in ("HK0700", "HK9992", "HK1810"):
+              for page in ("operate.html", "company.html"):
+                  url = f"https://basic.10jqka.com.cn/{code}/{page}"
+                  try:
+                      body = get(url)
+                      hit = "主营" in body or "业务" in body
+                      print(f"\n== 10jqka {code}/{page}  {len(body):,}B  주영구성:{hit}")
+                      if hit:
+                          i = body.find("主营")
+                          print("  ", re.sub(r"\s+", " ", body[i-100:i+500])[:520])
+                  except Exception as e:
+                      print(f"\n== 10jqka {code}/{page} 실패 {e}")
 
-          # 냄새 나는 것 즉시 시험 (SECUCODE 필터로)
-          for rn in sorted(names):
-              if not any(w in rn for w in ("MAINOP", "BUSINESS", "BUSSINESS_INCOME",
-                                           "INDUSTRY_INCOME", "OPERATE_INCOME", "MAIN_OP")):
-                  continue
+          # ── 2) 쉐치우 F10 — 먼저 홈을 열어 쿠키(xq_a_token)를 받는다
+          try:
+              get("https://xueqiu.com/")
+              for sym in ("00700", "09992"):
+                  for path in (f"https://stock.xueqiu.com/v5/stock/f10/hk/business.json?symbol={sym}",
+                               f"https://stock.xueqiu.com/v5/stock/f10/us/business.json?symbol={sym}"):
+                      try:
+                          body = get(path)
+                          print(f"\n== xueqiu {path.split('/')[-1][:40]}  {body[:360]}")
+                      except Exception as e:
+                          print(f"\n== xueqiu {sym} 실패 {e}")
+                      break
+          except Exception as e:
+              print("쉐치우 홈 실패:", e)
+
+          # ── 3) 이스트머니 앱 계열 이름 무차별 — SECUCODE 필터 필수였다
+          for rn in ("RPT_CUSTOM_HKF10_APP_MAINOP", "RPT_CUSTOM_HKF10_APPFN_MAINOP",
+                     "RPT_CUSTOM_HKF10_APP_BUSINESS", "RPT_CUSTOM_HKF10_APPFN_MAINBUSINESS",
+                     "RPT_CUSTOM_HKF10_APP_MAINDISTRIBUTION", "RPT_CUSTOM_HKF10_APPINCOME_CONSIST",
+                     "RPT_HKF10_INCOME_CONSIST", "RPT_HKF10_FN_MAINOP_PC"):
               try:
                   body = get("https://datacenter.eastmoney.com/securities/api/data/v1/get"
                              f"?reportName={rn}&columns=ALL"
-                             "&filter=(SECUCODE%3D%2200700.HK%22)&pageSize=8")
+                             "&filter=(SECUCODE%3D%2200700.HK%22)&pageSize=6")
                   d = json.loads(body)
                   data = ((d.get("result") or {}).get("data")) or []
-                  print(f"\n== {rn} 행{len(data)}")
-                  for row in data[:4]:
-                      print("   ", json.dumps(row, ensure_ascii=False)[:240])
+                  msg = d.get("message", "")
+                  print(f"\n== {rn} 행{len(data)} {msg[:60]}")
+                  if data:
+                      print("   ", json.dumps(data[0], ensure_ascii=False)[:240])
               except Exception as e:
                   print(f"\n== {rn} 실패 {e}")
           EOF
