@@ -914,15 +914,32 @@ SEG = load_seg()
 
 
 def load_desc():
-    """받아둔 사업 설명 원문. 한국어가 없는 종목에만 쓴다."""
+    """받아둔 사업 설명 원문. 한국어가 없는 종목에만 쓴다.
+
+    회사 설명이 아닌 것이 담겨 있으면 여기서 거른다 — stockanalysis SEO 껍데기
+    ("Company profile for …"), 닛케이 페이지 소개문(【日本経済新聞】…), HTML
+    속성 부스러기('…">')가 실제로 담겼었다. 수집기(scrape_desc.py 의 junk())가
+    다시 받을 때까지는 빈칸이 낫다 — 페이지 광고문을 회사 설명이라고 싣는 것보다.
+    """
     p = HERE / "data" / "desc.json"
     if not p.exists():
         return {}
     try:
-        return json.loads(p.read_text(encoding="utf-8")).get("stocks", {})
+        stocks = json.loads(p.read_text(encoding="utf-8")).get("stocks", {})
     except (ValueError, OSError) as e:
         print(f"  ! desc.json 읽기 실패: {e}")
         return {}
+    out, dropped = {}, 0
+    for k, v in stocks.items():
+        t = v.get("t") or ""
+        if (t.startswith("Company profile for") or "日本経済新聞" in t
+                or '">' in t[:120]):
+            dropped += 1
+            continue
+        out[k] = v
+    if dropped:
+        print(f"  사업 설명 원문 중 껍데기 {dropped}건은 싣지 않는다")
+    return out
 
 
 DESC = load_desc()

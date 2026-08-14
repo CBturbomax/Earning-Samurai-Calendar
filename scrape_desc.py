@@ -76,6 +76,24 @@ def get(url, timeout=25):
         raise Throttled(str(e))
 
 
+def junk(t):
+    """받아 놓고 보니 회사 설명이 아닌 것. 저장돼 있어도 다시 받는다.
+
+    실제로 담겼던 세 갈래다 —
+    - stockanalysis 의 SEO 껍데기: "Company profile for CK Hutchison … with a
+      description, list of executives…" (홍콩 199종목이 전부 이 문장이었다)
+    - 닛케이의 페이지 소개문: "【日本経済新聞】 …の決算情報を収録。…" (417A).
+      회사 요약과 같은 【…】 꼴이라 NK_RE 가 그대로 물었다.
+    - HTML 속성 부스러기: '<p class="[&>p]:mb-5">' 의 [^>]* 가 클래스값 속
+      > 에서 끊겨 'p]:mb-5">' 가 본문에 샜다 (02513).
+    """
+    if not t:
+        return False
+    return (t.startswith("Company profile for")
+            or "日本経済新聞" in t
+            or '">' in t[:120])
+
+
 def tidy(s, limit=220):
     """공백을 고르고 너무 길면 문장 끝에서 자른다."""
     s = re.sub(r"\s+", " ", TAGS.sub(" ", s or "")).strip()
@@ -115,7 +133,9 @@ def jp_desc(code):
         txt = None
     if txt:
         m = NK_RE.search(txt)
-        if m:
+        # 페이지 자기소개(【日本経済新聞】 …の決算情報を収録)도 같은 꼴이라
+        # 걸린다. 그건 회사 설명이 아니다 — 버리고 대체 소스로 간다.
+        if m and "日本経済新聞" not in m.group(1):
             head, rest = m.group(1).strip(), NK_TAIL.sub("", m.group(2)).strip()
             return tidy(("【" + head + "】 " + rest).strip())
     return sa_desc("tyo", code)
@@ -146,7 +166,11 @@ def sa_desc(ex, code):
     if not best:
         for m in re.finditer(r"<p[^>]*>(.{80,900}?)</p>", txt, re.S):
             t = tidy(m.group(1), 900)
-            if t.startswith("Company profile for"):
+            # <p class="[&>p]:mb-5"> 처럼 클래스값에 > 가 든 태그는 [^>]* 가
+            # 중간에서 끊겨 속성 부스러기('p]:mb-5">')가 본문에 샌다. 잘라낸다.
+            while '">' in t[:120]:
+                t = t.split('">', 1)[1].strip()
+            if t.startswith("Company profile for") or len(t) < 60:
                 continue
             if " engages in " in t or " is a " in t or " provides " in t:
                 best = t
@@ -199,7 +223,9 @@ def queue(old, cand):
         if k in DESC_KO:
             continue
         rec = old.get(k)
-        if not rec or rec.get("v") != DESC_VER:
+        # 껍데기·부스러기가 담긴 기록은 버전이 같아도 못 받은 것으로 친다 —
+        # 판별을 새로 배울 때마다 버전을 올려 멀쩡한 것까지 다시 받을 이유가 없다.
+        if not rec or rec.get("v") != DESC_VER or junk(rec.get("t") or ""):
             pri = 0
         elif not rec.get("t"):
             if (rec.get("ts") or "") >= cold:
