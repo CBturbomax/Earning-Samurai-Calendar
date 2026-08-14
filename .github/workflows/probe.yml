@@ -17,13 +17,13 @@ jobs:
         with:
           python-version: '3.12'
 
-      # 4차 — ORG_BUSSINESS 는 경영리뷰 텍스트였다. 숫자 표(주영구성)는 지연 로드
-      # 청크에 있다. 앱 번들이 참조하는 청크를 전부 받아 RPT_ 이름을 다 캐낸다.
-      - name: 🇭🇰 홍콩 부문 매출 소스 떠보기 (4차)
+      # 5차 — 주영구성(主营构成) 표의 report 이름 최종 수색. 지연 청크는 webpack
+      # 해시 맵으로 조립되어 문자열 그렙에 안 걸린다. 맵을 재조립해 전 청크를 훑는다.
+      - name: 🇭🇰 홍콩 부문 매출 소스 떠보기 (5차)
         timeout-minutes: 10
         run: |
           python - <<'EOF'
-          import json, re, urllib.request, collections
+          import json, re, urllib.request
 
           UA = {"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
                               "AppleWebKit/537.36 Chrome/124.0 Safari/537.36",
@@ -36,67 +36,56 @@ jobs:
 
           base = "https://emweb.eastmoney.com/PC_HKF10/pages/home/"
           home = get(base + "index.html?code=00700&type=web&color=w")
-          seen, queue = set(), []
+          names = set()
+          chunk_urls = set()
           for u in re.findall(r'src="([^"]+\.js[^"]*)"', home):
-              queue.append(u)
-          found = collections.defaultdict(set)
-          js_cache = {}
-          rounds = 0
-          while queue and len(seen) < 60:
-              u = queue.pop(0)
               if u.startswith("//"): full = "https:" + u
-              elif u.startswith("http"): full = u
               elif u.startswith("/"): full = "https://emweb.eastmoney.com" + u
-              else: full = base + u
-              if full in seen: continue
-              seen.add(full)
+              elif not u.startswith("http"): full = base + u
+              else: full = u
               try:
                   js = get(full)
               except Exception:
                   continue
-              js_cache[full] = js
-              for name in re.findall(r"RPT_[A-Z0-9_]{4,60}", js):
-                  found[name].add(full.rsplit("/",1)[-1][:40])
-              # webpack 청크 참조: "chunk-xxxx.hash.js" 꼴 문자열을 모두 큐에
-              for c in set(re.findall(r'["\']((?:static/)?(?:js/)?[A-Za-z0-9_.-]{4,80}\.js)["\']', js)):
-                  if c not in seen and len(queue) < 80:
-                      queue.append(c)
-          print("훑은 JS", len(seen))
-          for name in sorted(found):
-              print(" ", name)
+              names |= set(re.findall(r"RPT_[A-Z0-9_]{4,60}", js))
+              # webpack 청크 맵: {13:"a1b2c3d4",...} + "static/js/" 접두
+              for m in re.finditer(r'"static/js/"\s*\+\s*(?:\(\{[^}]*\}\[\w\]\|\|\w\)|\w+)\s*\+\s*"\."\s*\+\s*\{([^}]+)\}', js):
+                  pairs = re.findall(r'(\d+):"([a-f0-9]{6,24})"', m.group(1))
+                  root = full.rsplit("/static/js/", 1)[0] if "/static/js/" in full \
+                         else "https://emweb.eastmoney.com/PC_HKF10"
+                  for cid, h in pairs:
+                      chunk_urls.add(f"{root}/static/js/{cid}.{h}.js")
+              # 못 맞춘 꼴 대비 — 맵 덩어리를 그대로 찍어 사람이 본다
+              for m in re.finditer(r'\{(?:\d+:"[a-f0-9]{6,24}",?){3,}\}', js):
+                  print("맵 후보:", m.group(0)[:180])
+          print("주 번들에서 이름", len(names), "· 청크 URL", len(chunk_urls))
+          for u in sorted(chunk_urls)[:60]:
+              try:
+                  js = get(u)
+              except Exception:
+                  continue
+              got = set(re.findall(r"RPT_[A-Z0-9_]{4,60}", js))
+              fresh = got - names
+              if fresh:
+                  print(" ", u.rsplit("/",1)[-1], "->", sorted(fresh))
+              names |= got
+          print("\n전체 이름:")
+          for n in sorted(names): print(" ", n)
 
-          # 주영구성 냄새가 나는 이름을 곧장 시험
-          cands = [n for n in found if any(w in n for w in
-                   ("MAIN", "BUSSINESS", "BUSINESS", "INCOME", "OPERAT", "INDUSTRY"))]
-          print("\n시험할 후보:", cands)
-          for rn in cands[:12]:
+          # 냄새 나는 것 즉시 시험 (SECUCODE 필터로)
+          for rn in sorted(names):
+              if not any(w in rn for w in ("MAINOP", "BUSINESS", "BUSSINESS_INCOME",
+                                           "INDUSTRY_INCOME", "OPERATE_INCOME", "MAIN_OP")):
+                  continue
               try:
                   body = get("https://datacenter.eastmoney.com/securities/api/data/v1/get"
                              f"?reportName={rn}&columns=ALL"
-                             "&filter=(SECURITY_CODE%3D%2200700%22)&pageSize=6")
+                             "&filter=(SECUCODE%3D%2200700.HK%22)&pageSize=8")
                   d = json.loads(body)
                   data = ((d.get("result") or {}).get("data")) or []
-                  cols = sorted(data[0].keys()) if data else d.get("message","")
-                  print(f"\n== {rn} 행{len(data)}: {str(cols)[:220]}")
-                  if data:
-                      print("   ", json.dumps(data[0], ensure_ascii=False)[:260])
+                  print(f"\n== {rn} 행{len(data)}")
+                  for row in data[:4]:
+                      print("   ", json.dumps(row, ensure_ascii=False)[:240])
               except Exception as e:
                   print(f"\n== {rn} 실패 {e}")
-
-          # 텐센트 gu.qq 의 API 경로도 번들에서 캐낸다
-          try:
-              shell = get("https://gu.qq.com/hk00700/gp/srgc")
-              srcs = re.findall(r'src="([^"]+\.js[^"]*)"', shell)
-              print("\n[gu.qq] 번들", len(srcs))
-              for u in srcs[:8]:
-                  if u.startswith("//"): u = "https:" + u
-                  try:
-                      js = get(u)
-                  except Exception:
-                      continue
-                  for m in set(re.findall(r"(?:proxy\.finance\.qq\.com|ifzqgtimg)[A-Za-z0-9/_.?=&-]{0,90}", js)):
-                      if any(w in m.lower() for w in ("income", "srgc", "const", "business", "f10")):
-                          print("  ", m[:120])
-          except Exception as e:
-              print("[gu.qq] 실패", e)
           EOF
