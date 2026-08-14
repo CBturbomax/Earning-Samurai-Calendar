@@ -904,6 +904,50 @@ def quarter_from(vals, prior):
             "rev": rq, "opi": oq, "ni": nq}
 
 
+# 결산단신 첨부의 설명 섹션 — 회사가 "왜 이랬는지"를 제 입으로 적는 자리.
+#   （１）経営成績に関する説明 / 当四半期決算に関する定性的情報 / 経営成績等の概況
+# 브리핑 칸의 일본 코멘트 원문이 된다. 다음 절(（２）·財政状態…)이 나오면 끊는다.
+NARR_HEAD = re.compile(
+    r"(?:経営成績(?:等)?(?:に関する説明|の概況|の状況)|"
+    r"当[四半期中間]*決算に関する定性的情報|業績(?:等)?の概況)")
+NARR_STOP = re.compile(
+    r"（[２-９2-9]）|\(2\)|financial|財政状態|キャッシュ・フロー|"
+    r"今後の見通し|連結業績予想|業績予想に関する")
+
+
+def read_narrative(blob):
+    """결산단신 zip -> 경영성적 설명 원문(일본어) 또는 ''.
+
+    첨부 여러 장 중 설명 절이 있는 장을 찾아, 머리글 뒤부터 다음 절 앞까지
+    (최대 1,600자) 뜯는다. 원문 그대로 담기만 한다 — 한국어는 briefs.py 에
+    사람이(세션에서 일괄로) 옮긴다.
+    """
+    try:
+        z = zipfile.ZipFile(io.BytesIO(blob))
+    except zipfile.BadZipFile:
+        return ""
+    best = ""
+    for n in z.namelist():
+        if "Attachment" not in n or not n.lower().endswith(("ixbrl.htm", ".htm")):
+            continue
+        try:
+            txt = z.read(n).decode("utf-8", "replace")
+        except (KeyError, OSError):
+            continue
+        plain = re.sub(r"\s+", " ", TAGS.sub(" ", txt))
+        m = NARR_HEAD.search(plain)
+        if not m:
+            continue
+        body = plain[m.end():m.end() + 4000]
+        stop = NARR_STOP.search(body, 80)      # 머리글 바로 옆 재등장은 무시
+        if stop:
+            body = body[:stop.start()]
+        body = body.strip()[:1600]
+        if len(body) > len(best):
+            best = body
+    return best if len(best) >= 60 else ""
+
+
 def forecast_from(vals):
     """회사의 통기 예상(가이던스)을 뽑는다 — 요약의 ForecastMember 문맥.
 
@@ -983,8 +1027,9 @@ def collect():
     if len(done - fcst_done) > 50:
         print(f"  가이던스를 아직 안 본 공시가 {len(done - fcst_done):,}건 있다.",
               flush=True)
+    narrs = load_narrs()
 
-    got = skipped = streak = 0
+    got = skipped = streak = walked = 0
     for back in range(BACK_DAYS):
         day = (date.today() - timedelta(days=back)).isoformat()
         try:
@@ -1012,15 +1057,30 @@ def collect():
                 print(f"    {r['code']} 막힘: {e}", file=sys.stderr, flush=True)
                 if streak >= GIVE_UP_AFTER:
                     print("  연속으로 막혔다. 여기서 접는다.", file=sys.stderr, flush=True)
-                    return save(stocks, done, got, skipped, segs, seg_done, fcst_done)
+                    return save(stocks, done, got, skipped, segs, seg_done, fcst_done, narrs)
                 continue
             time.sleep(PAUSE)
             if not blob:
                 continue
+            # **문서 단위로도 중간 저장한다.** 백필(가이던스·설명을 아직 안 본
+            # 공시 되훑기)은 새 분기(got)가 안 늘어 아래 저장이 안 걸리고,
+            # 하루 500건짜리 날은 5분 예산 안에 못 끝나 날 단위 저장에도 못
+            # 닿는다 — 그러면 매 실행 같은 자리를 다시 받고 아무것도 안 남는다.
+            walked += 1
+            if walked % 60 == 0:
+                save(stocks, done, got, skipped, segs, seg_done, fcst_done,
+                     narrs, quiet=True)
+                print(f"    ...{walked}건 훑음", flush=True)
 
             for st, en, row in read_segments(blob):
                 segs.setdefault(key, {})[st + "/" + en] = row
 
+            if fresh_fc:
+                narr = read_narrative(blob)
+                cur = narrs.get(r["code"])
+                # 뒤로 훑으므로 옛 공시가 나중에 온다 — 새 것을 덮지 않는다.
+                if narr and (not cur or (cur.get("date") or "") <= day):
+                    narrs[r["code"]] = {"date": day, "text": narr}
             vals = read_summary(blob) if (fresh or fresh_fc) else None
             if vals and fresh_fc:
                 fc = forecast_from(vals)
@@ -1076,12 +1136,12 @@ def collect():
             # 실행되지 않아 받은 것을 통째로 잃는다. 실제로 첫 실행이 그랬다 —
             # 5분에서 잘려 197종목을 담고도 파일이 안 생겼다.
             if got % 20 == 0:
-                save(stocks, done, got, skipped, segs, seg_done, fcst_done, quiet=True)
+                save(stocks, done, got, skipped, segs, seg_done, fcst_done, narrs, quiet=True)
                 print(f"    ...{got}건", flush=True)
         # 부문만 보러 온 실행은 got 이 안 늘어 위 저장이 안 걸린다. 하루치를
         # 끝낼 때마다 써 둔다 — 시간 제한에 잘려도 받은 만큼은 남는다.
-        save(stocks, done, got, skipped, segs, seg_done, fcst_done, quiet=True)
-    return save(stocks, done, got, skipped, segs, seg_done, fcst_done)
+        save(stocks, done, got, skipped, segs, seg_done, fcst_done, narrs, quiet=True)
+    return save(stocks, done, got, skipped, segs, seg_done, fcst_done, narrs)
 
 
 def load_done():
@@ -1099,6 +1159,19 @@ def _seg_file():
         return {}
     try:
         return json.loads(SEG_OUT.read_text(encoding="utf-8"))
+    except (ValueError, OSError):
+        return {}
+
+
+BRIEFS_OUT = HERE / "data" / "briefs_jp.json"
+
+
+def load_narrs():
+    """받아둔 경영성적 설명 원문. {코드: {date, text}}."""
+    if not BRIEFS_OUT.exists():
+        return {}
+    try:
+        return json.loads(BRIEFS_OUT.read_text(encoding="utf-8")).get("stocks", {})
     except (ValueError, OSError):
         return {}
 
@@ -1165,7 +1238,8 @@ def save_segments(raw, seg_done=(), quiet=False):
               f"(누계 점을 가진 종목 {len(raw):,})")
 
 
-def save(stocks, done, got, skipped, segs=None, seg_done=(), fcst_done=(), quiet=False):
+def save(stocks, done, got, skipped, segs=None, seg_done=(), fcst_done=(),
+         narrs=None, quiet=False):
     payload = {
         "source": "TDnet 適時開示 결산단신 (inline XBRL)",
         "note": ("발표 당일에 올라온다. 누계로 실리므로 앞 분기를 빼 분기값으로 "
@@ -1181,6 +1255,14 @@ def save(stocks, done, got, skipped, segs=None, seg_done=(), fcst_done=(), quiet
     tmp = OUT.with_suffix(".tmp")
     tmp.write_text(json.dumps(payload, ensure_ascii=False), encoding="utf-8")
     tmp.replace(OUT)
+    if narrs is not None:
+        bt = BRIEFS_OUT.with_suffix(".tmp")
+        bt.write_text(json.dumps({
+            "source": "TDnet 결산단신 첨부 — 経営成績に関する説明",
+            "note": "원문(일본어)만 담는다. 한국어는 briefs.py 에 옮긴다.",
+            "count": len(narrs), "stocks": narrs,
+        }, ensure_ascii=False), encoding="utf-8")
+        bt.replace(BRIEFS_OUT)
     if segs is not None:
         save_segments(segs, seg_done, quiet=quiet)
     if not quiet:

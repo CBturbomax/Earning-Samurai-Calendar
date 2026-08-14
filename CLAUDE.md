@@ -575,7 +575,7 @@ HPE 가 Compute·Storage·Intelligent Edge 를 Cloud&AI·Networking 으로 바�
 | 워크플로 | 주기 | 쓰는 파일 |
 |---|---|---|
 | `collect.yml` | 1시간 | `data/earnings*.json`(`earnings_jp_past.json` · `earnings_jp_sched.json` 포함) · `data/caps.json` |
-| `numbers.yml` | 30분 | `data/financials*.json` · `data/segments.json` · `data/segments_jp.json` · `data/segments_hk.json` · `data/desc.json` |
+| `numbers.yml` | 30분 | `data/financials*.json` · `data/segments.json` · `data/segments_jp.json` · `data/segments_hk.json` · `data/briefs_jp.json` · `data/desc.json` |
 | `segments.yml` | 3시간 | `data/segments_sec.json` · `data/segments_edgar.json` · `data/briefs_us.json` |
 
 겹치는 건 만들어진 `index.html` 뿐이고, 그건 합친 자료로 다시 만들면 그만이다.
@@ -650,12 +650,19 @@ EPS 만 있다. **없는 값을 다른 항목으로 대신 채우지 말 것** �
   (points)에는 여전히 절대 섞지 않는다.** 같은 회계연도의 예상이 바뀌면 직전
   값을 `prevRev/prevOpi` 로 남겨 화면이 상향/하향 폭을 계산한다. 부문(seg_done)과
   같은 방식으로 `fcst_docs` 를 따로 적어 이번 시즌 공시를 한 번 더 뜯는다.
-- **'회사가 한 말'(수집 + 사람 번역).** 미국은 8-K(Item 2.02)의 보도자료
-  EX-99 에서 CEO 인용·가이던스 문단을 `scrape_pr_us.py` 가 **원문으로만** 담는다
-  (data/briefs_us.json). 한국어는 descriptions.py 와 같은 방식으로 사람이(세션
-  에서 일괄로) `briefs.py` 에 적는다 — **(종목, 분기) 열쇠라 분기가 바뀌면
-  자동으로 내려간다.** 지난 분기 이야기가 새 분기 옆에 붙는 것이 가장 나쁜
-  거짓말이라서다. 홍콩은 공시가 PDF 한 장이라 이 층이 없다(숫자 요약만).
+- **'회사가 한 말'(수집 + 번역).** 미국은 8-K(Item 2.02)의 보도자료 EX-99 에서
+  CEO 인용·가이던스 문단을 `scrape_pr_us.py` 가, 일본은 결산단신 첨부의
+  経営成績に関する説明 절을 `scrape_fin_jp.py` 의 `read_narrative` 가 **원문으로만**
+  담는다(data/briefs_us.json · briefs_jp.json). 한국어는 `briefs.py` 에 발표일
+  열쇠로 적는다 — **더 새 발표가 나오면 화면에서 자동으로 내려간다.** 지난 분기
+  이야기가 새 분기 옆에 붙는 것이 가장 나쁜 거짓말이라서다. 홍콩은 공시가
+  PDF 한 장이라 이 층이 없다.
+
+  **한국어 옮기기는 예약 세션이 알아서 한다.** 러너에는 번역기가 없으므로
+  claude.ai 의 Routine(하루 두 번, 17시·아침 7시 KST)이 새 세션을 열어
+  briefs_us/jp.json 에서 코멘트 없는 새 발표를 찾아 briefs.py 에 옮기고
+  main 에 푸시한다. 규칙: 원문에 있는 것만, 이유·가이던스만(숫자 되읊기 금지),
+  이유 설명이 없으면 그 종목은 건너뛴다.
 
 **검색칸이 둘인데 하는 일이 다르다.** 맨 위 것(`#fq`)은 **가진 종목 전부**에서
 찾아 곧장 그 회사 창을 연다 — 탭이 미국이어도 일본 회사가 나오고, 규모 필터에
