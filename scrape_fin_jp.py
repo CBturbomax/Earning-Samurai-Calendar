@@ -1166,6 +1166,17 @@ def _seg_file():
 BRIEFS_OUT = HERE / "data" / "briefs_jp.json"
 
 
+def load_fcst_done():
+    """가이던스까지 뜯어본 공시 번호. 부문(seg_done)과 같은 이유로 따로 적는다 —
+    한 벌만 적으면 나중에 붙인 수집이 영영 안 돈다."""
+    if not OUT.exists():
+        return []
+    try:
+        return json.loads(OUT.read_text(encoding="utf-8")).get("fcst_docs", [])
+    except (ValueError, OSError):
+        return []
+
+
 def load_narrs():
     """받아둔 경영성적 설명 원문. {코드: {date, text}}."""
     if not BRIEFS_OUT.exists():
