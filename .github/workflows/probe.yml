@@ -17,6 +17,13 @@ jobs:
         with:
           python-version: '3.12'
 
+      # 9차 — 8차에서 JPX 가 CI 에 열려 있고 셋 다 xlsx(zip)인 것을 확인했다.
+      # 이번에는 실제 파서(scrape_jp_sched.py --probe)를 돌려 열 매핑·날짜 범위·
+      # 어휘(kind/fy/업종)가 닛케이 것과 맞는지 본다.
+      - name: 🇯🇵 JPX 예정일 파서 확인 (9차)
+        timeout-minutes: 6
+        run: python scrape_jp_sched.py --probe
+
       # 8차 — 일본 앞으로의 일정. 닛케이가 CI IP 를 막아 8/17 이후가 구멍이다.
       # JPX(일본거래소)가 決算発表予定日 엑셀을 공식으로 낸다 — CI 에서 닿는지,
       # 파일이 xlsx(zip, 표준 라이브러리로 읽힘)인지 xls(옛 바이너리)인지 본다.
