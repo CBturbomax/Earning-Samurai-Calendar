@@ -38,7 +38,9 @@ PER_RUN = int(os.environ.get("PR_PER_RUN", "120"))
 PAUSE = float(os.environ.get("PR_PAUSE", "0.4"))
 FRESH_DAYS = int(os.environ.get("PR_FRESH_DAYS", "14"))   # 발표 며칠 안쪽을 신선으로 보나
 GIVE_UP_AFTER = 6
-PR_VER = 1
+# v2: 첫 수집이 실체참조를 안 푼 코드로 돌아 88건 전부 인용문이 비었다.
+# 접수번호 캐시가 그걸 '이미 봤다'고 지켜버리므로 판을 올려 다시 받는다.
+PR_VER = 2
 
 SUBS = "https://data.sec.gov/submissions/CIK{cik:010d}.json"
 FILES = "https://www.sec.gov/Archives/edgar/data/{cik}/{acc}/index.json"
