@@ -17,9 +17,8 @@ jobs:
         with:
           python-version: '3.12'
 
-      # 481건을 훑고 0건을 얻었다. 진짜 파서를 태워 어디서 떨어지는지 본다.
-      - name: 🇯🇵 결산단신에서 부문이 뽑히나
-        timeout-minutes: 8
-        env:
-          JP_BACK_DAYS: '8'
-        run: python scrape_fin_jp.py --seg 9432 6758 7203 8035
+      # stockanalysis 의 부문 페이지가 quote 주소(일본·홍콩)로도 열리는지.
+      # /stocks/ 주소로는 404였다 — 그건 미국 전용 주소였을 뿐일 수 있다.
+      - name: 🌏 일본·홍콩 부문 페이지가 열리나
+        timeout-minutes: 6
+        run: python scrape_fin_seg.py --probe hk:00700 hk:09992 hk:01810 jp:7203 jp:6758 jp:9984

@@ -44,6 +44,11 @@ HERE = Path(__file__).parent
 OUT = HERE / "data" / "segments.json"
 
 SA_SEG = "https://stockanalysis.com/stocks/{sym}/metrics/revenue-by-segment/__data.json"
+# 일본·홍콩은 주소가 다르다 — 미국은 /stocks/{티커}, 나머지는 /quote/{거래소}/{코드}.
+# 예전 주석에 "일본·홍콩은 404" 라고 적어 두었는데 그건 **/stocks/ 주소 얘기**였다.
+# quote 주소로는 재무제표(scrape_fin_intl.py)가 잘 오므로 부문도 같은 꼴로 두드린다.
+SA_SEG_INTL = ("https://stockanalysis.com/quote/{ex}/{code}"
+               "/metrics/revenue-by-segment/__data.json")
 
 PER_RUN = int(os.environ.get("SEG_PER_RUN", "200"))    # 한 실행에 받을 종목 수
 STALE_DAYS = int(os.environ.get("SEG_STALE_DAYS", "20"))
@@ -139,9 +144,22 @@ def dedupe(by_end, order):
     return [n for n in order if n not in dropped], dropped
 
 
-def series(sym):
-    """한 종목의 부문별 매출. 없으면 None."""
-    url = SA_SEG.format(sym=sym.lower().replace(".", "-"))
+def url_of(key):
+    """'us:NVDA' / 'jp:7203' / 'hk:09992' -> 부문 페이지 주소. 열쇠는 시장:코드다."""
+    market, _, code = key.partition(":")
+    if market == "us" or not code:
+        return SA_SEG.format(sym=(code or key).lower().replace(".", "-"))
+    if market == "hk":
+        digits = re.sub(r"\D", "", code)
+        if not digits:
+            return ""
+        code = f"{int(digits):04d}"           # 09992 -> 9992 -> '9992'... 넷으로 채운다
+    return SA_SEG_INTL.format(ex=si.EXCH.get(market, ""), code=code)
+
+
+def series(key):
+    """한 종목의 부문별 매출. 없으면 None. key 는 'us:NVDA' 꼴(옛 기록은 코드만)."""
+    url = url_of(key)
     for wait in si.BACKOFF:
         if wait:
             time.sleep(wait)
@@ -171,20 +189,36 @@ def series(sym):
 
 
 def targets():
-    """시총 상위 미국 종목. 부문 페이지는 미국만 있다(일본·홍콩 404)."""
-    p = HERE / "data" / "earnings_us.json"
-    if not p.exists():
-        return {}
-    try:
-        d = json.loads(p.read_text(encoding="utf-8"))
-    except (ValueError, OSError):
-        return {}
+    """시총 상위. 세 시장 전부다 — 열쇠는 '시장:코드'.
+
+    미국 열쇠는 예전 기록과 맞추느라 코드만 쓴다(NVDA). segments.json 을 읽는
+    build.py 가 ':' 없는 열쇠에 us: 를 붙이므로 화면 쪽은 어느 쪽이든 같다.
+    일본·홍콩 시총은 원본에 없어서 caps.json 에서 온다.
+    """
     caps = {}
-    for r in d.get("rows", []):
-        c = r.get("code")
-        if c:
-            caps[c] = max(caps.get(c, 0), r.get("cap") or 0)
-    top = sorted(caps.items(), key=lambda kv: -kv[1])[:TOP_N]
+    p = HERE / "data" / "caps.json"
+    if p.exists():
+        try:
+            caps = json.loads(p.read_text(encoding="utf-8")).get("caps", {})
+        except (ValueError, OSError):
+            pass
+    out = {}
+    for market, fn in (("us", "earnings_us.json"), ("jp", "earnings.json"),
+                       ("jp", "earnings_jp_past.json"), ("hk", "earnings_hk.json")):
+        f = HERE / "data" / fn
+        if not f.exists():
+            continue
+        try:
+            rows = json.loads(f.read_text(encoding="utf-8")).get("rows", [])
+        except (ValueError, OSError):
+            continue
+        for r in rows:
+            c = r.get("code")
+            if not c:
+                continue
+            k = c if market == "us" else f"{market}:{c}"
+            out[k] = max(out.get(k, 0), r.get("cap") or caps.get(f"{market}:{c}") or 0)
+    top = sorted(out.items(), key=lambda kv: -kv[1])[:TOP_N]
     return dict(top)
 
 
@@ -196,7 +230,7 @@ def queue(old, cand, ann):
     picks = []
     for code, cap in cand.items():
         rec = old.get(code)
-        last_ann = ann.get("us:" + code, (9999, ""))[1]
+        last_ann = ann.get(code if ":" in code else "us:" + code, (9999, ""))[1]
         if last_ann >= recent and (not rec or (rec.get("ts") or "") < last_ann):
             picks.append((-1, -cap, code))
             continue
@@ -222,7 +256,8 @@ def main():
     OUT.parent.mkdir(parents=True, exist_ok=True)
 
     if probe:
-        for sym in ("RKLB", "AAPL", "SE", "NVDA"):
+        picks = [a for a in sys.argv[1:] if not a.startswith("--")]
+        for sym in picks or ("RKLB", "hk:00700", "hk:09992", "jp:7203", "jp:6758"):
             print(f"\n===== {sym}")
             try:
                 s = series(sym)
@@ -284,8 +319,8 @@ def main():
     have = {k: v for k, v in stocks.items() if v.get("names")}
     payload = {
         "source": "stockanalysis.com (사업부별 매출)",
-        "note": ("미국 종목만 있다. 0 은 '그 부문이 없던 때'라 담지 않고, "
-                 "이름만 바뀐 같은 부문은 하나로 친다."),
+        "note": ("미국은 /stocks/, 일본·홍콩은 /quote/ 주소다. 0 은 '그 부문이 "
+                 "없던 때'라 담지 않고, 이름만 바뀐 같은 부문은 하나로 친다."),
         "count": len(have),
         "stocks": stocks,
     }

@@ -220,7 +220,10 @@ def main():
     bootstrap()
 
     todo = {}                                  # 야후심볼 -> (시장, 원래코드)
-    for mkt, fn in [("jp", "earnings.json"), ("hk", "earnings_hk.json")]:
+    # 일본은 TDnet 발표 완료분(earnings_jp_past.json)도 캘린더에 오른다.
+    # 여기 빠지면 그 종목만 시총이 없어 정렬 끝으로 밀리고 규모 필터도 못 잰다.
+    for mkt, fn in [("jp", "earnings.json"), ("jp", "earnings_jp_past.json"),
+                    ("hk", "earnings_hk.json")]:
         for sym, code in load_codes(mkt, fn).items():
             todo[sym] = (mkt, code)
     if not todo:

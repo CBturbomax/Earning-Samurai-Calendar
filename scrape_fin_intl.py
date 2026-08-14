@@ -341,7 +341,12 @@ def targets():
         except (ValueError, OSError):
             pass
     out = {}
-    for market, fn in (("jp", "earnings.json"), ("hk", "earnings_hk.json")):
+    # 일본은 소스가 둘이다. 닛케이(earnings.json)는 앞으로의 예정만 주고, 발표를
+    # 마친 회사는 TDnet 쪽(earnings_jp_past.json)에만 있다 — 3093 트레저팩토리가
+    # 여기 빠져서 캘린더에는 뜨는데 실적 차트가 없었다. **캘린더에 뜨는 종목은
+    # 전부 우주에 넣는다.**
+    for market, fn in (("jp", "earnings.json"), ("jp", "earnings_jp_past.json"),
+                       ("hk", "earnings_hk.json")):
         f = HERE / "data" / fn
         if not f.exists():
             continue
@@ -380,8 +385,8 @@ def announcements():
     today = date.today()
     tstr = today.isoformat()
     out = {}
-    for market, fn in (("jp", "earnings.json"), ("hk", "earnings_hk.json"),
-                       ("us", "earnings_us.json")):
+    for market, fn in (("jp", "earnings.json"), ("jp", "earnings_jp_past.json"),
+                       ("hk", "earnings_hk.json"), ("us", "earnings_us.json")):
         f = HERE / "data" / fn
         if not f.exists():
             continue
