@@ -19,6 +19,7 @@ scrape_fin_jp.py  ─> financials_jp.json   │    + descriptions.py
 scrape_fin_seg.py ─> segments.json        │    + translit.py)
 scrape_seg_sec.py ─> segments_sec.json    │
 scrape_seg_edgar.py ─> segments_edgar.json│
+scrape_seg_hk.py  ─> segments_hk.json     │
 scrape_desc.py    ─> desc.json            ┘
 (닛케이/나스닥/HKEXnews/야후/SEC/TDnet/stockanalysis)
                  '얼마나 큰가' '무엇을 발표했나' '무엇을 파는가'
@@ -55,6 +56,8 @@ python scrape_fin_jp.py --seg 6758          # 첨부에 부문 정보가 있는�
 python scrape_seg_sec.py                    # 미국 부문별 매출 (SEC 분기 벌크·뼈대)
 python scrape_seg_edgar.py                  # 미국 부문별 매출 최근 분기 (제출 서류)
 python scrape_seg_edgar.py --probe          # 서류 한 장을 뜯어 생김새만 본다
+python scrape_seg_hk.py                     # 홍콩 부문 비중 (동화순 F10)
+python scrape_seg_hk.py --probe 00700       # 파서가 뭘 읽는지 본다
 python scrape_fin_seg.py                    # 미국 부문별 매출 (최근 분기 보충)
 python scrape_desc.py                       # 사업 설명 원문
 ```
@@ -79,7 +82,7 @@ python scrape_desc.py                       # 사업 설명 원문
 | 발표 시각을 옮기는 규칙 | `markets.py`의 `US_BMO`/`US_AMC`/`JP_TYPICAL`, `build.py`의 `to_kst` |
 | 미국 실적 수치를 더 받는다 | `scrape_fin.py` — 매출 태그는 `REV_TAGS` |
 | 일본·홍콩 실적 수치 | `scrape_fin_intl.py`, 일본 당일치는 `scrape_fin_jp.py` |
-| 부문별 매출 | `scrape_seg_sec.py`(뼈대) · `scrape_seg_edgar.py`(최근 분기) |
+| 부문별 매출 | 미국 `scrape_seg_sec.py`(뼈대)·`scrape_seg_edgar.py`(최근 분기) · 일본 `scrape_fin_jp.py` · 홍콩 `scrape_seg_hk.py` |
 | 부문을 어느 축으로 가를까 | `scrape_seg_sec.py`의 `axis_rank` / `AXIS_KO` |
 | 회사 사업 설명(한국어) | `descriptions.py`의 `DESC_KO` — 원문 수집은 `scrape_desc.py` |
 | 차트 모양·통화 표기 | `build.py`의 `finChart` / `segChart` / `CUR` |
@@ -435,6 +438,27 @@ segments 예: BusinessSegments=Datacenter;ConsolidationItems=OperatingSegments;
   총매출 점과 스무 날 안이면 같은 분기로 보고 **그쪽이 매긴 이름을 그대로 쓴다**
   (`build.py` 의 `seg_align`) — SEC 프레임과 `unstack` 을 거친 이름이라 옳다.
 
+**홍콩 부문별 매출은 동화순(10jqka) F10 에서 온다 — 비중(%)만 준다.**
+홍콩 공시는 PDF 한 장이라 기계로 읽을 공식 경로가 없다. 여덟 소스를 떠봤고
+(probe.yml 기록: stockanalysis 404 · 이스트머니 웹 F10 에 표 없음 · AAstocks
+봇차단 · etnet 404 · futu/gu.qq 클라이언트 렌더 · 쉐치우 토큰 요구) 동화순
+`basic.10jqka.com.cn/HK0700/operate.html` 만 서버렌더 HTML 표를 준다.
+
+- **금액 칸은 비어 있고 보고기간 누계 기준의 비중(%)만 온다.** 절대 금액은
+  `build.py` 의 `hk_seg_records()` 가 우리가 이미 가진 총매출에 곱해 만든다 —
+  회사가 공시한 두 값(비중·총매출)의 곱이지 지어낸 값이 아니다.
+- **누계를 기간값으로 되돌린다.** 회계연도(총매출 라벨의 연도가 같은 것)의 첫
+  기간이면 비중×누계가 곧 그 기간 값. 아니면 앞 스냅샷과의 차. **앞 기간
+  스냅샷이 없으면 그 기간은 버린다** — 두 기간에 걸친 값을 한 칸에 앉히면
+  막대가 거짓말을 한다.
+- **페이지에 최근 세 보고기간만 실린다.** 반기 회사면 1년 반치다. 지난 스냅샷은
+  다시 얻을 길이 없으므로 `snaps` 에 쌓아 두고 지우지 않는다 — 시간이 갈수록
+  그림이 길어진다.
+- **날짜 수와 표 수가 안 맞으면 그 종목은 버린다.** 어긋난 채 짝지으면 지난
+  반기 비중이 이번 반기 것으로 붙는다.
+- 부문 이름은 간체 중국어 그대로다(零售店销售收入). 한국 한자음으로 읽으면
+  다른 말이 되는 건 회사 이름과 같다.
+
 **일본 부문별 매출은 이미 받고 있는 zip 안에 있다 — 요청을 더 하지 않는다.**
 일본에는 SEC 같은 벌크가 없지만, TDnet 결산단신 zip 의 **첨부**에 세그먼트 정보
 장(`…qcsg…-ixbrl.htm`)이 들어 있다. 원문을 열어 확인했다(NTT 2026년 1분기).
@@ -522,7 +546,7 @@ HPE 가 Compute·Storage·Intelligent Edge 를 Cloud&AI·Networking 으로 바�
 | 워크플로 | 주기 | 쓰는 파일 |
 |---|---|---|
 | `collect.yml` | 1시간 | `data/earnings*.json`(`earnings_jp_past.json` 포함) · `data/caps.json` |
-| `numbers.yml` | 20분 | `data/financials*.json` · `data/segments.json` · `data/segments_jp.json` · `data/desc.json` |
+| `numbers.yml` | 30분 | `data/financials*.json` · `data/segments.json` · `data/segments_jp.json` · `data/segments_hk.json` · `data/desc.json` |
 | `segments.yml` | 3시간 | `data/segments_sec.json` · `data/segments_edgar.json` |
 
 겹치는 건 만들어진 `index.html` 뿐이고, 그건 합친 자료로 다시 만들면 그만이다.

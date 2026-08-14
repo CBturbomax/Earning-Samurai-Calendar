@@ -667,6 +667,106 @@ def current_basis(rec):
     return {**rec, "names": [names[i] for i in live], "pts": rows}
 
 
+SEG_HK_SNAP = 20     # 스냅샷 날짜와 총매출 종료일이 이만큼 안이면 같은 기간으로 본다
+
+
+def hk_seg_records():
+    """동화순 비중 스냅샷 -> 부문 금액 기록. {hk:코드: {axis, names, pts}}
+
+    동화순(scrape_seg_hk.py)은 보고기간 **누계 기준의 부문 비중(%)**만 준다.
+    절대 금액은 우리가 이미 가진 총매출에 곱해 만든다 — 회사가 공시한 두 값의
+    곱이지 지어낸 값이 아니다.
+
+    누계를 기간값으로 되돌리는 규칙:
+      * 스냅샷 날짜를 총매출 점(FIN)의 종료일에 붙인다(20일 안).
+      * 같은 회계연도(총매출 라벨의 연도가 같은 것)의 누계 총매출을 만든다.
+      * 그 회계연도 **첫 기간**의 스냅샷이면 비중 × 누계가 곧 그 기간 값이다.
+      * 아니면 앞 스냅샷과의 차 — 연간 누계×연간 비중 − 상반기 누계×상반기 비중.
+        **앞 기간 스냅샷이 없으면 그 기간은 버린다.** 두 기간에 걸친 값을 한
+        기간 칸에 앉히면 막대가 거짓말을 한다.
+      * 차가 음수로 크게 나오는 부문(기중 개편)은 그 칸을 비운다.
+    """
+    p = HERE / "data" / "segments_hk.json"
+    if not p.exists():
+        return {}
+    try:
+        raw = json.loads(p.read_text(encoding="utf-8")).get("stocks", {})
+    except (ValueError, OSError) as e:
+        print(f"  ! segments_hk.json 읽기 실패: {e}")
+        return {}
+
+    out = {}
+    for code, rec in raw.items():
+        snaps = rec.get("snaps") or {}
+        if len(snaps) < 2:
+            continue
+        fin = FIN.get("hk:" + code)
+        pts_fin = (fin or {}).get("points") or []
+        if not pts_fin:
+            continue
+
+        # 총매출 점: 종료일 -> (라벨, 값, 회계연도). 라벨 끝 두 자리가 연도다
+        # ('1H25'·'2H25'·'1Q26'). 연도를 못 읽는 라벨은 안 쓴다.
+        fpts = []
+        for q in pts_fin:
+            lab, end, rev = q.get("label", ""), q.get("end", ""), q.get("rev")
+            m = re.search(r"(\d{2})$", lab)
+            if not (m and end and rev):
+                continue
+            fpts.append((end, lab, float(rev), m.group(1)))
+        fpts.sort()
+        if not fpts:
+            continue
+
+        def near(snap_day):
+            sd = date.fromisoformat(snap_day)
+            best = None
+            for i, (end, _lab, _rev, _fy) in enumerate(fpts):
+                gap = abs((date.fromisoformat(end) - sd).days)
+                if gap <= SEG_HK_SNAP and (best is None or gap < best[0]):
+                    best = (gap, i)
+            return best[1] if best else None
+
+        # 스냅샷마다: 그 기간까지의 회계연도 누계 총매출 × 비중 = 누계 부문값
+        cums = {}                            # fin 색인 -> {부문: 누계값}
+        for day, mix in snaps.items():
+            i = near(day)
+            if i is None:
+                continue
+            end, _lab, _rev, fy = fpts[i]
+            cum_total = sum(r for e, _l, r, f in fpts[:i + 1] if f == fy)
+            cums[i] = {n: pct / 100.0 * cum_total for n, pct in mix}
+
+        rows = {}                            # fin 색인 -> {부문: 기간값}
+        for i, seg_cum in sorted(cums.items()):
+            fy = fpts[i][3]
+            first = min(j for j, fp in enumerate(fpts) if fp[3] == fy)
+            if i == first:
+                rows[i] = dict(seg_cum)
+                continue
+            if (i - 1) not in cums or fpts[i - 1][3] != fy:
+                continue                     # 앞 기간 스냅샷이 없다. 지어내지 않는다.
+            prev = cums[i - 1]
+            vals = {}
+            for n, v in seg_cum.items():
+                d = v - prev.get(n, 0.0)
+                vals[n] = d if d > 0 else None
+            rows[i] = vals
+        if len(rows) < 2:
+            continue
+
+        names = []
+        for i in sorted(rows):
+            for n in rows[i]:
+                if n not in names:
+                    names.append(n)
+        last = rows[max(rows)]
+        names.sort(key=lambda n: -(last.get(n) or 0))
+        pts = [[fpts[i][0]] + [rows[i].get(n) for n in names] for i in sorted(rows)]
+        out["hk:" + code] = {"axis": "사업부문", "names": names, "pts": pts}
+    return out
+
+
 def load_seg():
     """사업부별 매출. 두 곳에서 온다. 열쇠는 미국 코드라 'us:' 를 붙여 맞춘다.
 
@@ -725,6 +825,17 @@ def load_seg():
             added += bool(n_add)
         print(f"  segments_edgar.json: 최근 분기를 이어 붙인 종목 {added:,}"
               f" · 새로 생긴 종목 {new:,}")
+
+    # 홍콩 — 동화순 비중 × 우리 총매출. 다른 소스가 홍콩을 아예 못 주므로
+    # 겹칠 일은 없지만, 있으면 그쪽(직접 금액)이 이긴다.
+    hk = hk_seg_records()
+    added_hk = 0
+    for k, v in hk.items():
+        if k not in out:
+            out[k] = v
+            added_hk += 1
+    if hk:
+        print(f"  segments_hk.json: 비중×총매출로 만든 홍콩 종목 {added_hk:,}")
 
     # 기준이 바뀐 회사는 **지금 쓰는 기준만** 남긴다. 이어 붙인 뒤에 걸어야
     # '최근 두 분기'가 실제 최근이 된다.
