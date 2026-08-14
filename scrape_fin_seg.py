@@ -189,36 +189,28 @@ def series(key):
 
 
 def targets():
-    """시총 상위. 세 시장 전부다 — 열쇠는 '시장:코드'.
+    """시총 상위 **미국** 종목.
 
-    미국 열쇠는 예전 기록과 맞추느라 코드만 쓴다(NVDA). segments.json 을 읽는
-    build.py 가 ':' 없는 열쇠에 us: 를 붙이므로 화면 쪽은 어느 쪽이든 같다.
-    일본·홍콩 시총은 원본에 없어서 caps.json 에서 온다.
+    일본·홍콩도 quote 주소(/quote/hkg/…)로 부문 페이지가 있는지 떠봤다 —
+    텐센트·팝마트·샤오미·도요타·소니·소프트뱅크 여섯 다 404 였다(2026-08-14,
+    probe.yml). 재무제표는 quote 주소로 잘 오지만 **부문 페이지는 SEC 제출
+    서류에서 만드는 것이라 미국뿐**이다. 헛되이 육천 종목을 두드리지 않도록
+    우주는 미국만 둔다. 홍콩 부문은 다른 소스를 쓴다(scrape_seg_hk.py).
+    일본 부문은 TDnet 결산단신 첨부(scrape_fin_jp.py)가 맡는다.
     """
+    p = HERE / "data" / "earnings_us.json"
+    if not p.exists():
+        return {}
+    try:
+        d = json.loads(p.read_text(encoding="utf-8"))
+    except (ValueError, OSError):
+        return {}
     caps = {}
-    p = HERE / "data" / "caps.json"
-    if p.exists():
-        try:
-            caps = json.loads(p.read_text(encoding="utf-8")).get("caps", {})
-        except (ValueError, OSError):
-            pass
-    out = {}
-    for market, fn in (("us", "earnings_us.json"), ("jp", "earnings.json"),
-                       ("jp", "earnings_jp_past.json"), ("hk", "earnings_hk.json")):
-        f = HERE / "data" / fn
-        if not f.exists():
-            continue
-        try:
-            rows = json.loads(f.read_text(encoding="utf-8")).get("rows", [])
-        except (ValueError, OSError):
-            continue
-        for r in rows:
-            c = r.get("code")
-            if not c:
-                continue
-            k = c if market == "us" else f"{market}:{c}"
-            out[k] = max(out.get(k, 0), r.get("cap") or caps.get(f"{market}:{c}") or 0)
-    top = sorted(out.items(), key=lambda kv: -kv[1])[:TOP_N]
+    for r in d.get("rows", []):
+        c = r.get("code")
+        if c:
+            caps[c] = max(caps.get(c, 0), r.get("cap") or 0)
+    top = sorted(caps.items(), key=lambda kv: -kv[1])[:TOP_N]
     return dict(top)
 
 
