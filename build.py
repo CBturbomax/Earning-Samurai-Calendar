@@ -1007,9 +1007,10 @@ def load_fcst():
     return out
 
 
-# 공시 원문에서 옮긴 한국어 실적 코멘트. (종목, 분기) 열쇠 — 화면은 그 분기가
-# 최신일 때만 낸다. 원문 수집은 scrape_pr_us.py(미국 8-K 보도자료) 등이 하고,
-# 한국어는 descriptions.py 처럼 사람이(또는 세션에서 일괄로) 쓴다.
+# 공시 원문에서 옮긴 한국어 실적 코멘트 — {키: {"date": 발표일, "ko": 몇 줄,
+# "src": 출처}}. 화면은 **그 발표가 그 종목의 가장 최근 발표일 때만** 낸다
+# (briefBlock 이 발표일로 가른다). 원문 수집은 scrape_pr_us.py(미국 8-K
+# 보도자료) 등이 하고, 한국어는 descriptions.py 처럼 사람이(세션에서 일괄로) 쓴다.
 try:
     from briefs import BRIEFS
 except ImportError:
@@ -2859,11 +2860,23 @@ function briefBlock(key, f, sg) {
     }
     lines.push(s);
   }
-  /* (6) 공시 원문에서 옮긴 한국어 코멘트 — 그 분기 것일 때만 낸다 */
+  /* (6) 공시 원문에서 옮긴 한국어 코멘트.
+     **그 종목의 가장 최근 발표에 대한 것일 때만 낸다.** 분기 라벨로 대조하면
+     회계연도가 어긋난 회사에서 깨진다(AMAT 의 '3분기'가 우리 라벨로는 2Q26).
+     발표일로 가른다 — 캘린더가 그 종목의 더 새로운 발표(오늘 이하)를 알고
+     있으면 이 코멘트는 지난 분기 이야기이므로 내리지 않는다. */
   const br = D.briefs && D.briefs[key];
-  if (br && br.ko && last && br.q === last[0])
-    lines.push('<span class="brko">' + esc(br.ko) + '</span> <i>(출처 ' +
-               esc(br.src || '실적 공시') + ')</i>');
+  if (br && br.ko && br.date) {
+    let newest = '';
+    ROWS.forEach(r => {
+      if (keyOf(r) === key && r[0] <= D.today && r[0] > newest) newest = r[0];
+    });
+    const gap = newest ? (new Date(newest) - new Date(br.date)) / 864e5 : 0;
+    if (gap <= 3)
+      lines.push('<span class="brko">' + esc(br.ko) + '</span> <i>(' +
+                 esc(br.date.slice(5).replace('-', '/')) + ' 발표 · 출처 ' +
+                 esc(br.src || '실적 공시 보도자료') + ')</i>');
+  }
   if (!lines.length) return '';
   return '<div class="brief"><h4>실적 브리핑' +
     (last ? ' <span class="tagx">' + esc(last[0]) + '</span>' : '') + '</h4><ul>' +

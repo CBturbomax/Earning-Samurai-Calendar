@@ -38,7 +38,9 @@ PER_RUN = int(os.environ.get("PR_PER_RUN", "120"))
 PAUSE = float(os.environ.get("PR_PAUSE", "0.4"))
 FRESH_DAYS = int(os.environ.get("PR_FRESH_DAYS", "14"))   # 발표 며칠 안쪽을 신선으로 보나
 GIVE_UP_AFTER = 6
-PR_VER = 1
+# v2: 첫 수집이 실체참조를 안 푼 코드로 돌아 88건 전부 인용문이 비었다.
+# 접수번호 캐시가 그걸 '이미 봤다'고 지켜버리므로 판을 올려 다시 받는다.
+PR_VER = 2
 
 SUBS = "https://data.sec.gov/submissions/CIK{cik:010d}.json"
 FILES = "https://www.sec.gov/Archives/edgar/data/{cik}/{acc}/index.json"
@@ -117,17 +119,19 @@ def press_release(cik, acc):
     if blob is None:
         return None
     try:
-        names = [it["name"] for it in json.loads(blob)["directory"]["item"]]
+        items = json.loads(blob)["directory"]["item"]
     except (ValueError, KeyError):
         return None
-    htm = [n for n in names if n.lower().endswith((".htm", ".html"))]
-    ex = [n for n in htm if re.search(r"ex[-_]?99|991|992|press|earnings", n, re.I)]
-    # exhibit 이름이 규칙 없는 회사도 있다 — 그때는 R 파일·색인을 뺀 본문 후보 중
-    # 이름이 가장 긴 것(대개 본문)을 본다. 아예 없으면 접는다.
-    pick = ex or [n for n in htm if not re.match(r"index|.*-index", n, re.I)]
-    if not pick:
+    htm = [(it["name"], int(it.get("size") or 0)) for it in items
+           if it["name"].lower().endswith((".htm", ".html"))
+           and not re.match(r"index|.*-index", it["name"], re.I)]
+    if not htm:
         return None
-    name = sorted(pick, key=lambda n: (0 if n in ex else 1, len(n)))[0]
+    ex = [t for t in htm if re.search(r"ex[-_]?99|991|992|press|earnings", t[0], re.I)]
+    # exhibit 이름이 규칙 없는 회사도 있다. 크기로 고른다 — 보도자료(표까지 실려
+    # 30~100KB)가 8-K 표지(10KB 남짓)보다 항상 크다. 이름을 추측하다가 NVDA 가
+    # 표지를 골라 빈손이 됐다(probe 11차).
+    name = max(ex or htm, key=lambda t: t[1])[0]
     doc = get(DOC.format(cik=cik, acc=acc, name=name), binary=False)
     if doc is None:
         return None
