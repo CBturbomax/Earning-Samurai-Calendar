@@ -574,7 +574,7 @@ HPE 가 Compute·Storage·Intelligent Edge 를 Cloud&AI·Networking 으로 바�
 
 | 워크플로 | 주기 | 쓰는 파일 |
 |---|---|---|
-| `fresh.yml` | **10분** | `data/earnings_jp_past.json` · `data/financials_jp.json` · `data/segments_jp.json` · `data/briefs_jp.json` · `data/briefs_us.json` |
+| `fresh.yml` | **3분 루프** | `data/earnings_jp_past.json` · `data/financials_jp.json` · `data/segments_jp.json` · `data/briefs_jp.json` · `data/briefs_us.json` |
 | `collect.yml` | 1시간 | `data/earnings.json` · `data/earnings_jp_sched.json` · `data/earnings_us.json` · `data/earnings_hk.json` · `data/caps.json` |
 | `numbers.yml` | 30분 | `data/financials.json` · `data/financials_intl.json` · `data/segments.json` · `data/segments_hk.json` · `data/desc.json` |
 | `segments.yml` | 3시간 | `data/segments_sec.json` · `data/segments_edgar.json` |
@@ -663,7 +663,8 @@ EPS 만 있다. **없는 값을 다른 항목으로 대신 채우지 말 것** �
   claude.ai 의 Routine 이 새 세션을 열어 briefs_us/jp.json 에서 코멘트 없는
   새 발표를 찾아 briefs.py 에 옮기고 main 에 푸시한다. 예약 최소 간격이
   1시간이라 **둘을 30분 엇갈리게(매시 :05·:35)** 걸어 사실상 30분마다 돈다 —
-  발표 → 수집(≤30분) → 번역(≤30분)이라 화면까지 보통 한 시간 안이다. 규칙: 원문에 있는 것만, 이유·가이던스만(숫자 되읊기 금지),
+  발표 → 수집(3분 루프, fresh.yml) → 번역(≤30분)이라 수치·차트는 몇 분,
+  한국어 코멘트는 보통 반 시간 안에 붙는다. 규칙: 원문에 있는 것만, 이유·가이던스만(숫자 되읊기 금지),
   이유 설명이 없으면 그 종목은 건너뛴다.
 
 **검색칸이 둘인데 하는 일이 다르다.** 맨 위 것(`#fq`)은 **가진 종목 전부**에서
