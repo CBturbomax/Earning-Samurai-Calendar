@@ -1077,8 +1077,12 @@ def collect():
             # 닿는다 — 그러면 매 실행 같은 자리를 다시 받고 아무것도 안 남는다.
             walked += 1
             if walked % 60 == 0:
+                # narr_done 을 빠뜨렸다가 '본 공시'가 매번 빈 채로 저장됐다 —
+                # 그러면 매 바퀴 같은 첫 120건만 다시 뜯다 시간이 끝나(시시포스)
+                # 오후 발표(아식스)에 영영 못 갔다. 인자 아홉 개를 자리로 맞추는
+                # 함수의 업보다. 여기만은 이름으로 못박는다.
                 save(stocks, done, got, skipped, segs, seg_done, fcst_done,
-                     narrs, quiet=True)
+                     narrs=narrs, narr_done=narr_done, quiet=True)
                 print(f"    ...{walked}건 훑음", flush=True)
 
             for st, en, row in read_segments(blob):
