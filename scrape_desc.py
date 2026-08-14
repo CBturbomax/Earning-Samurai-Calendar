@@ -36,7 +36,7 @@ OUT = HERE / "data" / "desc.json"
 
 NAS_PROFILE = "https://api.nasdaq.com/api/company/{sym}/company-profile"
 NIKKEI = "https://www.nikkei.com/nkd/company/kessan/?scode={code}"
-SA_HK = "https://stockanalysis.com/quote/hkg/{code}/company/"
+SA_PROFILE = "https://stockanalysis.com/quote/{ex}/{code}/company/"
 
 UA = ("Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 "
       "(KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36")
@@ -46,7 +46,10 @@ TOP_N = int(os.environ.get("DESC_TOP_N", "3000"))
 PAUSE = float(os.environ.get("DESC_PAUSE", "0.4"))
 STALE_DAYS = int(os.environ.get("DESC_STALE_DAYS", "120"))   # 사업 설명은 잘 안 바뀐다
 GIVE_UP_AFTER = 8
-DESC_VER = 1
+# v2: 홍콩에서 SEO 껍데기("Company profile for …")를 본문인 줄 알고 담았다.
+# 일본은 닛케이가 데이터센터 IP 를 막아 CI 에서 늘 빈손이었다 — stockanalysis 로
+# 대신 받는다. 헌 기록을 다시 받도록 판을 올린다.
+DESC_VER = 2
 
 TAGS = re.compile(r"<[^>]+>")
 # 닛케이 요약. 【…】 뒤에 한 문장이 더 붙는다. 그 뒤의 "この企業の最新ニュース…"는
@@ -100,34 +103,51 @@ def us_desc(sym):
 
 
 def jp_desc(code):
-    """닛케이 결산 페이지의 【…】 요약. 셋 중 가장 알짜다.
-
-    「【世界的電機メーカー】音楽や半導体にも強み」처럼 무엇을 하는 회사인지
-    한 줄로 적혀 있다. 뒤에 붙는 페이지 안내문은 잘라낸다.
+    """일본. 닛케이의 【…】 요약이 가장 알짜지만, **닛케이는 데이터센터 IP 를
+    막는다** — CI 에서는 늘 껍데기가 와서 이 경로가 한 번도 채워지지 않았다
+    (일본 설명이 164건뿐이던 이유). 그래서 닛케이를 먼저 두드리되 빈손이면
+    stockanalysis 회사 페이지로 받는다. 영어지만 빈칸보다 낫고, 한국어는
+    descriptions.py 가 덮는다.
     """
-    txt = get(NIKKEI.format(code=code))
-    if txt is None:
-        return ""
-    m = NK_RE.search(txt)
-    if not m:
-        return ""
-    head, rest = m.group(1).strip(), NK_TAIL.sub("", m.group(2)).strip()
-    return tidy(("【" + head + "】 " + rest).strip())
+    try:
+        txt = get(NIKKEI.format(code=code))
+    except Throttled:
+        txt = None
+    if txt:
+        m = NK_RE.search(txt)
+        if m:
+            head, rest = m.group(1).strip(), NK_TAIL.sub("", m.group(2)).strip()
+            return tidy(("【" + head + "】 " + rest).strip())
+    return sa_desc("tyo", code)
 
 
 def hk_desc(code):
-    """stockanalysis 회사 페이지. 메타태그는 껍데기라 본문에서 뽑는다."""
-    txt = get(SA_HK.format(code=code.lstrip("0").zfill(4)))
+    return sa_desc("hkg", code.lstrip("0").zfill(4) if code.strip("0") else code)
+
+
+def sa_desc(ex, code):
+    """stockanalysis 회사 페이지에서 본문 설명을 뽑는다.
+
+    페이지에 "description" 이 여러 벌 실려 있는데 그중 하나는 **SEO 껍데기**다 —
+    "Company profile for CK Hutchison Holdings Limited (HKG:0001) with a
+    description, list of executives…". 이걸 본문인 줄 알고 담아서 홍콩 199종목이
+    전부 그 문장이었다. 껍데기 문구는 거르고 가장 긴 진짜 문단을 고른다.
+    """
+    txt = get(SA_PROFILE.format(ex=ex, code=code))
     if txt is None:
         return ""
-    # 본문 설명은 '…engages in…' 같은 문장으로 시작한다. 가장 긴 문단을 고른다.
     best = ""
-    for m in re.finditer(r'"description\\?":\\?"([^"\\]{60,600})', txt):
-        if len(m.group(1)) > len(best):
-            best = m.group(1)
+    for m in re.finditer(r'"description\\?":\\?"([^"\\]{60,900})', txt):
+        t = m.group(1)
+        if t.startswith("Company profile for"):
+            continue                     # SEO 껍데기. 본문이 아니다.
+        if len(t) > len(best):
+            best = t
     if not best:
-        for m in re.finditer(r"<p[^>]*>(.{80,600}?)</p>", txt, re.S):
-            t = tidy(m.group(1), 600)
+        for m in re.finditer(r"<p[^>]*>(.{80,900}?)</p>", txt, re.S):
+            t = tidy(m.group(1), 900)
+            if t.startswith("Company profile for"):
+                continue
             if " engages in " in t or " is a " in t or " provides " in t:
                 best = t
                 break
