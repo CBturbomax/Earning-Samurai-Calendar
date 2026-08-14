@@ -2768,77 +2768,15 @@ function briefMoney(v, cur) {
 }
 const briefPct = r => (r >= 0 ? '+' : '') + Math.round(r * 100) + '%';
 const briefCls = r => r >= 0 ? 'up' : 'dn';
-/* '2Q26' -> '2Q25', '1H26' -> '1H25'. 전년 같은 기간의 이름. */
-function yearAgoLabel(lab) {
-  const m = /^(\d)([QH])(\d{2})$/.exec(lab);
-  return m ? m[1] + m[2] + String(+m[3] - 1).padStart(2, '0') : '';
-}
 function briefBlock(key, f, sg) {
+  /* 숫자를 되읊지 않는다 — 매출·YoY·연속 증수 따위는 위 차트가 이미 말한다.
+     회원님이 정확히 그렇게 짚었다: "이건 이미 차트로도 충분해. 이유를 알고
+     싶은거야." 여기 서는 것은 차트에 없는 두 가지뿐이다.
+       · 왜 잘/못 됐는지 — 공시(보도자료)가 설명한 이유를 옮긴 코멘트
+       · 회사가 공시한 가이던스와 그 변화
+     둘 다 없으면 칸 자체를 내지 않는다. */
   const lines = [];
-  const pts = (f && f.points) || [];
-  const freqH = f && f.freq === 'H';
-  const unit = freqH ? '반기' : '분기';
-  const last = pts[pts.length - 1];
-  if (last) {
-    const back = freqH ? 2 : 4;
-    const prev = pts[pts.length - 1 - back];
-    /* (1) 최근 기간: 매출 YoY · 영업이익률 변화 */
-    let s = '매출 ' + briefMoney(last[1], f.cur);
-    if (prev && prev[1])
-      s += ' <b class="' + briefCls(last[1] / prev[1] - 1) + '">' +
-           briefPct(last[1] / prev[1] - 1) + '</b> (전년 같은 ' + unit + ' 대비)';
-    if (last[2] != null && last[1]) {
-      const mNow = last[2] / last[1];
-      s += ' · 영업이익률 ' + Math.round(mNow * 100) + '%';
-      if (prev && prev[2] != null && prev[1]) {
-        const mPrev = prev[2] / prev[1];
-        const d = Math.round((mNow - mPrev) * 100);
-        if (d) s += ' <b class="' + briefCls(d) + '">(' + (d > 0 ? '+' : '') + d + '%p)</b>';
-      }
-    }
-    lines.push(s);
-    /* (2) 흑자 전환 / 적자 전환 — 이익률 숫자보다 이 한마디가 먼저다 */
-    if (prev && last[2] != null && prev[2] != null) {
-      if (last[2] > 0 && prev[2] < 0) lines.push('<b class="up">영업이익 흑자 전환</b> (전년 같은 ' + unit + '은 적자)');
-      if (last[2] < 0 && prev[2] >= 0) lines.push('<b class="dn">영업적자 전환</b>');
-    }
-    /* (3) 흐름: 몇 분기째 늘고 있나 / 줄고 있나 */
-    let inc = 0, dec = 0;
-    for (let i = pts.length - 1; i - back >= 0; i--) {
-      const a = pts[i][1], b = pts[i - back][1];
-      if (!a || !b) break;
-      if (a > b && !dec) inc++;
-      else if (a < b && !inc) dec++;
-      else break;
-    }
-    if (inc >= 2) lines.push(inc + unit + ' 연속 증수' + (inc >= 4 ? ' — 흐름이 길다' : ''));
-    if (dec >= 2) lines.push('<span class="dn">' + dec + unit + ' 연속 감수</span>');
-    /* (4) 부문: 어디가 끌었나. 부문 차트의 같은 기간과 전년 같은 기간을 대본다. */
-    if (sg && sg.pts && sg.pts.length) {
-      const L = sg.pts[sg.pts.length - 1];
-      const want = yearAgoLabel(L[0]);
-      const P = want && sg.pts.find(r => r[0] === want);
-      if (P) {
-        let best = null, worst = null;
-        sg.names.forEach((n, i) => {
-          const a = L[i + 1], b = P[i + 1];
-          if (a == null || b == null || b <= 0) return;
-          const d = a - b, g = a / b - 1;
-          if (!best || d > best.d) best = { n, d, g };
-          if (!worst || d < worst.d) worst = { n, d, g };
-        });
-        if (best && best.d > 0) {
-          let s4 = '부문별 성장 주도: <b>' + esc(best.n) + '</b> ' +
-                   '<b class="up">' + briefPct(best.g) + '</b>';
-          if (worst && worst.d < 0 && worst.n !== best.n)
-            s4 += ' · 역성장: <b>' + esc(worst.n) + '</b> <b class="dn">' +
-                  briefPct(worst.g) + '</b>';
-          lines.push(s4 + ' <i>(' + esc(L[0]) + ')</i>');
-        }
-      }
-    }
-  }
-  /* (5) 회사 가이던스 — 일본 결산단신의 통기 예상. 회사가 공시한 수치다. */
+  /* 회사 가이던스 — 일본 결산단신의 통기 예상. 회사가 공시한 수치다. */
   const fc = D.fcst && D.fcst[key];
   if (fc && (fc.rev || fc.opi)) {
     let s = '회사 통기 예상(공시): ';
@@ -2878,8 +2816,7 @@ function briefBlock(key, f, sg) {
                  esc(br.src || '실적 공시 보도자료') + ')</i>');
   }
   if (!lines.length) return '';
-  return '<div class="brief"><h4>실적 브리핑' +
-    (last ? ' <span class="tagx">' + esc(last[0]) + '</span>' : '') + '</h4><ul>' +
+  return '<div class="brief"><h4>왜 이랬나 — 실적 브리핑</h4><ul>' +
     lines.map(l => '<li>' + l + '</li>').join('') + '</ul></div>';
 }
 
