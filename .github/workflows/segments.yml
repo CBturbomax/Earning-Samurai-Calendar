@@ -113,10 +113,21 @@ jobs:
 
           for i in 1 2 3 4 5; do
             git merge --abort 2>/dev/null || true
+            # 늦게 도착한 쓰기를 거둬 간다. 단계가 시간을 넘겨 죽을 때 파이프 뒤의
+            # 파이썬이 고아로 살아남아 data/ 를 계속 쓰는 일이 있다 — 커밋 뒤에
+            # desc.json 이 또 바뀌어 있으면 merge 가 "would be overwritten" 으로
+            # 서고, 그 실행이 받은 수집분 전체가 버려진다(실제로 홍콩 부문 첫
+            # 수집분을 통째로 잃었다). 반복문 들머리마다 쓸어 담으면 안전하다.
+            git add data/ index.html 2>/dev/null || true
+            git diff --cached --quiet || git commit -m "늦게 도착한 수집분 [skip ci]"
             git fetch origin main || { sleep $((2**i)); continue; }
 
             if ! git merge --no-edit origin/main; then
               stuck=$(git diff --name-only --diff-filter=U)
+              if [ -z "$stuck" ]; then
+                # 충돌 없이 merge 가 실패했다(잠금 파일 따위). 다음 바퀴에서 다시.
+                echo "merge 실패(충돌 아님), 재시도"; sleep $((2**i)); continue
+              fi
               others=$(echo "$stuck" | grep -v -e '^data/' -e '^index\.html$' || true)
               if [ -n "$others" ]; then
                 echo "코드가 부딪혔다. 손으로 봐야 한다:"; echo "$others"; exit 1
