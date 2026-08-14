@@ -482,7 +482,21 @@ def queue(old, cand, ann):
                 continue              # 아직 싱싱하다.
         picks.append((pri, -cap, k))
     picks.sort()
-    return [k for _, _, k in picks]
+    # **발표 직후 그룹이 대기줄을 독식하지 못하게 섞는다.** 실적 시즌 절정에는
+    # '방금 발표해서 다시 받아야 할' 종목만 700을 넘는다 — 그러면 아직 한 번도
+    # 못 받은 종목(팝마트가 그랬다)이 매 실행 뒤로 밀려 영영 차례가 안 온다.
+    # 새치기 셋에 밀린 것 하나 꼴로 끼워 넣으면 새 발표도 빠르게 담으면서
+    # 못 받은 종목도 반드시 줄어든다.
+    neg = [k for p, _c, k in picks if p < 0]
+    rest = [k for p, _c, k in picks if p >= 0]
+    out, i, j = [], 0, 0
+    while i < len(neg) or j < len(rest):
+        for _ in range(3):
+            if i < len(neg):
+                out.append(neg[i]); i += 1
+        if j < len(rest):
+            out.append(rest[j]); j += 1
+    return out
 
 
 def main():
