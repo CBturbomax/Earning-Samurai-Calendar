@@ -117,17 +117,19 @@ def press_release(cik, acc):
     if blob is None:
         return None
     try:
-        names = [it["name"] for it in json.loads(blob)["directory"]["item"]]
+        items = json.loads(blob)["directory"]["item"]
     except (ValueError, KeyError):
         return None
-    htm = [n for n in names if n.lower().endswith((".htm", ".html"))]
-    ex = [n for n in htm if re.search(r"ex[-_]?99|991|992|press|earnings", n, re.I)]
-    # exhibit 이름이 규칙 없는 회사도 있다 — 그때는 R 파일·색인을 뺀 본문 후보 중
-    # 이름이 가장 긴 것(대개 본문)을 본다. 아예 없으면 접는다.
-    pick = ex or [n for n in htm if not re.match(r"index|.*-index", n, re.I)]
-    if not pick:
+    htm = [(it["name"], int(it.get("size") or 0)) for it in items
+           if it["name"].lower().endswith((".htm", ".html"))
+           and not re.match(r"index|.*-index", it["name"], re.I)]
+    if not htm:
         return None
-    name = sorted(pick, key=lambda n: (0 if n in ex else 1, len(n)))[0]
+    ex = [t for t in htm if re.search(r"ex[-_]?99|991|992|press|earnings", t[0], re.I)]
+    # exhibit 이름이 규칙 없는 회사도 있다. 크기로 고른다 — 보도자료(표까지 실려
+    # 30~100KB)가 8-K 표지(10KB 남짓)보다 항상 크다. 이름을 추측하다가 NVDA 가
+    # 표지를 골라 빈손이 됐다(probe 11차).
+    name = max(ex or htm, key=lambda t: t[1])[0]
     doc = get(DOC.format(cik=cik, acc=acc, name=name), binary=False)
     if doc is None:
         return None
