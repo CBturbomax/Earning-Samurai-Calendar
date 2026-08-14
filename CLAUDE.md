@@ -574,8 +574,9 @@ HPE 가 Compute·Storage·Intelligent Edge 를 Cloud&AI·Networking 으로 바�
 
 | 워크플로 | 주기 | 쓰는 파일 |
 |---|---|---|
-| `collect.yml` | 1시간 | `data/earnings*.json`(`earnings_jp_past.json` · `earnings_jp_sched.json` 포함) · `data/caps.json` |
-| `numbers.yml` | 30분 | `data/financials*.json` · `data/segments.json` · `data/segments_jp.json` · `data/segments_hk.json` · `data/briefs_jp.json` · `data/briefs_us.json` · `data/desc.json` |
+| `fresh.yml` | **10분** | `data/earnings_jp_past.json` · `data/financials_jp.json` · `data/segments_jp.json` · `data/briefs_jp.json` · `data/briefs_us.json` |
+| `collect.yml` | 1시간 | `data/earnings.json` · `data/earnings_jp_sched.json` · `data/earnings_us.json` · `data/earnings_hk.json` · `data/caps.json` |
+| `numbers.yml` | 30분 | `data/financials.json` · `data/financials_intl.json` · `data/segments.json` · `data/segments_hk.json` · `data/desc.json` |
 | `segments.yml` | 3시간 | `data/segments_sec.json` · `data/segments_edgar.json` |
 
 겹치는 건 만들어진 `index.html` 뿐이고, 그건 합친 자료로 다시 만들면 그만이다.
