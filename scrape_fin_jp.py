@@ -935,16 +935,21 @@ def read_narrative(blob):
         except (KeyError, OSError):
             continue
         plain = re.sub(r"\s+", " ", TAGS.sub(" ", txt))
-        m = NARR_HEAD.search(plain)
-        if not m:
-            continue
-        body = plain[m.end():m.end() + 4000]
-        stop = NARR_STOP.search(body, 80)      # 머리글 바로 옆 재등장은 무시
-        if stop:
-            body = body[:stop.start()]
-        body = body.strip()[:1600]
-        if len(body) > len(best):
-            best = body
+        # 첨부 첫 장은 점선 목차다 — 머리글이 거기서 먼저 걸린다. 실제로 329종목
+        # 전부 「……… 2」 같은 목차 부스러기를 담아 왔다. 머리글 후보를 전부
+        # 훑어 **점선이 아닌 산문이 따라오는 것**만 취한다.
+        for m in NARR_HEAD.finditer(plain):
+            body = plain[m.end():m.end() + 4000]
+            head200 = body[:200]
+            if "……" in head200 or head200.count(".") > 40:
+                continue                       # 목차 줄이다
+            stop = NARR_STOP.search(body, 80)  # 머리글 바로 옆 재등장은 무시
+            if stop:
+                body = body[:stop.start()]
+            body = body.strip()[:1600]
+            if len(body) > len(best):
+                best = body
+            break                              # 이 장에서 첫 산문 절이면 충분하다
     return best if len(best) >= 60 else ""
 
 
@@ -1028,6 +1033,7 @@ def collect():
         print(f"  가이던스를 아직 안 본 공시가 {len(done - fcst_done):,}건 있다.",
               flush=True)
     narrs = load_narrs()
+    narr_done = set(load_narr_done())
 
     got = skipped = streak = walked = 0
     for back in range(BACK_DAYS):
@@ -1042,13 +1048,16 @@ def collect():
         print(f"  {day}: 결산단신 {len(rows)}건", flush=True)
         for r in rows:
             key = "jp:" + r["code"]
-            if r["zip"] in done and r["zip"] in seg_done and r["zip"] in fcst_done:
-                continue                    # 지난 실행에서 셋 다 봤다
+            if (r["zip"] in done and r["zip"] in seg_done
+                    and r["zip"] in fcst_done and r["zip"] in narr_done):
+                continue                    # 지난 실행에서 넷 다 봤다
             fresh = r["zip"] not in done
             fresh_fc = r["zip"] not in fcst_done
+            fresh_nr = r["zip"] not in narr_done
             done.add(r["zip"])
             seg_done.add(r["zip"])
             fcst_done.add(r["zip"])
+            narr_done.add(r["zip"])
             try:
                 blob = get("https://www.release.tdnet.info/inbs/" + r["zip"], binary=True)
                 streak = 0
@@ -1057,7 +1066,7 @@ def collect():
                 print(f"    {r['code']} 막힘: {e}", file=sys.stderr, flush=True)
                 if streak >= GIVE_UP_AFTER:
                     print("  연속으로 막혔다. 여기서 접는다.", file=sys.stderr, flush=True)
-                    return save(stocks, done, got, skipped, segs, seg_done, fcst_done, narrs)
+                    return save(stocks, done, got, skipped, segs, seg_done, fcst_done, narrs, narr_done)
                 continue
             time.sleep(PAUSE)
             if not blob:
@@ -1075,7 +1084,7 @@ def collect():
             for st, en, row in read_segments(blob):
                 segs.setdefault(key, {})[st + "/" + en] = row
 
-            if fresh_fc:
+            if fresh_nr:
                 narr = read_narrative(blob)
                 cur = narrs.get(r["code"])
                 # 뒤로 훑으므로 옛 공시가 나중에 온다 — 새 것을 덮지 않는다.
@@ -1136,12 +1145,12 @@ def collect():
             # 실행되지 않아 받은 것을 통째로 잃는다. 실제로 첫 실행이 그랬다 —
             # 5분에서 잘려 197종목을 담고도 파일이 안 생겼다.
             if got % 20 == 0:
-                save(stocks, done, got, skipped, segs, seg_done, fcst_done, narrs, quiet=True)
+                save(stocks, done, got, skipped, segs, seg_done, fcst_done, narrs, narr_done, quiet=True)
                 print(f"    ...{got}건", flush=True)
         # 부문만 보러 온 실행은 got 이 안 늘어 위 저장이 안 걸린다. 하루치를
         # 끝낼 때마다 써 둔다 — 시간 제한에 잘려도 받은 만큼은 남는다.
-        save(stocks, done, got, skipped, segs, seg_done, fcst_done, narrs, quiet=True)
-    return save(stocks, done, got, skipped, segs, seg_done, fcst_done, narrs)
+        save(stocks, done, got, skipped, segs, seg_done, fcst_done, narrs, narr_done, quiet=True)
+    return save(stocks, done, got, skipped, segs, seg_done, fcst_done, narrs, narr_done)
 
 
 def load_done():
@@ -1177,14 +1186,30 @@ def load_fcst_done():
         return []
 
 
-def load_narrs():
-    """받아둔 경영성적 설명 원문. {코드: {date, text}}."""
+# v2: 첨부 첫 장의 점선 목차를 본문으로 잡아 329종목 전부 부스러기였다.
+# 판이 다르면 기록과 '본 공시' 목록을 통째로 버리고 다시 뜯는다.
+NARR_VER = 2
+
+
+def _briefs_file():
     if not BRIEFS_OUT.exists():
         return {}
     try:
-        return json.loads(BRIEFS_OUT.read_text(encoding="utf-8")).get("stocks", {})
+        d = json.loads(BRIEFS_OUT.read_text(encoding="utf-8"))
+        return d if d.get("v") == NARR_VER else {}
     except (ValueError, OSError):
         return {}
+
+
+def load_narrs():
+    """받아둔 경영성적 설명 원문. {코드: {date, text}}."""
+    return _briefs_file().get("stocks", {})
+
+
+def load_narr_done():
+    """서술까지 뜯어본 공시 번호. 목차 버그처럼 추출만 고쳤을 때 fcst 는 그대로
+    두고 서술만 다시 뜯을 수 있도록 fcst_docs 와 따로 적는다."""
+    return _briefs_file().get("docs", [])
 
 
 def load_seg_raw():
@@ -1250,7 +1275,7 @@ def save_segments(raw, seg_done=(), quiet=False):
 
 
 def save(stocks, done, got, skipped, segs=None, seg_done=(), fcst_done=(),
-         narrs=None, quiet=False):
+         narrs=None, narr_done=(), quiet=False):
     payload = {
         "source": "TDnet 適時開示 결산단신 (inline XBRL)",
         "note": ("발표 당일에 올라온다. 누계로 실리므로 앞 분기를 빼 분기값으로 "
@@ -1269,9 +1294,11 @@ def save(stocks, done, got, skipped, segs=None, seg_done=(), fcst_done=(),
     if narrs is not None:
         bt = BRIEFS_OUT.with_suffix(".tmp")
         bt.write_text(json.dumps({
+            "v": NARR_VER,
             "source": "TDnet 결산단신 첨부 — 経営成績に関する説明",
             "note": "원문(일본어)만 담는다. 한국어는 briefs.py 에 옮긴다.",
-            "count": len(narrs), "stocks": narrs,
+            "count": len(narrs), "docs": sorted(narr_done)[-6000:],
+            "stocks": narrs,
         }, ensure_ascii=False), encoding="utf-8")
         bt.replace(BRIEFS_OUT)
     if segs is not None:
