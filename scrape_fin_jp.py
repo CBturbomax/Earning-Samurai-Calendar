@@ -451,13 +451,18 @@ def seg_quarters(points):
         for i, en in enumerate(order):
             days = (date.fromisoformat(en) - date.fromisoformat(st)).days
             if i == 0:
-                if days <= 125:               # 첫 누계가 곧 1분기
+                # 첫 누계가 곧 한 기간이다. 분기(~125일)만 받다가 **반기 회사가
+                # 통째로 빠졌다** — 일본이 분기보고서를 폐지한 뒤 아식스처럼 반기
+                # 로만 내는 회사는 첫 누계가 181일이라 여기서 늘 버려졌고, 원자료
+                # 에 지역별 매출이 있는데도 화면에 부문 차트가 영영 안 섰다.
+                # 반기 점은 반기 그대로 싣는다(총매출의 1H/2H 규칙과 같다).
+                if days <= 125 or 150 <= days <= 220:
                     out[en] = dict(ends[en])
                 continue
             prev = ends[order[i - 1]]
             gap = (date.fromisoformat(en) - date.fromisoformat(order[i - 1])).days
-            if not 60 <= gap <= 125:
-                continue                      # 사이가 한 분기가 아니다
+            if not (60 <= gap <= 125 or 150 <= gap <= 220):
+                continue                      # 사이가 한 분기도 한 반기도 아니다
             cut = {k: ends[en][k] - prev.get(k, 0) for k in ends[en]
                    if ends[en][k] - prev.get(k, 0) > 0}
             if len(cut) >= 2:
