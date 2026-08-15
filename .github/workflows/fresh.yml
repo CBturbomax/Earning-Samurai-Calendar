@@ -91,11 +91,13 @@ jobs:
             # 오늘·어제만 훑는다 — 매 바퀴 열흘치 목록을 두드리는 건 실례다.
             timeout 60  python scrape_jp_tdnet.py || true
             JP_BACK_DAYS=2 timeout 150 python scrape_fin_jp.py || true
-            # 미국 8-K 와 일본 열흘치 백필(가이던스·설명 되훑기)은 열 바퀴(30분)에
-            # 한 번 — 새 발표는 위의 오늘치가 이미 잡는다.
+            # 미국 8-K 와 일본 보관창 백필(부문·가이던스·설명 되훑기)은 열 바퀴
+            # (30분)에 한 번 — 새 발표는 위의 오늘치가 이미 잡는다.
+            # 45일 = TDnet 보관창 전체. 판(SEG_JP_VER 등)을 올리면 이 창 안의
+            # 공시가 저절로 다시 뜯힌다 — 따라잡은 뒤에는 목록만 훑고 금방 끝난다.
             if [ $((n % 10)) -eq 1 ]; then
               PR_PER_RUN=60 timeout 90 python scrape_pr_us.py || true
-              JP_BACK_DAYS=10 timeout 120 python scrape_fin_jp.py || true
+              JP_BACK_DAYS=45 timeout 240 python scrape_fin_jp.py || true
             fi
             push_changes || exit 1
             el=$(( $(date +%s) - t0 ))

@@ -11,137 +11,173 @@ jobs:
   probe:
     runs-on: ubuntu-latest
     timeout-minutes: 12
+    env:
+      EDINET_API_KEY: ${{ secrets.EDINET_API_KEY }}
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
         with:
           python-version: '3.12'
 
-      # 16차 — EDINET 문서번호(docID)의 마지막 문 둘.
-      # (i) 웹 아카이브(Wayback)가 저장해 둔 옛 v1 목록 응답에서 docID 를 얻고
-      # (ii) 그 docID 로 문서 뷰어(WZEK0040)와 blob 창고 다운로드 꼴을 확인한다.
-      - name: 🇯🇵 EDINET docID 마지막 문 (16차)
-        timeout-minutes: 8
-        run: |
-          python - <<'EOF'
-          import json, re, urllib.request
-          UA = {"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) Chrome/124.0",
-                "Accept": "*/*"}
-          def peek(url, head=0, quiet=False):
-              req = urllib.request.Request(url, headers=UA)
-              try:
-                  with urllib.request.urlopen(req, timeout=30) as r:
-                      b = r.read()
-                      if not quiet:
-                          print(f"{r.status} {len(b):,}B  {url[:120]}")
-                      return b
-              except Exception as e:
-                  print(f"ERR {e}  {url[:120]}")
-                  return b""
-          print("== (i) Wayback CDX ==")
-          cdx = peek("http://web.archive.org/cdx/search/cdx?url=api.edinet-fsa.go.jp%2Fapi%2Fv1%2Fdocuments.json&matchType=prefix&output=json&filter=statuscode:200&limit=12&collapse=digest")
-          snaps = []
-          if cdx:
-              rows = json.loads(cdx.decode("utf-8", "replace"))
-              for r in rows[1:]:
-                  snaps.append((r[1], r[2]))     # (timestamp, original)
-                  print("  ", r[1], r[2][:100])
-          docids = []
-          for ts, orig in snaps[:3]:
-              b = peek(f"http://web.archive.org/web/{ts}id_/{orig}")
-              if b:
-                  ids = re.findall(r'"docID"\s*:\s*"(S100[0-9A-Z]{4})"', b.decode("utf-8", "replace"))
-                  print("   docID", len(ids), "개, 예:", ids[:5])
-                  docids += ids
-              if docids:
-                  break
-          print("== (ii) 뷰어·창고 꼴 ==")
-          did = docids[0] if docids else "S100TEST"
-          for u in (f"https://disclosure2.edinet-fsa.go.jp/WZEK0040.aspx?{did}",
-                    f"https://disclosure2.edinet-fsa.go.jp/wzek0040.aspx?{did}",
-                    f"https://disclosure2dl.edinet-fsa.go.jp/searchdocument/pdf/{did}.pdf",
-                    f"https://disclosure2dl.edinet-fsa.go.jp/searchdocument/zip/{did}.zip",
-                    f"https://disclosure2dl.edinet-fsa.go.jp/searchdocument/xbrl/{did}.zip",
-                    f"https://disclosure2dl.edinet-fsa.go.jp/searchdocument/{did}.zip"):
-              b = peek(u)
-              if b and b[:2] == b"PK":
-                  import io, zipfile
-                  print("   ★ zip 열림:", zipfile.ZipFile(io.BytesIO(b)).namelist()[:6])
-              elif b and len(b) < 90000 and b[:1] == b"<":
-                  t = b.decode("utf-8", "replace")
-                  dl = sorted(set(re.findall(r'(?:href|src|action)="([^"]*(?:dl|download|pdf|zip|xbrl)[^"]*)"', t, re.I)))[:8]
-                  print("   내려받기 흔적:", dl)
-          EOF
-
-      # 10차 — 미국 실적 보도자료(8-K EX-99). 브리핑 칸의 '회사가 한 말' 원문이
-      # EDGAR 에서 뽑히는지, 인용문·가이던스 문단이 실제로 걸리는지 본다.
-      - name: 🇺🇸 8-K 보도자료 발췌 확인 (10차)
-        timeout-minutes: 6
-        run: python scrape_pr_us.py --probe NVDA AAPL WMT DE
-
-      # 9차 — 8차에서 JPX 가 CI 에 열려 있고 셋 다 xlsx(zip)인 것을 확인했다.
-      # 이번에는 실제 파서(scrape_jp_sched.py --probe)를 돌려 열 매핑·날짜 범위·
-      # 어휘(kind/fy/업종)가 닛케이 것과 맞는지 본다.
-      - name: 🇯🇵 JPX 예정일 파서 확인 (9차)
-        timeout-minutes: 6
-        run: python scrape_jp_sched.py --probe
-
-      # 8차 — 일본 앞으로의 일정. 닛케이가 CI IP 를 막아 8/17 이후가 구멍이다.
-      # JPX(일본거래소)가 決算発表予定日 엑셀을 공식으로 낸다 — CI 에서 닿는지,
-      # 파일이 xlsx(zip, 표준 라이브러리로 읽힘)인지 xls(옛 바이너리)인지 본다.
-      - name: 🇯🇵 JPX 결산발표 예정일 엑셀 (8차)
-        timeout-minutes: 6
+      # 17차 — EDINET API 키 포털. 회원가입을 마친 사용자가 ?mode=1 을 다시 열자
+      # 흰 화면이 됐다. mode 마다 무엇이 그려지는지(가입/로그인/키 확인) 떠서
+      # '키가 보이는 문'이 어디인지 확인한다. ?mode=1 은 신규 가입 전용이라
+      # 가입을 마친 뒤에는 그릴 게 없을 것으로 본다 — 짐작 말고 확인.
+      - name: 🇯🇵 EDINET 키 포털 문 찾기 (17차)
+        timeout-minutes: 5
         run: |
           python - <<'EOF'
           import re, urllib.request
-
-          UA = {"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
-                              "AppleWebKit/537.36 Chrome/124.0 Safari/537.36",
-                "Accept": "*/*", "Accept-Language": "ja,en;q=0.8"}
-
-          def get(url, timeout=25):
+          UA = {"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) Chrome/124.0",
+                "Accept": "text/html,*/*", "Accept-Language": "ja,en;q=0.8"}
+          def attr(tag, k):
+              m = re.search(k + r'="([^"]*)"', tag)
+              return m.group(1) if m else ""
+          def visible(t):
+              t = re.sub(r"<(script|style)[^>]*>.*?</\1>", " ", t, flags=re.S | re.I)
+              t = re.sub(r"<[^>]+>", " ", t)
+              return re.sub(r"\s+", " ", t).strip()
+          for tail in ("", "?mode=1", "?mode=2", "?mode=3"):
+              url = "https://api.edinet-fsa.go.jp/api/auth/index.aspx" + tail
               req = urllib.request.Request(url, headers=UA)
-              with urllib.request.urlopen(req, timeout=timeout) as r:
-                  return r.read()
-
-          BASE = "https://www.jpx.co.jp"
-          page_url = BASE + "/listing/event-schedules/financial-announcement/index.html"
-          try:
-              body = get(page_url).decode("utf-8", "replace")
-          except Exception as e:
-              print("페이지 실패:", e); raise SystemExit
-          print(f"페이지 {len(body):,}B")
-          links = re.findall(r'href="([^"]+\.(?:xlsx?|csv|pdf))"', body)
-          print("파일 링크:")
-          for l in links[:20]:
-              print("  ", l)
-          # 엑셀부터 집어 내려받아 머리를 본다
-          xls = [l for l in links if re.search(r"\.xlsx?$", l)]
-          for l in xls[:3]:
-              url = l if l.startswith("http") else BASE + l
               try:
-                  data = get(url)
+                  with urllib.request.urlopen(req, timeout=30) as r:
+                      body = r.read().decode("utf-8", "replace")
+                      print(f"\n== {tail or '(민짜)'}  {r.status} {len(body):,}자  최종 …{r.geturl()[-60:]}")
               except Exception as e:
-                  print(f"\n{url} 실패: {e}"); continue
-              magic = data[:4]
-              kind = ("xlsx(zip)" if magic[:2] == b"PK"
-                      else "xls(옛 바이너리)" if magic == b"\xd0\xcf\x11\xe0"
-                      else repr(magic))
-              print(f"\n{url}\n  {len(data):,}B · {kind}")
-              if magic[:2] == b"PK":
-                  import io, zipfile
-                  z = zipfile.ZipFile(io.BytesIO(data))
-                  names = z.namelist()
-                  print("  zip 안:", names[:8])
-                  # 첫 시트 원문 앞부분 — 열 구성 확인
-                  sheet = [n for n in names if n.startswith("xl/worksheets/")]
-                  if sheet:
-                      xml = z.read(sheet[0]).decode("utf-8", "replace")
-                      print("  시트 XML 머리 1200자:")
-                      print("  " + xml[:1200].replace("\n", " "))
-                  shared = [n for n in names if n.endswith("sharedStrings.xml")]
-                  if shared:
-                      s = z.read(shared[0]).decode("utf-8", "replace")
-                      texts = re.findall(r"<t[^>]*>([^<]{1,40})</t>", s)
-                      print("  공유 문자열 앞 40개:", texts[:40])
+                  print(f"\n== {tail or '(민짜)'}  실패 {e}")
+                  continue
+              m = re.search(r"<title[^>]*>([^<]*)</title>", body, re.I)
+              print("   제목:", m.group(1).strip() if m else "(없음)")
+              print("   글:", visible(body)[:360])
+              btns = []
+              for tag in re.findall(r"<input[^>]*>", body, re.I):
+                  if attr(tag, "type").lower() == "hidden":
+                      continue
+                  btns.append((attr(tag, "type"), attr(tag, "name")[:26],
+                               attr(tag, "value")[:22]))
+              print("   입력·단추:", btns[:14])
+              print("   링크:", sorted(set(re.findall(
+                  r'href="([^"]*(?:mode=|\.aspx)[^"]*)"', body, re.I)))[:10])
+          EOF
+
+      # 17차 보조 — 아식스(7936) 부문 표에서 '일본(국내)' 행만 왜 떨어지는지.
+      # 12차에서 Japan 문맥이 있는 것은 확인했다. 이번에는 그 문맥을 가리키는
+      # 사실(fact)들의 이름·값·부호·자릿수를 전부 떠서 어느 관문(SEG_REV 태그?
+      # 문맥 기간? 부호?)에서 버려지는지 짚는다. 진짜 파서도 같이 태워 견준다.
+      - name: 🇯🇵 아식스 국내 부문 행 (17차 보조)
+        timeout-minutes: 6
+        run: |
+          python - <<'EOF'
+          import io, zipfile
+          from datetime import date, timedelta
+          import scrape_fin_jp as fj
+          blob = None
+          for back in range(12):
+              day = (date.today() - timedelta(days=back)).isoformat()
+              try:
+                  rows = fj.announcements(day)
+              except Exception as e:
+                  print(day, "목록 실패:", e)
+                  continue
+              for r in rows:
+                  if r["code"] == "7936" and "短信" in r["title"]:
+                      print("공시:", day, r["title"][:60])
+                      blob = fj.get("https://www.release.tdnet.info/inbs/" + r["zip"],
+                                    binary=True)
+                      break
+              if blob:
+                  break
+          if not blob:
+              print("최근 12일 목록에 아식스 결산단신이 없다")
+              raise SystemExit
+          z = zipfile.ZipFile(io.BytesIO(blob))
+          docs = {n: z.read(n).decode("utf-8", "replace")
+                  for n in z.namelist() if n.lower().endswith(("ixbrl.htm", ".xbrl"))}
+          ctx = {cid for txt in docs.values() for cid, _ in fj.CTX_RE.findall(txt)}
+          jap = sorted(c for c in ctx if "japan" in c.lower())
+          print(f"문맥 {len(ctx)}개 · Japan 문맥 {len(jap)}개")
+          for c in jap[:10]:
+              print("   ", c)
+          # 파일마다: 부문 문맥을 가리키는 사실 이름 전수 조사. 별표는 SEG_REV 에
+          # 있는(우리가 줍는) 이름 — 해외 행이 살아난 태그와 국내 행이 버려진
+          # 태그가 다른지, 어느 파일의 어느 표에서 오는지 한눈에 본다.
+          for n, txt in docs.items():
+              if "Attachment" not in n:
+                  continue
+              names = {}
+              for attrs, inner in fj.IX_FACT.findall(txt):
+                  a = dict(fj.IX_ATTR.findall(attrs))
+                  m = fj.seg_member(a.get("contextRef") or "")
+                  if not m:
+                      continue
+                  nm = (a.get("name") or "").rsplit(":", 1)[-1]
+                  slot = names.setdefault(nm, [0, set()])
+                  slot[0] += 1
+                  slot[1].add(fj.seg_name(m)[:16])
+              if names:
+                  print("\n==", n.split("/")[-1][:58])
+                  for nm, (c, mem) in sorted(names.items(), key=lambda kv: -kv[1][0]):
+                      star = "*" if nm in fj.SEG_REV_RANK else " "
+                      print(f"   {star} {nm[:46]:48s} {c:>3}건  {sorted(mem)[:5]}")
+          got = fj.read_segments(blob)
+          for st, en, row in got:
+              print(f"\nread_segments {st}~{en}")
+              for k, v in sorted(row.items()):
+                  print(f"    {k[:64]:66s} {v:>16,.0f}")
+              clean = {k: round(v / 1e9, 1) for k, v in fj.seg_clean(row).items()}
+              print("  seg_clean(십억) ->", clean)
+          EOF
+
+      # 17차 열쇠 — 저장소 시크릿에 EDINET_API_KEY 가 올라오면 그때부터 도는 단.
+      # (키가 없으면 통째로 건너뛴다.) v2 문서목록이 진짜로 열리는지, 2021·2023
+      # 옛 사분기보고서까지 주는지, XBRL zip 안에 부문 축이 있는지까지 본다.
+      # 키를 로그에 찍지 않는다 — 요청 주소도 안 찍는다.
+      - name: 🇯🇵 EDINET v2 자물쇠 (17차 · 키 있을 때만)
+        if: env.EDINET_API_KEY != ''
+        timeout-minutes: 8
+        run: |
+          python - <<'EOF'
+          import io, json, os, re, urllib.request, zipfile
+          KEY = os.environ["EDINET_API_KEY"]
+          UA = {"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) Chrome/124.0"}
+          def get(url):
+              req = urllib.request.Request(url, headers=UA)
+              with urllib.request.urlopen(req, timeout=60) as r:
+                  return r.read()
+          picked = None
+          for day in ("2026-03-27", "2023-08-10", "2021-08-06"):
+              try:
+                  j = json.loads(get("https://api.edinet-fsa.go.jp/api/v2/documents.json"
+                                     f"?date={day}&type=2&Subscription-Key={KEY}"))
+              except Exception as e:
+                  print(day, "실패:", getattr(e, "code", type(e).__name__))
+                  continue
+              docs = j.get("results") or []
+              rep = [d for d in docs if d.get("docTypeCode") in ("120", "140", "160")
+                     and d.get("xbrlFlag") == "1"]
+              print(day, "전체", len(docs), "· 보고서(120/140/160)", len(rep))
+              for d in rep[:4]:
+                  print("   ", d.get("docID"), d.get("docTypeCode"),
+                        d.get("secCode"), (d.get("filerName") or "")[:18])
+              if rep and not picked:
+                  picked = rep[0]
+          if not picked:
+              print("보고서를 한 건도 못 받았다 — 키나 API 상태를 본다")
+              raise SystemExit
+          z = get("https://api.edinet-fsa.go.jp/api/v2/documents/"
+                  f"{picked['docID']}?type=1&Subscription-Key={KEY}")
+          print("zip", f"{len(z):,}B", picked["docID"],
+                (picked.get("filerName") or "")[:18])
+          zf = zipfile.ZipFile(io.BytesIO(z))
+          pub = [n for n in zf.namelist() if "PublicDoc" in n]
+          print("PublicDoc", len(pub), "장:", [p.split("/")[-1][:40] for p in pub[:5]])
+          for n in pub:
+              if not n.endswith((".xbrl", ".htm")):
+                  continue
+              x = zf.read(n).decode("utf-8", "replace")
+              mem = sorted(set(re.findall(r"([A-Za-z0-9]{2,40}SegmentMember)", x)))
+              if mem:
+                  print(n.split("/")[-1][:44], "부문 멤버:", mem[:14])
+                  break
           EOF

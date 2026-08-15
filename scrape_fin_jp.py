@@ -56,7 +56,9 @@ JP_VER = 1
 # 2: 문맥을 zip 전체에서 모은다 · 수식어를 부문으로 읽지 않는다
 # 3: 합계 줄을 뺀다(전사 합계·보고부문 계) · 문자가 든 증권코드 접두사
 # 4: 원자료에 XBRL 이름을 그대로 담는다 — 이름 규칙을 고쳐도 다시 안 받는다
-SEG_JP_VER = 4
+# 5: 외부 매출의 복수형 표기(RevenuesFromExternalCustomers)를 줍는다 — 아식스의
+#    일본(국내) 행이 이것 때문에 통째로 빠졌다. 보관창 안의 공시를 다시 뜯는다.
+SEG_JP_VER = 5
 
 # 결산단신인지 가리는 말. '決算短信' 이 들어가면 실적 발표다.
 # (「業績予想の修正」 같은 것은 실적 발표가 아니라 예상 수정이라 뺀다.)
@@ -297,6 +299,10 @@ SEG_REV = ["TransactionsWithExternalCustomersIFRS",
            "NetSalesToOutsideCustomers",
            "NetSalesToExternalCustomers",
            "SalesToExternalCustomers",
+           # 복수형 표기가 따로 있다 — 아식스 단신의 외부 매출 행이 이것이라 못
+           # 알아봤고, 순위 밀린 NetSales(내부거래 포함 계)로 그리는 바람에 그 행에만
+           # 태그가 없던 일본(국내) 부문이 통째로 빠졌다. 외부 행이 언제나 이긴다.
+           "RevenuesFromExternalCustomers",
            "RevenueFromExternalCustomers",
            "TransactionsWithExternalCustomers",
            # 외부 매출이 따로 없는 회사는 부문 매출(내부 포함)을 쓴다.
