@@ -17,42 +17,86 @@ jobs:
         with:
           python-version: '3.12'
 
-      # 14차 — 13차에서 EDINET 열람 화면(week0010.aspx)이 열쇠 없이 200,
-      # 내려받기 창고(disclosure2dl)가 401 이 아니라 '그 blob 없음' 404 였다.
-      # 화면 HTML 을 뜯어 실존 문서번호·내려받기 링크 꼴을 알아낸다.
-      - name: 🇯🇵 EDINET 열람 화면 해부 (14차)
-        timeout-minutes: 6
+      # 15차 — 제품별 축과 이력, 두 갈래.
+      # (a) 아식스 결산단신 주석 장(scnp)에 수익분해(품목별) XBRL 태그가 있나 —
+      #     있으면 제품축을 TDnet 에서 매 시즌 자동 수집할 수 있다.
+      # (b) EDINET blob 창고의 정적 파일(코드 목록)과 GXState POST 흉내 —
+      #     문서번호를 열쇠 없이 얻는 길.
+      - name: 🇯🇵 제품축 + EDINET 문서번호 (15차)
+        timeout-minutes: 8
         run: |
           python - <<'EOF'
-          import re, urllib.request
+          import io, re, zipfile
+          import scrape_fin_jp as fj
+          rows = fj.announcements("2026-08-14")
+          hit = [r for r in rows if r["code"] == "7936"]
+          if hit:
+              blob = fj.get("https://www.release.tdnet.info/inbs/" + hit[0]["zip"], binary=True)
+              z = zipfile.ZipFile(io.BytesIO(blob))
+              for n in z.namelist():
+                  if "Attachment" not in n or not n.lower().endswith(".htm"):
+                      continue
+                  txt = z.read(n).decode("utf-8", "replace")
+                  tags = set(re.findall(r'name="([\w:-]*(?:Disaggregat|Revenue|Goods|Product)[\w:-]*)"', txt, re.I))
+                  ctxs = set(re.findall(r'contextRef="([^"]*(?:Product|Goods|Category|Running|Onitsuka|Sports)[^"]*)"', txt, re.I))
+                  if tags or ctxs:
+                      print("==", n.rsplit("/",1)[-1])
+                      for t in sorted(tags)[:12]: print("  tag", t)
+                      for c in sorted(ctxs)[:12]: print("  ctx", c)
+              # 주석 장 원문에 '収益' 표가 있는지 (태그가 없으면 HTML 표)
+              npf = [n for n in z.namelist() if "scnp" in n or "qcnp" in n]
+              if npf:
+                  t = re.sub(r"\s+"," ", fj.TAGS.sub(" ", z.read(npf[0]).decode("utf-8","replace")))
+                  i = t.find("収益")
+                  print("주석 장 '収益' 언저리:", t[max(0,i-40):i+400] if i>=0 else "없음")
+          EOF
+
+          python - <<'EOF'
+          import re, urllib.request, urllib.parse, io, zipfile
           UA = {"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) Chrome/124.0",
                 "Accept": "*/*", "Accept-Language": "ja,en;q=0.8"}
-          def get(url):
-              req = urllib.request.Request(url, headers=UA)
-              with urllib.request.urlopen(req, timeout=20) as r:
-                  return r.read().decode("utf-8", "replace")
-          t = get("https://disclosure2.edinet-fsa.go.jp/week0010.aspx")
-          print("길이", len(t))
-          # 폼과 입력들
-          for m in re.finditer(r'<form[^>]*>', t)[:3] if False else []:
-              pass
-          forms = re.findall(r'<form[^>]{0,200}', t)[:3]
-          print("form:", forms)
-          names = sorted(set(re.findall(r'<(?:input|select)[^>]*name="([^"]+)"', t)))[:30]
-          print("입력:", names)
-          # 링크·문서번호·내려받기 흔적
-          links = sorted(set(re.findall(r'(?:href|action)="([^"]{5,120})"', t)))
-          print("링크", len(links), "개 중 aspx/dl:")
-          for l in links:
-              if "aspx" in l.lower() or "dl" in l.lower():
-                  print("  ", l[:110])
-          docids = sorted(set(re.findall(r'S100[0-9A-Z]{4}', t)))[:10]
-          print("문서번호:", docids)
-          js = sorted(set(re.findall(r'"(WZEK[^"]{0,80})"', t)))[:6]
-          print("WZEK:", js)
-          # 자바스크립트 열기 함수의 인자 꼴
-          opens = re.findall(r'WindowOpen[^;]{0,140}', t)[:4]
-          print("WindowOpen:", opens)
+          def peek(url, data=None, head=0):
+              req = urllib.request.Request(url, data=data, headers=UA)
+              try:
+                  with urllib.request.urlopen(req, timeout=25) as r:
+                      b = r.read()
+                      print(f"{r.status} {len(b):,}B  {url}")
+                      return b
+              except Exception as e:
+                  print(f"ERR {e}  {url}")
+                  return b""
+          print("== (b1) blob 창고 정적 파일 ==")
+          for u in ("https://disclosure2dl.edinet-fsa.go.jp/searchdocument/codelist/Edinetcode.zip",
+                    "https://disclosure2dl.edinet-fsa.go.jp/searchdocument/codelist/Fundcode.zip"):
+              b = peek(u)
+              if b[:2] == b"PK":
+                  z = zipfile.ZipFile(io.BytesIO(b))
+                  print("   zip:", z.namelist()[:4])
+                  csv = z.read(z.namelist()[0]).decode("cp932", "replace")
+                  hitrows = [l for l in csv.splitlines() if "7936" in l][:3]
+                  print("   7936 줄:", hitrows)
+          print("== (b2) GXState POST 흉내 ==")
+          base = "https://disclosure2.edinet-fsa.go.jp/week0010.aspx"
+          t = peek(base).decode("utf-8", "replace")
+          m = re.search(r'name="GXState"\s+value="([^"]*)"', t) or re.search(r"GXState[^=]*=\s*'([^']*)'", t)
+          print("  GXState 있음:", bool(m), "길이", len(m.group(1)) if m else 0)
+          if m:
+              form = {
+                  "MAINFORM": "MAINFORM",
+                  "W0018vD_KEYWORD": "アシックス",
+                  "W0018vD_KIKAN": "0",
+                  "W0018vCHKSYORUI1": "1",
+                  "W0018BTNBTN_SEARCH": "검색",
+                  "GXState": m.group(1),
+              }
+              data = urllib.parse.urlencode(form).encode()
+              b = peek(base, data=data)
+              if b:
+                  tt = b.decode("utf-8", "replace")
+                  ids = sorted(set(re.findall(r"S100[0-9A-Z]{4}", tt)))[:8]
+                  print("  POST 응답 문서번호:", ids)
+                  links = sorted(set(re.findall(r'(WZEK[^"\']{0,60})', tt)))[:6]
+                  print("  WZEK:", links)
           EOF
 
       # 10차 — 미국 실적 보도자료(8-K EX-99). 브리핑 칸의 '회사가 한 말' 원문이
