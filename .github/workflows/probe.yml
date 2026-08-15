@@ -17,42 +17,60 @@ jobs:
         with:
           python-version: '3.12'
 
-      # 14차 — 13차에서 EDINET 열람 화면(week0010.aspx)이 열쇠 없이 200,
-      # 내려받기 창고(disclosure2dl)가 401 이 아니라 '그 blob 없음' 404 였다.
-      # 화면 HTML 을 뜯어 실존 문서번호·내려받기 링크 꼴을 알아낸다.
-      - name: 🇯🇵 EDINET 열람 화면 해부 (14차)
-        timeout-minutes: 6
+      # 16차 — EDINET 문서번호(docID)의 마지막 문 둘.
+      # (i) 웹 아카이브(Wayback)가 저장해 둔 옛 v1 목록 응답에서 docID 를 얻고
+      # (ii) 그 docID 로 문서 뷰어(WZEK0040)와 blob 창고 다운로드 꼴을 확인한다.
+      - name: 🇯🇵 EDINET docID 마지막 문 (16차)
+        timeout-minutes: 8
         run: |
           python - <<'EOF'
-          import re, urllib.request
+          import json, re, urllib.request
           UA = {"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) Chrome/124.0",
-                "Accept": "*/*", "Accept-Language": "ja,en;q=0.8"}
-          def get(url):
+                "Accept": "*/*"}
+          def peek(url, head=0, quiet=False):
               req = urllib.request.Request(url, headers=UA)
-              with urllib.request.urlopen(req, timeout=20) as r:
-                  return r.read().decode("utf-8", "replace")
-          t = get("https://disclosure2.edinet-fsa.go.jp/week0010.aspx")
-          print("길이", len(t))
-          # 폼과 입력들
-          for m in re.finditer(r'<form[^>]*>', t)[:3] if False else []:
-              pass
-          forms = re.findall(r'<form[^>]{0,200}', t)[:3]
-          print("form:", forms)
-          names = sorted(set(re.findall(r'<(?:input|select)[^>]*name="([^"]+)"', t)))[:30]
-          print("입력:", names)
-          # 링크·문서번호·내려받기 흔적
-          links = sorted(set(re.findall(r'(?:href|action)="([^"]{5,120})"', t)))
-          print("링크", len(links), "개 중 aspx/dl:")
-          for l in links:
-              if "aspx" in l.lower() or "dl" in l.lower():
-                  print("  ", l[:110])
-          docids = sorted(set(re.findall(r'S100[0-9A-Z]{4}', t)))[:10]
-          print("문서번호:", docids)
-          js = sorted(set(re.findall(r'"(WZEK[^"]{0,80})"', t)))[:6]
-          print("WZEK:", js)
-          # 자바스크립트 열기 함수의 인자 꼴
-          opens = re.findall(r'WindowOpen[^;]{0,140}', t)[:4]
-          print("WindowOpen:", opens)
+              try:
+                  with urllib.request.urlopen(req, timeout=30) as r:
+                      b = r.read()
+                      if not quiet:
+                          print(f"{r.status} {len(b):,}B  {url[:120]}")
+                      return b
+              except Exception as e:
+                  print(f"ERR {e}  {url[:120]}")
+                  return b""
+          print("== (i) Wayback CDX ==")
+          cdx = peek("http://web.archive.org/cdx/search/cdx?url=api.edinet-fsa.go.jp%2Fapi%2Fv1%2Fdocuments.json&matchType=prefix&output=json&filter=statuscode:200&limit=12&collapse=digest")
+          snaps = []
+          if cdx:
+              rows = json.loads(cdx.decode("utf-8", "replace"))
+              for r in rows[1:]:
+                  snaps.append((r[1], r[2]))     # (timestamp, original)
+                  print("  ", r[1], r[2][:100])
+          docids = []
+          for ts, orig in snaps[:3]:
+              b = peek(f"http://web.archive.org/web/{ts}id_/{orig}")
+              if b:
+                  ids = re.findall(r'"docID"\s*:\s*"(S100[0-9A-Z]{4})"', b.decode("utf-8", "replace"))
+                  print("   docID", len(ids), "개, 예:", ids[:5])
+                  docids += ids
+              if docids:
+                  break
+          print("== (ii) 뷰어·창고 꼴 ==")
+          did = docids[0] if docids else "S100TEST"
+          for u in (f"https://disclosure2.edinet-fsa.go.jp/WZEK0040.aspx?{did}",
+                    f"https://disclosure2.edinet-fsa.go.jp/wzek0040.aspx?{did}",
+                    f"https://disclosure2dl.edinet-fsa.go.jp/searchdocument/pdf/{did}.pdf",
+                    f"https://disclosure2dl.edinet-fsa.go.jp/searchdocument/zip/{did}.zip",
+                    f"https://disclosure2dl.edinet-fsa.go.jp/searchdocument/xbrl/{did}.zip",
+                    f"https://disclosure2dl.edinet-fsa.go.jp/searchdocument/{did}.zip"):
+              b = peek(u)
+              if b and b[:2] == b"PK":
+                  import io, zipfile
+                  print("   ★ zip 열림:", zipfile.ZipFile(io.BytesIO(b)).namelist()[:6])
+              elif b and len(b) < 90000 and b[:1] == b"<":
+                  t = b.decode("utf-8", "replace")
+                  dl = sorted(set(re.findall(r'(?:href|src|action)="([^"]*(?:dl|download|pdf|zip|xbrl)[^"]*)"', t, re.I)))[:8]
+                  print("   내려받기 흔적:", dl)
           EOF
 
       # 10차 — 미국 실적 보도자료(8-K EX-99). 브리핑 칸의 '회사가 한 말' 원문이
