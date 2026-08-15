@@ -17,6 +17,60 @@ jobs:
         with:
           python-version: '3.12'
 
+      # 13차 — EDINET 열쇠 없이 과거 XBRL 에 닿는 뒷길 셋.
+      # (a) ufocatch — EDINET/TDnet 을 통째로 미러링하던 무료 Atom 피드
+      # (b) EDINET 웹화면(disclosure2)이 쓰는 내부 endpoint — 브라우저는 열쇠가 없다
+      # (c) ullet — 유보 뷰어(서버렌더)에 세그먼트 표가 있는지
+      - name: 🇯🇵 과거 XBRL 뒷길 (13차)
+        timeout-minutes: 6
+        run: |
+          python - <<'EOF'
+          import re, urllib.request
+          UA = {"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) Chrome/124.0",
+                "Accept": "*/*", "Accept-Language": "ja,en;q=0.8"}
+          def peek(url, head=300):
+              req = urllib.request.Request(url, headers=UA)
+              try:
+                  with urllib.request.urlopen(req, timeout=20) as r:
+                      b = r.read()
+                      print(f"{r.status} {len(b):,}B  {url}")
+                      return b.decode("utf-8", "replace")
+              except Exception as e:
+                  print(f"ERR {e}  {url}")
+                  return ""
+
+          print("== (a) ufocatch ==")
+          for u in ("https://resource.ufocatch.com/atom/edinetx/query/7936",
+                    "https://resource.ufocatch.com/atom/edinet/query/7936"):
+              t = peek(u)
+              if t:
+                  ents = re.findall(r"<title>([^<]{5,90})</title>", t)[:6]
+                  links = re.findall(r'href="([^"]+\.(?:zip|xbrl)[^"]*)"', t)[:4]
+                  print("  제목:", ents)
+                  print("  링크:", links)
+
+          print("== (b) EDINET 웹화면 내부 ==")
+          t = peek("https://disclosure2.edinet-fsa.go.jp/week0010.aspx")
+          t2 = peek("https://disclosure2.edinet-fsa.go.jp/")
+          for tt in (t, t2):
+              if tt:
+                  srcs = re.findall(r'(?:src|href)="([^"]+\.js[^"]*)"', tt)[:8]
+                  print("  JS:", srcs)
+                  apis = sorted(set(re.findall(r'"(/[^"]*api[^"]*)"', tt)))[:10]
+                  print("  api 문자열:", apis)
+                  break
+          # 내려받기 호스트에 흔한 꼴을 몇 개 찔러본다 (없는 docID 라도 401/403/404 구분이 정보다)
+          for u in ("https://disclosure2dl.edinet-fsa.go.jp/searchdocument/pdf/S100TEST.pdf",
+                    "https://disclosure2dl.edinet-fsa.go.jp/searchdocument/zip/S100TEST.zip"):
+              peek(u)
+
+          print("== (c) ullet ==")
+          t = peek("https://www.ullet.com/7936.html")
+          if t:
+              print("  세그먼트 낱말:", "세그" if "セグメント" in t else "없음",
+                    "· 売上 표:", t.count("売上高"))
+          EOF
+
       # 12차 — 둘을 떠본다.
       # (a) 아식스 세그먼트 장에서 '일본' 지역 행이 왜 안 뽑히나 — 문맥 이름 전수
       # (b) EDINET(일본판 EDGAR)이 열쇠 없이 열리나 — 과거 분기·반기 보고서의
