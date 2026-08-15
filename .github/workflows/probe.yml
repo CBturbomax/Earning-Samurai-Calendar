@@ -17,36 +17,61 @@ jobs:
         with:
           python-version: '3.12'
 
-      # 11차 — 아식스(7936) 결산단신에서 설명 절이 왜 안 뽑히나. 첨부 장 이름과
-      # 経営成績 머리글 언저리 원문, read_narrative 결과를 그대로 찍는다.
-      - name: 🇯🇵 아식스 설명 절 뜯어보기 (11차)
-        timeout-minutes: 5
+      # 12차 — 둘을 떠본다.
+      # (a) 아식스 세그먼트 장에서 '일본' 지역 행이 왜 안 뽑히나 — 문맥 이름 전수
+      # (b) EDINET(일본판 EDGAR)이 열쇠 없이 열리나 — 과거 분기·반기 보고서의
+      #     세그먼트 XBRL 로 부문 이력(2022~)을 채울 수 있는지
+      - name: 🇯🇵 아식스 일본행 + EDINET 문 (12차)
+        timeout-minutes: 6
         run: |
           python - <<'EOF'
-          import io, json, re, zipfile
+          import io, re, zipfile
           import scrape_fin_jp as fj
 
           rows = fj.announcements("2026-08-14")
           hit = [r for r in rows if r["code"] == "7936"]
-          print("아식스 줄:", hit)
-          if not hit:
-              raise SystemExit("오늘 목록에 없다")
-          blob = fj.get("https://www.release.tdnet.info/inbs/" + hit[0]["zip"],
-                        binary=True)
-          z = zipfile.ZipFile(io.BytesIO(blob))
-          for n in z.namelist():
-              print("  ", n, z.getinfo(n).file_size)
-          for n in z.namelist():
-              if "Attachment" not in n or not n.lower().endswith(("ixbrl.htm", ".htm")):
-                  continue
-              txt = z.read(n).decode("utf-8", "replace")
-              plain = re.sub(r"\s+", " ", fj.TAGS.sub(" ", txt))
-              for m in fj.NARR_HEAD.finditer(plain):
-                  seg = plain[max(0, m.start()-60):m.end()+260]
-                  print(f"\n== {n.rsplit('/',1)[-1]} @{m.start()}\n   {seg}")
-          print("\nread_narrative ->", repr(fj.read_narrative(blob)[:200]))
+          if hit:
+              blob = fj.get("https://www.release.tdnet.info/inbs/" + hit[0]["zip"], binary=True)
+              z = zipfile.ZipFile(io.BytesIO(blob))
+              sg = [n for n in z.namelist() if "scsg" in n or "qcsg" in n]
+              print("세그먼트 장:", sg)
+              if sg:
+                  txt = z.read(sg[0]).decode("utf-8", "replace")
+                  # 문맥 정의 전수 — Japan 이 어디 있나
+                  ids = set(re.findall(r'contextRef="([^"]+)"', txt))
+                  segish = sorted({i for i in ids if re.search(r"Segment|Japan|Domestic", i, re.I)})
+                  print("문맥", len(ids), "· 부문/일본 후보:")
+                  for c in segish[:40]:
+                      print("  ", c)
           EOF
 
+          python - <<'EOF'
+          import json, urllib.request
+          UA = {"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) Chrome/124.0"}
+          def peek(url):
+              req = urllib.request.Request(url, headers=UA)
+              try:
+                  with urllib.request.urlopen(req, timeout=20) as r:
+                      b = r.read()
+                      print(f"{r.status} {len(b):,}B  {url}")
+                      return b
+              except Exception as e:
+                  print(f"ERR {e}  {url}")
+          # v1(구) / v2(열쇠 요구?) 문서 목록
+          peek("https://api.edinet-fsa.go.jp/api/v1/documents.json?date=2023-08-10&type=2")
+          b = peek("https://api.edinet-fsa.go.jp/api/v2/documents.json?date=2023-08-10&type=2")
+          if b:
+              d = json.loads(b.decode("utf-8", "replace"))
+              res = d.get("results") or []
+              print("  v2 결과", len(res), "· 메타:", json.dumps(d.get("metadata", {}), ensure_ascii=False)[:200])
+              q = [r for r in res if (r.get("docTypeCode") in ("140", "160")) ][:3]
+              for r in q:
+                  print("  ", r.get("docID"), r.get("secCode"), r.get("filerName"), r.get("docDescription"))
+              if q:
+                  did = q[0]["docID"]
+                  # 열쇠 없이 XBRL zip 이 내려오나 (type=1 제출본문서)
+                  peek(f"https://api.edinet-fsa.go.jp/api/v2/documents/{did}?type=1")
+          EOF
       # 10차 — 미국 실적 보도자료(8-K EX-99). 브리핑 칸의 '회사가 한 말' 원문이
       # EDGAR 에서 뽑히는지, 인용문·가이던스 문단이 실제로 걸리는지 본다.
       - name: 🇺🇸 8-K 보도자료 발췌 확인 (10차)
