@@ -99,22 +99,27 @@ jobs:
           print(f"문맥 {len(ctx)}개 · Japan 문맥 {len(jap)}개")
           for c in jap[:10]:
               print("   ", c)
+          # 파일마다: 부문 문맥을 가리키는 사실 이름 전수 조사. 별표는 SEG_REV 에
+          # 있는(우리가 줍는) 이름 — 해외 행이 살아난 태그와 국내 행이 버려진
+          # 태그가 다른지, 어느 파일의 어느 표에서 오는지 한눈에 본다.
           for n, txt in docs.items():
               if "Attachment" not in n:
                   continue
-              hits = []
+              names = {}
               for attrs, inner in fj.IX_FACT.findall(txt):
                   a = dict(fj.IX_ATTR.findall(attrs))
-                  cid = a.get("contextRef") or ""
-                  if "japan" not in cid.lower():
+                  m = fj.seg_member(a.get("contextRef") or "")
+                  if not m:
                       continue
-                  hits.append(((a.get("name") or ""), cid[:72],
-                               fj.TAGS.sub("", inner)[:16],
-                               a.get("scale"), a.get("sign"), a.get("xsi:nil")))
-              if hits:
-                  print("\n--", n.split("/")[-1][:60], f"Japan 사실 {len(hits)}건")
-                  for h in hits[:24]:
-                      print("   ", h)
+                  nm = (a.get("name") or "").rsplit(":", 1)[-1]
+                  slot = names.setdefault(nm, [0, set()])
+                  slot[0] += 1
+                  slot[1].add(fj.seg_name(m)[:16])
+              if names:
+                  print("\n==", n.split("/")[-1][:58])
+                  for nm, (c, mem) in sorted(names.items(), key=lambda kv: -kv[1][0]):
+                      star = "*" if nm in fj.SEG_REV_RANK else " "
+                      print(f"   {star} {nm[:46]:48s} {c:>3}건  {sorted(mem)[:5]}")
           got = fj.read_segments(blob)
           for st, en, row in got:
               print(f"\nread_segments {st}~{en}")
