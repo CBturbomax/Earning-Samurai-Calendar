@@ -17,115 +17,44 @@ jobs:
         with:
           python-version: '3.12'
 
-      # 13차 — EDINET 열쇠 없이 과거 XBRL 에 닿는 뒷길 셋.
-      # (a) ufocatch — EDINET/TDnet 을 통째로 미러링하던 무료 Atom 피드
-      # (b) EDINET 웹화면(disclosure2)이 쓰는 내부 endpoint — 브라우저는 열쇠가 없다
-      # (c) ullet — 유보 뷰어(서버렌더)에 세그먼트 표가 있는지
-      - name: 🇯🇵 과거 XBRL 뒷길 (13차)
+      # 14차 — 13차에서 EDINET 열람 화면(week0010.aspx)이 열쇠 없이 200,
+      # 내려받기 창고(disclosure2dl)가 401 이 아니라 '그 blob 없음' 404 였다.
+      # 화면 HTML 을 뜯어 실존 문서번호·내려받기 링크 꼴을 알아낸다.
+      - name: 🇯🇵 EDINET 열람 화면 해부 (14차)
         timeout-minutes: 6
         run: |
           python - <<'EOF'
           import re, urllib.request
           UA = {"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) Chrome/124.0",
                 "Accept": "*/*", "Accept-Language": "ja,en;q=0.8"}
-          def peek(url, head=300):
+          def get(url):
               req = urllib.request.Request(url, headers=UA)
-              try:
-                  with urllib.request.urlopen(req, timeout=20) as r:
-                      b = r.read()
-                      print(f"{r.status} {len(b):,}B  {url}")
-                      return b.decode("utf-8", "replace")
-              except Exception as e:
-                  print(f"ERR {e}  {url}")
-                  return ""
-
-          print("== (a) ufocatch ==")
-          for u in ("https://resource.ufocatch.com/atom/edinetx/query/7936",
-                    "https://resource.ufocatch.com/atom/edinet/query/7936"):
-              t = peek(u)
-              if t:
-                  ents = re.findall(r"<title>([^<]{5,90})</title>", t)[:6]
-                  links = re.findall(r'href="([^"]+\.(?:zip|xbrl)[^"]*)"', t)[:4]
-                  print("  제목:", ents)
-                  print("  링크:", links)
-
-          print("== (b) EDINET 웹화면 내부 ==")
-          t = peek("https://disclosure2.edinet-fsa.go.jp/week0010.aspx")
-          t2 = peek("https://disclosure2.edinet-fsa.go.jp/")
-          for tt in (t, t2):
-              if tt:
-                  srcs = re.findall(r'(?:src|href)="([^"]+\.js[^"]*)"', tt)[:8]
-                  print("  JS:", srcs)
-                  apis = sorted(set(re.findall(r'"(/[^"]*api[^"]*)"', tt)))[:10]
-                  print("  api 문자열:", apis)
-                  break
-          # 내려받기 호스트에 흔한 꼴을 몇 개 찔러본다 (없는 docID 라도 401/403/404 구분이 정보다)
-          for u in ("https://disclosure2dl.edinet-fsa.go.jp/searchdocument/pdf/S100TEST.pdf",
-                    "https://disclosure2dl.edinet-fsa.go.jp/searchdocument/zip/S100TEST.zip"):
-              peek(u)
-
-          print("== (c) ullet ==")
-          t = peek("https://www.ullet.com/7936.html")
-          if t:
-              print("  세그먼트 낱말:", "세그" if "セグメント" in t else "없음",
-                    "· 売上 표:", t.count("売上高"))
+              with urllib.request.urlopen(req, timeout=20) as r:
+                  return r.read().decode("utf-8", "replace")
+          t = get("https://disclosure2.edinet-fsa.go.jp/week0010.aspx")
+          print("길이", len(t))
+          # 폼과 입력들
+          for m in re.finditer(r'<form[^>]*>', t)[:3] if False else []:
+              pass
+          forms = re.findall(r'<form[^>]{0,200}', t)[:3]
+          print("form:", forms)
+          names = sorted(set(re.findall(r'<(?:input|select)[^>]*name="([^"]+)"', t)))[:30]
+          print("입력:", names)
+          # 링크·문서번호·내려받기 흔적
+          links = sorted(set(re.findall(r'(?:href|action)="([^"]{5,120})"', t)))
+          print("링크", len(links), "개 중 aspx/dl:")
+          for l in links:
+              if "aspx" in l.lower() or "dl" in l.lower():
+                  print("  ", l[:110])
+          docids = sorted(set(re.findall(r'S100[0-9A-Z]{4}', t)))[:10]
+          print("문서번호:", docids)
+          js = sorted(set(re.findall(r'"(WZEK[^"]{0,80})"', t)))[:6]
+          print("WZEK:", js)
+          # 자바스크립트 열기 함수의 인자 꼴
+          opens = re.findall(r'WindowOpen[^;]{0,140}', t)[:4]
+          print("WindowOpen:", opens)
           EOF
 
-      # 12차 — 둘을 떠본다.
-      # (a) 아식스 세그먼트 장에서 '일본' 지역 행이 왜 안 뽑히나 — 문맥 이름 전수
-      # (b) EDINET(일본판 EDGAR)이 열쇠 없이 열리나 — 과거 분기·반기 보고서의
-      #     세그먼트 XBRL 로 부문 이력(2022~)을 채울 수 있는지
-      - name: 🇯🇵 아식스 일본행 + EDINET 문 (12차)
-        timeout-minutes: 6
-        run: |
-          python - <<'EOF'
-          import io, re, zipfile
-          import scrape_fin_jp as fj
-
-          rows = fj.announcements("2026-08-14")
-          hit = [r for r in rows if r["code"] == "7936"]
-          if hit:
-              blob = fj.get("https://www.release.tdnet.info/inbs/" + hit[0]["zip"], binary=True)
-              z = zipfile.ZipFile(io.BytesIO(blob))
-              sg = [n for n in z.namelist() if "scsg" in n or "qcsg" in n]
-              print("세그먼트 장:", sg)
-              if sg:
-                  txt = z.read(sg[0]).decode("utf-8", "replace")
-                  # 문맥 정의 전수 — Japan 이 어디 있나
-                  ids = set(re.findall(r'contextRef="([^"]+)"', txt))
-                  segish = sorted({i for i in ids if re.search(r"Segment|Japan|Domestic", i, re.I)})
-                  print("문맥", len(ids), "· 부문/일본 후보:")
-                  for c in segish[:40]:
-                      print("  ", c)
-          EOF
-
-          python - <<'EOF'
-          import json, urllib.request
-          UA = {"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) Chrome/124.0"}
-          def peek(url):
-              req = urllib.request.Request(url, headers=UA)
-              try:
-                  with urllib.request.urlopen(req, timeout=20) as r:
-                      b = r.read()
-                      print(f"{r.status} {len(b):,}B  {url}")
-                      return b
-              except Exception as e:
-                  print(f"ERR {e}  {url}")
-          # v1(구) / v2(열쇠 요구?) 문서 목록
-          peek("https://api.edinet-fsa.go.jp/api/v1/documents.json?date=2023-08-10&type=2")
-          b = peek("https://api.edinet-fsa.go.jp/api/v2/documents.json?date=2023-08-10&type=2")
-          if b:
-              d = json.loads(b.decode("utf-8", "replace"))
-              res = d.get("results") or []
-              print("  v2 결과", len(res), "· 메타:", json.dumps(d.get("metadata", {}), ensure_ascii=False)[:200])
-              q = [r for r in res if (r.get("docTypeCode") in ("140", "160")) ][:3]
-              for r in q:
-                  print("  ", r.get("docID"), r.get("secCode"), r.get("filerName"), r.get("docDescription"))
-              if q:
-                  did = q[0]["docID"]
-                  # 열쇠 없이 XBRL zip 이 내려오나 (type=1 제출본문서)
-                  peek(f"https://api.edinet-fsa.go.jp/api/v2/documents/{did}?type=1")
-          EOF
       # 10차 — 미국 실적 보도자료(8-K EX-99). 브리핑 칸의 '회사가 한 말' 원문이
       # EDGAR 에서 뽑히는지, 인용문·가이던스 문단이 실제로 걸리는지 본다.
       - name: 🇺🇸 8-K 보도자료 발췌 확인 (10차)
