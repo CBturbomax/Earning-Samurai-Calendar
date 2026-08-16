@@ -12,7 +12,6 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 12
     env:
-      EDINET_API_KEY: ${{ secrets.EDINET_API_KEY }}
       EDINETDB_KEY: ${{ secrets.EDINETDB_KEY }}
     steps:
       - uses: actions/checkout@v4
@@ -20,107 +19,64 @@ jobs:
         with:
           python-version: '3.12'
 
-      # 20차 — 우회로 본선. irbank 은 데이터센터 IP 를 403 으로 막았다(닛케이와
-      # 같은 벽). EDINET DB(edinetdb.jp)는 EDINET 을 이미 파싱해 '보고 세그먼트'를
-      # 무료 API 로 낸다 — API 서비스라 데이터센터 IP 를 막지 않을 것으로 본다.
-      # status·search 는 키 없이 열린다(문서). 키 없이 (1) CI 에서 닿는지 (2)
-      # 엔드포인트 경로 (3) 세그먼트가 어떤 꼴로 오는지 확인한다. 종목당 한 번
-      # 요청으로 전체 이력을 준다면 무료 100건/일로도 시총 순 자동 백필이 된다.
-      - name: 🇯🇵 EDINET DB 우회로 (20차)
+      # 21차 — EDINET DB 가 우회로로 확정됐다(20차: CI 도달 OK · 검색 키 없이 OK ·
+      # 세그먼트 경로 /v1/companies/{E코드}/segments 는 401=경로 맞고 키만 필요).
+      # 이번엔 (A) 가입 절차를 문서에서 읽어 회원님께 정확히 안내하고, (B) 키가
+      # 시크릿(EDINETDB_KEY)에 있으면 세그먼트를 실제로 뜯어 이력 길이·단위·필드를
+      # 확인해 곧장 수집기를 짤 수 있게 한다.
+      - name: 🇯🇵 EDINET DB 가입 안내·세그먼트 형식 (21차)
         timeout-minutes: 6
         run: |
           python - <<'EOF'
-          import json, os, urllib.request, urllib.error
+          import json, os, re, urllib.request, urllib.error
           KEY = os.environ.get("EDINETDB_KEY") or ""
-          BASE_HOSTS = ("https://edinetdb.jp", "https://edinetdb.com")
-          def get(url, key=False):
+          def raw(url, key=False):
               h = {"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) Chrome/124.0",
-                   "Accept": "application/json,*/*"}
+                   "Accept": "text/html,application/json,*/*",
+                   "Accept-Language": "ja,en;q=0.8"}
               if key and KEY:
                   h["X-API-Key"] = KEY
-              req = urllib.request.Request(url, headers=h)
               try:
-                  with urllib.request.urlopen(req, timeout=30) as r:
+                  with urllib.request.urlopen(urllib.request.Request(url, headers=h), timeout=30) as r:
                       return r.status, r.read().decode("utf-8", "replace")
               except urllib.error.HTTPError as e:
-                  return e.code, e.read().decode("utf-8", "replace")[:400]
+                  return e.code, e.read().decode("utf-8", "replace")
               except Exception as e:
                   return None, f"{type(e).__name__}: {e}"
+          def visible(t):
+              t = re.sub(r"<(script|style)[^>]*>.*?</\1>", " ", t, flags=re.S | re.I)
+              return re.sub(r"\s+", " ", re.sub(r"<[^>]+>", " ", t)).strip()
 
-          def show(tag, st, body, n=400):
-              cut = body[:n].replace("\n", " ")
-              print(f"   {tag}: status={st}  {len(body):,}자  {cut}")
+          # (A) 가입·요금·인증 안내 — 문서 페이지에서 사람이 읽을 대목만
+          for url in ("https://edinetdb.jp/developers",
+                      "https://edinetdb.com/docs/api",
+                      "https://edinetdb.com/docs/api-reference"):
+              st, body = raw(url)
+              t = visible(body) if isinstance(body, str) else ""
+              print(f"\n== {url}  status={st}  본문 {len(t):,}자")
+              for kw in ("sign up", "Sign up", "register", "無料", "API key", "API Key",
+                         "X-API-Key", "100", "per day", "1日", "segment", "Segment"):
+                  i = t.find(kw)
+                  if i >= 0:
+                      print(f"   [{kw}] …{t[max(0,i-50):i+130]}…")
 
-          # (1) 키 없이 열린다는 status·search 로 CI 도달성부터 본다
-          host = None
-          for h in BASE_HOSTS:
-              st, body = get(h + "/v1/status")
-              print(f"\n== {h}/v1/status")
-              show("status", st, body)
-              if st is not None:
-                  host = host or h
-          if not host:
-              print("두 호스트 다 CI 에서 못 닿는다 — 여기도 데이터센터 차단일 수 있다")
-              raise SystemExit
-          print(f"\n== 도달 호스트: {host}")
-
-          # (2) 검색(키 없이) — E 코드/종목코드로 회사를 찾는 길이 있는지
-          for path in ("/v1/search?q=asics", "/v1/search?q=7936",
-                       "/v1/companies?per_page=3"):
-              st, body = get(host + path)
-              show(path, st, body, 300)
-
-          # (3) 세그먼트 엔드포인트 경로 후보 — 키 없으면 401 이 정상,
-          #     그 401 꼴로 '경로가 맞는지'와 '키를 어떻게 넘기는지'를 읽는다.
-          #     키가 시크릿에 있으면 실제 데이터까지 뜯어 이력 길이를 잰다.
-          print("\n== 세그먼트 엔드포인트 후보 (E02378 아식스)")
-          for path in ("/v1/companies/E02378/segments",
-                       "/v1/companies/E02378/reportable-segments",
-                       "/v1/companies/E02378/reportable_segments",
-                       "/v1/companies/E02378/financials",
-                       "/v1/segments?edinetCode=E02378",
-                       "/v1/reportable-segments?edinetCode=E02378"):
-              st, body = get(host + path, key=True)
-              show(path, st, body, 500)
-              if st == 200:
-                  try:
-                      j = json.loads(body)
-                      if isinstance(j, dict):
-                          print("      키:", list(j)[:12])
-                          data = j.get("data") or j.get("segments") or j.get("results")
-                          if isinstance(data, list) and data:
-                              print("      건수:", len(data), "· 첫 원소:", json.dumps(data[0], ensure_ascii=False)[:300])
-                      elif isinstance(j, list) and j:
-                          print("      리스트", len(j), "· 첫 원소:", json.dumps(j[0], ensure_ascii=False)[:300])
-                  except ValueError:
-                      pass
-          print("\n키 보유:", "예" if KEY else "아니오(키 없이 경로·인증 꼴만 확인)")
-          EOF
-
-      # 17차 열쇠 — EDINET 공식 v2. 키가 시크릿에 올라오면 그때만 돈다.
-      - name: 🇯🇵 EDINET v2 자물쇠 (공식 키 있을 때만)
-        if: env.EDINET_API_KEY != ''
-        timeout-minutes: 8
-        run: |
-          python - <<'EOF'
-          import io, json, os, re, urllib.request, zipfile
-          KEY = os.environ["EDINET_API_KEY"]
-          UA = {"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) Chrome/124.0"}
-          def get(url):
-              with urllib.request.urlopen(urllib.request.Request(url, headers=UA), timeout=60) as r:
-                  return r.read()
-          picked = None
-          for day in ("2026-03-27", "2023-08-10", "2021-08-06"):
+          # (B) 키가 있으면 세그먼트 실물을 뜯는다
+          if KEY:
+              st, body = raw("https://edinetdb.jp/v1/companies/E02378/segments", key=True)
+              print(f"\n== 아식스 세그먼트 status={st}  {len(body):,}자")
               try:
-                  j = json.loads(get("https://api.edinet-fsa.go.jp/api/v2/documents.json"
-                                     f"?date={day}&type=2&Subscription-Key={KEY}"))
-              except Exception as e:
-                  print(day, "실패:", getattr(e, "code", type(e).__name__)); continue
-              rep = [d for d in (j.get("results") or [])
-                     if d.get("docTypeCode") in ("120", "140", "160") and d.get("xbrlFlag") == "1"]
-              print(day, "보고서", len(rep))
-              if rep and not picked:
-                  picked = rep[0]
-          if picked:
-              print("문서 예:", picked["docID"], (picked.get("filerName") or "")[:18])
+                  j = json.loads(body)
+                  print("   최상위 키:", list(j) if isinstance(j, dict) else f"list[{len(j)}]")
+                  data = j.get("data") if isinstance(j, dict) else j
+                  if isinstance(data, list) and data:
+                      print("   기간 수:", len(data))
+                      print("   첫 원소:", json.dumps(data[0], ensure_ascii=False)[:400])
+                      print("   끝 원소:", json.dumps(data[-1], ensure_ascii=False)[:400])
+                  elif isinstance(data, dict):
+                      print("   data 키:", list(data)[:15])
+                      print("   일부:", json.dumps(data, ensure_ascii=False)[:500])
+              except ValueError:
+                  print("   JSON 아님:", body[:300])
+          else:
+              print("\n키 없음 — (B) 건너뜀. EDINETDB_KEY 시크릿이 올라오면 이 단이 실물을 뜯는다.")
           EOF
