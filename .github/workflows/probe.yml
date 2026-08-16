@@ -61,6 +61,38 @@ jobs:
                   r'href="([^"]*(?:mode=|\.aspx)[^"]*)"', body, re.I)))[:10])
           EOF
 
+      # 18차 — 로그인 뒤 키 화면이 「現在使用できない」로 막혔다(토요일 낮).
+      # 정기점검 공지는 8/29~30 뿐이라 다른 원인이다 — 금융청 가동상황 페이지와
+      # EDINET FAQ 에서 키 발급 화면의 이용 시간·정지 안내를 떠본다.
+      - name: 🇯🇵 EDINET 가동시간·상태 (18차)
+        timeout-minutes: 5
+        run: |
+          python - <<'EOF'
+          import re, urllib.request
+          UA = {"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) Chrome/124.0",
+                "Accept": "text/html,*/*", "Accept-Language": "ja,en;q=0.8"}
+          def visible(t):
+              t = re.sub(r"<(script|style)[^>]*>.*?</\1>", " ", t, flags=re.S | re.I)
+              t = re.sub(r"<[^>]+>", " ", t)
+              return re.sub(r"\s+", " ", t).strip()
+          for url in ("https://www.fsa.go.jp/search/edinet-Information/information-01.html",
+                      "https://disclosure2dl.edinet-fsa.go.jp/guide/static/disclosure/WZEK0090.html"):
+              try:
+                  with urllib.request.urlopen(urllib.request.Request(url, headers=UA), timeout=30) as r:
+                      body = r.read().decode("utf-8", "replace")
+              except Exception as e:
+                  print(f"\n== {url}\n   실패 {e}")
+                  continue
+              t = visible(body)
+              print(f"\n== {url}  {len(body):,}자")
+              # 이용시간·정지·APIキー 언저리를 앞뒤로 뜯어 보여준다
+              for kw in ("利用時間", "稼働時間", "停止", "メンテナンス", "APIキー", "利用でき"):
+                  for m in re.finditer(kw, t):
+                      s = max(0, m.start() - 60)
+                      print(f"   [{kw}] …{t[s:m.start() + 140]}…")
+                      break                    # 키워드마다 첫 대목만
+          EOF
+
       # 17차 보조 — 아식스(7936) 부문 표에서 '일본(국내)' 행만 왜 떨어지는지.
       # 12차에서 Japan 문맥이 있는 것은 확인했다. 이번에는 그 문맥을 가리키는
       # 사실(fact)들의 이름·값·부호·자릿수를 전부 떠서 어느 관문(SEG_REV 태그?
