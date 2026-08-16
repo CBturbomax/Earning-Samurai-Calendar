@@ -19,153 +19,79 @@ jobs:
         with:
           python-version: '3.12'
 
-      # 17차 — EDINET API 키 포털. 회원가입을 마친 사용자가 ?mode=1 을 다시 열자
-      # 흰 화면이 됐다. mode 마다 무엇이 그려지는지(가입/로그인/키 확인) 떠서
-      # '키가 보이는 문'이 어디인지 확인한다. ?mode=1 은 신규 가입 전용이라
-      # 가입을 마친 뒤에는 그릴 게 없을 것으로 본다 — 짐작 말고 확인.
-      - name: 🇯🇵 EDINET 키 포털 문 찾기 (17차)
-        timeout-minutes: 5
-        run: |
-          python - <<'EOF'
-          import re, urllib.request
-          UA = {"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) Chrome/124.0",
-                "Accept": "text/html,*/*", "Accept-Language": "ja,en;q=0.8"}
-          def attr(tag, k):
-              m = re.search(k + r'="([^"]*)"', tag)
-              return m.group(1) if m else ""
-          def visible(t):
-              t = re.sub(r"<(script|style)[^>]*>.*?</\1>", " ", t, flags=re.S | re.I)
-              t = re.sub(r"<[^>]+>", " ", t)
-              return re.sub(r"\s+", " ", t).strip()
-          for tail in ("", "?mode=1", "?mode=2", "?mode=3"):
-              url = "https://api.edinet-fsa.go.jp/api/auth/index.aspx" + tail
-              req = urllib.request.Request(url, headers=UA)
-              try:
-                  with urllib.request.urlopen(req, timeout=30) as r:
-                      body = r.read().decode("utf-8", "replace")
-                      print(f"\n== {tail or '(민짜)'}  {r.status} {len(body):,}자  최종 …{r.geturl()[-60:]}")
-              except Exception as e:
-                  print(f"\n== {tail or '(민짜)'}  실패 {e}")
-                  continue
-              m = re.search(r"<title[^>]*>([^<]*)</title>", body, re.I)
-              print("   제목:", m.group(1).strip() if m else "(없음)")
-              print("   글:", visible(body)[:360])
-              btns = []
-              for tag in re.findall(r"<input[^>]*>", body, re.I):
-                  if attr(tag, "type").lower() == "hidden":
-                      continue
-                  btns.append((attr(tag, "type"), attr(tag, "name")[:26],
-                               attr(tag, "value")[:22]))
-              print("   입력·단추:", btns[:14])
-              print("   링크:", sorted(set(re.findall(
-                  r'href="([^"]*(?:mode=|\.aspx)[^"]*)"', body, re.I)))[:10])
-          EOF
-
-      # 18차 — 로그인 뒤 키 화면이 「現在使用できない」로 막혔다(토요일 낮).
-      # 정기점검 공지는 8/29~30 뿐이라 다른 원인이다 — 금융청 가동상황 페이지와
-      # EDINET FAQ 에서 키 발급 화면의 이용 시간·정지 안내를 떠본다.
-      - name: 🇯🇵 EDINET 가동시간·상태 (18차)
-        timeout-minutes: 5
-        run: |
-          python - <<'EOF'
-          import re, urllib.request
-          UA = {"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) Chrome/124.0",
-                "Accept": "text/html,*/*", "Accept-Language": "ja,en;q=0.8"}
-          def visible(t):
-              t = re.sub(r"<(script|style)[^>]*>.*?</\1>", " ", t, flags=re.S | re.I)
-              t = re.sub(r"<[^>]+>", " ", t)
-              return re.sub(r"\s+", " ", t).strip()
-          for url in ("https://www.fsa.go.jp/search/edinet-Information/information-01.html",
-                      "https://disclosure2dl.edinet-fsa.go.jp/guide/static/disclosure/WZEK0090.html"):
-              try:
-                  with urllib.request.urlopen(urllib.request.Request(url, headers=UA), timeout=30) as r:
-                      body = r.read().decode("utf-8", "replace")
-              except Exception as e:
-                  print(f"\n== {url}\n   실패 {e}")
-                  continue
-              t = visible(body)
-              print(f"\n== {url}  {len(body):,}자")
-              # 이용시간·정지·APIキー 언저리를 앞뒤로 뜯어 보여준다
-              for kw in ("利用時間", "稼働時間", "停止", "メンテナンス", "APIキー", "利用でき"):
-                  for m in re.finditer(kw, t):
-                      s = max(0, m.start() - 60)
-                      print(f"   [{kw}] …{t[s:m.start() + 140]}…")
-                      break                    # 키워드마다 첫 대목만
-          EOF
-
-      # 17차 보조 — 아식스(7936) 부문 표에서 '일본(국내)' 행만 왜 떨어지는지.
-      # 12차에서 Japan 문맥이 있는 것은 확인했다. 이번에는 그 문맥을 가리키는
-      # 사실(fact)들의 이름·값·부호·자릿수를 전부 떠서 어느 관문(SEG_REV 태그?
-      # 문맥 기간? 부호?)에서 버려지는지 짚는다. 진짜 파서도 같이 태워 견준다.
-      - name: 🇯🇵 아식스 국내 부문 행 (17차 보조)
+      # 19차 — 우회로. EDINET 키가 며칠째 막혀(로그인 뒤 키 화면이 「現在使用できない」)
+      # 다른 길을 찾는다. irbank.net 이 EDINET 공시를 이미 파싱해 **지역·사업
+      # 부문별 매출 추이**를 서버렌더 HTML 표로 낸다(무료·키 없음·전 종목). 예전
+      # 실적수치 probe 에서 IR뱅크가 403 이었는데 그건 다른 경로였을 수 있다 —
+      # 이 정확한 세그먼트 URL 을 제대로 된 브라우저 헤더로 두드려 (1) 열리는지
+      # (2) 표에 몇 개년치가 있는지 (3) 분기/반기/연간 어느 단위인지 (4) 파서가
+      # 뽑을 수 있는 꼴인지 본다. E 코드는 EDINET 코드(아식스 E02378).
+      - name: 🇯🇵 irbank 세그먼트 매출 (19차)
         timeout-minutes: 6
         run: |
           python - <<'EOF'
-          import io, zipfile
-          from datetime import date, timedelta
-          import scrape_fin_jp as fj
-          blob = None
-          for back in range(12):
-              day = (date.today() - timedelta(days=back)).isoformat()
+          import re, time, urllib.request
+          UA = {"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
+                              "AppleWebKit/537.36 (KHTML, like Gecko) "
+                              "Chrome/124.0.0.0 Safari/537.36",
+                "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+                "Accept-Language": "ja,en-US;q=0.8,en;q=0.5",
+                "Referer": "https://irbank.net/"}
+          def get(url):
+              req = urllib.request.Request(url, headers=UA)
               try:
-                  rows = fj.announcements(day)
+                  with urllib.request.urlopen(req, timeout=30) as r:
+                      return r.status, r.read().decode("utf-8", "replace"), r.geturl()
+              except urllib.error.HTTPError as e:
+                  return e.code, e.read().decode("utf-8", "replace")[:200], url
               except Exception as e:
-                  print(day, "목록 실패:", e)
-                  continue
-              for r in rows:
-                  if r["code"] == "7936" and "短信" in r["title"]:
-                      print("공시:", day, r["title"][:60])
-                      blob = fj.get("https://www.release.tdnet.info/inbs/" + r["zip"],
-                                    binary=True)
-                      break
-              if blob:
-                  break
-          if not blob:
-              print("최근 12일 목록에 아식스 결산단신이 없다")
-              raise SystemExit
-          z = zipfile.ZipFile(io.BytesIO(blob))
-          docs = {n: z.read(n).decode("utf-8", "replace")
-                  for n in z.namelist() if n.lower().endswith(("ixbrl.htm", ".xbrl"))}
-          ctx = {cid for txt in docs.values() for cid, _ in fj.CTX_RE.findall(txt)}
-          jap = sorted(c for c in ctx if "japan" in c.lower())
-          print(f"문맥 {len(ctx)}개 · Japan 문맥 {len(jap)}개")
-          for c in jap[:10]:
-              print("   ", c)
-          # 파일마다: 부문 문맥을 가리키는 사실 이름 전수 조사. 별표는 SEG_REV 에
-          # 있는(우리가 줍는) 이름 — 해외 행이 살아난 태그와 국내 행이 버려진
-          # 태그가 다른지, 어느 파일의 어느 표에서 오는지 한눈에 본다.
-          for n, txt in docs.items():
-              if "Attachment" not in n:
-                  continue
-              names = {}
-              for attrs, inner in fj.IX_FACT.findall(txt):
-                  a = dict(fj.IX_ATTR.findall(attrs))
-                  m = fj.seg_member(a.get("contextRef") or "")
-                  if not m:
+                  return None, f"{type(e).__name__}: {e}", url
+
+          def strip(t):
+              return re.sub(r"\s+", " ", re.sub(r"<[^>]+>", " ", t)).strip()
+
+          # E 코드 몇 종목 — 아식스·도요타·소니로 일반성 확인
+          for ecode, name in (("E02378", "아식스"), ("E02144", "도요타"),
+                              ("E01777", "소니")):
+              for path in (f"/{ecode}/segment", f"/{ecode}/segment2"):
+                  url = "https://irbank.net" + path
+                  st, body, final = get(url)
+                  size = len(body) if isinstance(body, str) else 0
+                  print(f"\n== {name} {url}  status={st}  {size:,}자  최종 …{final[-40:]}")
+                  if st != 200 or size < 500:
+                      print("   본문:", body[:180] if isinstance(body, str) else body)
                       continue
-                  nm = (a.get("name") or "").rsplit(":", 1)[-1]
-                  slot = names.setdefault(nm, [0, set()])
-                  slot[0] += 1
-                  slot[1].add(fj.seg_name(m)[:16])
-              if names:
-                  print("\n==", n.split("/")[-1][:58])
-                  for nm, (c, mem) in sorted(names.items(), key=lambda kv: -kv[1][0]):
-                      star = "*" if nm in fj.SEG_REV_RANK else " "
-                      print(f"   {star} {nm[:46]:48s} {c:>3}건  {sorted(mem)[:5]}")
-          got = fj.read_segments(blob)
-          for st, en, row in got:
-              print(f"\nread_segments {st}~{en}")
-              for k, v in sorted(row.items()):
-                  print(f"    {k[:64]:66s} {v:>16,.0f}")
-              clean = {k: round(v / 1e9, 1) for k, v in fj.seg_clean(row).items()}
-              print("  seg_clean(십억) ->", clean)
+                  # 표(table)들을 뜯어 머리행(기간)과 왼쪽 라벨(부문)을 본다
+                  tables = re.findall(r"<table[^>]*>.*?</table>", body, re.S | re.I)
+                  print(f"   표 {len(tables)}개")
+                  for ti, tb in enumerate(tables[:3]):
+                      rows = re.findall(r"<tr[^>]*>(.*?)</tr>", tb, re.S | re.I)
+                      if len(rows) < 2:
+                          continue
+                      print(f"   [표{ti}] 행 {len(rows)}")
+                      for ri, rw in enumerate(rows[:9]):
+                          cells = re.findall(r"<t[dh][^>]*>(.*?)</t[dh]>", rw, re.S | re.I)
+                          vals = [strip(c)[:14] for c in cells]
+                          print(f"      r{ri}: {vals[:12]}")
+                  # 기간 표기(연도·분기)가 몇 개 있는지 — 이력 길이 가늠
+                  yrs = sorted(set(re.findall(r"(20[12]\d)[/年.]", body)))
+                  qs = re.findall(r"(第[1-4１-４]四半期|中間|通期|Q[1-4])", body)
+                  print(f"   연도 표기: {yrs}  · 분기/반기 어휘 {len(qs)}개")
+                  break     # segment 가 열리면 segment2 는 생략
+              time.sleep(1.0)
+
+          # JSON·CSV 뒷문이 있는지도 떠본다 — 있으면 파싱이 훨씬 싸다
+          for suf in ("/E02378/segment.json", "/api/segment/E02378",
+                      "/E02378/segment.csv"):
+              st, body, _ = get("https://irbank.net" + suf)
+              print(f"\n-- 뒷문 {suf}  status={st}  "
+                    f"{len(body) if isinstance(body,str) else 0}자  "
+                    f"{(body[:80] if isinstance(body,str) else body)}")
           EOF
 
-      # 17차 열쇠 — 저장소 시크릿에 EDINET_API_KEY 가 올라오면 그때부터 도는 단.
-      # (키가 없으면 통째로 건너뛴다.) v2 문서목록이 진짜로 열리는지, 2021·2023
-      # 옛 사분기보고서까지 주는지, XBRL zip 안에 부문 축이 있는지까지 본다.
-      # 키를 로그에 찍지 않는다 — 요청 주소도 안 찍는다.
-      - name: 🇯🇵 EDINET v2 자물쇠 (17차 · 키 있을 때만)
+      # 17차 열쇠 — EDINET_API_KEY 시크릿이 올라오면 그때부터 도는 단.
+      # (키가 없으면 통째로 건너뛴다.) 우회로가 잡히면 이 길은 안 써도 된다.
+      - name: 🇯🇵 EDINET v2 자물쇠 (키 있을 때만)
         if: env.EDINET_API_KEY != ''
         timeout-minutes: 8
         run: |
@@ -189,9 +115,6 @@ jobs:
               rep = [d for d in docs if d.get("docTypeCode") in ("120", "140", "160")
                      and d.get("xbrlFlag") == "1"]
               print(day, "전체", len(docs), "· 보고서(120/140/160)", len(rep))
-              for d in rep[:4]:
-                  print("   ", d.get("docID"), d.get("docTypeCode"),
-                        d.get("secCode"), (d.get("filerName") or "")[:18])
               if rep and not picked:
                   picked = rep[0]
           if not picked:
@@ -199,17 +122,13 @@ jobs:
               raise SystemExit
           z = get("https://api.edinet-fsa.go.jp/api/v2/documents/"
                   f"{picked['docID']}?type=1&Subscription-Key={KEY}")
-          print("zip", f"{len(z):,}B", picked["docID"],
-                (picked.get("filerName") or "")[:18])
+          print("zip", f"{len(z):,}B", picked["docID"], (picked.get("filerName") or "")[:18])
           zf = zipfile.ZipFile(io.BytesIO(z))
-          pub = [n for n in zf.namelist() if "PublicDoc" in n]
-          print("PublicDoc", len(pub), "장:", [p.split("/")[-1][:40] for p in pub[:5]])
-          for n in pub:
-              if not n.endswith((".xbrl", ".htm")):
-                  continue
-              x = zf.read(n).decode("utf-8", "replace")
-              mem = sorted(set(re.findall(r"([A-Za-z0-9]{2,40}SegmentMember)", x)))
-              if mem:
-                  print(n.split("/")[-1][:44], "부문 멤버:", mem[:14])
-                  break
+          for n in zf.namelist():
+              if "PublicDoc" in n and n.endswith((".xbrl", ".htm")):
+                  x = zf.read(n).decode("utf-8", "replace")
+                  mem = sorted(set(re.findall(r"([A-Za-z0-9]{2,40}SegmentMember)", x)))
+                  if mem:
+                      print(n.split("/")[-1][:44], "부문 멤버:", mem[:14])
+                      break
           EOF
