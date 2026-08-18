@@ -33,11 +33,26 @@ import time
 from datetime import date
 from pathlib import Path
 
+import io
+import re
+import xml.etree.ElementTree as ET
+
 import scrape_seg_sec as ss
-from scrape_seg_edgar import (absorb, get, instance_url, parse_instance)
+from scrape_seg_edgar import (absorb, ddate_of, get, instance_url, local,
+                              parse_instance, qtrs_of)
+
+# 회사 전체(부문 축이 안 걸린) 매출·영업이익. 부문을 뽑으려고 이미 받아 둔
+# 인스턴스에서 같이 뽑는다 — 요청이 한 번도 안 는다.
+OPI_TAGS = ["OperatingIncomeLoss", "ProfitLossFromOperatingActivities",
+            "OperatingProfitLoss", "ProfitLossFromOperations"]
 
 HERE = Path(__file__).parent
 OUT = HERE / "data" / "segments_fpi.json"
+# **실적 수치도 여기서 낸다.** 아메르스포츠 같은 외국 기업은 10-Q 를 안 내므로
+# SEC 분기 수치(financials.json)가 없고, stockanalysis 는 며칠 늦다 — 실제로
+# 8/18 아침에 발표한 6월 분기가 그날 저녁까지 안 실렸다. 부문을 뽑는 그 6-K
+# 인스턴스에 회사 전체 매출·영업이익도 함께 있으므로 같이 담는다.
+FIN_OUT = HERE / "data" / "financials_fpi.json"
 
 # 2: 표시축(SegmentConsolidationItems)·지역축(GeographicalAreas)·HSBC 의 매출
 #    항목을 알아보게 고쳤다. 이미 본 서류를 다시 뜯어야 하므로 판을 올린다.
@@ -136,6 +151,79 @@ def xbrl_filings(cik):
     return out
 
 
+def totals(blob):
+    """인스턴스 -> {(종료일, 기간길이): {"rev": 매출, "opi": 영업이익}}
+
+    **부문 축이 안 걸린 문맥만** 쓴다. 축이 걸린 값은 부문 매출이라 그것을
+    회사 전체로 적으면 매출이 조각난다. 회계기준은 안 가린다(국내 us-gaap ·
+    외국 ifrs-full · 회사 확장) — 이름으로만 거른다.
+    """
+    ctx, out = {}, {}
+    rev_rank, opi_rank = ss.REV_RANK, {t: i for i, t in enumerate(OPI_TAGS)}
+    try:
+        for ev, el in ET.iterparse(io.BytesIO(blob), events=("end",)):
+            n = local(el.tag)
+            if n == "context":
+                cid, dims, st, en = el.get("id"), 0, "", ""
+                for m in el.iter():
+                    lm = local(m.tag)
+                    if lm == "explicitMember":
+                        dims += 1
+                    elif lm == "startDate":
+                        st = (m.text or "").strip()
+                    elif lm == "endDate":
+                        en = (m.text or "").strip()
+                if cid and not dims and st and en:
+                    ctx[cid] = (st, en)
+                el.clear()
+            elif el.get("contextRef"):
+                slot = ctx.get(el.get("contextRef"))
+                r, o = rev_rank.get(n), opi_rank.get(n)
+                if slot and (r is not None or o is not None):
+                    txt = (el.text or "").strip().replace(",", "")
+                    if re.fullmatch(r"-?\d+(\.\d+)?", txt or ""):
+                        q = qtrs_of(*slot)
+                        if q:
+                            # 열쇠는 부문 쪽과 같은 꼴(YYYYMMDD, 월말 반올림)이라야
+                            # ss.quarterly 의 '한 분기 앞' 셈이 맞는다.
+                            key = (ddate_of(slot[1]), q)
+                            box = out.setdefault(key, {})
+                            val = float(txt)
+                            if r is not None and (box.get("revRank", 99) > r):
+                                box["rev"], box["revRank"] = val, r
+                            if o is not None and (box.get("opiRank", 99) > o):
+                                box["opi"], box["opiRank"] = val, o
+                el.clear()
+    except ET.ParseError:
+        return {}
+    return out
+
+
+def fin_points(raw):
+    """{(종료일, 기간길이): 값} -> 화면용 분기(또는 반기) 점 목록.
+
+    누계를 되돌리는 규칙은 부문과 한 벌이다 — `scrape_seg_sec.quarterly` 를
+    그대로 부른다. 분기가 하나도 안 나오면 그쪽이 반기로 돌려준다(HSBC 류).
+    """
+    pts = []
+    for field in ("rev", "opi"):
+        one = {k: (v[field], "") for k, v in raw.items() if field in v}
+        for end, val in ss.quarterly(one).items():
+            pts.append((end, field, val))
+    by_end = {}
+    for end, field, val in pts:
+        by_end.setdefault(end, {})[field] = val
+    out = []
+    for end in sorted(by_end):
+        if "rev" not in by_end[end]:
+            continue
+        # 분기 이름표는 build.py 가 붙인다(SEC 프레임·unstack 을 거친 규칙이라
+        # 여기서 어림하는 것보다 옳다). 여기서는 종료일과 값만 남긴다.
+        out.append({"end": f"{end[:4]}-{end[4:6]}-{end[6:]}",
+                    "rev": by_end[end]["rev"], "opi": by_end[end].get("opi")})
+    return out
+
+
 def collect():
     old = load_old()
     done = set(old.get("done", []))
@@ -145,6 +233,7 @@ def collect():
     cikmap = ss.cik_map()
 
     facts, pairs, by_cik = {}, {}, {}
+    fin_raw = {}                 # 종목 -> {(종료일, 기간길이): ({rev,opi}, 접수일)}
     walked = docs = 0
     for sym in codes[:PER_RUN]:
         cik = ss.cik_of(cikmap, sym)
@@ -185,14 +274,21 @@ def collect():
                 got += 1
                 absorb(facts, pairs, cik, filed, acc, rows)
                 by_cik.setdefault(cik, []).append(sym)
+            # 부문이 안 나온 서류에도 회사 전체 수치는 있다(표지뿐인 6-K 제외).
+            for k, v in totals(blob).items():
+                cur = fin_raw.setdefault(sym, {}).get(k)
+                if cur is None or filed >= cur[1]:
+                    fin_raw.setdefault(sym, {})[k] = (v, filed)
             time.sleep(PAUSE)
         if got:
             print(f"    {sym}: 서류 {got}장 · 부문 행 "
                   f"{len(facts.get(cik, {})) + len(pairs.get(cik, {}))}축", flush=True)
 
     made = save(old, facts, pairs, by_cik, done, seen)
+    fin_made = save_fin(fin_raw)
     print(f"  {walked:,}곳을 보고 서류 {docs:,}장에서 {made:,}종목 부문을 얻었다"
           f" -> {OUT}")
+    print(f"  실적 수치는 {fin_made:,}종목 -> {FIN_OUT}")
 
 
 def save(old, facts, pairs, by_cik, done, seen):
@@ -229,6 +325,42 @@ def save(old, facts, pairs, by_cik, done, seen):
     tmp = OUT.with_suffix(".tmp")
     tmp.write_text(json.dumps(old, ensure_ascii=False), encoding="utf-8")
     tmp.replace(OUT)
+    return made
+
+
+def save_fin(fin_raw):
+    """전사 수치를 financials_fpi.json 에 담는다. 열쇠는 `us:티커`.
+
+    **덮어쓰지 않고 합친다.** 한 실행이 훑는 것은 시총 순 일부라, 통째로 쓰면
+    지난 실행에서 얻은 종목이 사라진다.
+    """
+    old = {}
+    if FIN_OUT.exists():
+        try:
+            old = json.loads(FIN_OUT.read_text(encoding="utf-8"))
+        except (ValueError, OSError):
+            old = {}
+    stocks = old.get("stocks") or {}
+    made = 0
+    for sym, raw in fin_raw.items():
+        pts = fin_points({k: v[0] for k, v in raw.items()})
+        if len(pts) < 2:
+            continue
+        stocks["us:" + sym] = {"v": 1, "freq": "Q", "cur": "USD", "src": "6-K",
+                               "points": pts[-20:],
+                               "ts": date.today().isoformat()}
+        made += 1
+    payload = {
+        "source": "SEC EDGAR — 외국 기업(FPI)의 20-F·6-K 인라인 XBRL",
+        "note": ("외국 기업은 10-Q 를 안 내 SEC 분기 수치가 없고 stockanalysis 는 "
+                 "며칠 늦다. 부문을 뽑는 그 인스턴스에서 전사 매출·영업이익을 "
+                 "같이 담는다 — 요청이 늘지 않는다."),
+        "count": len(stocks), "stocks": stocks,
+        "ts": date.today().isoformat(),
+    }
+    tmp = FIN_OUT.with_suffix(".tmp")
+    tmp.write_text(json.dumps(payload, ensure_ascii=False), encoding="utf-8")
+    tmp.replace(FIN_OUT)
     return made
 
 
