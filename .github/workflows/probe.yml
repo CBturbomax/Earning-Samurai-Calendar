@@ -11,11 +11,62 @@ jobs:
   probe:
     runs-on: ubuntu-latest
     timeout-minutes: 12
+    env:
+      EDINETDB_KEY: ${{ secrets.EDINETDB_KEY }}
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
         with:
           python-version: '3.12'
+
+      # 26차 — 승부처. 25차에서 문서에 period=quarterly(분기) 옵션이 있는 것을
+      # 확인했다("annual (default) / quarterly / quarterly_standalone"). 세그먼트
+      # 엔드포인트가 이 옵션을 받으면 정부 키 없이 분기 부문 이력 직행이다.
+      # 쿼터를 아끼려고 **수동 실행(dispatch)일 때만** 돈다 — push 로는 안 돈다.
+      # (오늘 429 — 일본 자정에 리셋되면 dispatch 한다. 요청 4건.)
+      - name: 🇯🇵 세그먼트 분기 옵션 시험 (26차 · dispatch 전용)
+        if: env.EDINETDB_KEY != '' && github.event_name == 'workflow_dispatch'
+        timeout-minutes: 6
+        run: |
+          python - <<'EOF'
+          import json, os, urllib.request, urllib.error
+          KEY = os.environ["EDINETDB_KEY"]
+          def get(url):
+              h = {"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) Chrome/124.0",
+                   "Accept": "application/json", "X-API-Key": KEY}
+              try:
+                  with urllib.request.urlopen(urllib.request.Request(url, headers=h), timeout=40) as r:
+                      return r.status, r.read().decode("utf-8", "replace")
+              except urllib.error.HTTPError as e:
+                  return e.code, e.read().decode("utf-8", "replace")[:300]
+              except Exception as e:
+                  return None, f"{type(e).__name__}: {e}"
+          B = "https://edinetdb.jp/v1"
+          for url in (f"{B}/companies/E02378/segments?period=quarterly",
+                      f"{B}/companies/E02378/segments?period=quarterly_standalone",
+                      f"{B}/companies/E02378/financials?period=quarterly",
+                      f"{B}/disclosures/search?company=E02378"):
+              st, body = get(url)
+              tag = url.split("/v1/")[-1]
+              print(f"\n== {tag}  status={st}  {len(body):,}자")
+              if st != 200:
+                  print("   본문:", body[:250])
+                  continue
+              try:
+                  j = json.loads(body)
+              except ValueError:
+                  print("   JSON 아님:", body[:200]); continue
+              data = j.get("data") if isinstance(j, dict) else j
+              meta = j.get("meta") if isinstance(j, dict) else None
+              if isinstance(data, list):
+                  print(f"   행 {len(data)}개 · meta={json.dumps(meta, ensure_ascii=False)[:150]}")
+                  for r in data[:3]:
+                      print("   행:", json.dumps(r, ensure_ascii=False)[:330])
+                  if data:
+                      print("   끝행:", json.dumps(data[-1], ensure_ascii=False)[:330])
+              else:
+                  print("   data:", json.dumps(data, ensure_ascii=False)[:400])
+          EOF
 
       # 25차 — 분기 이력의 마지막 두 검증. 둘 다 키를 안 쓴다(오늘 EDINET DB
       # 쿼터가 429 라 키 쓰는 단계는 전부 걷어냈다).
