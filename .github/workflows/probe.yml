@@ -13,98 +13,54 @@ jobs:
     timeout-minutes: 14
     env:
       EDINETDB_KEY: ${{ secrets.EDINETDB_KEY }}
+      SEC_UA: 'Earning Samurai Calendar (cbpark@wisdomasset.co.kr)'
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
         with:
           python-version: '3.12'
 
-      # 28-A — IFRS 꼬리 고침(SEG_JP_VER=6)이 실제로 맞는지 원문으로 검증한다.
-      # 3분 루프의 되훑기가 도요타·소니에 닿기 전에 확인해야, 틀렸을 때 사흘을
-      # 버리지 않는다.
-      - name: 🇯🇵 IFRS 고침 검증 (28-A)
-        timeout-minutes: 6
+      # 29차 — FPI 수집기가 캐나다·유럽 은행 5곳은 잡았는데(TD·BMO·CIBC·TTE)
+      # ARM·HSBC·아메르스포츠는 빈손이다. 서류는 받았는지, 받았는데 부문 행이
+      # 0인지, 축 이름이 우리 잣대(axis_rank)에 안 걸리는지 원문으로 가른다.
+      - name: 🌏 FPI 실패 종목 해부 (29차)
+        timeout-minutes: 10
+        run: python scrape_seg_fpi.py --probe AS ARM HSBC AZN
+
+      # 29-B — 위에서 '축 이름이 문제'로 나오면 무엇을 넓혀야 하는지 알아야 한다.
+      # 실패 종목의 인스턴스에서 **문맥 축 이름을 전수**로 뽑아 빈도순으로 찍는다.
+      - name: 🌏 실패 종목의 축 이름 전수 (29-B)
+        timeout-minutes: 8
         run: |
           python - <<'EOF'
-          from datetime import date, timedelta
-          import scrape_fin_jp as fj
-          WANT = {"7203": "도요타", "6758": "소니"}
-          seen = {}
-          for back in range(30):
-              if len(seen) == len(WANT):
-                  break
-              day = (date.today() - timedelta(days=back)).isoformat()
-              try:
-                  rows = fj.announcements(day)
-              except Exception:
-                  continue
-              for r in rows:
-                  if r["code"] in WANT and r["code"] not in seen:
-                      seen[r["code"]] = r
-          for code, r in seen.items():
-              blob = fj.get("https://www.release.tdnet.info/inbs/" + r["zip"], binary=True)
-              got = fj.read_segments(blob) if blob else []
-              print(f"\n== {code} {WANT[code]}: read_segments -> {len(got)}기간")
-              for st, en, row in got:
-                  clean = fj.seg_clean(row)
-                  print(f"   {st}~{en}  " +
-                        ", ".join(f"{k}={v/1e9:,.0f}십억" for k, v in
-                                  sorted(clean.items(), key=lambda kv: -kv[1])[:7]))
-          EOF
-
-      # 28-B — 홍콩 대형주가 통째로 빈다(HSBC·공상은행·알리바바·건설은행).
-      # 동화순 F10 이 이 종목들에 매출구성 표를 주는지, 주는데 우리가 못 읽는지
-      # 가른다. 금융주는 '매출'개념이 달라 표 자체가 없을 수 있다.
-      - name: 🇭🇰 대형주 매출구성 확인 (28-B)
-        timeout-minutes: 5
-        run: python scrape_seg_hk.py --probe 00005 01398 09988 00939 03750 00700
-
-      # 28-C — 미국 상장 외국기업(20-F 제출자). TSMC·HSBC·ARM·아메르스포츠는
-      # 어느 소스에도 부문이 없다. SEC 가 이들의 XBRL 을 갖고 있는지, 갖고 있다면
-      # 분기인지 연간인지 본다. 회원님은 연간 차트를 원하지 않으므로 **분기가
-      # 있느냐**가 갈림길이다.
-      - name: 🇺🇸 외국기업 SEC 제출 서류 (28-C)
-        timeout-minutes: 6
-        env:
-          SEC_UA: 'Earning Samurai Calendar (cbpark@wisdomasset.co.kr)'
-        run: |
-          python - <<'EOF'
-          import json, os, urllib.request
-          UA = {"User-Agent": os.environ["SEC_UA"], "Accept-Encoding": "gzip"}
-          import gzip, io
-          def get(url):
-              req = urllib.request.Request(url, headers=UA)
-              with urllib.request.urlopen(req, timeout=40) as r:
-                  b = r.read()
-                  if r.headers.get("Content-Encoding") == "gzip":
-                      b = gzip.decompress(b)
-                  return b
+          import io, re
+          from collections import Counter
+          import xml.etree.ElementTree as ET
           import scrape_seg_sec as ss
-          cmap = ss.cik_map()
-          for sym, who in (("TSM", "TSMC"), ("AS", "아메르스포츠"), ("ARM", "ARM"),
-                           ("HSBC", "HSBC")):
-              cik = cmap.get(sym)
-              print(f"\n== {sym} {who} · CIK {cik}")
-              if not cik:
-                  print("   SEC 티커 목록에 없다"); continue
-              j = json.loads(get(f"https://data.sec.gov/submissions/CIK{int(cik):010d}.json"))
-              rec = j.get("filings", {}).get("recent", {})
-              forms = rec.get("form", [])
-              from collections import Counter
-              print("   최근 서류 종류:", dict(Counter(forms).most_common(8)))
-              # XBRL 이 붙은 서류만
-              for i, f in enumerate(forms[:60]):
-                  if f in ("20-F", "6-K", "40-F", "10-Q", "10-K"):
-                      xbrl = rec.get("isXBRL", [None])[i] if rec.get("isXBRL") else "?"
-                      print(f"   {rec['filingDate'][i]}  {f:5s} XBRL={xbrl} "
-                            f"acc={rec['accessionNumber'][i]} {rec.get('primaryDocument',[''])[i][:40]}")
-              # companyfacts 에 세그먼트 축이 있나 (차원은 떨어지지만 존재 확인)
-              try:
-                  cf = json.loads(get(f"https://data.sec.gov/api/xbrl/companyfacts/CIK{int(cik):010d}.json"))
-                  tags = list(cf.get("facts", {}).get("us-gaap", {}))[:6]
-                  ifrs = list(cf.get("facts", {}).get("ifrs-full", {}))[:6]
-                  print(f"   companyfacts: us-gaap {len(cf.get('facts',{}).get('us-gaap',{}))}개 {tags}")
-                  print(f"                 ifrs-full {len(cf.get('facts',{}).get('ifrs-full',{}))}개 {ifrs}")
-              except Exception as e:
-                  print("   companyfacts 실패:", getattr(e, "code", type(e).__name__))
+          from scrape_seg_edgar import get, instance_url, local, strip_member
+          from scrape_seg_fpi import xbrl_filings, DOCS_PER_CO
+          cikmap = ss.cik_map()
+          for sym in ("AS", "ARM", "HSBC"):
+              cik = ss.cik_of(cikmap, sym)
+              print(f"\n== {sym} CIK {cik}")
+              for acc, filed, form in xbrl_filings(cik)[:2]:
+                  url = instance_url(cik, acc)
+                  if not url:
+                      print(f"   {filed} {form}: 인스턴스 없음"); continue
+                  blob = get(url, timeout=120)
+                  if not blob:
+                      print(f"   {filed} {form}: 못 받음"); continue
+                  axes, tags = Counter(), Counter()
+                  for ev, el in ET.iterparse(io.BytesIO(blob), events=("end",)):
+                      n = local(el.tag)
+                      if n == "explicitMember":
+                          axes[ss.norm_axis(el.get("dimension") or "")] += 1
+                      elif el.get("contextRef"):
+                          t = n
+                          if re.search(r"Revenue|Sales|Income", t):
+                              tags[t] += 1
+                      el.clear()
+                  print(f"   {filed} {form} {len(blob)/1e6:.1f}MB")
+                  print("      축:", [(a, c, ss.axis_rank(a)) for a, c in axes.most_common(8)])
+                  print("      매출류 항목:", [(t, c, t in ss.REV_RANK) for t, c in tags.most_common(8)])
           EOF
