@@ -20,23 +20,24 @@ jobs:
         with:
           python-version: '3.12'
 
-      # 30차 — 29차는 축을 빈도 상위 8개만 찍어서, 금융상품 공시에 묻힌 부문
-      # 축을 못 봤다. 이번에는 **부문답게 생긴 축**(Segment/Business/Operating/
-      # ProductOrService/Geographical)만 골라 전부 찍고, 그 축의 문맥에 매출
-      # 항목이 실제로 걸리는지까지 본다. 어디서 끊기는지 한 화면에 나와야 한다.
-      - name: 🌏 부문 축만 골라 보기 (30차)
+      # 31차 — HSBC·AZN 은 부문 행이 0건이다. 29-B 에서 HSBC 의 주력 매출
+      # 항목이 `RevenueAndOperatingIncome` 이라 우리 REV_TAGS 에 없는 것이
+      # 드러났다. 그렇다면 다른 IFRS 회사도 제 이름을 쓸 것이다 — **부문답게
+      # 생긴 축에 걸린 숫자 항목을 REV_TAGS 로 거르지 말고 전부** 찍어, 무엇을
+      # 목록에 더해야 하는지 이름으로 확인한다. 짐작으로 태그를 늘리지 않는다.
+      - name: 🌏 IFRS 부문 축의 숫자 항목 전수 (31차)
         timeout-minutes: 10
         run: |
           python - <<'EOF'
           import io, re
-          from collections import Counter, defaultdict
+          from collections import Counter
           import xml.etree.ElementTree as ET
           import scrape_seg_sec as ss
-          from scrape_seg_edgar import get, instance_url, local, strip_member, qtrs_of
+          from scrape_seg_edgar import get, instance_url, local, strip_member
           from scrape_seg_fpi import xbrl_filings
           SEGISH = re.compile(r"Segment|Business|Operating|ProductOrService|Geograph", re.I)
           cikmap = ss.cik_map()
-          for sym in ("AS", "ARM", "AZN", "NVS"):
+          for sym in ("HSBC", "AZN", "NVS", "SHEL"):
               cik = ss.cik_of(cikmap, sym)
               print(f"\n===== {sym} CIK {cik}")
               for acc, filed, form in xbrl_filings(cik)[:2]:
@@ -45,43 +46,36 @@ jobs:
                       print(f"   {filed} {form}: 인스턴스 없음"); continue
                   blob = get(url, timeout=150)
                   if not blob:
-                      print(f"   {filed} {form}: 못 받음"); continue
-                  ctx, seg_axes = {}, Counter()
+                      continue
+                  ctx = {}
                   for ev, el in ET.iterparse(io.BytesIO(blob), events=("end",)):
                       if local(el.tag) == "context":
                           cid, dims = el.get("id"), []
-                          st = en = ""
                           for m in el.iter():
-                              lm = local(m.tag)
-                              if lm == "explicitMember":
+                              if local(m.tag) == "explicitMember":
                                   a = ss.norm_axis(m.get("dimension") or "")
                                   v = strip_member((m.text or "").strip())
                                   if a and v:
                                       dims.append((a, v))
-                                      if SEGISH.search(a):
-                                          seg_axes[a] += 1
-                              elif lm == "startDate":
-                                  st = (m.text or "").strip()
-                              elif lm == "endDate":
-                                  en = (m.text or "").strip()
-                          if cid and dims:
-                              ctx[cid] = (dims, st, en)
+                          if cid and any(SEGISH.search(a) for a, _ in dims):
+                              ctx[cid] = dims
                       el.clear()
-                  print(f"   {filed} {form} {len(blob)/1e6:.1f}MB · 문맥 {len(ctx)} · 부문류 축 {dict(seg_axes)}")
-                  # 그 축을 쓰는 문맥에 매출 항목이 붙는지
-                  hits = defaultdict(list)
+                  tags = Counter()
+                  members = Counter()
                   for ev, el in ET.iterparse(io.BytesIO(blob), events=("end",)):
                       cr = el.get("contextRef")
-                      if cr and cr in ctx and local(el.tag) in ss.REV_RANK:
-                          dims, st, en = ctx[cr]
-                          if any(SEGISH.search(a) for a, _ in dims):
-                              hits[local(el.tag)].append((dims, st, en, (el.text or "").strip()[:14]))
+                      if cr and cr in ctx:
+                          txt = (el.text or "").strip().replace(",", "")
+                          if re.fullmatch(r"-?\d+(\.\d+)?", txt or ""):
+                              tags[local(el.tag)] += 1
+                              for a, v in ctx[cr]:
+                                  if SEGISH.search(a):
+                                      members[f"{a}={v}"] += 1
                       el.clear()
-                  for tag, rows in hits.items():
-                      print(f"      항목 {tag}: {len(rows)}건 · 기간길이 "
-                            f"{Counter(qtrs_of(r[1], r[2]) for r in rows)}")
-                      for r in rows[:4]:
-                          print("         ", r[0], r[1], "~", r[2], r[3])
-                  if not hits:
-                      print("      부문 축 문맥에 매출 항목이 없다")
+                  print(f"   {filed} {form} · 부문류 문맥 {len(ctx)}")
+                  print("      숫자 항목(상위 12):")
+                  for t, c in tags.most_common(12):
+                      mark = " ★이미목록" if t in ss.REV_RANK else ""
+                      print(f"         {t[:58]:60s} {c:>4}{mark}")
+                  print("      멤버(상위 8):", [m for m, _ in members.most_common(8)])
           EOF
