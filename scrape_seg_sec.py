@@ -116,12 +116,17 @@ REV_TAGS = ["RevenueFromContractWithCustomerExcludingAssessedTax",
             "RevenueFromSaleOfGoods",
             "RegulatedAndUnregulatedOperatingRevenue",
             "RevenuesNetOfInterestExpense",
-            "InsuranceRevenue"]
+            "InsuranceRevenue",
+            # IFRS 은행이 쓰는 이름. HSBC 의 부문 매출이 이것이라 통째로 빠졌다.
+            "RevenueAndOperatingIncome"]
 REV_RANK = {t: i for i, t in enumerate(REV_TAGS)}
 
 # 축 이름은 DERA 가 앞뒤를 떼고 준다(us-gaap:StatementBusinessSegmentsAxis ->
 # BusinessSegments). 그래도 다른 형태로 올 때를 대비해 한 번 더 다듬는다.
-AXIS_PRI = {"ProductOrService": 2, "Geographical": 1, "StatementGeographical": 1}
+# IFRS 회사는 지역 축을 `GeographicalAreas` 로 쓴다(노바티스·아스트라제네카).
+# 이름 하나가 달라 부문이 통째로 빠지던 자리라 함께 적어 둔다.
+AXIS_PRI = {"ProductOrService": 2, "Geographical": 1, "StatementGeographical": 1,
+            "GeographicalAreas": 1}
 AXIS_KO = {3: "사업부문", 2: "제품·서비스", 1: "지역"}
 # 부문을 **남김없이** 나누는 아래 축. 이것으로만 더해 부문 합계를 만든다.
 SUB_AXES = {"ProductOrService", "Geographical"}
@@ -232,7 +237,12 @@ def parse_seg(segments):
         if not v:
             return None
         k = norm_axis(k)
-        if k == "ConsolidationItems":
+        # **표시축 이름이 회계기준마다 다르다.** us-gaap 은 `ConsolidationItems`,
+        # IFRS 는 `SegmentConsolidationItems` 다. 뒤엣것을 몰라서 셸·BHP 는
+        # (SegmentConsolidationItems=OperatingSegments)+(Segments=Upstream) 이
+        # 축 둘로 읽혀 통째로 버려졌고, 아메르스포츠 20-F 에서는 그 표시가 부문
+        # 이름('Operating Segments')으로 화면에 오를 뻔했다.
+        if k.endswith("ConsolidationItems"):
             # 부문 값이라고 못 박은 것만 받는다. 상계·조정 줄은 여기서 걸린다.
             if v.split(":")[-1] != "OperatingSegments":
                 return None
