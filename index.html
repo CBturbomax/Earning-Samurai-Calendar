@@ -255,7 +255,13 @@ button.btn:disabled:hover { border-color:var(--line); color:var(--fg); }
   background:#0f1620; border:1px solid #1e2831; border-radius:7px;
   padding:7px 9px 7px 12px; margin-bottom:5px; cursor:pointer; text-align:left;
   font-family:inherit; color:var(--fg); font-size:17px; line-height:1.3;
-  box-shadow:inset 3px 0 0 0 var(--mk,transparent);
+  box-shadow:inset 5px 0 0 0 var(--mk,transparent);
+}
+/* 시장 구분이 칩 색의 전부다 — 일본 빨강, 미국 파랑, 홍콩 노랑(markets.py).
+   왼쪽 띠 + 코드 글자색 + 옅은 배경 틴트. 순위별 색칠은 하지 않는다. */
+@supports (background: color-mix(in srgb, red 8%, black)) {
+  .chip { background:color-mix(in srgb, var(--mk, #0f1620) 7%, #0f1620); }
+  .chip:hover { background:color-mix(in srgb, var(--mk, #16202b) 13%, #16202b); }
 }
 .chip .fl { flex:0 0 auto; font-size:15px; }
 /* 발표 시각 — 미국만 원본에 있다. 장전/장후는 미국 실적을 볼 때 제일 먼저 보는 값. */
@@ -310,13 +316,10 @@ button.btn:disabled:hover { border-color:var(--line); color:var(--fg); }
   flex:0 0 auto; font-size:13px; color:#8fb8dc; font-variant-numeric:tabular-nums;
 }
 .chip:hover { border-color:var(--a2); background:#16202b; }
-.chip.big { background:#1d1418; border-color:#43242c; }
-.chip.big:hover { border-color:var(--a1); }
 .chip .cd {
-  font-size:15px; font-weight:700; color:#8fb8dc; font-variant-numeric:tabular-nums;
-  flex:0 0 auto;
+  font-size:15px; font-weight:700; color:var(--mk,#8fb8dc);
+  font-variant-numeric:tabular-nums; flex:0 0 auto;
 }
-.chip.big .cd { color:var(--a1); }
 .chip .cn { flex:1 1 auto; min-width:0; overflow:hidden; text-overflow:ellipsis;
             white-space:nowrap; }
 .chip .cq {
@@ -503,7 +506,7 @@ svg.bars rect.b:hover { fill:var(--a3); }
 <body>
 <div class="wrap">
 
-<div class="topline"><span class="fl fl-us" role="img" aria-label="미국"></span> 미국 <b>8,170</b> · <span class="fl fl-jp" role="img" aria-label="일본"></span> 일본 <b>3,956</b> · <span class="fl fl-hk" role="img" aria-label="홍콩"></span> 홍콩 <b>6,925</b> · 합계 <b>19,051건</b> · 수집 <b>2025-07-09 ~ 2026-10-17</b> · 갱신 2026-08-18 12:33 KST</div>
+<div class="topline"><span class="fl fl-us" role="img" aria-label="미국"></span> 미국 <b>8,170</b> · <span class="fl fl-jp" role="img" aria-label="일본"></span> 일본 <b>3,956</b> · <span class="fl fl-hk" role="img" aria-label="홍콩"></span> 홍콩 <b>6,925</b> · 합계 <b>19,051건</b> · 수집 <b>2025-07-09 ~ 2026-10-17</b> · 갱신 2026-08-18 12:51 KST</div>
 <h1><span class="mark" aria-hidden="true"></span>Earning <span class="jp">Samurai</span>
     <span class="byline">by CB</span></h1>
 <p class="sub">미국 · 일본 · 홍콩 주간 실적발표 일정 — 누가 언제 무엇을 발표했는지</p>
@@ -794,8 +797,6 @@ function go(w) { week = w; renderAll(); }
 /* ── 주간 캘린더 ──────────────────────────────────────────── */
 const CHIP_LIMIT = 12;
 const expanded = new Set();
-/* 이 이상이면 칸에서 크게 띄운다. 10조원 — 수기 목록이 아니라 시총이 기준이다. */
-const BIG_CAP = 10e12 / D.usdKrw / 1e9;
 
 /* 시총은 십억 달러 단위로 들어온다. 한국식으로 억/조 달러로 고쳐 읽는다.
    1 십억 달러 = 10억 달러, 1000 십억 달러 = 1조 달러. */
@@ -932,7 +933,7 @@ function surprise(a, c) {
          Math.abs(p).toFixed(0) + '%</em>';
 }
 
-function chip(r, big) {
+function chip(r) {
   const k = keyOf(r), t = timeOf(r);
   const dn = doneInfo(r);
   // 발표가 끝났으면 ✓ 를 시각 자리에 넣는다. 칸을 하나 더 만들면 그만큼 회사 이름이
@@ -952,7 +953,7 @@ function chip(r, big) {
   const we = wd >= 5
     ? '<span class="we" title="' + dateOf(r) + ' (' + DOW_KO[wd] + ') 발표">' +
       DOW_KO[wd] + '</span>' : '';
-  return '<button class="chip m-' + r[9] + (big ? ' big' : '') +
+  return '<button class="chip m-' + r[9] +
          (got ? ' done' : '') +
          '" data-key="' + esc(k) + '" data-date="' + dateOf(r) + '">' +
          (mkt ? '' : FL(r[9])) + we +
@@ -1021,9 +1022,11 @@ function renderCal() {
       body = '<div class="empty">발표 없음' + why + '</div>';
     } else {
       const miss = missing(d), soon = notYet(d);
-      // 시총 상위 몇 개는 크게, 나머지는 보통 크기로. 기준은 수기 목록이 아니라 시총이다.
+      // 상위 종목만 빨갛게 칠하던 것은 걷어냈다 — 회원님 지시다. 칩의 색은
+      // 순위가 아니라 **시장 구분**(왼쪽 띠·코드색·옅은 배경)에만 쓴다.
+      // 시총 순서 자체는 정렬이 이미 말해 준다.
       body = (hol.text ? '<div class="dsec gap">' + esc(hol.text) + '</div>' : '') +
-             shownList.map((r, i) => chip(r, i < 3 && r[11] >= BIG_CAP)).join('') +
+             shownList.map(r => chip(r)).join('') +
              (list.length > CHIP_LIMIT
                ? '<button class="more" data-key="' + key + '">' +
                  (open ? '접기' : '+' + (list.length - CHIP_LIMIT) + '개 더 보기') + '</button>'
