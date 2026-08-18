@@ -107,7 +107,7 @@ jobs:
         run: |
           python scrape_seg_fpi.py | tee fpi.log
           {
-            echo '### 외국 기업 부문 매출'
+            echo '### 외국 기업 부문 매출·실적 수치'
             echo '```'
             tail -25 fpi.log
             echo '```'

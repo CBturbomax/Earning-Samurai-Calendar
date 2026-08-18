@@ -484,8 +484,14 @@ def load_fin():
     홍콩 08035 는 다른 회사이므로 코드만으로는 가를 수 없다.
     """
     out = {}
+    # financials_fpi.json 은 미국 상장 **외국 기업**(아메르스포츠·HSBC…)의
+    # 6-K·20-F 에서 뽑은 수치다. 그들은 10-Q 를 안 내 SEC 쪽이 비고
+    # stockanalysis 는 며칠 늦다 — 실제로 8/18 아침에 발표한 6월 분기가 그날
+    # 저녁까지 안 실렸다. merge_fin 이 깊은 쪽을 뼈대로 삼고 빠진 최근 분기를
+    # 메우므로, 이 파일은 '가장 빠른 최근 분기' 몫이다.
     for name, prefix in (("financials.json", "us:"),
                          ("financials_intl.json", ""),
+                         ("financials_fpi.json", ""),
                          ("financials_jp.json", "")):
         p = HERE / "data" / name
         if not p.exists():
