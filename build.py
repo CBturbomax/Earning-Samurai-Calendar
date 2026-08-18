@@ -1387,9 +1387,31 @@ def build():
     if SEG:
         note = f"  사업부별 매출 {len(seg):,}종목"
         if tossed:
-            note += (f" · 합이 총매출보다 고르게 부풀어 뺀 종목 {len(tossed)}"
+            note += (f" · 같은 표가 두 벌이라 뺀 종목 {len(tossed)}"
                      f" ({', '.join(sorted(tossed)[:6])})")
         print(note)
+
+    # **부문 구멍은 스스로 드러나야 한다.** 회원님이 종목 하나를 짚어 물어봐야
+    # 알게 되면 그건 우리가 못 본 것이다("꼭 이렇게 내가 말하지 않아도 전종목 다
+    # 해줘 시총 1조 이상"). 큰 종목의 커버리지를 빌드 때마다 적고, 시장별로 제일
+    # 큰 미커버 종목을 이름으로 부른다 — 원인을 짚는 실마리가 된다.
+    jo = 1e12 / USD_KRW / 1e9              # 1조원을 십억 달러로
+    big = {}
+    for p in packed:
+        if p[11] and p[11] >= jo:
+            k = p[9] + ":" + p[1]
+            big[k] = max(big.get(k, 0), p[11])
+    if big:
+        gap = sorted(((v, k) for k, v in big.items() if k not in seg), reverse=True)
+        print(f"  시총 1조원 이상 {len(big):,}종목 중 부문 차트 "
+              f"{len(big) - len(gap):,} ({(len(big) - len(gap)) / len(big) * 100:.0f}%)"
+              + (f" · 없음 {len(gap):,}" if gap else ""))
+        for m in MARKET_ORDER:
+            mine = [(v, k) for v, k in gap if k.startswith(m + ":")]
+            tot = sum(1 for k in big if k.startswith(m + ":"))
+            if mine and tot:
+                names = ", ".join(k.split(":")[1] for _v, k in mine[:5])
+                print(f"    {MARKETS[m]['ko']} {len(mine):,}/{tot:,} 없음 — 큰 것부터: {names}")
 
     # 실적 브리핑 재료 둘. 회사가 공시한 통기 예상(일본 결산단신의 예상란)과
     # 공시 원문에서 옮긴 한국어 코멘트(briefs.py). 코멘트는 (종목, 분기) 열쇠라

@@ -58,7 +58,9 @@ JP_VER = 1
 # 4: 원자료에 XBRL 이름을 그대로 담는다 — 이름 규칙을 고쳐도 다시 안 받는다
 # 5: 외부 매출의 복수형 표기(RevenuesFromExternalCustomers)를 줍는다 — 아식스의
 #    일본(국내) 행이 이것 때문에 통째로 빠졌다. 보관창 안의 공시를 다시 뜯는다.
-SEG_JP_VER = 5
+# 6: IFRS 꼬리를 뗀다(SalesToExternalCustomersIFRS 등) — 도요타·소니를 비롯한
+#    IFRS 대형주의 부문이 통째로 비어 있었다.
+SEG_JP_VER = 6
 
 # 결산단신인지 가리는 말. '決算短信' 이 들어가면 실적 발표다.
 # (「業績予想の修正」 같은 것은 실적 발표가 아니라 예상 수정이라 뺀다.)
@@ -295,19 +297,31 @@ SEG_SUFFIX = re.compile(r"(Reportable)?Segments?Member$|Member$")
 
 # **외부 고객 매출을 쓴다.** 부문 매출에는 부문끼리 주고받은 것(InterSegment)이
 # 섞여 있어, 그걸 더하면 회사 총매출보다 커진다. 외부 매출만 더해야 총매출이 된다.
-SEG_REV = ["TransactionsWithExternalCustomersIFRS",
-           "NetSalesToOutsideCustomers",
-           "NetSalesToExternalCustomers",
+SEG_REV = ["TransactionsWithExternalCustomers",
            "SalesToExternalCustomers",
-           # 복수형 표기가 따로 있다 — 아식스 단신의 외부 매출 행이 이것이라 못
-           # 알아봤고, 순위 밀린 NetSales(내부거래 포함 계)로 그리는 바람에 그 행에만
-           # 태그가 없던 일본(국내) 부문이 통째로 빠졌다. 외부 행이 언제나 이긴다.
+           "NetSalesToExternalCustomers",
+           "NetSalesToOutsideCustomers",
            "RevenuesFromExternalCustomers",
            "RevenueFromExternalCustomers",
-           "TransactionsWithExternalCustomers",
+           "OperatingRevenueFromExternalCustomers",
+           "OperatingRevenuesFromExternalCustomers",
            # 외부 매출이 따로 없는 회사는 부문 매출(내부 포함)을 쓴다.
-           "OperatingRevenuesIFRS", "RevenueIFRS", "NetSales", "OperatingRevenues"]
+           "OperatingRevenues", "OperatingRevenue", "SalesRevenues",
+           "Revenue", "NetSales"]
+# **IFRS 꼬리를 떼고 맞춘다.** 같은 항목이 회계기준에 따라 이름 끝에 `IFRS` 가
+# 붙어 온다 — 소니는 `SalesToExternalCustomersIFRS`, 도요타는
+# `OperatingRevenueFromExternalCustomersIFRS`. 꼬리를 안 떼던 시절에는 이 둘을
+# 못 알아봐 **일본 대형주(도요타·소니·소프트뱅크…)의 부문이 통째로 비었다.**
+# 아식스의 복수형 사고와 같은 병이라, 이번에는 이름 하나가 아니라 규칙으로 막는다.
 SEG_REV_RANK = {t: i for i, t in enumerate(SEG_REV)}
+
+
+def seg_rev_rank(name):
+    """부문 매출 항목이면 순위(작을수록 정확), 아니면 None. IFRS 꼬리는 뗀다."""
+    r = SEG_REV_RANK.get(name)
+    if r is None and name.endswith("IFRS"):
+        r = SEG_REV_RANK.get(name[:-4])
+    return r
 
 
 def seg_member(cid):
@@ -391,7 +405,7 @@ def read_segments(blob):
             a = dict(IX_ATTR.findall(attrs))
             name = (a.get("name") or "").rsplit(":", 1)[-1]
             cid = a.get("contextRef") or ""
-            rank = SEG_REV_RANK.get(name)
+            rank = seg_rev_rank(name)
             if rank is None or a.get("xsi:nil") == "true":
                 continue
             if FORECAST_CTX.search(cid) or cid not in periods:
