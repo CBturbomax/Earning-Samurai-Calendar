@@ -288,7 +288,11 @@ def parse_instance(blob):
                     root.clear()
             elif el.get("contextRef"):
                 tag = name
-                if tag in ss.REV_RANK and "us-gaap" in el.tag:
+                # **회계기준을 가리지 않는다.** 미국 국내 기업은 us-gaap,
+                # 외국 기업(20-F·6-K)은 ifrs-full 로 태그한다 — 아메르스포츠·
+                # ARM·HSBC 가 그렇다. 이름(Revenue 등)은 REV_TAGS 가 이미 둘 다
+                # 담고 있으므로 네임스페이스만 넓히면 같은 파서가 쓰인다.
+                if tag in ss.REV_RANK and ("us-gaap" in el.tag or "ifrs" in el.tag):
                     slot = ctx.get(el.get("contextRef"))
                     txt = (el.text or "").strip().replace(",", "")
                     if slot and txt and el.get("{http://www.w3.org/2001/XMLSchema-instance}nil") != "true":

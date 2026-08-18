@@ -838,7 +838,10 @@ def load_seg():
     1,350종목을 두드려 223종목밖에 못 얻었다.
     """
     out = {}
-    for name in ("segments_sec.json", "segments_jp.json",
+    # **미국 상장 외국 기업은 10-Q 를 안 낸다.** 그래서 벌크·분기색인이 못 잡고
+    # 아메르스포츠·ARM·HSBC 의 부문이 통째로 비었다. segments_fpi.json 이
+    # 20-F·6-K 의 인라인 XBRL 에서 그 자리를 메운다(scrape_seg_fpi.py).
+    for name in ("segments_sec.json", "segments_jp.json", "segments_fpi.json",
                  "segments.json"):                        # 뒤엣것이 이긴다
         p = HERE / "data" / name
         if not p.exists():
