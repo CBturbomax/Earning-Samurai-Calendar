@@ -94,6 +94,27 @@ def load_out():
 
 
 def save_out(done, stocks, qdone=None, quiet=False):
+    # **덮어쓰지 않고 합친다.** 같은 워크플로가 두 번 겹쳐 돌면(코드 푸시가 부른
+    # 실행과 손으로 부른 실행) 뒤엣것이 시작할 때 읽은 헌 파일 위에 제 것만 얹어
+    # 커밋한다 — 실제로 72종목이 4종목으로 덮였다. 저장 직전에 디스크를 다시 읽어
+    # 우리가 안 건드린 종목은 그쪽 것을 살린다.
+    if OUT.exists():
+        try:
+            disk = json.loads(OUT.read_text(encoding="utf-8"))
+        except (ValueError, OSError):
+            disk = {}
+        for k, v in (disk.get("stocks") or {}).items():
+            mine = stocks.setdefault(k, {})
+            for field, stamp in (("q", "qts"), ("rows", "ts")):
+                if v.get(field) and not mine.get(field):
+                    mine[field] = v[field]
+                    mine.setdefault(stamp, v.get(stamp))
+                    mine.setdefault("e", v.get("e"))
+                    mine.setdefault("cur", v.get("cur", "JPY"))
+        for src, dst in ((disk.get("done") or {}, done), (disk.get("qdone") or {}, qdone or {})):
+            for k, v in src.items():
+                if k not in dst:
+                    dst[k] = v
     payload = {
         "source": ("EDINET DB (edinetdb.jp) — 보고 세그먼트. "
                    "분기(四半期·半期報告書, 누계)와 연간(有価証券報告書)."),

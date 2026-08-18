@@ -11,11 +11,9 @@ on:
   workflow_dispatch:
   schedule:
     - cron: '40 20 * * *'          # 매일 한 번 (05:40 JST)
-  push:
-    branches: [main]
-    paths:
-      - 'scrape_seg_jp_edinetdb.py'
-      - '.github/workflows/segments_hist.yml'
+  # **코드 푸시로는 돌리지 않는다.** 손으로 부른 실행과 겹쳐 두 개가 돌면
+  # 뒤엣것이 헌 파일 위에 제 것만 얹어 커밋해 앞엣것의 수집분을 덮는다
+  # (72종목이 4종목이 됐다). 하루 100건짜리 예산이라 겹쳐 돌 값도 없다.
 
 permissions:
   contents: write
