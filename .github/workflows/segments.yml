@@ -105,6 +105,10 @@ jobs:
           # 한 번(제출목록) + 서류마다 두 번이고 SEC 는 초당 열 번까지 받는다.
           FPI_PER_RUN: '150'
         run: |
+          # **파이프가 죽음을 삼키지 않게.** tee 를 거치면 파이썬이 예외로 죽어도
+          # bash 는 tee 의 성공만 본다 — 그래서 수집이 매번 일곱 번째 회사에서
+          # 죽고 있는데도 워크플로는 초록불이었다.
+          set -o pipefail
           python scrape_seg_fpi.py | tee fpi.log
           {
             echo '### 외국 기업 부문 매출·실적 수치'

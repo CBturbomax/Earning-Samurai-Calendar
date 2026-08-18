@@ -318,7 +318,16 @@ def collect():
             if not blob:
                 continue
             docs += 1
-            rows = parse_instance(blob)
+            # **깨진 서류 하나가 실행 전체를 죽이지 않게 한다.** 실제로 XML 이
+            # 망가진 6-K 하나에 걸려 매 실행이 일곱 번째 회사에서 멈췄고,
+            # 저장은 반복문 뒤에 있으므로 **그때까지 받은 것이 통째로 버려졌다.**
+            # 다음 실행도 같은 자리에서 같은 서류를 다시 받아 또 죽었다 —
+            # 대기줄이 영영 안 나아가는 덫이다.
+            try:
+                rows = parse_instance(blob)
+            except ss.Blocked as e:
+                print(f"    {sym} {acc} 못 읽음: {e}", file=sys.stderr, flush=True)
+                continue
             if rows:
                 got += 1
                 absorb(facts, pairs, cik, filed, acc, rows)
@@ -332,6 +341,11 @@ def collect():
         if got:
             print(f"    {sym}: 서류 {got}장 · 부문 행 "
                   f"{len(facts.get(cik, {})) + len(pairs.get(cik, {}))}축", flush=True)
+        # 서른 곳마다 써 둔다. 반복문 뒤에만 저장하면 도중에 죽을 때 다 잃는다.
+        if walked % 30 == 0:
+            old["fpi"] = sorted(fpi_seen)
+            save(old, facts, pairs, by_cik, done, seen)
+            save_fin(fin_raw)
 
     old["fpi"] = sorted(fpi_seen)
     made = save(old, facts, pairs, by_cik, done, seen)
