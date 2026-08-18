@@ -21,6 +21,7 @@ scrape_fin_seg.py ─> segments.json        │    + translit.py)
 scrape_seg_sec.py ─> segments_sec.json    │
 scrape_seg_edgar.py ─> segments_edgar.json│
 scrape_seg_hk.py  ─> segments_hk.json     │
+scrape_seg_jp_edinetdb.py ─> segments_jp_hist.json │
 scrape_pr_us.py   ─> briefs_us.json       │  '회사가 뭐라 했나' (+ briefs.py)
 scrape_desc.py    ─> desc.json            ┘
 (닛케이/나스닥/HKEXnews/야후/SEC/TDnet/stockanalysis)
@@ -62,6 +63,8 @@ python scrape_seg_edgar.py                  # 미국 부문별 매출 최근 분
 python scrape_seg_edgar.py --probe          # 서류 한 장을 뜯어 생김새만 본다
 python scrape_seg_hk.py                     # 홍콩 부문 비중 (동화순 F10)
 python scrape_seg_hk.py --probe 00700       # 파서가 뭘 읽는지 본다
+python scrape_seg_jp_edinetdb.py            # 일본 부문 연간 이력 (EDINETDB_KEY 필요)
+python scrape_seg_jp_edinetdb.py --probe    # 아식스 한 종목만 떠본다 (예산 1건)
 python scrape_fin_seg.py                    # 미국 부문별 매출 (최근 분기 보충)
 python scrape_desc.py                       # 사업 설명 원문
 ```
@@ -87,6 +90,7 @@ python scrape_desc.py                       # 사업 설명 원문
 | 미국 실적 수치를 더 받는다 | `scrape_fin.py` — 매출 태그는 `REV_TAGS` |
 | 일본·홍콩 실적 수치 | `scrape_fin_intl.py`, 일본 당일치는 `scrape_fin_jp.py` |
 | 부문별 매출 | 미국 `scrape_seg_sec.py`(뼈대)·`scrape_seg_edgar.py`(최근 분기) · 일본 `scrape_fin_jp.py` · 홍콩 `scrape_seg_hk.py` |
+| 일본 부문 **연간** 이력(차트 아래 연간 막대) | `scrape_seg_jp_edinetdb.py` — 걸러내기는 `build.py`의 `load_seg_hist` |
 | 부문을 어느 축으로 가를까 | `scrape_seg_sec.py`의 `axis_rank` / `AXIS_KO` |
 | 회사 사업 설명(한국어) | `descriptions.py`의 `DESC_KO` — 원문 수집은 `scrape_desc.py` |
 | 실적 브리핑(숫자 요약·문구) | `build.py`의 `briefBlock` — 한국어 코멘트는 `briefs.py`, 원문 수집은 `scrape_pr_us.py`(미국)·`scrape_fin_jp.py`의 `fcst`(일본 가이던스) |
@@ -515,6 +519,26 @@ segments 예: BusinessSegments=Datacenter;ConsolidationItems=OperatingSegments;
   생기는 순간 다시 훑기가 멈춰 그 시즌을 통째로 놓친다. **둘 다 본 공시만**
   건너뛴다.
 
+**일본 부문의 옛 이력은 연간으로만 있다 — EDINET DB 에서 받는다.** TDnet 은
+한 달치만 남아 위 경로의 부문은 최근 분기부터만 쌓이고, 옛 분기는 어느 길로도
+없다. 우회로를 전부 떠봤다(probe 19~21차): EDINET 공식 API 는 키 포털이 막혔고
+(가입을 마쳐도 로그인 뒤 키 화면이 「現在使用できない」), irbank 는 데이터센터
+IP 를 403 으로 막는다(닛케이와 같은 벽). edinetdb.jp 무료 API 만 CI 에서 열리고,
+有価証券報告書의 보고 세그먼트를 **연간으로 2014년치부터** 준다.
+`scrape_seg_jp_edinetdb.py` 가 종목당 요청 한 번으로 받는다 — X-API-Key 헤더,
+무료 100건/일이라 시총 큰 순 90종목씩, 전 종목이 두 주쯤에 채워진다. 有報는
+연 1회이므로 반년 지난 종목만 다시 받는다. 종목코드→EDINET코드 매핑은 공식
+코드리스트 zip(무인증) 한 방이다 — 검색 API 로 종목마다 두드리면 그것만으로
+하루 예산이 끝난다.
+
+- **연간과 분기를 한 차트에 섞지 않는다.** 연간 막대 옆에 반기 막대가 서면
+  높이가 거짓말이 된다. 화면은 분기 차트 아래에 「연간 부문별 매출」 차트를
+  따로 단다.
+- 조정·소거 줄 걸러내기와 기준 변경 정리는 `build.py`(load_seg_hist)가 한다 —
+  분기 쪽과 **같은 함수**(current_basis)를 태운다. 수집기는 원자료만 담는다.
+  규칙을 수집기에 두면 고칠 때마다 100건/일 예산으로 다시 받아야 한다.
+- 부문 이름은 일본어 원문 그대로다(欧州地域). 한국 한자음으로 지어 읽지 않는다.
+
 **기준이 바뀌면 바뀐 것만 보여준다.** 회사는 사업부 구분을 통째로 갈아엎는다.
 HPE 가 Compute·Storage·Intelligent Edge 를 Cloud&AI·Networking 으로 바꿨고,
 엔테그리스·메디목스·ADM 도 그랬다. 그런데 옛 이름과 새 이름이 한 표에 다 실려
@@ -578,6 +602,7 @@ HPE 가 Compute·Storage·Intelligent Edge 를 Cloud&AI·Networking 으로 바�
 | `collect.yml` | 1시간 | `data/earnings.json` · `data/earnings_jp_sched.json` · `data/earnings_us.json` · `data/earnings_hk.json` · `data/caps.json` |
 | `numbers.yml` | 30분 | `data/financials.json` · `data/financials_intl.json` · `data/segments.json` · `data/segments_hk.json` · `data/desc.json` |
 | `segments.yml` | 3시간 | `data/segments_sec.json` · `data/segments_edgar.json` |
+| `segments_hist.yml` | 하루 1번 | `data/segments_jp_hist.json` (EDINETDB_KEY 있을 때만) |
 
 겹치는 건 만들어진 `index.html` 뿐이고, 그건 합친 자료로 다시 만들면 그만이다.
 새 수집기를 붙일 때도 **어느 쪽이 그 파일의 주인인지 먼저 정하고** 한쪽에만 넣는다.

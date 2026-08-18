@@ -954,6 +954,64 @@ def splice(base, fresh):
 
 SEG = load_seg()
 
+# 조정·소거·전사공통 줄은 부문이 아니다. 이름이 일본어 원문 그대로라 어휘로 거른다.
+# (분기 쪽은 XBRL 멤버 이름이라 영어 어휘로 거른다 — 소스가 달라 어휘도 다르다.)
+SEG_HIST_SKIP = re.compile(r"調整|消去|全社|セグメント間|内部取引|合計")
+
+
+def load_seg_hist():
+    """일본 부문의 **연간** 이력 (EDINET DB — 有価証券報告書의 보고 세그먼트).
+
+    TDnet 결산단신은 한 달치만 남아 옛 분기가 그 길에 없고, EDINET 공식 API 는
+    키 포털이 막혀 있다. 그래서 연간 이력을 edinetdb.jp 에서 받는다(2014년치부터).
+    **분기 차트에 섞지 않는다** — 연간 막대 옆에 반기 막대가 서면 높이가
+    거짓말이 된다. 화면은 분기 차트 아래에 연간 차트를 따로 단다.
+
+    걸러내기 규칙이 수집기가 아니라 여기 있는 까닭은 분기 부문의 원자료와
+    같다 — 수집 쪽에 두면 규칙을 고칠 때마다 100건/일 예산으로 다시 받아야 한다.
+    기준이 바뀐 회사 정리는 분기와 **같은 함수**(current_basis)를 쓴다.
+    """
+    p = HERE / "data" / "segments_jp_hist.json"
+    if not p.exists():
+        return {}
+    try:
+        got = json.loads(p.read_text(encoding="utf-8")).get("stocks", {})
+    except (ValueError, OSError) as e:
+        print(f"  ! segments_jp_hist.json 읽기 실패: {e}")
+        return {}
+    out = {}
+    for key, v in got.items():
+        by_fy = {}
+        for fy, nm, rev, _opi in v.get("rows", []):
+            # 음수·0 매출은 부문이 아니라 상계 줄이다. 쌓는 막대에 못 올린다.
+            if SEG_HIST_SKIP.search(nm) or not rev or rev <= 0:
+                continue
+            by_fy.setdefault(fy, {})[nm] = int(rev)
+        fys = sorted(by_fy)
+        if len(fys) < 2:
+            continue
+        last = by_fy[fys[-1]]
+        names = sorted({n for row in by_fy.values() for n in row},
+                       key=lambda n: (-(last.get(n) or 0),
+                                      -sum(row.get(n) or 0 for row in by_fy.values())))
+        pts = [[f"FY{fy}"] + [by_fy[fy].get(n) for n in names]
+               for fy in fys[-12:]]
+        rec = current_basis({"ax": "연간 부문", "names": names, "pts": pts})
+        if not rec or len(rec.get("names") or []) < 2:
+            continue
+        if len(rec["names"]) > 10:              # 범례가 화면을 가로지르면 못 읽는다
+            keep = rec["names"][:10]
+            idx = [rec["names"].index(n) for n in keep]
+            rec = {"ax": rec.get("ax", "연간 부문"), "names": keep,
+                   "pts": [[r[0]] + [r[i + 1] for i in idx] for r in rec["pts"]]}
+        out[key] = rec
+    if out:
+        print(f"  segments_jp_hist.json: 연간 부문 이력 {len(out):,}종목")
+    return out
+
+
+SEG_HIST = load_seg_hist()
+
 
 def load_desc():
     """받아둔 사업 설명 원문. 한국어가 없는 종목에만 쓴다.
@@ -1382,6 +1440,9 @@ def build():
         # 지금은 미국 종목만 — 일본·홍콩은 소스에 부문 페이지가 없다.
         # 합이 총매출과 안 맞는 종목은 여기서 걸러진다(seg_fit).
         "seg": seg,
+        # 일본 부문의 연간 이력(有報 기준, EDINET DB). 분기 차트와 섞지 않고
+        # 아래에 따로 그린다 — 단위가 달라 한 차트에 서면 높이가 거짓말이 된다.
+        "segH": {s: rec for s, rec in SEG_HIST.items() if s in on_screen},
     }
 
     # **러너는 UTC 로 돈다.** 예전에는 datetime.now() 에 "KST" 만 붙였는데,
@@ -2704,13 +2765,14 @@ function bizLine(m, code) {
 
 function finBlock(m, code) {
   const key = m + ':' + code;
-  const f = D.fin[key], sg = D.seg[key];
+  const f = D.fin[key], sg = D.seg[key], sh = D.segH && D.segH[key];
   const biz = bizLine(m, code);
   // 실적 수치가 없어도 부문은 있을 수 있다. 그때 통화를 'USD' 로 박아 두면
   // 일본 회사의 엔화 막대에 '단위: bil USD' 라고 적히는 거짓말이 된다.
   const MKT_CUR = { jp: 'JPY', hk: 'HKD' };
-  if (!f) return biz + (sg
-    ? '<div class="finwrap">' + segChart(sg, MKT_CUR[m] || 'USD') + '</div>'
+  if (!f) return biz + ((sg || sh)
+    ? '<div class="finwrap">' + (sg ? segChart(sg, MKT_CUR[m] || 'USD') : '') +
+      (sh ? segChart(sh, MKT_CUR[m] || 'USD') : '') + '</div>'
     : '<p class="finnote">이 종목은 아직 실적 수치를 받지 않았습니다. ' +
       '시가총액 큰 종목부터 채우는 중입니다.</p>');
   let html = biz;
@@ -2741,6 +2803,9 @@ function finBlock(m, code) {
   }
   // 사업부별은 매출·성장률 아래에 붙인다. 큰 그림을 먼저 보고 쪼개 보는 순서다.
   if (sg) html += segChart(sg, f.cur || 'USD');
+  // 일본 연간 부문 이력(有報 기준). 분기 차트와 **섞지 않고** 아래에 따로 —
+  // 연간 막대 옆에 반기 막대가 서면 높이가 거짓말이 된다.
+  if (sh) html += segChart(sh, f.cur || 'USD');
   // 맨 아래 실적 브리핑 — 차트를 못 읽고 지나가도 요점은 남게.
   html += briefBlock(key, f, sg);
   return html || '<p class="finnote">받아둔 수치가 없습니다.</p>';
