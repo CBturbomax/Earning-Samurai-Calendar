@@ -30,7 +30,7 @@ import json
 import os
 import sys
 import time
-from datetime import date
+from datetime import date, datetime, timedelta, timezone
 from pathlib import Path
 
 import io
@@ -79,6 +79,13 @@ TRIES_PER_CO = 10
 PAUSE = 0.25
 # 다 따라잡은 회사는 이만큼 지나야 다시 본다(6-K 는 분기마다 나온다).
 REFRESH_DAYS = 20
+# 방금 발표했는데 그 분기가 우리에게 없는 회사를 한 실행에 몇 곳까지 새치기
+# 시킬까. 대부분은 목록 요청 한 번에 끝난다(국내 기업은 6-K 를 안 내므로).
+FRESH_MAX = 30
+# 소스가 발표 당일 바로 싣지 않는 일이 흔하다. 그렇다고 매 실행 다시 두드리면
+# 그 몇백 종목이 대기줄을 통째로 차지한다 — 두 시간에 한 번씩만(scrape_fin_intl
+# 의 `retry` 와 같은 셈법).
+POKE_HOURS = 2
 
 
 def load_old():
@@ -134,29 +141,78 @@ def announced_recently(days=12):
     return out
 
 
+def newest_points():
+    """티커 -> 우리가 가진 가장 새 분기의 종료일. 소스를 가리지 않는다."""
+    out = {}
+    for name in ("financials.json", "financials_intl.json",
+                 "financials_fpi.json"):
+        p = HERE / "data" / name
+        if not p.exists():
+            continue
+        try:
+            st = json.loads(p.read_text(encoding="utf-8")).get("stocks", {})
+        except (ValueError, OSError):
+            continue
+        for k, v in (st or {}).items():
+            pts = v.get("points") or []
+            if not pts:
+                continue
+            end = pts[-1].get("end") or ""
+            t = k.split(":")[-1]
+            if end > out.get(t, ""):
+                out[t] = end
+    return out
+
+
+def stale_announced(caps, pokes, days=10):
+    """발표는 났는데 그 분기가 우리에게 없는 종목 — 시총 큰 순.
+
+    **'외국 기업 명단'으로 가르지 않는다.** 예전에는 지난번에 부문을 얻은
+    회사(=명단)만 발표일에 새치기시켰는데, 아메르스포츠는 부문 행이 문턱을 못
+    넘어 그 명단에 영영 못 올랐다. 그래서 6월 분기를 발표한 그날 대기줄 어디에도
+    없었고, `seen` 이 오늘로 찍혀 있어 뒷줄(REFRESH_DAYS)에도 못 섰다 —
+    스무 날 동안 아무 길로도 안 들어오는 자리였다.
+
+    가르는 잣대는 명단이 아니라 **우리가 그 분기를 가졌는가**다
+    (`scrape_fin_intl.missing_announced` 와 같은 규칙: 발표일 백 일 앞에서 끝난
+    분기가 없으면 그 발표는 안 담긴 것이다). 담기면 저절로 빠지므로 명단을
+    손으로 기를 필요가 없다. 국내 기업이 섞여 들어와도 값이 싸다 — 10-Q 는
+    `FORMS` 에 없으므로 목록 요청 한 번에 헛걸음 없이 끝난다.
+    """
+    newest = newest_points()
+    cut = (datetime.now(timezone.utc)
+           - timedelta(hours=POKE_HOURS)).strftime("%Y-%m-%dT%H:%M")
+    out = []
+    for c, d in announced_recently(days).items():
+        try:
+            want = (date.fromisoformat(d) - timedelta(days=100)).isoformat()
+        except ValueError:
+            continue
+        if newest.get(c, "") >= want:
+            continue                      # 그 분기를 이미 가졌다
+        if pokes.get(c, "") > cut:
+            continue                      # 방금 두드렸다
+        out.append((c, caps.get(c, 0)))
+    out.sort(key=lambda kv: -kv[1])
+    return out[:FRESH_MAX]
+
+
 def universe(old):
     """이번에 볼 종목을 순서대로. 두 갈래를 이어 붙인다.
 
-    1. **방금 발표한 외국 기업**을 맨 앞에 둔다. 부문을 이미 얻은 회사라도
-       실적 수치는 새 분기가 나왔을 수 있다 — 아메르스포츠가 그랬다. 부문이
-       있다고 대기줄에서 빼 버렸더니 발표 당일에 숫자가 안 들어왔다.
-       (여기 오르는 것은 지난번에 XBRL 서류가 실제로 잡힌 회사뿐이다.
-       미국 국내 기업을 매일 두드리면 헛걸음만 는다.)
+    1. **발표는 났는데 그 분기가 우리에게 없는 종목**을 맨 앞에 둔다
+       (`stale_announced`). 부문을 이미 얻었는지, 외국 기업 명단에 있는지는
+       안 따진다 — 그 명단으로 가르던 시절 아메르스포츠가 통째로 새어나갔다.
     2. 그다음이 **부문이 아직 없는 종목**, 시총 큰 순.
     """
     caps = ss.want_tickers()
     have = covered()
     seen = old.get("seen", {})
-    # 이미 이 수집기로 부문을 얻은 회사는 두말할 것 없이 외국 기업이다.
-    # (처음 돌 때는 'fpi' 목록이 비어 있으므로 여기서 씨앗을 얻는다 —
-    #  아니면 부문이 있는 회사는 대기줄 어디에도 못 올라 영영 안 본다.)
-    fpi = set(old.get("fpi") or []) | {k.split(":")[-1] for k in (old.get("stocks") or {})}
+    pokes = old.get("pokes", {})
     today = date.today().isoformat()
     cut = (date.fromordinal(date.today().toordinal() - REFRESH_DAYS)).isoformat()
 
-    fresh = [(c, d) for c, d in announced_recently().items()
-             if c in fpi and (seen.get(c, "") < d or seen.get(c, "") < today)]
-    fresh.sort(key=lambda kv: (-caps.get(kv[0], 0),))
+    fresh = stale_announced(caps, pokes)
 
     todo = [(c, cap) for c, cap in caps.items()
             if c not in have and (seen.get(c, "") < cut)]
@@ -168,9 +224,9 @@ def universe(old):
             seen_once.add(c)
             order.append(c)
     if fresh:
-        print(f"  방금 발표한 외국 기업 {len(fresh)}곳을 먼저 본다: "
-              + ", ".join(c for c, _ in fresh[:8]))
-    return order, today
+        print(f"  발표했는데 그 분기가 없는 종목 {len(fresh)}곳을 먼저 본다: "
+              + ", ".join(c for c, _ in fresh[:10]))
+    return order, today, {c for c, _ in fresh}
 
 
 def xbrl_filings(cik):
@@ -273,7 +329,9 @@ def collect():
     old = load_old()
     done = set(old.get("done", []))
     seen = dict(old.get("seen", {}))
-    codes, today = universe(old)
+    pokes = dict(old.get("pokes", {}))
+    codes, today, fresh = universe(old)
+    now = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M")
     print(f"  부문 없는 미국 종목 {len(codes):,} · 이번 실행 {min(PER_RUN, len(codes))}곳")
     cikmap = ss.cik_map()
 
@@ -285,6 +343,11 @@ def collect():
     for sym in codes[:PER_RUN]:
         cik = ss.cik_of(cikmap, sym)
         seen[sym] = today
+        if sym in fresh:
+            # 새치기로 본 회사는 **분 단위로** 적는다. `seen`(날짜)만 두면
+            # 같은 날 다시 볼 길이 없어, 발표는 아침인데 서류가 오후에 올라오는
+            # 회사를 그날 안에 못 잡는다.
+            pokes[sym] = now
         if not cik:
             continue
         walked += 1
@@ -344,10 +407,12 @@ def collect():
         # 서른 곳마다 써 둔다. 반복문 뒤에만 저장하면 도중에 죽을 때 다 잃는다.
         if walked % 30 == 0:
             old["fpi"] = sorted(fpi_seen)
+            old["pokes"] = pokes
             save(old, facts, pairs, by_cik, done, seen)
             save_fin(fin_raw)
 
     old["fpi"] = sorted(fpi_seen)
+    old["pokes"] = pokes
     made = save(old, facts, pairs, by_cik, done, seen)
     fin_made = save_fin(fin_raw)
     print(f"  {walked:,}곳을 보고 서류 {docs:,}장에서 {made:,}종목 부문을 얻었다"
@@ -383,6 +448,10 @@ def save(old, facts, pairs, by_cik, done, seen):
                    "scrape_seg_sec.py 와 한 벌을 쓴다.")
     old["done"] = sorted(done)[-40000:]
     old["seen"] = seen
+    # 오늘 두드린 기록만 남긴다 — 어제 것은 아무 판단에도 안 쓰인다.
+    today = date.today().isoformat()
+    old["pokes"] = {k: v for k, v in (old.get("pokes") or {}).items()
+                    if v[:10] >= today}
     old["count"] = len(old["stocks"])
     old["ts"] = date.today().isoformat()
     OUT.parent.mkdir(parents=True, exist_ok=True)
