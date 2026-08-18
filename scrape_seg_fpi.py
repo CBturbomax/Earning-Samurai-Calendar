@@ -45,9 +45,13 @@ SUBS = "https://data.sec.gov/submissions/CIK{cik:010d}.json"
 FORMS = ("6-K", "20-F", "40-F")
 # 한 실행에 회사 몇 곳까지. 회사마다 요청이 1 + 2×서류라 넉넉히 잡아도 가볍다.
 PER_RUN = int(os.environ.get("FPI_PER_RUN", "40"))
-# 회사마다 서류 몇 장까지 볼까. 6-K 한 장에 이번 분기와 전년 같은 분기가 함께
-# 실리므로 석 장이면 대여섯 분기가 모인다.
+# 회사마다 **부문이 실제로 나온** 서류를 몇 장까지 모을까. 6-K 한 장에 이번
+# 분기와 전년 같은 분기가 함께 실리므로 석 장이면 대여섯 분기가 모인다.
 DOCS_PER_CO = 3
+# 그 석 장을 찾느라 열어 볼 수 있는 서류 수. 6-K 에는 배당 공고·표지뿐인 것이
+# 섞여 있어(ARM 은 셋 중 둘이 그랬다) 열어 봐야 알맹이가 있는지 안다. 이 여유가
+# 없으면 알맹이 있는 서류를 못 채워 기록이 안 만들어진다.
+TRIES_PER_CO = 7
 PAUSE = 0.25
 # 다 따라잡은 회사는 이만큼 지나야 다시 본다(6-K 는 분기마다 나온다).
 REFRESH_DAYS = 20
@@ -138,10 +142,11 @@ def collect():
         except ss.Blocked as e:
             print(f"    {sym} 목록 실패: {e}", file=sys.stderr, flush=True)
             continue
-        got = 0
+        got = tried = 0
         for acc, filed, form in fl:
-            if got >= DOCS_PER_CO:
+            if got >= DOCS_PER_CO or tried >= TRIES_PER_CO:
                 break
+            tried += 1
             if acc in done:
                 continue
             try:
@@ -159,10 +164,10 @@ def collect():
                 continue
             if not blob:
                 continue
-            got += 1
             docs += 1
             rows = parse_instance(blob)
             if rows:
+                got += 1
                 absorb(facts, pairs, cik, filed, acc, rows)
                 by_cik.setdefault(cik, []).append(sym)
             time.sleep(PAUSE)

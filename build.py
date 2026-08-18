@@ -1001,7 +1001,10 @@ def seg_ko(name):
                     break
             else:
                 return name
-        got = " ".join(out).strip()
+        # 같은 말이 잇달아 나오면 하나로 줄인다 — 'Geographic Areas' 처럼
+        # 두 낱말이 같은 한글로 옮겨지는 경우가 있다('지역 지역').
+        squeezed = [w for i, w in enumerate(out) if i == 0 or w != out[i - 1]]
+        got = " ".join(squeezed).strip()
         return got or name
     # 일본어·중국어: 아는 토막을 길게부터 치환. 가나·한자가 남으면 원문.
     t = name
