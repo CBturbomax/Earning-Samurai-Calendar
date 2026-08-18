@@ -23,9 +23,9 @@ import companies_hk
 import companies_us
 from descriptions import DESC_KO
 from markets import (CAP_STEPS, HK_TYPICAL, HKT, HOLIDAYS, JP_TYPICAL, KST,
-                     MARKET_KO, MARKET_ORDER, MARKETS, SECTOR_KO, TIMING_KO,
-                     US_AMC, US_BMO, US_EDT, US_EST, US_SECTOR_KO, USD_KRW,
-                     holiday_ko)
+                     MARKET_KO, MARKET_ORDER, MARKETS, SECTOR_KO, SEG_KO_CJK,
+                     SEG_KO_EN, SEG_KO_FULL, TIMING_KO, US_AMC, US_BMO, US_EDT,
+                     US_EST, US_SECTOR_KO, USD_KRW, holiday_ko)
 from translit import to_korean
 
 HERE = Path(__file__).parent
@@ -954,63 +954,48 @@ def splice(base, fresh):
 
 SEG = load_seg()
 
-# 조정·소거·전사공통 줄은 부문이 아니다. 이름이 일본어 원문 그대로라 어휘로 거른다.
-# (분기 쪽은 XBRL 멤버 이름이라 영어 어휘로 거른다 — 소스가 달라 어휘도 다르다.)
-SEG_HIST_SKIP = re.compile(r"調整|消去|全社|セグメント間|内部取引|合計")
+# ── 부문 이름 한글 표기 ──────────────────────────────────────────
+# 사전은 markets.py 에 있다(SEG_KO_*). **낱말 단위로 전부 아는 이름만** 옮기고
+# 한 낱말이라도 모르면 원문을 그대로 둔다 — 반쪽 번역이 원문보다 더 헷갈리고,
+# 억지 음차·한자음 지어 읽기는 회사 이름과 같은 이유로 금지다.
+_SEG_CJK_KEYS = sorted(SEG_KO_CJK, key=len, reverse=True)
+_SEG_EN_WORD = re.compile(r"[A-Za-z0-9&,\-./·'()% ]+")
+_CJK_LEFT = re.compile(r"[\u3040-\u30ff\u3400-\u9fff\uff01-\uff60]")
 
 
-def load_seg_hist():
-    """일본 부문의 **연간** 이력 (EDINET DB — 有価証券報告書의 보고 세그먼트).
+def seg_ko(name):
+    """부문 이름 -> 한글. 확신이 없으면 원문 그대로."""
+    name = (name or "").strip()
+    hit = SEG_KO_FULL.get(name)
+    if hit:
+        return hit
+    if _SEG_EN_WORD.fullmatch(name):
+        # 영어: 구(2~3낱말)부터 길게 맞춘다. 하나라도 모르면 원문.
+        words = name.replace(",", " ").split()
+        out, i = [], 0
+        while i < len(words):
+            for n in (3, 2, 1):
+                phrase = " ".join(words[i:i + n]).lower()
+                if len(words[i:i + n]) == n and phrase in SEG_KO_EN:
+                    ko = SEG_KO_EN[phrase]
+                    if ko:
+                        out.append(ko)
+                    i += n
+                    break
+            else:
+                return name
+        got = " ".join(out).strip()
+        return got or name
+    # 일본어·중국어: 아는 토막을 길게부터 치환. 가나·한자가 남으면 원문.
+    t = name
+    for k in _SEG_CJK_KEYS:
+        if k in t:
+            t = t.replace(k, SEG_KO_CJK[k])
+    if _CJK_LEFT.search(t):
+        return name
+    t = re.sub(r"\s+", " ", t).strip(" ·&")
+    return t or name
 
-    TDnet 결산단신은 한 달치만 남아 옛 분기가 그 길에 없고, EDINET 공식 API 는
-    키 포털이 막혀 있다. 그래서 연간 이력을 edinetdb.jp 에서 받는다(2014년치부터).
-    **분기 차트에 섞지 않는다** — 연간 막대 옆에 반기 막대가 서면 높이가
-    거짓말이 된다. 화면은 분기 차트 아래에 연간 차트를 따로 단다.
-
-    걸러내기 규칙이 수집기가 아니라 여기 있는 까닭은 분기 부문의 원자료와
-    같다 — 수집 쪽에 두면 규칙을 고칠 때마다 100건/일 예산으로 다시 받아야 한다.
-    기준이 바뀐 회사 정리는 분기와 **같은 함수**(current_basis)를 쓴다.
-    """
-    p = HERE / "data" / "segments_jp_hist.json"
-    if not p.exists():
-        return {}
-    try:
-        got = json.loads(p.read_text(encoding="utf-8")).get("stocks", {})
-    except (ValueError, OSError) as e:
-        print(f"  ! segments_jp_hist.json 읽기 실패: {e}")
-        return {}
-    out = {}
-    for key, v in got.items():
-        by_fy = {}
-        for fy, nm, rev, _opi in v.get("rows", []):
-            # 음수·0 매출은 부문이 아니라 상계 줄이다. 쌓는 막대에 못 올린다.
-            if SEG_HIST_SKIP.search(nm) or not rev or rev <= 0:
-                continue
-            by_fy.setdefault(fy, {})[nm] = int(rev)
-        fys = sorted(by_fy)
-        if len(fys) < 2:
-            continue
-        last = by_fy[fys[-1]]
-        names = sorted({n for row in by_fy.values() for n in row},
-                       key=lambda n: (-(last.get(n) or 0),
-                                      -sum(row.get(n) or 0 for row in by_fy.values())))
-        pts = [[f"FY{fy}"] + [by_fy[fy].get(n) for n in names]
-               for fy in fys[-12:]]
-        rec = current_basis({"ax": "연간 부문", "names": names, "pts": pts})
-        if not rec or len(rec.get("names") or []) < 2:
-            continue
-        if len(rec["names"]) > 10:              # 범례가 화면을 가로지르면 못 읽는다
-            keep = rec["names"][:10]
-            idx = [rec["names"].index(n) for n in keep]
-            rec = {"ax": rec.get("ax", "연간 부문"), "names": keep,
-                   "pts": [[r[0]] + [r[i + 1] for i in idx] for r in rec["pts"]]}
-        out[key] = rec
-    if out:
-        print(f"  segments_jp_hist.json: 연간 부문 이력 {len(out):,}종목")
-    return out
-
-
-SEG_HIST = load_seg_hist()
 
 
 def load_desc():
@@ -1187,7 +1172,9 @@ def pack_seg(rec, fin_rec):
     # 처럼 실으면 종목마다 몇백 바이트씩 늘어난다.
     rows = [[lab] + [int(v) if v else None for v in r[1:]]
             for r, (lab, _rev) in zip(pts, aligned)][-SEG_KEEP:]
-    out = {"names": names, "pts": rows}
+    # 이름은 화면 직전에 한글로 옮긴다(아는 이름만 — seg_ko). 여기서 옮겨야
+    # 미국·일본·홍콩이 한 길로 지나간다.
+    out = {"names": [seg_ko(n) for n in names], "pts": rows}
     # 어느 축으로 쪼갠 것인가. 사업부문이 없어 제품이나 지역으로 내려간 회사가
     # 있다(애플의 영업부문은 지역이다). 화면 제목이 이걸로 갈린다.
     if rec.get("axis") and rec["axis"] != "사업부문":
@@ -1440,9 +1427,6 @@ def build():
         # 지금은 미국 종목만 — 일본·홍콩은 소스에 부문 페이지가 없다.
         # 합이 총매출과 안 맞는 종목은 여기서 걸러진다(seg_fit).
         "seg": seg,
-        # 일본 부문의 연간 이력(有報 기준, EDINET DB). 분기 차트와 섞지 않고
-        # 아래에 따로 그린다 — 단위가 달라 한 차트에 서면 높이가 거짓말이 된다.
-        "segH": {s: rec for s, rec in SEG_HIST.items() if s in on_screen},
     }
 
     # **러너는 UTC 로 돈다.** 예전에는 datetime.now() 에 "KST" 만 붙였는데,
@@ -2765,14 +2749,13 @@ function bizLine(m, code) {
 
 function finBlock(m, code) {
   const key = m + ':' + code;
-  const f = D.fin[key], sg = D.seg[key], sh = D.segH && D.segH[key];
+  const f = D.fin[key], sg = D.seg[key];
   const biz = bizLine(m, code);
   // 실적 수치가 없어도 부문은 있을 수 있다. 그때 통화를 'USD' 로 박아 두면
   // 일본 회사의 엔화 막대에 '단위: bil USD' 라고 적히는 거짓말이 된다.
   const MKT_CUR = { jp: 'JPY', hk: 'HKD' };
-  if (!f) return biz + ((sg || sh)
-    ? '<div class="finwrap">' + (sg ? segChart(sg, MKT_CUR[m] || 'USD') : '') +
-      (sh ? segChart(sh, MKT_CUR[m] || 'USD') : '') + '</div>'
+  if (!f) return biz + (sg
+    ? '<div class="finwrap">' + segChart(sg, MKT_CUR[m] || 'USD') + '</div>'
     : '<p class="finnote">이 종목은 아직 실적 수치를 받지 않았습니다. ' +
       '시가총액 큰 종목부터 채우는 중입니다.</p>');
   let html = biz;
@@ -2803,9 +2786,6 @@ function finBlock(m, code) {
   }
   // 사업부별은 매출·성장률 아래에 붙인다. 큰 그림을 먼저 보고 쪼개 보는 순서다.
   if (sg) html += segChart(sg, f.cur || 'USD');
-  // 일본 연간 부문 이력(有報 기준). 분기 차트와 **섞지 않고** 아래에 따로 —
-  // 연간 막대 옆에 반기 막대가 서면 높이가 거짓말이 된다.
-  if (sh) html += segChart(sh, f.cur || 'USD');
   // 맨 아래 실적 브리핑 — 차트를 못 읽고 지나가도 요점은 남게.
   html += briefBlock(key, f, sg);
   return html || '<p class="finnote">받아둔 수치가 없습니다.</p>';

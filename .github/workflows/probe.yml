@@ -19,6 +19,67 @@ jobs:
         with:
           python-version: '3.12'
 
+      # 22차 — 분기 이력의 마지막 문. 회원님이 원하는 건 연간이 아니라 **분기**다.
+      # 옛 분기는 EDINET 四半期報告書(2021~2024·이후 半期報告書)에만 있고, 정부
+      # 창고(disclosure2dl)는 익명으로 열려 있으나 **문서번호(docID)** 를 모르면
+      # 못 받는다(16차에서 확인 — 가짜 번호는 "blob does not exist"). EDINET DB 가
+      # 문서번호를 노출하는지 뒤진다: financials 류 응답에 docID/S100… 이 실려
+      # 있으면, 문서번호는 EDINET DB(키 있음)로 얻고 zip 은 정부 창고에서 키·쿼터
+      # 없이 받는 길이 열린다 → 진짜 분기 부문 이력.
+      - name: 🇯🇵 EDINET DB 문서번호 사냥 (22차 · 키 필요)
+        if: env.EDINETDB_KEY != ''
+        timeout-minutes: 6
+        run: |
+          python - <<'EOF'
+          import json, os, re, urllib.request, urllib.error
+          KEY = os.environ["EDINETDB_KEY"]
+          def get(url, key=True):
+              h = {"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) Chrome/124.0",
+                   "Accept": "application/json,*/*"}
+              if key:
+                  h["X-API-Key"] = KEY
+              try:
+                  with urllib.request.urlopen(urllib.request.Request(url, headers=h), timeout=30) as r:
+                      return r.status, r.read().decode("utf-8", "replace")
+              except urllib.error.HTTPError as e:
+                  return e.code, e.read().decode("utf-8", "replace")[:200]
+              except Exception as e:
+                  return None, f"{type(e).__name__}: {e}"
+          docids = set()
+          for path in ("/companies/E02378/financials",
+                       "/companies/E02378/filings",
+                       "/companies/E02378/documents",
+                       "/companies/E02378/reports",
+                       "/companies/E02378"):
+              st, body = get("https://edinetdb.jp/v1" + path)
+              ids = set(re.findall(r"S100[0-9A-Za-z]{4,6}", body))
+              docids |= ids
+              print(f"\n== {path}  status={st}  {len(body):,}자  docID {len(ids)}개")
+              if st == 200:
+                  try:
+                      j = json.loads(body)
+                      d = j.get("data")
+                      row = (d[0] if isinstance(d, list) and d else d)
+                      if isinstance(row, dict):
+                          print("   첫 행 키:", sorted(row)[:24])
+                          print("   맛보기:", json.dumps(row, ensure_ascii=False)[:400])
+                  except ValueError:
+                      print("   본문:", body[:200])
+              else:
+                  print("   본문:", body[:160])
+          print("\n== 모은 docID:", sorted(docids)[:8])
+          # 진짜 docID 로 정부 창고 내려받기 꼴을 확인한다 (키·쿼터 없음)
+          for did in sorted(docids)[:2]:
+              for pat in (f"https://disclosure2dl.edinet-fsa.go.jp/searchdocument/pdf/{did}.pdf",
+                          f"https://disclosure2dl.edinet-fsa.go.jp/searchdocument/zip/{did}.zip",
+                          f"https://disclosure2dl.edinet-fsa.go.jp/searchdocument/xbrl/{did}.zip",
+                          f"https://disclosure2dl.edinet-fsa.go.jp/searchdocument/{did}.zip"):
+                  st, body = get(pat, key=False)
+                  head = body[:4].encode("utf-8", "replace") if isinstance(body, str) else b""
+                  print(f"   {pat.split('/searchdocument/')[-1]:34s} status={st}"
+                        f"  {len(body):,}자  머리={head[:4]}")
+          EOF
+
       # 21차 — EDINET DB 가 우회로로 확정됐다(20차: CI 도달 OK · 검색 키 없이 OK ·
       # 세그먼트 경로 /v1/companies/{E코드}/segments 는 401=경로 맞고 키만 필요).
       # 이번엔 (A) 가입 절차를 문서에서 읽어 회원님께 정확히 안내하고, (B) 키가

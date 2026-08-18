@@ -90,7 +90,8 @@ python scrape_desc.py                       # 사업 설명 원문
 | 미국 실적 수치를 더 받는다 | `scrape_fin.py` — 매출 태그는 `REV_TAGS` |
 | 일본·홍콩 실적 수치 | `scrape_fin_intl.py`, 일본 당일치는 `scrape_fin_jp.py` |
 | 부문별 매출 | 미국 `scrape_seg_sec.py`(뼈대)·`scrape_seg_edgar.py`(최근 분기) · 일본 `scrape_fin_jp.py` · 홍콩 `scrape_seg_hk.py` |
-| 일본 부문 **연간** 이력(차트 아래 연간 막대) | `scrape_seg_jp_edinetdb.py` — 걸러내기는 `build.py`의 `load_seg_hist` |
+| 일본 부문 **연간** 이력(수집만, 화면엔 안 냄) | `scrape_seg_jp_edinetdb.py` |
+| 부문 이름 한글 표기 | `markets.py`의 `SEG_KO_FULL`/`SEG_KO_EN`/`SEG_KO_CJK` — 옮기기는 `build.py`의 `seg_ko` |
 | 부문을 어느 축으로 가를까 | `scrape_seg_sec.py`의 `axis_rank` / `AXIS_KO` |
 | 회사 사업 설명(한국어) | `descriptions.py`의 `DESC_KO` — 원문 수집은 `scrape_desc.py` |
 | 실적 브리핑(숫자 요약·문구) | `build.py`의 `briefBlock` — 한국어 코멘트는 `briefs.py`, 원문 수집은 `scrape_pr_us.py`(미국)·`scrape_fin_jp.py`의 `fcst`(일본 가이던스) |
@@ -531,13 +532,19 @@ IP 를 403 으로 막는다(닛케이와 같은 벽). edinetdb.jp 무료 API 만
 코드리스트 zip(무인증) 한 방이다 — 검색 API 로 종목마다 두드리면 그것만으로
 하루 예산이 끝난다.
 
-- **연간과 분기를 한 차트에 섞지 않는다.** 연간 막대 옆에 반기 막대가 서면
-  높이가 거짓말이 된다. 화면은 분기 차트 아래에 「연간 부문별 매출」 차트를
-  따로 단다.
-- 조정·소거 줄 걸러내기와 기준 변경 정리는 `build.py`(load_seg_hist)가 한다 —
-  분기 쪽과 **같은 함수**(current_basis)를 태운다. 수집기는 원자료만 담는다.
-  규칙을 수집기에 두면 고칠 때마다 100건/일 예산으로 다시 받아야 한다.
-- 부문 이름은 일본어 원문 그대로다(欧州地域). 한국 한자음으로 지어 읽지 않는다.
+- **연간 차트는 화면에 안 낸다 — 회원님 지시다** ("연간은 필요없어. 분기별이
+  필요한거"). 한때 분기 차트 아래 연간 차트를 달았다가 내렸다. 자료는 계속
+  받아 둔다 — 분기 이력이 열리는 날(아래) 결산 분기를 「연간 − 앞 세 분기」로
+  되살리는 밑절미가 된다. 다시 달지 말 것.
+- 수집기는 원자료만 담는다. 걸러내기 규칙을 수집기에 두면 고칠 때마다
+  100건/일 예산으로 다시 받아야 한다.
+
+**부문 이름은 아는 것만 한글로 옮긴다** — `markets.py` 의 `SEG_KO_FULL`(통짜)
+`SEG_KO_EN`(영어 낱말·구) `SEG_KO_CJK`(일·중 토막), 옮기기는 `build.py` 의
+`seg_ko`. 영어는 **낱말이 전부 사전에 있을 때만**, 일·중은 **치환 뒤 가나·한자가
+안 남을 때만** 옮기고 아니면 원문 그대로다 — 반쪽 번역('부동산 Alpha')이
+원문보다 더 헷갈리고, 억지 음차·한자음 지어 읽기는 회사 이름과 같은 이유로
+금지다(騰訊 → '등신' 참사). 자주 보이는데 안 옮겨진 이름은 사전에 낱말을 더한다.
 
 **기준이 바뀌면 바뀐 것만 보여준다.** 회사는 사업부 구분을 통째로 갈아엎는다.
 HPE 가 Compute·Storage·Intelligent Edge 를 Cloud&AI·Networking 으로 바꿨고,
