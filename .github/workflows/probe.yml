@@ -20,69 +20,58 @@ jobs:
         with:
           python-version: '3.12'
 
-      # 33차 — HSBC 만 남았다. 태그 이름(RevenueAndOperatingIncome)도 넣고
-      # 이름공간도 안 따지게 했는데 여전히 0건이다. 인스턴스에서 그 항목이
-      # 걸린 문맥을 하나씩 뜯어 (축 이름 / 기간 / parse_seg 판정 / qtrs_of)를
-      # 나란히 찍는다. 어느 관문에서 죽는지 눈으로 본다.
-      - name: 🏦 HSBC 부문 매출 관문별 추적 (33차)
+      # 34차 — 아메르스포츠. 오늘 장전에 6월 분기를 발표했다(나스닥 캘린더에
+      # 2026-08-18 time-pre-market 로 올라 있다). 물음은 하나다:
+      # **그 6-K 가 지금 EDGAR 에 올라와 있고, 우리 파서가 6월 분기를 뽑아내나.**
+      # 제출 목록을 통째로 찍고, XBRL 이 붙은 것부터 인스턴스를 뜯어
+      # totals()/parse_instance() 결과를 나란히 본다.
+      - name: 🎿 아메르스포츠 6월 분기 서류 추적 (34차)
         timeout-minutes: 10
         run: |
           python - <<'EOF'
-          import io, re
-          from collections import Counter
-          import xml.etree.ElementTree as ET
+          import json
           import scrape_seg_sec as ss
-          from scrape_seg_edgar import get, instance_url, local, strip_member, qtrs_of, parse_instance
-          from scrape_seg_fpi import xbrl_filings
+          from scrape_seg_edgar import get, instance_url, qtrs_of, parse_instance
+          from scrape_seg_fpi import xbrl_filings, totals, fin_points, SUBS
+
           cikmap = ss.cik_map()
-          cik = ss.cik_of(cikmap, "HSBC")
-          print("HSBC CIK", cik)
-          for acc, filed, form in xbrl_filings(cik)[:2]:
-              url = instance_url(cik, acc)
-              print(f"\n== {filed} {form} -> {(url or '없음').split('/')[-1]}")
-              if not url:
+          for sym in ("AS", "BHP", "ZTO"):
+              cik = ss.cik_of(cikmap, sym)
+              print(f"\n===== {sym} CIK {cik}")
+              if not cik:
                   continue
-              blob = get(url, timeout=150)
-              if not blob:
-                  print("   못 받음"); continue
-              # 문맥 전부 읽기(자식을 먼저 비우지 않는다)
-              ctx = {}
-              for ev, el in ET.iterparse(io.BytesIO(blob), events=("end",)):
-                  if local(el.tag) == "context":
-                      cid, dims, st, en = el.get("id"), [], "", ""
-                      for m in el.iter():
-                          lm = local(m.tag)
-                          if lm == "explicitMember":
-                              a = ss.norm_axis(m.get("dimension") or "")
-                              v = strip_member((m.text or "").strip())
-                              if a and v:
-                                  dims.append(f"{a}={v}")
-                          elif lm == "startDate":
-                              st = (m.text or "").strip()
-                          elif lm == "endDate":
-                              en = (m.text or "").strip()
-                      if cid:
-                          ctx[cid] = (dims, st, en)
-                      el.clear()
-                  elif el.get("contextRef"):
-                      el.clear()
-              shown = 0
-              seen_axes = Counter()
-              for ev, el in ET.iterparse(io.BytesIO(blob), events=("end",)):
-                  cr = el.get("contextRef")
-                  nm = local(el.tag)
-                  if cr and nm in ss.REV_RANK and cr in ctx:
-                      dims, st, en = ctx[cr]
-                      q = qtrs_of(st, en) if (st and en) else None
-                      got = ss.parse_seg(";".join(dims) + ";") if dims else None
-                      for d in dims:
-                          seen_axes[d.split("=")[0]] += 1
-                      if shown < 14:
-                          print(f"   {nm[:34]:36s} {st}~{en} qtrs={q} parse_seg={got} "
-                                f"값={(el.text or '').strip()[:14]}")
-                          shown += 1
-                  el.clear()
-              print("   매출 항목이 걸린 축 빈도:", dict(seen_axes.most_common(8)))
-              rows = parse_instance(blob)
-              print(f"   parse_instance -> {len(rows)}행", rows[:3])
+              blob = get(SUBS.format(cik=cik), timeout=60)
+              j = json.loads(blob)
+              r = j["filings"]["recent"]
+              print(f"  이름 {j.get('name')} · 최근 {len(r['form'])}건")
+              for i in range(min(14, len(r["form"]))):
+                  print(f"    {r['filingDate'][i]} {r['form'][i]:6s} "
+                        f"xbrl={r.get('isXBRL',[0]*99)[i]} inline={r.get('isInlineXBRL',[0]*99)[i]} "
+                        f"{r['accessionNumber'][i]} {r.get('primaryDocument',[''])[i][:40]}")
+              fl = xbrl_filings(cik)
+              print(f"  xbrl_filings -> {len(fl)}건, 앞 3: {fl[:3]}")
+              raw = {}
+              for acc, filed, form in fl[:3]:
+                  url = instance_url(cik, acc)
+                  print(f"  -- {filed} {form} {acc} -> {(url or '없음').split('/')[-1]}")
+                  if not url:
+                      continue
+                  b = get(url, timeout=150)
+                  if not b:
+                      print("     못 받음"); continue
+                  t = totals(b)
+                  print(f"     totals {len(t)}칸: "
+                        + ", ".join(f"{k[0]}/q{k[1]}" for k in sorted(t)[:8]))
+                  for k, v in t.items():
+                      cur = raw.get(k)
+                      if cur is None or filed >= cur[1]:
+                          raw[k] = (v, filed)
+                  try:
+                      rows = parse_instance(b)
+                  except Exception as e:
+                      rows = []
+                      print(f"     parse_instance 실패: {type(e).__name__} {e}")
+                  print(f"     부문 {len(rows)}행 {rows[:2]}")
+              pts = fin_points({k: v[0] for k, v in raw.items()})
+              print(f"  == fin_points {len(pts)}점: {pts[-4:]}")
           EOF
