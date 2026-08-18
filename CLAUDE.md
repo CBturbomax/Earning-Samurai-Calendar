@@ -89,7 +89,7 @@ python scrape_desc.py                       # 사업 설명 원문
 | 발표 시각을 옮기는 규칙 | `markets.py`의 `US_BMO`/`US_AMC`/`JP_TYPICAL`, `build.py`의 `to_kst` |
 | 미국 실적 수치를 더 받는다 | `scrape_fin.py` — 매출 태그는 `REV_TAGS` |
 | 일본·홍콩 실적 수치 | `scrape_fin_intl.py`, 일본 당일치는 `scrape_fin_jp.py` |
-| 부문별 매출 | 미국 `scrape_seg_sec.py`(뼈대)·`scrape_seg_edgar.py`(최근 분기) · 일본 `scrape_fin_jp.py` · 홍콩 `scrape_seg_hk.py` |
+| 부문별 매출 | 미국 `scrape_seg_sec.py`(뼈대)·`scrape_seg_edgar.py`(최근 분기)·`scrape_seg_fpi.py`(외국 기업) · 일본 `scrape_fin_jp.py` · 홍콩 `scrape_seg_hk.py` |
 | 일본 부문 **연간** 이력(수집만, 화면엔 안 냄) | `scrape_seg_jp_edinetdb.py` |
 | 부문 이름 한글 표기 | `markets.py`의 `SEG_KO_FULL`/`SEG_KO_EN`/`SEG_KO_CJK` — 옮기기는 `build.py`의 `seg_ko` |
 | 부문을 어느 축으로 가를까 | `scrape_seg_sec.py`의 `axis_rank` / `AXIS_KO` |
@@ -477,6 +477,23 @@ segments 예: BusinessSegments=Datacenter;ConsolidationItems=OperatingSegments;
 - **종료일이 월말로 반올림돼 온다.** 엔비디아의 1월 28일 결산이 1월 31일로 온다.
   총매출 점과 스무 날 안이면 같은 분기로 보고 **그쪽이 매긴 이름을 그대로 쓴다**
   (`build.py` 의 `seg_align`) — SEC 프레임과 `unstack` 을 거친 이름이라 옳다.
+
+**미국 상장 외국 기업은 10-Q 를 안 낸다 — 20-F·6-K 에서 따로 받는다.**
+회원님이 아메르스포츠를 짚어 물으신 자리다. 국내 기업만 분기보고서를 내므로
+SEC 분기 벌크도 분기 색인(form.idx 는 10-Q/10-K 만 훑는다)도 이들을 구조적으로
+못 잡았고, TSMC·HSBC·ARM·아메르스포츠의 부문이 어느 소스에도 없었다.
+`scrape_seg_fpi.py` 가 **회사별 제출 목록**(submissions JSON)에서 XBRL 이 붙은
+20-F·6-K 만 골라 인스턴스를 뜯는다 — 6-K 를 859건 내는 HSBC 에서도 헛걸음이 없다.
+
+- **회계기준을 가리지 않는다.** 국내 기업은 us-gaap, 외국 기업은 ifrs-full 로
+  태그한다(아메르스포츠·HSBC 는 ifrs-full, ARM 은 us-gaap). 항목 이름은
+  `REV_TAGS` 가 이미 둘 다 담고 있어 네임스페이스만 넓혔다.
+- **분기 XBRL 이 있는 회사와 없는 회사가 갈린다**(probe 28-C 실측). ARM 은 6-K 가
+  전부 XBRL, 아메르스포츠·HSBC 는 분기 보고 6-K 에 XBRL 이 붙는다. **TSMC 는
+  최근 6-K 가 전부 XBRL 이 아니고 20-F(연 1회)에만 있다** — 이 길로도 분기가
+  없다. 없는 것을 지어내지 않는다.
+- 축 고르기·상계 빼기·누계 되돌리기는 `scrape_seg_sec.py` 의 함수를 그대로
+  불러 쓴다. 같은 판단을 세 군데 적어 두면 반드시 갈라진다.
 
 **홍콩 부문별 매출은 동화순(10jqka) F10 에서 온다 — 비중(%)만 준다.**
 홍콩 공시는 PDF 한 장이라 기계로 읽을 공식 경로가 없다. 여덟 소스를 떠봤고
