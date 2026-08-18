@@ -387,6 +387,8 @@ SEG_KO_EN = {
     "sports": "스포츠", "geographic": "지역", "areas": "지역",
     "segments": "부문", "segment": "부문", "商品": "상품",
     "non": "비", "for": "", "all": "", "it": "IT",
+    "imaging": "이미징", "sensing": "센싱", "pet": "펫", "care": "케어",
+    "personal care": "개인 케어", "pet care": "펫 케어", "computing": "컴퓨팅",
     "canadian": "캐나다", "american": "미국", "european": "유럽",
     "asian": "아시아", "wealth": "자산", "chinese": "중국",
 }
