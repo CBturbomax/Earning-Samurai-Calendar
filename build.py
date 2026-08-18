@@ -1425,6 +1425,37 @@ def build():
                 names = ", ".join(k.split(":")[1] for _v, k in mine[:5])
                 print(f"    {MARKETS[m]['ko']} {len(mine):,}/{tot:,} 없음 — 큰 것부터: {names}")
 
+    # **'발표는 났는데 그 분기가 없는' 것도 같이 드러낸다.** 부문 커버리지만
+    # 재던 시절에 아메르스포츠를 놓쳤다 — 부문이 아니라 **수치**가 3월 분기에
+    # 멈춰 있었고, 회원님이 짚어 물어보시고서야 알았다("얌마 아머스포츠 실적
+    # 나왔는데 왜 업뎃 안해?"). 발표일이 이미 지났는데(어제까지) 그 분기가 우리
+    # 기록에 없으면 그건 발표가 없는 게 아니라 **우리가 못 받은 것**이다.
+    # 잣대는 수집기들과 한 벌이다 — 발표일 백 일 앞에서 끝난 분기가 없으면 빈 것.
+    if big:
+        y = (date.today() - timedelta(days=1)).isoformat()
+        lo = (date.today() - timedelta(days=30)).isoformat()
+        late = []
+        for p_ in packed:
+            k = p_[9] + ":" + p_[1]
+            if k not in big or not (lo <= p_[0] <= y):
+                continue
+            pts = (FIN.get(k) or {}).get("points") or []
+            last = pts[-1].get("end", "") if pts else ""
+            want = (date.fromisoformat(p_[0]) - timedelta(days=100)).isoformat()
+            if last < want:
+                late.append((big[k], k, p_[0], last or "없음"))
+        late = sorted({(c, k, d, l) for c, k, d, l in late}, reverse=True)
+        seen_k, uniq = set(), []
+        for c, k, d, l in late:
+            if k not in seen_k:
+                seen_k.add(k)
+                uniq.append((c, k, d, l))
+        if uniq:
+            print(f"  발표는 났는데 그 분기가 없는 종목 {len(uniq):,}"
+                  f" (시총 1조원 이상 · 최근 30일)")
+            for c, k, d, l in uniq[:6]:
+                print(f"    {k} 발표 {d} · 우리 최신 {l}")
+
     # 실적 브리핑 재료 둘. 회사가 공시한 통기 예상(일본 결산단신의 예상란)과
     # 공시 원문에서 옮긴 한국어 코멘트(briefs.py). 코멘트는 (종목, 분기) 열쇠라
     # 다음 분기가 오면 자동으로 내려간다 — 낡은 말이 새 분기에 붙는 것을 막는다.
