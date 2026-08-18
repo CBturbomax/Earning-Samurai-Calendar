@@ -492,6 +492,17 @@ SEC 분기 벌크도 분기 색인(form.idx 는 10-Q/10-K 만 훑는다)도 이�
   전부 XBRL, 아메르스포츠·HSBC 는 분기 보고 6-K 에 XBRL 이 붙는다. **TSMC 는
   최근 6-K 가 전부 XBRL 이 아니고 20-F(연 1회)에만 있다** — 이 길로도 분기가
   없다. 없는 것을 지어내지 않는다.
+- **표시축·지역축 이름이 회계기준마다 다르다.** us-gaap 은 `ConsolidationItems`·
+  `Geographical`, IFRS 는 `SegmentConsolidationItems`·`GeographicalAreas` 다.
+  뒤엣것을 몰라서 셸·BHP 는 축이 둘로 읽혀 통째로 버려졌고(그 표시축을 부문으로
+  세는 바람), 노바티스·아스트라제네카는 지역 축이 0점이라 걸러졌다. 이름 하나가
+  달라 회사 전체가 사라지는 자리라 규칙으로 막았다(`k.endswith("ConsolidationItems")`).
+- **IFRS 은행은 매출 항목 이름이 또 다르다** — HSBC 의 부문 매출은
+  `RevenueAndOperatingIncome` 이다. `REV_TAGS` 에 더했다(us-gaap 회사에는 그
+  이름이 없으므로 무해하다).
+- **분기 6-K 에 부문이 없는 회사도 있다.** 아스트라제네카의 6-K 는 부문 문맥이
+  다섯 개뿐이고 그 안의 숫자는 특허 건수다 — 부문 매출은 연 1회 20-F 에만 있다.
+  BHP 도 연 1회다. 없는 분기를 지어내지 않는다.
 - 축 고르기·상계 빼기·누계 되돌리기는 `scrape_seg_sec.py` 의 함수를 그대로
   불러 쓴다. 같은 판단을 세 군데 적어 두면 반드시 갈라진다.
 
