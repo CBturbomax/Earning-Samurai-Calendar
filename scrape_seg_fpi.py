@@ -39,7 +39,9 @@ from scrape_seg_edgar import (absorb, get, instance_url, parse_instance)
 HERE = Path(__file__).parent
 OUT = HERE / "data" / "segments_fpi.json"
 
-FPI_VER = 1
+# 2: 표시축(SegmentConsolidationItems)·지역축(GeographicalAreas)·HSBC 의 매출
+#    항목을 알아보게 고쳤다. 이미 본 서류를 다시 뜯어야 하므로 판을 올린다.
+FPI_VER = 2
 SUBS = "https://data.sec.gov/submissions/CIK{cik:010d}.json"
 # 외국 기업이 내는 서류. 40-F 는 캐나다 회사다.
 FORMS = ("6-K", "20-F", "40-F")
