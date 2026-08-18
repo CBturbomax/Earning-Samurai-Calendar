@@ -1,11 +1,11 @@
 # 소스를 떠보는 자리. 결과만 로그로 보고 아무것도 커밋하지 않는다.
+#
+# **35차는 dispatch 전용이다.** EDINET DB 무료 키가 하루 100건이라, push 로도
+# 걸려 있으면 파일을 고칠 때마다 예산이 새어 나간다. 손으로 한 번만 돌린다.
 name: 소스 접근 확인
 
 on:
   workflow_dispatch:
-  push:
-    paths:
-      - '.github/workflows/probe.yml'
 
 jobs:
   probe:
@@ -20,58 +20,158 @@ jobs:
         with:
           python-version: '3.12'
 
-      # 34차 — 아메르스포츠. 오늘 장전에 6월 분기를 발표했다(나스닥 캘린더에
-      # 2026-08-18 time-pre-market 로 올라 있다). 물음은 하나다:
-      # **그 6-K 가 지금 EDGAR 에 올라와 있고, 우리 파서가 6월 분기를 뽑아내나.**
-      # 제출 목록을 통째로 찍고, XBRL 이 붙은 것부터 인스턴스를 뜯어
-      # totals()/parse_instance() 결과를 나란히 본다.
-      - name: 🎿 아메르스포츠 6월 분기 서류 추적 (34차)
+      # 35차 — EDINET DB 에서 **분기** 세그먼트를 얻을 수 있나.
+      #
+      # 지금 받는 것은 有価証券報告書 기준의 연간뿐이고(2014~2025), 회원님이
+      # 원하시는 것은 분기다. 물음 넷을 예산 **4건**으로 끝낸다.
+      #   1) segments?period=quarterly 가 분기 행을 주나 (연간과 같은 응답이면 꽝)
+      #   2) financials?period=quarterly 는 어떤가 (총매출·영업이익 이력 보강용)
+      #   3) disclosures/search 에 四半期報告書 docID 가 보이나 (PDF 경로 실현성)
+      #   4) 남는 한 건은 1)이 꽝일 때 다른 이름의 매개변수에 쓴다
+      #
+      # 키가 안 드는 것(스펙 문서·상태)은 먼저 훑어 매개변수 이름을 알아낸다.
+      - name: 🗾 EDINET DB 분기 세그먼트 (35차 · 예산 4건)
         timeout-minutes: 10
         run: |
           python - <<'EOF'
-          import json
-          import scrape_seg_sec as ss
-          from scrape_seg_edgar import get, instance_url, qtrs_of, parse_instance
-          from scrape_seg_fpi import xbrl_filings, totals, fin_points, SUBS
+          import json, os, sys, urllib.error, urllib.request
 
-          cikmap = ss.cik_map()
-          for sym in ("AS", "BHP", "ZTO"):
-              cik = ss.cik_of(cikmap, sym)
-              print(f"\n===== {sym} CIK {cik}")
-              if not cik:
+          KEY = os.environ.get("EDINETDB_KEY", "")
+          print("키 있음" if KEY else "키 없음 — 여기서 끝")
+          if not KEY:
+              sys.exit(0)
+          BASE = "https://edinetdb.jp/v1"
+          UA = {"User-Agent": "Earning Samurai Calendar (cbpark@wisdomasset.co.kr)",
+                "Accept": "application/json,*/*"}
+          spent = [0]
+
+          def call(url, key=True, note=""):
+              if key:
+                  spent[0] += 1
+                  print(f"\n[예산 {spent[0]}/4] {note or url}")
+              else:
+                  print(f"\n[무료] {note or url}")
+              h = dict(UA)
+              if key:
+                  h["X-API-Key"] = KEY
+              req = urllib.request.Request(url, headers=h)
+              try:
+                  with urllib.request.urlopen(req, timeout=40) as r:
+                      body = r.read()
+                      print(f"   HTTP {r.status} · {len(body):,}바이트")
+                      return body
+              except urllib.error.HTTPError as e:
+                  body = e.read()
+                  print(f"   HTTP {e.code} · 본문 {body[:400]!r}")
+                  return None
+              except Exception as e:
+                  print(f"   실패 {type(e).__name__}: {e}")
+                  return None
+
+          # ── 0) 키 안 드는 것부터: 스펙에 매개변수 이름이 적혀 있나 ──────────
+          hints = set()
+          for u in (f"{BASE}/openapi.json", "https://edinetdb.jp/openapi.json",
+                    f"{BASE}/status", "https://edinetdb.jp/api-docs"):
+              b = call(u, key=False, note=u)
+              if not b:
                   continue
-              blob = get(SUBS.format(cik=cik), timeout=60)
-              j = json.loads(blob)
-              r = j["filings"]["recent"]
-              print(f"  이름 {j.get('name')} · 최근 {len(r['form'])}건")
-              for i in range(min(14, len(r["form"]))):
-                  print(f"    {r['filingDate'][i]} {r['form'][i]:6s} "
-                        f"xbrl={r.get('isXBRL',[0]*99)[i]} inline={r.get('isInlineXBRL',[0]*99)[i]} "
-                        f"{r['accessionNumber'][i]} {r.get('primaryDocument',[''])[i][:40]}")
-              fl = xbrl_filings(cik)
-              print(f"  xbrl_filings -> {len(fl)}건, 앞 3: {fl[:3]}")
-              raw = {}
-              for acc, filed, form in fl[:3]:
-                  url = instance_url(cik, acc)
-                  print(f"  -- {filed} {form} {acc} -> {(url or '없음').split('/')[-1]}")
-                  if not url:
-                      continue
-                  b = get(url, timeout=150)
-                  if not b:
-                      print("     못 받음"); continue
-                  t = totals(b)
-                  print(f"     totals {len(t)}칸: "
-                        + ", ".join(f"{k[0]}/q{k[1]}" for k in sorted(t)[:8]))
-                  for k, v in t.items():
-                      cur = raw.get(k)
-                      if cur is None or filed >= cur[1]:
-                          raw[k] = (v, filed)
+              try:
+                  txt = b.decode("utf-8", "replace")
+              except Exception:
+                  continue
+              for w in ("period", "quarter", "quarterly", "freq", "frequency",
+                        "type", "unit", "四半期"):
+                  if w in txt:
+                      hints.add(w)
+              print(f"   낌새 낱말: {sorted(hints) or '없음'}")
+              if "openapi" in u and len(txt) < 200000 and txt.lstrip().startswith("{"):
                   try:
-                      rows = parse_instance(b)
-                  except Exception as e:
-                      rows = []
-                      print(f"     parse_instance 실패: {type(e).__name__} {e}")
-                  print(f"     부문 {len(rows)}행 {rows[:2]}")
-              pts = fin_points({k: v[0] for k, v in raw.items()})
-              print(f"  == fin_points {len(pts)}점: {pts[-4:]}")
+                      spec = json.loads(txt)
+                      for path, ops in (spec.get("paths") or {}).items():
+                          if "segment" in path or "financial" in path:
+                              for m, op in ops.items():
+                                  ps = [p.get("name") for p in (op.get("parameters") or [])]
+                                  print(f"   {m.upper()} {path} 매개변수 {ps}")
+                  except ValueError:
+                      pass
+
+          def summarize(body, label):
+              """응답이 분기인지 연간인지 눈으로 가른다."""
+              if not body:
+                  return None
+              try:
+                  j = json.loads(body)
+              except ValueError:
+                  print(f"   {label}: JSON 아님 — {body[:200]!r}")
+                  return None
+              data = j.get("data") if isinstance(j, dict) else j
+              meta = j.get("meta") if isinstance(j, dict) else None
+              print(f"   meta={meta}")
+              if not isinstance(data, list):
+                  print(f"   data 가 목록이 아니다: {str(j)[:300]}")
+                  return None
+              print(f"   {label}: {len(data)}행")
+              if data:
+                  print(f"   열 이름: {sorted(data[0].keys())}")
+                  for r in data[:4]:
+                      print("     ", json.dumps(r, ensure_ascii=False)[:220])
+                  # 분기 낌새: 분기 구분 필드가 있거나, 같은 연도가 여러 번 나온다
+                  keys = set(data[0].keys())
+                  qfield = sorted(k for k in keys
+                                  if any(w in k.lower() for w in
+                                         ("quarter", "period", "term", "month", "date")))
+                  yrs = [r.get("fiscalYear") for r in data if r.get("fiscalYear")]
+                  from collections import Counter
+                  top = Counter(yrs).most_common(3)
+                  print(f"   분기 낌새 필드: {qfield or '없음'} · 연도별 행수 {top}")
+              return data
+
+          # ── 1) 세그먼트 분기 ────────────────────────────────────────────────
+          seg_q = summarize(
+              call(f"{BASE}/companies/E02378/segments?period=quarterly",
+                   note="아식스 segments?period=quarterly"), "segments(quarterly)")
+          # 저장해 둔 연간(82행 · FY2014~2025 · 열 4개)과 견준다 — 요청이 안 든다.
+          print("\n   [대조] 우리가 가진 연간: 82행 · FY2014~2025 · "
+                "열 fiscalYear/segmentName/revenue/operatingIncome")
+
+          # ── 2) 재무 분기 ────────────────────────────────────────────────────
+          summarize(call(f"{BASE}/companies/E02378/financials?period=quarterly",
+                         note="아식스 financials?period=quarterly"),
+                    "financials(quarterly)")
+
+          # ── 3) 四半期報告書 docID 가 목록에 보이나 ──────────────────────────
+          b = call(f"{BASE}/disclosures/search?edinetCode=E02378&limit=20",
+                   note="아식스 disclosures/search")
+          if b:
+              try:
+                  j = json.loads(b)
+                  data = j.get("data") or []
+                  print(f"   공시 {len(data)}건")
+                  if data:
+                      print(f"   열 이름: {sorted(data[0].keys())}")
+                  for r in data[:12]:
+                      print("     ", json.dumps(r, ensure_ascii=False)[:220])
+                  q = [r for r in data
+                       if "四半期" in json.dumps(r, ensure_ascii=False)]
+                  print(f"   四半期 들어간 건수: {len(q)}")
+              except ValueError:
+                  print(f"   JSON 아님 {b[:200]!r}")
+
+          # ── 4) 1)이 꽝이면 매개변수 이름을 하나 더 시험 ─────────────────────
+          annual_like = (not seg_q) or (
+              seg_q and "fiscalYear" in seg_q[0]
+              and not any(k for k in seg_q[0]
+                          if "quarter" in k.lower() or "period" in k.lower()))
+          if annual_like and spent[0] < 4:
+              alt = "frequency=quarterly"
+              for w in ("freq", "type", "unit"):
+                  if w in hints:
+                      alt = f"{w}=quarterly"
+                      break
+              summarize(call(f"{BASE}/companies/E02378/segments?{alt}",
+                             note=f"아식스 segments?{alt} (예비)"),
+                        f"segments({alt})")
+          else:
+              print("\n   예비 요청은 안 쓴다.")
+          print(f"\n== 오늘 쓴 예산 {spent[0]}건 ==")
           EOF
