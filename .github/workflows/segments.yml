@@ -101,6 +101,9 @@ jobs:
         timeout-minutes: 12
         env:
           SEC_UA: 'Earning Samurai Calendar (cbpark@wisdomasset.co.kr)'
+          # 처음 한 바퀴는 밀린 회사가 수백 곳이라 넉넉히 돈다. 회사당 요청이
+          # 한 번(제출목록) + 서류마다 두 번이고 SEC 는 초당 열 번까지 받는다.
+          FPI_PER_RUN: '90'
         run: |
           python scrape_seg_fpi.py | tee fpi.log
           {
