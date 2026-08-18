@@ -429,7 +429,23 @@ def quarterly(raw):
         back = [plain.get(shift_q(ds, -k)) for k in (1, 2, 3)]
         if all(back) and v[0] > sum(back):
             plain[ds] = v[0] - sum(back)
-    return plain
+    if plain:
+        return plain
+
+    # **분기가 하나도 안 나오면 반기로 본다.** 유럽·홍콩계 외국 기업은 분기
+    # 보고 의무가 없어 상반기(6개월)와 연간만 낸다 — HSBC 가 그렇다(6-K 는
+    # qtrs=2, 20-F 는 qtrs=4 뿐이라 위 규칙으로는 아무 점도 안 나온다).
+    # 그 회사에는 상반기를 그대로 한 점으로 쓰고, 연간에서 상반기를 빼 하반기를
+    # 만든다. **분기가 하나라도 나온 회사에는 걸지 않는다** — 미국 국내 기업의
+    # 6개월 누계를 반기 점으로 잘못 실으면 막대가 두 배가 된다.
+    half = {k[0]: v[0] for k, v in raw.items() if k[1] == 2}
+    for (ds, q), v in raw.items():
+        if q != 4 or ds in half:
+            continue
+        prev = raw.get((shift_q(ds, -2), 2))
+        if prev and v[0] > prev[0]:
+            half[ds] = v[0] - prev[0]
+    return half
 
 
 def quarterly_merged(by_tag):

@@ -44,6 +44,11 @@ OUT = HERE / "data" / "segments_fpi.json"
 # 3: 이름공간을 안 따진다(HSBC 는 회사 확장 항목이었다) · 표지뿐인 6-K 를
 #    넘기며 열어 보는 한도를 열 장으로.
 FPI_VER = 3
+# **뜯는 규칙이 바뀌면 이것만 올린다.** 판(FPI_VER)을 올리면 모아둔 종목까지
+# 통째로 지워져 처음부터 다시 훑어야 한다 — 오늘 그걸 두 번 하며 시총 아래쪽
+# 회사(아메르스포츠)를 두 번 잃었다. 이 번호가 다르면 **본 서류 기록만** 비우고
+# 이미 얻은 종목은 그대로 둔다. 다시 훑으면서 덮어쓰면 그만이다.
+PARSE_VER = 2      # 2: 반기 결산(HSBC 류) 지원
 SUBS = "https://data.sec.gov/submissions/CIK{cik:010d}.json"
 # 외국 기업이 내는 서류. 40-F 는 캐나다 회사다.
 FORMS = ("6-K", "20-F", "40-F")
@@ -66,10 +71,16 @@ def load_old():
         try:
             d = json.loads(OUT.read_text(encoding="utf-8"))
             if d.get("v") == FPI_VER:
+                if d.get("pv") != PARSE_VER:
+                    # 뜯는 규칙이 바뀌었다. 서류를 다시 읽어야 하므로 '본 것'만
+                    # 비우고 이미 얻은 종목은 남긴다.
+                    print(f"  뜯는 규칙이 바뀌었다(pv {d.get('pv')} -> {PARSE_VER})."
+                          f" 서류를 다시 읽는다.")
+                    d["done"], d["seen"] = [], {}
                 return d
         except (ValueError, OSError):
             pass
-    return {"v": FPI_VER, "stocks": {}, "done": [], "seen": {}}
+    return {"v": FPI_VER, "pv": PARSE_VER, "stocks": {}, "done": [], "seen": {}}
 
 
 def covered():
@@ -205,6 +216,7 @@ def save(old, facts, pairs, by_cik, done, seen):
             made += 1
     ss.MIN_PTS, ss.MIN_MEMBER_PTS = keep
     old["v"] = FPI_VER
+    old["pv"] = PARSE_VER
     old["source"] = "SEC EDGAR — 외국 기업(FPI)의 20-F·6-K 인라인 XBRL"
     old["note"] = ("미국 국내 기업만 10-Q 를 낸다. 외국 기업은 20-F(연 1회)와 "
                    "6-K(수시)라 벌크·분기색인이 못 잡는다. 판단 규칙은 "
