@@ -98,12 +98,15 @@ jobs:
       # 접수번호로 건너뛴다.
       - name: 🌏 외국 기업 부문 매출 (20-F·6-K)
         continue-on-error: true
-        timeout-minutes: 12
+        timeout-minutes: 22
         env:
           SEC_UA: 'Earning Samurai Calendar (cbpark@wisdomasset.co.kr)'
           # 처음 한 바퀴는 밀린 회사가 수백 곳이라 넉넉히 돈다. 회사당 요청이
           # 한 번(제출목록) + 서류마다 두 번이고 SEC 는 초당 열 번까지 받는다.
-          FPI_PER_RUN: '150'
+          # 뜯어낸 행을 남기게 되면서(PARSE_VER 3) 본 서류를 한 번 다시
+          # 훑는다. 1,944곳이라 150씩이면 열세 시간이다 — 실측 3분/150곳
+          # 이었으니 220 으로 올려도 넉넉하다.
+          FPI_PER_RUN: '220'
         run: |
           # **파이프가 죽음을 삼키지 않게.** tee 를 거치면 파이썬이 예외로 죽어도
           # bash 는 tee 의 성공만 본다 — 그래서 수집이 매번 일곱 번째 회사에서
