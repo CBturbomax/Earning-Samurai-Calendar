@@ -20,76 +20,69 @@ jobs:
         with:
           python-version: '3.12'
 
-      # 32차 — 31차는 **내 검사 코드가 틀렸다.** iterparse 는 자식 요소의 end 가
-      # 부모보다 먼저 오는데 거기서 el.clear() 를 불러, 문맥(context)을 읽을 때는
-      # 이미 explicitMember 의 글자가 지워져 있었다(그래서 축 0건). 진짜 파서
-      # (scrape_seg_edgar.parse_instance)는 contextRef 가 있는 요소만 비우므로
-      # 멀쩡하다. 이번에는 그 규칙대로 문맥을 읽고, **부문답게 생긴 축에 걸린
-      # 숫자 항목 이름**을 REV_TAGS 로 거르지 않고 전부 찍는다.
-      - name: 🌏 IFRS 부문 축의 숫자 항목 전수 (32차)
-        timeout-minutes: 11
+      # 33차 — HSBC 만 남았다. 태그 이름(RevenueAndOperatingIncome)도 넣고
+      # 이름공간도 안 따지게 했는데 여전히 0건이다. 인스턴스에서 그 항목이
+      # 걸린 문맥을 하나씩 뜯어 (축 이름 / 기간 / parse_seg 판정 / qtrs_of)를
+      # 나란히 찍는다. 어느 관문에서 죽는지 눈으로 본다.
+      - name: 🏦 HSBC 부문 매출 관문별 추적 (33차)
+        timeout-minutes: 10
         run: |
           python - <<'EOF'
           import io, re
           from collections import Counter
           import xml.etree.ElementTree as ET
           import scrape_seg_sec as ss
-          from scrape_seg_edgar import get, instance_url, local, strip_member
+          from scrape_seg_edgar import get, instance_url, local, strip_member, qtrs_of, parse_instance
           from scrape_seg_fpi import xbrl_filings
-          SEGISH = re.compile(r"Segment|Business|Operating|ProductOrService|Geograph", re.I)
-
-          def scan(blob):
-              """(부문류 문맥 {id: dims}, 그 문맥에 걸린 숫자 항목 Counter, 멤버 Counter)"""
-              ctx, tags, members = {}, Counter(), Counter()
-              axes_all = Counter()
-              for ev, el in ET.iterparse(io.BytesIO(blob), events=("end",)):
-                  n = local(el.tag)
-                  if n == "context":
-                      cid, dims = el.get("id"), []
-                      for m in el.iter():
-                          if local(m.tag) != "explicitMember":
-                              continue
-                          a = ss.norm_axis(m.get("dimension") or "")
-                          v = strip_member((m.text or "").strip())
-                          if a and v:
-                              dims.append((a, v))
-                              axes_all[a] += 1
-                      if cid and any(SEGISH.search(a) for a, _ in dims):
-                          ctx[cid] = dims
-                      el.clear()                      # 문맥은 다 읽은 뒤에만 비운다
-                  elif el.get("contextRef"):
-                      cr = el.get("contextRef")
-                      if cr in ctx:
-                          txt = (el.text or "").strip().replace(",", "")
-                          if re.fullmatch(r"-?\d+(\.\d+)?", txt or ""):
-                              tags[n] += 1
-                              for a, v in ctx[cr]:
-                                  if SEGISH.search(a):
-                                      members[f"{a}={v}"] += 1
-                      el.clear()
-              return ctx, tags, members, axes_all
-
           cikmap = ss.cik_map()
-          for sym in ("HSBC", "AZN", "NVS", "SHEL", "BHP"):
-              cik = ss.cik_of(cikmap, sym)
-              print(f"\n===== {sym} CIK {cik}")
-              for acc, filed, form in xbrl_filings(cik)[:2]:
-                  url = instance_url(cik, acc)
-                  if not url:
-                      print(f"   {filed} {form}: 인스턴스 없음"); continue
-                  blob = get(url, timeout=150)
-                  if not blob:
-                      print(f"   {filed} {form}: 못 받음"); continue
-                  ctx, tags, members, axes_all = scan(blob)
-                  print(f"   {filed} {form} {len(blob)/1e6:.1f}MB · 전체 축 {len(axes_all)}종"
-                        f" · 부문류 문맥 {len(ctx)}")
-                  if not ctx:
-                      print("      부문류 축이 없다. 축 상위:",
-                            [a for a, _ in axes_all.most_common(6)])
-                      continue
-                  print("      숫자 항목(상위 12):")
-                  for t, c in tags.most_common(12):
-                      mark = " ★이미목록" if t in ss.REV_RANK else ""
-                      print(f"         {t[:56]:58s} {c:>4}{mark}")
-                  print("      멤버(상위 8):", [m for m, _ in members.most_common(8)])
+          cik = ss.cik_of(cikmap, "HSBC")
+          print("HSBC CIK", cik)
+          for acc, filed, form in xbrl_filings(cik)[:2]:
+              url = instance_url(cik, acc)
+              print(f"\n== {filed} {form} -> {(url or '없음').split('/')[-1]}")
+              if not url:
+                  continue
+              blob = get(url, timeout=150)
+              if not blob:
+                  print("   못 받음"); continue
+              # 문맥 전부 읽기(자식을 먼저 비우지 않는다)
+              ctx = {}
+              for ev, el in ET.iterparse(io.BytesIO(blob), events=("end",)):
+                  if local(el.tag) == "context":
+                      cid, dims, st, en = el.get("id"), [], "", ""
+                      for m in el.iter():
+                          lm = local(m.tag)
+                          if lm == "explicitMember":
+                              a = ss.norm_axis(m.get("dimension") or "")
+                              v = strip_member((m.text or "").strip())
+                              if a and v:
+                                  dims.append(f"{a}={v}")
+                          elif lm == "startDate":
+                              st = (m.text or "").strip()
+                          elif lm == "endDate":
+                              en = (m.text or "").strip()
+                      if cid:
+                          ctx[cid] = (dims, st, en)
+                      el.clear()
+                  elif el.get("contextRef"):
+                      el.clear()
+              shown = 0
+              seen_axes = Counter()
+              for ev, el in ET.iterparse(io.BytesIO(blob), events=("end",)):
+                  cr = el.get("contextRef")
+                  nm = local(el.tag)
+                  if cr and nm in ss.REV_RANK and cr in ctx:
+                      dims, st, en = ctx[cr]
+                      q = qtrs_of(st, en) if (st and en) else None
+                      got = ss.parse_seg(";".join(dims) + ";") if dims else None
+                      for d in dims:
+                          seen_axes[d.split("=")[0]] += 1
+                      if shown < 14:
+                          print(f"   {nm[:34]:36s} {st}~{en} qtrs={q} parse_seg={got} "
+                                f"값={(el.text or '').strip()[:14]}")
+                          shown += 1
+                  el.clear()
+              print("   매출 항목이 걸린 축 빈도:", dict(seen_axes.most_common(8)))
+              rows = parse_instance(blob)
+              print(f"   parse_instance -> {len(rows)}행", rows[:3])
           EOF
