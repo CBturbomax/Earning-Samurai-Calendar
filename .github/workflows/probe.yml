@@ -20,13 +20,14 @@ jobs:
         with:
           python-version: '3.12'
 
-      # 31차 — HSBC·AZN 은 부문 행이 0건이다. 29-B 에서 HSBC 의 주력 매출
-      # 항목이 `RevenueAndOperatingIncome` 이라 우리 REV_TAGS 에 없는 것이
-      # 드러났다. 그렇다면 다른 IFRS 회사도 제 이름을 쓸 것이다 — **부문답게
-      # 생긴 축에 걸린 숫자 항목을 REV_TAGS 로 거르지 말고 전부** 찍어, 무엇을
-      # 목록에 더해야 하는지 이름으로 확인한다. 짐작으로 태그를 늘리지 않는다.
-      - name: 🌏 IFRS 부문 축의 숫자 항목 전수 (31차)
-        timeout-minutes: 10
+      # 32차 — 31차는 **내 검사 코드가 틀렸다.** iterparse 는 자식 요소의 end 가
+      # 부모보다 먼저 오는데 거기서 el.clear() 를 불러, 문맥(context)을 읽을 때는
+      # 이미 explicitMember 의 글자가 지워져 있었다(그래서 축 0건). 진짜 파서
+      # (scrape_seg_edgar.parse_instance)는 contextRef 가 있는 요소만 비우므로
+      # 멀쩡하다. 이번에는 그 규칙대로 문맥을 읽고, **부문답게 생긴 축에 걸린
+      # 숫자 항목 이름**을 REV_TAGS 로 거르지 않고 전부 찍는다.
+      - name: 🌏 IFRS 부문 축의 숫자 항목 전수 (32차)
+        timeout-minutes: 11
         run: |
           python - <<'EOF'
           import io, re
@@ -36,8 +37,40 @@ jobs:
           from scrape_seg_edgar import get, instance_url, local, strip_member
           from scrape_seg_fpi import xbrl_filings
           SEGISH = re.compile(r"Segment|Business|Operating|ProductOrService|Geograph", re.I)
+
+          def scan(blob):
+              """(부문류 문맥 {id: dims}, 그 문맥에 걸린 숫자 항목 Counter, 멤버 Counter)"""
+              ctx, tags, members = {}, Counter(), Counter()
+              axes_all = Counter()
+              for ev, el in ET.iterparse(io.BytesIO(blob), events=("end",)):
+                  n = local(el.tag)
+                  if n == "context":
+                      cid, dims = el.get("id"), []
+                      for m in el.iter():
+                          if local(m.tag) != "explicitMember":
+                              continue
+                          a = ss.norm_axis(m.get("dimension") or "")
+                          v = strip_member((m.text or "").strip())
+                          if a and v:
+                              dims.append((a, v))
+                              axes_all[a] += 1
+                      if cid and any(SEGISH.search(a) for a, _ in dims):
+                          ctx[cid] = dims
+                      el.clear()                      # 문맥은 다 읽은 뒤에만 비운다
+                  elif el.get("contextRef"):
+                      cr = el.get("contextRef")
+                      if cr in ctx:
+                          txt = (el.text or "").strip().replace(",", "")
+                          if re.fullmatch(r"-?\d+(\.\d+)?", txt or ""):
+                              tags[n] += 1
+                              for a, v in ctx[cr]:
+                                  if SEGISH.search(a):
+                                      members[f"{a}={v}"] += 1
+                      el.clear()
+              return ctx, tags, members, axes_all
+
           cikmap = ss.cik_map()
-          for sym in ("HSBC", "AZN", "NVS", "SHEL"):
+          for sym in ("HSBC", "AZN", "NVS", "SHEL", "BHP"):
               cik = ss.cik_of(cikmap, sym)
               print(f"\n===== {sym} CIK {cik}")
               for acc, filed, form in xbrl_filings(cik)[:2]:
@@ -46,36 +79,17 @@ jobs:
                       print(f"   {filed} {form}: 인스턴스 없음"); continue
                   blob = get(url, timeout=150)
                   if not blob:
+                      print(f"   {filed} {form}: 못 받음"); continue
+                  ctx, tags, members, axes_all = scan(blob)
+                  print(f"   {filed} {form} {len(blob)/1e6:.1f}MB · 전체 축 {len(axes_all)}종"
+                        f" · 부문류 문맥 {len(ctx)}")
+                  if not ctx:
+                      print("      부문류 축이 없다. 축 상위:",
+                            [a for a, _ in axes_all.most_common(6)])
                       continue
-                  ctx = {}
-                  for ev, el in ET.iterparse(io.BytesIO(blob), events=("end",)):
-                      if local(el.tag) == "context":
-                          cid, dims = el.get("id"), []
-                          for m in el.iter():
-                              if local(m.tag) == "explicitMember":
-                                  a = ss.norm_axis(m.get("dimension") or "")
-                                  v = strip_member((m.text or "").strip())
-                                  if a and v:
-                                      dims.append((a, v))
-                          if cid and any(SEGISH.search(a) for a, _ in dims):
-                              ctx[cid] = dims
-                      el.clear()
-                  tags = Counter()
-                  members = Counter()
-                  for ev, el in ET.iterparse(io.BytesIO(blob), events=("end",)):
-                      cr = el.get("contextRef")
-                      if cr and cr in ctx:
-                          txt = (el.text or "").strip().replace(",", "")
-                          if re.fullmatch(r"-?\d+(\.\d+)?", txt or ""):
-                              tags[local(el.tag)] += 1
-                              for a, v in ctx[cr]:
-                                  if SEGISH.search(a):
-                                      members[f"{a}={v}"] += 1
-                      el.clear()
-                  print(f"   {filed} {form} · 부문류 문맥 {len(ctx)}")
                   print("      숫자 항목(상위 12):")
                   for t, c in tags.most_common(12):
                       mark = " ★이미목록" if t in ss.REV_RANK else ""
-                      print(f"         {t[:58]:60s} {c:>4}{mark}")
+                      print(f"         {t[:56]:58s} {c:>4}{mark}")
                   print("      멤버(상위 8):", [m for m, _ in members.most_common(8)])
           EOF
