@@ -319,6 +319,8 @@ SEG_KO_EN = {
     "housing": "주택", "automotive": "자동차", "automobile": "자동차",
     "mobility": "모빌리티", "aerospace": "항공우주", "defense": "방산",
     "semiconductor": "반도체", "semiconductors": "반도체",
+    "laser": "레이저", "lasers": "레이저", "networking": "네트워킹",
+    "datacenter": "데이터센터", "communications": "통신", "photonics": "포토닉스",
     "software": "소프트웨어", "hardware": "하드웨어", "internet": "인터넷",
     "advertising": "광고", "marketing": "마케팅", "consulting": "컨설팅",
     "services": "서비스", "service": "서비스", "systems": "시스템",

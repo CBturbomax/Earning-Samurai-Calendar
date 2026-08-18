@@ -650,14 +650,25 @@ def current_basis(rec):
     # 구멍인데 개편으로 보고 자르면 멀쩡한 5년치가 두 칸이 된다. 셈프라가
     # 그랬다 — 제출 서류에서 부문 둘만 잡혀 나머지 둘이 죽은 것처럼 보였다.
     # 그래서 **새 이름이 실제로 등장할 때만** 옛 부문을 빼고 앞을 자른다.
+    # 부문 i 가 값을 가진 구간 (첫 분기, 마지막 분기)
+    def span(i):
+        js = [j for j in range(len(pts)) if val(pts[j], i) is not None]
+        return (js[0], js[-1]) if js else None
+
+    born = []
     if dead:
-        end = max((j for i in dead for j in range(len(pts) - 1, -1, -1)
-                   if val(pts[j], i) is not None), default=-1)
-        born = [i for i in live
-                if all(val(pts[j], i) is None for j in range(end + 1))]
+        # '새 이름'은 **옛 기준이 한 해 넘게 돌아간 뒤에야** 처음 값이 생긴 부문이다.
+        # 처음에는 '옛 기준이 끝난 뒤 등장한 이름'만 새 이름으로 쳤는데, 새 기준의
+        # 10-Q 가 싣는 **전년 재표시 비교치**는 옛 기준과 몇 분기 겹쳐 등장한다 —
+        # 코히어런트가 그랬다. 새 부문(Datacenter…)이 재표시된 3Q24 에 이미 값이
+        # 있어 개편으로 못 보고 두 기준을 같이 쌓았고, 그 두 칸의 막대가 두 배였다.
+        first_dead = min((sp[0] for i in dead if (sp := span(i))), default=0)
+        born = [i for i in live if (sp := span(i)) and sp[0] >= first_dead + 4]
         if not born:
-            # 개편이 아니다. 끊긴 부문도 그대로 둔다 — 뒤가 빈 막대는 '그 사업이
-            # 거기서 끝났다'는 사실이고, 지우면 그 사실이 없어진다.
+            # 개편이 아니다(수집 구멍이거나 판 사업). 끊긴 부문도 그대로 둔다 —
+            # 뒤가 빈 막대는 '그 사업이 거기서 끝났다'는 사실이고, 지우면 그
+            # 사실이 없어진다. 셈프라가 이 경우다 — 제출 서류에서 부문 둘만
+            # 잡혀 나머지 둘이 죽은 것처럼 보였다.
             dead, live = [], keep
     if not dead and len(live) == len(names):
         return rec
@@ -668,10 +679,6 @@ def current_basis(rec):
     #     변경으로 보고 잘라 버리면 멀쩡한 5년치가 두 칸으로 준다.
     #     **둘 다 하나일 때만** 한다 — 여럿이 한꺼번에 갈리면 진짜 개편이라
     #     어느 것이 어느 것의 후신인지 알 길이 없다(HPE 가 그랬다).
-    def span(i):
-        js = [j for j in range(len(pts)) if val(pts[j], i) is not None]
-        return (js[0], js[-1]) if js else None
-
     if len(dead) == 1 and len(live) >= 2:
         old = dead[0]
         so = span(old)
@@ -696,12 +703,19 @@ def current_basis(rec):
     #    부문이 **없어지지 않고 새로 생기기만** 했으면 기준이 바뀐 게 아니다.
     #    그때는 자르지 않는다 — 사업 하나가 늘어난 것뿐이라 옛 분기도 다 맞다.
     start = 0
-    for i in dead:
-        for j in range(len(pts) - 1, -1, -1):
-            if val(pts[j], i) is not None:
-                start = max(start, j + 1)
-                break
+    if dead:
+        # **새 기준의 첫 분기부터** 남긴다. 깨끗한 교대면 '옛 기준 마지막 + 1'과
+        # 같은 자리다. 재표시 비교치가 옛 기준과 겹치는 회사(코히어런트)는 그
+        # 비교치가 새 기준의 첫 분기이므로, '옛 기준 마지막 + 1'로 자르면 멀쩡한
+        # 새 기준 두 분기를 함께 버리게 된다.
+        old_end = max((sp[1] for i in dead if (sp := span(i))), default=-1)
+        news = [sp[0] for i in born if (sp := span(i))]
+        start = min(news) if news else old_end + 1
     rows = [[r[0]] + [val(r, i) for i in live] for r in pts[start:]]
+    # 겹침 구간을 빼고 나면 값이 하나도 없는 칸이 남을 수 있다(재표시는 전년
+    # 비교치만 있어 그 사이 분기가 빈다). 빈 칸을 그대로 두면 매출 0 으로
+    # 읽히므로 칸째 뺀다 — 라벨이 분기 이름이라 건너뛴 것이 그대로 보인다.
+    rows = [r for r in rows if any(v is not None for v in r[1:])]
     # 새 기준으로 두 분기도 안 되면 그릴 것이 없다. 옛 기준을 섞어 그리느니
     # 이번 분기는 비워 둔다 — 다음 분기가 쌓이면 저절로 살아난다.
     if len(rows) < 2:
