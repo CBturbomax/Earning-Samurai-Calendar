@@ -63,7 +63,10 @@ FPI_VER = 3
 # 통째로 지워져 처음부터 다시 훑어야 한다 — 오늘 그걸 두 번 하며 시총 아래쪽
 # 회사(아메르스포츠)를 두 번 잃었다. 이 번호가 다르면 **본 서류 기록만** 비우고
 # 이미 얻은 종목은 그대로 둔다. 다시 훑으면서 덮어쓰면 그만이다.
-PARSE_VER = 2      # 2: 반기 결산(HSBC 류) 지원
+PARSE_VER = 3      # 2: 반기 결산(HSBC 류) 지원
+#                  # 3: 뜯어낸 행을 `raw` 에 남긴다. 그 전에 읽고 버린
+#                  #    서류는 `done` 에 막혀 다시 안 열리므로(아메르스포츠
+#                  #    3월 분기가 그렇게 없어졌다) 한 번 다시 훑는다.
 SUBS = "https://data.sec.gov/submissions/CIK{cik:010d}.json"
 # 외국 기업이 내는 서류. 40-F 는 캐나다 회사다.
 FORMS = ("6-K", "20-F", "40-F")
@@ -79,6 +82,9 @@ TRIES_PER_CO = 10
 PAUSE = 0.25
 # 다 따라잡은 회사는 이만큼 지나야 다시 본다(6-K 는 분기마다 나온다).
 REFRESH_DAYS = 20
+# 뜯어낸 행을 회사마다 몇 건(서류 단위)까지 남길까. 서류 한 장이 대여섯 분기라
+# 여덟 장이면 5년치가 넘는다.
+RAW_DOCS = 8
 # 방금 발표했는데 그 분기가 우리에게 없는 회사를 한 실행에 몇 곳까지 새치기
 # 시킬까. 대부분은 목록 요청 한 번에 끝난다(국내 기업은 6-K 를 안 내므로).
 FRESH_MAX = 30
@@ -98,11 +104,14 @@ def load_old():
                     # 비우고 이미 얻은 종목은 남긴다.
                     print(f"  뜯는 규칙이 바뀌었다(pv {d.get('pv')} -> {PARSE_VER})."
                           f" 서류를 다시 읽는다.")
-                    d["done"], d["seen"] = [], {}
+                    # **뜯어 둔 행도 같이 비운다.** 그건 옛 규칙으로 뜯은
+                    # 결과라 그대로 두면 새 규칙이 적용되지 않는다.
+                    d["done"], d["seen"], d["raw"] = [], {}, {}
                 return d
         except (ValueError, OSError):
             pass
-    return {"v": FPI_VER, "pv": PARSE_VER, "stocks": {}, "done": [], "seen": {}}
+    return {"v": FPI_VER, "pv": PARSE_VER, "stocks": {}, "done": [], "seen": {},
+            "raw": {}}
 
 
 def covered():
@@ -336,6 +345,14 @@ def collect():
     cikmap = ss.cik_map()
 
     facts, pairs, by_cik = {}, {}, {}
+    # **뜯어낸 행을 버리지 않는다.** 예전에는 한 실행에서 읽은 서류의 행만 모아
+    # 기록을 만들고, 문턱(MIN_PTS)을 못 넘으면 통째로 버렸다. 그런데 그 서류는
+    # `done` 에 '읽었다'고 찍혀 다시는 안 열리므로 **그 행들이 영영 사라진다.**
+    # 아메르스포츠의 3월 분기 부문이 그렇게 없어졌다 — 5월 6-K 를 앞선 실행이
+    # 읽었지만 그때는 분기가 둘뿐이라 기록이 안 만들어졌고, 오늘 6월 6-K 를
+    # 읽었을 때는 3월치가 이미 손에 없었다. 지금은 행을 그대로 남겨 다음 실행이
+    # 새 서류와 **합쳐서** 만든다(일본 쪽 segments_jp.json 의 `raw` 와 같은 뜻).
+    raw_all = dict(old.get("raw") or {})
     fin_raw = {}                 # 종목 -> {(종료일, 기간길이): ({rev,opi}, 접수일)}
     fpi_seen = (set(old.get("fpi") or [])
                 | {k.split(":")[-1] for k in (old.get("stocks") or {})})
@@ -358,6 +375,14 @@ def collect():
             continue
         if fl:
             fpi_seen.add(sym)          # XBRL 서류가 있는 외국 기업이다
+        # 지난 실행에서 뜯어 둔 행을 먼저 되살린다. 같은 접수번호를 두 번 담으면
+        # 두 축짜리 행이 겹쳐 더해지므로 이미 든 것은 다시 안 넣는다.
+        stored = list(raw_all.get(sym) or [])
+        in_raw = {r[8] for r in stored}
+        for r in stored:
+            absorb(facts, pairs, cik, r[7], r[8], [tuple(r[:7])])
+        if stored:
+            by_cik.setdefault(cik, []).append(sym)
         got = tried = 0
         for acc, filed, form in fl:
             if got >= DOCS_PER_CO or tried >= TRIES_PER_CO:
@@ -395,12 +420,24 @@ def collect():
                 got += 1
                 absorb(facts, pairs, cik, filed, acc, rows)
                 by_cik.setdefault(cik, []).append(sym)
+                if acc not in in_raw:
+                    in_raw.add(acc)
+                    stored.extend(list(r) + [filed, acc] for r in rows)
             # 부문이 안 나온 서류에도 회사 전체 수치는 있다(표지뿐인 6-K 제외).
             for k, v in totals(blob).items():
                 cur = fin_raw.setdefault(sym, {}).get(k)
                 if cur is None or filed >= cur[1]:
                     fin_raw.setdefault(sym, {})[k] = (v, filed)
             time.sleep(PAUSE)
+        if stored:
+            # 서류 단위로 자른다. 행 수로 자르면 한 서류가 반토막 나서 두 축짜리
+            # 행의 합이 어긋난다.
+            by_acc = {}
+            for r in stored:
+                by_acc.setdefault(r[8], []).append(r)
+            keep = sorted(by_acc, key=lambda a: max(x[7] for x in by_acc[a]))
+            keep = keep[-RAW_DOCS:]
+            raw_all[sym] = [r for a in keep for r in by_acc[a]]
         if got:
             print(f"    {sym}: 서류 {got}장 · 부문 행 "
                   f"{len(facts.get(cik, {})) + len(pairs.get(cik, {}))}축", flush=True)
@@ -408,11 +445,13 @@ def collect():
         if walked % 30 == 0:
             old["fpi"] = sorted(fpi_seen)
             old["pokes"] = pokes
+            old["raw"] = raw_all
             save(old, facts, pairs, by_cik, done, seen)
             save_fin(fin_raw)
 
     old["fpi"] = sorted(fpi_seen)
     old["pokes"] = pokes
+    old["raw"] = raw_all
     made = save(old, facts, pairs, by_cik, done, seen)
     fin_made = save_fin(fin_raw)
     print(f"  {walked:,}곳을 보고 서류 {docs:,}장에서 {made:,}종목 부문을 얻었다"
