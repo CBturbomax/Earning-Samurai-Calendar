@@ -115,17 +115,62 @@ def covered():
     return out
 
 
+def announced_recently(days=12):
+    """최근 며칠 안에 실적을 발표한 미국 종목 -> 발표일."""
+    p = HERE / "data" / "earnings_us.json"
+    if not p.exists():
+        return {}
+    try:
+        rows = json.loads(p.read_text(encoding="utf-8")).get("rows", [])
+    except (ValueError, OSError):
+        return {}
+    lo = (date.fromordinal(date.today().toordinal() - days)).isoformat()
+    hi = date.today().isoformat()
+    out = {}
+    for r in rows:
+        c, d = r.get("code"), r.get("date") or ""
+        if c and lo <= d <= hi:
+            out[c] = max(out.get(c, ""), d)
+    return out
+
+
 def universe(old):
-    """시총 큰 순으로, 부문이 없는 미국 종목만. 최근에 본 회사는 뒤로 민다."""
+    """이번에 볼 종목을 순서대로. 두 갈래를 이어 붙인다.
+
+    1. **방금 발표한 외국 기업**을 맨 앞에 둔다. 부문을 이미 얻은 회사라도
+       실적 수치는 새 분기가 나왔을 수 있다 — 아메르스포츠가 그랬다. 부문이
+       있다고 대기줄에서 빼 버렸더니 발표 당일에 숫자가 안 들어왔다.
+       (여기 오르는 것은 지난번에 XBRL 서류가 실제로 잡힌 회사뿐이다.
+       미국 국내 기업을 매일 두드리면 헛걸음만 는다.)
+    2. 그다음이 **부문이 아직 없는 종목**, 시총 큰 순.
+    """
     caps = ss.want_tickers()
     have = covered()
     seen = old.get("seen", {})
+    # 이미 이 수집기로 부문을 얻은 회사는 두말할 것 없이 외국 기업이다.
+    # (처음 돌 때는 'fpi' 목록이 비어 있으므로 여기서 씨앗을 얻는다 —
+    #  아니면 부문이 있는 회사는 대기줄 어디에도 못 올라 영영 안 본다.)
+    fpi = set(old.get("fpi") or []) | {k.split(":")[-1] for k in (old.get("stocks") or {})}
     today = date.today().isoformat()
     cut = (date.fromordinal(date.today().toordinal() - REFRESH_DAYS)).isoformat()
+
+    fresh = [(c, d) for c, d in announced_recently().items()
+             if c in fpi and (seen.get(c, "") < d or seen.get(c, "") < today)]
+    fresh.sort(key=lambda kv: (-caps.get(kv[0], 0),))
+
     todo = [(c, cap) for c, cap in caps.items()
             if c not in have and (seen.get(c, "") < cut)]
     todo.sort(key=lambda kv: -kv[1])
-    return [c for c, _ in todo], today
+
+    order, seen_once = [], set()
+    for c in [c for c, _ in fresh] + [c for c, _ in todo]:
+        if c not in seen_once:
+            seen_once.add(c)
+            order.append(c)
+    if fresh:
+        print(f"  방금 발표한 외국 기업 {len(fresh)}곳을 먼저 본다: "
+              + ", ".join(c for c, _ in fresh[:8]))
+    return order, today
 
 
 def xbrl_filings(cik):
@@ -234,6 +279,8 @@ def collect():
 
     facts, pairs, by_cik = {}, {}, {}
     fin_raw = {}                 # 종목 -> {(종료일, 기간길이): ({rev,opi}, 접수일)}
+    fpi_seen = (set(old.get("fpi") or [])
+                | {k.split(":")[-1] for k in (old.get("stocks") or {})})
     walked = docs = 0
     for sym in codes[:PER_RUN]:
         cik = ss.cik_of(cikmap, sym)
@@ -246,6 +293,8 @@ def collect():
         except ss.Blocked as e:
             print(f"    {sym} 목록 실패: {e}", file=sys.stderr, flush=True)
             continue
+        if fl:
+            fpi_seen.add(sym)          # XBRL 서류가 있는 외국 기업이다
         got = tried = 0
         for acc, filed, form in fl:
             if got >= DOCS_PER_CO or tried >= TRIES_PER_CO:
@@ -284,6 +333,7 @@ def collect():
             print(f"    {sym}: 서류 {got}장 · 부문 행 "
                   f"{len(facts.get(cik, {})) + len(pairs.get(cik, {}))}축", flush=True)
 
+    old["fpi"] = sorted(fpi_seen)
     made = save(old, facts, pairs, by_cik, done, seen)
     fin_made = save_fin(fin_raw)
     print(f"  {walked:,}곳을 보고 서류 {docs:,}장에서 {made:,}종목 부문을 얻었다"
