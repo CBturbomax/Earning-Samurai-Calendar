@@ -39,7 +39,11 @@ from scrape_seg_edgar import (absorb, get, instance_url, parse_instance)
 HERE = Path(__file__).parent
 OUT = HERE / "data" / "segments_fpi.json"
 
-FPI_VER = 1
+# 2: 표시축(SegmentConsolidationItems)·지역축(GeographicalAreas)·HSBC 의 매출
+#    항목을 알아보게 고쳤다. 이미 본 서류를 다시 뜯어야 하므로 판을 올린다.
+# 3: 이름공간을 안 따진다(HSBC 는 회사 확장 항목이었다) · 표지뿐인 6-K 를
+#    넘기며 열어 보는 한도를 열 장으로.
+FPI_VER = 3
 SUBS = "https://data.sec.gov/submissions/CIK{cik:010d}.json"
 # 외국 기업이 내는 서류. 40-F 는 캐나다 회사다.
 FORMS = ("6-K", "20-F", "40-F")
@@ -51,7 +55,7 @@ DOCS_PER_CO = 3
 # 그 석 장을 찾느라 열어 볼 수 있는 서류 수. 6-K 에는 배당 공고·표지뿐인 것이
 # 섞여 있어(ARM 은 셋 중 둘이 그랬다) 열어 봐야 알맹이가 있는지 안다. 이 여유가
 # 없으면 알맹이 있는 서류를 못 채워 기록이 안 만들어진다.
-TRIES_PER_CO = 7
+TRIES_PER_CO = 10
 PAUSE = 0.25
 # 다 따라잡은 회사는 이만큼 지나야 다시 본다(6-K 는 분기마다 나온다).
 REFRESH_DAYS = 20
