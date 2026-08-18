@@ -618,9 +618,19 @@ def queue(old, cand):
         else:
             ts = rec.get("ts") or ""
             if empty:
-                if ts >= cold:
+                # **비었다고 발표 언저리까지 건너뛰지 않는다.** 빈 기록에는 두
+                # 가지가 섞여 있다 — 정말 SEC 에 자료가 없는 종목과, 그날
+                # 예산(FACTS_PER_RUN)이 떨어졌거나 잠깐 어긋나 빈손으로 돌아온
+                # 종목이다. 뒤엣것까지 한 달(cold) 동안 얼려 두면 시총 1,100조
+                # 버크셔가 8/12 이후 통째로 비어 있는 일이 생긴다.
+                # 발표 언저리(±4일)에는 하루 한 번 다시 두드린다 — 값이 지금
+                # 생기는 자리라 여기서 놓치면 그 분기를 통째로 놓친다.
+                if gap <= NEAR_DAYS and ts < today:
+                    pri = 1
+                elif ts >= cold:
                     continue      # 자료가 없는 종목이다. 자주 두드리지 않는다.
-                pri = 3
+                else:
+                    pri = 3
             elif gap <= NEAR_DAYS and ts < today:
                 pri = 1
             elif ts < stale:
