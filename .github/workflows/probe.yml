@@ -20,47 +20,68 @@ jobs:
         with:
           python-version: '3.12'
 
-      # 29차 — FPI 수집기가 캐나다·유럽 은행 5곳은 잡았는데(TD·BMO·CIBC·TTE)
-      # ARM·HSBC·아메르스포츠는 빈손이다. 서류는 받았는지, 받았는데 부문 행이
-      # 0인지, 축 이름이 우리 잣대(axis_rank)에 안 걸리는지 원문으로 가른다.
-      - name: 🌏 FPI 실패 종목 해부 (29차)
+      # 30차 — 29차는 축을 빈도 상위 8개만 찍어서, 금융상품 공시에 묻힌 부문
+      # 축을 못 봤다. 이번에는 **부문답게 생긴 축**(Segment/Business/Operating/
+      # ProductOrService/Geographical)만 골라 전부 찍고, 그 축의 문맥에 매출
+      # 항목이 실제로 걸리는지까지 본다. 어디서 끊기는지 한 화면에 나와야 한다.
+      - name: 🌏 부문 축만 골라 보기 (30차)
         timeout-minutes: 10
-        run: python scrape_seg_fpi.py --probe AS ARM HSBC AZN
-
-      # 29-B — 위에서 '축 이름이 문제'로 나오면 무엇을 넓혀야 하는지 알아야 한다.
-      # 실패 종목의 인스턴스에서 **문맥 축 이름을 전수**로 뽑아 빈도순으로 찍는다.
-      - name: 🌏 실패 종목의 축 이름 전수 (29-B)
-        timeout-minutes: 8
         run: |
           python - <<'EOF'
           import io, re
-          from collections import Counter
+          from collections import Counter, defaultdict
           import xml.etree.ElementTree as ET
           import scrape_seg_sec as ss
-          from scrape_seg_edgar import get, instance_url, local, strip_member
-          from scrape_seg_fpi import xbrl_filings, DOCS_PER_CO
+          from scrape_seg_edgar import get, instance_url, local, strip_member, qtrs_of
+          from scrape_seg_fpi import xbrl_filings
+          SEGISH = re.compile(r"Segment|Business|Operating|ProductOrService|Geograph", re.I)
           cikmap = ss.cik_map()
-          for sym in ("AS", "ARM", "HSBC"):
+          for sym in ("AS", "ARM", "AZN", "NVS"):
               cik = ss.cik_of(cikmap, sym)
-              print(f"\n== {sym} CIK {cik}")
+              print(f"\n===== {sym} CIK {cik}")
               for acc, filed, form in xbrl_filings(cik)[:2]:
                   url = instance_url(cik, acc)
                   if not url:
                       print(f"   {filed} {form}: 인스턴스 없음"); continue
-                  blob = get(url, timeout=120)
+                  blob = get(url, timeout=150)
                   if not blob:
                       print(f"   {filed} {form}: 못 받음"); continue
-                  axes, tags = Counter(), Counter()
+                  ctx, seg_axes = {}, Counter()
                   for ev, el in ET.iterparse(io.BytesIO(blob), events=("end",)):
-                      n = local(el.tag)
-                      if n == "explicitMember":
-                          axes[ss.norm_axis(el.get("dimension") or "")] += 1
-                      elif el.get("contextRef"):
-                          t = n
-                          if re.search(r"Revenue|Sales|Income", t):
-                              tags[t] += 1
+                      if local(el.tag) == "context":
+                          cid, dims = el.get("id"), []
+                          st = en = ""
+                          for m in el.iter():
+                              lm = local(m.tag)
+                              if lm == "explicitMember":
+                                  a = ss.norm_axis(m.get("dimension") or "")
+                                  v = strip_member((m.text or "").strip())
+                                  if a and v:
+                                      dims.append((a, v))
+                                      if SEGISH.search(a):
+                                          seg_axes[a] += 1
+                              elif lm == "startDate":
+                                  st = (m.text or "").strip()
+                              elif lm == "endDate":
+                                  en = (m.text or "").strip()
+                          if cid and dims:
+                              ctx[cid] = (dims, st, en)
                       el.clear()
-                  print(f"   {filed} {form} {len(blob)/1e6:.1f}MB")
-                  print("      축:", [(a, c, ss.axis_rank(a)) for a, c in axes.most_common(8)])
-                  print("      매출류 항목:", [(t, c, t in ss.REV_RANK) for t, c in tags.most_common(8)])
+                  print(f"   {filed} {form} {len(blob)/1e6:.1f}MB · 문맥 {len(ctx)} · 부문류 축 {dict(seg_axes)}")
+                  # 그 축을 쓰는 문맥에 매출 항목이 붙는지
+                  hits = defaultdict(list)
+                  for ev, el in ET.iterparse(io.BytesIO(blob), events=("end",)):
+                      cr = el.get("contextRef")
+                      if cr and cr in ctx and local(el.tag) in ss.REV_RANK:
+                          dims, st, en = ctx[cr]
+                          if any(SEGISH.search(a) for a, _ in dims):
+                              hits[local(el.tag)].append((dims, st, en, (el.text or "").strip()[:14]))
+                      el.clear()
+                  for tag, rows in hits.items():
+                      print(f"      항목 {tag}: {len(rows)}건 · 기간길이 "
+                            f"{Counter(qtrs_of(r[1], r[2]) for r in rows)}")
+                      for r in rows[:4]:
+                          print("         ", r[0], r[1], "~", r[2], r[3])
+                  if not hits:
+                      print("      부문 축 문맥에 매출 항목이 없다")
           EOF
