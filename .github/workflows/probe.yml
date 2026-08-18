@@ -11,23 +11,23 @@ jobs:
   probe:
     runs-on: ubuntu-latest
     timeout-minutes: 12
-    env:
-      EDINETDB_KEY: ${{ secrets.EDINETDB_KEY }}
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
         with:
           python-version: '3.12'
 
-      # 24차 — 23차에서 PDF 는 키 없이 열렸지만 XBRL zip 의 주소 꼴은 못 찾았다.
-      # 사람은 열람 사이트에서 키 없이 XBRL 을 받는다 — 그러니 어딘가에 키 없는
-      # 문이 있다. 열람 화면(SPA)의 JS 번들을 받아 내려받기 주소와 문서목록
-      # API 의 진짜 꼴을 찾는다 (EDINET DB 쿼터와 무관 — 키 안 씀).
-      - name: 🇯🇵 열람 사이트 JS 해부 (24차)
-        timeout-minutes: 6
+      # 25차 — 분기 이력의 마지막 두 검증. 둘 다 키를 안 쓴다(오늘 EDINET DB
+      # 쿼터가 429 라 키 쓰는 단계는 전부 걷어냈다).
+      # (a) EDINET DB 공식 문서(120K자)에서 GET /v1/... 엔드포인트 전체를 긁어
+      #     분기 문서번호(四半期報告書 docID)를 주는 문이 있는지 확정한다.
+      # (b) 정부 창고는 pdf/{docID}.pdf 가 키 없이 열린다(23차 확인). 형제
+      #     경로가 있는지 XBRL 후보 꼴을 체계적으로 마저 두드린다.
+      - name: 🇯🇵 EDINET DB 전체 문 목록 + 창고 형제 경로 (25차)
+        timeout-minutes: 7
         run: |
           python - <<'EOF'
-          import gzip, io, re, urllib.request, urllib.error
+          import gzip, re, urllib.request, urllib.error
           UA = {"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) Chrome/124.0",
                 "Accept": "*/*", "Accept-Encoding": "gzip",
                 "Accept-Language": "ja,en;q=0.8"}
@@ -43,234 +43,44 @@ jobs:
                   return e.code, e.read()[:200]
               except Exception as e:
                   return None, str(e).encode()
-          base = "https://disclosure2.edinet-fsa.go.jp"
-          st, shell = get(base + "/WZEK0040.aspx?S10078HB")
-          t = shell.decode("utf-8", "replace")
-          print(f"셸 status={st} {len(t):,}자")
-          srcs = re.findall(r'(?:src|href)="([^"]+\.(?:js|mjs)[^"]*)"', t)
-          print("스크립트:", srcs[:10])
-          seen = 0
-          for s in srcs[:6]:
-              u = s if s.startswith("http") else base + "/" + s.lstrip("/")
-              st, body = get(u)
-              js = body.decode("utf-8", "replace") if isinstance(body, bytes) else ""
-              print(f"\n== {u.split('/')[-1][:50]}  status={st}  {len(js):,}자")
-              if st != 200:
-                  continue
-              seen += 1
-              # 내려받기·API 주소 후보를 전부 긁는다
-              for pat, tag in ((r'["\'`]([^"\'`]{3,120}?(?:xbrl|\.zip|download|dl)[^"\'`]{0,60})["\'`]', "dl"),
-                               (r'["\'`](/[a-zA-Z0-9_\-./]{2,80}api[a-zA-Z0-9_\-./]{0,60})["\'`]', "api"),
-                               (r'["\'`](https?://[^"\'`]{10,120})["\'`]', "url")):
-                  hits = sorted(set(re.findall(pat, js, re.I)))
-                  hits = [h for h in hits if "w3.org" not in h and "schema" not in h.lower()]
-                  for h in hits[:20 if tag == "dl" else 12]:
-                      print(f"   [{tag}] {h[:120]}")
-              # GeneXus 셀프포스트라면 이벤트 이름이 실마리다
-              ev = sorted(set(re.findall(r"'(E[A-Z0-9_]{6,30})'", js)))[:10]
-              if ev:
-                  print("   이벤트:", ev)
-          if not seen:
-              print("번들을 하나도 못 받았다 — 셸 원문 앞 2000자:")
-              print(t[:2000])
-          EOF
 
-      # 23차 — 22차에서 docID(S100…)로 정부 창고 PDF 가 키 없이 열렸다. 남은 건
-      # (i) XBRL zip 의 URL 꼴 — 진짜 docID 를 열람 화면(WZEK0040)에 넣어 내려받기
-      # 링크를 뜯고, 후보 꼴도 마저 두드린다. (ii) 분기(四半期報告書) docID 가
-      # EDINET DB 어디에 실리는지 — financials 행의 어느 필드가 S100… 을 들고
-      # 있고 분기 행이 따로 있는지 원문을 본다.
-      - name: 🇯🇵 XBRL 내려받기 꼴 + 분기 docID (23차 · 키 필요)
-        if: env.EDINETDB_KEY != ''
-        timeout-minutes: 6
-        run: |
-          python - <<'EOF'
-          import json, os, re, urllib.request, urllib.error
-          KEY = os.environ["EDINETDB_KEY"]
-          def get(url, key=False):
-              h = {"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) Chrome/124.0",
-                   "Accept": "*/*", "Accept-Language": "ja,en;q=0.8"}
-              if key:
-                  h["X-API-Key"] = KEY
-              req = urllib.request.Request(url, headers=h)
-              try:
-                  with urllib.request.urlopen(req, timeout=30) as r:
-                      return r.status, r.read()
-              except urllib.error.HTTPError as e:
-                  return e.code, e.read()[:300]
-              except Exception as e:
-                  return None, str(e).encode()
+          # (a) 문서에서 엔드포인트 전수
+          st, body = get("https://edinetdb.com/docs/api")
+          t = body.decode("utf-8", "replace")
+          t = re.sub(r"<[^>]+>", " ", t)
+          eps = sorted(set(re.findall(r"GET\s+(/v1/[A-Za-z0-9_{}\-./]+)", t)))
+          print(f"== 문서 status={st} · GET 엔드포인트 {len(eps)}개")
+          for e in eps:
+              print("   ", e)
+          # docID·문서 관련 낱말 언저리
+          for kw in ("doc_id", "docID", "quarterly", "四半期", "filings", "documents"):
+              for m in list(re.finditer(kw, t))[:3]:
+                  s = max(0, m.start() - 70)
+                  cut = re.sub(r"\s+", " ", t[s:m.start() + 150]).strip()
+                  print(f"   [{kw}] …{cut}…")
 
-          # (ii) financials 원문 — docID 필드 이름과 분기 행 여부
-          st, body = get("https://edinetdb.jp/v1/companies/E02378/financials", key=True)
-          j = json.loads(body)
-          rows = j.get("data") or []
-          print(f"financials 행 {len(rows)}개")
-          for r in rows[:3]:
-              keep = {k: v for k, v in r.items()
-                      if isinstance(v, str) and re.match(r"S100", str(v))
-                      or k in ("fiscal_year", "period", "period_type", "quarter",
-                               "doc_id", "docid", "source", "source_doc",
-                               "report_type", "doc_type")}
-              print("  행:", json.dumps(keep, ensure_ascii=False)[:220])
-          did = None
-          for r in rows:
-              for k, v in r.items():
-                  if isinstance(v, str) and v.startswith("S100"):
-                      print("  docID 필드:", k, "=", v)
-                      did = did or v
-                      break
-              if did:
-                  break
-
-          # (i) 열람 화면에서 내려받기 링크 꼴을 뜯는다
-          did = did or "S10078HB"
-          for u in (f"https://disclosure2.edinet-fsa.go.jp/WZEK0040.aspx?{did}",
-                    f"https://disclosure2.edinet-fsa.go.jp/week0010/S100/{did}"):
-              st, body = get(u)
-              t = body.decode("utf-8", "replace") if isinstance(body, bytes) else str(body)
-              links = sorted(set(re.findall(
-                  r'(?:href|src|action|data-[a-z]+)="([^"]*(?:zip|xbrl|csv|pdf|download|dl)[^"]*)"',
-                  t, re.I)))
-              print(f"\n== {u.split('/')[-1][:40]}  status={st}  {len(t):,}자")
-              for l in links[:12]:
-                  print("   링크:", l[:110])
-              hits = sorted(set(re.findall(r"[A-Za-z0-9_/.-]*" + did + r"[A-Za-z0-9_/.-]*", t)))
-              for h in hits[:10]:
-                  print("   흔적:", h[:110])
-
-          # 후보 꼴 마저 두드리기 — zip 이 어디 사는지
-          print("\n== zip 후보 꼴")
-          for pat in (f"https://disclosure2dl.edinet-fsa.go.jp/searchdocument/zip/{did}",
-                      f"https://disclosure2dl.edinet-fsa.go.jp/searchdocument/csv/{did}.zip",
-                      f"https://disclosure2dl.edinet-fsa.go.jp/searchdocument/attach/{did}.zip",
-                      f"https://disclosure2dl.edinet-fsa.go.jp/searchdocument/xbrl/{did}",
-                      f"https://disclosure2dl.edinet-fsa.go.jp/document/{did}.zip",
-                      f"https://disclosure2dl.edinet-fsa.go.jp/searchdocument/pdf/{did}.zip"):
-              st, body = get(pat)
-              head = body[:4] if isinstance(body, bytes) else b""
-              print(f"   {pat.split('.jp/')[-1]:44s} status={st}  {len(body):,}B  머리={head}")
-          EOF
-
-      # 22차 — 분기 이력의 마지막 문. 회원님이 원하는 건 연간이 아니라 **분기**다.
-      # 옛 분기는 EDINET 四半期報告書(2021~2024·이후 半期報告書)에만 있고, 정부
-      # 창고(disclosure2dl)는 익명으로 열려 있으나 **문서번호(docID)** 를 모르면
-      # 못 받는다(16차에서 확인 — 가짜 번호는 "blob does not exist"). EDINET DB 가
-      # 문서번호를 노출하는지 뒤진다: financials 류 응답에 docID/S100… 이 실려
-      # 있으면, 문서번호는 EDINET DB(키 있음)로 얻고 zip 은 정부 창고에서 키·쿼터
-      # 없이 받는 길이 열린다 → 진짜 분기 부문 이력.
-      - name: 🇯🇵 EDINET DB 문서번호 사냥 (22차 · 키 필요)
-        if: env.EDINETDB_KEY != ''
-        timeout-minutes: 6
-        run: |
-          python - <<'EOF'
-          import json, os, re, urllib.request, urllib.error
-          KEY = os.environ["EDINETDB_KEY"]
-          def get(url, key=True):
-              h = {"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) Chrome/124.0",
-                   "Accept": "application/json,*/*"}
-              if key:
-                  h["X-API-Key"] = KEY
-              try:
-                  with urllib.request.urlopen(urllib.request.Request(url, headers=h), timeout=30) as r:
-                      return r.status, r.read().decode("utf-8", "replace")
-              except urllib.error.HTTPError as e:
-                  return e.code, e.read().decode("utf-8", "replace")[:200]
-              except Exception as e:
-                  return None, f"{type(e).__name__}: {e}"
-          docids = set()
-          for path in ("/companies/E02378/financials",
-                       "/companies/E02378/filings",
-                       "/companies/E02378/documents",
-                       "/companies/E02378/reports",
-                       "/companies/E02378"):
-              st, body = get("https://edinetdb.jp/v1" + path)
-              ids = set(re.findall(r"S100[0-9A-Za-z]{4,6}", body))
-              docids |= ids
-              print(f"\n== {path}  status={st}  {len(body):,}자  docID {len(ids)}개")
-              if st == 200:
-                  try:
-                      j = json.loads(body)
-                      d = j.get("data")
-                      row = (d[0] if isinstance(d, list) and d else d)
-                      if isinstance(row, dict):
-                          print("   첫 행 키:", sorted(row)[:24])
-                          print("   맛보기:", json.dumps(row, ensure_ascii=False)[:400])
-                  except ValueError:
-                      print("   본문:", body[:200])
-              else:
-                  print("   본문:", body[:160])
-          print("\n== 모은 docID:", sorted(docids)[:8])
-          # 진짜 docID 로 정부 창고 내려받기 꼴을 확인한다 (키·쿼터 없음)
-          for did in sorted(docids)[:2]:
-              for pat in (f"https://disclosure2dl.edinet-fsa.go.jp/searchdocument/pdf/{did}.pdf",
-                          f"https://disclosure2dl.edinet-fsa.go.jp/searchdocument/zip/{did}.zip",
-                          f"https://disclosure2dl.edinet-fsa.go.jp/searchdocument/xbrl/{did}.zip",
-                          f"https://disclosure2dl.edinet-fsa.go.jp/searchdocument/{did}.zip"):
-                  st, body = get(pat, key=False)
-                  head = body[:4].encode("utf-8", "replace") if isinstance(body, str) else b""
-                  print(f"   {pat.split('/searchdocument/')[-1]:34s} status={st}"
-                        f"  {len(body):,}자  머리={head[:4]}")
-          EOF
-
-      # 21차 — EDINET DB 가 우회로로 확정됐다(20차: CI 도달 OK · 검색 키 없이 OK ·
-      # 세그먼트 경로 /v1/companies/{E코드}/segments 는 401=경로 맞고 키만 필요).
-      # 이번엔 (A) 가입 절차를 문서에서 읽어 회원님께 정확히 안내하고, (B) 키가
-      # 시크릿(EDINETDB_KEY)에 있으면 세그먼트를 실제로 뜯어 이력 길이·단위·필드를
-      # 확인해 곧장 수집기를 짤 수 있게 한다.
-      - name: 🇯🇵 EDINET DB 가입 안내·세그먼트 형식 (21차)
-        timeout-minutes: 6
-        run: |
-          python - <<'EOF'
-          import json, os, re, urllib.request, urllib.error
-          KEY = os.environ.get("EDINETDB_KEY") or ""
-          def raw(url, key=False):
-              h = {"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) Chrome/124.0",
-                   "Accept": "text/html,application/json,*/*",
-                   "Accept-Language": "ja,en;q=0.8"}
-              if key and KEY:
-                  h["X-API-Key"] = KEY
-              try:
-                  with urllib.request.urlopen(urllib.request.Request(url, headers=h), timeout=30) as r:
-                      return r.status, r.read().decode("utf-8", "replace")
-              except urllib.error.HTTPError as e:
-                  return e.code, e.read().decode("utf-8", "replace")
-              except Exception as e:
-                  return None, f"{type(e).__name__}: {e}"
-          def visible(t):
-              t = re.sub(r"<(script|style)[^>]*>.*?</\1>", " ", t, flags=re.S | re.I)
-              return re.sub(r"\s+", " ", re.sub(r"<[^>]+>", " ", t)).strip()
-
-          # (A) 가입·요금·인증 안내 — 문서 페이지에서 사람이 읽을 대목만
-          for url in ("https://edinetdb.jp/developers",
-                      "https://edinetdb.com/docs/api",
-                      "https://edinetdb.com/docs/api-reference"):
-              st, body = raw(url)
-              t = visible(body) if isinstance(body, str) else ""
-              print(f"\n== {url}  status={st}  본문 {len(t):,}자")
-              for kw in ("sign up", "Sign up", "register", "無料", "API key", "API Key",
-                         "X-API-Key", "100", "per day", "1日", "segment", "Segment"):
-                  i = t.find(kw)
-                  if i >= 0:
-                      print(f"   [{kw}] …{t[max(0,i-50):i+130]}…")
-
-          # (B) 키가 있으면 세그먼트 실물을 뜯는다
-          if KEY:
-              st, body = raw("https://edinetdb.jp/v1/companies/E02378/segments", key=True)
-              print(f"\n== 아식스 세그먼트 status={st}  {len(body):,}자")
-              try:
-                  j = json.loads(body)
-                  print("   최상위 키:", list(j) if isinstance(j, dict) else f"list[{len(j)}]")
-                  data = j.get("data") if isinstance(j, dict) else j
-                  if isinstance(data, list) and data:
-                      print("   기간 수:", len(data))
-                      print("   첫 원소:", json.dumps(data[0], ensure_ascii=False)[:400])
-                      print("   끝 원소:", json.dumps(data[-1], ensure_ascii=False)[:400])
-                  elif isinstance(data, dict):
-                      print("   data 키:", list(data)[:15])
-                      print("   일부:", json.dumps(data, ensure_ascii=False)[:500])
-              except ValueError:
-                  print("   JSON 아님:", body[:300])
-          else:
-              print("\n키 없음 — (B) 건너뜀. EDINETDB_KEY 시크릿이 올라오면 이 단이 실물을 뜯는다.")
+          # (b) 창고 형제 경로 — pdf 형(pdf/{did}.pdf)이 열리니 남은 후보를 다 본다
+          did = "S10078HB"
+          base = "https://disclosure2dl.edinet-fsa.go.jp/searchdocument"
+          pats = [f"{base}/xbrl/{did}.pdf", f"{base}/xbrl/{did}.xbrl",
+                  f"{base}/data/{did}.zip", f"{base}/file/{did}.zip",
+                  f"{base}/download/{did}.zip", f"{base}/dl/{did}.zip",
+                  f"{base}/1/{did}.zip", f"{base}/2/{did}.pdf",
+                  f"{base}/type1/{did}.zip", f"{base}/{did}/{did}.zip",
+                  f"{base}/{did}/xbrl.zip", f"{base}/zip/{did}/{did}.zip",
+                  f"{base}/pdf/{did}",
+                  f"https://disclosure2dl.edinet-fsa.go.jp/searchdocument/csv/{did}.csv",
+                  f"https://disclosure2dl.edinet-fsa.go.jp/xbrl/{did}.zip",
+                  f"https://disclosure2dl.edinet-fsa.go.jp/searchdocument/english/{did}.pdf"]
+          print("\n== 창고 형제 경로")
+          for p in pats:
+              st, b = get(p)
+              head = b[:4] if isinstance(b, bytes) else b""
+              mark = " ★" if head[:2] in (b"PK", b"%P") else ""
+              print(f"   {p.split('.jp/')[-1]:44s} status={st}  {len(b):,}B  머리={head}{mark}")
+          # 디렉터리 존재 신호 — 파일명 없이 두드리면 403/404 가 갈리는지
+          print("\n== 디렉터리 신호")
+          for d in ("pdf", "xbrl", "zip", "csv", "data", "file"):
+              st, b = get(f"{base}/{d}/")
+              print(f"   {d}/  status={st}  {len(b):,}B")
           EOF
