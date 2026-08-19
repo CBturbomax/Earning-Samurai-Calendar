@@ -12,8 +12,10 @@ data/earnings*.json  ->  index.html (단일 파일, 외부 의존 없음)
 "미수집"으로 적는다. 없는 걸 빈 화면으로 두면 '발표가 없는 것'처럼 보인다.
 """
 import base64
+import calendar
 import json
 import re
+from difflib import SequenceMatcher
 from collections import Counter
 from datetime import date, datetime, timedelta, timezone
 from pathlib import Path
@@ -732,6 +734,251 @@ def current_basis(rec):
 SEG_HK_SNAP = 20     # 스냅샷 날짜와 총매출 종료일이 이만큼 안이면 같은 기간으로 본다
 
 
+def jp_hist_records():
+    """일본 부문별 매출의 **옛 분기 이력** — EDINET DB(有報·四半期報告書·決算短信).
+
+    오래 "EDINET 은 연간뿐"이라 적어 두었는데 그건 매개변수를 안 써 본 것이었다
+    (35차 떠보기). `?period=quarterly` 를 붙이면 아식스가 연간 82행 -> **분기
+    223행**이 되고 FY2015 까지 거슬러 올라간다. TDnet 은 목록이 한 달치뿐이라
+    이 종목의 부문 막대가 두 칸(2025-06·2026-06)밖에 없었다.
+
+    받아 온 값은 **누계(ytd)**라 그대로 쓰면 막대가 계단처럼 커진다. 되돌리는
+    규칙은 TDnet·SEC 쪽과 같은 생각이되, 이 소스에만 있는 함정이 셋이다.
+
+    * **분기마다 이름이 일본어와 영어로 갈린다.** 아식스는 1·2분기에
+      `Other Region`, 3분기에 `その他` 로 온다. 이름으로만 빼면 짝이 없어져
+      그 분기가 통째로 빈다(실측 94%). **회계연도 안에서만** 묶는다 —
+      연도를 넘어 묶으면 東アジア(동아시아)와 東南・南アジア(동남아)가 붙는다.
+      같은 분기에 함께 나온 적이 있으면 서로 다른 부문이다.
+    * **4분기는 신고되지 않는다.** 3분기 누계까지만 있고 결산은 有報의 연간
+      값뿐이라 `연간 − 3분기 누계`로 되살린다. **3분기가 있을 때만** 한다 —
+      2024년부터 일본이 四半期報告書를 없애고 半期報告書로 바꿔서 반기까지만
+      오는 해가 있는데, 거기서 `연간 − 반기`를 4분기에 앉히면 하반기 전체가
+      한 칸에 들어간다.
+    * **결산기말이 몇 월인지 안 알려준다.** (회계연도, 분기)만 온다. 그래서
+      열두 달을 다 넣어 보고 **우리가 이미 가진 총매출과 가장 잘 맞는 달**을
+      고른다. 잘 맞는 달이 없으면 그 종목은 싣지 않는다 — 어림으로 날짜를
+      붙이면 막대가 한 분기씩 밀린다.
+    """
+    p = HERE / "data" / "segments_jp_hist.json"
+    if not p.exists():
+        return {}
+    try:
+        stocks = json.loads(p.read_text(encoding="utf-8")).get("stocks", {})
+    except (ValueError, OSError) as e:
+        print(f"  ! segments_jp_hist.json 읽기 실패: {e}")
+        return {}
+    out, tossed = {}, 0
+    for key, v in stocks.items():
+        rows = v.get("q") or []
+        if not rows:
+            continue
+        per = jp_hist_quarters(rows, v.get("rows") or [])
+        if len(per) < JP_HIST_MIN_Q:
+            continue
+        fin = {q["end"]: q.get("rev")
+               for q in (FIN.get(key) or {}).get("points") or [] if q.get("rev")}
+        endmon, err = jp_hist_endmon(per, fin)
+        if endmon is None or err > JP_HIST_MAX_ERR:
+            tossed += 1
+            continue
+        # **총매출과 어긋나는 칸은 싣지 않는다.** 결산 분기를 되살리다 보면
+        # 부문 몇 개가 빠진 채 한 칸이 만들어진다. 우리는 그 분기의 회사
+        # 전체 매출을 이미 아니까, 안 맞으면 그 칸만 뺀다 — 종목을 통째로
+        # 버리는 것보다 낫고, 틀린 막대를 세우는 것보다는 훨씬 낫다.
+        for k in list(per):
+            f = fin.get(jp_hist_end(k[0], k[1], endmon))
+            if f and f > 0 and abs(sum(per[k].values()) - f) / f > JP_HIST_MAX_CELL:
+                del per[k]
+        if len(per) < JP_HIST_MIN_Q:
+            tossed += 1
+            continue
+        names = sorted({n for row in per.values() for n in row},
+                       key=lambda n: -sum(row.get(n, 0) for row in per.values()))
+        pts = []
+        for fy, q in sorted(per):
+            row = per[(fy, q)]
+            pts.append([jp_hist_end(fy, q, endmon)] + [row.get(n) for n in names])
+        out[key] = {"v": 1, "axis": "사업부문", "names": names, "pts": pts}
+    if tossed:
+        print(f"  segments_jp_hist.json: 총매출과 안 맞아 뺀 종목 {tossed:,}")
+    return out
+
+
+JP_HIST_MIN_Q = 6         # 이만큼은 나와야 이력이라 할 만하다
+JP_HIST_MAX_ERR = 0.05    # 총매출과 이보다 어긋나면 날짜·부문이 잘못 맞은 것이다
+JP_HIST_MAX_CELL = 0.10   # 한 칸이 이보다 어긋나면 그 칸만 뺀다
+
+
+def jp_hist_end(fy, q, endmon):
+    """(회계연도, 분기, 결산기말 달) -> 그 분기의 종료일(월말)."""
+    m, y = endmon - 3 * (4 - q), fy
+    while m <= 0:
+        m, y = m + 12, y - 1
+    return f"{y:04d}-{m:02d}-{calendar.monthrange(y, m)[1]:02d}"
+
+
+def jp_hist_merge(qmap):
+    """한 회계연도 안에서 분기마다 갈린 이름을 묶는다 -> {이름: 대표이름}."""
+    where, en = {}, {}
+    for q, d in qmap.items():
+        for nm, (rev, e) in d.items():
+            where.setdefault(nm, set()).add(q)
+            en[nm] = e
+    names = sorted(where)
+    rep = {n: n for n in names}
+    pairs = []
+    for i, a in enumerate(names):
+        for b in names[i + 1:]:
+            if where[a] & where[b]:
+                continue                  # 같은 분기에 함께 있으면 딴 부문이다
+            ka, kb = seg_key(en[a] or a), seg_key(en[b] or b)
+            pairs.append((max(SequenceMatcher(None, ka, kb).ratio(),
+                              SequenceMatcher(None, seg_key(a), seg_key(b)).ratio()),
+                          a, b))
+    for r, a, b in sorted(pairs, reverse=True):
+        if r < 0.55:
+            break
+        if rep[a] != a or rep[b] != b:
+            continue
+        seq = [qmap[q][nm][0] for q in sorted(qmap) for nm in (a, b) if nm in qmap[q]]
+        if any(y < x for x, y in zip(seq, seq[1:])):
+            continue                      # 묶었더니 누계가 줄었다 — 딴 부문이다
+        last = max(where[a] | where[b])
+        keep, drop = (a, b) if a in qmap[last] else (b, a)
+        rep[drop] = keep                  # 대표는 마지막 분기에 쓰인 이름
+    return rep
+
+
+def jp_hist_quarters(rows, annual):
+    """누계 행 -> {(회계연도, 분기): {부문: 그 분기 매출}}."""
+    ys = {}
+    for fy, q, nm, e, rev, opi, dt, vb in rows:
+        if rev is None:
+            continue
+        ys.setdefault(int(fy), {}).setdefault(int(q), {})[nm] = (float(rev), e or "")
+    ann = {}
+    for fy, nm, rev, _opi in annual:
+        if rev is not None:
+            ann.setdefault(int(fy), {})[nm] = float(rev)
+    # 연도마다 따로 묶은 다음 **연도끼리 잇는다.** 대표 이름이 그 해의 마지막
+    # 분기 표기라 해가 바뀌면 갈린다 — 아식스는 2023년까지 3분기 표기(その他)가
+    # 대표였다가 2024년부터 2분기 표기(Other Region)가 대표가 된다. 안 이으면
+    # 같은 부문이 두 줄로 서고 각각 반쪽만 찬다.
+    per_year, members, clus_en = {}, {}, {}
+    for fy, qmap in ys.items():
+        rep = jp_hist_merge(qmap)
+        cum = {}
+        for q in sorted(qmap):
+            for nm, (rev, _e) in qmap[q].items():
+                cum.setdefault(rep[nm], {})[q] = rev
+        per_year[fy] = cum
+        for nm, r in rep.items():
+            members.setdefault((fy, r), set()).add(nm)
+            # 영문명을 군집에 매달아 둔다. `seg_key` 는 일본어를 통째로 지우므로
+            # (`東南・南アジア地域` -> 빈 문자열) 원문만으로는 해를 못 잇는다.
+            e = next((x[1] for q in qmap for x in [(nm, qmap[q].get(nm, (0, ""))[1])]
+                      if x[1]), "")
+            if e and not clus_en.get((fy, r)):
+                clus_en[(fy, r)] = e
+    link = jp_hist_link(per_year, clus_en)
+
+    out, need = {}, {}
+    for fy, cum in per_year.items():
+        for nm, d in cum.items():
+            show = link.get((fy, nm), nm)
+            for q in sorted(d):
+                val = d[q] if q == 1 else (
+                    None if d.get(q - 1) is None else d[q] - d[q - 1])
+                if val is not None:
+                    out.setdefault((fy, q), {})[show] = val
+            if 3 not in d or 4 in d:
+                continue
+            # 결산 분기 = 연간 − 3분기 누계. 연간 쪽 이름은 **이 부문에 속한
+            # 이름 중 하나여야** 한다 — 닮은 이름으로 아무거나 집으면 엉뚱한
+            # 부문의 연간값이 들어와 그 칸만 열 배로 솟는다(아식스 4Q23).
+            mine = members.get((fy, nm), {nm})
+            keys = {seg_key(x) for x in mine}
+            tot = None
+            for k, vv in ann.get(fy, {}).items():
+                if k in mine or seg_key(k) in keys:
+                    tot = vv
+                    break
+            # 결산 분기가 9개월 누계보다 클 수는 없다. 넘으면 잘못 짝지은 것이다.
+            if tot is not None and d[3] < tot <= d[3] * 2:
+                out.setdefault((fy, 4), {})[show] = tot - d[3]
+                need.setdefault(fy, set()).add(show)
+
+    # **반쪽짜리 결산 분기는 통째로 뺀다.** 연간 쪽 부문 이름이 분기 쪽과
+    # 달라 몇 개만 짝이 맞는 일이 흔한데(아식스는 여섯 중 셋이었다), 그대로
+    # 두면 그 칸만 막대가 반토막 나 매출이 준 것처럼 보인다. 3분기에 값이
+    # 있던 부문이 **전부** 살아났을 때만 싣는다.
+    for fy, got in need.items():
+        want = {n for n in out.get((fy, 3), {})}
+        if want and not want <= got:
+            out.pop((fy, 4), None)
+    return out
+
+
+def jp_hist_link(per_year, clus_en=None):
+    """해가 바뀌며 표기가 달라진 같은 부문을 잇는다 -> {(연도, 대표): 보일 이름}.
+
+    잇는 잣대는 **이름이 닮았는가**다. 값으로 이으면 사업이 커진 해에 어긋난다.
+    이은 사슬의 이름은 **가장 최근 해의 표기**를 쓴다 — 그게 지금 쓰는 말이다.
+    """
+    years = sorted(per_year)
+    clus_en = clus_en or {}
+    key = lambda y, n: seg_key(clus_en.get((y, n)) or n) or seg_key(n) or n
+    nxt = {}
+    for y0, y1 in zip(years, years[1:]):
+        a, b = list(per_year[y0]), list(per_year[y1])
+        taken = set()
+        for nm in a:                       # 똑같은 이름부터
+            if nm in per_year[y1]:
+                nxt[(y0, nm)] = nm
+                taken.add(nm)
+        cand = []
+        for nm in a:
+            if (y0, nm) in nxt:
+                continue
+            for other in b:
+                if other in taken:
+                    continue
+                cand.append((SequenceMatcher(None, key(y0, nm),
+                                             key(y1, other)).ratio(), nm, other))
+        for r, nm, other in sorted(cand, reverse=True):
+            if r < 0.55:
+                break
+            if (y0, nm) in nxt or other in taken:
+                continue
+            nxt[(y0, nm)] = other
+            taken.add(other)
+    show = {}
+    for y in reversed(years):
+        for nm in per_year[y]:
+            here = nxt.get((y, nm))
+            show[(y, nm)] = show.get((y + 1, here), here) if here else nm
+    return show
+
+
+def jp_hist_endmon(per, fin):
+    """결산기말 달을 우리 총매출과 맞춰 고른다. (달, 중앙오차)."""
+    best = None
+    for m in (3, 12, 6, 9, 1, 2, 4, 5, 7, 8, 10, 11):
+        errs = []
+        for (fy, q), row in per.items():
+            f = fin.get(jp_hist_end(fy, q, m))
+            tot = sum(row.values())
+            if f and f > 0 and tot > 0:
+                errs.append(abs(tot - f) / f)
+        if len(errs) < 3:
+            continue
+        cand = (sorted(errs)[len(errs) // 2], -len(errs), m)
+        if best is None or cand < best:
+            best = cand
+    return (best[2], best[0]) if best else (None, None)
+
+
 def hk_seg_records():
     """동화순 비중 스냅샷 -> 부문 금액 기록. {hk:코드: {axis, names, pts}}
 
@@ -890,6 +1137,28 @@ def load_seg():
             added += bool(n_add)
         print(f"  segments_edgar.json: 최근 분기를 이어 붙인 종목 {added:,}"
               f" · 새로 생긴 종목 {new:,}")
+
+    # 일본 옛 분기 — EDINET DB. **이력이 뼈대고 TDnet 이 꼬리다.** TDnet 목록은
+    # 한 달치뿐이라 부문 막대가 한두 칸이던 종목이 수십 칸이 된다(아식스 2 -> 42).
+    # 이어 붙이기는 미국 쪽과 같은 `splice` 를 쓴다 — 같은 판단을 두 군데 적어
+    # 두면 반드시 갈라진다.
+    hist = jp_hist_records()
+    grew = seeded = 0
+    for k, base in hist.items():
+        tail = out.get(k)
+        if tail:
+            # 꼬리를 못 붙였으면(이름이 안 맞거나 새로 낼 분기가 없으면) **긴
+            # 쪽을 남긴다.** 무턱대고 이력으로 갈아치우면 TDnet 이 방금 받아 온
+            # 최근 분기가 사라진다.
+            if splice(base, tail) or len(base["pts"]) > len(tail.get("pts") or []):
+                out[k] = base
+                grew += 1
+        else:
+            out[k] = base
+            seeded += 1
+    if hist:
+        print(f"  segments_jp_hist.json: 옛 분기를 앞에 붙인 종목 {grew:,}"
+              f" · 새로 생긴 종목 {seeded:,}")
 
     # 홍콩 — 동화순 비중 × 우리 총매출. 다른 소스가 홍콩을 아예 못 주므로
     # 겹칠 일은 없지만, 있으면 그쪽(직접 금액)이 이긴다.

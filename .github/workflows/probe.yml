@@ -1,11 +1,11 @@
 # 소스를 떠보는 자리. 결과만 로그로 보고 아무것도 커밋하지 않는다.
+#
+# **dispatch 전용이다.** EDINET DB 무료 키가 하루 100건이라, push 로도 걸려
+# 있으면 파일을 고칠 때마다 예산이 새어 나간다. 손으로 한 번만 돌린다.
 name: 소스 접근 확인
 
 on:
   workflow_dispatch:
-  push:
-    paths:
-      - '.github/workflows/probe.yml'
 
 jobs:
   probe:
@@ -20,58 +20,10 @@ jobs:
         with:
           python-version: '3.12'
 
-      # 34차 — 아메르스포츠. 오늘 장전에 6월 분기를 발표했다(나스닥 캘린더에
-      # 2026-08-18 time-pre-market 로 올라 있다). 물음은 하나다:
-      # **그 6-K 가 지금 EDGAR 에 올라와 있고, 우리 파서가 6월 분기를 뽑아내나.**
-      # 제출 목록을 통째로 찍고, XBRL 이 붙은 것부터 인스턴스를 뜯어
-      # totals()/parse_instance() 결과를 나란히 본다.
-      - name: 🎿 아메르스포츠 6월 분기 서류 추적 (34차)
-        timeout-minutes: 10
-        run: |
-          python - <<'EOF'
-          import json
-          import scrape_seg_sec as ss
-          from scrape_seg_edgar import get, instance_url, qtrs_of, parse_instance
-          from scrape_seg_fpi import xbrl_filings, totals, fin_points, SUBS
-
-          cikmap = ss.cik_map()
-          for sym in ("AS", "BHP", "ZTO"):
-              cik = ss.cik_of(cikmap, sym)
-              print(f"\n===== {sym} CIK {cik}")
-              if not cik:
-                  continue
-              blob = get(SUBS.format(cik=cik), timeout=60)
-              j = json.loads(blob)
-              r = j["filings"]["recent"]
-              print(f"  이름 {j.get('name')} · 최근 {len(r['form'])}건")
-              for i in range(min(14, len(r["form"]))):
-                  print(f"    {r['filingDate'][i]} {r['form'][i]:6s} "
-                        f"xbrl={r.get('isXBRL',[0]*99)[i]} inline={r.get('isInlineXBRL',[0]*99)[i]} "
-                        f"{r['accessionNumber'][i]} {r.get('primaryDocument',[''])[i][:40]}")
-              fl = xbrl_filings(cik)
-              print(f"  xbrl_filings -> {len(fl)}건, 앞 3: {fl[:3]}")
-              raw = {}
-              for acc, filed, form in fl[:3]:
-                  url = instance_url(cik, acc)
-                  print(f"  -- {filed} {form} {acc} -> {(url or '없음').split('/')[-1]}")
-                  if not url:
-                      continue
-                  b = get(url, timeout=150)
-                  if not b:
-                      print("     못 받음"); continue
-                  t = totals(b)
-                  print(f"     totals {len(t)}칸: "
-                        + ", ".join(f"{k[0]}/q{k[1]}" for k in sorted(t)[:8]))
-                  for k, v in t.items():
-                      cur = raw.get(k)
-                      if cur is None or filed >= cur[1]:
-                          raw[k] = (v, filed)
-                  try:
-                      rows = parse_instance(b)
-                  except Exception as e:
-                      rows = []
-                      print(f"     parse_instance 실패: {type(e).__name__} {e}")
-                  print(f"     부문 {len(rows)}행 {rows[:2]}")
-              pts = fin_points({k: v[0] for k, v in raw.items()})
-              print(f"  == fin_points {len(pts)}점: {pts[-4:]}")
-          EOF
+      # 36차 — 35차에서 `?period=quarterly` 가 분기를 준다는 것까지 확인했다
+      # (아식스 223행 · quarter 칸 · valueBasis=ytd). 이제 **값을 눈으로 본다** —
+      # 35차는 220자에서 잘라 찍는 바람에 정작 quarter·revenue 가 안 보였다.
+      # 새 수집기의 --probe 를 그대로 쓴다(예산 1건).
+      - name: 🗾 아식스 분기 부문 원문 (36차 · 예산 1건)
+        timeout-minutes: 8
+        run: python scrape_seg_jp_edinetdb.py --probe
