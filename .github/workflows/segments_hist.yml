@@ -10,10 +10,15 @@ name: 부문 연간 이력 (EDINET DB)
 on:
   workflow_dispatch:
   schedule:
-    - cron: '40 20 * * *'          # 매일 한 번 (05:40 JST)
-  # **코드 푸시로는 돌리지 않는다.** 손으로 부른 실행과 겹쳐 두 개가 돌면
-  # 뒤엣것이 헌 파일 위에 제 것만 얹어 커밋해 앞엣것의 수집분을 덮는다
-  # (72종목이 4종목이 됐다). 하루 100건짜리 예산이라 겹쳐 돌 값도 없다.
+    # **하루 몫을 맨 먼저 집는다.** 예산은 일본 자정에 100건으로 되살아나는데
+    # 05:40 JST 에 돌던 시절 손으로 돌린 실행이 00:38 JST 에 100건을 다 써서
+    # 크론이 첫 요청에서 429 를 맞고 빈손으로 돌아왔다. 경계 직후로 옮긴다.
+    - cron: '10 15 * * *'          # 매일 한 번 (00:10 JST)
+  push:
+    branches: [main]
+    paths:
+      - 'scrape_seg_jp_edinetdb.py'
+      - '.github/workflows/segments_hist.yml'
 
 permissions:
   contents: write
