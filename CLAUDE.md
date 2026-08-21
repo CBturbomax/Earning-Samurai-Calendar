@@ -739,10 +739,18 @@ HPE 가 Compute·Storage·Intelligent Edge 를 Cloud&AI·Networking 으로 바�
 | 워크플로 | 주기 | 쓰는 파일 |
 |---|---|---|
 | `fresh.yml` | **3분 루프** | `data/earnings_jp_past.json` · `data/financials_jp.json` · `data/segments_jp.json` · `data/briefs_jp.json` · `data/briefs_us.json` |
-| `collect.yml` | 1시간 | `data/earnings.json` · `data/earnings_jp_sched.json` · `data/earnings_us.json` · `data/earnings_hk.json` · `data/caps.json` |
-| `numbers.yml` | 30분 | `data/financials.json` · `data/financials_intl.json` · `data/segments.json` · `data/segments_hk.json` · `data/desc.json` |
-| `segments.yml` | 3시간 | `data/segments_sec.json` · `data/segments_edgar.json` |
+| `collect.yml` | 20분 | `data/earnings.json` · `data/earnings_jp_sched.json` · `data/earnings_us.json` · `data/earnings_hk.json` · `data/caps.json` |
+| `numbers.yml` | 15분 | `data/financials.json` · `data/financials_intl.json` · `data/segments.json` · `data/segments_hk.json` · `data/desc.json` |
+| `segments.yml` | 30분 | `data/segments_sec.json` · `data/segments_edgar.json` · `data/segments_fpi.json` · `data/financials_fpi.json` |
 | `segments_hist.yml` | 하루 1번 | `data/segments_jp_hist.json` (EDINETDB_KEY 있을 때만) |
+
+**공개 저장소라 GitHub Actions 시간이 무제한 무료다.** 그래서 주기를 늦출 이유가
+없다 — 이미 받아둔 것은 캐시로 몇 초 만에 건너뛰므로, 자주 도는 값은 새로 생긴
+것이 있을 때만 비싸다. 처음에는 지금보다 늦게(1시간·30분·3시간) 잡았다가
+"업데이트가 느리다"는 지적을 받고 당겼다. 더 당기고 싶으면 GitHub 크론의 실질
+하한(5분)까지는 안전하다 — `concurrency`(`cancel-in-progress: false`)가 앞 실행이
+안 끝났을 때 다음 것을 취소가 아니라 대기시키므로, 주기를 실행 시간보다 짧게
+잡아도 깨지지 않고 그냥 대기줄이 는다.
 
 겹치는 건 만들어진 `index.html` 뿐이고, 그건 합친 자료로 다시 만들면 그만이다.
 새 수집기를 붙일 때도 **어느 쪽이 그 파일의 주인인지 먼저 정하고** 한쪽에만 넣는다.
