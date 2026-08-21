@@ -457,8 +457,11 @@ def queue(old, cand, ann):
     cold = (date.today() - timedelta(days=STALE_DAYS * 6)).isoformat()
     recent = (date.today() - timedelta(days=45)).isoformat()
     # 소스가 발표 당일 바로 싣지 않을 때가 있다. 그렇다고 매 실행마다 다시
-    # 두드리면 그 몇백 종목이 대기줄을 통째로 차지한다. 세 시간에 한 번씩만.
-    retry = (datetime.now(timezone.utc) - timedelta(hours=3)).strftime("%Y-%m-%dT%H:%M")
+    # 두드리면 그 몇백 종목이 대기줄을 통째로 차지한다 — 다만 이 종목들은
+    # -1순위라 어차피 새치기 셋에 하나만 끼워 넣으므로(아래) 대기줄을 통째로
+    # 차지하지는 못한다. 실행 주기가 5분으로 당겨졌으니 재시도 간격도 맞춰
+    # 당긴다 — 세 시간이면 크론을 아무리 당겨도 소용이 없다.
+    retry = (datetime.now(timezone.utc) - timedelta(minutes=20)).strftime("%Y-%m-%dT%H:%M")
     picks = []
     for k, cap in cand.items():
         rec = old.get(k)
