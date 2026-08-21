@@ -89,9 +89,10 @@ RAW_DOCS = 8
 # 시킬까. 대부분은 목록 요청 한 번에 끝난다(국내 기업은 6-K 를 안 내므로).
 FRESH_MAX = 30
 # 소스가 발표 당일 바로 싣지 않는 일이 흔하다. 그렇다고 매 실행 다시 두드리면
-# 그 몇백 종목이 대기줄을 통째로 차지한다 — 두 시간에 한 번씩만(scrape_fin_intl
-# 의 `retry` 와 같은 셈법).
-POKE_HOURS = 2
+# 그 몇백 종목이 대기줄을 통째로 차지한다 — 다만 이 새치기 줄은 FRESH_MAX 로
+# 이미 한도가 있다. segments.yml 주기가 30분으로 당겨졌으니 이 값도 맞춰
+# 당긴다(scrape_fin_intl 의 `retry` 와 같은 셈법).
+POKE_HOURS = 0.33
 
 
 def load_old():
