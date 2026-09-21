@@ -10,7 +10,7 @@
 # 페이지를 다시 만들어 푸시한다.
 #
 # **여기가 이 파일들의 주인이다** (numbers.yml·collect.yml 에서 옮겨 왔다):
-#   data/earnings_jp_past.json · data/monthly_jp.json · data/monthly_nums_jp.json
+#   data/earnings_jp_past.json · data/monthly_jp.json
 #   data/financials_jp.json · data/segments_jp.json
 #   data/briefs_jp.json · data/briefs_us.json
 # 다른 워크플로는 읽기만 한다. 두 워크플로가 같은 파일에 쓰면 한쪽 수집분이
@@ -49,6 +49,11 @@ jobs:
 
       - name: 3분 루프
         run: |
+          # **`bash -e` 를 끈다.** GitHub 은 run 블록을 `bash -e` 로 돌리는데,
+          # 이 루프에는 `실패해도 되는` 명령이 많다(fetch·merge·is-ancestor).
+          # `cmd && return 0` 꼴이 거짓일 때 -e 가 스크립트를 통째로 죽여
+          # **루프가 한 시간 넘게 커밋을 못 냈다.** 오류는 손으로 받는다.
+          set +e
           set -u
           git config user.name  "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
@@ -62,8 +67,8 @@ jobs:
             fi
             # **바뀐 게 없어도 앞서 있으면 민다.** sync_code 가 담아 둔 커밋이
             # 여기서 안 나가면 영영 안 나간다.
-            git fetch -q origin main 2>/dev/null || true
-            git merge-base --is-ancestor HEAD origin/main && return 0
+            git fetch -q origin main 2>/dev/null
+            if git merge-base --is-ancestor HEAD origin/main; then return 0; fi
             for i in 1 2 3 4; do
               git merge --abort 2>/dev/null || true
               git add data/ index.html 2>/dev/null || true
@@ -134,11 +139,8 @@ jobs:
             # 고친 규칙이 화면에 닿는 것은 한 바퀴로 끝나는 편이 낫다.
             timeout 150 python scrape_jp_tdnet.py || true
             JP_BACK_DAYS=2 timeout 150 python scrape_fin_jp.py || true
-            # 월매출의 **숫자**는 첨부 PDF 안에 있다. 목록 훑기는 몇 초지만
-            # 첨부는 종목마다 200KB 라 따로 뗀다. 한 번 뜯어 본 공시는 주소로
-            # 건너뛰므로, 따라잡은 뒤에는 하루 몇 건이 전부다. 첨부는 한 달쯤만
-            # 남으므로 새 공시부터 본다 — 늦게 보면 영영 못 받는다.
-            MON_PDF_PER_RUN=80 MON_SECS=110 timeout 170 python scrape_mon_jp.py || true
+            # 월매출 **숫자**(첨부 PDF)는 monthly.yml 로 옮겼다 — 여기 끼우면
+            # 한 바퀴가 길어지고, 무엇보다 이 루프의 로그에 묻혀 안 보인다.
             # 미국 8-K 와 일본 보관창 백필(부문·가이던스·설명 되훑기)은 열 바퀴
             # (30분)에 한 번 — 새 발표는 위의 오늘치가 이미 잡는다.
             # 45일 = TDnet 보관창 전체. 판(SEG_JP_VER 등)을 올리면 이 창 안의
@@ -149,7 +151,7 @@ jobs:
             fi
             push_changes || exit 1
             el=$(( $(date +%s) - t0 ))
-            [ "$el" -lt 180 ] && sleep $(( 180 - el ))
-            echo "── 바퀴 $n 끝 (${el}초)"
+            if [ "$el" -lt 180 ]; then sleep $(( 180 - el )); fi
+            echo "── 바퀴 $n 끝 (${el}초) $(date -u +%H:%M:%S)"
           done
           echo "5시간 채움 — 대기 중인 다음 실행이 이어받는다"
