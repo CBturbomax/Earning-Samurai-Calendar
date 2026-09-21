@@ -102,13 +102,20 @@ def _objects(buf: bytes, crypt=None):
         if raw is None:
             e = body.find(b"endstream")
             raw = body[:e if e > 0 else len(body)]
+        f = FILTER_RE.search(head)
+        flate = bool(f and b"Flate" in f.group(1))
         # **암호가 걸렸으면 풀고 나서 압축을 푼다.** 차례가 바뀌면 zlib 이
         # 쓰레기를 받아 빈 결과를 내고, 화면에서는 '글자가 없는 공시'와
         # 구별되지 않는다.
-        if crypt and b"/XRef" not in head:
+        #
+        # 다만 **읽을 것만 푼다.** 파이썬으로 짠 AES 는 256KB 에 2초라, 한
+        # 공시의 그림까지 다 풀면 단계가 시간을 넘겨 잘린다. 우리가 읽는 것은
+        # Flate 로 눌린 글자 스트림(내용·CMap·객체스트림)뿐이고 그림은 대개
+        # DCT/JPX 라 애초에 안 뜯는다.
+        if crypt and flate and b"/XRef" not in head and b"/Image" not in head \
+                and len(raw) <= 3_000_000:
             raw = pdfcrypt.decrypt(crypt[0], crypt[1], num, gen, raw)
-        f = FILTER_RE.search(head)
-        data = _inflate(raw) if (f and b"Flate" in f.group(1)) else raw
+        data = _inflate(raw) if flate else raw
         objs[num] = (head, data)
     return objs
 

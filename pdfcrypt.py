@@ -43,7 +43,7 @@ def _xt(a):
     return (a ^ 0x1B) & 0xFF if a & 0x100 else a
 
 
-def _mul(a, b):
+def _mul_slow(a, b):
     r = 0
     while b:
         if b & 1:
@@ -51,6 +51,14 @@ def _mul(a, b):
         a = _xt(a)
         b >>= 1
     return r
+
+
+# **곱셈을 미리 표로 만들어 둔다.** 순수 파이썬이라 갈루아 곱을 그때그때
+# 돌리면 한 블록에 수천 번이 돌아 250KB 짜리 한 장에 1분이 걸렸다 — 워크플로
+# 단계가 그대로 잘렸다. 여섯 개 표(2·3·9·11·13·14)면 곱셈이 조회로 바뀐다.
+_M = {k: bytes(_mul_slow(a, k) for a in range(256))
+      for k in (2, 3, 9, 11, 13, 14)}
+_M2, _M3, _M9, _M11, _M13, _M14 = (_M[2], _M[3], _M[9], _M[11], _M[13], _M[14])
 
 
 def _expand(key: bytes):
@@ -88,10 +96,10 @@ def _block(inp, w, nr, enc):
             if rnd != nr:
                 for c in range(4):
                     a = [s[rr][c] for rr in range(4)]
-                    s[0][c] = _mul(a[0], 2) ^ _mul(a[1], 3) ^ a[2] ^ a[3]
-                    s[1][c] = a[0] ^ _mul(a[1], 2) ^ _mul(a[2], 3) ^ a[3]
-                    s[2][c] = a[0] ^ a[1] ^ _mul(a[2], 2) ^ _mul(a[3], 3)
-                    s[3][c] = _mul(a[0], 3) ^ a[1] ^ a[2] ^ _mul(a[3], 2)
+                    s[0][c] = _M2[a[0]] ^ _M3[a[1]] ^ a[2] ^ a[3]
+                    s[1][c] = a[0] ^ _M2[a[1]] ^ _M3[a[2]] ^ a[3]
+                    s[2][c] = a[0] ^ a[1] ^ _M2[a[2]] ^ _M3[a[3]]
+                    s[3][c] = _M3[a[0]] ^ a[1] ^ a[2] ^ _M2[a[3]]
             ark(rnd)
     else:
         ark(nr)
@@ -105,14 +113,10 @@ def _block(inp, w, nr, enc):
             if rnd:
                 for c in range(4):
                     a = [s[rr][c] for rr in range(4)]
-                    s[0][c] = (_mul(a[0], 14) ^ _mul(a[1], 11) ^ _mul(a[2], 13)
-                               ^ _mul(a[3], 9))
-                    s[1][c] = (_mul(a[0], 9) ^ _mul(a[1], 14) ^ _mul(a[2], 11)
-                               ^ _mul(a[3], 13))
-                    s[2][c] = (_mul(a[0], 13) ^ _mul(a[1], 9) ^ _mul(a[2], 14)
-                               ^ _mul(a[3], 11))
-                    s[3][c] = (_mul(a[0], 11) ^ _mul(a[1], 13) ^ _mul(a[2], 9)
-                               ^ _mul(a[3], 14))
+                    s[0][c] = (_M14[a[0]] ^ _M11[a[1]] ^ _M13[a[2]] ^ _M9[a[3]])
+                    s[1][c] = (_M9[a[0]] ^ _M14[a[1]] ^ _M11[a[2]] ^ _M13[a[3]])
+                    s[2][c] = (_M13[a[0]] ^ _M9[a[1]] ^ _M14[a[2]] ^ _M11[a[3]])
+                    s[3][c] = (_M11[a[0]] ^ _M13[a[1]] ^ _M9[a[2]] ^ _M14[a[3]])
     out = bytearray(16)
     for c in range(4):
         for rr in range(4):
