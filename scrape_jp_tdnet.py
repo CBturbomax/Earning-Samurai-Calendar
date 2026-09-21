@@ -112,6 +112,11 @@ MON_SKIP = re.compile(r"決算短信|決算説明|説明資料|説明会|訂正|
 PER_DO = re.compile(r"(\d{1,2})\s*月度")
 PER_BUN = re.compile(r"(\d{1,2})\s*月分")
 
+# 가려내는 규칙(is_monthly)이 바뀌면 올린다. **모은 줄은 안 버리고 '훑은 날'만
+# 비운다** — 그래야 넓힌 규칙이 옛 날에도 닿는다. 불러올 때 거르는 것만으로는
+# 줄을 뺄 수는 있어도 **새로 넣지는 못한다**(212A 의 KPI형 공시가 그랬다).
+MON_RULE_VER = 2
+
 # 목록 표의 한 줄. 클래스 이름이 둘씩 붙어 있다(`oddnew-M kjTitle`) —
 # `class="kjTitle"` 로 잡으면 한 건도 안 걸린다(scrape_fin_jp.py 에서 겪었다).
 ROW_RE = re.compile(
@@ -330,10 +335,17 @@ def load_monthly():
         by_day.setdefault(r["date"], []).append(r)
     if dropped:
         print(f"  쌓아둔 것 중 지금 규칙에 안 맞는 {dropped}건을 뺐다.")
-    return by_day
+    # 훑은 날. 규칙 판이 바뀌었으면 비워서 다시 훑게 한다 — **줄은 그대로 두고**
+    # 날만 비우므로 창 밖으로 밀려난 달을 잃지 않는다.
+    scanned = set(old.get("days") or [])
+    if old.get("rv") != MON_RULE_VER:
+        print(f"  가려내는 규칙이 바뀌었다(rv {old.get('rv')} -> {MON_RULE_VER})."
+              f" 쌓은 것은 두고 날짜만 다시 훑는다.")
+        scanned = set()
+    return by_day, scanned
 
 
-def save_monthly(by_day: dict):
+def save_monthly(by_day: dict, scanned=None):
     """**쌓아 두고 지우지 않는다.** TDnet 목록은 한 달쯤만 남으므로 창 밖으로
     밀려난 달은 어느 길로도 다시 못 받는다. 화면의 월별 이력은 여기 쌓인 것이
     전부다 — 돌수록 길어진다(홍콩 부문 비중 스냅샷과 같은 이치).
@@ -343,6 +355,9 @@ def save_monthly(by_day: dict):
     codes = {r["code"] for r in rows}
     payload = {
         "v": MONTH_VER,
+        "rv": MON_RULE_VER,
+        # 훑은 날과 모은 줄은 **다른 것**이다. 규칙이 바뀌면 날만 비운다.
+        "days": sorted(scanned if scanned is not None else by_day),
         "source": "TDnet 적시공시 — 월매출(月次)",
         "source_url": "https://www.release.tdnet.info/inbs/I_main_00.html",
         "note": ("결산단신을 훑는 그 목록에서 같이 건진다(요청 추가 없음). "
@@ -397,7 +412,7 @@ def main(back_days: int, probe: bool = False):
         return
 
     by_day, gone = load_cache()
-    mon_day = load_monthly()
+    mon_day, mon_seen_days = load_monthly()
     failed, streak, expired = [], 0, 0
     fresh_from = today - timedelta(days=FRESH_DAYS)
 
@@ -408,7 +423,7 @@ def main(back_days: int, probe: bool = False):
         key = day.isoformat()
         # 결산단신과 월매출을 **따로** 본다. 월매출을 뒤늦게 붙였으므로 이미 받아둔
         # 날에는 월매출 쪽이 비어 있다 — 그 날들만 다시 훑으면 된다.
-        if key in by_day and key in mon_day and day < fresh_from:
+        if key in by_day and key in mon_seen_days and day < fresh_from:
             continue
         if key in gone:
             continue
@@ -438,16 +453,21 @@ def main(back_days: int, probe: bool = False):
         # 구분된다 — 세 스크래퍼가 다 같은 규칙이다.
         by_day[key] = rows
         # **월매출은 빈 날이라고 지우지 않는다.** 이미 받아둔 날을 0건으로
-        # 덮으면 창 밖으로 밀려나 다시 못 받을 이력이 사라진다.
+        # 덮으면 창 밖으로 밀려나 다시 못 받을 이력이 사라진다. 다시 훑을 때는
+        # 종목으로 합친다 — 규칙이 넓어져 새로 걸린 줄만 늘어난다.
         if mon or key not in mon_day:
-            mon_day[key] = mon
+            have = {r["code"]: r for r in mon_day.get(key, [])}
+            for r in mon:
+                have[r["code"]] = r
+            mon_day[key] = list(have.values())
+        mon_seen_days.add(key)
         save(by_day, gone)
-        save_monthly(mon_day)
+        save_monthly(mon_day, mon_seen_days)
         print(f"{key} {len(rows):>4}건" + (f" · 월매출 {len(mon)}건" if mon else ""),
               flush=True)
 
     n, days = save(by_day, gone)
-    mn, mc = save_monthly(mon_day)
+    mn, mc = save_monthly(mon_day, mon_seen_days)
     print(f"\n총 {n}건 / {days}일 -> {OUT}")
     print(f"월매출 {mn}건 / {mc}개사 -> {MONTH_OUT}")
     if expired:
