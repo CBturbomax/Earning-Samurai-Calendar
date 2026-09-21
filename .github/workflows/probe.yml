@@ -15,66 +15,20 @@ jobs:
         with:
           python-version: '3.12'
 
-      # 50차 — 암호가 걸린 공시가 14건이다. **무엇으로 걸렸는지 봐야** 푼다.
-      # 표준 보안 핸들러는 대개 '빈 사용자 암호 + 권한 잠금'이라 열쇠를 계산할
-      # 수 있다. RC4(V1/2)면 40줄, AES(V4/5)면 AES 구현이 붙는다 — 어느 쪽인지
-      # 먼저 세고 시작한다. /Encrypt 사전을 그대로 찍는다.
-      - name: 🗾 월매출 — 암호 걸린 공시가 무엇으로 걸렸나 (50차)
-        timeout-minutes: 10
+      # 51차 — 루프가 살아 있는데 monthly_nums_jp.json 이 pv3 에서 안 움직인다.
+      # 루프 안에서는 `|| true` 가 오류를 삼켜 아무것도 안 보이므로, 수집기를
+      # **여기서 그대로 돌려** 무슨 일이 나는지 본다. 커밋은 안 한다.
+      - name: 🗾 월매출 수집기를 그대로 돌려 본다 (51차)
+        timeout-minutes: 12
+        env:
+          MON_PDF_PER_RUN: '40'
         run: |
+          python -X faulthandler scrape_mon_jp.py 2>&1 | tail -40
+          echo "── 나온 파일 ──"
           python - <<'EOF'
-          import json, re, time, urllib.request, gzip
-          from collections import Counter
-
-          UA = ("Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 "
-                "(KHTML, like Gecko) Chrome/124.0 Safari/537.36")
-
-          def get(url, timeout=40):
-              h = {"User-Agent": UA, "Accept": "*/*", "Accept-Encoding": "gzip"}
-              try:
-                  with urllib.request.urlopen(
-                          urllib.request.Request(url, headers=h), timeout=timeout) as r:
-                      raw = r.read()
-                      if r.headers.get("Content-Encoding") == "gzip":
-                          raw = gzip.decompress(raw)
-                      return r.status, raw
-              except Exception as e:
-                  return str(e)[:40], b""
-
-          nums = json.load(open("data/monthly_nums_jp.json", encoding="utf-8"))
-          enc = [u for u, why in (nums.get("skip") or {}).items() if why == "암호"]
-          rows = {r["doc"]: r for r in
-                  json.load(open("data/monthly_jp.json", encoding="utf-8"))["rows"]
-                  if r.get("doc")}
-          print(f"암호 걸린 공시 {len(enc)}건\n")
-          kinds = Counter()
-          for u in enc[:14]:
-              st, data = get(u)
-              if st != 200:
-                  print(f"  {st}"); continue
-              m = re.search(rb"/Encrypt\s+(\d+)\s+\d+\s+R", data[-3000:]) or \
-                  re.search(rb"/Encrypt\s+(\d+)\s+\d+\s+R", data)
-              n = int(m.group(1)) if m else None
-              body = b""
-              if n is not None:
-                  o = re.search(rb"(?<![0-9])" + str(n).encode() +
-                                rb"\s+\d+\s+obj(.{0,700}?)endobj", data, re.S)
-                  if o:
-                      body = o.group(1)
-              v = re.search(rb"/V\s+(\d+)", body)
-              r_ = re.search(rb"/R\s+(\d+)", body)
-              cfm = re.search(rb"/CFM\s*/(\w+)", body)
-              leng = re.search(rb"/Length\s+(\d+)", body)
-              perm = re.search(rb"/P\s+(-?\d+)", body)
-              kind = (cfm.group(1).decode() if cfm else
-                      ("RC4" if (v and int(v.group(1)) <= 2) else "?"))
-              kinds[f"V{v.group(1).decode() if v else '?'}"
-                    f"/R{r_.group(1).decode() if r_ else '?'}/{kind}"] += 1
-              code = rows.get(u, {}).get("code", "?")
-              print(f"  {code} V={v and v.group(1)} R={r_ and r_.group(1)} "
-                    f"CFM={cfm and cfm.group(1)} Len={leng and leng.group(1)} "
-                    f"P={perm and perm.group(1)}")
-              print(f"     {body[:220]!r}")
-              time.sleep(0.2)
-          print("\n갈래:", dict(kinds))
+          import json, collections
+          d = json.load(open("data/monthly_nums_jp.json", encoding="utf-8"))
+          print(f"pv{d['pv']} · {d['companies']}개사 {d['months']}개월 "
+                f"· 본공시 {len(d.get('done') or [])} "
+                f"· {dict(collections.Counter((d.get('skip') or {}).values()))}")
           EOF
