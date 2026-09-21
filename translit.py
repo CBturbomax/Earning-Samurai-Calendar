@@ -574,13 +574,22 @@ _WORD_RE = re.compile("(?:" + "|".join(re.escape(k) for k in _WORD_KEYS if k) +
 
 
 def _hanja_run(s: str, at_start: bool) -> str:
+    """한자 덩어리를 한국 한자음으로. **한 글자라도 모르면 덩어리째 원문으로 둔다.**
+
+    예전에는 모르는 글자만 그대로 남겼는데, 그러면 반쪽짜리가 나온다 —
+    `セントラル警備保障` 이 '센트럴警비보障', `柿安本店` 이 '柿안본店' 이 됐다.
+    실측하니 일본 4,216종목 중 172개(4%)가 이 꼴이었다. 반쪽 번역은 원문보다
+    더 헷갈린다(부문 이름에 쓰는 `seg_ko` 도 같은 규칙이다 — 치환 뒤 한자가
+    남으면 아예 안 옮긴다). 일본 이름은 화면에 늘 원문을 병기하므로
+    한자로 남겨 두어도 읽는 데 손해가 없다.
+    """
     out = []
     for i, ch in enumerate(s):
         if ch == "々" and out:                 # 반복 기호 — 앞 글자를 되풀이
             out.append(out[-1]); continue
         r = HANJA.get(ch)
         if r is None:
-            out.append(ch); continue
+            return s                           # 모르는 글자가 있다 — 통째로 원문
         if i == 0 and at_start:
             r = DUEUM.get(r, r)
         out.append(r)
