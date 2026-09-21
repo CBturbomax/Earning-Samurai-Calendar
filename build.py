@@ -2045,33 +2045,37 @@ __FLAGCSS__
 }
 
 /* ── 월매출(月次) ────────────────────────────────────────────── */
-.mn { display:flex; flex-direction:column; gap:12px; }
-.mcard { border:1px solid var(--line); border-radius:12px; background:var(--panel);
-         padding:12px 14px 6px; }
+/* **여러 종목을 한눈에 두루 본다.** 처음엔 한 종목이 한 줄을 다 쓰는 큰 카드로
+   냈는데, 회원님이 "하나하나 차트랑 글씨가 너무 크다, 여러 종목 다 두루 보고
+   싶다"고 하셨다. 그래서 격자로 바꿔 한 화면에 여남은 장이 들어가게 했다.
+   막대 위의 숫자도 뺐다 — 최신값은 카드 머리에 있고, 나머지는 **모양**으로
+   읽는 것이 이 격자의 목적이다(하나하나 짚어 볼 때는 막대에 손을 얹으면 뜬다). */
+.mn { display:grid; grid-template-columns:repeat(auto-fill, minmax(330px, 1fr));
+      gap:9px; }
+.mcard { border:1px solid var(--line); border-radius:9px; background:var(--panel);
+         padding:7px 10px 4px; }
 .mcard.hit { cursor:pointer; }
 .mcard.hit:hover { border-color:#2f4457; }
-.mhd { display:flex; align-items:baseline; gap:12px; flex-wrap:wrap;
-       margin-bottom:4px; }
-.mhd .mc { color:#8fb8dc; font-weight:700; font-variant-numeric:tabular-nums; }
-.mhd .mnm { font-weight:700; font-size:19px; }
-.mhd .mnm i { font-style:normal; color:var(--mute); font-weight:500; font-size:16px;
-              border-bottom:1px dotted #3a4a59; }
-.mhd .mcap { color:var(--mute); font-size:16px; }
-.mhd .mlast { margin-left:auto; font-size:17px; font-variant-numeric:tabular-nums; }
-.mhd .mlast b { font-weight:700; }
+.mhd { display:flex; align-items:baseline; gap:6px; margin-bottom:1px;
+       white-space:nowrap; }
+.mhd .mc { color:#8fb8dc; font-weight:700; font-size:13px;
+           font-variant-numeric:tabular-nums; flex:0 0 auto; }
+.mhd .mnm { font-weight:700; font-size:15px; overflow:hidden;
+            text-overflow:ellipsis; }
+.mhd .mcap { color:var(--mute); font-size:12px; flex:0 0 auto; }
+.mhd .mlast { margin-left:auto; font-size:13px; flex:0 0 auto;
+              font-variant-numeric:tabular-nums; }
 .mhd .up { color:#6fd39b; } .mhd .dn { color:#e2857f; }
 .mchart { display:block; width:100%; height:auto; }
 .mchart .bar { fill:#2f6ea8; } .mchart .bar.y { fill:#3d7f5c; }
 .mchart .bar.yn { fill:#8a4a46; }
-.mchart .lb { fill:#c9d6e0; font-size:13px; }
-.mchart .xl { fill:var(--mute); font-size:12px; }
-.mchart .xl.now { fill:#e8eef4; font-weight:700; }
+.mchart .xl { fill:var(--mute); font-size:11px; }
 .mchart .zero { stroke:#33465a; stroke-width:1; }
-.mft { display:flex; gap:10px; align-items:center; color:var(--mute);
-       font-size:15px; padding:2px 0 6px; flex-wrap:wrap; }
-.mft .mpdf { color:var(--a3); text-decoration:none; border-bottom:1px dotted; }
-.mft .mnxt { color:#d8b877; }
-.mft .mguess { color:#d8b877; }
+.mft { display:flex; gap:7px; align-items:center; color:var(--mute);
+       font-size:12px; padding:0 0 2px; white-space:nowrap; overflow:hidden; }
+.mft .mpdf { color:var(--a3); text-decoration:none; border-bottom:1px dotted;
+             flex:0 0 auto; margin-left:auto; }
+.mft .mnxt { color:#d8b877; flex:0 0 auto; }
 
 
 /* ── 알림 배너 ─────────────────────────────────────────────── */
@@ -3078,10 +3082,17 @@ function mnChart(m) {
   const n = m.length;
   if (!n) return '';
   const hasRev = m.some(r => r[1] != null);
-  const W = Math.max(520, n * 54), H = 132, L = 8, R = 8, T = 22, B = 22;
+  /* 격자에 들어가는 작은 그림이다. **막대 위에 숫자를 쓰지 않는다** — 넷씩
+     늘어놓으면 글자가 서로 붙어 도리어 안 읽힌다. 최신값은 카드 머리에 적고,
+     하나하나는 막대에 손을 얹으면 뜬다. x 이름표도 처음과 끝만 적는다. */
+  const W = Math.max(300, n * 22), H = 62, L = 4, R = 4, T = 6, B = 13;
   const step = (W - L - R) / n;
   const cx = i => L + step * i + step / 2;
-  const bw = Math.min(30, step * 0.56);
+  const bw = Math.min(16, step * 0.62);
+  const tip = i => (+m[i][0].slice(5, 7)) + '월 ' +
+        (m[i][1] != null ? mnFmtJPY(m[i][1]) : '') +
+        (m[i][2] != null ? (m[i][1] != null ? ' · ' : '') + '전년비 ' +
+                           m[i][2].toFixed(1) + '%' : '');
   let body = '';
   if (hasRev) {
     const mx = Math.max(...m.map(r => r[1] || 0), 1);
@@ -3091,14 +3102,12 @@ function mnChart(m) {
       if (v == null) continue;
       const h = Math.max(1, (base - T) * (v / mx));
       body += '<rect class="bar" x="' + (cx(i) - bw / 2).toFixed(1) + '" y="' +
-              (base - h).toFixed(1) + '" width="' + bw.toFixed(1) +
-              '" height="' + h.toFixed(1) + '" rx="2"/>';
-      const y = m[i][2];
-      body += '<text class="lb" x="' + cx(i).toFixed(1) + '" y="' +
-              (base - h - 5).toFixed(1) + '" text-anchor="middle">' +
-              (y != null ? y.toFixed(0) + '%' : mnFmtJPY(v)) + '</text>';
+              (base - h).toFixed(1) + '" width="' + bw.toFixed(1) + '" height="' +
+              h.toFixed(1) + '" rx="1.5"><title>' + tip(i) + '</title></rect>';
     }
   } else {
+    /* 전년비만 있는 회사는 100%를 기준선으로 위아래로 그린다 — 0 부터 그리면
+       95%와 105%가 거의 같은 높이라 좋아졌는지가 안 보인다. */
     const dev = m.map(r => r[2] == null ? null : r[2] - 100);
     const mx = Math.max(10, ...dev.filter(v => v != null).map(Math.abs));
     const mid = T + (H - B - T) / 2;
@@ -3108,20 +3117,18 @@ function mnChart(m) {
       const d = dev[i];
       if (d == null) continue;
       const h = (H - B - T) / 2 * (Math.abs(d) / mx);
-      const y = d >= 0 ? mid - h : mid;
       body += '<rect class="bar ' + (d >= 0 ? 'y' : 'yn') + '" x="' +
-              (cx(i) - bw / 2).toFixed(1) + '" y="' + y.toFixed(1) +
-              '" width="' + bw.toFixed(1) + '" height="' +
-              Math.max(1, h).toFixed(1) + '" rx="2"/>';
-      body += '<text class="lb" x="' + cx(i).toFixed(1) + '" y="' +
-              (d >= 0 ? y - 4 : y + h + 12).toFixed(1) +
-              '" text-anchor="middle">' + m[i][2].toFixed(0) + '%</text>';
+              (cx(i) - bw / 2).toFixed(1) + '" y="' +
+              (d >= 0 ? mid - h : mid).toFixed(1) + '" width="' + bw.toFixed(1) +
+              '" height="' + Math.max(1, h).toFixed(1) + '" rx="1.5"><title>' +
+              tip(i) + '</title></rect>';
     }
   }
-  for (let i = 0; i < n; i++)
-    body += '<text class="xl' + (i === n - 1 ? ' now' : '') + '" x="' +
-            cx(i).toFixed(1) + '" y="' + (H - 6) + '" text-anchor="middle">' +
-            (+m[i][0].slice(5, 7)) + '월</text>';
+  const lab = (i, anchor) => '<text class="xl" x="' + cx(i).toFixed(1) + '" y="' +
+        (H - 3) + '" text-anchor="' + anchor + '">' +
+        m[i][0].slice(2, 4) + '.' + m[i][0].slice(5, 7) + '</text>';
+  body += lab(0, n > 1 ? 'start' : 'middle');
+  if (n > 1) body += lab(n - 1, 'end');
   return '<svg class="mchart" viewBox="0 0 ' + W + ' ' + H +
          '" preserveAspectRatio="xMidYMid meet">' + body + '</svg>';
 }
@@ -3187,7 +3194,7 @@ function renderMonthly() {
 
   // 대상월마다 첫 발표만 세어 다음 발표일을 짚는다(같은 달을 두 번 내는 회사가
   // 있다 — 8237 은 속보 뒤에 본보고를 또 낸다).
-  host.innerHTML = list.slice(0, 200).map(c => {
+  host.innerHTML = list.slice(0, 400).map(c => {
     const num = MNUM[c.code];
     const last = c.rows[c.rows.length - 1];
     const has = mnDate.has(c.code);
@@ -3198,31 +3205,30 @@ function renderMonthly() {
     if (num) {
       const lr = num.m[num.m.length - 1];
       const y = lr[2];
-      head = '<span class="mlast">' + lr[0].slice(0, 4) + '년 ' +
-             (+lr[0].slice(5, 7)) + '월 · ' +
-             (lr[1] != null ? '<b>' + mnFmtJPY(lr[1]) + '</b> · ' : '') +
-             (y != null ? '<b class="' + (y >= 100 ? 'up' : 'dn') + '">전년비 ' +
+      head = '<span class="mlast">' + (+lr[0].slice(5, 7)) + '월 ' +
+             (lr[1] != null ? mnFmtJPY(lr[1]) + ' ' : '') +
+             (y != null ? '<b class="' + (y >= 100 ? 'up' : 'dn') + '">' +
                           y.toFixed(1) + '%</b>' : '') + '</span>';
     }
+    // 원문 제목은 길어서 격자를 무너뜨린다. 무엇의 값인지(前年比·売上高)만
+    // 짧게 남기고 제목은 원문 링크에 맡긴다.
+    const what = num ? (num.lab || num.ylab || '') : '';
     return '<div class="mcard' + (has ? ' hit' : '') + '"' +
       (has ? ' data-mkey="jp:' + esc(c.code) + '" data-mdate="' +
              esc(mnDate.get(c.code)) + '"' : '') + '>' +
       '<div class="mhd"><span class="mc">' + esc(c.code) + '</span>' +
-      '<span class="mnm">' + esc(c.ko) +
-      (c.ko !== c.orig ? ' <i>' + esc(c.orig) + '</i>' : '') +
+      '<span class="mnm" title="' + esc(c.orig) + '">' + esc(c.ko) +
       (NOTE['jp:' + c.code] ? ' ★' : '') + '</span>' +
-      (c.cap ? '<span class="mcap">시총 ' + c.cap.toFixed(2) + '조원</span>' : '') +
+      (c.cap ? '<span class="mcap">' + c.cap.toFixed(2) + '조</span>' : '') +
       head + '</div>' +
       (num ? mnChart(num.m) : '') +
       '<div class="mft">' +
-      (num && (num.lab || num.ylab)
-        ? '<span>' + esc(num.lab || num.ylab) + '</span>' : '') +
-      '<span>' + last[0].slice(5) + ' ' + esc(last[7].slice(0, 46)) + '</span>' +
-      (last[6] ? '' : '<span class="mguess">대상월은 발표일에서 어림</span>') +
-      (nx ? '<span class="mnxt">다음 ' + nx.slice(5) + ' 예상</span>' : '') +
+      '<span>' + esc(what ? what.slice(0, 16) : last[0].slice(5) + ' 공시') +
+      '</span>' +
+      (nx ? '<span class="mnxt">~' + nx.slice(5) + '</span>' : '') +
+      (num ? '' : '<span>수치 못 읽음</span>') +
       (last[8] ? '<a class="mpdf" href="' + esc(last[8]) +
                  '" target="_blank" rel="noopener">원문</a>' : '') +
-      (num ? '' : '<span>수치를 못 읽었습니다</span>') +
       '</div></div>';
   }).join('');
 }
