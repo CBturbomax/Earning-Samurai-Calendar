@@ -28,7 +28,10 @@ __all__ = ["read"]
 
 ZEN = str.maketrans("０１２３４５６７８９．％，－　", "0123456789.%,- ")
 
-MONTH_HDR = re.compile(r"^\(?(\d{1,2})月(度|分|期)?\)?$")
+# 달 이름표는 세 꼴로 온다. 「8月」·「8月度」 만 보던 시절에는 **해가 붙어
+# 오는 표**(스기HD 의 「26年3月 26年4月 …」)를 통째로 못 읽었다. 해가 적혀
+# 있으면 그게 정답이므로 발표일로 짐작하지 않고 그대로 쓴다.
+MONTH_HDR = re.compile(r"^\(?(?:(\d{2}|\d{4})年)?(\d{1,2})月(度|分|期)?\)?$")
 NUMCELL = re.compile(r"^[（(]?[-△▲]?\d[\d,]*(?:\.\d+)?[%]?[)）]?$")
 
 # 금액 줄의 이름표. 넓게 잡되 **무엇의 값인지 적혀 있을 때만** 쓴다.
@@ -68,7 +71,7 @@ def _num(cell: str):
     return -v if neg else v
 
 
-def _years(cols, filled, ann: date):
+def _years(cols, filled, ann: date, given=None):
     """머리줄의 달들에 해를 붙인다 -> [연도].
 
     **한 달씩 따로 정하면 안 된다.** '발표한 달보다 크면 지난해'만 쓰면
@@ -80,6 +83,9 @@ def _years(cols, filled, ann: date):
     거꾸로 가는 자리마다 해를 하나 넘긴다.
     """
     n = len(cols)
+    # **이름표에 해가 적혀 있으면 그것이 정답이다**(「26年3月」). 짐작할 이유가 없다.
+    if given and all(g is not None for g in given):
+        return list(given)
     yr = [None] * n
     anchor = max(filled) if filled else n - 1
     yr[anchor] = ann.year if cols[anchor] <= ann.month else ann.year - 1
@@ -91,25 +97,30 @@ def _years(cols, filled, ann: date):
 
 
 def _headers(cells):
-    """달 이름표 줄이면 [(x, 달)] 을 준다. 아니면 None."""
+    """달 이름표 줄이면 [(x, 달, 해 또는 None)] 을 준다. 아니면 None."""
     got = []
     for x, t in cells:
         m = MONTH_HDR.match(_norm(t))
-        if m and 1 <= int(m.group(1)) <= 12:
-            got.append((x, int(m.group(1))))
+        if m and 1 <= int(m.group(2)) <= 12:
+            y = m.group(1)
+            if y is not None:
+                y = int(y)
+                y += 2000 if y < 100 else 0
+            got.append((x, int(m.group(2)), y))
     # 셋은 있어야 표의 머리로 본다. 둘로는 본문의 '8月' 두 개와 못 가른다.
     if len(got) < 3:
         return None
-    # 같은 달이 두 번 나오면 두 해가 섞인 표다(전년 비교표). 그건 안 다룬다 —
-    # 어느 쪽이 올해인지 x 만으로는 모른다.
-    if len({m for _, m in got}) != len(got):
+    # 같은 (해, 달)이 두 번 나오면 두 해가 섞인 표다(전년 비교표). 그건 안
+    # 다룬다 — 어느 쪽이 올해인지 x 만으로는 모른다. 해가 적혀 있으면 같은
+    # 달이 두 번 나와도 서로 다른 달이므로 괜찮다.
+    if len({(y, m) for _, m, y in got}) != len(got):
         return None
     return got
 
 
 def _assign(cells, hdr):
-    """값 칸을 가장 가까운 이름표에 붙인다. 멀면 버린다."""
-    xs = [x for x, _ in hdr]
+    """값 칸을 가장 가까운 이름표에 붙인다. 멀면 버린다. 열쇠는 이름표의 차례다."""
+    xs = [x for x, _m, _y in hdr]
     span = min(b - a for a, b in zip(xs, xs[1:])) if len(xs) > 1 else 40.0
     tol = max(span * 0.6, 8.0)
     out = {}
@@ -118,10 +129,10 @@ def _assign(cells, hdr):
         if v is None:
             continue
         best, bd = None, 1e9
-        for hx, mo in hdr:
+        for k, (hx, _mo, _yr) in enumerate(hdr):
             d = abs(hx - x)
             if d < bd:
-                best, bd = mo, d
+                best, bd = k, d
         if best is not None and bd <= tol and best not in out:
             out[best] = v
     return out
@@ -129,8 +140,17 @@ def _assign(cells, hdr):
 
 def _label(cells, hdr):
     """줄의 이름표 — 첫 이름표 자리보다 왼쪽에 있는 글자 칸들."""
-    left = min(x for x, _ in hdr)
+    left = min(x for x, _m, _y in hdr)
     return "".join(_norm(t) for x, t in cells if x < left - 1 and not NUMCELL.match(_norm(t)))
+
+
+# 이름표에 이 낱말이 있으면 매출 줄이 아니다. 약한 이름표를 받아들일 때만 쓴다.
+OTHER_LABEL = re.compile(r"客数|客単価|店舗数|会員数|人数|件数|稼働|坪|面積|"
+                         r"社数|口座|台数|席数|利益|原価|在庫")
+
+
+def lab_has_other(lab: str) -> bool:
+    return bool(OTHER_LABEL.search(lab or ""))
 
 
 def _unit(*texts):
@@ -141,7 +161,51 @@ def _unit(*texts):
     return "", 0
 
 
-def read(data: bytes, ann: str, max_pages: int = 12):
+TITLE_METRIC = re.compile(r"売上高|売上収益|営業収益|仕入高|受注高|取扱高|"
+                          r"販売高|月次売上|売上")
+
+
+N = r"\d[\d,]*(?:\.\d+)?"
+AMT_RE = re.compile(rf"({N})(兆|億|百万|万|千)?円")
+S_MONTH = re.compile(r"(\d{1,2})月")
+S_METRIC = re.compile(r"売上高|売上収益|営業収益|仕入高|受注高|取扱高|販売高|営業収入")
+S_YOY = re.compile(rf"(?:前年同月比|前年同期比|前年比)({N})[%]の?(増|減)?")
+MULT = {"兆": 10 ** 12, "億": 10 ** 8, "百万": 10 ** 6, "万": 10 ** 4, "千": 10 ** 3,
+        None: 1}
+
+
+def _sentence(table, aday: date):
+    """표가 없을 때 **문장 한 줄**에서 그 달치만 건진다.
+
+    「8月のグループ連結売上高は15,154百万円、前年同月比8％の増収」(9997) 처럼
+    달·무엇·금액·전년비가 **한 문장 안에** 다 있는 공시가 있다. 표가 아니라
+    문장이므로 어느 칸인지 헷갈릴 일이 없다 — 넷이 다 있을 때만 담는다.
+    하나라도 없으면 담지 않는다.
+    """
+    flat = "".join(_norm(t) for row in table for _x, t in row)
+    for sent in flat.split("。"):
+        if len(sent) > 400:
+            continue
+        mo, met = S_MONTH.search(sent), S_METRIC.search(sent)
+        amt, yoy = AMT_RE.search(sent), S_YOY.search(sent)
+        if not (mo and met and amt and yoy):
+            continue
+        m = int(mo.group(1))
+        if not 1 <= m <= 12:
+            continue
+        y = aday.year if m <= aday.month else aday.year - 1
+        v = float(amt.group(1).replace(",", "")) * MULT[amt.group(2)]
+        r = float(yoy.group(1))
+        if yoy.group(2):                      # 増/減 는 증감폭이다
+            r = 100 + (r if yoy.group(2) == "増" else -r)
+        return {"rows": [{"period": f"{y:04d}-{m:02d}", "rev": v, "yoy": r,
+                          "unit": (amt.group(2) or "") + "円",
+                          "metric": met.group(0)}],
+                "amount_label": met.group(0), "yoy_label": "前年同月比"}
+    return None
+
+
+def read(data: bytes, ann: str, max_pages: int = 12, title: str = ""):
     """PDF -> {'rows': [...], 'basis': ...} 또는 None.
 
     rows: [{'period': 'YYYY-MM', 'rev': 원화가 아닌 **엔**, 'yoy': 전년동월비(%),
@@ -155,24 +219,34 @@ def read(data: bytes, ann: str, max_pages: int = 12):
         table = pdftext.extract_cells(data, max_pages)
     except Exception:
         return None
+    # 이름표가 약한 줄에 붙일 이름. 공시 제목이 「月次売上速報」 라면 그 표의
+    # 금액은 매출이다 — 지어내는 것이 아니라 회사가 제목에 적어 둔 것이다.
+    tm = TITLE_METRIC.search(_norm(title or ""))
+    title_metric = tm.group(0) if tm else "월매출"
 
     best = None
     for i, cells in enumerate(table):
         hdr = _headers(cells)
         if not hdr:
             continue
+        # **단위는 표 바깥에 적히기도 한다** — 「（単位：百万円）」 가 머리줄
+        # 위에 한 줄로 서는 표가 흔하다. 값 줄에만 단위를 찾으면 그런 표가
+        # 통째로 버려진다. 머리줄과 그 위 두 줄까지 본다.
+        cap_txt = "".join(_norm(t) for row in table[max(0, i - 2):i + 1]
+                          for _x, t in row)
+        cap_unit, cap_mul = _unit(cap_txt)
         amounts, yoys = [], []
         # 이름표 줄 아래로 여덟 줄까지 본다. 그 아래는 다른 표다.
         for cells2 in table[i + 1:i + 9]:
             if _headers(cells2):
                 break
             lab = _label(cells2, hdr)
-            if not lab or SKIP_LABEL.search(lab):
+            if SKIP_LABEL.search(lab or ""):
                 continue
             vals = _assign(cells2, hdr)
             if len(vals) < 2:
                 continue
-            rowtext = "".join(t for _, t in cells2)
+            rowtext = "".join(_norm(t) for _, t in cells2)
             # **전년비 줄은 이름표에 '전년'이 있어야 한다.** 한때 '％가 있고
             # 단위가 없으면 전년비'로 봤더니 9163·7059 의 「稼働率」(가동률)이
             # 전년비로 실렸다. 백분율이라고 다 전년비가 아니다.
@@ -180,46 +254,56 @@ def read(data: bytes, ann: str, max_pages: int = 12):
                 if DELTA_LABEL.search(lab):
                     vals = {k: v + 100.0 for k, v in vals.items()}
                 yoys.append((lab, vals))
-            elif AMOUNT_LABEL.search(lab):
+            else:
                 unit, mul = _unit(lab, rowtext)
-                if mul:
-                    amounts.append((lab, unit, mul, vals))
+                # **이름표가 약해도 줄에 통화 단위가 있으면 금액 줄이다.**
+                # 값 줄의 이름표가 결산기(「2026年12月期」)뿐인 공시가 흔한데,
+                # 낱말 사전만 보면 그런 표가 통째로 버려진다(3276·3983).
+                if mul and (AMOUNT_LABEL.search(lab or "") or "円" in rowtext):
+                    amounts.append((lab or title_metric, unit, mul, vals))
+                elif cap_mul and tm and not lab_has_other(lab):
+                    # 이름표가 약하고 줄에도 단위가 없다 — 그래도 **표 바깥 단위·
+                    # 공시 제목의 '매출'·머리줄 아래 첫 줄** 셋이 함께 가리키면
+                    # 금액 줄로 본다(스기HD 의 「26年3月…」 표가 그랬다).
+                    # 셋 중 하나라도 없으면 담지 않는다.
+                    amounts.append((lab or title_metric, cap_unit, cap_mul, vals))
         if not amounts and not yoys:
             continue
         # **가장 꽉 찬 표를 고르면 안 된다.** 지난 회계연도 표는 열두 달이 다
         # 차 있고 올해 표는 이번 달까지만 차 있어서, 개수로 고르면 늘 작년
         # 것이 이긴다 — 토요쿠모(4058)가 2025년 열두 달로 실렸다. 그 표가
         # 가리키는 **가장 최근 달**을 먼저 보고, 같으면 개수로 가른다.
-        cols = [m for _x, m in hdr]
+        cols = [m for _x, m, _y in hdr]
+        given = [y for _x, _m, y in hdr]
         have = set(amounts[0][3] if amounts else {}) | set(yoys[0][1] if yoys else {})
-        filled = [k for k, m in enumerate(cols) if m in have]
-        yrs = _years(cols, filled, aday)
+        filled = sorted(have)
+        yrs = _years(cols, filled, aday, given)
         newest = max((yrs[k] * 12 + cols[k] for k in filled), default=0)
         cand = (newest, len(have), i, hdr, amounts, yoys)
         if best is None or cand[:2] > best[:2]:
             best = cand
 
     if best is None:
-        return None
+        return _sentence(table, aday)
     _newest, _n, _i, hdr, amounts, yoys = best
     amt = amounts[0] if amounts else None
     yoy = yoys[0] if yoys else None
-    cols = [m for _x, m in hdr]
+    cols = [m for _x, m, _y in hdr]
+    given = [y for _x, _m, y in hdr]
     have = set(amt[3] if amt else {}) | set(yoy[1] if yoy else {})
-    filled = [i for i, m in enumerate(cols) if m in have]
-    yrs = _years(cols, filled, aday)
+    yrs = _years(cols, sorted(have), aday, given)
     out = []
     for i, mo in enumerate(cols):
-        if mo not in have:
+        if i not in have:
             continue
         y = yrs[i]
         rec = {"period": f"{y:04d}-{mo:02d}"}
-        if amt and mo in amt[3]:
-            rec["rev"] = amt[3][mo] * amt[2]
+        if amt and i in amt[3]:
+            rec["rev"] = amt[3][i] * amt[2]
             rec["unit"] = amt[1]
             rec["metric"] = amt[0][:24]
-        if yoy and mo in yoy[1]:
-            rec["yoy"] = yoy[1][mo]
+        if yoy and i in yoy[1]:
+            rec["yoy"] = yoy[1][i]
             rec.setdefault("metric", yoy[0][:24])
         if len(rec) > 1:
             out.append(rec)

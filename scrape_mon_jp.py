@@ -37,7 +37,7 @@ OUT = HERE / "data" / "monthly_nums_jp.json"
 
 # 뜯는 규칙이 바뀌면 올린다. **본 공시 기록만** 비우고 모아둔 값은 남긴다 —
 # 창 밖으로 밀려난 공시는 다시 못 받으므로 값을 버리면 영영 잃는다.
-PARSE_VER = 2
+PARSE_VER = 3
 
 UA = ("Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 "
       "(KHTML, like Gecko) Chrome/124.0 Safari/537.36")
@@ -135,7 +135,7 @@ def main():
                 print("   암호가 걸려 있다"); continue
             for ln in pdftext.extract_lines(data, 4)[:24]:
                 print("   |", ln[:120])
-            got = montable.read(data, r["date"])
+            got = montable.read(data, r["date"], title=r.get("title", ""))
             print("   ->", json.dumps(got, ensure_ascii=False)[:600] if got else "표를 못 읽었다")
         return
 
@@ -176,7 +176,7 @@ def main():
             skip[r["doc"]] = "암호"
             continue
         try:
-            got = montable.read(data, r["date"])
+            got = montable.read(data, r["date"], title=r.get("title", ""))
         except Exception as e:                      # noqa: BLE001
             # 깨진 PDF 하나가 실행 전체를 죽이지 않게 한다.
             print(f"  ! {r['code']} {type(e).__name__}: {e}")
