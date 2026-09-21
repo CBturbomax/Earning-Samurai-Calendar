@@ -11,6 +11,7 @@ GitHub Pages로 그대로 서비스한다. 서버·빌드툴·의존 패키지�
 scrape.py      ──> data/earnings.json     ┐   '언제 발표하나'
 scrape_jp_tdnet.py ─> earnings_jp_past.json│   (일본은 소스가 셋이다)
                  └─> monthly_jp.json      │   '이번 달 얼마 팔았나'(월매출)
+scrape_mon_jp.py  ─> monthly_nums_jp.json │   (+ pdftext.py + montable.py)
 scrape_jp_sched.py ─> earnings_jp_sched.json│
 scrape_us.py   ──> data/earnings_us.json  │
 scrape_hk.py   ──> data/earnings_hk.json  │
@@ -49,6 +50,9 @@ python build.py
 python scrape.py    2026-07-20 2026-09-30   # 일본 일정 (앞으로의 예정, 닛케이)
 python scrape_jp_tdnet.py                   # 일본 발표 완료분 (TDnet, 최근 한 달)
 python scrape_jp_tdnet.py --probe           # 목록 생김새만 떠보기
+python scrape_mon_jp.py                     # 월매출 수치 (첨부 PDF 표에서)
+python scrape_mon_jp.py --probe 7685        # 한 종목의 PDF 를 뜯어 본다
+python pdftext.py 어떤.pdf                  # PDF 에서 글자만 꺼내 본다
 python scrape_jp_sched.py                   # 일본 발표 예정 (JPX 공식 엑셀)
 python scrape_jp_sched.py --probe           # 파일·열 매핑만 떠보기
 python scrape_us.py 2026-07-20 2026-09-30   # 미국 일정
@@ -93,6 +97,7 @@ python scrape_desc.py                       # 사업 설명 원문
 | 부문별 매출 | 미국 `scrape_seg_sec.py`(뼈대)·`scrape_seg_edgar.py`(최근 분기)·`scrape_seg_fpi.py`(외국 기업) · 일본 `scrape_fin_jp.py` · 홍콩 `scrape_seg_hk.py` |
 | 일본 부문 **연간** 이력(수집만, 화면엔 안 냄) | `scrape_seg_jp_edinetdb.py` |
 | 일본 **월매출(月次)** 공시 | 수집은 `scrape_jp_tdnet.py` 의 `is_monthly`/`monthly_period`, 화면은 `build.py` 의 `load_monthly`/`renderMonthly` |
+| 월매출 **수치**(금액·전년비) | `scrape_mon_jp.py` — 글자 꺼내기는 `pdftext.py`, 표 읽기는 `montable.py`, 차트는 `build.py` 의 `mnChart` |
 | 부문 이름 한글 표기 | `markets.py`의 `SEG_KO_FULL`/`SEG_KO_EN`/`SEG_KO_CJK` — 옮기기는 `build.py`의 `seg_ko` |
 | 부문을 어느 축으로 가를까 | `scrape_seg_sec.py`의 `axis_rank` / `AXIS_KO` |
 | 회사 사업 설명(한국어) | `descriptions.py`의 `DESC_KO` — 원문 수집은 `scrape_desc.py` |
@@ -313,11 +318,56 @@ zip 에서 같이 뽑는 것과 같은 규칙 — 남의 서버를 두 배로 �
   「月分」 을 먼저 보고 그다음에 `(?!期)` 를 건 맨 달을 본다. 제목에 달이 아예
   없으면(「月次リユース売上高（速報）」) 발표일의 전달로 어림하고 **어림했다고
   적어 둔다**(`pok:0`) — 발표 시각에 쓰는 `시각정확도` 와 같은 규칙이다.
-- **숫자는 안 담는다.** 알맹이는 첨부 PDF 안에 있는데 그 PDF 가 CID 인코딩이라
-  (ToUnicode CMap 이 필요하다) 표준 라이브러리로는 글자가 안 나온다 — 실제로
-  뜯어 보니 풀린 문자열이 `(en-US)`·`( )` 따위뿐이었다. 그래서 **지어내지 않고
-  링크를 건다.** 회원님이 눌러 원문을 본다. 숫자까지 담으려면 CID/ToUnicode
-  해독기를 먼저 써야 하고, 그건 회사마다 다른 표 배치 파싱이 또 뒤에 붙는다.
+- **숫자도 담는다 — 첨부 PDF 의 표에서 직접 읽는다.** 한동안 "CID 인코딩이라
+  표준 라이브러리로는 못 읽는다"고 적어 두었는데, 그건 **압축을 안 풀고 원문
+  바이트에서 괄호 문자열만 긁어 본 것**이었다. 스트림은 대개 Flate 라 zlib 으로
+  풀리고, 폰트마다 `/ToUnicode` CMap 이 붙어 있어 CID→유니코드 표가 파일 안에
+  함께 들어 있다. 실측 70건 중 **66건이 읽힌다**(나머지 4건은 암호가 걸려 있다).
+  `pdftext.py` 가 글자를 꺼내고 `montable.py` 가 표를 읽는다.
+
+  - **문장으로 집지 않는다.** 평평하게 편 글에서 「売上高5月6月7月8月前年同月比
+    125.4%」 가 문장처럼 걸리는데, 그 125.4 는 **표의 한 칸**이라 어느 달 값인지
+    모른다. 그대로 담으면 조용히 엉뚱한 달에 값이 붙는다. 문장 규칙으로 재봤을
+    때 66건 중 14건이 걸렸고 그중 몇이 이런 것이었다.
+  - **좌표로 열을 맞춘다.** 달 이름표 줄(셋 이상)을 찾고, 아래 줄의 값을 x 가
+    가장 가까운 이름표에 붙인다. 붙일 이름표가 없으면 **그 값은 버린다.**
+  - **글자폭을 어림하면 표가 무너진다.** 가로 자리를 '글자 크기의 절반'으로
+    밀었더니 「7月8月9月10月11月12月」 열두 칸이 한 칸으로 붙어, 달 이름표를
+    못 찾아 그 공시가 통째로 안 읽혔다. 폰트 사전의 `/Widths`(한 바이트)와
+    CID 폰트의 `/W`·`/DW` 에 폭이 적혀 있으므로 읽어 쓴다.
+  - **TJ 배열의 닫는 대괄호에서 쌓아둔 것을 지우면 안 된다.** `]` 를 연산자로
+    보고 stack 을 비웠더니 바로 뒤의 TJ 가 빈손이 되어 **TJ 를 쓰는 PDF 가
+    통째로 0줄**이었다(열 건 중 일곱). Tj 만 쓰는 공시에서는 멀쩡히 나와서
+    더 안 보였다.
+  - **좌표 변환(`cm`)을 봐야 한다.** Tm 의 y 만 쓰면 변환이 걸린 쪽에서 서로
+    다른 줄이 같은 y 로 떨어져 한 줄로 뭉친다.
+  - **전년비 줄은 이름표에 '전년'이 있어야 한다.** '％가 있고 단위가 없으면
+    전년비'로 봤더니 「稼働率」(가동률)이 전년비로 실렸다. 백분율이라고 다
+    전년비가 아니다.
+  - **해(年)는 머리줄 전체를 보고 차례가 늘도록 정한다.** 한 달씩 '발표한 달보다
+    크면 지난해'로 정하면 회계연도가 발표한 달에서 시작하는 표의 첫 칸이 올해로
+    붙는다(4058 의 9월이 2026-09 가 됐다 — 아직 끝나지도 않은 달이다). 값이 있는
+    맨 오른쪽 칸을 기준으로 삼고 양쪽으로 훑으며 달 번호가 거꾸로 가는 자리마다
+    해를 하나 넘긴다.
+  - **누계·예상·통기·회사정보 줄은 그 달의 값이 아니다.** 먼저 쳐낸다.
+  - **밖으로 못 나가는 자리라 손으로 PDF 를 만들어 시험한다.** 두 바이트
+    CID(Identity-H, bfchar/bfrange/배열형)·한 바이트 ToUnicode·표 없는 폰트,
+    그리고 9월 시작 회계연도 열두 달 표(해 넘김·누계 줄 거르기)까지 밟는다.
+  - **못 읽은 공시는 숫자 없이 지나간다.** 암호가 걸렸거나 표가 그림이면 그
+    종목은 링크만 남는다. 지어 넣지 않는다.
+  - 화면은 **회사 하나가 카드 한 장**이다. 금액이 있으면 금액 막대 위에 전년비를
+    적고, **금액 없이 전년동월비만 내는 회사**(소매업이 특히)는 100%를 기준선으로
+    위아래로 그린다 — 0 부터 그리면 95%와 105%가 거의 같은 높이라 좋아졌는지가
+    안 보인다. 엔으로 적고 **원화로 환산하지 않는다**(실적 차트와 같은 규칙).
+  - 시총 하한은 **5,000억원**으로 열린다(`build.py` 의 `mnCap`). 시총을 모르는
+    종목은 통과시킨다 — 일본 시총은 따로 받아 붙이는 값이라 비어 있으면 '아직
+    못 받았다'는 뜻이다.
+
+- **월매출 수치는 다른 파일이다.** 목록 훑기(`monthly_jp.json`)는 HTML 한 장이라
+  3분마다 돌려도 싸지만 첨부는 종목마다 200KB 다. `data/monthly_nums_jp.json` 을
+  따로 두고 한 번 뜯어 본 공시는 주소로 건너뛴다. **첨부는 한 달쯤만 남으므로
+  새 공시부터 본다** — 늦게 보면 영영 못 받는다.
+
 - **의무가 아니라 회사 선택이다.** 스시로(3563)·니토리(9843)는 45일 동안 월매출을
   한 건도 안 냈다 — 자사 IR 페이지에만 올리는 회사가 많다. 안 나온다고 수집
   구멍이 아니다. 화면 설명에 그렇게 적어 두었다.
@@ -793,7 +843,7 @@ HPE 가 Compute·Storage·Intelligent Edge 를 Cloud&AI·Networking 으로 바�
 
 | 워크플로 | 주기 | 쓰는 파일 |
 |---|---|---|
-| `fresh.yml` | **3분 루프** | `data/earnings_jp_past.json` · `data/monthly_jp.json` · `data/financials_jp.json` · `data/segments_jp.json` · `data/briefs_jp.json` · `data/briefs_us.json` |
+| `fresh.yml` | **3분 루프** | `data/earnings_jp_past.json` · `data/monthly_jp.json` · `data/monthly_nums_jp.json` · `data/financials_jp.json` · `data/segments_jp.json` · `data/briefs_jp.json` · `data/briefs_us.json` |
 | `collect.yml` | **5분**(크론 하한) | `data/earnings.json` · `data/earnings_jp_sched.json` · `data/earnings_us.json` · `data/earnings_hk.json` · `data/caps.json` |
 | `numbers.yml` | **5분**(크론 하한) | `data/financials.json` · `data/financials_intl.json` · `data/segments.json` · `data/segments_hk.json` · `data/desc.json` |
 | `segments.yml` | 30분 | `data/segments_sec.json` · `data/segments_edgar.json` · `data/segments_fpi.json` · `data/financials_fpi.json` |
