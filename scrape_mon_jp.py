@@ -37,7 +37,7 @@ OUT = HERE / "data" / "monthly_nums_jp.json"
 
 # 뜯는 규칙이 바뀌면 올린다. **본 공시 기록만** 비우고 모아둔 값은 남긴다 —
 # 창 밖으로 밀려난 공시는 다시 못 받으므로 값을 버리면 영영 잃는다.
-PARSE_VER = 3
+PARSE_VER = 4
 
 UA = ("Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 "
       "(KHTML, like Gecko) Chrome/124.0 Safari/537.36")
@@ -145,6 +145,22 @@ def main():
         print(f"월매출 목록을 못 읽었다: {e}")
         return
     by, done, skip = load()
+    # **규칙이 바뀌면 틀린 값을 지워야 한다.** 판을 올리면 다시 뜯긴 하지만,
+    # 새 규칙이 그 줄을 아예 거절하면 예전에 잘못 담은 달이 그대로 남는다
+    # (지역 줄·주말 일수가 매출로 실렸던 자리다). 그렇다고 통째로 비우면
+    # 첨부가 창 밖으로 밀려난 옛 달을 영영 잃는다. 그래서 **지금 다시 읽을
+    # 공시에서 온 달만** 지운다 — 어차피 곧 새 값으로 채워진다.
+    if not done:
+        live = {r["doc"] for r in rows if r.get("doc")}
+        dropped = 0
+        for rec in by.values():
+            ms = rec.get("months") or {}
+            for k in [k for k, v in ms.items() if v.get("doc") in live]:
+                del ms[k]
+                dropped += 1
+        by = {c: r for c, r in by.items() if r.get("months")}
+        if dropped:
+            print(f"  다시 읽을 공시에서 온 {dropped}개월을 비웠다(새 규칙으로 채운다).")
 
     # **시총 큰 회사부터** 본다. 화면이 시총 5,000억원 이상으로 열리므로 거기
     # 뜨는 회사가 먼저 채워져야 한다. 그다음이 새 공시다 — 첨부는 한 달쯤만

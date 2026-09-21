@@ -146,11 +146,34 @@ def _label(cells, hdr):
 
 # 이름표에 이 낱말이 있으면 매출 줄이 아니다. 약한 이름표를 받아들일 때만 쓴다.
 OTHER_LABEL = re.compile(r"客数|客単価|店舗数|会員数|人数|件数|稼働|坪|面積|"
-                         r"社数|口座|台数|席数|利益|原価|在庫")
+                         r"社数|口座|台数|席数|利益|原価|在庫|日数|日祝|営業日|"
+                         r"従業員|単価|人員")
+
+
+# 약한 이름표 — 결산기·당기·빈칸. 이만큼 좁혀야 **지역 줄**을 안 집는다.
+# 사카이이사(9039)의 「北海道・東北地区」 가 전사 매출로 실렸던 자리다.
+WEAK_LABEL = re.compile(r"|当期|今期|当月|\d{2,4}年\d{1,2}月期?|"
+                        r"\d{2,4}年\d{1,2}月期\d{0,2}|第\d+期")
 
 
 def lab_has_other(lab: str) -> bool:
     return bool(OTHER_LABEL.search(lab or ""))
+
+
+def _looks_delta(vals) -> bool:
+    """이름표에 '増減率'이 없어도 값이 증감폭이면 그렇게 본다.
+
+    「全店前年比（%）」 에 8.4 가 오면 그것은 +8.4% 이지 '작년의 8.4%'가 아니다
+    (오토박스가 그랬다 — 비율로 읽으면 매출이 9할 줄어든 것이 된다). 음수가
+    섞여 있거나 값이 대체로 30 보다 작으면 증감폭이다.
+    """
+    vs = [v for v in vals.values()]
+    if not vs:
+        return False
+    if any(v < 0 for v in vs):
+        return True
+    vs = sorted(abs(v) for v in vs)
+    return vs[len(vs) // 2] < 30
 
 
 def _unit(*texts):
@@ -166,12 +189,17 @@ TITLE_METRIC = re.compile(r"売上高|売上収益|営業収益|仕入高|受注
 
 
 N = r"\d[\d,]*(?:\.\d+)?"
-AMT_RE = re.compile(rf"({N})(兆|億|百万|万|千)?円")
+# **금액은 단위가 겹쳐 온다** — 「482億42百万円」·「1兆2,345億円」. 앞에서
+# `(숫자)(단위)?円` 하나만 찾았더니 482億을 건너뛰고 「42百万円」만 잡아
+# 고베물산의 482억엔이 0.42억엔으로 실렸다. 토막을 전부 모아 더한다.
+AMT_PIECE = rf"({N})(兆|億|百万|万|千)?"
+AMT_RE = re.compile(rf"(?:{AMT_PIECE})+円")
+PIECE_RE = re.compile(AMT_PIECE)
 S_MONTH = re.compile(r"(\d{1,2})月")
 S_METRIC = re.compile(r"売上高|売上収益|営業収益|仕入高|受注高|取扱高|販売高|営業収入")
 S_YOY = re.compile(rf"(?:前年同月比|前年同期比|前年比)({N})[%]の?(増|減)?")
 MULT = {"兆": 10 ** 12, "億": 10 ** 8, "百万": 10 ** 6, "万": 10 ** 4, "千": 10 ** 3,
-        None: 1}
+        None: 1, "": 1}
 
 
 def _sentence(table, aday: date):
@@ -194,12 +222,15 @@ def _sentence(table, aday: date):
         if not 1 <= m <= 12:
             continue
         y = aday.year if m <= aday.month else aday.year - 1
-        v = float(amt.group(1).replace(",", "")) * MULT[amt.group(2)]
+        v = 0.0
+        for num, un in PIECE_RE.findall(amt.group(0)):
+            if num:
+                v += float(num.replace(",", "")) * MULT[un or None]
         r = float(yoy.group(1))
         if yoy.group(2):                      # 増/減 는 증감폭이다
             r = 100 + (r if yoy.group(2) == "増" else -r)
         return {"rows": [{"period": f"{y:04d}-{m:02d}", "rev": v, "yoy": r,
-                          "unit": (amt.group(2) or "") + "円",
+                          "unit": "円",
                           "metric": met.group(0)}],
                 "amount_label": met.group(0), "yoy_label": "前年同月比"}
     return None
@@ -250,8 +281,8 @@ def read(data: bytes, ann: str, max_pages: int = 12, title: str = ""):
             # **전년비 줄은 이름표에 '전년'이 있어야 한다.** 한때 '％가 있고
             # 단위가 없으면 전년비'로 봤더니 9163·7059 의 「稼働率」(가동률)이
             # 전년비로 실렸다. 백분율이라고 다 전년비가 아니다.
-            if YOY_LABEL.search(lab):
-                if DELTA_LABEL.search(lab):
+            if YOY_LABEL.search(lab) and not lab_has_other(lab):
+                if DELTA_LABEL.search(lab) or _looks_delta(vals):
                     vals = {k: v + 100.0 for k, v in vals.items()}
                 yoys.append((lab, vals))
             else:
@@ -261,7 +292,7 @@ def read(data: bytes, ann: str, max_pages: int = 12, title: str = ""):
                 # 낱말 사전만 보면 그런 표가 통째로 버려진다(3276·3983).
                 if mul and (AMOUNT_LABEL.search(lab or "") or "円" in rowtext):
                     amounts.append((lab or title_metric, unit, mul, vals))
-                elif cap_mul and tm and not lab_has_other(lab):
+                elif cap_mul and tm and WEAK_LABEL.fullmatch(lab or ""):
                     # 이름표가 약하고 줄에도 단위가 없다 — 그래도 **표 바깥 단위·
                     # 공시 제목의 '매출'·머리줄 아래 첫 줄** 셋이 함께 가리키면
                     # 금액 줄로 본다(스기HD 의 「26年3月…」 표가 그랬다).
