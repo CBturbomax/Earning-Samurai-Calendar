@@ -15,13 +15,16 @@ jobs:
         with:
           python-version: '3.12'
 
-      # 42차 — 41차에서 해독기가 열 건 다 터졌다(`bytes.encode`). 고치고
-      # **손으로 만든 PDF 로 오프라인 자체 시험**까지 붙인 뒤 다시 부딪힌다.
-      # 이번에는 실패했을 때 어디서 막혔는지 보이게 진단을 함께 찍는다 —
-      # 객체 수·스트림 수·ToUnicode 붙은 폰트 수·쪽 수·내용 스트림 크기.
-      # 그게 없으면 "0줄"만 보고 원인을 못 가른다(스캔 이미지인지, 폰트 표가
-      # 없는지, 우리 파서가 못 찾는지).
-      - name: 🗾 월매출 PDF 해독 — 진단 붙여 다시 (42차)
+      # 43차 — 42차에서 해독기가 실제로 글자를 뱉었다(9007 에서 既存店·全店·
+      # 前年比). 두 가지가 남았다.
+      #   (A) 절반이 **0줄**이다. 쪽도 찾고 ToUnicode 폰트도 찾았는데 내용이
+      #       비어 나온다 — /Contents 를 못 읽는 것으로 보인다. 쪽마다 머리를
+      #       찍어 어떤 꼴인지 본다.
+      #   (B) 줄이 뒤섞인다(7865 가 한 줄로 뭉쳤다). `cm`(좌표 변환)을 안 보고
+      #       Tm 의 y 만 써서, 변환이 걸린 쪽에서 서로 다른 줄이 같은 y 로 온다.
+      # 그리고 **월차Web(kabubiz)** — 상장 313사의 월매출을 모아 둔 곳이다.
+      # 여기가 열리면 PDF 를 안 뜯고도 숫자를 받는다. 구조를 본다.
+      - name: 🗾 월매출 — 내용 스트림 진단 + 월차Web 구조 (43차)
         timeout-minutes: 13
         run: |
           python - <<'EOF'
@@ -31,11 +34,9 @@ jobs:
           UA = ("Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 "
                 "(KHTML, like Gecko) Chrome/124.0 Safari/537.36")
 
-          def get(url, timeout=40, ref=None):
+          def get(url, timeout=40):
               h = {"User-Agent": UA, "Accept": "*/*",
                    "Accept-Language": "ja,en;q=0.8", "Accept-Encoding": "gzip"}
-              if ref:
-                  h["Referer"] = ref
               try:
                   with urllib.request.urlopen(
                           urllib.request.Request(url, headers=h), timeout=timeout) as r:
@@ -48,73 +49,57 @@ jobs:
               except Exception as e:
                   return str(e)[:60], b""
 
-          PDFS = [
-              ("6238", "https://www.release.tdnet.info/inbs/140120260918538410.pdf"),
-              ("7865", "https://www.release.tdnet.info/inbs/140120260918538582.pdf"),
+          print("=" * 70)
+          print("(A) 0줄로 나온 PDF 의 쪽 머리를 본다")
+          print("=" * 70)
+          for code, url in [
               ("3038", "https://www.release.tdnet.info/inbs/140120260917537924.pdf"),
               ("7370", "https://www.release.tdnet.info/inbs/140120260918538566.pdf"),
-              ("8715", "https://www.release.tdnet.info/inbs/140120260917537741.pdf"),
-              ("9007", "https://www.release.tdnet.info/inbs/140120260917538088.pdf"),
-              ("3461", "https://www.release.tdnet.info/inbs/140120260917538196.pdf"),
-              ("7685", "https://www.release.tdnet.info/inbs/140120260917537893.pdf"),
               ("5580", "https://www.release.tdnet.info/inbs/140120260916537473.pdf"),
-              ("7043", "https://www.release.tdnet.info/inbs/140120260916537033.pdf"),
-          ]
-          KEY = re.compile("売上|既存店|全店|前年|同月|店舗|客数|月度|月次")
-          ok = 0
-          for code, url in PDFS:
+              ("7685", "https://www.release.tdnet.info/inbs/140120260917537893.pdf"),
+          ]:
               st, data = get(url)
-              if st != 200 or not data:
-                  print(f"{code}: 받기 실패 {st}"); continue
-              try:
-                  objs = pdftext._expand_objstm(pdftext._objects(data))
-                  fonts = pdftext._fonts(objs)
-                  pages = [n for n, (h, _) in objs.items()
-                           if b"/Type" in h and b"/Page" in h and b"/Pages" not in h]
-                  nstream = sum(1 for _, (_, d) in objs.items() if d)
-                  t0 = time.time()
-                  lines = pdftext.extract_lines(data)
-                  el = time.time() - t0
-              except Exception as e:
-                  import traceback
-                  print(f"{code}: 터짐"); traceback.print_exc(); continue
-              txt = "\n".join(lines)
-              jp = sum(1 for ch in txt
-                       if "\u3040" <= ch <= "\u30ff" or "\u4e00" <= ch <= "\u9fff")
-              good = jp > 30 and len(re.findall(r"\d", txt)) > 20
-              ok += good
-              print(f"{code}: {len(data)//1024}KB · 객체 {len(objs)} · 스트림 {nstream} · "
-                    f"ToUnicode 폰트 {len(fonts)} · 쪽 {len(pages)} · 줄 {len(lines)} · "
-                    f"일본글자 {jp} · {el:.2f}초 · {'읽힌다' if good else 'X'}")
-              hits = [l for l in lines if KEY.search(l)]
-              for l in (hits or lines)[:16]:
-                  print(f"    | {l[:120]}")
+              if st != 200:
+                  print(f"{code}: {st}"); continue
+              objs = pdftext._expand_objstm(pdftext._objects(data))
+              pages = [(n, h) for n, (h, _) in objs.items()
+                       if b"/Type" in h and b"/Page" in h and b"/Pages" not in h]
+              print(f"{code}: 쪽 {len(pages)}")
+              for n, h in pages[:2]:
+                  print(f"   쪽 obj {n} 머리: {h[:260]!r}")
+                  cm = pdftext.CONTENTS_RE.search(h)
+                  print(f"   /Contents 맞았나: {bool(cm)} {cm.groups() if cm else ''}")
+                  if cm:
+                      refs = ([int(cm.group(1))] if cm.group(1)
+                              else [int(x) for x in pdftext.REF_RE.findall(cm.group(2) or b"")])
+                      for r in refs[:3]:
+                          got = objs.get(r)
+                          print(f"     내용 obj {r}: 있나={got is not None} "
+                                f"머리={got[0][:120]!r} 길이={len(got[1]) if got and got[1] else 0}"
+                                if got else f"     내용 obj {r}: 없다")
               print()
-          print(f"==> 열 건 중 {ok} 건")
 
-          print()
-          print("=" * 60)
-          print("외부 소스 2차 — 막힌 곳에 Referer 를 달아 다시, 그리고 TDnet 거울")
-          print("=" * 60)
-          CAND = [
-              ("kabutan(ref)", "https://kabutan.jp/stock/?code=9843", "https://kabutan.jp/"),
-              ("minkabu(ref)", "https://minkabu.jp/stock/9843", "https://minkabu.jp/"),
-              ("yanoshin tdnet", "https://webapi.yanoshin.jp/webapi/tdnet/list/9843.json", None),
-              ("yanoshin 최근", "https://webapi.yanoshin.jp/webapi/tdnet/list/recent.json?limit=5", None),
-              ("yahoo quote", "https://finance.yahoo.co.jp/quote/9843.T", None),
-              ("nitori ir top", "https://www.nitorihd.co.jp/ir/", None),
-              ("sushiro ir top", "https://www.food-and-life.co.jp/ir/", None),
-          ]
-          for name, url, ref in CAND:
-              st, data = get(url, timeout=25, ref=ref)
-              extra = ""
-              if isinstance(st, int) and st == 200 and data:
-                  t = data.decode("utf-8", "ignore")
-                  marks = [m for m in ("月次", "既存店", "前年同月", "売上高") if m in t]
-                  extra = f" · {len(data)//1024}KB · {marks}"
-                  j = t.find("既存店")
-                  if j > 0:
-                      extra += " · 본문: " + re.sub(r"\s+", " ", t[j-60:j+80])
-              print(f"  {name:16s} {st}{extra}")
-              time.sleep(0.6)
+          print("=" * 70)
+          print("(B) 월차Web — 상장 313사 월매출 모음")
+          print("=" * 70)
+          st, data = get("https://kabubiz.com/getuji/")
+          print(f"  목록: {st} · {len(data)//1024}KB")
+          if st == 200:
+              t = data.decode("utf-8", "ignore")
+              links = sorted(set(re.findall(r'href="(/getuji/[^"#?]*)"', t)))
+              print(f"  /getuji/ 링크 {len(links)}종 — 앞 25개:")
+              for l in links[:25]:
+                  print(f"     {l}")
+              for m in ("月次", "既存店", "前年", "売上"):
+                  print(f"  '{m}' 나옴: {m in t}")
+              j = t.find("既存店")
+              if j > 0:
+                  print("  본문 주변:", re.sub(r"\s+", " ", t[j - 200:j + 300]))
+          for u in ("https://kabubiz.com/getuji/code/9843/",
+                    "https://kabubiz.com/getuji/9843",
+                    "https://kabubiz.com/getuji/company/9843/",
+                    "https://kabubiz.com/getuji/ranking/"):
+              st, d = get(u, timeout=20)
+              print(f"  {u} -> {st} {len(d)//1024}KB")
+              time.sleep(0.5)
           EOF
