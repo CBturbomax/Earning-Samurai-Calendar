@@ -192,8 +192,12 @@ N = r"\d[\d,]*(?:\.\d+)?"
 # **금액은 단위가 겹쳐 온다** — 「482億42百万円」·「1兆2,345億円」. 앞에서
 # `(숫자)(단위)?円` 하나만 찾았더니 482億을 건너뛰고 「42百万円」만 잡아
 # 고베물산의 482억엔이 0.42억엔으로 실렸다. 토막을 전부 모아 더한다.
+#
+# **되풀이(`(?:…)+円`)로 쓰면 안 된다.** 숫자가 길게 늘어선 표에서 뒤에 円 이
+# 없으면 갈래가 기하급수로 불어나 **한 건이 영영 안 끝난다** — 수집기가 매
+# 실행 12분을 넘겨 죽은 것이 이것이었다. 단위마다 자리를 못박아 되풀이를 없앤다.
 AMT_PIECE = rf"({N})(兆|億|百万|万|千)?"
-AMT_RE = re.compile(rf"(?:{AMT_PIECE})+円")
+AMT_RE = re.compile(rf"(?:{N}兆)?(?:{N}億)?(?:{N}百万)?(?:{N}万)?(?:{N}千)?(?:{N})?円")
 PIECE_RE = re.compile(AMT_PIECE)
 S_MONTH = re.compile(r"(\d{1,2})月")
 S_METRIC = re.compile(r"売上高|売上収益|営業収益|仕入高|受注高|取扱高|販売高|営業収入")
@@ -217,6 +221,8 @@ def _sentence(table, aday: date):
         mo, met = S_MONTH.search(sent), S_METRIC.search(sent)
         amt, yoy = AMT_RE.search(sent), S_YOY.search(sent)
         if not (mo and met and amt and yoy):
+            continue
+        if not re.search(r"\d", amt.group(0)):     # 숫자 없는 '円' 은 금액이 아니다
             continue
         m = int(mo.group(1))
         if not 1 <= m <= 12:
