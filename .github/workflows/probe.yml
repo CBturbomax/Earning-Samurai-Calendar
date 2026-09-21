@@ -15,349 +15,107 @@ jobs:
         with:
           python-version: '3.12'
 
-      # 40차 — 39차는 거절된 후보를 **빈도 상위 40건**만 찍었는데 거의 전부
-      # 건수 1이라 그 정렬은 사실상 임의였다. 안 놓친다고 말하려면 나머지도
-      # 봐야 한다. 이번엔 가이던스 수정류(業績予想/差異)를 먼저 걷어내고
-      # **남는 것을 전부** 찍는다. 여기서 0 이면 진짜로 안 놓치는 것이다.
-      - name: 🗾 월매출 놓친 것 — 전수 (40차)
-        timeout-minutes: 12
+      # 41차 — **월매출의 숫자를 어디서 받나.** 지금 가진 것은 '언제 무엇을
+      # 냈나'와 원문 링크뿐이고 알맹이(실제 매출·전년비)가 없다. 두 길을 같이 본다.
+      #
+      #   (가) TDnet 첨부 PDF 를 우리가 직접 해독한다(pdftext.py). 예전에
+      #        "CID 인코딩이라 표준 라이브러리로는 못 읽는다"고 접었는데, 그건
+      #        **압축을 안 풀고 괄호 문자열만 긁어 본 것**이었다. Flate 를 풀고
+      #        폰트의 /ToUnicode 표를 읽으면 되는지 실제 공시 열 건에 부딪혀 본다.
+      #   (나) TDnet 에 아예 안 내는 회사(니토리·스시로)를 메울 집계 사이트.
+      - name: 🗾 월매출 숫자 — PDF 해독 + 외부 소스 (41차)
+        timeout-minutes: 13
         run: |
           python - <<'EOF'
-          import re, time, urllib.request, urllib.error
-          from datetime import date, timedelta
-          from scrape_jp_tdnet import is_monthly, LIST_URL, ROW_RE, TAGS, UA
-
-          def get(url, timeout=40):
-              req = urllib.request.Request(url, headers={
-                  "User-Agent": UA, "Accept": "*/*", "Accept-Language": "ja,en;q=0.8"})
-              try:
-                  with urllib.request.urlopen(req, timeout=timeout) as r:
-                      return r.read().decode("utf-8", "replace")
-              except urllib.error.HTTPError:
-                  return None
-
-          LOOSE = re.compile(r"売上|販売|受注|業績|実績|概況|速報|月次|月商|"
-                             r"稼働|来店|客数|入場|取扱|会員数|契約数|出荷|生産")
-          MONTHY = re.compile(r"(\d{1,2}|[０-９]{1,2})\s*月")
-          # 월매출이 아닌 것이 확실한 갈래 — 이걸 빼고 남는 것만 눈으로 본다
-          NOTMON = re.compile(r"業績予想|配当予想|予想の修正|予想と実績|実績値との差異|"
-                              r"予想値と実績|決算短信|決算説明|訂正|有価証券報告書|"
-                              r"質疑応答|補足説明|業績目標|予想の開示|予想の公表")
-
-          days = []
-          d = date.today() - timedelta(days=1)
-          while len(days) < 26:
-              if d.weekday() < 5:
-                  days.append(d.strftime("%Y%m%d"))
-              d -= timedelta(days=1)
-
-          left, n_rows, n_take = [], 0, 0
-          for day in days:
-              page = 1
-              while page <= 40:
-                  txt = get(LIST_URL.format(page=page, day=day))
-                  if txt is None:
-                      break
-                  ms = list(ROW_RE.finditer(txt))
-                  if not ms:
-                      break
-                  n_rows += len(ms)
-                  for m in ms:
-                      g = m.groupdict()
-                      t = TAGS.sub("", g["titlecell"]).replace("\u3000", " ").strip()
-                      c = g["code"].strip()[:4]
-                      if is_monthly(t):
-                          n_take += 1
-                      elif LOOSE.search(t) and MONTHY.search(t) and not NOTMON.search(t):
-                          left.append((day, c, t))
-                  page += 1
-                  time.sleep(0.35)
-
-          print(f"훑은 줄 {n_rows:,} · 잡은 것 {n_take}")
-          print(f"가이던스류를 걷어내고 **남은 놓침 후보: {len(left)}건**\n")
-          for day, c, t in left:
-              print(f"  {day} {c}  {t[:88]}")
-          EOF
-
-      # 39차 — **놓치는 회사가 있나.** 회원님이 "7종목만 하라고 한 적 없다,
-      # 올라오는 일본 종목 전부"라고 하셨다. 지금 규칙(is_monthly)이 실제로
-      # 몇 %를 건지는지 재려면 **거절한 줄 중에 월매출처럼 생긴 것**을 봐야 한다.
-      # 저장소의 진짜 함수를 그대로 불러 쓴다 — 여기서 따로 베끼면 갈라진다.
-      - name: 🗾 월매출 놓친 것 찾기 (39차)
-        timeout-minutes: 12
-        run: |
-          python - <<'EOF'
-          import re, time, urllib.request, urllib.error
-          from collections import Counter
-          from datetime import date, timedelta
-          from scrape_jp_tdnet import is_monthly, LIST_URL, ROW_RE, TAGS, UA
-
-          def get(url, timeout=40):
-              req = urllib.request.Request(url, headers={
-                  "User-Agent": UA, "Accept": "*/*", "Accept-Language": "ja,en;q=0.8"})
-              try:
-                  with urllib.request.urlopen(req, timeout=timeout) as r:
-                      return r.read().decode("utf-8", "replace")
-              except urllib.error.HTTPError:
-                  return None
-
-          # 월매출처럼 생겼는지 **아주 느슨하게** 본다. 여기 걸리는데 is_monthly 가
-          # 거절하면 그게 놓친 후보다.
-          LOOSE = re.compile(r"売上|売上高|販売|受注|業績|実績|概況|速報|月次|月商|"
-                             r"稼働|来店|客数|入場|取扱|会員数|契約数|出荷|生産")
-          MONTHY = re.compile(r"(\d{1,2}|[０-９]{1,2})\s*月")
-
-          days = []
-          d = date.today() - timedelta(days=1)
-          while len(days) < 26:
-              if d.weekday() < 5:
-                  days.append(d.strftime("%Y%m%d"))
-              d -= timedelta(days=1)
-
-          taken, missed, rows_n = [], [], 0
-          for day in days:
-              page = 1
-              while page <= 40:
-                  txt = get(LIST_URL.format(page=page, day=day))
-                  if txt is None:
-                      break
-                  ms = list(ROW_RE.finditer(txt))
-                  if not ms:
-                      break
-                  rows_n += len(ms)
-                  for m in ms:
-                      g = m.groupdict()
-                      t = TAGS.sub("", g["titlecell"]).replace("\u3000", " ").strip()
-                      c = g["code"].strip()[:4]
-                      if is_monthly(t):
-                          taken.append((c, t))
-                      elif LOOSE.search(t) and MONTHY.search(t):
-                          missed.append((c, t))
-                  page += 1
-                  time.sleep(0.35)
-
-          print(f"훑은 줄 {rows_n:,} · 잡은 것 {len(taken)} · 놓친 후보 {len(missed)}")
-          print(f"잡은 회사 {len({c for c, _ in taken})}곳\n")
-          print("-- 놓친 후보(월매출처럼 생겼는데 거절당한 줄) 상위 40 --")
-          for t, n in Counter(t for _c, t in missed).most_common(40):
-              print(f"  {n:2d}  {t[:72]}")
-          EOF
-
-      # 38차 — 37차에서 테스트 7종목 중 7685 만 잡혔다. 나머지 여섯이
-      # **TDnet 에 월차를 아예 안 내는 것**인지, 내가 훑은 9영업일 밖이라 그런
-      # 것인지 가른다(45일 = TDnet 보존창 전체). 겸사겸사 물음 둘 더:
-      #   · 45일 창에서 월차를 내는 회사가 실제로 몇 곳인가(우주 크기)
-      #   · 첨부 PDF 에서 표준 라이브러리만으로 숫자를 뽑을 수 있나
-      - name: 🗾 월차 우주 크기 + PDF 숫자 (38차)
-        timeout-minutes: 12
-        run: |
-          python - <<'EOF'
-          import re, time, zlib, urllib.request, urllib.error
-          from collections import Counter, defaultdict
-          from datetime import date, timedelta
+          import re, time, urllib.request, urllib.error, gzip
+          import pdftext
 
           UA = ("Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 "
                 "(KHTML, like Gecko) Chrome/124.0 Safari/537.36")
-          LIST = "https://www.release.tdnet.info/inbs/I_list_{p:03d}_{d}.html"
-          ROW = re.compile(
-              r'<td class="[^"]*kjTime"[^>]*>(?P<time>[^<]*)</td>\s*'
-              r'<td class="[^"]*kjCode"[^>]*>(?P<code>[^<]*)</td>\s*'
-              r'<td class="[^"]*kjName"[^>]*>(?P<name>[^<]*)</td>\s*'
-              r'<td class="[^"]*kjTitle"[^>]*>(?P<cell>.*?)</td>', re.S)
-          HREF = re.compile(r'href="([^"]+)"')
-          TAGS = re.compile(r"<[^>]+>")
 
           def get(url, timeout=40):
-              req = urllib.request.Request(url, headers={
-                  "User-Agent": UA, "Accept": "*/*", "Accept-Language": "ja,en;q=0.8"})
+              h = {"User-Agent": UA, "Accept": "*/*",
+                   "Accept-Language": "ja,en;q=0.8", "Accept-Encoding": "gzip"}
+              req = urllib.request.Request(url, headers=h)
               try:
                   with urllib.request.urlopen(req, timeout=timeout) as r:
-                      return r.read()
-              except urllib.error.HTTPError:
-                  return None
-
-          WIDE = re.compile(r"月次|月別|売上速報|既存店|全店|営業[速概]報|月商|月例")
-          WATCH = {"3093", "3046", "3563", "4680", "6036", "9843"}
-
-          days = []
-          d = date(2026, 9, 18)
-          while len(days) < 30:
-              if d.weekday() < 5:
-                  days.append(d.strftime("%Y%m%d"))
-              d -= timedelta(days=1)
-          days.reverse()
-
-          monthly = defaultdict(list)      # code -> [(day, time, title)]
-          watch_any = defaultdict(list)    # 관심 6종목의 **모든** 공시
-          gone = []
-          first_pdf = None
-          for day in days:
-              page, n = 1, 0
-              while page <= 40:
-                  body = get(LIST.format(p=page, d=day))
-                  if body is None:
-                      if page == 1:
-                          gone.append(day)
-                      break
-                  rows = list(ROW.finditer(body.decode("utf-8", "replace")))
-                  if not rows:
-                      break
-                  n += len(rows)
-                  for m in rows:
-                      g = m.groupdict()
-                      title = TAGS.sub("", g["cell"]).replace("\u3000", " ").strip()
-                      code = g["code"].strip()[:4]
-                      if WIDE.search(title):
-                          monthly[code].append((day, g["time"].strip(), title[:44]))
-                          if first_pdf is None and code == "7685":
-                              h = HREF.search(g["cell"])
-                              if h:
-                                  first_pdf = h.group(1)
-                      if code in WATCH:
-                          watch_any[code].append((day, title[:52]))
-                  page += 1
-                  time.sleep(0.35)
-          print(f"훑은 날 {len(days)} · TDnet 이 안 주는 날 {len(gone)}: {gone[:6]}")
-
-          n_ev = sum(len(v) for v in monthly.values())
-          print(f"\n== 월차 공시 {n_ev}건 · 낸 회사 {len(monthly)}곳")
-          rep = {c: v for c, v in monthly.items() if len(v) >= 2}
-          print(f"   그중 두 번 이상 낸 회사 {len(rep)}곳 (달마다 내는 회사)")
-
-          print("\n-- 관심 6종목이 45일간 TDnet 에 낸 공시 --")
-          for c in sorted(WATCH):
-              evs = watch_any.get(c, [])
-              print(f"  {c}: 전체 {len(evs)}건 · 월차낌새 {len(monthly.get(c, []))}건")
-              for day, t in evs[:6]:
-                  print(f"      {day} {t}")
-
-          print("\n-- 월차를 가장 자주 낸 회사 12곳 --")
-          for c, v in sorted(monthly.items(), key=lambda kv: -len(kv[1]))[:12]:
-              print(f"  {c} {len(v)}건 | {v[-1][2]}")
-
-          # PDF 에서 표준 라이브러리로 글자를 뽑을 수 있나
-          if first_pdf:
-              url = "https://www.release.tdnet.info/inbs/" + first_pdf
-              blob = get(url, timeout=60)
-              print(f"\n-- PDF 숫자 뽑기 시험: {url} ({len(blob):,}바이트)")
-              streams = re.findall(rb"stream\r?\n(.*?)endstream", blob, re.S)
-              print(f"   stream {len(streams)}개")
-              text, ok = [], 0
-              for st in streams:
-                  try:
-                      raw = zlib.decompress(st.strip(b"\r\n"))
-                  except zlib.error:
-                      continue
-                  ok += 1
-                  text.append(raw)
-              print(f"   zlib 로 풀린 stream {ok}개")
-              joined = b"".join(text)
-              shown = re.findall(rb"\((?:[^()\\]|\\.)*\)", joined)[:30]
-              print(f"   괄호 문자열 {len(re.findall(rb'\((?:[^()\\]|\\.)*\)', joined))}개 · 앞 30:")
-              for s in shown:
-                  print("      ", s[:60])
-              print(f"   ToUnicode CMap 있나: {b'ToUnicode' in blob}")
-          EOF
-
-      # 37차 — TDnet 목록에 **월차(月次)** 가 어떤 모습으로 오나.
-      # 물음 넷:
-      #   1) 제목이 어떻게 생겼나 · 몇 건이나 되나
-      #   2) 첨부 링크(href)가 목록 줄에 같이 오나 — 지금 파서는 버린다
-      #   3) 테스트 7종목이 실제로 잡히나
-      #   4) 첨부가 PDF 인가 HTML 인가 (숫자 뽑기 가능성)
-      - name: 🗾 TDnet 월차 공시 떠보기 (37차)
-        timeout-minutes: 12
-        run: |
-          python - <<'EOF'
-          import re, time, urllib.request, urllib.error
-          from collections import Counter
-          from datetime import date, timedelta
-
-          UA = ("Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 "
-                "(KHTML, like Gecko) Chrome/124.0 Safari/537.36")
-          LIST = "https://www.release.tdnet.info/inbs/I_list_{p:03d}_{d}.html"
-          # 지금 쓰는 정규식에 href 를 더 잡게 넓힌 것
-          ROW = re.compile(
-              r'<td class="[^"]*kjTime"[^>]*>(?P<time>[^<]*)</td>\s*'
-              r'<td class="[^"]*kjCode"[^>]*>(?P<code>[^<]*)</td>\s*'
-              r'<td class="[^"]*kjName"[^>]*>(?P<name>[^<]*)</td>\s*'
-              r'<td class="[^"]*kjTitle"[^>]*>(?P<cell>.*?)</td>', re.S)
-          HREF = re.compile(r'href="([^"]+)"')
-          TAGS = re.compile(r"<[^>]+>")
-          SECT = re.compile(r"^[ＰＳＧＥEPSG][－\-]\s*")
-
-          def get(url, timeout=30):
-              req = urllib.request.Request(url, headers={
-                  "User-Agent": UA, "Accept": "*/*", "Accept-Language": "ja,en;q=0.8"})
-              try:
-                  with urllib.request.urlopen(req, timeout=timeout) as r:
-                      return r.read(), r.status, r.headers.get("Content-Type", "")
+                      raw = r.read()
+                      if r.headers.get("Content-Encoding") == "gzip":
+                          raw = gzip.decompress(raw)
+                      return r.status, raw
               except urllib.error.HTTPError as e:
-                  return None, e.code, ""
+                  return e.code, b""
+              except Exception as e:
+                  return str(e)[:60], b""
 
-          # 월차로 보이는 제목을 넓게 잡아 본다 — 좁히는 건 실물을 보고 한다
-          WIDE = re.compile(r"月次|月別|売上速報|既存店|全店|営業[速概]報|月商")
-          TEST = {"7685", "3093", "3046", "3563", "4680", "6036", "9843"}
+          print("=" * 72)
+          print("(가) TDnet 첨부 PDF 를 직접 해독할 수 있나")
+          print("=" * 72)
+          PDFS = [
+              ("6238", "https://www.release.tdnet.info/inbs/140120260918538410.pdf"),
+              ("7865", "https://www.release.tdnet.info/inbs/140120260918538582.pdf"),
+              ("3038", "https://www.release.tdnet.info/inbs/140120260917537924.pdf"),
+              ("7370", "https://www.release.tdnet.info/inbs/140120260918538566.pdf"),
+              ("8715", "https://www.release.tdnet.info/inbs/140120260917537741.pdf"),
+              ("9007", "https://www.release.tdnet.info/inbs/140120260917538088.pdf"),
+              ("3461", "https://www.release.tdnet.info/inbs/140120260917538196.pdf"),
+              ("7685", "https://www.release.tdnet.info/inbs/140120260917537893.pdf"),
+              ("5580", "https://www.release.tdnet.info/inbs/140120260916537473.pdf"),
+              ("7043", "https://www.release.tdnet.info/inbs/140120260916537033.pdf"),
+          ]
+          ok = 0
+          for code, url in PDFS:
+              st, data = get(url)
+              if st != 200 or not data:
+                  print(f"  {code}: 받기 실패 {st}")
+                  continue
+              t0 = time.time()
+              try:
+                  lines = pdftext.extract_lines(data)
+              except Exception as e:
+                  print(f"  {code}: 해독 중 터짐 {type(e).__name__} {e}")
+                  continue
+              txt = "\n".join(lines)
+              jp = sum(1 for ch in txt
+                       if "\u3040" <= ch <= "\u30ff" or "\u4e00" <= ch <= "\u9fff")
+              nums = len(re.findall(r"\d[\d,]*\.?\d*", txt))
+              good = jp > 30 and nums > 10
+              ok += good
+              print(f"  {code}: {len(data)//1024}KB · 줄 {len(lines)} · 일본글자 {jp} · "
+                    f"숫자 {nums} · {time.time()-t0:.2f}초 · {'읽힌다' if good else '못 읽음'}")
+              for ln in lines[:14]:
+                  print(f"      | {ln[:110]}")
+              print()
+          print(f"==> 열 건 중 {ok} 건이 읽혔다")
 
-          days = []
-          d = date(2026, 9, 18)
-          while len(days) < 9:
-              if d.weekday() < 5:
-                  days.append(d.strftime("%Y%m%d"))
-              d -= timedelta(days=1)
-
-          hits, titles, by_code, hrefs = 0, Counter(), Counter(), []
-          total_rows = 0
-          for day in days:
-              page, nrow = 1, 0
-              while page <= 40:
-                  body, st, _ = get(LIST.format(p=page, d=day))
-                  if body is None:
-                      break
-                  txt = body.decode("utf-8", "replace")
-                  rows = list(ROW.finditer(txt))
-                  if not rows:
-                      break
-                  nrow += len(rows)
-                  for m in rows:
-                      g = m.groupdict()
-                      title = TAGS.sub("", g["cell"]).replace("　", " ").strip()
-                      code = g["code"].strip()[:4]
-                      if not WIDE.search(title):
-                          continue
-                      hits += 1
-                      titles[title[:46]] += 1
-                      by_code[code] += 1
-                      h = HREF.search(g["cell"])
-                      if len(hrefs) < 8 and h:
-                          hrefs.append((code, SECT.sub("", TAGS.sub("", g["name"]).strip()),
-                                        g["time"].strip(), title[:50], h.group(1)))
-                  page += 1
-                  time.sleep(0.4)
-              total_rows += nrow
-              print(f"{day}: 줄 {nrow}", flush=True)
-
-          print(f"\n== 전체 {total_rows}줄 중 월차 낌새 {hits}건")
-          print("\n-- 제목 상위 25 --")
-          for t, c in titles.most_common(25):
-              print(f"  {c:3d}  {t}")
-          print(f"\n-- 월차를 낸 종목 {len(by_code)}개 · 상위 15 --")
-          print("  ", dict(by_code.most_common(15)))
-          print(f"\n-- 테스트 7종목 중 잡힌 것: {sorted(TEST & set(by_code))}")
-          print(f"   못 잡은 것: {sorted(TEST - set(by_code))}")
-
-          print("\n-- 첨부 링크 생김새 --")
-          for c, n, t, ti, h in hrefs:
-              print(f"  {c} {n[:14]:16s} {t} | {ti}")
-              print(f"      href={h}")
-
-          # 첨부 하나를 실제로 받아 본다
-          if hrefs:
-              h = hrefs[0][4]
-              url = h if h.startswith("http") else "https://www.release.tdnet.info/inbs/" + h
-              body, st, ct = get(url, timeout=60)
-              print(f"\n-- 첨부 받기: {url}")
-              print(f"   HTTP {st} · {ct} · {len(body) if body else 0:,}바이트")
-              if body:
-                  print(f"   머리 16바이트: {body[:16]!r}")
+          print()
+          print("=" * 72)
+          print("(나) TDnet 에 안 내는 회사용 — 월매출 집계 사이트")
+          print("=" * 72)
+          CAND = [
+              ("irbank 월차",     "https://irbank.net/9843/gs"),
+              ("irbank 코드",     "https://irbank.net/E03144/gs"),
+              ("kabutan",         "https://kabutan.jp/stock/?code=9843"),
+              ("minkabu",         "https://minkabu.jp/stock/9843"),
+              ("kabuyoho",        "https://kabuyoho.ifis.co.jp/index.php?action=tp1&sa=report_top&bcode=9843"),
+              ("buffett-code",    "https://www.buffett-code.com/company/9843/"),
+              ("getsuji",         "https://www.getsuji.com/"),
+              ("shikiho",         "https://shikiho.toyokeizai.net/stocks/9843"),
+              ("니토리 IR",        "https://www.nitorihd.co.jp/ir/monthly/"),
+              ("스시로 IR",        "https://www.food-and-life.co.jp/ir/monthly/"),
+              ("ullet",           "https://www.ullet.com/9843.html"),
+              ("株予報",           "https://kabuyoho.jp/sp/reportTop?bcode=9843"),
+              ("stockanalysis",   "https://stockanalysis.com/quote/tyo/9843/"),
+              ("yahoo finance jp","https://finance.yahoo.co.jp/quote/9843.T"),
+          ]
+          for name, url in CAND:
+              st, data = get(url, timeout=25)
+              hit = ""
+              if isinstance(st, int) and st == 200 and data:
+                  t = data.decode("utf-8", "ignore")
+                  marks = [m for m in ("月次", "既存店", "売上高", "前年同月", "月別")
+                           if m in t]
+                  hit = f" · {len(data)//1024}KB · 표식 {marks}"
+              print(f"  {name:16s} {st}{hit}")
+              time.sleep(0.6)
           EOF
