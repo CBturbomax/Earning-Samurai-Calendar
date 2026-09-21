@@ -2100,6 +2100,80 @@ __FLAGCSS__
 .mft .mpdf { color:var(--a3); text-decoration:none; border-bottom:1px dotted;
              margin-left:auto; }
 .mft .mnxt { color:#d8b877; }
+/* ── 알림 배너 ─────────────────────────────────────────────── */
+
+/* ── 툴바 ──────────────────────────────────────────────────── */
+.tools {
+  display:flex; flex-wrap:wrap; gap:12px; align-items:center; margin:14px 0;
+  background:var(--panel); border:1px solid var(--line); border-radius:10px;
+  padding:14px 16px;
+}
+select, input[type=search] {
+  background:#0b1015; color:var(--fg); border:1px solid var(--line);
+  border-radius:8px; padding:11px 13px; font-size:19px; font-family:inherit;
+}
+select { max-width:230px; }
+select:focus { outline:2px solid var(--a3); }
+input[type=search] { width:min(420px,100%); padding:11px 16px; font-size:20px; }
+input[type=search]:focus { outline:2px solid var(--a1); border-color:var(--a1); }
+
+/* ── 종목 바로 찾기 ────────────────────────────────────────────
+   아래 표의 검색칸은 **보고 있는 것 안에서** 거른다 — 탭이 미국이면 일본 회사는
+   안 나오고, 규모 필터에 걸린 회사도 안 나온다. 그건 훑어볼 때 쓰는 것이다.
+   여기 것은 반대다: **가진 종목 전부**에서 찾아 곧장 그 회사 창을 연다. */
+.find { position:relative; margin:14px 0 6px; max-width:640px; }
+.find input[type=search] { width:100%; padding:14px 18px 14px 46px; font-size:21px; }
+.find .mag { position:absolute; left:16px; top:50%; transform:translateY(-50%);
+             color:var(--mute); font-size:20px; pointer-events:none; }
+.fqlist { position:absolute; z-index:40; left:0; right:0; top:calc(100% + 6px);
+          background:var(--panel); border:1px solid var(--line); border-radius:10px;
+          box-shadow:0 14px 34px rgba(0,0,0,.5); overflow:hidden; }
+.fqlist[hidden] { display:none; }
+.fqi { display:flex; align-items:baseline; gap:10px; padding:11px 16px; cursor:pointer;
+       border-bottom:1px solid var(--line); font-size:19px; }
+.fqi:last-child { border-bottom:0; }
+.fqi.on, .fqi:hover { background:#1b2530; }
+.fqi .fqn { font-weight:700; }
+.fqi .fqc { color:var(--mute); font-size:17px; }
+.fqi .fqd { margin-left:auto; color:var(--mute); font-size:17px; white-space:nowrap; }
+.fqnone { padding:12px 16px; color:var(--mute); font-size:18px; }
+.chk {
+  display:inline-flex; align-items:center; gap:8px; font-size:19px;
+  cursor:pointer; user-select:none; white-space:nowrap;
+}
+.chk input { width:20px; height:20px; accent-color:var(--a1); cursor:pointer; }
+.count { margin-left:auto; color:var(--mute); font-size:19px; }
+.count b { color:var(--a1); font-size:22px; }
+
+/* button 과 a 를 함께 받는다. 예전에는 button.btn 으로만 잡아서
+   모달의 <a class="btn"> 링크가 맨 파란 글씨로 나왔다. */
+.btn {
+  background:#0b1015; color:var(--fg); border:1px solid var(--line);
+  border-radius:8px; padding:11px 16px; font-size:19px; font-family:inherit;
+  cursor:pointer; text-decoration:none; display:inline-block; line-height:1.2;
+}
+/* .btn 의 display 가 브라우저 기본 [hidden] 규칙을 이겨서, hidden 을 걸어도
+   버튼이 그대로 보였다. 명시적으로 눌러 준다. */
+.btn[hidden] { display:none; }
+.btn:hover { border-color:var(--a1); color:var(--a1); }
+.btn.pri { background:var(--a1); border-color:var(--a1); color:#fff; font-weight:700; }
+.btn.pri:hover { filter:brightness(1.12); color:#fff; }
+button.btn:disabled { opacity:.4; cursor:default; }
+button.btn:disabled:hover { border-color:var(--line); color:var(--fg); }
+
+/* ── 주 네비게이션 ─────────────────────────────────────────── */
+.weeknav {
+  display:flex; align-items:center; gap:14px; flex-wrap:wrap;
+  background:var(--panel); border:1px solid var(--line); border-radius:10px;
+  padding:12px 16px; margin:14px 0;
+}
+.weeknav .wlabel { font-size:24px; font-weight:800; letter-spacing:-.3px; }
+.weeknav .wsum { color:var(--mute); font-size:18px; }
+.weeknav .spacer { margin-left:auto; }
+
+/* 나라 고르기 — 위쪽 탭과 같은 것을 캘린더 옆에도 둔다. 주를 넘기다가
+   나라를 바꾸려고 맨 위까지 올라갔다 오지 않게. 둘은 늘 같이 움직인다. */
+.mpick { display:flex; gap:6px; flex-wrap:wrap; }
 .mpick .mp {
   font:inherit; font-size:17px; font-weight:700; cursor:pointer;
   background:#141c24; color:var(--mute); border:1px solid var(--line);
@@ -2450,7 +2524,6 @@ svg.bars rect.b:hover { fill:var(--a3); }
 </div>
 
 <h2><span class="n">2</span>🇯🇵 일본 월매출 <span class="meta" id="mnMeta"></span></h2>
-<div class="note" id="mnNote"></div>
 <div class="tools">
   <input type="search" id="mnQ" placeholder="회사·코드 검색 — 뷰셀 / 7685 / 라운드원" autocomplete="off">
   <select id="mnCap">
@@ -3114,29 +3187,18 @@ function renderMonthly() {
   const host = document.getElementById('mnList');
   if (!host) return;
   const meta = document.getElementById('mnMeta');
-  const note = document.getElementById('mnNote');
   if (!MN.length) {
-    host.innerHTML = '';
-    if (note) note.innerHTML =
-      '아직 수집하지 않았습니다. <code>scrape_jp_tdnet.py</code> 가 결산단신을 ' +
-      '훑는 그 목록에서 월매출도 같이 건집니다.';
+    host.innerHTML = '<div class="note">아직 수집하지 않았습니다.</div>';
     if (meta) meta.textContent = '';
     return;
   }
   const nMon = Object.keys(MNUM).length;
   if (meta) meta.textContent = new Set(MN.map(m => m[2])).size.toLocaleString() +
       '개사 · 수치 ' + nMon.toLocaleString() + '개사';
-  if (note) note.innerHTML =
-    '일본 회사가 분기 실적과 <b>따로</b> 매달 내는 매출·KPI 속보입니다 ' +
-    '(TDnet 적시공시 — 올라오는 종목을 <b>가리지 않고 전부</b> 담습니다). ' +
-    '수치는 첨부 PDF 의 <b>표에서 직접 읽습니다</b> — 달 이름표 줄을 찾아 값을 ' +
-    '붙이고, 붙일 곳이 없으면 담지 않습니다. 암호가 걸렸거나 표가 그림인 공시는 ' +
-    '<b>숫자 없이</b> 원문 링크만 남습니다. 지어 넣지 않습니다. ' +
-    '금액 없이 <b>전년동월비만</b> 내는 회사가 많아, 그때는 100%를 기준선으로 ' +
-    '위아래로 그립니다. 월매출은 <b>의무가 아니라 회사 선택</b>이라 아예 안 내거나 ' +
-    '자사 IR 에만 올리는 회사도 많습니다(니토리·스시로가 그렇습니다). ' +
-    'TDnet 목록·첨부가 한 달쯤만 남으므로 이력은 <b>여기 쌓인 만큼</b>이고 ' +
-    '돌수록 길어집니다.';
+  // **안내 문구는 화면에 안 낸다.** 「테마별 주요 종목」 아래 세 줄을 뺀 것과
+  // 같은 이유다 — 자리를 쓰려면 그만한 값을 해야 한다. 여기 적혀 있던
+  // 열 줄짜리 설명(어디서 읽는지·못 읽으면 어떻게 하는지·회사 선택이라는
+  // 것)은 CLAUDE.md 에 있으면 된다. 회원님이 지우라고 하셨다.
 
   const q = (document.getElementById('mnQ').value || '').trim().toLowerCase();
   const capMin = +document.getElementById('mnCap').value;
