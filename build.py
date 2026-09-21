@@ -1496,6 +1496,46 @@ def pack_seg(rec, fin_rec):
     return out
 
 
+def load_monthly(packed):
+    """일본 **월차(月次)** 공시 — `scrape_jp_tdnet.py` 가 결산단신과 같은 목록에서
+    같이 건진 것. 회사가 분기 실적과 별개로 매달 내는 매출·KPI 속보다.
+
+    **여기서 오는 것은 '언제 무엇을 냈나'뿐, 숫자가 아니다.** 알맹이는 첨부 PDF
+    안에 있는데 그 PDF 가 CID 인코딩이라(ToUnicode CMap 필요) 표준 라이브러리로는
+    글자가 안 나온다 — 실측해 보니 풀린 문자열이 `(en-US)`·`( )` 따위뿐이었다.
+    그래서 **숫자를 지어내지 않고** 링크를 건다. 회원님이 눌러 원문을 본다.
+
+    한글 회사명은 캘린더에 이미 오른 종목이면 그쪽 것을 그대로 쓴다 — TDnet 이
+    주는 이름은 줄임말이라(`ＢＵＹＳＥＬＬ`) 따로 변환하면 같은 회사가 화면
+    두 군데에서 다른 이름으로 뜬다.
+    """
+    p = HERE / "data" / "monthly_jp.json"
+    if not p.exists():
+        return []
+    try:
+        rows = json.loads(p.read_text(encoding="utf-8")).get("rows", [])
+    except (ValueError, OSError) as e:
+        print(f"  ! monthly_jp.json 읽기 실패: {e}")
+        return []
+    known = {}
+    for q in packed:
+        if q[9] == "jp":
+            known.setdefault(q[1], q[2])
+    out = []
+    for r in rows:
+        code = r.get("code") or ""
+        ko = known.get(code)
+        if not ko:
+            ko, _lvl = to_korean(r.get("name", ""),
+                                 companies.NOTABLE.get(code, ("",))[0])
+        out.append([r.get("date", ""), r.get("time", ""), code, ko,
+                    r.get("name", ""), r.get("period", ""), int(r.get("pok", 1)),
+                    r.get("title", ""), r.get("doc", ""),
+                    CAPS.get("jp:" + code, 0)])
+    out.sort(key=lambda x: (x[0], -x[9], x[2]), reverse=False)
+    return out
+
+
 def pack_jp(r):
     """일본만 기계 변환을 거친다. 원본이 일본어라 그대로는 훑어보기가 안 된다."""
     ko, lvl = to_korean(r["name"], companies.NOTABLE.get(r["code"], ("",))[0])
@@ -1626,6 +1666,7 @@ def build():
         for code, v in DICTS[m].NOTABLE.items():
             notable[m + ":" + code] = list(v)
 
+    monthly = load_monthly(packed)
     per_day = Counter(p[0] for p in packed)
     notable_hits = sum(1 for p in packed if p[9] + ":" + p[1] in notable)
     all_ok = sorted({d for m in ok_days for d in ok_days[m]})
@@ -1790,6 +1831,9 @@ def build():
         # 지금은 미국 종목만 — 일본·홍콩은 소스에 부문 페이지가 없다.
         # 합이 총매출과 안 맞는 종목은 여기서 걸러진다(seg_fit).
         "seg": seg,
+        # 일본 월차(月次). [날짜, 시각, 코드, 한글명, 원문명, 대상월, 달정확도,
+        #                  제목, 첨부, 시총] — 숫자가 아니라 '무엇을 언제 냈나'다.
+        "monthly": monthly,
     }
 
     # **러너는 UTC 로 돈다.** 예전에는 datetime.now() 에 "KST" 만 붙였는데,
@@ -1831,6 +1875,11 @@ def build():
         days = len(ok_days[m])
         state = f"{n:>6,}건 / {days:>3}일" if data[m] else "     미수집 — " + MARKETS[m]["scraper"]
         print(f"  {MARKETS[m]['flag']} {MARKETS[m]['ko']:<3} {state}")
+    if monthly:
+        mcodes = {m[2] for m in monthly}
+        mper = {m[5] for m in monthly}
+        print(f"  🇯🇵 월차 {len(monthly):,}건 / {len(mcodes):,}개사 / "
+              f"{len(mper)}개월치")
     print(f"  합계 {len(packed):,}건 / 주목 {notable_hits:,}건 / {len(weeks)}주")
     if per_day:
         busiest = max(per_day.items(), key=lambda kv: kv[1])
@@ -1954,6 +2003,32 @@ __FLAGCSS__
   background:#1a2129; border:1px solid var(--line); border-left:5px solid var(--a3);
   border-radius:8px; padding:14px 20px; margin:14px 0; color:#c9d6e0; font-size:19px;
 }
+
+/* ── 월차(月次) ────────────────────────────────────────────── */
+.mn { border:1px solid var(--line); border-radius:10px; overflow:hidden; }
+.mn .mr {
+  display:flex; gap:14px; align-items:baseline; padding:11px 16px;
+  border-bottom:1px solid #1c252d; font-size:19px; background:#0f1419;
+}
+.mn .mr:nth-child(even) { background:#12191f; }
+.mn .mr:last-child { border-bottom:0; }
+.mn .mr.hit { cursor:pointer; }
+.mn .mr.hit:hover { background:#1d2833; }
+.mn .md { color:var(--mute); flex:0 0 118px; font-variant-numeric:tabular-nums; }
+.mn .mc { color:#8fb8dc; font-weight:700; flex:0 0 58px; }
+.mn .mnm { font-weight:600; flex:0 0 220px; overflow:hidden;
+           text-overflow:ellipsis; white-space:nowrap; }
+.mn .mp {
+  flex:0 0 auto; background:#1b2b3a; color:var(--a3); border-radius:6px;
+  padding:2px 9px; font-size:16px; font-weight:700;
+}
+.mn .mp.guess { background:#2a2419; color:#d8b877; }
+.mn .mt { flex:1 1 auto; color:#c9d6e0; font-size:17px; overflow:hidden;
+          text-overflow:ellipsis; white-space:nowrap; }
+.mn .mpdf { flex:0 0 auto; color:var(--a3); font-size:16px; text-decoration:none;
+            border:1px solid var(--line); border-radius:6px; padding:3px 9px; }
+.mn .mpdf:hover { border-color:var(--a3); }
+.mn .mnx { color:#d8b877; font-size:16px; flex:0 0 auto; }
 
 /* ── 알림 배너 ─────────────────────────────────────────────── */
 
@@ -2378,14 +2453,24 @@ svg.bars rect.b:hover { fill:var(--a3); }
   <button class="btn" id="fitBtn" hidden></button>
 </div>
 
-<h2><span class="n">2</span>테마별 주요 종목 실적발표일 <span class="meta" id="gMeta"></span></h2>
+<h2><span class="n">2</span>🇯🇵 월차(月次) 공시 <span class="meta" id="mnMeta"></span></h2>
+<div class="note" id="mnNote"></div>
+<div class="tools">
+  <input type="search" id="mnQ" placeholder="회사·코드·제목 검색 — 뷰셀 / 7685 / 月次" autocomplete="off">
+  <select id="mnPer"><option value="">전체 대상월</option></select>
+  <label class="chk"><input type="checkbox" id="mnBig">주목종목만</label>
+  <span class="count" id="mnCnt"></span>
+</div>
+<div class="mn" id="mnList"></div>
+
+<h2><span class="n">3</span>테마별 주요 종목 실적발표일 <span class="meta" id="gMeta"></span></h2>
 <div id="groups"></div>
 
-<h2><span class="n">3</span>일자별 발표 건수 <span class="meta">막대를 누르면 그 주로 이동</span></h2>
+<h2><span class="n">4</span>일자별 발표 건수 <span class="meta">막대를 누르면 그 주로 이동</span></h2>
 <div class="chartbox"><svg class="bars" id="bars" viewBox="0 0 1400 260"
      preserveAspectRatio="xMinYMid meet"></svg></div>
 
-<h2><span class="n">4</span>전체 종목 표</h2>
+<h2><span class="n">5</span>전체 종목 표</h2>
 <div class="tools">
   <input type="search" id="q" placeholder="한글·원문·영문·코드 검색 — 엔비디아 / NVDA / 소니 / ソニー / 텐센트 / 00700" autocomplete="off">
   <select id="fSector"><option value="">전체 업종</option></select>
@@ -2893,6 +2978,113 @@ function renderCal() {
 }
 
 /* ── 주목종목 그룹 ────────────────────────────────────────── */
+/* ── 월차(月次) ──────────────────────────────────────────────────
+   일본 회사가 분기 실적과 **별개로** 매달 내는 매출·KPI 속보. 여기 담긴 것은
+   '언제 무엇을 냈나'이고 숫자는 첨부 PDF 안에 있다 — 그 PDF 가 CID 인코딩이라
+   표준 라이브러리로는 글자가 안 나와서, 숫자를 지어내지 않고 링크를 건다.
+   줄 모양: [날짜, 시각, 코드, 한글명, 원문명, 대상월, 달정확도, 제목, 첨부, 시총] */
+const MN = D.monthly || [];
+
+/* 다음 발표일 어림. **확정이 아니라 예상이다** — 회사가 월차 예정일을 공식으로
+   내는 일은 드물어서 과거 발표일의 패턴으로 짚는다. 발표일이 셋은 쌓여야 한다
+   (둘로는 우연과 규칙을 못 가른다). 주말에 떨어지면 다음 평일로 민다. */
+function mnNext(dates) {
+  if (dates.length < 3) return null;
+  const dom = dates.map(d => +d.slice(8, 10)).sort((a, b) => a - b);
+  const med = dom[dom.length >> 1];
+  const last = parse(dates[dates.length - 1]);
+  const d = new Date(last.getFullYear(), last.getMonth() + 1, med);
+  while (d.getDay() === 0 || d.getDay() === 6) d.setDate(d.getDate() + 1);
+  return iso(d);
+}
+
+/* 캘린더에 오른 일본 종목이면 그 종목의 가장 최근 발표 날짜를 준다.
+   상세창을 여는 데 쓴다 — 목록에 뜬 회사는 어디서든 눌려야 한다는 규칙이다. */
+const mnDate = new Map();
+for (const r of D.rows) {
+  if (r[9] !== 'jp') continue;
+  const k = r[1], cur = mnDate.get(k);
+  if (!cur || Math.abs(parse(r[0]) - parse(D.today)) < Math.abs(parse(cur) - parse(D.today)))
+    mnDate.set(k, r[0]);
+}
+
+function renderMonthly() {
+  const host = document.getElementById('mnList');
+  if (!host) return;
+  const meta = document.getElementById('mnMeta');
+  const note = document.getElementById('mnNote');
+  if (!MN.length) {
+    host.innerHTML = '';
+    if (note) note.innerHTML =
+      '아직 수집하지 않았습니다. <code>scrape_jp_tdnet.py</code> 가 결산단신을 ' +
+      '훑는 그 목록에서 월차도 같이 건집니다.';
+    if (meta) meta.textContent = '';
+    return;
+  }
+  const codes = new Set(MN.map(m => m[2]));
+  const pers = [...new Set(MN.map(m => m[5]))].sort().reverse();
+  if (meta) meta.textContent = codes.size.toLocaleString() + '개사 · ' +
+      MN.length.toLocaleString() + '건';
+  if (note) note.innerHTML =
+    '일본 회사가 분기 실적과 <b>따로</b> 매달 내는 매출·KPI 속보입니다 ' +
+    '(TDnet 적시공시). 담긴 것은 <b>언제 무엇을 냈나</b>이고, 숫자는 첨부 PDF 안에 ' +
+    '있어 링크로 겁니다 — 없는 값을 지어 넣지 않습니다. ' +
+    '월차는 <b>의무가 아니라 회사 선택</b>이라 내지 않는 회사도 많습니다. ' +
+    'TDnet 목록이 한 달쯤만 남으므로 이력은 <b>여기 쌓인 만큼</b>이고 돌수록 길어집니다.';
+
+  const sel = document.getElementById('mnPer');
+  if (sel && sel.options.length <= 1)
+    for (const pv of pers) {
+      const o = document.createElement('option');
+      o.value = pv;
+      o.textContent = pv.slice(0, 4) + '년 ' + (+pv.slice(5, 7)) + '월분';
+      sel.appendChild(o);
+    }
+
+  const q = (document.getElementById('mnQ').value || '').trim().toLowerCase();
+  const per = document.getElementById('mnPer').value;
+  const big = document.getElementById('mnBig').checked;
+
+  // 종목별 발표일 이력 — 다음 발표일을 짚는 데 쓴다.
+  const hist = new Map();
+  for (const m of MN) {
+    if (!hist.has(m[2])) hist.set(m[2], []);
+    hist.get(m[2]).push(m[0]);
+  }
+  for (const v of hist.values()) v.sort();
+
+  const rows = MN.filter(m => {
+    if (per && m[5] !== per) return false;
+    if (big && !NOTE['jp:' + m[2]]) return false;
+    if (!q) return true;
+    return (m[2] + ' ' + m[3] + ' ' + m[4] + ' ' + m[7]).toLowerCase().includes(q);
+  }).slice().reverse();
+
+  document.getElementById('mnCnt').innerHTML = '<b>' + rows.length.toLocaleString() + '</b>건';
+
+  const seenNext = new Set();
+  host.innerHTML = rows.slice(0, 400).map(m => {
+    const key = 'jp:' + m[2], has = mnDate.has(m[2]);
+    const nx = seenNext.has(m[2]) ? null : mnNext(hist.get(m[2]) || []);
+    seenNext.add(m[2]);
+    const wd = '일월화수목금토'[parse(m[0]).getDay()];
+    return '<div class="mr' + (has ? ' hit' : '') + '"' +
+      (has ? ' data-mkey="' + esc(key) + '" data-mdate="' + esc(mnDate.get(m[2])) + '"' : '') +
+      '><span class="md">' + m[0].slice(5) + '(' + wd + ')' +
+      (m[1] ? ' ' + esc(m[1]) : '') + '</span>' +
+      '<span class="mc">' + esc(m[2]) + '</span>' +
+      '<span class="mnm">' + esc(m[3]) + (NOTE[key] ? ' ★' : '') + '</span>' +
+      '<span class="mp' + (m[6] ? '' : ' guess') + '" title="' +
+        (m[6] ? '제목에서 읽은 달' : '제목에 달이 없어 발표일에서 어림한 달') + '">' +
+        (+m[5].slice(5, 7)) + '월분' + (m[6] ? '' : '?') + '</span>' +
+      '<span class="mt">' + esc(m[7]) + '</span>' +
+      (nx ? '<span class="mnx" title="과거 발표일 패턴으로 짚은 예상일입니다">다음 ' +
+            nx.slice(5) + ' 예상</span>' : '') +
+      (m[8] ? '<a class="mpdf" href="' + esc(m[8]) + '" target="_blank" rel="noopener">원문</a>' : '') +
+      '</div>';
+  }).join('');
+}
+
 function renderGroups() {
   // 종목마다 한 줄만 남긴다. 오늘 이후 일정이 있으면 그 중 가장 이른 것,
   // 없으면 가장 최근 과거 일정. VIEW가 날짜 오름차순이라 한 번만 훑으면 된다.
@@ -3520,6 +3712,13 @@ document.addEventListener('click', e => {
   const grow = e.target.closest('.grow');
   if (grow) { openModal(grow.dataset.key, grow.dataset.date); return; }
 
+  // 월차 줄 — 캘린더에 오른 종목이면 상세창을 연다. 원문 링크는 그대로 둔다.
+  const mrow = e.target.closest('.mr[data-mkey]');
+  if (mrow && !e.target.closest('.mpdf')) {
+    openModal(mrow.dataset.mkey, mrow.dataset.mdate);
+    return;
+  }
+
   const bar = e.target.closest('rect.b');
   if (bar) {
     const d = parse(bar.dataset.date);
@@ -3586,6 +3785,10 @@ document.getElementById('kstToggle').onchange = e => {
   useKst = e.target.checked; expanded.clear(); reslice(); fillWeeks(); renderAll();
 };
 document.getElementById('jpToggle').onchange = e => { showJp = e.target.checked; renderCal(); };
+for (const id of ['mnQ', 'mnPer', 'mnBig']) {
+  const el = document.getElementById(id);
+  if (el) el.addEventListener(id === 'mnQ' ? 'input' : 'change', renderMonthly);
+}
 
 /* ── 시장 탭 ──────────────────────────────────────────────── */
 /* 탭을 누르면 그 시장만 켠다. 여러 시장을 같이 보려면 체크박스를 쓴다. */
@@ -3799,7 +4002,7 @@ document.addEventListener('keydown', e => {
 
 function renderAll() {
   renderTabs(); renderCards(); renderCapNote();
-  renderCal(); renderGroups(); renderBars(); renderTable();
+  renderCal(); renderMonthly(); renderGroups(); renderBars(); renderTable();
 }
 reslice(); fillFilters(); fillWeeks(); renderFoot(); renderAll();
 </script>
