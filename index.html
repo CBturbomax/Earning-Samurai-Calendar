@@ -532,7 +532,7 @@ svg.bars rect.b:hover { fill:var(--a3); }
 <body>
 <div class="wrap">
 
-<div class="topline"><span class="fl fl-us" role="img" aria-label="미국"></span> 미국 <b>8,170</b> · <span class="fl fl-jp" role="img" aria-label="일본"></span> 일본 <b>4,659</b> · <span class="fl fl-hk" role="img" aria-label="홍콩"></span> 홍콩 <b>8,888</b> · 합계 <b>21,717건</b> · 수집 <b>2025-07-09 ~ 2026-11-20</b> · 갱신 2026-09-21 12:38 KST</div>
+<div class="topline"><span class="fl fl-us" role="img" aria-label="미국"></span> 미국 <b>8,170</b> · <span class="fl fl-jp" role="img" aria-label="일본"></span> 일본 <b>4,659</b> · <span class="fl fl-hk" role="img" aria-label="홍콩"></span> 홍콩 <b>8,888</b> · 합계 <b>21,717건</b> · 수집 <b>2025-07-09 ~ 2026-11-20</b> · 갱신 2026-09-21 12:39 KST</div>
 <h1><span class="mark" aria-hidden="true"></span>Earning <span class="jp">Samurai</span>
     <span class="byline">by CB</span></h1>
 <p class="sub">미국 · 일본 · 홍콩 주간 실적발표 일정 — 누가 언제 무엇을 발표했는지</p>
@@ -1164,9 +1164,10 @@ function renderMonthly() {
   const big = document.getElementById('mnBig').checked;
 
   // 종목별 발표일 이력 — 다음 발표일을 짚는 데 쓴다.
-  // **대상월마다 한 번만 센다.** 한 달에 두 번 내는 회사가 있어서(8798 은
-  // 월매출와 별도 KPI 를 따로 낸다) 그냥 쌓으면 날짜 간격이 들쭉날쭉해지고
-  // 예상일이 엉뚱해진다. 그 달의 **첫 발표**가 그 회사의 월매출 주기다.
+  // **대상월마다 한 번만 센다.** 같은 달을 두 번 내는 회사가 있다 — 8237 은
+  // 「8月売上速報」(9/1) 뒤에 「8月売上報告」(9/10) 를 또 내고, 7177 도 속보와
+  // 본보고를 따로 낸다. 그냥 쌓으면 간격이 들쭉날쭉해져 예상일이 엉뚱해진다.
+  // 그 달의 **첫 발표**가 그 회사의 월매출 주기다.
   const firstOf = new Map();
   for (const m of MN) {
     const k = m[2] + '|' + m[5];
