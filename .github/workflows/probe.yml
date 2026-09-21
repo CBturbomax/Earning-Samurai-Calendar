@@ -15,19 +15,17 @@ jobs:
         with:
           python-version: '3.12'
 
-      # 48차 — 문장으로 집는 길은 접었다(46차 14/66 이고 그중 몇은 표를 문장으로
-      # 잘못 읽은 것이었다 — 556A「売上高5月6月7月8月前年同月比125.4%」). 자료는
-      # 전부 **표**라 좌표로 열을 맞춰야 한다. montable.py 가 달 이름표 줄을 찾고
-      # 아래 줄의 값을 x 가 가장 가까운 이름표에 붙인다. 붙일 곳이 없으면 버린다.
-      #
-      # 여기서 재는 것은 **몇 종목이 몇 달치를 주나**다. 표로 읽으면 한 건으로
-      # 여러 달이 한꺼번에 들어오므로 차트가 바로 선다.
-      - name: 🗾 월매출 — 표로 읽어 달별 수치 — 실제 글자폭 반영 (48차)
+      # 49차 — 밀린 264건을 다 훑었는데 표를 찾은 것이 29건뿐이다(20개사).
+      # **왜 못 찾았는지는 짐작하지 말고 본다.** 실패한 공시에서 '月' 이 든 줄을
+      # 그대로 찍어, 달 이름표가 어떤 꼴로 오는지 눈으로 고른다. 지금 규칙은
+      # 「8月」·「8月度」 처럼 **칸 하나가 통째로 달**일 때만 머리로 보는데,
+      # 「2026年8月」 이나 세로로 선 표는 그 규칙에 안 걸린다.
+      - name: 🗾 월매출 — 표를 못 찾은 공시의 생김새 (49차)
         timeout-minutes: 13
         run: |
           python - <<'EOF'
           import json, re, time, urllib.request, urllib.error, gzip
-          from datetime import date, timedelta
+          from collections import Counter
           import pdftext, montable
 
           UA = ("Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 "
@@ -42,59 +40,52 @@ jobs:
                       if r.headers.get("Content-Encoding") == "gzip":
                           raw = gzip.decompress(raw)
                       return r.status, raw
-              except urllib.error.HTTPError as e:
-                  return e.code, b""
               except Exception as e:
-                  return str(e)[:50], b""
+                  return str(e)[:40], b""
 
+          nums = json.load(open("data/monthly_nums_jp.json", encoding="utf-8"))
+          bad = {u for u, why in (nums.get("skip") or {}).items() if why == "표없음"}
           rows = json.load(open("data/monthly_jp.json", encoding="utf-8"))["rows"]
-          cut = (date.today() - timedelta(days=16)).isoformat()
-          recent, seen = [], set()
+          pick, seen = [], set()
           for r in sorted(rows, key=lambda r: r["date"], reverse=True):
-              if r["date"] < cut or r["code"] in seen or not r.get("doc"):
-                  continue
-              seen.add(r["code"]); recent.append(r)
-              if len(recent) >= 70:
+              if r.get("doc") in bad and r["code"] not in seen:
+                  seen.add(r["code"]); pick.append(r)
+              if len(pick) >= 26:
                   break
+          print(f"표 못 찾은 공시 {len(bad)}건 중 {len(pick)}건을 본다\n")
 
-          okread = enc = fail = 0
-          hit = withrev = 0
-          months = []
-          good, bad = [], []
-          for r in recent:
+          MONTHCELL = re.compile(r"^\(?(\d{1,2})月(度|分|期)?\)?$")
+          ANYMONTH = re.compile(r"\d{1,2}\s*月")
+          why = Counter()
+          for r in pick:
               st, data = get(r["doc"])
-              if st != 200 or not data:
-                  fail += 1; continue
-              if pdftext.is_encrypted(data):
-                  enc += 1; continue
+              if st != 200:
+                  why["받기실패"] += 1; continue
               try:
-                  txt = pdftext.extract_text(data, 6)
+                  table = pdftext.extract_cells(data, 8)
               except Exception:
-                  fail += 1; continue
-              if len(txt) < 40:
-                  fail += 1; continue
-              okread += 1
-              got = montable.read(data, r["date"])
-              if not got:
-                  if len(bad) < 10:
-                      bad.append(f"{r['code']} {r['title'][:34]}")
+                  why["터짐"] += 1; continue
+              if not table:
+                  why["글자0"] += 1
+                  print(f"── {r['code']} {r['title'][:36]}\n     글자가 아예 안 나온다")
                   continue
-              hit += 1
-              months.append(len(got["rows"]))
-              if any("rev" in x for x in got["rows"]):
-                  withrev += 1
-              if len(good) < 20:
-                  sm = [(x["period"], x.get("rev"), x.get("yoy")) for x in got["rows"][-4:]]
-                  good.append(f"{r['code']} [{got['amount_label']}|{got['yoy_label']}] {sm}")
-              time.sleep(0.15)
-
-          print(f"표본 {len(recent)} · 읽힘 {okread} · 암호 {enc} · 실패 {fail}")
-          print(f"표로 읽힌 종목 {hit}/{okread} · 그중 금액까지 {withrev}")
-          if months:
-              months.sort()
-              print(f"종목당 달 수: 가운뎃값 {months[len(months)//2]} · 최소 {months[0]} · 최대 {months[-1]} · 합계 {sum(months)}")
-          print("--- 읽힌 것 ---")
-          for x in good: print("  ", x)
-          print("--- 못 읽은 것 ---")
-          for x in bad: print("  ", x)
+              cand = []
+              for cells in table:
+                  k = sum(1 for _x, t in cells if MONTHCELL.match(
+                      montable._norm(t)))
+                  if k:
+                      cand.append((k, cells))
+              hits3 = [c for c in cand if c[0] >= 3]
+              tag = "머리후보있음" if hits3 else ("달칸1~2개" if cand else "달칸없음")
+              why[tag] += 1
+              print(f"── {r['code']} {r['title'][:34]} · 줄 {len(table)} · {tag}")
+              shown = 0
+              for cells in table:
+                  line = " | ".join(t for _x, t in cells)
+                  if ANYMONTH.search(montable._norm(line)) and shown < 4:
+                      print(f"     [{len(cells):2d}칸] {line[:130]}")
+                      shown += 1
+              time.sleep(0.12)
+          print()
+          print("까닭:", dict(why))
           EOF
