@@ -1,7 +1,5 @@
 # 소스를 떠보는 자리. 결과만 로그로 보고 아무것도 커밋하지 않는다.
-#
-# **dispatch 전용이다.** EDINET DB 무료 키가 하루 100건이라, push 로도 걸려
-# 있으면 파일을 고칠 때마다 예산이 새어 나간다. 손으로 한 번만 돌린다.
+# **dispatch 전용이다.**
 name: 소스 접근 확인
 
 on:
@@ -11,19 +9,111 @@ jobs:
   probe:
     runs-on: ubuntu-latest
     timeout-minutes: 14
-    env:
-      EDINETDB_KEY: ${{ secrets.EDINETDB_KEY }}
-      SEC_UA: 'Earning Samurai Calendar (cbpark@wisdomasset.co.kr)'
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
         with:
           python-version: '3.12'
 
-      # 36차 — 35차에서 `?period=quarterly` 가 분기를 준다는 것까지 확인했다
-      # (아식스 223행 · quarter 칸 · valueBasis=ytd). 이제 **값을 눈으로 본다** —
-      # 35차는 220자에서 잘라 찍는 바람에 정작 quarter·revenue 가 안 보였다.
-      # 새 수집기의 --probe 를 그대로 쓴다(예산 1건).
-      - name: 🗾 아식스 분기 부문 원문 (36차 · 예산 1건)
-        timeout-minutes: 8
-        run: python scrape_seg_jp_edinetdb.py --probe
+      # 37차 — TDnet 목록에 **월차(月次)** 가 어떤 모습으로 오나.
+      # 물음 넷:
+      #   1) 제목이 어떻게 생겼나 · 몇 건이나 되나
+      #   2) 첨부 링크(href)가 목록 줄에 같이 오나 — 지금 파서는 버린다
+      #   3) 테스트 7종목이 실제로 잡히나
+      #   4) 첨부가 PDF 인가 HTML 인가 (숫자 뽑기 가능성)
+      - name: 🗾 TDnet 월차 공시 떠보기 (37차)
+        timeout-minutes: 12
+        run: |
+          python - <<'EOF'
+          import re, time, urllib.request, urllib.error
+          from collections import Counter
+          from datetime import date, timedelta
+
+          UA = ("Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 "
+                "(KHTML, like Gecko) Chrome/124.0 Safari/537.36")
+          LIST = "https://www.release.tdnet.info/inbs/I_list_{p:03d}_{d}.html"
+          # 지금 쓰는 정규식에 href 를 더 잡게 넓힌 것
+          ROW = re.compile(
+              r'<td class="[^"]*kjTime"[^>]*>(?P<time>[^<]*)</td>\s*'
+              r'<td class="[^"]*kjCode"[^>]*>(?P<code>[^<]*)</td>\s*'
+              r'<td class="[^"]*kjName"[^>]*>(?P<name>[^<]*)</td>\s*'
+              r'<td class="[^"]*kjTitle"[^>]*>(?P<cell>.*?)</td>', re.S)
+          HREF = re.compile(r'href="([^"]+)"')
+          TAGS = re.compile(r"<[^>]+>")
+          SECT = re.compile(r"^[ＰＳＧＥEPSG][－\-]\s*")
+
+          def get(url, timeout=30):
+              req = urllib.request.Request(url, headers={
+                  "User-Agent": UA, "Accept": "*/*", "Accept-Language": "ja,en;q=0.8"})
+              try:
+                  with urllib.request.urlopen(req, timeout=timeout) as r:
+                      return r.read(), r.status, r.headers.get("Content-Type", "")
+              except urllib.error.HTTPError as e:
+                  return None, e.code, ""
+
+          # 월차로 보이는 제목을 넓게 잡아 본다 — 좁히는 건 실물을 보고 한다
+          WIDE = re.compile(r"月次|月別|売上速報|既存店|全店|営業[速概]報|月商")
+          TEST = {"7685", "3093", "3046", "3563", "4680", "6036", "9843"}
+
+          days = []
+          d = date(2026, 9, 18)
+          while len(days) < 9:
+              if d.weekday() < 5:
+                  days.append(d.strftime("%Y%m%d"))
+              d -= timedelta(days=1)
+
+          hits, titles, by_code, hrefs = 0, Counter(), Counter(), []
+          total_rows = 0
+          for day in days:
+              page, nrow = 1, 0
+              while page <= 40:
+                  body, st, _ = get(LIST.format(p=page, d=day))
+                  if body is None:
+                      break
+                  txt = body.decode("utf-8", "replace")
+                  rows = list(ROW.finditer(txt))
+                  if not rows:
+                      break
+                  nrow += len(rows)
+                  for m in rows:
+                      g = m.groupdict()
+                      title = TAGS.sub("", g["cell"]).replace("　", " ").strip()
+                      code = g["code"].strip()[:4]
+                      if not WIDE.search(title):
+                          continue
+                      hits += 1
+                      titles[title[:46]] += 1
+                      by_code[code] += 1
+                      h = HREF.search(g["cell"])
+                      if len(hrefs) < 8 and h:
+                          hrefs.append((code, SECT.sub("", TAGS.sub("", g["name"]).strip()),
+                                        g["time"].strip(), title[:50], h.group(1)))
+                  page += 1
+                  time.sleep(0.4)
+              total_rows += nrow
+              print(f"{day}: 줄 {nrow}", flush=True)
+
+          print(f"\n== 전체 {total_rows}줄 중 월차 낌새 {hits}건")
+          print("\n-- 제목 상위 25 --")
+          for t, c in titles.most_common(25):
+              print(f"  {c:3d}  {t}")
+          print(f"\n-- 월차를 낸 종목 {len(by_code)}개 · 상위 15 --")
+          print("  ", dict(by_code.most_common(15)))
+          print(f"\n-- 테스트 7종목 중 잡힌 것: {sorted(TEST & set(by_code))}")
+          print(f"   못 잡은 것: {sorted(TEST - set(by_code))}")
+
+          print("\n-- 첨부 링크 생김새 --")
+          for c, n, t, ti, h in hrefs:
+              print(f"  {c} {n[:14]:16s} {t} | {ti}")
+              print(f"      href={h}")
+
+          # 첨부 하나를 실제로 받아 본다
+          if hrefs:
+              h = hrefs[0][4]
+              url = h if h.startswith("http") else "https://www.release.tdnet.info/inbs/" + h
+              body, st, ct = get(url, timeout=60)
+              print(f"\n-- 첨부 받기: {url}")
+              print(f"   HTTP {st} · {ct} · {len(body) if body else 0:,}바이트")
+              if body:
+                  print(f"   머리 16바이트: {body[:16]!r}")
+          EOF
