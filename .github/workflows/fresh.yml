@@ -130,7 +130,7 @@ jobs:
             # 첨부는 종목마다 200KB 라 따로 뗀다. 한 번 뜯어 본 공시는 주소로
             # 건너뛰므로, 따라잡은 뒤에는 하루 몇 건이 전부다. 첨부는 한 달쯤만
             # 남으므로 새 공시부터 본다 — 늦게 보면 영영 못 받는다.
-            MON_PDF_PER_RUN=40 timeout 150 python scrape_mon_jp.py || true
+            MON_PDF_PER_RUN=80 timeout 170 python scrape_mon_jp.py || true
             # 미국 8-K 와 일본 보관창 백필(부문·가이던스·설명 되훑기)은 열 바퀴
             # (30분)에 한 번 — 새 발표는 위의 오늘치가 이미 잡는다.
             # 45일 = TDnet 보관창 전체. 판(SEG_JP_VER 등)을 올리면 이 창 안의

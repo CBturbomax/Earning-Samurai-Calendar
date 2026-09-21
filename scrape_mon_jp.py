@@ -41,7 +41,7 @@ PARSE_VER = 2
 
 UA = ("Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 "
       "(KHTML, like Gecko) Chrome/124.0 Safari/537.36")
-PER_RUN = int(os.environ.get("MON_PDF_PER_RUN", "40"))
+PER_RUN = int(os.environ.get("MON_PDF_PER_RUN", "80"))
 PAUSE = 0.35
 
 
@@ -146,9 +146,20 @@ def main():
         return
     by, done, skip = load()
 
-    # **새 공시부터** 본다. 첨부는 한 달쯤만 남으므로 늦게 보면 영영 못 받는다.
-    todo = [r for r in sorted(rows, key=lambda r: r["date"], reverse=True)
+    # **시총 큰 회사부터** 본다. 화면이 시총 5,000억원 이상으로 열리므로 거기
+    # 뜨는 회사가 먼저 채워져야 한다. 그다음이 새 공시다 — 첨부는 한 달쯤만
+    # 남으므로 밀린 것은 늦게 보면 영영 못 받는다. 밀린 양이 이백여 건뿐이라
+    # 몇 바퀴면 어차피 다 훑지만, 그 몇 바퀴 사이에 무엇이 먼저 보이느냐는
+    # 다르다.
+    try:
+        caps = json.loads((HERE / "data" / "caps.json").read_text(encoding="utf-8"))
+        caps = caps.get("caps", caps)
+    except (ValueError, OSError):
+        caps = {}
+    todo = [r for r in rows
             if r.get("doc") and r["doc"] not in done and r["doc"] not in skip]
+    todo.sort(key=lambda r: (-(caps.get("jp:" + r["code"]) or 0), r["date"]),
+              reverse=False)
     print(f"월매출 공시 {len(rows)}건 · 아직 안 뜯은 것 {len(todo)}건 "
           f"· 이번에 {min(len(todo), PER_RUN)}건")
 
