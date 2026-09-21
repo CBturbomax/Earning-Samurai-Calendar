@@ -120,7 +120,7 @@ h2 .n { color:var(--a3); margin-right:10px; }
   border-radius:8px; padding:14px 20px; margin:14px 0; color:#c9d6e0; font-size:19px;
 }
 
-/* ── 월차(月次) ────────────────────────────────────────────── */
+/* ── 월매출(月次) ────────────────────────────────────────────── */
 .mn { border:1px solid var(--line); border-radius:10px; overflow:hidden; }
 .mn .mr {
   display:flex; gap:14px; align-items:baseline; padding:11px 16px;
@@ -532,7 +532,7 @@ svg.bars rect.b:hover { fill:var(--a3); }
 <body>
 <div class="wrap">
 
-<div class="topline"><span class="fl fl-us" role="img" aria-label="미국"></span> 미국 <b>8,170</b> · <span class="fl fl-jp" role="img" aria-label="일본"></span> 일본 <b>4,659</b> · <span class="fl fl-hk" role="img" aria-label="홍콩"></span> 홍콩 <b>8,888</b> · 합계 <b>21,717건</b> · 수집 <b>2025-07-09 ~ 2026-11-20</b> · 갱신 2026-09-21 11:48 KST</div>
+<div class="topline"><span class="fl fl-us" role="img" aria-label="미국"></span> 미국 <b>8,170</b> · <span class="fl fl-jp" role="img" aria-label="일본"></span> 일본 <b>4,659</b> · <span class="fl fl-hk" role="img" aria-label="홍콩"></span> 홍콩 <b>8,888</b> · 합계 <b>21,717건</b> · 수집 <b>2025-07-09 ~ 2026-11-20</b> · 갱신 2026-09-21 11:59 KST</div>
 <h1><span class="mark" aria-hidden="true"></span>Earning <span class="jp">Samurai</span>
     <span class="byline">by CB</span></h1>
 <p class="sub">미국 · 일본 · 홍콩 주간 실적발표 일정 — 누가 언제 무엇을 발표했는지</p>
@@ -569,10 +569,10 @@ svg.bars rect.b:hover { fill:var(--a3); }
   <button class="btn" id="fitBtn" hidden></button>
 </div>
 
-<h2><span class="n">2</span>🇯🇵 월차(月次) 공시 <span class="meta" id="mnMeta"></span></h2>
+<h2><span class="n">2</span>🇯🇵 일본 월매출 <span class="meta" id="mnMeta"></span></h2>
 <div class="note" id="mnNote"></div>
 <div class="tools">
-  <input type="search" id="mnQ" placeholder="회사·코드·제목 검색 — 뷰셀 / 7685 / 月次" autocomplete="off">
+  <input type="search" id="mnQ" placeholder="회사·코드·제목 검색 — 뷰셀 / 7685 / 라운드원 / 月次" autocomplete="off">
   <select id="mnPer"><option value="">전체 대상월</option></select>
   <label class="chk"><input type="checkbox" id="mnBig">주목종목만</label>
   <span class="count" id="mnCnt"></span>
@@ -1094,14 +1094,14 @@ function renderCal() {
 }
 
 /* ── 주목종목 그룹 ────────────────────────────────────────── */
-/* ── 월차(月次) ──────────────────────────────────────────────────
+/* ── 월매출(月次) ──────────────────────────────────────────────────
    일본 회사가 분기 실적과 **별개로** 매달 내는 매출·KPI 속보. 여기 담긴 것은
    '언제 무엇을 냈나'이고 숫자는 첨부 PDF 안에 있다 — 그 PDF 가 CID 인코딩이라
    표준 라이브러리로는 글자가 안 나와서, 숫자를 지어내지 않고 링크를 건다.
    줄 모양: [날짜, 시각, 코드, 한글명, 원문명, 대상월, 달정확도, 제목, 첨부, 시총] */
 const MN = D.monthly || [];
 
-/* 다음 발표일 어림. **확정이 아니라 예상이다** — 회사가 월차 예정일을 공식으로
+/* 다음 발표일 어림. **확정이 아니라 예상이다** — 회사가 월매출 예정일을 공식으로
    내는 일은 드물어서 과거 발표일의 패턴으로 짚는다. 발표일이 셋은 쌓여야 한다
    (둘로는 우연과 규칙을 못 가른다). 주말에 떨어지면 다음 평일로 민다. */
 function mnNext(dates) {
@@ -1133,7 +1133,7 @@ function renderMonthly() {
     host.innerHTML = '';
     if (note) note.innerHTML =
       '아직 수집하지 않았습니다. <code>scrape_jp_tdnet.py</code> 가 결산단신을 ' +
-      '훑는 그 목록에서 월차도 같이 건집니다.';
+      '훑는 그 목록에서 월매출도 같이 건집니다.';
     if (meta) meta.textContent = '';
     return;
   }
@@ -1143,9 +1143,11 @@ function renderMonthly() {
       MN.length.toLocaleString() + '건';
   if (note) note.innerHTML =
     '일본 회사가 분기 실적과 <b>따로</b> 매달 내는 매출·KPI 속보입니다 ' +
-    '(TDnet 적시공시). 담긴 것은 <b>언제 무엇을 냈나</b>이고, 숫자는 첨부 PDF 안에 ' +
-    '있어 링크로 겁니다 — 없는 값을 지어 넣지 않습니다. ' +
-    '월차는 <b>의무가 아니라 회사 선택</b>이라 내지 않는 회사도 많습니다. ' +
+    '(TDnet 적시공시 — 올라오는 종목을 <b>가리지 않고 전부</b> 담습니다). ' +
+    '담긴 것은 <b>언제 무엇을 냈나</b>이고, 매출 숫자는 첨부 PDF 안에 있어 ' +
+    '<b>원문</b> 링크로 겁니다 — 없는 값을 지어 넣지 않습니다. ' +
+    '월매출은 <b>의무가 아니라 회사 선택</b>이라 아예 안 내거나 자사 IR 에만 ' +
+    '올리는 회사도 많습니다(니토리·스시로가 그렇습니다). ' +
     'TDnet 목록이 한 달쯤만 남으므로 이력은 <b>여기 쌓인 만큼</b>이고 돌수록 길어집니다.';
 
   const sel = document.getElementById('mnPer');
@@ -1163,8 +1165,8 @@ function renderMonthly() {
 
   // 종목별 발표일 이력 — 다음 발표일을 짚는 데 쓴다.
   // **대상월마다 한 번만 센다.** 한 달에 두 번 내는 회사가 있어서(8798 은
-  // 월차와 별도 KPI 를 따로 낸다) 그냥 쌓으면 날짜 간격이 들쭉날쭉해지고
-  // 예상일이 엉뚱해진다. 그 달의 **첫 발표**가 그 회사의 월차 주기다.
+  // 월매출와 별도 KPI 를 따로 낸다) 그냥 쌓으면 날짜 간격이 들쭉날쭉해지고
+  // 예상일이 엉뚱해진다. 그 달의 **첫 발표**가 그 회사의 월매출 주기다.
   const firstOf = new Map();
   for (const m of MN) {
     const k = m[2] + '|' + m[5];
@@ -1837,7 +1839,7 @@ document.addEventListener('click', e => {
   const grow = e.target.closest('.grow');
   if (grow) { openModal(grow.dataset.key, grow.dataset.date); return; }
 
-  // 월차 줄 — 캘린더에 오른 종목이면 상세창을 연다. 원문 링크는 그대로 둔다.
+  // 월매출 줄 — 캘린더에 오른 종목이면 상세창을 연다. 원문 링크는 그대로 둔다.
   const mrow = e.target.closest('.mr[data-mkey]');
   if (mrow && !e.target.closest('.mpdf')) {
     openModal(mrow.dataset.mkey, mrow.dataset.mdate);
