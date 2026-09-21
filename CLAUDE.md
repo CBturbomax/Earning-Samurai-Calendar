@@ -10,6 +10,7 @@ GitHub Pages로 그대로 서비스한다. 서버·빌드툴·의존 패키지�
 ```
 scrape.py      ──> data/earnings.json     ┐   '언제 발표하나'
 scrape_jp_tdnet.py ─> earnings_jp_past.json│   (일본은 소스가 셋이다)
+                 └─> monthly_jp.json      │   '이번 달 얼마 팔았나'(월차)
 scrape_jp_sched.py ─> earnings_jp_sched.json│
 scrape_us.py   ──> data/earnings_us.json  │
 scrape_hk.py   ──> data/earnings_hk.json  │
@@ -91,6 +92,7 @@ python scrape_desc.py                       # 사업 설명 원문
 | 일본·홍콩 실적 수치 | `scrape_fin_intl.py`, 일본 당일치는 `scrape_fin_jp.py` |
 | 부문별 매출 | 미국 `scrape_seg_sec.py`(뼈대)·`scrape_seg_edgar.py`(최근 분기)·`scrape_seg_fpi.py`(외국 기업) · 일본 `scrape_fin_jp.py` · 홍콩 `scrape_seg_hk.py` |
 | 일본 부문 **연간** 이력(수집만, 화면엔 안 냄) | `scrape_seg_jp_edinetdb.py` |
+| 일본 **월차(月次)** 공시 | 수집은 `scrape_jp_tdnet.py` 의 `is_monthly`/`monthly_period`, 화면은 `build.py` 의 `load_monthly`/`renderMonthly` |
 | 부문 이름 한글 표기 | `markets.py`의 `SEG_KO_FULL`/`SEG_KO_EN`/`SEG_KO_CJK` — 옮기기는 `build.py`의 `seg_ko` |
 | 부문을 어느 축으로 가를까 | `scrape_seg_sec.py`의 `axis_rank` / `AXIS_KO` |
 | 회사 사업 설명(한국어) | `descriptions.py`의 `DESC_KO` — 원문 수집은 `scrape_desc.py` |
@@ -272,6 +274,42 @@ TDnet 목록에는 **실제 공시 시각**이 찍혀 있다(`15:00`). 일본에
 않는다(날짜는 더 오래되기만 하므로 다시 나타날 일이 없다).
 
 이 경로로 메워지는 것은 최근 한 달 남짓이고 그 앞은 여전히 구멍이다.
+
+**월차(月次)도 같은 목록에서 같이 건진다 — 요청을 한 번도 더 하지 않는다.**
+일본 회사 상당수가 분기 실적과 **별개로** 매달 매출·KPI 를 적시공시로 낸다.
+실측(2026-09, 30영업일): **208건 · 161개사**, 그중 달마다 내는 회사가 45곳.
+목록을 어차피 전 줄 훑으므로 `scrape_jp_tdnet.py` 가 결산단신을 거르는 그
+반복문에서 월차 줄도 같이 담아 `data/monthly_jp.json` 에 쓴다(부문을 결산단신
+zip 에서 같이 뽑는 것과 같은 규칙 — 남의 서버를 두 배로 두드릴 이유가 없다).
+
+- **제목에 통일된 형식이 없다.** 실측한 36건이 전부 제각각이었다 —
+  「2026年８月月次に関するお知らせ」(7685) · 「月次リユース売上高（速報）」 ·
+  「事業KPI 2026年9月期 8月度月次情報」. 그래서 한 꼴을 잡는 대신 **'月次' 같은
+  강한 낱말** 아니면 **'N월' + 매출/실적 낱말**로 가른다(`is_monthly`).
+  **라운드원(4680)이 이 규칙을 만들게 한 회사다** — 「第47期（2027年３月期）
+  ８月の売上の状況に関するお知らせ（速報）」 는 월차인데 제목에 '月次' 가 아예
+  없다. '月次' 만 찾던 시절에는 통째로 새어나갔다. 반대로 「業績予想の修正」 은
+  '業績' 때문에 낱말 규칙에 걸리므로 `MON_SKIP` 이 먼저 쳐낸다.
+  규칙을 고칠 때는 **실제 제목 양성 36건·음성 15건에 부딪혀 보고** 고친다.
+- **보고 대상 달은 「N月期」 를 피해서 읽는다.** 「2027年5月期 月次売上（8月度）」
+  에서 집어야 하는 것은 8이지 5가 아니다(5月期 는 결산기말). 그래서 「月度」·
+  「月分」 을 먼저 보고 그다음에 `(?!期)` 를 건 맨 달을 본다. 제목에 달이 아예
+  없으면(「月次リユース売上高（速報）」) 발표일의 전달로 어림하고 **어림했다고
+  적어 둔다**(`pok:0`) — 발표 시각에 쓰는 `시각정확도` 와 같은 규칙이다.
+- **숫자는 안 담는다.** 알맹이는 첨부 PDF 안에 있는데 그 PDF 가 CID 인코딩이라
+  (ToUnicode CMap 이 필요하다) 표준 라이브러리로는 글자가 안 나온다 — 실제로
+  뜯어 보니 풀린 문자열이 `(en-US)`·`( )` 따위뿐이었다. 그래서 **지어내지 않고
+  링크를 건다.** 회원님이 눌러 원문을 본다. 숫자까지 담으려면 CID/ToUnicode
+  해독기를 먼저 써야 하고, 그건 회사마다 다른 표 배치 파싱이 또 뒤에 붙는다.
+- **의무가 아니라 회사 선택이다.** 스시로(3563)·니토리(9843)는 45일 동안 월차를
+  한 건도 안 냈다 — 자사 IR 페이지에만 올리는 회사가 많다. 안 나온다고 수집
+  구멍이 아니다. 화면 설명에 그렇게 적어 두었다.
+- **쌓아 두고 지우지 않는다.** TDnet 목록은 한 달쯤만 남아 창 밖으로 밀려난
+  달은 어느 길로도 다시 못 받는다. 이력은 여기 쌓인 만큼이고 돌수록 길어진다
+  (홍콩 부문 비중 스냅샷과 같은 이치). **이미 받아둔 날을 0건으로 덮지 않는다.**
+- **다음 발표일은 '예상'이라고 적는다.** 월차는 공식 예정일을 내는 회사가 드물어
+  과거 발표일의 패턴(날짜 중앙값)으로 짚고, 주말이면 다음 평일로 민다. 발표일이
+  **셋은 쌓여야** 짚는다 — 둘로는 우연과 규칙을 못 가른다. 확정처럼 적지 말 것.
 
 **발표 시각은 미국과 (TDnet 을 거친) 일본에 있다.** 나스닥 소스가 장전(BMO)/장후(AMC)를
 주고, TDnet 은 실제 공시 시각을 준다. 닛케이 예정과 홍콩 이사회 일정에는 없다.
@@ -738,7 +776,7 @@ HPE 가 Compute·Storage·Intelligent Edge 를 Cloud&AI·Networking 으로 바�
 
 | 워크플로 | 주기 | 쓰는 파일 |
 |---|---|---|
-| `fresh.yml` | **3분 루프** | `data/earnings_jp_past.json` · `data/financials_jp.json` · `data/segments_jp.json` · `data/briefs_jp.json` · `data/briefs_us.json` |
+| `fresh.yml` | **3분 루프** | `data/earnings_jp_past.json` · `data/monthly_jp.json` · `data/financials_jp.json` · `data/segments_jp.json` · `data/briefs_jp.json` · `data/briefs_us.json` |
 | `collect.yml` | **5분**(크론 하한) | `data/earnings.json` · `data/earnings_jp_sched.json` · `data/earnings_us.json` · `data/earnings_hk.json` · `data/caps.json` |
 | `numbers.yml` | **5분**(크론 하한) | `data/financials.json` · `data/financials_intl.json` · `data/segments.json` · `data/segments_hk.json` · `data/desc.json` |
 | `segments.yml` | 30분 | `data/segments_sec.json` · `data/segments_edgar.json` · `data/segments_fpi.json` · `data/financials_fpi.json` |
