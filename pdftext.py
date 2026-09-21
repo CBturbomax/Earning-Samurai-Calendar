@@ -69,18 +69,19 @@ STREAM_KW = re.compile(rb"\bstream\r?\n")
 LEN_RE = re.compile(rb"/Length\s+(\d+)(?!\s+\d+\s+R)")
 
 
-def _objects(buf: bytes, crypt=None):
-    """번호 -> (사전 바이트, 푼 스트림 바이트 또는 None).
+def _objects(buf: bytes):
+    """번호 -> (사전 바이트, 푼 스트림, 원문 스트림, 세대).
 
     **`endobj` 로 잘라서는 안 된다.** 압축된 스트림 안에 그 바이트열이 그대로
     들어 있는 일이 흔해서, 그러면 몸통이 앞에서 잘려 `endstream` 을 못 찾는다.
-    길이가 `/Length 1234` 로 직접 적혀 있으면 그것을 쓰고, 간접 참조라
-    당장 못 읽으면 `endstream` 을 찾는다. 울타리는 **다음 객체 머리**다.
+    길이가 `/Length 1234` 로 직접 적혀 있으면 그것을 쓰고, 간접 참조라 당장
+    못 읽으면 `endstream` 을 찾는다. 울타리는 **다음 객체 머리**다.
+
+    암호는 **여기서 풀지 않는다.** 파이썬으로 짠 AES 는 느려서 한 공시의
+    스트림을 전부 풀면 몇 분이 걸린다 — 실제로 수집기가 40건에 12분을 넘겨
+    잘렸다. 우리가 읽는 것만 나중에 골라 푼다(`_need`).
     """
     objs = {}
-    # 울타리는 **다음 객체 머리가 시작하는 자리**다. 앞서 한 번 '머리의 끝에서
-    # 40 을 뺀 자리'로 잡았는데, 짧은 객체에서는 그 값이 지금 객체의 시작보다
-    # 앞이라 몸통이 통째로 빈 문자열이 됐다(자체 시험에서 잡혔다).
     starts = [(int(m.group(1)), int(m.group(2)), m.start(), m.end())
               for m in OBJ_RE.finditer(buf)]
     for i, (num, gen, head_at, pos) in enumerate(starts):
@@ -89,7 +90,7 @@ def _objects(buf: bytes, crypt=None):
         sm = STREAM_KW.search(region)
         if not sm:
             end = region.find(b"endobj")
-            objs[num] = (region[:end if end > 0 else len(region)], None)
+            objs[num] = (region[:end if end > 0 else len(region)], None, b"", gen)
             continue
         head = region[:sm.start()]
         body = region[sm.end():]
@@ -103,43 +104,16 @@ def _objects(buf: bytes, crypt=None):
             e = body.find(b"endstream")
             raw = body[:e if e > 0 else len(body)]
         f = FILTER_RE.search(head)
-        flate = bool(f and b"Flate" in f.group(1))
-        # **암호가 걸렸으면 풀고 나서 압축을 푼다.** 차례가 바뀌면 zlib 이
-        # 쓰레기를 받아 빈 결과를 내고, 화면에서는 '글자가 없는 공시'와
-        # 구별되지 않는다.
-        #
-        # 다만 **읽을 것만 푼다.** 파이썬으로 짠 AES 는 256KB 에 2초라, 한
-        # 공시의 그림까지 다 풀면 단계가 시간을 넘겨 잘린다. 우리가 읽는 것은
-        # Flate 로 눌린 글자 스트림(내용·CMap·객체스트림)뿐이고 그림은 대개
-        # DCT/JPX 라 애초에 안 뜯는다.
-        if crypt and flate and b"/XRef" not in head and b"/Image" not in head \
-                and len(raw) <= 3_000_000:
-            raw = pdfcrypt.decrypt(crypt[0], crypt[1], num, gen, raw)
-        data = _inflate(raw) if flate else raw
-        objs[num] = (head, data)
+        data = _inflate(raw) if (f and b"Flate" in f.group(1)) else raw
+        objs[num] = (head, data, raw, gen)
     return objs
-
-
-def _load(buf: bytes):
-    """객체를 읽는다. 암호가 걸려 있으면 열쇠를 찾아 다시 읽는다.
-
-    열쇠는 문서 안의 값으로 계산된다 — 암호를 깨는 것이 아니라 규격대로
-    여는 것이다(`pdfcrypt`). **빈 사용자 암호**일 때만 열린다.
-    """
-    objs = _objects(buf)
-    body, fid = pdfcrypt.encrypt_dict(buf, objs)
-    if body:
-        key, cfm = pdfcrypt.file_key(body, fid)
-        if key:
-            objs = _objects(buf, (key, cfm))
-    return _expand_objstm(objs)
 
 
 def _expand_objstm(objs: dict):
     """객체 스트림을 풀어 안에 든 객체를 바깥과 같은 자리에 올린다.
-    안 풀면 폰트 사전이 통째로 안 보여 ToUnicode 를 못 찾는다."""
+    안 풀면 폰트·쪽 사전이 통째로 안 보여 아무것도 못 읽는다."""
     add = {}
-    for head, data in list(objs.values()):
+    for head, data, _raw, _gen in list(objs.values()):
         if not data or b"/ObjStm" not in head:
             continue
         m = re.search(rb"/N\s+(\d+)", head)
@@ -155,10 +129,77 @@ def _expand_objstm(objs: dict):
             except (IndexError, ValueError):
                 break
             nxt = int(nums[2 * i + 3]) if 2 * i + 3 < len(nums) else len(data) - first
-            add[num] = (data[first + off:first + nxt], None)
+            add[num] = (data[first + off:first + nxt], None, b"", 0)
     for k, v in add.items():
         objs.setdefault(k, v)
     return objs
+
+
+def _unlock(objs: dict, crypt, nums):
+    """고른 객체만 복호하고 다시 압축을 푼다. 차례는 **복호 -> 압축 풀기**다."""
+    key, cfm = crypt
+    for n in nums:
+        got = objs.get(n)
+        if not got or not got[2]:
+            continue
+        head, _old, raw, gen = got
+        if b"/XRef" in head or len(raw) > 3_000_000:
+            continue
+        try:
+            dec = pdfcrypt.decrypt(key, cfm, n, gen, raw)
+        except Exception:                      # noqa: BLE001
+            continue
+        f = FILTER_RE.search(head)
+        objs[n] = (head, _inflate(dec) if (f and b"Flate" in f.group(1)) else dec,
+                   raw, gen)
+
+
+REF_ANY = re.compile(rb"(\d+)\s+\d+\s+R")
+
+
+def _need(objs: dict):
+    """우리가 실제로 읽는 스트림의 번호 — 쪽의 내용과 폰트의 ToUnicode 뿐이다.
+
+    공시 용량의 대부분은 그림이고 우리는 그것을 뜯지 않는다. 다 풀면 느려서
+    단계가 잘리므로 **읽을 것만** 고른다.
+    """
+    want = set()
+    for num, (head, _d, _r, _g) in objs.items():
+        if b"/Type" in head and b"/Page" in head and b"/Pages" not in head:
+            cm = CONTENTS_RE.search(head)
+            if cm:
+                want.update(int(x) for x in
+                            ([cm.group(1)] if cm.group(1)
+                             else REF_ANY.findall(cm.group(2) or b"")))
+            rm = RES_REF_RE.search(head)
+            if rm:
+                want.add(int(rm.group(1)))
+        tm = TOUNI_RE.search(head)
+        if tm:
+            want.add(int(tm.group(1)))
+    return want
+
+
+def _load(buf: bytes):
+    """객체를 읽는다. 암호가 걸려 있으면 열쇠를 찾아 **읽을 것만** 푼다.
+
+    열쇠는 문서 안의 값으로 계산된다 — 암호를 깨는 것이 아니라 규격대로
+    여는 것이다(`pdfcrypt`). **빈 사용자 암호**일 때만 열린다.
+    """
+    objs = _objects(buf)
+    body, fid = pdfcrypt.encrypt_dict(buf, objs)
+    if body:
+        key, cfm = pdfcrypt.file_key(body, fid)
+        if key:
+            # 사전은 암호가 안 걸린다(스트림과 문자열만 걸린다). 그래서 객체
+            # 스트림만 먼저 풀면 쪽·폰트 사전이 다 보이고, 그다음 읽을
+            # 스트림만 고르면 된다.
+            _unlock(objs, (key, cfm),
+                    [n for n, (h, _d, _r, _g) in objs.items() if b"/ObjStm" in h])
+            objs = _expand_objstm(objs)
+            _unlock(objs, (key, cfm), _need(objs))
+            return objs
+    return _expand_objstm(objs)
 
 
 def _parse_cmap(data: bytes):
@@ -265,7 +306,7 @@ def _widths(objs: dict, num: int, head: bytes):
 def _fonts(objs: dict):
     """폰트 객체 번호 -> (CID 표, 코드 바이트 수, 글자폭 표, 기본폭)."""
     out = {}
-    for num, (head, _) in objs.items():
+    for num, (head, _d, _r, _g) in objs.items():
         if b"/Font" not in head and not TOUNI_RE.search(head):
             continue
         if b"/Type0" not in head and b"/TrueType" not in head and \
@@ -463,7 +504,7 @@ def extract_cells(data: bytes, max_pages: int = 40):
     """
     objs = _load(data)
     fonts = _fonts(objs)
-    pages = [(num, head) for num, (head, _) in objs.items()
+    pages = [(num, head) for num, (head, _d, _r, _g) in objs.items()
              if b"/Type" in head and b"/Page" in head and b"/Pages" not in head]
     pages.sort()
     rows = []
