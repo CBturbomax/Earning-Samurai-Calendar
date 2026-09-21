@@ -1500,10 +1500,12 @@ def load_monthly(packed):
     """일본 **월매출(月次)** 공시 — `scrape_jp_tdnet.py` 가 결산단신과 같은 목록에서
     같이 건진 것. 회사가 분기 실적과 별개로 매달 내는 매출·KPI 속보다.
 
-    **여기서 오는 것은 '언제 무엇을 냈나'뿐, 숫자가 아니다.** 알맹이는 첨부 PDF
-    안에 있는데 그 PDF 가 CID 인코딩이라(ToUnicode CMap 필요) 표준 라이브러리로는
-    글자가 안 나온다 — 실측해 보니 풀린 문자열이 `(en-US)`·`( )` 따위뿐이었다.
-    그래서 **숫자를 지어내지 않고** 링크를 건다. 회원님이 눌러 원문을 본다.
+    **숫자도 같이 낸다.** 한동안 "PDF 가 CID 인코딩이라 못 읽는다"고 적어
+    두었는데, 그건 압축을 안 풀고 원문 바이트에서 괄호 문자열만 긁어 본 것이었다.
+    `pdftext.py` 가 Flate 를 풀고 폰트의 ToUnicode 표로 글자를 되살리며,
+    `montable.py` 가 달 이름표 줄을 찾아 값을 붙인다(`scrape_mon_jp.py`).
+    **못 읽은 공시는 숫자 없이 지나간다** — 그 종목은 지금처럼 링크만 걸린다.
+    암호가 걸린 공시(실측 70건 중 4건)와 표가 그림인 공시가 그렇다.
 
     한글 회사명은 캘린더에 이미 오른 종목이면 그쪽 것을 그대로 쓴다 — TDnet 이
     주는 이름은 줄임말이라(`ＢＵＹＳＥＬＬ`) 따로 변환하면 같은 회사가 화면
@@ -1533,6 +1535,38 @@ def load_monthly(packed):
                     r.get("title", ""), r.get("doc", ""),
                     CAPS.get("jp:" + code, 0)])
     out.sort(key=lambda x: (x[0], -x[9], x[2]), reverse=False)
+    return out
+
+
+def load_monthly_nums():
+    """월매출의 **달별 수치** — `scrape_mon_jp.py` 가 첨부 PDF 표에서 읽은 것.
+
+    회사마다 {달: [매출(엔), 전년동월비(%)]} 로 내려보낸다. 둘 중 하나만
+    있는 달이 흔하다 — 금액 없이 전년비만 내는 회사가 많다(소매업이 특히).
+    없는 값은 `null` 로 두고 화면이 그대로 비워 둔다. 지어 채우지 않는다.
+    """
+    p = HERE / "data" / "monthly_nums_jp.json"
+    if not p.exists():
+        return {}
+    try:
+        got = json.loads(p.read_text(encoding="utf-8"))
+    except (ValueError, OSError) as e:
+        print(f"  ! monthly_nums_jp.json 읽기 실패: {e}")
+        return {}
+    out = {}
+    for code, rec in (got.get("codes") or {}).items():
+        months = rec.get("months") or {}
+        rows = [[k, v.get("rev"), v.get("yoy")] for k, v in sorted(months.items())]
+        if not rows:
+            continue
+        out[code] = {
+            "m": rows,
+            "lab": rec.get("amount_label", ""),
+            "ylab": rec.get("yoy_label", ""),
+            # 단위는 달마다 같다 — 마지막 것을 대표로 쓴다.
+            "unit": next((v.get("unit") for v in reversed(list(months.values()))
+                          if v.get("unit")), ""),
+        }
     return out
 
 
@@ -1667,6 +1701,7 @@ def build():
             notable[m + ":" + code] = list(v)
 
     monthly = load_monthly(packed)
+    monthly_nums = load_monthly_nums()
     per_day = Counter(p[0] for p in packed)
     notable_hits = sum(1 for p in packed if p[9] + ":" + p[1] in notable)
     all_ok = sorted({d for m in ok_days for d in ok_days[m]})
@@ -1834,6 +1869,7 @@ def build():
         # 일본 월매출(月次). [날짜, 시각, 코드, 한글명, 원문명, 대상월, 달정확도,
         #                  제목, 첨부, 시총] — 숫자가 아니라 '무엇을 언제 냈나'다.
         "monthly": monthly,
+        "monthlyNum": monthly_nums,
     }
 
     # **러너는 UTC 로 돈다.** 예전에는 datetime.now() 에 "KST" 만 붙였는데,
@@ -1878,8 +1914,12 @@ def build():
     if monthly:
         mcodes = {m[2] for m in monthly}
         mper = {m[5] for m in monthly}
+        nm = sum(len(v["m"]) for v in monthly_nums.values())
+        nrev = sum(1 for v in monthly_nums.values() for r in v["m"] if r[1] is not None)
         print(f"  🇯🇵 월매출 {len(monthly):,}건 / {len(mcodes):,}개사 / "
               f"{len(mper)}개월치")
+        print(f"     수치 {len(monthly_nums):,}개사 / {nm:,}개월 "
+              f"(금액 {nrev:,} · 나머지는 전년비만)")
     print(f"  합계 {len(packed):,}건 / 주목 {notable_hits:,}건 / {len(weeks)}주")
     if per_day:
         busiest = max(per_day.items(), key=lambda kv: kv[1])
@@ -2005,30 +2045,34 @@ __FLAGCSS__
 }
 
 /* ── 월매출(月次) ────────────────────────────────────────────── */
-.mn { border:1px solid var(--line); border-radius:10px; overflow:hidden; }
-.mn .mr {
-  display:flex; gap:14px; align-items:baseline; padding:11px 16px;
-  border-bottom:1px solid #1c252d; font-size:19px; background:#0f1419;
-}
-.mn .mr:nth-child(even) { background:#12191f; }
-.mn .mr:last-child { border-bottom:0; }
-.mn .mr.hit { cursor:pointer; }
-.mn .mr.hit:hover { background:#1d2833; }
-.mn .md { color:var(--mute); flex:0 0 118px; font-variant-numeric:tabular-nums; }
-.mn .mc { color:#8fb8dc; font-weight:700; flex:0 0 58px; }
-.mn .mnm { font-weight:600; flex:0 0 220px; overflow:hidden;
-           text-overflow:ellipsis; white-space:nowrap; }
-.mn .mp {
-  flex:0 0 auto; background:#1b2b3a; color:var(--a3); border-radius:6px;
-  padding:2px 9px; font-size:16px; font-weight:700;
-}
-.mn .mp.guess { background:#2a2419; color:#d8b877; }
-.mn .mt { flex:1 1 auto; color:#c9d6e0; font-size:17px; overflow:hidden;
-          text-overflow:ellipsis; white-space:nowrap; }
-.mn .mpdf { flex:0 0 auto; color:var(--a3); font-size:16px; text-decoration:none;
-            border:1px solid var(--line); border-radius:6px; padding:3px 9px; }
-.mn .mpdf:hover { border-color:var(--a3); }
-.mn .mnx { color:#d8b877; font-size:16px; flex:0 0 auto; }
+.mn { display:flex; flex-direction:column; gap:12px; }
+.mcard { border:1px solid var(--line); border-radius:12px; background:var(--panel);
+         padding:12px 14px 6px; }
+.mcard.hit { cursor:pointer; }
+.mcard.hit:hover { border-color:#2f4457; }
+.mhd { display:flex; align-items:baseline; gap:12px; flex-wrap:wrap;
+       margin-bottom:4px; }
+.mhd .mc { color:#8fb8dc; font-weight:700; font-variant-numeric:tabular-nums; }
+.mhd .mnm { font-weight:700; font-size:19px; }
+.mhd .mnm i { font-style:normal; color:var(--mute); font-weight:500; font-size:16px;
+              border-bottom:1px dotted #3a4a59; }
+.mhd .mcap { color:var(--mute); font-size:16px; }
+.mhd .mlast { margin-left:auto; font-size:17px; font-variant-numeric:tabular-nums; }
+.mhd .mlast b { font-weight:700; }
+.mhd .up { color:#6fd39b; } .mhd .dn { color:#e2857f; }
+.mchart { display:block; width:100%; height:auto; }
+.mchart .bar { fill:#2f6ea8; } .mchart .bar.y { fill:#3d7f5c; }
+.mchart .bar.yn { fill:#8a4a46; }
+.mchart .lb { fill:#c9d6e0; font-size:13px; }
+.mchart .xl { fill:var(--mute); font-size:12px; }
+.mchart .xl.now { fill:#e8eef4; font-weight:700; }
+.mchart .zero { stroke:#33465a; stroke-width:1; }
+.mft { display:flex; gap:10px; align-items:center; color:var(--mute);
+       font-size:15px; padding:2px 0 6px; flex-wrap:wrap; }
+.mft .mpdf { color:var(--a3); text-decoration:none; border-bottom:1px dotted; }
+.mft .mnxt { color:#d8b877; }
+.mft .mguess { color:#d8b877; }
+
 
 /* ── 알림 배너 ─────────────────────────────────────────────── */
 
@@ -2456,9 +2500,14 @@ svg.bars rect.b:hover { fill:var(--a3); }
 <h2><span class="n">2</span>🇯🇵 일본 월매출 <span class="meta" id="mnMeta"></span></h2>
 <div class="note" id="mnNote"></div>
 <div class="tools">
-  <input type="search" id="mnQ" placeholder="회사·코드·제목 검색 — 뷰셀 / 7685 / 라운드원 / 月次" autocomplete="off">
-  <select id="mnPer"><option value="">전체 대상월</option></select>
-  <label class="chk"><input type="checkbox" id="mnBig">주목종목만</label>
+  <input type="search" id="mnQ" placeholder="회사·코드 검색 — 뷰셀 / 7685 / 라운드원" autocomplete="off">
+  <select id="mnCap">
+    <option value="0.5">시총 5,000억원 이상</option>
+    <option value="1">1조원 이상</option>
+    <option value="3">3조원 이상</option>
+    <option value="0">시총 가리지 않기</option>
+  </select>
+  <label class="chk"><input type="checkbox" id="mnNum" checked>수치 읽은 종목만</label>
   <span class="count" id="mnCnt"></span>
 </div>
 <div class="mn" id="mnList"></div>
@@ -2984,6 +3033,7 @@ function renderCal() {
    표준 라이브러리로는 글자가 안 나와서, 숫자를 지어내지 않고 링크를 건다.
    줄 모양: [날짜, 시각, 코드, 한글명, 원문명, 대상월, 달정확도, 제목, 첨부, 시총] */
 const MN = D.monthly || [];
+const MNUM = D.monthlyNum || {};
 
 /* 다음 발표일 어림. **확정이 아니라 예상이다** — 회사가 월매출 예정일을 공식으로
    내는 일은 드물어서 과거 발표일의 패턴으로 짚는다. 발표일이 셋은 쌓여야 한다
@@ -3008,6 +3058,74 @@ for (const r of D.rows) {
     mnDate.set(k, r[0]);
 }
 
+function mnFmtJPY(v) {
+  /* 엔 표기. 억 단위가 넘으면 억엔, 아니면 백만엔 — 일본 공시가 쓰는 단위다.
+     **원화로 환산하지 않는다.** 몇 달치를 오늘 환율로 바꾸면 매출 흐름이
+     아니라 환율 흐름이 된다(실적 차트와 같은 규칙). */
+  if (v == null) return '';
+  const a = Math.abs(v);
+  if (a >= 1e12) return (v / 1e12).toFixed(2) + '조엔';
+  if (a >= 1e8) return (v / 1e8).toFixed(a >= 1e10 ? 0 : 1) + '억엔';
+  if (a >= 1e6) return Math.round(v / 1e6).toLocaleString() + '백만엔';
+  return Math.round(v).toLocaleString() + '엔';
+}
+
+/* 달별 막대. 금액이 있으면 금액을 그리고 전년비를 막대 위에 적는다.
+   금액 없이 전년비만 내는 회사가 많아서(소매업이 특히), 그때는 100 을 기준선으로
+   놓고 **위아래로** 그린다 — 0 부터 그리면 95% 와 105% 가 거의 같은 높이가 되어
+   좋아졌는지 나빠졌는지가 안 보인다. */
+function mnChart(m) {
+  const n = m.length;
+  if (!n) return '';
+  const hasRev = m.some(r => r[1] != null);
+  const W = Math.max(520, n * 54), H = 132, L = 8, R = 8, T = 22, B = 22;
+  const step = (W - L - R) / n;
+  const cx = i => L + step * i + step / 2;
+  const bw = Math.min(30, step * 0.56);
+  let body = '';
+  if (hasRev) {
+    const mx = Math.max(...m.map(r => r[1] || 0), 1);
+    const base = H - B;
+    for (let i = 0; i < n; i++) {
+      const v = m[i][1];
+      if (v == null) continue;
+      const h = Math.max(1, (base - T) * (v / mx));
+      body += '<rect class="bar" x="' + (cx(i) - bw / 2).toFixed(1) + '" y="' +
+              (base - h).toFixed(1) + '" width="' + bw.toFixed(1) +
+              '" height="' + h.toFixed(1) + '" rx="2"/>';
+      const y = m[i][2];
+      body += '<text class="lb" x="' + cx(i).toFixed(1) + '" y="' +
+              (base - h - 5).toFixed(1) + '" text-anchor="middle">' +
+              (y != null ? y.toFixed(0) + '%' : mnFmtJPY(v)) + '</text>';
+    }
+  } else {
+    const dev = m.map(r => r[2] == null ? null : r[2] - 100);
+    const mx = Math.max(10, ...dev.filter(v => v != null).map(Math.abs));
+    const mid = T + (H - B - T) / 2;
+    body += '<line class="zero" x1="' + L + '" y1="' + mid.toFixed(1) +
+            '" x2="' + (W - R) + '" y2="' + mid.toFixed(1) + '"/>';
+    for (let i = 0; i < n; i++) {
+      const d = dev[i];
+      if (d == null) continue;
+      const h = (H - B - T) / 2 * (Math.abs(d) / mx);
+      const y = d >= 0 ? mid - h : mid;
+      body += '<rect class="bar ' + (d >= 0 ? 'y' : 'yn') + '" x="' +
+              (cx(i) - bw / 2).toFixed(1) + '" y="' + y.toFixed(1) +
+              '" width="' + bw.toFixed(1) + '" height="' +
+              Math.max(1, h).toFixed(1) + '" rx="2"/>';
+      body += '<text class="lb" x="' + cx(i).toFixed(1) + '" y="' +
+              (d >= 0 ? y - 4 : y + h + 12).toFixed(1) +
+              '" text-anchor="middle">' + m[i][2].toFixed(0) + '%</text>';
+    }
+  }
+  for (let i = 0; i < n; i++)
+    body += '<text class="xl' + (i === n - 1 ? ' now' : '') + '" x="' +
+            cx(i).toFixed(1) + '" y="' + (H - 6) + '" text-anchor="middle">' +
+            (+m[i][0].slice(5, 7)) + '월</text>';
+  return '<svg class="mchart" viewBox="0 0 ' + W + ' ' + H +
+         '" preserveAspectRatio="xMidYMid meet">' + body + '</svg>';
+}
+
 function renderMonthly() {
   const host = document.getElementById('mnList');
   if (!host) return;
@@ -3021,79 +3139,91 @@ function renderMonthly() {
     if (meta) meta.textContent = '';
     return;
   }
-  const codes = new Set(MN.map(m => m[2]));
-  const pers = [...new Set(MN.map(m => m[5]))].sort().reverse();
-  if (meta) meta.textContent = codes.size.toLocaleString() + '개사 · ' +
-      MN.length.toLocaleString() + '건';
+  const nMon = Object.keys(MNUM).length;
+  if (meta) meta.textContent = new Set(MN.map(m => m[2])).size.toLocaleString() +
+      '개사 · 수치 ' + nMon.toLocaleString() + '개사';
   if (note) note.innerHTML =
     '일본 회사가 분기 실적과 <b>따로</b> 매달 내는 매출·KPI 속보입니다 ' +
     '(TDnet 적시공시 — 올라오는 종목을 <b>가리지 않고 전부</b> 담습니다). ' +
-    '담긴 것은 <b>언제 무엇을 냈나</b>이고, 매출 숫자는 첨부 PDF 안에 있어 ' +
-    '<b>원문</b> 링크로 겁니다 — 없는 값을 지어 넣지 않습니다. ' +
-    '월매출은 <b>의무가 아니라 회사 선택</b>이라 아예 안 내거나 자사 IR 에만 ' +
-    '올리는 회사도 많습니다(니토리·스시로가 그렇습니다). ' +
-    'TDnet 목록이 한 달쯤만 남으므로 이력은 <b>여기 쌓인 만큼</b>이고 돌수록 길어집니다.';
-
-  const sel = document.getElementById('mnPer');
-  if (sel && sel.options.length <= 1)
-    for (const pv of pers) {
-      const o = document.createElement('option');
-      o.value = pv;
-      o.textContent = pv.slice(0, 4) + '년 ' + (+pv.slice(5, 7)) + '월분';
-      sel.appendChild(o);
-    }
+    '수치는 첨부 PDF 의 <b>표에서 직접 읽습니다</b> — 달 이름표 줄을 찾아 값을 ' +
+    '붙이고, 붙일 곳이 없으면 담지 않습니다. 암호가 걸렸거나 표가 그림인 공시는 ' +
+    '<b>숫자 없이</b> 원문 링크만 남습니다. 지어 넣지 않습니다. ' +
+    '금액 없이 <b>전년동월비만</b> 내는 회사가 많아, 그때는 100%를 기준선으로 ' +
+    '위아래로 그립니다. 월매출은 <b>의무가 아니라 회사 선택</b>이라 아예 안 내거나 ' +
+    '자사 IR 에만 올리는 회사도 많습니다(니토리·스시로가 그렇습니다). ' +
+    'TDnet 목록·첨부가 한 달쯤만 남으므로 이력은 <b>여기 쌓인 만큼</b>이고 ' +
+    '돌수록 길어집니다.';
 
   const q = (document.getElementById('mnQ').value || '').trim().toLowerCase();
-  const per = document.getElementById('mnPer').value;
-  const big = document.getElementById('mnBig').checked;
+  const capMin = +document.getElementById('mnCap').value;
+  const numBox = document.getElementById('mnNum');
+  // 아직 수치를 하나도 못 읽었으면 그 체크는 화면을 통째로 비운다. 켜 둔 채로
+  // 두면 "월매출이 사라졌다"로 보이므로, 그럴 때는 꺼서 목록이라도 보이게 한다.
+  if (!nMon) { numBox.checked = false; numBox.disabled = true; }
+  const numOnly = numBox.checked;
 
-  // 종목별 발표일 이력 — 다음 발표일을 짚는 데 쓴다.
-  // **대상월마다 한 번만 센다.** 같은 달을 두 번 내는 회사가 있다 — 8237 은
-  // 「8月売上速報」(9/1) 뒤에 「8月売上報告」(9/10) 를 또 내고, 7177 도 속보와
-  // 본보고를 따로 낸다. 그냥 쌓으면 간격이 들쭉날쭉해져 예상일이 엉뚱해진다.
-  // 그 달의 **첫 발표**가 그 회사의 월매출 주기다.
-  const firstOf = new Map();
+  // 종목별로 묶는다. 화면의 단위가 '공시 한 줄'이 아니라 '회사 하나'다.
+  const byCode = new Map();
   for (const m of MN) {
-    const k = m[2] + '|' + m[5];
-    if (!firstOf.has(k) || m[0] < firstOf.get(k)) firstOf.set(k, m[0]);
+    let c = byCode.get(m[2]);
+    if (!c) byCode.set(m[2], c = {code: m[2], ko: m[3], orig: m[4], cap: m[9],
+                                  rows: []});
+    c.rows.push(m);
+    if (m[9] > c.cap) c.cap = m[9];
   }
-  const hist = new Map();
-  for (const [k, day] of firstOf) {
-    const code = k.slice(0, k.indexOf('|'));
-    if (!hist.has(code)) hist.set(code, []);
-    hist.get(code).push(day);
+  const list = [];
+  for (const c of byCode.values()) {
+    // **시총을 모르는 종목은 통과시킨다.** 일본 시총은 따로 받아 붙이는 값이라
+    // 비어 있으면 '아직 못 받았다'는 뜻이다(markets.py 의 규칙과 같다).
+    if (capMin && c.cap && c.cap < capMin) continue;
+    if (numOnly && !MNUM[c.code]) continue;
+    if (q && !(c.code + ' ' + c.ko + ' ' + c.orig).toLowerCase().includes(q)) continue;
+    c.rows.sort((a, b) => a[0] < b[0] ? -1 : 1);
+    list.push(c);
   }
-  for (const v of hist.values()) v.sort();
+  list.sort((a, b) => (b.cap || 0) - (a.cap || 0));
+  document.getElementById('mnCnt').innerHTML =
+    '<b>' + list.length.toLocaleString() + '</b>개사';
 
-  const rows = MN.filter(m => {
-    if (per && m[5] !== per) return false;
-    if (big && !NOTE['jp:' + m[2]]) return false;
-    if (!q) return true;
-    return (m[2] + ' ' + m[3] + ' ' + m[4] + ' ' + m[7]).toLowerCase().includes(q);
-  }).slice().reverse();
-
-  document.getElementById('mnCnt').innerHTML = '<b>' + rows.length.toLocaleString() + '</b>건';
-
-  const seenNext = new Set();
-  host.innerHTML = rows.slice(0, 400).map(m => {
-    const key = 'jp:' + m[2], has = mnDate.has(m[2]);
-    const nx = seenNext.has(m[2]) ? null : mnNext(hist.get(m[2]) || []);
-    seenNext.add(m[2]);
-    const wd = '일월화수목금토'[parse(m[0]).getDay()];
-    return '<div class="mr' + (has ? ' hit' : '') + '"' +
-      (has ? ' data-mkey="' + esc(key) + '" data-mdate="' + esc(mnDate.get(m[2])) + '"' : '') +
-      '><span class="md">' + m[0].slice(5) + '(' + wd + ')' +
-      (m[1] ? ' ' + esc(m[1]) : '') + '</span>' +
-      '<span class="mc">' + esc(m[2]) + '</span>' +
-      '<span class="mnm">' + esc(m[3]) + (NOTE[key] ? ' ★' : '') + '</span>' +
-      '<span class="mp' + (m[6] ? '' : ' guess') + '" title="' +
-        (m[6] ? '제목에서 읽은 달' : '제목에 달이 없어 발표일에서 어림한 달') + '">' +
-        (+m[5].slice(5, 7)) + '월분' + (m[6] ? '' : '?') + '</span>' +
-      '<span class="mt">' + esc(m[7]) + '</span>' +
-      (nx ? '<span class="mnx" title="과거 발표일 패턴으로 짚은 예상일입니다">다음 ' +
-            nx.slice(5) + ' 예상</span>' : '') +
-      (m[8] ? '<a class="mpdf" href="' + esc(m[8]) + '" target="_blank" rel="noopener">원문</a>' : '') +
-      '</div>';
+  // 대상월마다 첫 발표만 세어 다음 발표일을 짚는다(같은 달을 두 번 내는 회사가
+  // 있다 — 8237 은 속보 뒤에 본보고를 또 낸다).
+  host.innerHTML = list.slice(0, 200).map(c => {
+    const num = MNUM[c.code];
+    const last = c.rows[c.rows.length - 1];
+    const has = mnDate.has(c.code);
+    const firstOf = new Map();
+    for (const r of c.rows) if (!firstOf.has(r[5])) firstOf.set(r[5], r[0]);
+    const nx = mnNext([...firstOf.values()].sort());
+    let head = '';
+    if (num) {
+      const lr = num.m[num.m.length - 1];
+      const y = lr[2];
+      head = '<span class="mlast">' + lr[0].slice(0, 4) + '년 ' +
+             (+lr[0].slice(5, 7)) + '월 · ' +
+             (lr[1] != null ? '<b>' + mnFmtJPY(lr[1]) + '</b> · ' : '') +
+             (y != null ? '<b class="' + (y >= 100 ? 'up' : 'dn') + '">전년비 ' +
+                          y.toFixed(1) + '%</b>' : '') + '</span>';
+    }
+    return '<div class="mcard' + (has ? ' hit' : '') + '"' +
+      (has ? ' data-mkey="jp:' + esc(c.code) + '" data-mdate="' +
+             esc(mnDate.get(c.code)) + '"' : '') + '>' +
+      '<div class="mhd"><span class="mc">' + esc(c.code) + '</span>' +
+      '<span class="mnm">' + esc(c.ko) +
+      (c.ko !== c.orig ? ' <i>' + esc(c.orig) + '</i>' : '') +
+      (NOTE['jp:' + c.code] ? ' ★' : '') + '</span>' +
+      (c.cap ? '<span class="mcap">시총 ' + c.cap.toFixed(2) + '조원</span>' : '') +
+      head + '</div>' +
+      (num ? mnChart(num.m) : '') +
+      '<div class="mft">' +
+      (num && (num.lab || num.ylab)
+        ? '<span>' + esc(num.lab || num.ylab) + '</span>' : '') +
+      '<span>' + last[0].slice(5) + ' ' + esc(last[7].slice(0, 46)) + '</span>' +
+      (last[6] ? '' : '<span class="mguess">대상월은 발표일에서 어림</span>') +
+      (nx ? '<span class="mnxt">다음 ' + nx.slice(5) + ' 예상</span>' : '') +
+      (last[8] ? '<a class="mpdf" href="' + esc(last[8]) +
+                 '" target="_blank" rel="noopener">원문</a>' : '') +
+      (num ? '' : '<span>수치를 못 읽었습니다</span>') +
+      '</div></div>';
   }).join('');
 }
 
@@ -3725,7 +3855,7 @@ document.addEventListener('click', e => {
   if (grow) { openModal(grow.dataset.key, grow.dataset.date); return; }
 
   // 월매출 줄 — 캘린더에 오른 종목이면 상세창을 연다. 원문 링크는 그대로 둔다.
-  const mrow = e.target.closest('.mr[data-mkey]');
+  const mrow = e.target.closest('.mcard[data-mkey]');
   if (mrow && !e.target.closest('.mpdf')) {
     openModal(mrow.dataset.mkey, mrow.dataset.mdate);
     return;
@@ -3797,7 +3927,7 @@ document.getElementById('kstToggle').onchange = e => {
   useKst = e.target.checked; expanded.clear(); reslice(); fillWeeks(); renderAll();
 };
 document.getElementById('jpToggle').onchange = e => { showJp = e.target.checked; renderCal(); };
-for (const id of ['mnQ', 'mnPer', 'mnBig']) {
+for (const id of ['mnQ', 'mnCap', 'mnNum']) {
   const el = document.getElementById(id);
   if (el) el.addEventListener(id === 'mnQ' ? 'input' : 'change', renderMonthly);
 }
