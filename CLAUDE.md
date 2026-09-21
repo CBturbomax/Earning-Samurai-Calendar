@@ -843,10 +843,11 @@ HPE 가 Compute·Storage·Intelligent Edge 를 Cloud&AI·Networking 으로 바�
 
 | 워크플로 | 주기 | 쓰는 파일 |
 |---|---|---|
-| `fresh.yml` | **3분 루프** | `data/earnings_jp_past.json` · `data/monthly_jp.json` · `data/monthly_nums_jp.json` · `data/financials_jp.json` · `data/segments_jp.json` · `data/briefs_jp.json` · `data/briefs_us.json` |
+| `fresh.yml` | **3분 루프** | `data/earnings_jp_past.json` · `data/monthly_jp.json` · `data/financials_jp.json` · `data/segments_jp.json` · `data/briefs_jp.json` · `data/briefs_us.json` |
 | `collect.yml` | **5분**(크론 하한) | `data/earnings.json` · `data/earnings_jp_sched.json` · `data/earnings_us.json` · `data/earnings_hk.json` · `data/caps.json` |
 | `numbers.yml` | **5분**(크론 하한) | `data/financials.json` · `data/financials_intl.json` · `data/segments.json` · `data/segments_hk.json` · `data/desc.json` |
 | `segments.yml` | 30분 | `data/segments_sec.json` · `data/segments_edgar.json` · `data/segments_fpi.json` · `data/financials_fpi.json` |
+| `monthly.yml` | 10분 | `data/monthly_nums_jp.json` (월매출 수치 — 첨부 PDF) |
 | `segments_hist.yml` | 하루 1번 | `data/segments_jp_hist.json` (EDINETDB_KEY 있을 때만) |
 
 **공개 저장소라 GitHub Actions 시간이 무제한 무료다.** 그래서 주기를 늦출 이유가
@@ -869,6 +870,22 @@ HPE 가 Compute·Storage·Intelligent Edge 를 Cloud&AI·Networking 으로 바�
 수집분이 있으면 그 바퀴는 건너뛴다(바퀴 끝의 `push_changes` 가 커밋·머지·푸시를 한
 묶음으로 하므로, 여기서 커밋만 해두면 푸시 안 된 커밋이 남는다). 코드가 부딪히면
 `merge --abort` 하고 다음 바퀴에서 다시 — 여기서 죽으면 속보가 통째로 멈춘다.
+
+**루프 안에서는 오류가 안 보인다 — 비싼 일은 제 워크플로로 뗀다.**
+월매출 수치(첨부 PDF)를 3분 루프에 끼웠더니 수집기가 시간을 넘겨 죽고 있는데도
+`|| true` 가 오류를 삼켜 겉으로는 멀쩡해 보였다. 한 시간 넘게 아무것도 안
+들어오고 나서야 알았다. `monthly.yml` 로 떼니 로그가 그대로 보인다.
+
+**`bash -e` 가 루프를 죽인다.** GitHub 은 `run` 블록을 `bash -e` 로 돌린다.
+`git merge-base --is-ancestor … && return 0` 처럼 **거짓일 수 있는 것을 `&&` 의
+왼쪽에 두면** 그 순간 스크립트가 통째로 끝난다 — 루프가 한 시간 넘게 커밋을
+못 낸 것이 이것이었다. 루프 들머리에서 `set +e` 로 끄고 오류는 `if` 로 받는다.
+
+**수집기는 스스로 시간을 재야 한다.** 워크플로의 `timeout` 이 먼저 닿으면
+프로세스가 통째로 죽어 그 실행에서 받은 것을 저장도 못 한다. 그러면 다음
+실행이 같은 자리에서 같은 일을 하다 또 죽는 **덫**이 된다(암호 PDF 를 파이썬
+AES 로 풀다 실제로 그랬다). `MON_SECS` 처럼 스스로 끊고 저장하면 한 바퀴에
+조금씩이라도 반드시 앞으로 간다.
 
 **크론만 당겨서는 안 된다 — 코드 안의 재시도 간격도 같이 당겨야 한다.**
 `scrape_fin_intl.py`(홍콩·일본 실적수치)의 `retry`(세 시간 -> 20분)와
