@@ -52,9 +52,12 @@ OUT = HERE / "data" / "earnings_jp_past.json"
 MONTH_OUT = HERE / "data" / "monthly_jp.json"
 
 # 담는 형식이 바뀌면 올린다. 그래야 받아둔 헌 기록을 버리고 다시 받는다.
-# 3: 같은 목록에서 월차(月次)를 같이 건지기 시작했다. 캐시된 날은 다시 파싱할
-#    길이 없으므로 한 번 통째로 다시 받아 월차 쪽을 채운다.
-TDNET_VER = 3
+#
+# **월차를 붙이면서 이 번호를 올리지 않았다.** 올리면 캐시가 통째로 비워져
+# 다시 받는 십몇 분 동안 캘린더의 일본 발표 완료분이 얇아진다 — 월차를 채우자고
+# 멀쩡한 것을 깎을 이유가 없다. 대신 아래 main() 이 **두 캐시를 따로 보고**
+# 월차가 없는 날만 다시 훑는다. 결산단신 쪽은 같은 값으로 덮어써지므로 안 준다.
+TDNET_VER = 2
 MONTH_VER = 1
 
 LIST_URL = "https://www.release.tdnet.info/inbs/I_list_{page:03d}_{day}.html"
@@ -384,7 +387,9 @@ def main(back_days: int, probe: bool = False):
     for back in range(back_days, -1, -1):
         day = today - timedelta(days=back)
         key = day.isoformat()
-        if key in by_day and day < fresh_from:
+        # 결산단신과 월차를 **따로** 본다. 월차를 뒤늦게 붙였으므로 이미 받아둔
+        # 날에는 월차 쪽이 비어 있다 — 그 날들만 다시 훑으면 된다.
+        if key in by_day and key in mon_day and day < fresh_from:
             continue
         if key in gone:
             continue
