@@ -233,59 +233,100 @@ TOKEN_RE = re.compile(
     rb"<([0-9A-Fa-f\s]*)>|\((?:\\.|[^\\()])*\)|"
     rb"(-?\d+\.?\d*)|(/[A-Za-z0-9#_.+-]+)|(\[|\]|[A-Za-z'\"*]+)", re.S)
 
+IDENT = (1.0, 0.0, 0.0, 1.0, 0.0, 0.0)
+
+
+def _mul(m, n):
+    """두 아핀 행렬을 곱한다(PDF 차례: m 을 n 에 이어 붙인다)."""
+    a, b, c, d, e, f = m
+    A, B, C, D, E, F = n
+    return (a * A + b * C, a * B + b * D,
+            c * A + d * C, c * B + d * D,
+            e * A + f * C + E, e * B + f * D + F)
+
 
 def _run(content: bytes, fonts: dict, res: dict):
-    """내용 스트림 -> [(y, x, 글자)]"""
+    """내용 스트림 -> [(y, x, 글자)] — **장치 좌표**로.
+
+    **`cm`(좌표 변환)을 봐야 한다.** 한동안 Tm 의 y 만 썼더니, 변환이 걸린
+    쪽에서 서로 다른 줄이 같은 y 로 떨어져 한 줄로 뭉쳤다(7865 가 그랬다).
+    글자가 놓이는 자리는 `문자행렬 × 현재변환행렬` 이다.
+
+    가로 자리도 대충 밀어 준다. 글자를 하나씩 따로 찍는 PDF 가 있어서, 안
+    밀면 한 줄 안에서 차례가 뒤섞인다 — 정확한 글자폭(폰트 Widths)까지는
+    안 읽고 글자 크기의 절반으로 어림한다. 줄 안의 **차례**만 지키면 된다.
+    """
     out = []
     cmap, nb = {}, 2
-    tx = ty = 0.0
+    size = 12.0
+    ctm, tm, tlm = IDENT, IDENT, IDENT
     lead = 0.0
+    gs = []
     stack = []
     for m in TOKEN_RE.finditer(content):
         hexs, num, name, op = m.group(1), m.group(2), m.group(3), m.group(4)
         tok = m.group(0)
         if hexs is not None:
-            stack.append(("s", bytes.fromhex(re.sub(rb"\s", b"", hexs).decode("ascii"))
-                          if len(re.sub(rb"\s", b"", hexs)) % 2 == 0 else b""))
-        elif tok.startswith(b"("):
+            h = re.sub(rb"\s", b"", hexs)
+            stack.append(("s", bytes.fromhex(h.decode("ascii"))
+                          if len(h) % 2 == 0 else b""))
+            continue
+        if tok.startswith(b"("):
             stack.append(("s", _unescape(tok[1:-1])))
-        elif num is not None:
+            continue
+        if num is not None:
             stack.append(("n", float(num)))
-        elif name is not None:
+            continue
+        if name is not None:
             stack.append(("k", name))
-        else:
-            o = op.decode("latin-1")
-            if o == "Tf":
-                for kind, v in reversed(stack):
-                    if kind == "k":
-                        cmap, nb = fonts.get(res.get(v[1:], -1), ({}, 2))
-                        break
-            elif o in ("Td", "TD"):
-                ns = [v for k, v in stack if k == "n"]
-                if len(ns) >= 2:
-                    tx += ns[-2]
-                    ty += ns[-1]
-                if o == "TD" and len(ns) >= 1:
-                    lead = -ns[-1]
-            elif o == "Tm":
-                ns = [v for k, v in stack if k == "n"]
-                if len(ns) >= 6:
-                    tx, ty = ns[-2], ns[-1]
-            elif o == "TL":
-                ns = [v for k, v in stack if k == "n"]
-                if ns:
-                    lead = ns[-1]
-            elif o == "T*":
-                ty -= lead
-            elif o in ("Tj", "TJ", "'", '"'):
-                if o in ("'", '"'):
-                    ty -= lead
-                txt = "".join(_decode(v, cmap, nb) for k, v in stack if k == "s")
-                if txt.strip():
-                    out.append((round(ty, 1), round(tx, 1), txt))
-            elif o == "BT":
-                tx = ty = 0.0
-            stack = []
+            continue
+        o = op.decode("latin-1")
+        # **대괄호에서 쌓아둔 것을 지우면 안 된다.** `[(あ)-250(い)]TJ` 에서
+        # 닫는 `]` 를 연산자로 보고 stack 을 비웠더니, 바로 뒤의 TJ 가 빈손이
+        # 되어 **TJ 를 쓰는 PDF 가 통째로 0줄**이었다(열 건 중 일곱). Tj 만
+        # 쓰는 공시에서는 멀쩡히 나와서 더 안 보였다.
+        if o in ("[", "]"):
+            continue
+        ns = [v for k, v in stack if k == "n"]
+        if o == "q":
+            gs.append(ctm)
+        elif o == "Q":
+            if gs:
+                ctm = gs.pop()
+        elif o == "cm" and len(ns) >= 6:
+            ctm = _mul(tuple(ns[-6:]), ctm)
+        elif o == "BT":
+            tm = tlm = IDENT
+        elif o == "Tf":
+            for kind, v in reversed(stack):
+                if kind == "k":
+                    cmap, nb = fonts.get(res.get(v[1:], -1), ({}, 2))
+                    break
+            if ns:
+                size = abs(ns[-1]) or 12.0
+        elif o == "TL" and ns:
+            lead = ns[-1]
+        elif o in ("Td", "TD") and len(ns) >= 2:
+            if o == "TD":
+                lead = -ns[-1]
+            tlm = _mul((1.0, 0.0, 0.0, 1.0, ns[-2], ns[-1]), tlm)
+            tm = tlm
+        elif o == "Tm" and len(ns) >= 6:
+            tlm = tm = tuple(ns[-6:])
+        elif o == "T*":
+            tlm = _mul((1.0, 0.0, 0.0, 1.0, 0.0, -lead), tlm)
+            tm = tlm
+        elif o in ("Tj", "TJ", "'", '"'):
+            if o in ("'", '"'):
+                tlm = _mul((1.0, 0.0, 0.0, 1.0, 0.0, -lead), tlm)
+                tm = tlm
+            txt = "".join(_decode(v, cmap, nb) for k, v in stack if k == "s")
+            if txt.strip():
+                a, b, c, d, e, f = _mul(tm, ctm)
+                out.append((round(f, 1), round(e, 1), txt))
+                # 다음 글자가 어디쯤 놓일지 어림해 둔다 — 차례만 지키면 된다.
+                tm = _mul((1.0, 0.0, 0.0, 1.0, len(txt) * size * 0.5, 0.0), tm)
+        stack = []
     return out
 
 
@@ -307,9 +348,16 @@ def extract_lines(data: bytes, max_pages: int = 40):
         content = b"".join((objs.get(r) or (b"", b""))[1] or b"" for r in refs)
         if not content:
             continue
-        rows = {}
-        for y, x, txt in _run(content, fonts, res):
-            rows.setdefault(y, []).append((x, txt))
+        # **y 가 딱 떨어지지 않는다.** 같은 줄인데 글자마다 0.1~1 쯤 어긋나
+        # 오는 일이 흔해서, 값 그대로 묶으면 한 줄이 여러 줄로 부서진다.
+        # 1.5 안쪽이면 같은 줄로 본다(본문 글자가 9~11pt 라 줄 간격은 그보다 넓다).
+        buckets = []
+        for y, x, txt in sorted(_run(content, fonts, res), key=lambda r: -r[0]):
+            if buckets and abs(buckets[-1][0] - y) <= 1.5:
+                buckets[-1][1].append((x, txt))
+            else:
+                buckets.append((y, [(x, txt)]))
+        rows = {y: cells for y, cells in buckets}
         for y in sorted(rows, reverse=True):
             line = " ".join(t for _, t in sorted(rows[y]))
             line = re.sub(r"\s+", " ", line).strip()

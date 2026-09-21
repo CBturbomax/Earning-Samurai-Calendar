@@ -15,16 +15,16 @@ jobs:
         with:
           python-version: '3.12'
 
-      # 43차 — 42차에서 해독기가 실제로 글자를 뱉었다(9007 에서 既存店·全店·
-      # 前年比). 두 가지가 남았다.
-      #   (A) 절반이 **0줄**이다. 쪽도 찾고 ToUnicode 폰트도 찾았는데 내용이
-      #       비어 나온다 — /Contents 를 못 읽는 것으로 보인다. 쪽마다 머리를
-      #       찍어 어떤 꼴인지 본다.
-      #   (B) 줄이 뒤섞인다(7865 가 한 줄로 뭉쳤다). `cm`(좌표 변환)을 안 보고
-      #       Tm 의 y 만 써서, 변환이 걸린 쪽에서 서로 다른 줄이 같은 y 로 온다.
-      # 그리고 **월차Web(kabubiz)** — 상장 313사의 월매출을 모아 둔 곳이다.
-      # 여기가 열리면 PDF 를 안 뜯고도 숫자를 받는다. 구조를 본다.
-      - name: 🗾 월매출 — 내용 스트림 진단 + 월차Web 구조 (43차)
+      # 44차 — 43차 진단이 원인을 짚어 줬다. `[(あ)-250(い)]TJ` 의 닫는 `]` 를
+      # 연산자로 보고 쌓아둔 문자열을 비우고 있었다. 대부분의 PDF 가 TJ 를 쓰므로
+      # 열 건 중 일곱이 0줄이었던 것이 이것 하나다. 좌표 변환(cm)과 줄 묶음
+      # 여유도 같이 넣었다. 이제 **얼마나 읽히는지**와 **숫자를 집을 수 있는지**를
+      # 같은 열 건에 다시 부딪혀 본다.
+      #
+      # 월차Web(kabubiz)은 접었다 — 목록은 200 이지만 링크가 자바스크립트로만
+      # 붙고 종목 페이지는 403 이다. PDF 쪽이 어차피 '실제로 공시한 회사'를
+      # 정확히 덮으므로 그쪽이 옳다.
+      - name: 🗾 월매출 PDF — TJ 고친 뒤 재현율과 숫자 집기 (44차)
         timeout-minutes: 13
         run: |
           python - <<'EOF'
@@ -49,57 +49,39 @@ jobs:
               except Exception as e:
                   return str(e)[:60], b""
 
-          print("=" * 70)
-          print("(A) 0줄로 나온 PDF 의 쪽 머리를 본다")
-          print("=" * 70)
-          for code, url in [
+          PDFS = [
+              ("6238", "https://www.release.tdnet.info/inbs/140120260918538410.pdf"),
+              ("7865", "https://www.release.tdnet.info/inbs/140120260918538582.pdf"),
               ("3038", "https://www.release.tdnet.info/inbs/140120260917537924.pdf"),
               ("7370", "https://www.release.tdnet.info/inbs/140120260918538566.pdf"),
-              ("5580", "https://www.release.tdnet.info/inbs/140120260916537473.pdf"),
+              ("8715", "https://www.release.tdnet.info/inbs/140120260917537741.pdf"),
+              ("9007", "https://www.release.tdnet.info/inbs/140120260917538088.pdf"),
+              ("3461", "https://www.release.tdnet.info/inbs/140120260917538196.pdf"),
               ("7685", "https://www.release.tdnet.info/inbs/140120260917537893.pdf"),
-          ]:
+              ("5580", "https://www.release.tdnet.info/inbs/140120260916537473.pdf"),
+              ("7043", "https://www.release.tdnet.info/inbs/140120260916537033.pdf"),
+          ]
+          KEY = re.compile("売上|既存店|全店|前年|同月|月度|合計|百万|千円")
+          ok = 0
+          for code, url in PDFS:
               st, data = get(url)
               if st != 200:
-                  print(f"{code}: {st}"); continue
-              objs = pdftext._expand_objstm(pdftext._objects(data))
-              pages = [(n, h) for n, (h, _) in objs.items()
-                       if b"/Type" in h and b"/Page" in h and b"/Pages" not in h]
-              print(f"{code}: 쪽 {len(pages)}")
-              for n, h in pages[:2]:
-                  print(f"   쪽 obj {n} 머리: {h[:260]!r}")
-                  cm = pdftext.CONTENTS_RE.search(h)
-                  print(f"   /Contents 맞았나: {bool(cm)} {cm.groups() if cm else ''}")
-                  if cm:
-                      refs = ([int(cm.group(1))] if cm.group(1)
-                              else [int(x) for x in pdftext.REF_RE.findall(cm.group(2) or b"")])
-                      for r in refs[:3]:
-                          got = objs.get(r)
-                          print(f"     내용 obj {r}: 있나={got is not None} "
-                                f"머리={got[0][:120]!r} 길이={len(got[1]) if got and got[1] else 0}"
-                                if got else f"     내용 obj {r}: 없다")
+                  print(f"{code}: 받기 실패 {st}"); continue
+              t0 = time.time()
+              try:
+                  lines = pdftext.extract_lines(data)
+              except Exception:
+                  import traceback; print(f"{code}: 터짐"); traceback.print_exc(); continue
+              txt = "\n".join(lines)
+              jp = sum(1 for ch in txt
+                       if "\u3040" <= ch <= "\u30ff" or "\u4e00" <= ch <= "\u9fff")
+              good = jp > 30 and len(re.findall(r"\d", txt)) > 20
+              ok += good
+              print(f"{code}: {len(data)//1024}KB · 줄 {len(lines)} · 일본글자 {jp} · "
+                    f"{time.time()-t0:.2f}초 · {'읽힌다' if good else 'X'}")
+              hits = [l for l in lines if KEY.search(l)]
+              for l in (hits or lines)[:22]:
+                  print(f"    | {l[:130]}")
               print()
-
-          print("=" * 70)
-          print("(B) 월차Web — 상장 313사 월매출 모음")
-          print("=" * 70)
-          st, data = get("https://kabubiz.com/getuji/")
-          print(f"  목록: {st} · {len(data)//1024}KB")
-          if st == 200:
-              t = data.decode("utf-8", "ignore")
-              links = sorted(set(re.findall(r'href="(/getuji/[^"#?]*)"', t)))
-              print(f"  /getuji/ 링크 {len(links)}종 — 앞 25개:")
-              for l in links[:25]:
-                  print(f"     {l}")
-              for m in ("月次", "既存店", "前年", "売上"):
-                  print(f"  '{m}' 나옴: {m in t}")
-              j = t.find("既存店")
-              if j > 0:
-                  print("  본문 주변:", re.sub(r"\s+", " ", t[j - 200:j + 300]))
-          for u in ("https://kabubiz.com/getuji/code/9843/",
-                    "https://kabubiz.com/getuji/9843",
-                    "https://kabubiz.com/getuji/company/9843/",
-                    "https://kabubiz.com/getuji/ranking/"):
-              st, d = get(u, timeout=20)
-              print(f"  {u} -> {st} {len(d)//1024}KB")
-              time.sleep(0.5)
+          print(f"==> 열 건 중 {ok} 건이 읽혔다")
           EOF
