@@ -37,7 +37,7 @@ OUT = HERE / "data" / "monthly_nums_jp.json"
 
 # 뜯는 규칙이 바뀌면 올린다. **본 공시 기록만** 비우고 모아둔 값은 남긴다 —
 # 창 밖으로 밀려난 공시는 다시 못 받으므로 값을 버리면 영영 잃는다.
-PARSE_VER = 4
+PARSE_VER = 5
 
 UA = ("Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 "
       "(KHTML, like Gecko) Chrome/124.0 Safari/537.36")
@@ -187,10 +187,9 @@ def main():
             fail += 1
             continue
         done.add(r["doc"])
-        if pdftext.is_encrypted(data):
-            enc += 1
-            skip[r["doc"]] = "암호"
-            continue
+        # **암호가 걸렸다고 건너뛰지 않는다.** 실측해 보니 열넷이 전부 표준
+        # 보안 핸들러에 빈 사용자 암호였다(권한 잠금만 걸어 둔 것) — pdfcrypt
+        # 가 규격대로 연다. 그래도 안 열리면 그때 '암호'로 적는다.
         try:
             got = montable.read(data, r["date"], title=r.get("title", ""))
         except Exception as e:                      # noqa: BLE001
@@ -200,8 +199,12 @@ def main():
             continue
         read += 1
         if not got:
-            miss += 1
-            skip[r["doc"]] = "표없음"
+            if pdftext.is_encrypted(data):
+                enc += 1
+                skip[r["doc"]] = "암호"
+            else:
+                miss += 1
+                skip[r["doc"]] = "표없음"
             continue
         rec = by.setdefault(r["code"], {"name": r.get("name", "")})
         got_n += merge(rec, got, r["doc"], r["date"])
