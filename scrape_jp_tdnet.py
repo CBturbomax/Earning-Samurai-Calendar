@@ -316,12 +316,15 @@ def load_cache():
 def load_monthly():
     """월매출 캐시. 결산단신 쪽과 판을 따로 센다 — 한쪽 형식이 바뀌었다고
     다른 쪽까지 버릴 이유가 없다."""
+    # **두 값을 돌려준다** — 한쪽만 돌려주면 부르는 쪽이 풀다 터진다. 그러면
+    # 월매출이 아니라 **일본 속보 전체**가 죽는다(이 파일이 캘린더 줄도 만든다).
+    # 판을 올리거나 파일이 깨지는 날에만 지나는 길이라 눈에 안 띈다.
     try:
         old = json.loads(MONTH_OUT.read_text(encoding="utf-8"))
     except (ValueError, OSError):
-        return {}
+        return {}, set()
     if old.get("v") != MONTH_VER:
-        return {}
+        return {}, set()
     # **가려내는 규칙이 바뀌면 쌓아둔 것도 다시 건다.** 판(MONTH_VER)을 올려
     # 통째로 다시 받는 길도 있지만, 그러면 TDnet 창 밖으로 밀려난 달을 영영
     # 잃는다 — 여기 쌓인 것이 이력의 전부라 그럴 수 없다. 대신 불러올 때 지금
