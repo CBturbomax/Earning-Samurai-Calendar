@@ -1,0 +1,188 @@
+# -*- coding: utf-8 -*-
+"""월매출 공시 PDF 에서 **달별 수치를 표로 읽는다**.
+
+문장으로 집으려다 접었다. 평평하게 편 글에서 「売上高5月6月7月8月前年同月比
+125.4%」 같은 것이 걸리는데, 그 125.4 는 문장이 아니라 **표의 한 칸**이라 어느
+달 값인지 알 수 없다. 그대로 담으면 조용히 엉뚱한 달에 값이 붙는다 — 이 저장소가
+가장 싫어하는 실패다. 실측 66건 중 문장 규칙에 걸린 14건에도 그런 것이 섞여 있었다.
+
+그래서 좌표를 쓴다. 월매출 공시는 거의 전부 이 꼴이다.
+
+      7月  8月  9月 10月 …      <- 달 이름표 줄
+  月次 149  127   93            <- 금액 줄
+  前年同期比 115.8 89.7 100.4   <- 전년비 줄
+
+달 이름표 줄을 찾고, 아래 줄의 값들을 **x 가 가장 가까운 이름표**에 붙인다.
+붙일 이름표가 없으면 그 값은 버린다. 지어내지 않는다.
+
+**해(年)는 발표일에서 정한다.** 표에는 대개 달만 적혀 있다. 발표한 달보다 큰
+달은 지난해 것이다(9월에 내는 표의 12월은 작년 12월). 회계연도 표기를 읽지
+않아도 되는 대신, 열두 달을 넘겨 도는 표에는 쓰지 않는다.
+"""
+import re
+from datetime import date
+
+import pdftext
+
+__all__ = ["read"]
+
+ZEN = str.maketrans("０１２３４５６７８９．％，－　", "0123456789.%,- ")
+
+MONTH_HDR = re.compile(r"^\(?(\d{1,2})月(度|分|期)?\)?$")
+NUMCELL = re.compile(r"^[（(]?[-△▲]?\d[\d,]*(?:\.\d+)?[%]?[)）]?$")
+
+# 금액 줄의 이름표. 넓게 잡되 **무엇의 값인지 적혀 있을 때만** 쓴다.
+AMOUNT_LABEL = re.compile(
+    r"売上高|売上収益|営業収益|営業収入|仕入高|受注高|取扱高|販売高|総取扱高|"
+    r"流通総額|月商|月次|売上|チェーン全店|全店|既存店|合計|グループ")
+# 전년비 줄의 이름표.
+YOY_LABEL = re.compile(r"前年|対前年|昨対|YoY")
+# 단위. 줄 어디에 적혀 있든 찾는다(이름표 안, 또는 옆 칸).
+UNIT = (("百万円", 1_000_000), ("千円", 1_000), ("億円", 100_000_000),
+        ("万円", 10_000), ("円", 1))
+PCT = re.compile(r"[%％]")
+
+# 누계·예상은 그 달의 값이 아니다.
+SKIP_LABEL = re.compile(r"累計|累積|予想|計画|見通|通期|上期|下期|前年同月の|前期")
+
+
+def _norm(s: str) -> str:
+    return s.translate(ZEN).replace(" ", "")
+
+
+def _num(cell: str):
+    """칸 -> 숫자. 괄호·△·▲ 는 음수 표기다."""
+    t = _norm(cell)
+    neg = t.startswith(("(", "（", "△", "▲", "-"))
+    t = re.sub(r"[()（）△▲%％,\-]", "", t)
+    if not t or not re.fullmatch(r"\d+(?:\.\d+)?", t):
+        return None
+    v = float(t)
+    return -v if neg else v
+
+
+def _year_of(month: int, ann: date) -> int:
+    """발표일로 해를 정한다. 발표한 달보다 크면 지난해다."""
+    return ann.year if month <= ann.month else ann.year - 1
+
+
+def _headers(cells):
+    """달 이름표 줄이면 [(x, 달)] 을 준다. 아니면 None."""
+    got = []
+    for x, t in cells:
+        m = MONTH_HDR.match(_norm(t))
+        if m and 1 <= int(m.group(1)) <= 12:
+            got.append((x, int(m.group(1))))
+    # 셋은 있어야 표의 머리로 본다. 둘로는 본문의 '8月' 두 개와 못 가른다.
+    if len(got) < 3:
+        return None
+    # 같은 달이 두 번 나오면 두 해가 섞인 표다(전년 비교표). 그건 안 다룬다 —
+    # 어느 쪽이 올해인지 x 만으로는 모른다.
+    if len({m for _, m in got}) != len(got):
+        return None
+    return got
+
+
+def _assign(cells, hdr):
+    """값 칸을 가장 가까운 이름표에 붙인다. 멀면 버린다."""
+    xs = [x for x, _ in hdr]
+    span = min(b - a for a, b in zip(xs, xs[1:])) if len(xs) > 1 else 40.0
+    tol = max(span * 0.6, 8.0)
+    out = {}
+    for x, t in cells:
+        v = _num(t)
+        if v is None:
+            continue
+        best, bd = None, 1e9
+        for hx, mo in hdr:
+            d = abs(hx - x)
+            if d < bd:
+                best, bd = mo, d
+        if best is not None and bd <= tol and best not in out:
+            out[best] = v
+    return out
+
+
+def _label(cells, hdr):
+    """줄의 이름표 — 첫 이름표 자리보다 왼쪽에 있는 글자 칸들."""
+    left = min(x for x, _ in hdr)
+    return "".join(_norm(t) for x, t in cells if x < left - 1 and not NUMCELL.match(_norm(t)))
+
+
+def _unit(*texts):
+    joined = "".join(texts)
+    for name, mul in UNIT:
+        if name in joined:
+            return name, mul
+    return "", 0
+
+
+def read(data: bytes, ann: str, max_pages: int = 12):
+    """PDF -> {'rows': [...], 'basis': ...} 또는 None.
+
+    rows: [{'period': 'YYYY-MM', 'rev': 원화가 아닌 **엔**, 'yoy': 전년동월비(%),
+            'metric': 무엇의 값인가, 'unit': 표기 단위}]
+    """
+    try:
+        aday = date.fromisoformat(ann)
+    except ValueError:
+        return None
+    try:
+        table = pdftext.extract_cells(data, max_pages)
+    except Exception:
+        return None
+
+    best = None
+    for i, cells in enumerate(table):
+        hdr = _headers(cells)
+        if not hdr:
+            continue
+        amounts, yoys = [], []
+        # 이름표 줄 아래로 여덟 줄까지 본다. 그 아래는 다른 표다.
+        for cells2 in table[i + 1:i + 9]:
+            if _headers(cells2):
+                break
+            lab = _label(cells2, hdr)
+            if not lab or SKIP_LABEL.search(lab):
+                continue
+            vals = _assign(cells2, hdr)
+            if len(vals) < 2:
+                continue
+            rowtext = "".join(t for _, t in cells2)
+            if YOY_LABEL.search(lab) or (PCT.search(rowtext) and not _unit(lab, rowtext)[0]):
+                yoys.append((lab, vals))
+            elif AMOUNT_LABEL.search(lab):
+                unit, mul = _unit(lab, rowtext)
+                if mul:
+                    amounts.append((lab, unit, mul, vals))
+        if not amounts and not yoys:
+            continue
+        cand = (len(amounts and amounts[0][3] or {}) + len(yoys and yoys[0][1] or {}),
+                i, hdr, amounts, yoys)
+        if best is None or cand[0] > best[0]:
+            best = cand
+
+    if best is None:
+        return None
+    _n, _i, hdr, amounts, yoys = best
+    amt = amounts[0] if amounts else None
+    yoy = yoys[0] if yoys else None
+    months = sorted(set((amt[3] if amt else {})) | set((yoy[1] if yoy else {})))
+    out = []
+    for mo in months:
+        y = _year_of(mo, aday)
+        rec = {"period": f"{y:04d}-{mo:02d}"}
+        if amt and mo in amt[3]:
+            rec["rev"] = amt[3][mo] * amt[2]
+            rec["unit"] = amt[1]
+            rec["metric"] = amt[0][:24]
+        if yoy and mo in yoy[1]:
+            rec["yoy"] = yoy[1][mo]
+            rec.setdefault("metric", yoy[0][:24])
+        if len(rec) > 1:
+            out.append(rec)
+    if not out:
+        return None
+    return {"rows": out,
+            "amount_label": amt[0][:24] if amt else "",
+            "yoy_label": yoy[0][:24] if yoy else ""}

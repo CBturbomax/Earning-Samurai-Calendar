@@ -333,21 +333,29 @@ def _run(content: bytes, fonts: dict, res: dict):
             txt = "".join(_decode(v, cmap, nb) for k, v in stack if k == "s")
             if txt.strip():
                 a, b, c, d, e, f = _mul(tm, ctm)
-                out.append((round(f, 1), round(e, 1), txt))
+                out.append((round(f, 1), round(e, 1), txt, size * abs(d or 1.0)))
                 # 다음 글자가 어디쯤 놓일지 어림해 둔다 — 차례만 지키면 된다.
                 tm = _mul((1.0, 0.0, 0.0, 1.0, len(txt) * size * 0.5, 0.0), tm)
         stack = []
     return out
 
 
-def extract_lines(data: bytes, max_pages: int = 40):
-    """PDF 바이트 -> 줄 목록. 표의 가로줄을 살린다."""
+def extract_cells(data: bytes, max_pages: int = 40):
+    """PDF 바이트 -> [[(x, 글자), …], …] — **줄이 아니라 칸**으로 돌려준다.
+
+    월매출 공시는 거의 전부 표다. 줄로만 붙여 내면 「売上高5月6月7月8月前年同月比
+    125.4%」 처럼 뭉쳐서, 그 125.4 가 어느 달의 값인지 알 수 없다 — 문장인 줄
+    알고 집으면 **조용히 엉뚱한 칸**을 읽는다. 그래서 x 를 살려 둔다.
+
+    글자 조각은 붙여 준다. 가로 자리를 글자폭으로 어림해 밀어 두었으므로 한
+    낱말 안의 조각은 틈이 거의 0 이고, 표의 칸 사이는 그보다 훨씬 넓다.
+    """
     objs = _expand_objstm(_objects(data))
     fonts = _fonts(objs)
     pages = [(num, head) for num, (head, _) in objs.items()
              if b"/Type" in head and b"/Page" in head and b"/Pages" not in head]
     pages.sort()
-    lines = []
+    rows = []
     for num, head in pages[:max_pages]:
         res = _resources(objs, head)
         cm = CONTENTS_RE.search(head)
@@ -358,22 +366,40 @@ def extract_lines(data: bytes, max_pages: int = 40):
         content = b"".join((objs.get(r) or (b"", b""))[1] or b"" for r in refs)
         if not content:
             continue
-        # **y 가 딱 떨어지지 않는다.** 같은 줄인데 글자마다 0.1~1 쯤 어긋나
-        # 오는 일이 흔해서, 값 그대로 묶으면 한 줄이 여러 줄로 부서진다.
-        # 1.5 안쪽이면 같은 줄로 본다(본문 글자가 9~11pt 라 줄 간격은 그보다 넓다).
+        # y 로 줄을 묶는다. 같은 줄인데 글자마다 조금씩 어긋나 오므로 여유를 준다.
         buckets = []
-        for y, x, txt in sorted(_run(content, fonts, res), key=lambda r: -r[0]):
+        for y, x, txt, size in sorted(_run(content, fonts, res), key=lambda r: -r[0]):
             if buckets and abs(buckets[-1][0] - y) <= 1.5:
-                buckets[-1][1].append((x, txt))
+                buckets[-1][1].append((x, txt, size))
             else:
-                buckets.append((y, [(x, txt)]))
-        rows = {y: cells for y, cells in buckets}
-        for y in sorted(rows, reverse=True):
-            line = " ".join(t for _, t in sorted(rows[y]))
-            line = re.sub(r"\s+", " ", line).strip()
-            if line:
-                lines.append(line)
-    return lines
+                buckets.append((y, [(x, txt, size)]))
+        for _y, frags in buckets:
+            frags.sort()
+            cells, cx, cur, csz = [], None, "", 10.0
+            for x, txt, size in frags:
+                if cur and x - cx > max(size, 6.0) * 0.8:
+                    cells.append((round(cx0, 1), cur))
+                    cur = ""
+                if not cur:
+                    cx0 = x
+                cur += txt
+                cx = x + len(txt) * size * 0.5
+                csz = size
+            if cur:
+                cells.append((round(cx0, 1), cur))
+            if cells:
+                rows.append(cells)
+    return rows
+
+
+def extract_lines(data: bytes, max_pages: int = 40):
+    """PDF 바이트 -> 줄 목록. 칸을 빈칸으로 이어 붙인 것이다."""
+    out = []
+    for cells in extract_cells(data, max_pages):
+        line = re.sub(r"\s+", " ", " ".join(t for _, t in cells)).strip()
+        if line:
+            out.append(line)
+    return out
 
 
 def extract_text(data: bytes, max_pages: int = 40) -> str:

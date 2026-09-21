@@ -15,22 +15,20 @@ jobs:
         with:
           python-version: '3.12'
 
-      # 46차 — 45차의 적중은 4/66 이었지만 **규칙이 좁았던 것**이지 자료가
-      # 없는 게 아니었다. 못 집은 것들을 보니 세 갈래가 더 있었다.
-      #   · 금액 없이 전년비만 적는다 — 6238「売上高は前年同月比102.7%」
-      #   · 달 이름표가 붙은 시계열 — 3135「2026年7月107.2%2026年8月114.5%」
-      #     (이것 하나로 지난 달들이 한꺼번에 들어온다)
-      #   · 증감 낱말 — 8798「前年同月比7%減」
-      # 넷을 다 걸어 **회사별로 무엇을 얻을 수 있나**를 다시 잰다. 집을 때마다
-      # 원문 조각을 함께 담는 것이 요점이다 — 화면에 그 문구를 같이 내면
-      # 회원님이 숫자의 출처를 바로 확인한다(지어낸 값이 아님을 보이는 길).
-      - name: 🗾 월매출 — 규칙 넷으로 넓혀 다시 잰다 (46차)
+      # 47차 — 문장으로 집는 길은 접었다(46차 14/66 이고 그중 몇은 표를 문장으로
+      # 잘못 읽은 것이었다 — 556A「売上高5月6月7月8月前年同月比125.4%」). 자료는
+      # 전부 **표**라 좌표로 열을 맞춰야 한다. montable.py 가 달 이름표 줄을 찾고
+      # 아래 줄의 값을 x 가 가장 가까운 이름표에 붙인다. 붙일 곳이 없으면 버린다.
+      #
+      # 여기서 재는 것은 **몇 종목이 몇 달치를 주나**다. 표로 읽으면 한 건으로
+      # 여러 달이 한꺼번에 들어오므로 차트가 바로 선다.
+      - name: 🗾 월매출 — 표로 읽어 달별 수치 (47차)
         timeout-minutes: 13
         run: |
           python - <<'EOF'
           import json, re, time, urllib.request, urllib.error, gzip
           from datetime import date, timedelta
-          import pdftext
+          import pdftext, montable
 
           UA = ("Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 "
                 "(KHTML, like Gecko) Chrome/124.0 Safari/537.36")
@@ -49,19 +47,6 @@ jobs:
               except Exception as e:
                   return str(e)[:50], b""
 
-          ZEN = str.maketrans("０１２３４５６７８９．％，－", "0123456789.%,-")
-          N = r"\d[\d,]*(?:\.\d+)?"
-          AMT = rf"(?:{N}兆)?(?:{N}億)?(?:{N}百万|{N}万|{N}千)?円"
-          MET = (r"売上高|売上収益|営業収益|仕入高|受注高|取扱高|販売高|営業収入|"
-                 r"総取扱高|流通総額|月商|既存店|全店|チェーン全店")
-          YOY = r"前年同月比|前年同期比|前年比|対前年同月"
-
-          P_AMT_YOY = re.compile(rf"({MET})[^。]{{0,14}}?(?:{YOY})({N})%[^。]{{0,4}}?({AMT})")
-          P_YOY_AMT = re.compile(rf"({MET})[^。]{{0,14}}?({AMT})[^。]{{0,12}}?(?:{YOY})({N})%")
-          P_YOY     = re.compile(rf"({MET})[^。]{{0,16}}?(?:{YOY})({N})%")
-          P_UPDN    = re.compile(rf"({MET})[^。]{{0,16}}?(?:{YOY})({N})%(増|減)")
-          P_SERIES  = re.compile(rf"(20\d\d)年(\d{{1,2}})月({N})%")
-
           rows = json.load(open("data/monthly_jp.json", encoding="utf-8"))["rows"]
           cut = (date.today() - timedelta(days=16)).isoformat()
           recent, seen = [], set()
@@ -73,8 +58,9 @@ jobs:
                   break
 
           okread = enc = fail = 0
-          got_amt = got_yoy = got_ser = got_any = 0
-          ex_amt, ex_yoy, ex_ser, still = [], [], [], []
+          hit = withrev = 0
+          months = []
+          good, bad = [], []
           for r in recent:
               st, data = get(r["doc"])
               if st != 200 or not data:
@@ -82,42 +68,33 @@ jobs:
               if pdftext.is_encrypted(data):
                   enc += 1; continue
               try:
-                  txt = pdftext.extract_text(data)
+                  txt = pdftext.extract_text(data, 6)
               except Exception:
                   fail += 1; continue
               if len(txt) < 40:
                   fail += 1; continue
               okread += 1
-              flat = re.sub(r"\s+", "", txt).translate(ZEN)
-              a = P_AMT_YOY.search(flat) or P_YOY_AMT.search(flat)
-              y = P_UPDN.search(flat) or P_YOY.search(flat)
-              ser = P_SERIES.findall(flat)
-              if a:
-                  got_amt += 1
-                  if len(ex_amt) < 14: ex_amt.append(f"{r['code']} {a.group(0)[:72]}")
-              if y:
-                  got_yoy += 1
-                  if len(ex_yoy) < 10: ex_yoy.append(f"{r['code']} {y.group(0)[:64]}")
-              if len(ser) >= 2:
-                  got_ser += 1
-                  if len(ex_ser) < 8:
-                      ex_ser.append(f"{r['code']} {ser[:6]}")
-              if a or y or len(ser) >= 2:
-                  got_any += 1
-              elif len(still) < 10:
-                  j = flat.find("前年")
-                  still.append(f"{r['code']} … {flat[max(0,j-40):j+70] if j>0 else flat[:90]}")
+              got = montable.read(data, r["date"])
+              if not got:
+                  if len(bad) < 10:
+                      bad.append(f"{r['code']} {r['title'][:34]}")
+                  continue
+              hit += 1
+              months.append(len(got["rows"]))
+              if any("rev" in x for x in got["rows"]):
+                  withrev += 1
+              if len(good) < 16:
+                  sm = [(x["period"], x.get("rev"), x.get("yoy")) for x in got["rows"][-4:]]
+                  good.append(f"{r['code']} [{got['amount_label']}|{got['yoy_label']}] {sm}")
               time.sleep(0.15)
 
           print(f"표본 {len(recent)} · 읽힘 {okread} · 암호 {enc} · 실패 {fail}")
-          print(f"금액+전년비 {got_amt} · 전년비만 {got_yoy} · 달 이름표 시계열 {got_ser}")
-          print(f"==> 셋 중 하나라도 {got_any}/{okread}")
-          print("--- 금액+전년비 ---")
-          for x in ex_amt: print("  ", x)
-          print("--- 전년비만 ---")
-          for x in ex_yoy: print("  ", x)
-          print("--- 달 이름표 시계열 ---")
-          for x in ex_ser: print("  ", x)
-          print("--- 그래도 아무것도 없음 ---")
-          for x in still: print("  ", x)
+          print(f"표로 읽힌 종목 {hit}/{okread} · 그중 금액까지 {withrev}")
+          if months:
+              months.sort()
+              print(f"종목당 달 수: 가운뎃값 {months[len(months)//2]} · 최소 {months[0]} · 최대 {months[-1]} · 합계 {sum(months)}")
+          print("--- 읽힌 것 ---")
+          for x in good: print("  ", x)
+          print("--- 못 읽은 것 ---")
+          for x in bad: print("  ", x)
           EOF
