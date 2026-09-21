@@ -42,6 +42,11 @@ PARSE_VER = 5
 UA = ("Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 "
       "(KHTML, like Gecko) Chrome/124.0 Safari/537.36")
 PER_RUN = int(os.environ.get("MON_PDF_PER_RUN", "80"))
+# **스스로 시간을 잰다.** 워크플로의 `timeout` 이 먼저 닿으면 프로세스가 통째로
+# 죽어 그 바퀴에 받은 것을 저장도 못 한다 — 그러면 다음 바퀴가 같은 자리에서
+# 같은 일을 하다 또 죽는 덫이 된다(암호 PDF 를 파이썬 AES 로 풀다 실제로 그랬다).
+# 여기서 먼저 끊고 저장하면 한 바퀴에 조금씩이라도 반드시 앞으로 간다.
+BUDGET = float(os.environ.get("MON_SECS", "110"))
 PAUSE = 0.35
 
 
@@ -180,7 +185,11 @@ def main():
           f"· 이번에 {min(len(todo), PER_RUN)}건")
 
     read = got_n = miss = enc = fail = 0
+    until = time.time() + BUDGET
     for r in todo[:PER_RUN]:
+        if time.time() > until:
+            print(f"  시간이 찼다({BUDGET:.0f}초). 여기까지 담고 다음 바퀴에 잇는다.")
+            break
         data = get(r["doc"])
         time.sleep(PAUSE)
         if not data:
