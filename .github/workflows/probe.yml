@@ -15,20 +15,56 @@ jobs:
         with:
           python-version: '3.12'
 
-      # 51차 — 루프가 살아 있는데 monthly_nums_jp.json 이 pv3 에서 안 움직인다.
-      # 루프 안에서는 `|| true` 가 오류를 삼켜 아무것도 안 보이므로, 수집기를
-      # **여기서 그대로 돌려** 무슨 일이 나는지 본다. 커밋은 안 한다.
-      - name: 🗾 월매출 수집기를 그대로 돌려 본다 (51차)
-        timeout-minutes: 12
-        env:
-          MON_PDF_PER_RUN: '40'
+      # 52차 — 암호 해독을 붙였는데 열넷 중 하나만 열렸다. AES 는 NIST·FIPS
+      # 벡터를 통과하므로 열쇠 만들기나 사전 읽기에서 막힌 것이다. 단계마다
+      # 찍어 어디서 멎는지 본다.
+      - name: 🗾 월매출 — 암호 해독이 어디서 막히나 (52차)
+        timeout-minutes: 10
         run: |
-          python -X faulthandler scrape_mon_jp.py 2>&1 | tail -40
-          echo "── 나온 파일 ──"
           python - <<'EOF'
-          import json, collections
-          d = json.load(open("data/monthly_nums_jp.json", encoding="utf-8"))
-          print(f"pv{d['pv']} · {d['companies']}개사 {d['months']}개월 "
-                f"· 본공시 {len(d.get('done') or [])} "
-                f"· {dict(collections.Counter((d.get('skip') or {}).values()))}")
+          import json, time, urllib.request, gzip
+          import pdfcrypt, pdftext
+
+          UA = ("Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 "
+                "(KHTML, like Gecko) Chrome/124.0 Safari/537.36")
+
+          def get(url):
+              h = {"User-Agent": UA, "Accept": "*/*", "Accept-Encoding": "gzip"}
+              with urllib.request.urlopen(
+                      urllib.request.Request(url, headers=h), timeout=40) as r:
+                  raw = r.read()
+                  if r.headers.get("Content-Encoding") == "gzip":
+                      raw = gzip.decompress(raw)
+                  return raw
+
+          nums = json.load(open("data/monthly_nums_jp.json", encoding="utf-8"))
+          enc = [u for u, why in (nums.get("skip") or {}).items() if why == "암호"]
+          rows = {r["doc"]: r for r in
+                  json.load(open("data/monthly_jp.json", encoding="utf-8"))["rows"]
+                  if r.get("doc")}
+          print(f"암호로 남은 {len(enc)}건 중 4건을 본다\n")
+          for u in enc[:4]:
+              code = rows.get(u, {}).get("code", "?")
+              data = get(u)
+              objs = pdftext._objects(data)
+              body, fid = pdfcrypt.encrypt_dict(data, objs)
+              print(f"── {code} · {len(data)//1024}KB")
+              if not body:
+                  print("   /Encrypt 사전을 못 찾았다"); continue
+              print(f"   사전 {len(body)}바이트 · ID {len(fid)}바이트")
+              for nm in (b"/O", b"/U", b"/OE", b"/UE"):
+                  print(f"   {nm.decode()}={len(pdfcrypt._pdf_string(body, nm))}바이트")
+              t0 = time.time()
+              key, cfm = pdfcrypt.file_key(body, fid)
+              print(f"   열쇠={'있음 ' + str(len(key)) + '바이트' if key else '못 만듦'}"
+                    f" · {cfm} · {time.time()-t0:.1f}초")
+              if not key:
+                  u48 = pdfcrypt._pdf_string(body, b"/U")
+                  if len(u48) >= 48:
+                      h = pdfcrypt._hash_2b(b"", u48[32:40], b"")
+                      print(f"   검증 해시 {h[:8].hex()} vs U {u48[:8].hex()}")
+                  continue
+              txt = pdftext.extract_text(data, 6)
+              print(f"   글자 {len(txt)}자 · 앞머리: {txt[:80]!r}")
+              print()
           EOF
