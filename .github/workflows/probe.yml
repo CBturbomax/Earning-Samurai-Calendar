@@ -15,18 +15,16 @@ jobs:
         with:
           python-version: '3.12'
 
-      # 49차 — 밀린 264건을 다 훑었는데 표를 찾은 것이 29건뿐이다(20개사).
-      # **왜 못 찾았는지는 짐작하지 말고 본다.** 실패한 공시에서 '月' 이 든 줄을
-      # 그대로 찍어, 달 이름표가 어떤 꼴로 오는지 눈으로 고른다. 지금 규칙은
-      # 「8月」·「8月度」 처럼 **칸 하나가 통째로 달**일 때만 머리로 보는데,
-      # 「2026年8月」 이나 세로로 선 표는 그 규칙에 안 걸린다.
-      - name: 🗾 월매출 — 표를 못 찾은 공시의 생김새 (49차)
-        timeout-minutes: 13
+      # 50차 — 암호가 걸린 공시가 14건이다. **무엇으로 걸렸는지 봐야** 푼다.
+      # 표준 보안 핸들러는 대개 '빈 사용자 암호 + 권한 잠금'이라 열쇠를 계산할
+      # 수 있다. RC4(V1/2)면 40줄, AES(V4/5)면 AES 구현이 붙는다 — 어느 쪽인지
+      # 먼저 세고 시작한다. /Encrypt 사전을 그대로 찍는다.
+      - name: 🗾 월매출 — 암호 걸린 공시가 무엇으로 걸렸나 (50차)
+        timeout-minutes: 10
         run: |
           python - <<'EOF'
-          import json, re, time, urllib.request, urllib.error, gzip
+          import json, re, time, urllib.request, gzip
           from collections import Counter
-          import pdftext, montable
 
           UA = ("Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 "
                 "(KHTML, like Gecko) Chrome/124.0 Safari/537.36")
@@ -44,48 +42,39 @@ jobs:
                   return str(e)[:40], b""
 
           nums = json.load(open("data/monthly_nums_jp.json", encoding="utf-8"))
-          bad = {u for u, why in (nums.get("skip") or {}).items() if why == "표없음"}
-          rows = json.load(open("data/monthly_jp.json", encoding="utf-8"))["rows"]
-          pick, seen = [], set()
-          for r in sorted(rows, key=lambda r: r["date"], reverse=True):
-              if r.get("doc") in bad and r["code"] not in seen:
-                  seen.add(r["code"]); pick.append(r)
-              if len(pick) >= 26:
-                  break
-          print(f"표 못 찾은 공시 {len(bad)}건 중 {len(pick)}건을 본다\n")
-
-          MONTHCELL = re.compile(r"^\(?(\d{1,2})月(度|分|期)?\)?$")
-          ANYMONTH = re.compile(r"\d{1,2}\s*月")
-          why = Counter()
-          for r in pick:
-              st, data = get(r["doc"])
+          enc = [u for u, why in (nums.get("skip") or {}).items() if why == "암호"]
+          rows = {r["doc"]: r for r in
+                  json.load(open("data/monthly_jp.json", encoding="utf-8"))["rows"]
+                  if r.get("doc")}
+          print(f"암호 걸린 공시 {len(enc)}건\n")
+          kinds = Counter()
+          for u in enc[:14]:
+              st, data = get(u)
               if st != 200:
-                  why["받기실패"] += 1; continue
-              try:
-                  table = pdftext.extract_cells(data, 8)
-              except Exception:
-                  why["터짐"] += 1; continue
-              if not table:
-                  why["글자0"] += 1
-                  print(f"── {r['code']} {r['title'][:36]}\n     글자가 아예 안 나온다")
-                  continue
-              cand = []
-              for cells in table:
-                  k = sum(1 for _x, t in cells if MONTHCELL.match(
-                      montable._norm(t)))
-                  if k:
-                      cand.append((k, cells))
-              hits3 = [c for c in cand if c[0] >= 3]
-              tag = "머리후보있음" if hits3 else ("달칸1~2개" if cand else "달칸없음")
-              why[tag] += 1
-              print(f"── {r['code']} {r['title'][:34]} · 줄 {len(table)} · {tag}")
-              shown = 0
-              for cells in table:
-                  line = " | ".join(t for _x, t in cells)
-                  if ANYMONTH.search(montable._norm(line)) and shown < 4:
-                      print(f"     [{len(cells):2d}칸] {line[:130]}")
-                      shown += 1
-              time.sleep(0.12)
-          print()
-          print("까닭:", dict(why))
+                  print(f"  {st}"); continue
+              m = re.search(rb"/Encrypt\s+(\d+)\s+\d+\s+R", data[-3000:]) or \
+                  re.search(rb"/Encrypt\s+(\d+)\s+\d+\s+R", data)
+              n = int(m.group(1)) if m else None
+              body = b""
+              if n is not None:
+                  o = re.search(rb"(?<![0-9])" + str(n).encode() +
+                                rb"\s+\d+\s+obj(.{0,700}?)endobj", data, re.S)
+                  if o:
+                      body = o.group(1)
+              v = re.search(rb"/V\s+(\d+)", body)
+              r_ = re.search(rb"/R\s+(\d+)", body)
+              cfm = re.search(rb"/CFM\s*/(\w+)", body)
+              leng = re.search(rb"/Length\s+(\d+)", body)
+              perm = re.search(rb"/P\s+(-?\d+)", body)
+              kind = (cfm.group(1).decode() if cfm else
+                      ("RC4" if (v and int(v.group(1)) <= 2) else "?"))
+              kinds[f"V{v.group(1).decode() if v else '?'}"
+                    f"/R{r_.group(1).decode() if r_ else '?'}/{kind}"] += 1
+              code = rows.get(u, {}).get("code", "?")
+              print(f"  {code} V={v and v.group(1)} R={r_ and r_.group(1)} "
+                    f"CFM={cfm and cfm.group(1)} Len={leng and leng.group(1)} "
+                    f"P={perm and perm.group(1)}")
+              print(f"     {body[:220]!r}")
+              time.sleep(0.2)
+          print("\n갈래:", dict(kinds))
           EOF
