@@ -55,10 +55,15 @@ jobs:
 
           push_changes() {
             git add data/ index.html
-            git diff --cached --quiet && return 0
-            python build.py > /dev/null
-            git add index.html
-            git commit -m "발표 속보 $(date -u +%H:%M) [skip ci]"
+            if ! git diff --cached --quiet; then
+              python build.py > /dev/null
+              git add index.html
+              git commit -m "발표 속보 $(date -u +%H:%M) [skip ci]"
+            fi
+            # **바뀐 게 없어도 앞서 있으면 민다.** sync_code 가 담아 둔 커밋이
+            # 여기서 안 나가면 영영 안 나간다.
+            git fetch -q origin main 2>/dev/null || true
+            git merge-base --is-ancestor HEAD origin/main && return 0
             for i in 1 2 3 4; do
               git merge --abort 2>/dev/null || true
               git add data/ index.html 2>/dev/null || true
@@ -91,10 +96,13 @@ jobs:
           # 코드로 계속 돌아 한 시간이 지나도록 그대로였다. 조용한 날일수록
           # 고친 것이 안 먹는 셈이라 정확히 거꾸로다.
           sync_code() {
-            # 아직 커밋 안 된 수집분이 있으면 이 바퀴는 건너뛴다. 바퀴 끝의
-            # push_changes 가 커밋·머지·푸시를 한 묶음으로 하므로, 여기서 커밋만
-            # 해두면 푸시되지 않은 커밋이 남는다.
-            [ -n "$(git status --porcelain -- data/ index.html)" ] && return 0
+            # **작업트리가 지저분하다고 건너뛰면 안 된다.** 처음에 그렇게 했더니
+            # 시간을 넘겨 죽은 단계의 파이썬이 고아로 남아 data/ 를 계속 쓰는
+            # 바람에 트리가 영영 깨끗해지지 않았고, 루프가 살아서 커밋은 하면서도
+            # **새 코드를 한 시간 넘게 안 받았다**. 그래서 먼저 담고 머지한다.
+            # 남는 커밋은 push_changes 가 밀어낸다(바뀐 게 없어도 앞서 있으면 민다).
+            git add data/ index.html 2>/dev/null || true
+            git diff --cached --quiet || git commit -q -m "받은 것 먼저 담기 [skip ci]"
             git fetch -q origin main || return 0
             git merge-base --is-ancestor origin/main HEAD && return 0
             if git merge --no-edit origin/main; then return 0; fi
