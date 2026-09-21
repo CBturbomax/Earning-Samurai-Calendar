@@ -26,7 +26,7 @@ CMap 만 쓰는 파일은 표가 우리 손에 없어 글자를 되살릴 수 �
 import re
 import zlib
 
-__all__ = ["extract_text", "extract_lines"]
+__all__ = ["extract_text", "extract_lines", "is_encrypted"]
 
 OBJ_RE = re.compile(rb"(\d+)\s+(\d+)\s+obj\b", re.S)
 FILTER_RE = re.compile(rb"/Filter\s*(/\w+|\[[^\]]*\])")
@@ -37,6 +37,16 @@ CONTENTS_RE = re.compile(rb"/Contents\s*(?:(\d+)\s+\d+\s+R|\[([^\]]*)\])")
 REF_RE = re.compile(rb"(\d+)\s+\d+\s+R")
 RES_REF_RE = re.compile(rb"/Resources\s+(\d+)\s+\d+\s+R")
 ONE_BYTE_RE = re.compile(rb"begincodespacerange\s*<([0-9A-Fa-f]+)>")
+
+
+ENC_RE = re.compile(rb"/Encrypt\s+\d+\s+\d+\s+R")
+
+
+def is_encrypted(data: bytes) -> bool:
+    """암호가 걸린 PDF 인가. 권한 잠금만 걸어 둔 것이 흔한데, 그래도 스트림이
+    RC4/AES 로 싸여 있어 zlib 이 못 푼다. **'못 읽었다'와 '글자가 없다'를
+    가르려고** 따로 본다 — 조용히 0줄로 넘기면 스캔 이미지와 구별이 안 된다."""
+    return bool(ENC_RE.search(data[-4096:]) or ENC_RE.search(data[:4096]))
 
 
 def _inflate(raw: bytes):

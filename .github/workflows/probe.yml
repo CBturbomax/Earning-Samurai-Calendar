@@ -15,28 +15,31 @@ jobs:
         with:
           python-version: '3.12'
 
-      # 44차 — 43차 진단이 원인을 짚어 줬다. `[(あ)-250(い)]TJ` 의 닫는 `]` 를
-      # 연산자로 보고 쌓아둔 문자열을 비우고 있었다. 대부분의 PDF 가 TJ 를 쓰므로
-      # 열 건 중 일곱이 0줄이었던 것이 이것 하나다. 좌표 변환(cm)과 줄 묶음
-      # 여유도 같이 넣었다. 이제 **얼마나 읽히는지**와 **숫자를 집을 수 있는지**를
-      # 같은 열 건에 다시 부딪혀 본다.
+      # 45차 — 해독은 9/10 이 된다. 이제 **숫자를 안전하게 집을 수 있는 자리**를
+      # 찾는다. 표를 좌표로 복원해 열을 맞추는 길은 회사마다 표 배치가 달라
+      # 조용히 엉뚱한 칸을 집게 된다(이 저장소가 가장 싫어하는 실패다).
       #
-      # 월차Web(kabubiz)은 접었다 — 목록은 200 이지만 링크가 자바스크립트로만
-      # 붙고 종목 페이지는 403 이다. PDF 쪽이 어차피 '실제로 공시한 회사'를
-      # 정확히 덮으므로 그쪽이 옳다.
-      - name: 🗾 월매출 PDF — TJ 고친 뒤 재현율과 숫자 집기 (44차)
+      # 대신 **스스로 이름표를 달고 오는 문장**만 쓴다 —
+      #   「個別売上高は前年同期比105.9%の482億42百万円」(3038)
+      #   「仕入高は前年同月比161％の1,835百万円」(7685)
+      # 금액과 전년비가 한 문장에 있고 무엇의 값인지도 적혀 있다. 이런 문장이
+      # 없으면 숫자를 안 담고 링크만 남긴다.
+      #
+      # 여기서 재는 것은 **그 문장이 얼마나 자주 있나**다. 저장소에 이미 있는
+      # monthly_jp.json 에서 최근 공시를 골라 부딪힌다.
+      - name: 🗾 월매출 — '이름표 달린 문장' 적중률 (45차)
         timeout-minutes: 13
         run: |
           python - <<'EOF'
-          import re, time, urllib.request, urllib.error, gzip
+          import json, re, time, urllib.request, urllib.error, gzip
+          from datetime import date, timedelta
           import pdftext
 
           UA = ("Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 "
                 "(KHTML, like Gecko) Chrome/124.0 Safari/537.36")
 
           def get(url, timeout=40):
-              h = {"User-Agent": UA, "Accept": "*/*",
-                   "Accept-Language": "ja,en;q=0.8", "Accept-Encoding": "gzip"}
+              h = {"User-Agent": UA, "Accept": "*/*", "Accept-Encoding": "gzip"}
               try:
                   with urllib.request.urlopen(
                           urllib.request.Request(url, headers=h), timeout=timeout) as r:
@@ -47,41 +50,69 @@ jobs:
               except urllib.error.HTTPError as e:
                   return e.code, b""
               except Exception as e:
-                  return str(e)[:60], b""
+                  return str(e)[:50], b""
 
-          PDFS = [
-              ("6238", "https://www.release.tdnet.info/inbs/140120260918538410.pdf"),
-              ("7865", "https://www.release.tdnet.info/inbs/140120260918538582.pdf"),
-              ("3038", "https://www.release.tdnet.info/inbs/140120260917537924.pdf"),
-              ("7370", "https://www.release.tdnet.info/inbs/140120260918538566.pdf"),
-              ("8715", "https://www.release.tdnet.info/inbs/140120260917537741.pdf"),
-              ("9007", "https://www.release.tdnet.info/inbs/140120260917538088.pdf"),
-              ("3461", "https://www.release.tdnet.info/inbs/140120260917538196.pdf"),
-              ("7685", "https://www.release.tdnet.info/inbs/140120260917537893.pdf"),
-              ("5580", "https://www.release.tdnet.info/inbs/140120260916537473.pdf"),
-              ("7043", "https://www.release.tdnet.info/inbs/140120260916537033.pdf"),
+          # 뽑아낸 글자에는 숫자 사이에 빈칸이 끼어 온다("1, 8 35 百万円").
+          # 일본어는 빈칸이 뜻을 가르지 않으므로 **통째로 지우고** 본다.
+          ZEN = str.maketrans("０１２３４５６７８９．％，",  "0123456789.%,")
+          N = r"(?:\d[\d,]*(?:\.\d+)?)"
+          AMT = rf"(?:{N}兆)?(?:{N}億)?(?:{N}百万|{N}万|{N}千)?円"
+          METRIC = (r"(売上高|売上収益|営業収益|仕入高|受注高|取扱高|チェーン全店売上高|"
+                    r"全店売上高|既存店売上高|販売高|営業収入|総取扱高|流通総額|"
+                    r"月商|売上)")
+          PATS = [
+              re.compile(rf"{METRIC}[^。]{{0,12}}?(?:前年同月比|前年同期比|前年比)({N})%の({AMT})"),
+              re.compile(rf"{METRIC}[^。]{{0,12}}?({AMT})[^。]{{0,10}}?(?:前年同月比|前年同期比|前年比)({N})%"),
+              re.compile(rf"(?:前年同月比|前年同期比|前年比)({N})%の({AMT})の({METRIC})"),
           ]
-          KEY = re.compile("売上|既存店|全店|前年|同月|月度|合計|百万|千円")
-          ok = 0
-          for code, url in PDFS:
-              st, data = get(url)
-              if st != 200:
-                  print(f"{code}: 받기 실패 {st}"); continue
-              t0 = time.time()
+
+          rows = json.load(open("data/monthly_jp.json", encoding="utf-8"))["rows"]
+          cut = (date.today() - timedelta(days=16)).isoformat()
+          recent, seen = [], set()
+          for r in sorted(rows, key=lambda r: r["date"], reverse=True):
+              if r["date"] < cut or r["code"] in seen or not r.get("doc"):
+                  continue
+              seen.add(r["code"]); recent.append(r)
+              if len(recent) >= 70:
+                  break
+          print(f"표본 {len(recent)}건 (최근 16일, 종목당 하나)")
+
+          okread = enc = fail = hit = 0
+          samples, misses = [], []
+          for r in recent:
+              st, data = get(r["doc"])
+              if st != 200 or not data:
+                  fail += 1; continue
+              if pdftext.is_encrypted(data):
+                  enc += 1; continue
               try:
-                  lines = pdftext.extract_lines(data)
+                  txt = pdftext.extract_text(data)
               except Exception:
-                  import traceback; print(f"{code}: 터짐"); traceback.print_exc(); continue
-              txt = "\n".join(lines)
-              jp = sum(1 for ch in txt
-                       if "\u3040" <= ch <= "\u30ff" or "\u4e00" <= ch <= "\u9fff")
-              good = jp > 30 and len(re.findall(r"\d", txt)) > 20
-              ok += good
-              print(f"{code}: {len(data)//1024}KB · 줄 {len(lines)} · 일본글자 {jp} · "
-                    f"{time.time()-t0:.2f}초 · {'읽힌다' if good else 'X'}")
-              hits = [l for l in lines if KEY.search(l)]
-              for l in (hits or lines)[:22]:
-                  print(f"    | {l[:130]}")
-              print()
-          print(f"==> 열 건 중 {ok} 건이 읽혔다")
+                  fail += 1; continue
+              if len(txt) < 40:
+                  fail += 1; continue
+              okread += 1
+              flat = re.sub(r"\s+", "", txt).translate(ZEN)
+              got = None
+              for pat in PATS:
+                  m = pat.search(flat)
+                  if m:
+                      got = m.group(0)[:70]; break
+              if got:
+                  hit += 1
+                  if len(samples) < 22:
+                      samples.append(f"{r['code']} {got}")
+              elif len(misses) < 10:
+                  j = max(flat.find("前年同月比"), flat.find("前年比"))
+                  misses.append(f"{r['code']} … {flat[max(0,j-50):j+60] if j>0 else flat[:100]}")
+              time.sleep(0.15)
+
+          print(f"받아서 읽힘 {okread} · 암호걸림 {enc} · 실패 {fail}")
+          print(f"이름표 달린 문장 적중 {hit}/{okread}")
+          print("--- 집힌 것 ---")
+          for x in samples:
+              print("  ", x)
+          print("--- 못 집은 것(전년비 주변) ---")
+          for x in misses:
+              print("  ", x)
           EOF
