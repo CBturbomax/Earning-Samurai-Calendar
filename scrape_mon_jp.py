@@ -208,7 +208,15 @@ def main():
             continue
         read += 1
         if not got:
-            if pdftext.is_encrypted(data):
+            # **'암호'와 '표가 없다'를 가른다.** 암호가 걸렸다고 곧장 그렇게
+            # 적었더니, 멀쩡히 열린 공시(마쓰이증권의 매매실적·호시노리조트의
+            # 객실가동률)까지 암호로 셌다. 열쇠가 듣지 않아 글자가 안 나올
+            # 때만 암호다 — 아니면 열리긴 열렸는데 쓸 표가 없는 것이다.
+            try:
+                opened = len(pdftext.extract_text(data, 4)) > 40
+            except Exception:                   # noqa: BLE001
+                opened = False
+            if not opened and pdftext.is_encrypted(data):
                 enc += 1
                 skip[r["doc"]] = "암호"
             else:
