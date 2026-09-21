@@ -3046,10 +3046,19 @@ function renderMonthly() {
   const big = document.getElementById('mnBig').checked;
 
   // 종목별 발표일 이력 — 다음 발표일을 짚는 데 쓴다.
-  const hist = new Map();
+  // **대상월마다 한 번만 센다.** 한 달에 두 번 내는 회사가 있어서(8798 은
+  // 월차와 별도 KPI 를 따로 낸다) 그냥 쌓으면 날짜 간격이 들쭉날쭉해지고
+  // 예상일이 엉뚱해진다. 그 달의 **첫 발표**가 그 회사의 월차 주기다.
+  const firstOf = new Map();
   for (const m of MN) {
-    if (!hist.has(m[2])) hist.set(m[2], []);
-    hist.get(m[2]).push(m[0]);
+    const k = m[2] + '|' + m[5];
+    if (!firstOf.has(k) || m[0] < firstOf.get(k)) firstOf.set(k, m[0]);
+  }
+  const hist = new Map();
+  for (const [k, day] of firstOf) {
+    const code = k.slice(0, k.indexOf('|'));
+    if (!hist.has(code)) hist.set(code, []);
+    hist.get(code).push(day);
   }
   for (const v of hist.values()) v.sort();
 
