@@ -37,6 +37,11 @@ AMOUNT_LABEL = re.compile(
     r"流通総額|月商|月次|売上|チェーン全店|全店|既存店|合計|グループ")
 # 전년비 줄의 이름표.
 YOY_LABEL = re.compile(r"前年|対前年|昨対|YoY")
+# **전년비에는 두 가지 자가 섞여 있다.** 「前年同月比111.2%」 는 비율이고
+# 「対前年同月増減率41.5%」 는 증감폭이다. 같은 칸에 담으면 41.5% 가 '작년의
+# 41.5%' 즉 반토막으로 읽힌다 — 실제로 테라프로브(6627)가 그렇게 실렸다.
+# 증감폭이면 100 을 더해 **비율 하나로 맞춰** 담는다.
+DELTA_LABEL = re.compile(r"増減率|増減|伸び率|成長率|前年差|増収率")
 # 단위. 줄 어디에 적혀 있든 찾는다(이름표 안, 또는 옆 칸).
 UNIT = (("百万円", 1_000_000), ("千円", 1_000), ("億円", 100_000_000),
         ("万円", 10_000), ("円", 1))
@@ -172,6 +177,8 @@ def read(data: bytes, ann: str, max_pages: int = 12):
             # 단위가 없으면 전년비'로 봤더니 9163·7059 의 「稼働率」(가동률)이
             # 전년비로 실렸다. 백분율이라고 다 전년비가 아니다.
             if YOY_LABEL.search(lab):
+                if DELTA_LABEL.search(lab):
+                    vals = {k: v + 100.0 for k, v in vals.items()}
                 yoys.append((lab, vals))
             elif AMOUNT_LABEL.search(lab):
                 unit, mul = _unit(lab, rowtext)
@@ -179,14 +186,22 @@ def read(data: bytes, ann: str, max_pages: int = 12):
                     amounts.append((lab, unit, mul, vals))
         if not amounts and not yoys:
             continue
-        cand = (len(amounts and amounts[0][3] or {}) + len(yoys and yoys[0][1] or {}),
-                i, hdr, amounts, yoys)
-        if best is None or cand[0] > best[0]:
+        # **가장 꽉 찬 표를 고르면 안 된다.** 지난 회계연도 표는 열두 달이 다
+        # 차 있고 올해 표는 이번 달까지만 차 있어서, 개수로 고르면 늘 작년
+        # 것이 이긴다 — 토요쿠모(4058)가 2025년 열두 달로 실렸다. 그 표가
+        # 가리키는 **가장 최근 달**을 먼저 보고, 같으면 개수로 가른다.
+        cols = [m for _x, m in hdr]
+        have = set(amounts[0][3] if amounts else {}) | set(yoys[0][1] if yoys else {})
+        filled = [k for k, m in enumerate(cols) if m in have]
+        yrs = _years(cols, filled, aday)
+        newest = max((yrs[k] * 12 + cols[k] for k in filled), default=0)
+        cand = (newest, len(have), i, hdr, amounts, yoys)
+        if best is None or cand[:2] > best[:2]:
             best = cand
 
     if best is None:
         return None
-    _n, _i, hdr, amounts, yoys = best
+    _newest, _n, _i, hdr, amounts, yoys = best
     amt = amounts[0] if amounts else None
     yoy = yoys[0] if yoys else None
     cols = [m for _x, m in hdr]
