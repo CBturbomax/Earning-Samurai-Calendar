@@ -15,6 +15,134 @@ jobs:
         with:
           python-version: '3.12'
 
+      # 40차 — 39차는 거절된 후보를 **빈도 상위 40건**만 찍었는데 거의 전부
+      # 건수 1이라 그 정렬은 사실상 임의였다. 안 놓친다고 말하려면 나머지도
+      # 봐야 한다. 이번엔 가이던스 수정류(業績予想/差異)를 먼저 걷어내고
+      # **남는 것을 전부** 찍는다. 여기서 0 이면 진짜로 안 놓치는 것이다.
+      - name: 🗾 월매출 놓친 것 — 전수 (40차)
+        timeout-minutes: 12
+        run: |
+          python - <<'EOF'
+          import re, time, urllib.request, urllib.error
+          from datetime import date, timedelta
+          from scrape_jp_tdnet import is_monthly, LIST_URL, ROW_RE, TAGS, UA
+
+          def get(url, timeout=40):
+              req = urllib.request.Request(url, headers={
+                  "User-Agent": UA, "Accept": "*/*", "Accept-Language": "ja,en;q=0.8"})
+              try:
+                  with urllib.request.urlopen(req, timeout=timeout) as r:
+                      return r.read().decode("utf-8", "replace")
+              except urllib.error.HTTPError:
+                  return None
+
+          LOOSE = re.compile(r"売上|販売|受注|業績|実績|概況|速報|月次|月商|"
+                             r"稼働|来店|客数|入場|取扱|会員数|契約数|出荷|生産")
+          MONTHY = re.compile(r"(\d{1,2}|[０-９]{1,2})\s*月")
+          # 월매출이 아닌 것이 확실한 갈래 — 이걸 빼고 남는 것만 눈으로 본다
+          NOTMON = re.compile(r"業績予想|配当予想|予想の修正|予想と実績|実績値との差異|"
+                              r"予想値と実績|決算短信|決算説明|訂正|有価証券報告書|"
+                              r"質疑応答|補足説明|業績目標|予想の開示|予想の公表")
+
+          days = []
+          d = date.today() - timedelta(days=1)
+          while len(days) < 26:
+              if d.weekday() < 5:
+                  days.append(d.strftime("%Y%m%d"))
+              d -= timedelta(days=1)
+
+          left, n_rows, n_take = [], 0, 0
+          for day in days:
+              page = 1
+              while page <= 40:
+                  txt = get(LIST_URL.format(page=page, day=day))
+                  if txt is None:
+                      break
+                  ms = list(ROW_RE.finditer(txt))
+                  if not ms:
+                      break
+                  n_rows += len(ms)
+                  for m in ms:
+                      g = m.groupdict()
+                      t = TAGS.sub("", g["titlecell"]).replace("\u3000", " ").strip()
+                      c = g["code"].strip()[:4]
+                      if is_monthly(t):
+                          n_take += 1
+                      elif LOOSE.search(t) and MONTHY.search(t) and not NOTMON.search(t):
+                          left.append((day, c, t))
+                  page += 1
+                  time.sleep(0.35)
+
+          print(f"훑은 줄 {n_rows:,} · 잡은 것 {n_take}")
+          print(f"가이던스류를 걷어내고 **남은 놓침 후보: {len(left)}건**\n")
+          for day, c, t in left:
+              print(f"  {day} {c}  {t[:88]}")
+          EOF
+
+      # 39차 — **놓치는 회사가 있나.** 회원님이 "7종목만 하라고 한 적 없다,
+      # 올라오는 일본 종목 전부"라고 하셨다. 지금 규칙(is_monthly)이 실제로
+      # 몇 %를 건지는지 재려면 **거절한 줄 중에 월매출처럼 생긴 것**을 봐야 한다.
+      # 저장소의 진짜 함수를 그대로 불러 쓴다 — 여기서 따로 베끼면 갈라진다.
+      - name: 🗾 월매출 놓친 것 찾기 (39차)
+        timeout-minutes: 12
+        run: |
+          python - <<'EOF'
+          import re, time, urllib.request, urllib.error
+          from collections import Counter
+          from datetime import date, timedelta
+          from scrape_jp_tdnet import is_monthly, LIST_URL, ROW_RE, TAGS, UA
+
+          def get(url, timeout=40):
+              req = urllib.request.Request(url, headers={
+                  "User-Agent": UA, "Accept": "*/*", "Accept-Language": "ja,en;q=0.8"})
+              try:
+                  with urllib.request.urlopen(req, timeout=timeout) as r:
+                      return r.read().decode("utf-8", "replace")
+              except urllib.error.HTTPError:
+                  return None
+
+          # 월매출처럼 생겼는지 **아주 느슨하게** 본다. 여기 걸리는데 is_monthly 가
+          # 거절하면 그게 놓친 후보다.
+          LOOSE = re.compile(r"売上|売上高|販売|受注|業績|実績|概況|速報|月次|月商|"
+                             r"稼働|来店|客数|入場|取扱|会員数|契約数|出荷|生産")
+          MONTHY = re.compile(r"(\d{1,2}|[０-９]{1,2})\s*月")
+
+          days = []
+          d = date.today() - timedelta(days=1)
+          while len(days) < 26:
+              if d.weekday() < 5:
+                  days.append(d.strftime("%Y%m%d"))
+              d -= timedelta(days=1)
+
+          taken, missed, rows_n = [], [], 0
+          for day in days:
+              page = 1
+              while page <= 40:
+                  txt = get(LIST_URL.format(page=page, day=day))
+                  if txt is None:
+                      break
+                  ms = list(ROW_RE.finditer(txt))
+                  if not ms:
+                      break
+                  rows_n += len(ms)
+                  for m in ms:
+                      g = m.groupdict()
+                      t = TAGS.sub("", g["titlecell"]).replace("\u3000", " ").strip()
+                      c = g["code"].strip()[:4]
+                      if is_monthly(t):
+                          taken.append((c, t))
+                      elif LOOSE.search(t) and MONTHY.search(t):
+                          missed.append((c, t))
+                  page += 1
+                  time.sleep(0.35)
+
+          print(f"훑은 줄 {rows_n:,} · 잡은 것 {len(taken)} · 놓친 후보 {len(missed)}")
+          print(f"잡은 회사 {len({c for c, _ in taken})}곳\n")
+          print("-- 놓친 후보(월매출처럼 생겼는데 거절당한 줄) 상위 40 --")
+          for t, n in Counter(t for _c, t in missed).most_common(40):
+              print(f"  {n:2d}  {t[:72]}")
+          EOF
+
       # 38차 — 37차에서 테스트 7종목 중 7685 만 잡혔다. 나머지 여섯이
       # **TDnet 에 월차를 아예 안 내는 것**인지, 내가 훑은 9영업일 밖이라 그런
       # 것인지 가른다(45일 = TDnet 보존창 전체). 겸사겸사 물음 둘 더:
