@@ -37,7 +37,7 @@ OUT = HERE / "data" / "monthly_nums_jp.json"
 
 # 뜯는 규칙이 바뀌면 올린다. **본 공시 기록만** 비우고 모아둔 값은 남긴다 —
 # 창 밖으로 밀려난 공시는 다시 못 받으므로 값을 버리면 영영 잃는다.
-PARSE_VER = 1
+PARSE_VER = 2
 
 UA = ("Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 "
       "(KHTML, like Gecko) Chrome/124.0 Safari/537.36")
@@ -67,11 +67,14 @@ def load():
         return {}, set(), {}
     by = old.get("codes") or {}
     done = set(old.get("done") or [])
+    skip = old.get("skip") or {}
     if old.get("pv") != PARSE_VER:
+        # **건너뛴 것도 같이 비운다.** 규칙이 넓어지면 전에 '표없음'으로 넘긴
+        # 공시에서 이제 표가 나올 수 있는데, skip 을 남겨 두면 영영 안 본다.
         print(f"  뜯는 규칙이 바뀌었다(pv {old.get('pv')} -> {PARSE_VER})."
-              f" 모아둔 값은 두고 본 공시 기록만 비운다.")
-        done = set()
-    return by, done, old.get("skip") or {}
+              f" 모아둔 값은 두고 본 공시·건너뛴 공시 기록을 비운다.")
+        done, skip = set(), {}
+    return by, done, skip
 
 
 def save(by, done, skip):
