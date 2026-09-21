@@ -1519,10 +1519,12 @@ def load_monthly(packed):
     except (ValueError, OSError) as e:
         print(f"  ! monthly_jp.json 읽기 실패: {e}")
         return []
-    known = {}
+    known, sect = {}, {}
     for q in packed:
         if q[9] == "jp":
             known.setdefault(q[1], q[2])
+            if q[5]:
+                sect.setdefault(q[1], q[5])
     out = []
     for r in rows:
         code = r.get("code") or ""
@@ -1533,7 +1535,7 @@ def load_monthly(packed):
         out.append([r.get("date", ""), r.get("time", ""), code, ko,
                     r.get("name", ""), r.get("period", ""), int(r.get("pok", 1)),
                     r.get("title", ""), r.get("doc", ""),
-                    CAPS.get("jp:" + code, 0)])
+                    CAPS.get("jp:" + code, 0), sect.get(code, "")])
     out.sort(key=lambda x: (x[0], -x[9], x[2]), reverse=False)
     return out
 
@@ -1867,7 +1869,8 @@ def build():
         # 합이 총매출과 안 맞는 종목은 여기서 걸러진다(seg_fit).
         "seg": seg,
         # 일본 월매출(月次). [날짜, 시각, 코드, 한글명, 원문명, 대상월, 달정확도,
-        #                  제목, 첨부, 시총] — 숫자가 아니라 '무엇을 언제 냈나'다.
+        #                  제목, 첨부, 시총, 업종] — 여기는 '무엇을 언제 냈나'고
+        # 숫자는 monthlyNum 에 따로 있다(못 읽은 종목은 거기 없다).
         "monthly": monthly,
         "monthlyNum": monthly_nums,
     }
@@ -2050,108 +2053,53 @@ __FLAGCSS__
    싶다"고 하셨다. 그래서 격자로 바꿔 한 화면에 여남은 장이 들어가게 했다.
    막대 위의 숫자도 뺐다 — 최신값은 카드 머리에 있고, 나머지는 **모양**으로
    읽는 것이 이 격자의 목적이다(하나하나 짚어 볼 때는 막대에 손을 얹으면 뜬다). */
-.mn { display:grid; grid-template-columns:repeat(auto-fill, minmax(330px, 1fr));
-      gap:9px; }
-.mcard { border:1px solid var(--line); border-radius:9px; background:var(--panel);
-         padding:7px 10px 4px; }
+/* **업종별로 묶어 세 장씩 늘어놓는다.** 회원님이 보내 주신 대만 월매출 화면과
+   같은 꼴이다 — 묶음 머리에 종목 수와 합계, 카드마다 코드·이름·업종·시총,
+   그 아래 최신월 수치와 전년비, 막대 그림, 맨 아래 한 줄짜리 사업 설명.
+   한 종목이 한 줄을 다 쓰던 큰 카드도, 이름만 빽빽하던 작은 카드도 아니다. */
+.mn { display:flex; flex-direction:column; gap:22px; }
+.mgrp > h3 { font-size:20px; font-weight:800; margin:0 0 10px;
+             border-left:4px solid var(--a2); padding-left:10px; }
+.mgrp > h3 em { font-style:normal; color:#d8b877; font-size:16px;
+                font-weight:600; margin-left:8px; }
+.mgrid { display:grid; grid-template-columns:repeat(auto-fill, minmax(430px, 1fr));
+         gap:12px; }
+.mcard { border:1px solid var(--line); border-radius:11px; background:var(--panel);
+         padding:11px 14px 9px; display:flex; flex-direction:column; }
 .mcard.hit { cursor:pointer; }
 .mcard.hit:hover { border-color:#2f4457; }
-.mhd { display:flex; align-items:baseline; gap:6px; margin-bottom:1px;
-       white-space:nowrap; }
-.mhd .mc { color:#8fb8dc; font-weight:700; font-size:13px;
-           font-variant-numeric:tabular-nums; flex:0 0 auto; }
-.mhd .mnm { font-weight:700; font-size:15px; overflow:hidden;
+.mhd { display:flex; align-items:baseline; gap:7px; white-space:nowrap; }
+.mhd .mc { color:#8fb8dc; font-weight:700; font-size:16px;
+           font-variant-numeric:tabular-nums; }
+.mhd .mnm { font-weight:800; font-size:18px; overflow:hidden;
             text-overflow:ellipsis; }
-.mhd .mcap { color:var(--mute); font-size:12px; flex:0 0 auto; }
-.mhd .mlast { margin-left:auto; font-size:13px; flex:0 0 auto;
-              font-variant-numeric:tabular-nums; }
-.mhd .up { color:#6fd39b; } .mhd .dn { color:#e2857f; }
-.mchart { display:block; width:100%; height:auto; }
-.mchart .bar { fill:#2f6ea8; } .mchart .bar.y { fill:#3d7f5c; }
+.mhd .morig { color:var(--mute); font-size:14px; overflow:hidden;
+              text-overflow:ellipsis; border-bottom:1px dotted #3a4a59; }
+.msub { color:var(--mute); font-size:14px; margin:1px 0 6px; }
+/* 최신월 한 줄 — 왼쪽에 값, 오른쪽에 전년비·전월비. 큰 글자는 이 둘뿐이다. */
+.mstat { display:flex; align-items:flex-end; justify-content:space-between;
+         background:#111a21; border-radius:8px; padding:6px 10px; }
+.mstat .v { font-size:24px; font-weight:800; color:#8fb8dc; line-height:1.1;
+            font-variant-numeric:tabular-nums; }
+.mstat .k { color:var(--mute); font-size:12px; }
+.mstat .r { text-align:right; }
+.mstat .r b { font-size:19px; font-variant-numeric:tabular-nums; }
+.mstat .up { color:#e2857f; } .mstat .dn { color:#6fd39b; }
+.mchart { display:block; width:100%; height:auto; margin:4px 0 2px; }
+.mchart .bar { fill:#3b7fc4; } .mchart .bar.y { fill:#3d7f5c; }
 .mchart .bar.yn { fill:#8a4a46; }
+.mchart .ln { fill:none; stroke:#e08a4a; stroke-width:1.6; }
+.mchart .ma { fill:none; stroke:#5fbf92; stroke-width:1.2; opacity:.75; }
 .mchart .xl { fill:var(--mute); font-size:11px; }
 .mchart .zero { stroke:#33465a; stroke-width:1; }
-.mft { display:flex; gap:7px; align-items:center; color:var(--mute);
-       font-size:12px; padding:0 0 2px; white-space:nowrap; overflow:hidden; }
+.mdesc { color:#9fb0bf; font-size:14px; border-top:1px dotted #26333f;
+         padding-top:6px; margin-top:auto; overflow:hidden;
+         display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; }
+.mft { display:flex; gap:8px; align-items:center; color:var(--mute);
+       font-size:12px; padding-top:4px; white-space:nowrap; overflow:hidden; }
 .mft .mpdf { color:var(--a3); text-decoration:none; border-bottom:1px dotted;
-             flex:0 0 auto; margin-left:auto; }
-.mft .mnxt { color:#d8b877; flex:0 0 auto; }
-
-
-/* ── 알림 배너 ─────────────────────────────────────────────── */
-
-/* ── 툴바 ──────────────────────────────────────────────────── */
-.tools {
-  display:flex; flex-wrap:wrap; gap:12px; align-items:center; margin:14px 0;
-  background:var(--panel); border:1px solid var(--line); border-radius:10px;
-  padding:14px 16px;
-}
-select, input[type=search] {
-  background:#0b1015; color:var(--fg); border:1px solid var(--line);
-  border-radius:8px; padding:11px 13px; font-size:19px; font-family:inherit;
-}
-select { max-width:230px; }
-select:focus { outline:2px solid var(--a3); }
-input[type=search] { width:min(420px,100%); padding:11px 16px; font-size:20px; }
-input[type=search]:focus { outline:2px solid var(--a1); border-color:var(--a1); }
-
-/* ── 종목 바로 찾기 ────────────────────────────────────────────
-   아래 표의 검색칸은 **보고 있는 것 안에서** 거른다 — 탭이 미국이면 일본 회사는
-   안 나오고, 규모 필터에 걸린 회사도 안 나온다. 그건 훑어볼 때 쓰는 것이다.
-   여기 것은 반대다: **가진 종목 전부**에서 찾아 곧장 그 회사 창을 연다. */
-.find { position:relative; margin:14px 0 6px; max-width:640px; }
-.find input[type=search] { width:100%; padding:14px 18px 14px 46px; font-size:21px; }
-.find .mag { position:absolute; left:16px; top:50%; transform:translateY(-50%);
-             color:var(--mute); font-size:20px; pointer-events:none; }
-.fqlist { position:absolute; z-index:40; left:0; right:0; top:calc(100% + 6px);
-          background:var(--panel); border:1px solid var(--line); border-radius:10px;
-          box-shadow:0 14px 34px rgba(0,0,0,.5); overflow:hidden; }
-.fqlist[hidden] { display:none; }
-.fqi { display:flex; align-items:baseline; gap:10px; padding:11px 16px; cursor:pointer;
-       border-bottom:1px solid var(--line); font-size:19px; }
-.fqi:last-child { border-bottom:0; }
-.fqi.on, .fqi:hover { background:#1b2530; }
-.fqi .fqn { font-weight:700; }
-.fqi .fqc { color:var(--mute); font-size:17px; }
-.fqi .fqd { margin-left:auto; color:var(--mute); font-size:17px; white-space:nowrap; }
-.fqnone { padding:12px 16px; color:var(--mute); font-size:18px; }
-.chk {
-  display:inline-flex; align-items:center; gap:8px; font-size:19px;
-  cursor:pointer; user-select:none; white-space:nowrap;
-}
-.chk input { width:20px; height:20px; accent-color:var(--a1); cursor:pointer; }
-.count { margin-left:auto; color:var(--mute); font-size:19px; }
-.count b { color:var(--a1); font-size:22px; }
-
-/* button 과 a 를 함께 받는다. 예전에는 button.btn 으로만 잡아서
-   모달의 <a class="btn"> 링크가 맨 파란 글씨로 나왔다. */
-.btn {
-  background:#0b1015; color:var(--fg); border:1px solid var(--line);
-  border-radius:8px; padding:11px 16px; font-size:19px; font-family:inherit;
-  cursor:pointer; text-decoration:none; display:inline-block; line-height:1.2;
-}
-/* .btn 의 display 가 브라우저 기본 [hidden] 규칙을 이겨서, hidden 을 걸어도
-   버튼이 그대로 보였다. 명시적으로 눌러 준다. */
-.btn[hidden] { display:none; }
-.btn:hover { border-color:var(--a1); color:var(--a1); }
-.btn.pri { background:var(--a1); border-color:var(--a1); color:#fff; font-weight:700; }
-.btn.pri:hover { filter:brightness(1.12); color:#fff; }
-button.btn:disabled { opacity:.4; cursor:default; }
-button.btn:disabled:hover { border-color:var(--line); color:var(--fg); }
-
-/* ── 주 네비게이션 ─────────────────────────────────────────── */
-.weeknav {
-  display:flex; align-items:center; gap:14px; flex-wrap:wrap;
-  background:var(--panel); border:1px solid var(--line); border-radius:10px;
-  padding:12px 16px; margin:14px 0;
-}
-.weeknav .wlabel { font-size:24px; font-weight:800; letter-spacing:-.3px; }
-.weeknav .wsum { color:var(--mute); font-size:18px; }
-.weeknav .spacer { margin-left:auto; }
-
-/* 나라 고르기 — 위쪽 탭과 같은 것을 캘린더 옆에도 둔다. 주를 넘기다가
-   나라를 바꾸려고 맨 위까지 올라갔다 오지 않게. 둘은 늘 같이 움직인다. */
-.mpick { display:flex; gap:6px; flex-wrap:wrap; }
+             margin-left:auto; }
+.mft .mnxt { color:#d8b877; }
 .mpick .mp {
   font:inherit; font-size:17px; font-weight:700; cursor:pointer;
   background:#141c24; color:var(--mute); border:1px solid var(--line);
@@ -3082,21 +3030,22 @@ function mnChart(m) {
   const n = m.length;
   if (!n) return '';
   const hasRev = m.some(r => r[1] != null);
-  /* 격자에 들어가는 작은 그림이다. **막대 위에 숫자를 쓰지 않는다** — 넷씩
-     늘어놓으면 글자가 서로 붙어 도리어 안 읽힌다. 최신값은 카드 머리에 적고,
-     하나하나는 막대에 손을 얹으면 뜬다. x 이름표도 처음과 끝만 적는다. */
-  const W = Math.max(300, n * 22), H = 62, L = 4, R = 4, T = 6, B = 13;
+  const W = Math.max(400, n * 15), H = 118, L = 6, R = 6, T = 8, B = 15;
   const step = (W - L - R) / n;
   const cx = i => L + step * i + step / 2;
-  const bw = Math.min(16, step * 0.62);
-  const tip = i => (+m[i][0].slice(5, 7)) + '월 ' +
+  const bw = Math.min(13, step * 0.66);
+  const base = H - B;
+  const tip = i => m[i][0].slice(2).replace('-', '/') + ' ' +
         (m[i][1] != null ? mnFmtJPY(m[i][1]) : '') +
         (m[i][2] != null ? (m[i][1] != null ? ' · ' : '') + '전년비 ' +
                            m[i][2].toFixed(1) + '%' : '');
   let body = '';
   if (hasRev) {
+    /* 막대는 금액, 주황 선은 전년비, 옅은 녹색 선은 석 달 이동평균이다.
+       전년비 축은 **그 종목의 값 언저리로 좁게** 잡는다 — 0~200% 로 넓게
+       잡으면 100 언저리의 오르내림이 한 줄로 눌려 보이지 않는다
+       (실적 차트의 영업이익률 축과 같은 이치). */
     const mx = Math.max(...m.map(r => r[1] || 0), 1);
-    const base = H - B;
     for (let i = 0; i < n; i++) {
       const v = m[i][1];
       if (v == null) continue;
@@ -3105,18 +3054,45 @@ function mnChart(m) {
               (base - h).toFixed(1) + '" width="' + bw.toFixed(1) + '" height="' +
               h.toFixed(1) + '" rx="1.5"><title>' + tip(i) + '</title></rect>';
     }
+    const ys = m.map(r => r[2]).filter(v => v != null);
+    if (ys.length >= 2) {
+      const lo = Math.min(...ys), hi = Math.max(...ys);
+      const pad = Math.max(3, (hi - lo) * 0.15);
+      const a = lo - pad, b2 = hi + pad;
+      const yy = v => base - (base - T) * (v - a) / Math.max(1e-6, b2 - a);
+      let d = '', started = false;
+      for (let i = 0; i < n; i++) {
+        if (m[i][2] == null) { started = false; continue; }
+        d += (started ? 'L' : 'M') + cx(i).toFixed(1) + ',' + yy(m[i][2]).toFixed(1);
+        started = true;
+      }
+      if (d) body += '<path class="ln" d="' + d + '"/>';
+    }
+    // 석 달 이동평균 — 달마다 들쭉날쭉한 것 밑에 깔린 흐름을 본다.
+    if (n >= 4) {
+      let d = '', started = false;
+      for (let i = 2; i < n; i++) {
+        const w = [m[i - 2][1], m[i - 1][1], m[i][1]];
+        if (w.some(v => v == null)) { started = false; continue; }
+        const av = (w[0] + w[1] + w[2]) / 3;
+        d += (started ? 'L' : 'M') + cx(i).toFixed(1) + ',' +
+             (base - (base - T) * (av / mx)).toFixed(1);
+        started = true;
+      }
+      if (d) body += '<path class="ma" d="' + d + '"/>';
+    }
   } else {
     /* 전년비만 있는 회사는 100%를 기준선으로 위아래로 그린다 — 0 부터 그리면
        95%와 105%가 거의 같은 높이라 좋아졌는지가 안 보인다. */
     const dev = m.map(r => r[2] == null ? null : r[2] - 100);
     const mx = Math.max(10, ...dev.filter(v => v != null).map(Math.abs));
-    const mid = T + (H - B - T) / 2;
+    const mid = T + (base - T) / 2;
     body += '<line class="zero" x1="' + L + '" y1="' + mid.toFixed(1) +
             '" x2="' + (W - R) + '" y2="' + mid.toFixed(1) + '"/>';
     for (let i = 0; i < n; i++) {
       const d = dev[i];
       if (d == null) continue;
-      const h = (H - B - T) / 2 * (Math.abs(d) / mx);
+      const h = (base - T) / 2 * (Math.abs(d) / mx);
       body += '<rect class="bar ' + (d >= 0 ? 'y' : 'yn') + '" x="' +
               (cx(i) - bw / 2).toFixed(1) + '" y="' +
               (d >= 0 ? mid - h : mid).toFixed(1) + '" width="' + bw.toFixed(1) +
@@ -3124,11 +3100,12 @@ function mnChart(m) {
               tip(i) + '</title></rect>';
     }
   }
-  const lab = (i, anchor) => '<text class="xl" x="' + cx(i).toFixed(1) + '" y="' +
-        (H - 3) + '" text-anchor="' + anchor + '">' +
-        m[i][0].slice(2, 4) + '.' + m[i][0].slice(5, 7) + '</text>';
-  body += lab(0, n > 1 ? 'start' : 'middle');
-  if (n > 1) body += lab(n - 1, 'end');
+  // x 이름표는 여섯 달마다. 촘촘하면 서로 붙어 도리어 안 읽힌다.
+  const gap = n > 14 ? 6 : (n > 7 ? 3 : 1);
+  for (let i = n - 1; i >= 0; i -= gap)
+    body += '<text class="xl" x="' + cx(i).toFixed(1) + '" y="' + (H - 3) +
+            '" text-anchor="middle">' + m[i][0].slice(2, 4) + '/' +
+            m[i][0].slice(5, 7) + '</text>';
   return '<svg class="mchart" viewBox="0 0 ' + W + ' ' + H +
          '" preserveAspectRatio="xMidYMid meet">' + body + '</svg>';
 }
@@ -3164,19 +3141,17 @@ function renderMonthly() {
   const q = (document.getElementById('mnQ').value || '').trim().toLowerCase();
   const capMin = +document.getElementById('mnCap').value;
   const numBox = document.getElementById('mnNum');
-  // 아직 수치를 하나도 못 읽었으면 그 체크는 화면을 통째로 비운다. 켜 둔 채로
-  // 두면 "월매출이 사라졌다"로 보이므로, 그럴 때는 꺼서 목록이라도 보이게 한다.
   if (!nMon) { numBox.checked = false; numBox.disabled = true; }
   const numOnly = numBox.checked;
 
-  // 종목별로 묶는다. 화면의 단위가 '공시 한 줄'이 아니라 '회사 하나'다.
   const byCode = new Map();
   for (const m of MN) {
     let c = byCode.get(m[2]);
     if (!c) byCode.set(m[2], c = {code: m[2], ko: m[3], orig: m[4], cap: m[9],
-                                  rows: []});
+                                  sect: m[10] || '기타', rows: []});
     c.rows.push(m);
     if (m[9] > c.cap) c.cap = m[9];
+    if (!c.sect && m[10]) c.sect = m[10];
   }
   const list = [];
   for (const c of byCode.values()) {
@@ -3192,45 +3167,85 @@ function renderMonthly() {
   document.getElementById('mnCnt').innerHTML =
     '<b>' + list.length.toLocaleString() + '</b>개사';
 
-  // 대상월마다 첫 발표만 세어 다음 발표일을 짚는다(같은 달을 두 번 내는 회사가
-  // 있다 — 8237 은 속보 뒤에 본보고를 또 낸다).
-  host.innerHTML = list.slice(0, 400).map(c => {
-    const num = MNUM[c.code];
-    const last = c.rows[c.rows.length - 1];
-    const has = mnDate.has(c.code);
-    const firstOf = new Map();
-    for (const r of c.rows) if (!firstOf.has(r[5])) firstOf.set(r[5], r[0]);
-    const nx = mnNext([...firstOf.values()].sort());
-    let head = '';
-    if (num) {
-      const lr = num.m[num.m.length - 1];
-      const y = lr[2];
-      head = '<span class="mlast">' + (+lr[0].slice(5, 7)) + '월 ' +
-             (lr[1] != null ? mnFmtJPY(lr[1]) + ' ' : '') +
-             (y != null ? '<b class="' + (y >= 100 ? 'up' : 'dn') + '">' +
-                          y.toFixed(1) + '%</b>' : '') + '</span>';
-    }
-    // 원문 제목은 길어서 격자를 무너뜨린다. 무엇의 값인지(前年比·売上高)만
-    // 짧게 남기고 제목은 원문 링크에 맡긴다.
-    const what = num ? (num.lab || num.ylab || '') : '';
-    return '<div class="mcard' + (has ? ' hit' : '') + '"' +
-      (has ? ' data-mkey="jp:' + esc(c.code) + '" data-mdate="' +
-             esc(mnDate.get(c.code)) + '"' : '') + '>' +
-      '<div class="mhd"><span class="mc">' + esc(c.code) + '</span>' +
-      '<span class="mnm" title="' + esc(c.orig) + '">' + esc(c.ko) +
-      (NOTE['jp:' + c.code] ? ' ★' : '') + '</span>' +
-      (c.cap ? '<span class="mcap">' + c.cap.toFixed(2) + '조</span>' : '') +
-      head + '</div>' +
-      (num ? mnChart(num.m) : '') +
-      '<div class="mft">' +
-      '<span>' + esc(what ? what.slice(0, 16) : last[0].slice(5) + ' 공시') +
-      '</span>' +
-      (nx ? '<span class="mnxt">~' + nx.slice(5) + '</span>' : '') +
-      (num ? '' : '<span>수치 못 읽음</span>') +
-      (last[8] ? '<a class="mpdf" href="' + esc(last[8]) +
-                 '" target="_blank" rel="noopener">원문</a>' : '') +
-      '</div></div>';
+  // 업종으로 묶는다. 묶음 차례는 **그 업종의 시총 합**이 큰 순이다.
+  const grp = new Map();
+  for (const c of list) {
+    if (!grp.has(c.sect)) grp.set(c.sect, []);
+    grp.get(c.sect).push(c);
+  }
+  const order = [...grp.entries()].sort(
+    (a, b) => b[1].reduce((s, c) => s + (c.cap || 0), 0) -
+              a[1].reduce((s, c) => s + (c.cap || 0), 0));
+
+  host.innerHTML = order.map(([sect, cs]) => {
+    const withNum = cs.filter(c => MNUM[c.code]).length;
+    const capSum = cs.reduce((s, c) => s + (c.cap || 0), 0);
+    return '<div class="mgrp"><h3>' + esc(sect) +
+      '<em>' + cs.length + '종목' +
+      (withNum ? ' · 수치 ' + withNum + '종목' : '') +
+      (capSum ? ' · 시총 합계 ' + capSum.toFixed(1) + '조원' : '') +
+      '</em></h3><div class="mgrid">' +
+      cs.map(c => mnCard(c)).join('') + '</div></div>';
   }).join('');
+}
+
+/* 카드 한 장. 대만 화면과 같은 차례로 — 이름줄 · 업종/시총 · 최신월 수치 ·
+   그림 · 사업 설명. 설명은 상세창이 쓰는 것과 같은 자료라 따로 받지 않는다. */
+function mnCard(c) {
+  const num = MNUM[c.code];
+  const last = c.rows[c.rows.length - 1];
+  const has = mnDate.has(c.code);
+  const firstOf = new Map();
+  for (const r of c.rows) if (!firstOf.has(r[5])) firstOf.set(r[5], r[0]);
+  const nx = mnNext([...firstOf.values()].sort());
+  const key = 'jp:' + c.code;
+  const desc = (D.descKo && D.descKo[key]) || (D.desc && D.desc[key]) || '';
+
+  let stat = '';
+  if (num) {
+    const mm = num.m, lr = mm[mm.length - 1];
+    const prev = mm.length > 1 ? mm[mm.length - 2] : null;
+    const yoy = lr[2];
+    // 전월비는 **금액이 둘 다 있을 때만** 낸다. 전년비끼리 빼면 그건
+    // 전월비가 아니라 전년비의 변화폭이라 뜻이 다르다.
+    const mom = (lr[1] != null && prev && prev[1]) ? (lr[1] / prev[1] - 1) * 100 : null;
+    stat = '<div class="mstat"><div>' +
+      '<div class="v">' + (lr[1] != null ? mnFmtJPY(lr[1]) :
+                           (yoy != null ? yoy.toFixed(1) + '%' : '—')) + '</div>' +
+      '<div class="k">' + lr[0].slice(0, 4) + '년 ' + (+lr[0].slice(5, 7)) + '월' +
+      (lr[1] != null ? '' : ' · 전년동월비') + '</div></div>' +
+      '<div class="r"><b>' +
+      (yoy != null ? '<span class="' + (yoy >= 100 ? 'up' : 'dn') + '">' +
+        (yoy >= 100 ? '+' : '') + (yoy - 100).toFixed(1) + '</span>' : '—') +
+      (mom != null ? ' / <span class="' + (mom >= 0 ? 'up' : 'dn') + '">' +
+        (mom >= 0 ? '+' : '') + mom.toFixed(1) + '</span>' : '') +
+      '</b><div class="k">전년비% ' + (mom != null ? '/ 전월비%' : '') + '</div>' +
+      '</div></div>';
+  } else {
+    stat = '<div class="mstat"><div><div class="v">—</div>' +
+      '<div class="k">' + last[0].slice(5) + ' 공시 · 수치 못 읽음</div></div></div>';
+  }
+
+  return '<div class="mcard' + (has ? ' hit' : '') + '"' +
+    (has ? ' data-mkey="' + esc(key) + '" data-mdate="' +
+           esc(mnDate.get(c.code)) + '"' : '') + '>' +
+    '<div class="mhd"><span class="mc">' + esc(c.code) + '</span>' +
+    '<span class="mnm">' + esc(c.ko) + (NOTE[key] ? ' ★' : '') + '</span>' +
+    (c.ko !== c.orig ? '<span class="morig">' + esc(c.orig) + '</span>' : '') +
+    '</div>' +
+    '<div class="msub">' + esc(c.sect) +
+    (c.cap ? ' · ' + c.cap.toFixed(2) + '조원' : '') +
+    (num && (num.lab || num.ylab) ? ' · ' + esc((num.lab || num.ylab).slice(0, 14))
+                                  : '') + '</div>' +
+    stat + (num ? mnChart(num.m) : '') +
+    '<div class="mft">' +
+    (last[6] ? '' : '<span>대상월 어림</span>') +
+    (nx ? '<span class="mnxt">다음 ' + nx.slice(5) + ' 예상</span>' : '') +
+    (last[8] ? '<a class="mpdf" href="' + esc(last[8]) +
+               '" target="_blank" rel="noopener">원문</a>' : '') +
+    '</div>' +
+    (desc ? '<div class="mdesc">' + esc(desc) + '</div>' : '') +
+    '</div>';
 }
 
 function renderGroups() {
