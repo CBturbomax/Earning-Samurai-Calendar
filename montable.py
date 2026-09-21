@@ -42,8 +42,10 @@ UNIT = (("百万円", 1_000_000), ("千円", 1_000), ("億円", 100_000_000),
         ("万円", 10_000), ("円", 1))
 PCT = re.compile(r"[%％]")
 
-# 누계·예상은 그 달의 값이 아니다.
-SKIP_LABEL = re.compile(r"累計|累積|予想|計画|見通|通期|上期|下期|前年同月の|前期")
+# 누계·예상은 그 달의 값이 아니다. 회사 정보 줄(2654 의 「株式会社」)도 아니다 —
+# 표가 아닌 줄에 달 이름표가 우연히 걸린 것이라, 그대로 두면 아무 숫자나 실린다.
+SKIP_LABEL = re.compile(r"累計|累積|予想|計画|見通|通期|上期|下期|前年同月の|前期|"
+                        r"株式会社|代表者|問合せ|電話|コード番号|各位|TEL")
 
 
 def _norm(s: str) -> str:
@@ -61,9 +63,26 @@ def _num(cell: str):
     return -v if neg else v
 
 
-def _year_of(month: int, ann: date) -> int:
-    """발표일로 해를 정한다. 발표한 달보다 크면 지난해다."""
-    return ann.year if month <= ann.month else ann.year - 1
+def _years(cols, filled, ann: date):
+    """머리줄의 달들에 해를 붙인다 -> [연도].
+
+    **한 달씩 따로 정하면 안 된다.** '발표한 달보다 크면 지난해'만 쓰면
+    회계연도가 발표한 달에서 시작하는 표에서 첫 칸이 올해로 붙는다(4058 의
+    9월이 2026-09 가 됐다 — 9월은 아직 끝나지도 않았다).
+
+    표의 달은 왼쪽에서 오른쪽으로 시간 순이다. **값이 있는 맨 오른쪽 칸**을
+    기준으로 삼고(그것이 이번에 보고하는 달이다), 양쪽으로 훑으며 달 번호가
+    거꾸로 가는 자리마다 해를 하나 넘긴다.
+    """
+    n = len(cols)
+    yr = [None] * n
+    anchor = max(filled) if filled else n - 1
+    yr[anchor] = ann.year if cols[anchor] <= ann.month else ann.year - 1
+    for i in range(anchor - 1, -1, -1):
+        yr[i] = yr[i + 1] - 1 if cols[i] > cols[i + 1] else yr[i + 1]
+    for i in range(anchor + 1, n):
+        yr[i] = yr[i - 1] + 1 if cols[i] < cols[i - 1] else yr[i - 1]
+    return yr
 
 
 def _headers(cells):
@@ -149,7 +168,10 @@ def read(data: bytes, ann: str, max_pages: int = 12):
             if len(vals) < 2:
                 continue
             rowtext = "".join(t for _, t in cells2)
-            if YOY_LABEL.search(lab) or (PCT.search(rowtext) and not _unit(lab, rowtext)[0]):
+            # **전년비 줄은 이름표에 '전년'이 있어야 한다.** 한때 '％가 있고
+            # 단위가 없으면 전년비'로 봤더니 9163·7059 의 「稼働率」(가동률)이
+            # 전년비로 실렸다. 백분율이라고 다 전년비가 아니다.
+            if YOY_LABEL.search(lab):
                 yoys.append((lab, vals))
             elif AMOUNT_LABEL.search(lab):
                 unit, mul = _unit(lab, rowtext)
@@ -167,10 +189,15 @@ def read(data: bytes, ann: str, max_pages: int = 12):
     _n, _i, hdr, amounts, yoys = best
     amt = amounts[0] if amounts else None
     yoy = yoys[0] if yoys else None
-    months = sorted(set((amt[3] if amt else {})) | set((yoy[1] if yoy else {})))
+    cols = [m for _x, m in hdr]
+    have = set(amt[3] if amt else {}) | set(yoy[1] if yoy else {})
+    filled = [i for i, m in enumerate(cols) if m in have]
+    yrs = _years(cols, filled, aday)
     out = []
-    for mo in months:
-        y = _year_of(mo, aday)
+    for i, mo in enumerate(cols):
+        if mo not in have:
+            continue
+        y = yrs[i]
         rec = {"period": f"{y:04d}-{mo:02d}"}
         if amt and mo in amt[3]:
             rec["rev"] = amt[3][mo] * amt[2]

@@ -174,16 +174,83 @@ def _parse_cmap(data: bytes):
     return table, nbytes
 
 
+FIRSTCHAR_RE = re.compile(rb"/FirstChar\s+(\d+)")
+WIDTHS_RE = re.compile(rb"/Widths\s*(?:\[([^\]]*)\]|(\d+)\s+\d+\s+R)")
+DESC_RE = re.compile(rb"/DescendantFonts\s*(?:\[\s*(\d+)\s+\d+\s+R|(\d+)\s+\d+\s+R)")
+DW_RE = re.compile(rb"/DW\s+(\d+)")
+W_RE = re.compile(rb"/W\s*\[(.*?)\]\s*(?:/|>>)", re.S)
+
+
+def _widths(objs: dict, num: int, head: bytes):
+    """글자폭 표(1000 단위) 와 기본폭. **어림하면 표가 무너진다.**
+
+    한동안 '글자 크기의 절반'으로 밀었더니 가로 자리가 어긋나, 「7月8月9月10月」
+    처럼 열두 칸짜리 머리가 한 칸으로 붙어 버렸다 — 달 이름표를 못 찾으니 그
+    공시가 통째로 안 읽혔다. 폰트 사전에 폭이 그대로 적혀 있으므로 읽어 쓴다.
+    """
+    dm = DESC_RE.search(head)
+    if dm:                                   # 두 바이트 CID 폰트
+        d = objs.get(int(dm.group(1) or dm.group(2)))
+        if not d:
+            return {}, 1000.0
+        dh = d[0]
+        dw = float(DW_RE.search(dh).group(1)) if DW_RE.search(dh) else 1000.0
+        w = {}
+        wm = W_RE.search(dh)
+        if wm:
+            toks = re.findall(rb"\[([^\]]*)\]|(-?\d+\.?\d*)", wm.group(1))
+            flat, i = [], 0
+            for arr, one in toks:
+                flat.append(("a", arr) if arr else ("n", float(one)))
+            while i < len(flat):
+                if flat[i][0] != "n":
+                    i += 1
+                    continue
+                c = int(flat[i][1])
+                if i + 1 < len(flat) and flat[i + 1][0] == "a":
+                    for j, v in enumerate(re.findall(rb"-?\d+\.?\d*", flat[i + 1][1])):
+                        w[c + j] = float(v)
+                    i += 2
+                elif i + 2 < len(flat) and flat[i + 1][0] == "n" and flat[i + 2][0] == "n":
+                    c2, val = int(flat[i + 1][1]), flat[i + 2][1]
+                    if c2 - c <= 65535:
+                        for k in range(c, c2 + 1):
+                            w[k] = val
+                    i += 3
+                else:
+                    i += 1
+        return w, dw
+    fm = WIDTHS_RE.search(head)               # 한 바이트 폰트
+    if fm:
+        body = fm.group(1)
+        if body is None:
+            got = objs.get(int(fm.group(2)))
+            body = got[1] if got else b""
+        first = int(FIRSTCHAR_RE.search(head).group(1)) if FIRSTCHAR_RE.search(head) else 0
+        vals = [float(v) for v in re.findall(rb"-?\d+\.?\d*", body or b"")]
+        return {first + i: v for i, v in enumerate(vals)}, 500.0
+    return {}, 500.0
+
+
 def _fonts(objs: dict):
-    """폰트 객체 번호 -> (CID 표, 코드 바이트 수)."""
+    """폰트 객체 번호 -> (CID 표, 코드 바이트 수, 글자폭 표, 기본폭)."""
     out = {}
     for num, (head, _) in objs.items():
-        m = TOUNI_RE.search(head)
-        if not m:
+        if b"/Font" not in head and not TOUNI_RE.search(head):
             continue
-        tgt = objs.get(int(m.group(1)))
-        if tgt:
-            out[num] = _parse_cmap(tgt[1])
+        if b"/Type0" not in head and b"/TrueType" not in head and \
+           b"/Type1" not in head and not TOUNI_RE.search(head):
+            continue
+        m = TOUNI_RE.search(head)
+        cmap, nb = ({}, 2)
+        if m:
+            tgt = objs.get(int(m.group(1)))
+            if tgt:
+                cmap, nb = _parse_cmap(tgt[1])
+        elif b"/Type0" not in head:
+            nb = 1
+        w, dw = _widths(objs, num, head)
+        out[num] = (cmap, nb, w, dw)
     return out
 
 
@@ -227,16 +294,21 @@ def _unescape(s: bytes) -> bytes:
     return bytes(out)
 
 
-def _decode(raw: bytes, cmap, nbytes) -> str:
+def _decode(raw: bytes, cmap, nbytes):
+    """(글자, 코드 목록). 코드는 글자폭을 더하는 데 쓴다."""
+    step = max(1, nbytes)
+    codes = [int.from_bytes(raw[i:i + step], "big")
+             for i in range(0, len(raw) - step + 1, step)]
     if not cmap:
         # 표가 없으면 한 바이트 라틴으로 읽어 본다 — 숫자·영문은 이걸로도 나온다.
-        return raw.decode("latin-1", "ignore")
-    out = []
-    step = max(1, nbytes)
-    for i in range(0, len(raw) - step + 1, step):
-        code = int.from_bytes(raw[i:i + step], "big")
-        out.append(cmap.get(code, ""))
-    return "".join(out)
+        return raw.decode("latin-1", "ignore"), list(raw)
+    # **표에 없는 한 바이트 코드는 그 글자로 본다.** 표가 일부만 덮은 폰트가
+    # 있어서, 없다고 빈 글자로 버리면 숫자가 통째로 사라진다(표의 값이 전부
+    # 날아가 표를 못 읽는다). 두 바이트 CID 는 코드가 글자가 아니므로 안 한다.
+    if step == 1:
+        return ("".join(cmap.get(c) or (chr(c) if 32 <= c < 127 else "")
+                        for c in codes), codes)
+    return "".join(cmap.get(c, "") for c in codes), codes
 
 
 TOKEN_RE = re.compile(
@@ -267,7 +339,7 @@ def _run(content: bytes, fonts: dict, res: dict):
     안 읽고 글자 크기의 절반으로 어림한다. 줄 안의 **차례**만 지키면 된다.
     """
     out = []
-    cmap, nb = {}, 2
+    cmap, nb, wmap, dw = {}, 2, {}, 500.0
     size = 12.0
     ctm, tm, tlm = IDENT, IDENT, IDENT
     lead = 0.0
@@ -310,7 +382,8 @@ def _run(content: bytes, fonts: dict, res: dict):
         elif o == "Tf":
             for kind, v in reversed(stack):
                 if kind == "k":
-                    cmap, nb = fonts.get(res.get(v[1:], -1), ({}, 2))
+                    cmap, nb, wmap, dw = fonts.get(res.get(v[1:], -1),
+                                                   ({}, 2, {}, 500.0))
                     break
             if ns:
                 size = abs(ns[-1]) or 12.0
@@ -330,12 +403,20 @@ def _run(content: bytes, fonts: dict, res: dict):
             if o in ("'", '"'):
                 tlm = _mul((1.0, 0.0, 0.0, 1.0, 0.0, -lead), tlm)
                 tm = tlm
-            txt = "".join(_decode(v, cmap, nb) for k, v in stack if k == "s")
+            txt, adv = "", 0.0
+            # TJ 배열의 음수는 글자 사이를 좁히는 값이다(1/1000 em). 표에서는
+            # 이것이 칸 사이의 빈틈으로 오는 일이 있어 가로 자리에 같이 넣는다.
+            for kind, v in stack:
+                if kind == "s":
+                    t, codes = _decode(v, cmap, nb)
+                    txt += t
+                    adv += sum(wmap.get(c, dw) for c in codes) / 1000.0 * size
+                elif kind == "n" and o == "TJ":
+                    adv -= v / 1000.0 * size
             if txt.strip():
                 a, b, c, d, e, f = _mul(tm, ctm)
                 out.append((round(f, 1), round(e, 1), txt, size * abs(d or 1.0)))
-                # 다음 글자가 어디쯤 놓일지 어림해 둔다 — 차례만 지키면 된다.
-                tm = _mul((1.0, 0.0, 0.0, 1.0, len(txt) * size * 0.5, 0.0), tm)
+                tm = _mul((1.0, 0.0, 0.0, 1.0, adv, 0.0), tm)
         stack = []
     return out
 
@@ -377,13 +458,13 @@ def extract_cells(data: bytes, max_pages: int = 40):
             frags.sort()
             cells, cx, cur, csz = [], None, "", 10.0
             for x, txt, size in frags:
-                if cur and x - cx > max(size, 6.0) * 0.8:
+                if cur and x - cx > max(size, 6.0) * 0.45:
                     cells.append((round(cx0, 1), cur))
                     cur = ""
                 if not cur:
                     cx0 = x
                 cur += txt
-                cx = x + len(txt) * size * 0.5
+                cx = x + len(txt) * size * 0.5   # 다음 조각과의 틈을 재는 어림
                 csz = size
             if cur:
                 cells.append((round(cx0, 1), cur))

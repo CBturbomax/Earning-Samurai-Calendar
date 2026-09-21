@@ -15,14 +15,14 @@ jobs:
         with:
           python-version: '3.12'
 
-      # 47차 — 문장으로 집는 길은 접었다(46차 14/66 이고 그중 몇은 표를 문장으로
+      # 48차 — 문장으로 집는 길은 접었다(46차 14/66 이고 그중 몇은 표를 문장으로
       # 잘못 읽은 것이었다 — 556A「売上高5月6月7月8月前年同月比125.4%」). 자료는
       # 전부 **표**라 좌표로 열을 맞춰야 한다. montable.py 가 달 이름표 줄을 찾고
       # 아래 줄의 값을 x 가 가장 가까운 이름표에 붙인다. 붙일 곳이 없으면 버린다.
       #
       # 여기서 재는 것은 **몇 종목이 몇 달치를 주나**다. 표로 읽으면 한 건으로
       # 여러 달이 한꺼번에 들어오므로 차트가 바로 선다.
-      - name: 🗾 월매출 — 표로 읽어 달별 수치 (47차)
+      - name: 🗾 월매출 — 표로 읽어 달별 수치 — 실제 글자폭 반영 (48차)
         timeout-minutes: 13
         run: |
           python - <<'EOF'
@@ -83,7 +83,7 @@ jobs:
               months.append(len(got["rows"]))
               if any("rev" in x for x in got["rows"]):
                   withrev += 1
-              if len(good) < 16:
+              if len(good) < 20:
                   sm = [(x["period"], x.get("rev"), x.get("yoy")) for x in got["rows"][-4:]]
                   good.append(f"{r['code']} [{got['amount_label']}|{got['yoy_label']}] {sm}")
               time.sleep(0.15)
