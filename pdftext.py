@@ -26,6 +26,8 @@ CMap 만 쓰는 파일은 표가 우리 손에 없어 글자를 되살릴 수 �
 import re
 import zlib
 
+import pdfcrypt
+
 __all__ = ["extract_text", "extract_lines", "is_encrypted"]
 
 OBJ_RE = re.compile(rb"(\d+)\s+(\d+)\s+obj\b", re.S)
@@ -67,7 +69,7 @@ STREAM_KW = re.compile(rb"\bstream\r?\n")
 LEN_RE = re.compile(rb"/Length\s+(\d+)(?!\s+\d+\s+R)")
 
 
-def _objects(buf: bytes):
+def _objects(buf: bytes, crypt=None):
     """번호 -> (사전 바이트, 푼 스트림 바이트 또는 None).
 
     **`endobj` 로 잘라서는 안 된다.** 압축된 스트림 안에 그 바이트열이 그대로
@@ -79,9 +81,10 @@ def _objects(buf: bytes):
     # 울타리는 **다음 객체 머리가 시작하는 자리**다. 앞서 한 번 '머리의 끝에서
     # 40 을 뺀 자리'로 잡았는데, 짧은 객체에서는 그 값이 지금 객체의 시작보다
     # 앞이라 몸통이 통째로 빈 문자열이 됐다(자체 시험에서 잡혔다).
-    starts = [(int(m.group(1)), m.start(), m.end()) for m in OBJ_RE.finditer(buf)]
-    for i, (num, head_at, pos) in enumerate(starts):
-        fence = starts[i + 1][1] if i + 1 < len(starts) else len(buf)
+    starts = [(int(m.group(1)), int(m.group(2)), m.start(), m.end())
+              for m in OBJ_RE.finditer(buf)]
+    for i, (num, gen, head_at, pos) in enumerate(starts):
+        fence = starts[i + 1][2] if i + 1 < len(starts) else len(buf)
         region = buf[pos:max(pos, fence)]
         sm = STREAM_KW.search(region)
         if not sm:
@@ -99,10 +102,30 @@ def _objects(buf: bytes):
         if raw is None:
             e = body.find(b"endstream")
             raw = body[:e if e > 0 else len(body)]
+        # **암호가 걸렸으면 풀고 나서 압축을 푼다.** 차례가 바뀌면 zlib 이
+        # 쓰레기를 받아 빈 결과를 내고, 화면에서는 '글자가 없는 공시'와
+        # 구별되지 않는다.
+        if crypt and b"/XRef" not in head:
+            raw = pdfcrypt.decrypt(crypt[0], crypt[1], num, gen, raw)
         f = FILTER_RE.search(head)
         data = _inflate(raw) if (f and b"Flate" in f.group(1)) else raw
         objs[num] = (head, data)
     return objs
+
+
+def _load(buf: bytes):
+    """객체를 읽는다. 암호가 걸려 있으면 열쇠를 찾아 다시 읽는다.
+
+    열쇠는 문서 안의 값으로 계산된다 — 암호를 깨는 것이 아니라 규격대로
+    여는 것이다(`pdfcrypt`). **빈 사용자 암호**일 때만 열린다.
+    """
+    objs = _objects(buf)
+    body, fid = pdfcrypt.encrypt_dict(buf, objs)
+    if body:
+        key, cfm = pdfcrypt.file_key(body, fid)
+        if key:
+            objs = _objects(buf, (key, cfm))
+    return _expand_objstm(objs)
 
 
 def _expand_objstm(objs: dict):
@@ -431,7 +454,7 @@ def extract_cells(data: bytes, max_pages: int = 40):
     글자 조각은 붙여 준다. 가로 자리를 글자폭으로 어림해 밀어 두었으므로 한
     낱말 안의 조각은 틈이 거의 0 이고, 표의 칸 사이는 그보다 훨씬 넓다.
     """
-    objs = _expand_objstm(_objects(data))
+    objs = _load(data)
     fonts = _fonts(objs)
     pages = [(num, head) for num, (head, _) in objs.items()
              if b"/Type" in head and b"/Page" in head and b"/Pages" not in head]
