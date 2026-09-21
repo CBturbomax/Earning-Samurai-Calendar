@@ -53,25 +53,42 @@ def _inflate(raw: bytes):
         return b""
 
 
+STREAM_KW = re.compile(rb"\bstream\r?\n")
+LEN_RE = re.compile(rb"/Length\s+(\d+)(?!\s+\d+\s+R)")
+
+
 def _objects(buf: bytes):
-    """번호 -> (사전 바이트, 푼 스트림 바이트 또는 None)."""
+    """번호 -> (사전 바이트, 푼 스트림 바이트 또는 None).
+
+    **`endobj` 로 잘라서는 안 된다.** 압축된 스트림 안에 그 바이트열이 그대로
+    들어 있는 일이 흔해서, 그러면 몸통이 앞에서 잘려 `endstream` 을 못 찾는다.
+    길이가 `/Length 1234` 로 직접 적혀 있으면 그것을 쓰고, 간접 참조라
+    당장 못 읽으면 `endstream` 을 찾는다. 울타리는 **다음 객체 머리**다.
+    """
     objs = {}
-    for m in OBJ_RE.finditer(buf):
-        num = int(m.group(1))
-        end = buf.find(b"endobj", m.end())
-        body = buf[m.end():end if end > 0 else len(buf)]
-        s = body.find(b"stream")
-        if s < 0:
-            objs[num] = (body, None)
+    # 울타리는 **다음 객체 머리가 시작하는 자리**다. 앞서 한 번 '머리의 끝에서
+    # 40 을 뺀 자리'로 잡았는데, 짧은 객체에서는 그 값이 지금 객체의 시작보다
+    # 앞이라 몸통이 통째로 빈 문자열이 됐다(자체 시험에서 잡혔다).
+    starts = [(int(m.group(1)), m.start(), m.end()) for m in OBJ_RE.finditer(buf)]
+    for i, (num, head_at, pos) in enumerate(starts):
+        fence = starts[i + 1][1] if i + 1 < len(starts) else len(buf)
+        region = buf[pos:max(pos, fence)]
+        sm = STREAM_KW.search(region)
+        if not sm:
+            end = region.find(b"endobj")
+            objs[num] = (region[:end if end > 0 else len(region)], None)
             continue
-        head = body[:s]
-        p = s + 6
-        if body[p:p + 2] == b"\r\n":
-            p += 2
-        elif body[p:p + 1] in (b"\n", b"\r"):
-            p += 1
-        e = body.find(b"endstream", p)
-        raw = body[p:e if e > 0 else len(body)]
+        head = region[:sm.start()]
+        body = region[sm.end():]
+        lm = LEN_RE.search(head)
+        raw = None
+        if lm:
+            n = int(lm.group(1))
+            if n <= len(body) and body[n:n + 20].lstrip()[:9] == b"endstream":
+                raw = body[:n]
+        if raw is None:
+            e = body.find(b"endstream")
+            raw = body[:e if e > 0 else len(body)]
         f = FILTER_RE.search(head)
         data = _inflate(raw) if (f and b"Flate" in f.group(1)) else raw
         objs[num] = (head, data)
@@ -241,8 +258,7 @@ def _run(content: bytes, fonts: dict, res: dict):
             if o == "Tf":
                 for kind, v in reversed(stack):
                     if kind == "k":
-                        cmap, nb = fonts.get(res.get(v[1:].encode("latin-1"), -1),
-                                             ({}, 2))
+                        cmap, nb = fonts.get(res.get(v[1:], -1), ({}, 2))
                         break
             elif o in ("Td", "TD"):
                 ns = [v for k, v in stack if k == "n"]

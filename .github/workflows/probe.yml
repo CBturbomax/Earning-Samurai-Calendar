@@ -15,15 +15,13 @@ jobs:
         with:
           python-version: '3.12'
 
-      # 41차 — **월매출의 숫자를 어디서 받나.** 지금 가진 것은 '언제 무엇을
-      # 냈나'와 원문 링크뿐이고 알맹이(실제 매출·전년비)가 없다. 두 길을 같이 본다.
-      #
-      #   (가) TDnet 첨부 PDF 를 우리가 직접 해독한다(pdftext.py). 예전에
-      #        "CID 인코딩이라 표준 라이브러리로는 못 읽는다"고 접었는데, 그건
-      #        **압축을 안 풀고 괄호 문자열만 긁어 본 것**이었다. Flate 를 풀고
-      #        폰트의 /ToUnicode 표를 읽으면 되는지 실제 공시 열 건에 부딪혀 본다.
-      #   (나) TDnet 에 아예 안 내는 회사(니토리·스시로)를 메울 집계 사이트.
-      - name: 🗾 월매출 숫자 — PDF 해독 + 외부 소스 (41차)
+      # 42차 — 41차에서 해독기가 열 건 다 터졌다(`bytes.encode`). 고치고
+      # **손으로 만든 PDF 로 오프라인 자체 시험**까지 붙인 뒤 다시 부딪힌다.
+      # 이번에는 실패했을 때 어디서 막혔는지 보이게 진단을 함께 찍는다 —
+      # 객체 수·스트림 수·ToUnicode 붙은 폰트 수·쪽 수·내용 스트림 크기.
+      # 그게 없으면 "0줄"만 보고 원인을 못 가른다(스캔 이미지인지, 폰트 표가
+      # 없는지, 우리 파서가 못 찾는지).
+      - name: 🗾 월매출 PDF 해독 — 진단 붙여 다시 (42차)
         timeout-minutes: 13
         run: |
           python - <<'EOF'
@@ -33,12 +31,14 @@ jobs:
           UA = ("Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 "
                 "(KHTML, like Gecko) Chrome/124.0 Safari/537.36")
 
-          def get(url, timeout=40):
+          def get(url, timeout=40, ref=None):
               h = {"User-Agent": UA, "Accept": "*/*",
                    "Accept-Language": "ja,en;q=0.8", "Accept-Encoding": "gzip"}
-              req = urllib.request.Request(url, headers=h)
+              if ref:
+                  h["Referer"] = ref
               try:
-                  with urllib.request.urlopen(req, timeout=timeout) as r:
+                  with urllib.request.urlopen(
+                          urllib.request.Request(url, headers=h), timeout=timeout) as r:
                       raw = r.read()
                       if r.headers.get("Content-Encoding") == "gzip":
                           raw = gzip.decompress(raw)
@@ -48,9 +48,6 @@ jobs:
               except Exception as e:
                   return str(e)[:60], b""
 
-          print("=" * 72)
-          print("(가) TDnet 첨부 PDF 를 직접 해독할 수 있나")
-          print("=" * 72)
           PDFS = [
               ("6238", "https://www.release.tdnet.info/inbs/140120260918538410.pdf"),
               ("7865", "https://www.release.tdnet.info/inbs/140120260918538582.pdf"),
@@ -63,59 +60,61 @@ jobs:
               ("5580", "https://www.release.tdnet.info/inbs/140120260916537473.pdf"),
               ("7043", "https://www.release.tdnet.info/inbs/140120260916537033.pdf"),
           ]
+          KEY = re.compile("売上|既存店|全店|前年|同月|店舗|客数|月度|月次")
           ok = 0
           for code, url in PDFS:
               st, data = get(url)
               if st != 200 or not data:
-                  print(f"  {code}: 받기 실패 {st}")
-                  continue
-              t0 = time.time()
+                  print(f"{code}: 받기 실패 {st}"); continue
               try:
+                  objs = pdftext._expand_objstm(pdftext._objects(data))
+                  fonts = pdftext._fonts(objs)
+                  pages = [n for n, (h, _) in objs.items()
+                           if b"/Type" in h and b"/Page" in h and b"/Pages" not in h]
+                  nstream = sum(1 for _, (_, d) in objs.items() if d)
+                  t0 = time.time()
                   lines = pdftext.extract_lines(data)
+                  el = time.time() - t0
               except Exception as e:
-                  print(f"  {code}: 해독 중 터짐 {type(e).__name__} {e}")
-                  continue
+                  import traceback
+                  print(f"{code}: 터짐"); traceback.print_exc(); continue
               txt = "\n".join(lines)
               jp = sum(1 for ch in txt
                        if "\u3040" <= ch <= "\u30ff" or "\u4e00" <= ch <= "\u9fff")
-              nums = len(re.findall(r"\d[\d,]*\.?\d*", txt))
-              good = jp > 30 and nums > 10
+              good = jp > 30 and len(re.findall(r"\d", txt)) > 20
               ok += good
-              print(f"  {code}: {len(data)//1024}KB · 줄 {len(lines)} · 일본글자 {jp} · "
-                    f"숫자 {nums} · {time.time()-t0:.2f}초 · {'읽힌다' if good else '못 읽음'}")
-              for ln in lines[:14]:
-                  print(f"      | {ln[:110]}")
+              print(f"{code}: {len(data)//1024}KB · 객체 {len(objs)} · 스트림 {nstream} · "
+                    f"ToUnicode 폰트 {len(fonts)} · 쪽 {len(pages)} · 줄 {len(lines)} · "
+                    f"일본글자 {jp} · {el:.2f}초 · {'읽힌다' if good else 'X'}")
+              hits = [l for l in lines if KEY.search(l)]
+              for l in (hits or lines)[:16]:
+                  print(f"    | {l[:120]}")
               print()
-          print(f"==> 열 건 중 {ok} 건이 읽혔다")
+          print(f"==> 열 건 중 {ok} 건")
 
           print()
-          print("=" * 72)
-          print("(나) TDnet 에 안 내는 회사용 — 월매출 집계 사이트")
-          print("=" * 72)
+          print("=" * 60)
+          print("외부 소스 2차 — 막힌 곳에 Referer 를 달아 다시, 그리고 TDnet 거울")
+          print("=" * 60)
           CAND = [
-              ("irbank 월차",     "https://irbank.net/9843/gs"),
-              ("irbank 코드",     "https://irbank.net/E03144/gs"),
-              ("kabutan",         "https://kabutan.jp/stock/?code=9843"),
-              ("minkabu",         "https://minkabu.jp/stock/9843"),
-              ("kabuyoho",        "https://kabuyoho.ifis.co.jp/index.php?action=tp1&sa=report_top&bcode=9843"),
-              ("buffett-code",    "https://www.buffett-code.com/company/9843/"),
-              ("getsuji",         "https://www.getsuji.com/"),
-              ("shikiho",         "https://shikiho.toyokeizai.net/stocks/9843"),
-              ("니토리 IR",        "https://www.nitorihd.co.jp/ir/monthly/"),
-              ("스시로 IR",        "https://www.food-and-life.co.jp/ir/monthly/"),
-              ("ullet",           "https://www.ullet.com/9843.html"),
-              ("株予報",           "https://kabuyoho.jp/sp/reportTop?bcode=9843"),
-              ("stockanalysis",   "https://stockanalysis.com/quote/tyo/9843/"),
-              ("yahoo finance jp","https://finance.yahoo.co.jp/quote/9843.T"),
+              ("kabutan(ref)", "https://kabutan.jp/stock/?code=9843", "https://kabutan.jp/"),
+              ("minkabu(ref)", "https://minkabu.jp/stock/9843", "https://minkabu.jp/"),
+              ("yanoshin tdnet", "https://webapi.yanoshin.jp/webapi/tdnet/list/9843.json", None),
+              ("yanoshin 최근", "https://webapi.yanoshin.jp/webapi/tdnet/list/recent.json?limit=5", None),
+              ("yahoo quote", "https://finance.yahoo.co.jp/quote/9843.T", None),
+              ("nitori ir top", "https://www.nitorihd.co.jp/ir/", None),
+              ("sushiro ir top", "https://www.food-and-life.co.jp/ir/", None),
           ]
-          for name, url in CAND:
-              st, data = get(url, timeout=25)
-              hit = ""
+          for name, url, ref in CAND:
+              st, data = get(url, timeout=25, ref=ref)
+              extra = ""
               if isinstance(st, int) and st == 200 and data:
                   t = data.decode("utf-8", "ignore")
-                  marks = [m for m in ("月次", "既存店", "売上高", "前年同月", "月別")
-                           if m in t]
-                  hit = f" · {len(data)//1024}KB · 표식 {marks}"
-              print(f"  {name:16s} {st}{hit}")
+                  marks = [m for m in ("月次", "既存店", "前年同月", "売上高") if m in t]
+                  extra = f" · {len(data)//1024}KB · {marks}"
+                  j = t.find("既存店")
+                  if j > 0:
+                      extra += " · 본문: " + re.sub(r"\s+", " ", t[j-60:j+80])
+              print(f"  {name:16s} {st}{extra}")
               time.sleep(0.6)
           EOF
