@@ -15,40 +15,175 @@ jobs:
         with:
           python-version: '3.12'
 
-      # 65차 — 표 꼴 셋을 더 읽게 고쳤다. 얼마나 늘었고, 엉뚱한 것이 안 들어왔나.
-      # 전수로 훑어 종목마다 값을 늘어놓고 눈으로 본다.
-      - name: 🏬 표 꼴 셋을 더한 뒤 (65차)
+      # 66차 — 회원님: "2년치 월별을 쭉 긁어와서 YoY 로 비교해야지, 띄엄띄엄은
+      # 유의미한 자료가 아니다." 맞다. 왜 띄엄띄엄인지 두 갈래를 잰다.
+      #   (가) PDF 는 표를 **하나만** 고른다. 한 공시에 작년 표와 올해 표가
+      #        나란히 실리는데 하나를 버리고 있다. 다 합치면 몇 달이 되나.
+      #   (나) 流通ニュース 는 기사 목록이 두 달치뿐이다. 회사별로 과거를
+      #        거슬러 갈 길(태그 쪽·지난달 기사 링크)이 있나.
+      - name: 🔬 왜 띄엄띄엄인가 (66차)
         timeout-minutes: 14
-        env:
-          WEB_PER_RUN: '260'
-          WEB_SECS: '560'
-          WEB_DEEP: '14'
         run: |
           set -o pipefail
-          python monweb.py
-          python scrape_mon_web.py
-          python - <<'EOF' 2>&1 | tail -180
-          import json
-          d = json.load(open("data/monthly_web_jp.json"))
-          codes = d["codes"]
-          C = (json.load(open("data/caps.json")).get("caps")
-               or json.load(open("data/caps.json")))
-          have = {r["code"] for r in json.load(
-              open("data/monthly_jp.json"))["rows"]}
+          python - <<'EOF' 2>&1 | tail -140
+          import json, re, time, urllib.request
+          from datetime import date
+          import pdftext, montable as MT
 
-          def cap(c):
-              v = C.get("jp:" + c)
-              return (v.get("cap") if isinstance(v, dict) else v) or 0
+          rows = json.load(open("data/monthly_jp.json"))["rows"]
+          nums = json.load(open("data/monthly_nums_jp.json"))
+          H = {"User-Agent": "Mozilla/5.0 (compatible; earnings-samurai/1.0)"}
 
-          print(f"\n종목 {d['companies']} · 달 {d['months']} · 본 기사 "
-                f"{len(d['done'])} · 쪽 {d['deep']}"
-                f"{' (끝까지)' if d.get('deep_done') else ''}")
-          print(f"우리 목록에 없던 회사 {sum(1 for c in codes if c not in have)}")
-          for c, v in sorted(codes.items(), key=lambda kv: -cap(kv[0])):
-              ms = sorted(v["months"])
-              print(f"\n{c} {v['name'][:24]} [{v['brand']}] {cap(c):.2f}조원 "
-                    f"{'새' if c not in have else '겹침'}")
-              print("   " + " ".join(
-                  f"{m[2:]}:{v['months'][m].get('same','-')}/"
-                  f"{v['months'][m].get('all','-')}" for m in ms[-13:]))
+          def all_tables(table, aday, title):
+              """read() 와 같은 길인데 **표를 하나만 고르지 않고 다 합친다.**"""
+              tm = MT.TITLE_METRIC.search(MT._norm(title or ""))
+              got = {}
+              for i, cells in enumerate(table):
+                  hdr = MT._headers(cells)
+                  if not hdr:
+                      continue
+                  cap_txt = "".join(MT._norm(t) for row in table[max(0, i - 2):i + 1]
+                                    for _x, t in row)
+                  decl = MT.UNIT_DECL.search(cap_txt)
+                  if decl and "円" not in decl.group(1):
+                      continue
+                  cap_unit, cap_mul = MT._unit(cap_txt)
+                  cap_yoy = bool(MT.CAP_YOY.search(cap_txt)) and not cap_mul
+                  amounts, yoys, cap_yoys = [], [], []
+                  pending = ""
+                  for k in range(i + 1, min(i + 9, len(table))):
+                      c2 = table[k]
+                      if MT._headers(c2):
+                          break
+                      lab = MT._label(c2, hdr)
+                      vals = MT._assign(c2, hdr)
+                      if len(vals) < 2:
+                          if lab and "単位" not in lab:
+                              pending = lab
+                          continue
+                      if not lab:
+                          lab, pending = pending, ""
+                      else:
+                          pending = ""
+                      if MT.SKIP_LABEL.search(lab or ""):
+                          continue
+                      rowtext = "".join(MT._norm(t) for _, t in c2)
+                      if MT.YOY_LABEL.search(lab) and not MT.lab_has_other(lab):
+                          if MT.DELTA_LABEL.search(lab) or MT._looks_delta(vals):
+                              vals = {q: v + 100.0 for q, v in vals.items()}
+                          yoys.append((lab, vals))
+                          continue
+                      unit, mul = MT._unit(lab, rowtext)
+                      if not mul and k + 1 < len(table):
+                          nxt = "".join(MT._norm(t) for _x, t in table[k + 1])
+                          if "単位" in nxt:
+                              unit, mul = MT._unit(nxt)
+                      if mul and (MT.AMOUNT_LABEL.search(lab or "") or "円" in rowtext):
+                          amounts.append((lab, unit, mul, vals))
+                      elif cap_mul and (MT.AMOUNT_LABEL.search(lab or "")
+                                        and not MT.lab_has_other(lab)
+                                        or tm and MT.WEAK_LABEL.fullmatch(lab or "")):
+                          amounts.append((lab, cap_unit, cap_mul, vals))
+                      elif cap_yoy and not mul and MT.AMOUNT_LABEL.search(lab or "") \
+                              and not MT.lab_has_other(lab):
+                          if MT.DELTA_LABEL.search(lab) or MT._looks_delta(vals):
+                              vals = {q: v + 100.0 for q, v in vals.items()}
+                          cap_yoys.append((lab, vals))
+                  if not amounts and not yoys:
+                      yoys = cap_yoys
+                  if not amounts and not yoys:
+                      continue
+                  amt = amounts[0] if amounts else None
+                  yoy = yoys[0] if yoys else None
+                  cols = [m for _x, m, _y in hdr]
+                  given = [y for _x, _m, y in hdr]
+                  have = set(amt[3] if amt else {}) | set(yoy[1] if yoy else {})
+                  yrs = MT._years(cols, sorted(have), aday, given)
+                  for q, mo in enumerate(cols):
+                      if q not in have:
+                          continue
+                      p = f"{yrs[q]:04d}-{mo:02d}"
+                      rec = got.setdefault(p, {})
+                      if amt and q in amt[3]:
+                          rec.setdefault("rev", amt[3][q] * amt[2])
+                      if yoy and q in yoy[1]:
+                          rec.setdefault("yoy", yoy[1][q])
+              return got
+
+          print("(가) 한 공시에서 표를 다 합치면 몇 달이 되나")
+          seen, t0 = {}, time.time()
+          for r in rows:
+              if time.time() - t0 > 600:
+                  print("  …시간이 다 됐다")
+                  break
+              if nums["skip"].get(r["doc"]):
+                  continue
+              try:
+                  with urllib.request.urlopen(
+                          urllib.request.Request(r["doc"], headers=H), timeout=20) as f:
+                      pdf = f.read()
+                  tab = pdftext.extract_cells(pdf, 12)
+                  one = MT.read(pdf, r["date"], 12, r["title"])
+              except Exception:
+                  continue
+              if not one:
+                  continue
+              many = all_tables(tab, date.fromisoformat(r["date"]), r["title"])
+              a, b = len(one["rows"]), len(many)
+              if b > a:
+                  seen[r["code"]] = (r["name"], a, b, sorted(many)[0], sorted(many)[-1])
+          print(f"  표를 합치면 늘어나는 종목 {len(seen)}")
+          for c, (n, a, b, lo, hi) in sorted(seen.items(), key=lambda kv: -kv[1][2])[:18]:
+              print(f"   {c} {n[:16]:18s} {a:2d}달 -> {b:2d}달  {lo}~{hi}")
+          EOF
+
+      # (나) 流通ニュース 에서 회사별 과거를 거슬러 갈 길이 있나
+      - name: 📰 회사별 과거 거슬러 가기 (66-나)
+        timeout-minutes: 5
+        run: |
+          python - <<'EOF'
+          import re, time, urllib.request, html as H2
+          UA = {"User-Agent": ("Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
+                               "AppleWebKit/537.36 (KHTML, like Gecko) "
+                               "Chrome/131.0.0.0 Safari/537.36")}
+
+          def get(u):
+              try:
+                  with urllib.request.urlopen(
+                          urllib.request.Request(u, headers=UA), timeout=20) as r:
+                      return r.status, r.read(900_000).decode("utf-8", "ignore")
+              except Exception as e:
+                  return type(e).__name__ + str(getattr(e, "code", "")), ""
+
+          st, a = get("https://www.ryutsuu.biz/sales/s090944.html")   # 맥도날드 8월
+          print("맥도날드 8월 기사", st)
+          # 기사 안의 모든 링크를 본다 — 태그 쪽·지난달 기사가 있나
+          links = re.findall(r'<a[^>]+href="(https://www\.ryutsuu\.biz/[^"]+)"[^>]*>(.*?)</a>',
+                             a, re.S)
+          seen = []
+          for u, lab in links:
+              lab = re.sub(r"\s+", " ", re.sub(r"<[^>]+>", "", H2.unescape(lab))).strip()
+              if lab and (u, lab) not in seen:
+                  seen.append((u, lab))
+          print(f"  링크 {len(seen)}개 — 종류별로")
+          import collections
+          kind = collections.Counter(u.split("ryutsuu.biz/")[1].split("/")[0]
+                                     for u, _ in seen)
+          print("   ", dict(kind))
+          for u, lab in seen:
+              if "マクドナルド" in lab or "マクドナルド" in u or "/tag" in u:
+                  print(f"    {lab[:46]:48s} {u}")
+
+          # 태그 쪽이 있으면 열어 본다
+          for u in ("https://www.ryutsuu.biz/tag/%E3%83%9E%E3%82%AF%E3%83%89%E3%83%8A%E3%83%AB%E3%83%89",
+                    "https://www.ryutsuu.biz/?s=%E3%83%9E%E3%82%AF%E3%83%89%E3%83%8A%E3%83%AB%E3%83%89+%E6%9C%88%E6%AC%A1"):
+              time.sleep(0.6)
+              st, t = get(u)
+              n = len(set(re.findall(r'href="(https://www\.ryutsuu\.biz/sales/s\d+\.html)"', t)))
+              ti = re.search(r"<title>(.*?)</title>", t, re.S)
+              print(f"\n  {u[:70]}  {st}  기사 {n}  "
+                    f"{re.sub(r'  +', ' ', ti.group(1))[:44] if ti else ''}")
+              for m in re.findall(r'<a[^>]+href="(https://www\.ryutsuu\.biz/sales/s\d+\.html)"[^>]*>(.*?)</a>', t, re.S)[:10]:
+                  lab = re.sub(r"\s+", " ", re.sub(r"<[^>]+>", "", H2.unescape(m[1]))).strip()
+                  print("      " + lab[:56])
           EOF
