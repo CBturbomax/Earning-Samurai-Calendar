@@ -37,7 +37,7 @@ OUT = HERE / "data" / "monthly_nums_jp.json"
 
 # 뜯는 규칙이 바뀌면 올린다. **본 공시 기록만** 비우고 모아둔 값은 남긴다 —
 # 창 밖으로 밀려난 공시는 다시 못 받으므로 값을 버리면 영영 잃는다.
-PARSE_VER = 7
+PARSE_VER = 8
 
 UA = ("Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 "
       "(KHTML, like Gecko) Chrome/124.0 Safari/537.36")

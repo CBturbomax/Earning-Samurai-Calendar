@@ -492,6 +492,63 @@ def _selftest():                                          # pragma: no cover
                            for i, o in enumerate(objs, 1))
                 + b"trailer << /Root 1 0 R >>\n%%EOF\n")
 
+    def _pdf_tj(lines, kern=0):
+        """한 줄을 **TJ 배열 하나**로 그린다.
+
+        표를 TJ 로 그리는 공시가 많다 — 칸 사이를 배열의 음수로 건너뛴다.
+        그걸 한 덩어리로 읽으면 「100.892.1104.1」 처럼 붙어 어느 달 값인지
+        알 수 없고, 반대로 조각마다 쪼개면 「26年3月」의 月 이 떨어져 나간다.
+        `kern` 을 주면 낱말 안을 잘게 끊어 그려 그것까지 시험한다.
+        """
+        for _y, cells in lines:
+            for _x, s in cells:
+                _add(s)
+        cm = (b"/CIDInit /ProcSet findresource begin\n12 dict begin begincmap\n"
+              b"1 begincodespacerange\n<00> <FF>\nendcodespacerange\n"
+              b"%d beginbfchar\n" % len(code)
+              + b"".join(b"<%02X> <%s>\n"
+                         % (v, c.encode("utf-16-be").hex().upper().encode())
+                         for c, v in sorted(code.items(), key=lambda kv: kv[1]))
+              + b"endbfchar\nendcmap\nend end\n")
+
+        def enc(s):
+            return (bytes(code[c] for c in s).replace(b"\\", b"\\\\")
+                    .replace(b"(", b"\\(").replace(b")", b"\\)"))
+
+        cs = [b"BT\n/F1 10 Tf\n"]
+        for y, cells in lines:
+            x0 = cells[0][0]
+            parts, cur = [], x0
+            for x, s in cells:
+                gap = x - cur
+                if parts:
+                    parts.append(b"%d" % round(-100 * gap))
+                if kern and len(s) > 1:
+                    # 낱말 안을 잘게 끊는다 — 여기서 쪼개지면 안 된다.
+                    parts.append(b"(%s)%d(%s)" % (enc(s[:-1]), -kern,
+                                                  enc(s[-1:])))
+                else:
+                    parts.append(b"(%s)" % enc(s))
+                cur = x + len(s) * 6
+            cs.append(b"1 0 0 1 %d %d Tm [%s] TJ\n"
+                      % (x0, y, b" ".join(parts)))
+        cs = b"".join(cs) + b"ET\n"
+        objs = [
+            b"<< /Type /Catalog /Pages 2 0 R >>",
+            b"<< /Type /Pages /Kids [3 0 R] /Count 1 >>",
+            b"<< /Type /Page /Parent 2 0 R /MediaBox [0 0 612 792] /Resources "
+            b"<< /Font << /F1 4 0 R >> >> /Contents 6 0 R >>",
+            b"<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica /FirstChar 32 "
+            b"/LastChar 126 /Widths [" + b" ".join(b"600" for _ in range(95))
+            + b"] /ToUnicode 5 0 R >>",
+            b"<< /Length %d >>\nstream\n" % len(cm) + cm + b"\nendstream",
+            b"<< /Length %d >>\nstream\n" % len(cs) + cs + b"\nendstream",
+        ]
+        return (b"%PDF-1.4\n"
+                + b"".join(b"%d 0 obj\n" % i + o + b"\nendobj\n"
+                           for i, o in enumerate(objs, 1))
+                + b"trailer << /Root 1 0 R >>\n%%EOF\n")
+
     hdr = [(100, "１月"), (140, "２月"), (180, "３月"), (220, "４月")]
     ok = True
 
@@ -582,6 +639,19 @@ def _selftest():                                          # pragma: no cover
     if not g or len(g["rows"]) != 3 or len({r["metric"] for r in g["rows"]}) != 1:
         print("!! 사) 전점·기존점 표를 섞었다", g)
         ok = False
+
+    # (차) 표를 **TJ 배열 하나**로 그린 공시. 칸 사이는 크게 건너뛰고
+    #      낱말 안은 잘게 끊는다 — 앞엣것은 갈라야 하고 뒤엣것은 붙여야 한다.
+    for kern, what in ((0, "낱말 안 끊김 없음"), (40, "낱말 안을 잘게 끊음")):
+        j = _pdf_tj([(700, hdr), (680, [(40, "売上高")]),
+                     (660, [(100, "749"), (140, "832"), (180, "1,026"),
+                            (220, "980")]),
+                     (640, [(40, "(単位：百万円)")])], kern=kern)
+        g = read(j, "2026-05-10")
+        got = {r["period"]: r.get("rev") for r in (g or {}).get("rows") or []}
+        if len(got) != 4 or got.get("2026-04") != 980_000_000:
+            print(f"!! 차) TJ 표 ({what})", got)
+            ok = False
 
     print("montable 스스로 시험:", "통과" if ok else "떨어짐")
     return 0 if ok else 1
