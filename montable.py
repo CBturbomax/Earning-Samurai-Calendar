@@ -257,6 +257,16 @@ def _sentence(table, aday: date):
     return None
 
 
+# 표끼리 합쳐도 되는지는 **이름표가 같은가**로 가른다. 숫자·괄호·단위 표기는
+# 표마다 달라서(「売上高(百万円)」·「売上高」) 지우고 견준다.
+_KIND_DROP = re.compile(r"[\d\s()（）%％,.:：・]|百万|千|億|万|円")
+
+
+def _same_kind(amt, yoy):
+    lab = (amt[0] if amt else "") or (yoy[0] if yoy else "")
+    return _KIND_DROP.sub("", _norm(lab))
+
+
 def read(data: bytes, ann: str, max_pages: int = 12, title: str = ""):
     """PDF -> {'rows': [...], 'basis': ...} 또는 None.
 
@@ -276,7 +286,7 @@ def read(data: bytes, ann: str, max_pages: int = 12, title: str = ""):
     tm = TITLE_METRIC.search(_norm(title or ""))
     title_metric = tm.group(0) if tm else "월매출"
 
-    best = None
+    cands = []
     for i, cells in enumerate(table):
         hdr = _headers(cells)
         if not hdr:
@@ -371,49 +381,65 @@ def read(data: bytes, ann: str, max_pages: int = 12, title: str = ""):
             yoys = cap_yoys
         if not amounts and not yoys:
             continue
-        # **가장 꽉 찬 표를 고르면 안 된다.** 지난 회계연도 표는 열두 달이 다
-        # 차 있고 올해 표는 이번 달까지만 차 있어서, 개수로 고르면 늘 작년
-        # 것이 이긴다 — 토요쿠모(4058)가 2025년 열두 달로 실렸다. 그 표가
-        # 가리키는 **가장 최근 달**을 먼저 보고, 같으면 개수로 가른다.
+        # **표를 하나만 쓰고 버리면 안 된다.** 월매출 공시에는 지난 회계연도
+        # 열두 달 표와 올해 표가 나란히 실리는 일이 흔한데, 하나만 고르면
+        # 손에 든 스물넉 달이 대여섯 달로 준다 — 그러면 전년동월비를 견줄
+        # 수가 없다. 같은 것을 재는 표끼리 **합친다.**
+        #
+        # 다만 **아무 표나 합치면 안 된다.** 한 공시에 全店 표와 既存店 표가
+        # 따로 실리기도 하고 부문별 표가 붙기도 하는데, 섞으면 3월은 전점이고
+        # 4월은 기존점인 막대가 선다. 그래서 **이름표가 같은 표끼리만** 묶고,
+        # 묶음 중에서 가장 최근 달을 가리키는 쪽을 쓴다.
         cols = [m for _x, m, _y in hdr]
         given = [y for _x, _m, y in hdr]
         have = set(amounts[0][3] if amounts else {}) | set(yoys[0][1] if yoys else {})
         filled = sorted(have)
         yrs = _years(cols, filled, aday, given)
         newest = max((yrs[k] * 12 + cols[k] for k in filled), default=0)
-        cand = (newest, len(have), i, hdr, amounts, yoys)
-        if best is None or cand[:2] > best[:2]:
-            best = cand
+        cands.append((newest, len(have), i, hdr, amounts, yoys))
 
-    if best is None:
+    if not cands:
         return _sentence(table, aday)
-    _newest, _n, _i, hdr, amounts, yoys = best
-    amt = amounts[0] if amounts else None
-    yoy = yoys[0] if yoys else None
-    cols = [m for _x, m, _y in hdr]
-    given = [y for _x, _m, y in hdr]
-    have = set(amt[3] if amt else {}) | set(yoy[1] if yoy else {})
-    yrs = _years(cols, sorted(have), aday, given)
-    out = []
-    for i, mo in enumerate(cols):
-        if i not in have:
-            continue
-        y = yrs[i]
-        rec = {"period": f"{y:04d}-{mo:02d}"}
-        if amt and i in amt[3]:
-            rec["rev"] = amt[3][i] * amt[2]
-            rec["unit"] = amt[1]
-            rec["metric"] = amt[0][:24]
-        if yoy and i in yoy[1]:
-            rec["yoy"] = yoy[1][i]
-            rec.setdefault("metric", yoy[0][:24])
-        if len(rec) > 1:
-            out.append(rec)
+
+    groups = {}
+    for c in cands:
+        amt = c[4][0] if c[4] else None
+        yoy = c[5][0] if c[5] else None
+        groups.setdefault(_same_kind(amt, yoy), []).append(c)
+    # 묶음 고르기: 가장 최근 달이 먼저고, 같으면 달이 많은 쪽이다.
+    pick = max(groups.values(),
+               key=lambda g: (max(c[0] for c in g), sum(c[1] for c in g)))
+    # 겹치는 달은 **새 표가 이긴다** — 속보 뒤에 확정치를 싣는 공시가 있다.
+    pick.sort(key=lambda c: -c[0])
+
+    got, amt_lab, yoy_lab, unit_of = {}, "", "", {}
+    for _newest, _n, _i, hdr, amounts, yoys in pick:
+        amt = amounts[0] if amounts else None
+        yoy = yoys[0] if yoys else None
+        cols = [m for _x, m, _y in hdr]
+        given = [y for _x, _m, y in hdr]
+        have = set(amt[3] if amt else {}) | set(yoy[1] if yoy else {})
+        yrs = _years(cols, sorted(have), aday, given)
+        if amt and not amt_lab:
+            amt_lab = amt[0][:24]
+        if yoy and not yoy_lab:
+            yoy_lab = yoy[0][:24]
+        for k, mo in enumerate(cols):
+            if k not in have:
+                continue
+            p = f"{yrs[k]:04d}-{mo:02d}"
+            rec = got.setdefault(p, {"period": p})
+            if amt and k in amt[3] and "rev" not in rec:
+                rec["rev"] = amt[3][k] * amt[2]
+                rec["unit"] = amt[1]
+                rec.setdefault("metric", amt[0][:24])
+            if yoy and k in yoy[1] and "yoy" not in rec:
+                rec["yoy"] = yoy[1][k]
+                rec.setdefault("metric", yoy[0][:24])
+    out = [r for _p, r in sorted(got.items()) if len(r) > 1]
     if not out:
         return None
-    return {"rows": out,
-            "amount_label": amt[0][:24] if amt else "",
-            "yoy_label": yoy[0][:24] if yoy else ""}
+    return {"rows": out, "amount_label": amt_lab, "yoy_label": yoy_lab}
 
 
 # ── 스스로 시험 ─────────────────────────────────────────────────────────────
@@ -522,6 +548,39 @@ def _selftest():                                          # pragma: no cover
     if not e or e["rows"][0].get("yoy") is not None \
             or e["rows"][0].get("rev") != 4124e6:
         print("!! 마) 백만엔 금액이 전년비로 실렸다", e)
+        ok = False
+
+    # 바) 한 공시에 작년 표와 올해 표가 나란히 — **합쳐야 한다.**
+    f = read(_pdf([
+        (760, [(40, "(単位：百万円)")]),
+        (740, [(100, "25年4月"), (140, "25年5月"), (180, "25年6月")]),
+        (720, [(40, "売上高")]),
+        (700, [(100, "100"), (140, "110"), (180, "120")]),
+        (660, [(40, "(単位：百万円)")]),
+        (640, [(100, "26年4月"), (140, "26年5月"), (180, "26年6月")]),
+        (620, [(40, "売上高")]),
+        (600, [(100, "130"), (140, "140"), (180, "150")])]),
+        "2026-07-10", 4, "2026年6月度 月次売上高")
+    if not f or len(f["rows"]) != 6 or f["rows"][0]["period"] != "2025-04" \
+            or f["rows"][-1]["period"] != "2026-06" \
+            or f["rows"][-1].get("rev") != 150e6:
+        print("!! 바) 두 해 표 합치기", f and [r["period"] for r in f["rows"]])
+        ok = False
+
+    # 사) 全店 표와 既存店 표는 **다른 것**이다. 합치면 3월은 전점 4월은
+    #     기존점인 막대가 선다 — 한쪽만 쓴다.
+    g = read(_pdf([
+        (740, [(40, "前年比")]),
+        (720, [(100, "１月"), (140, "２月"), (180, "３月")]),
+        (700, [(40, "全店売上高")]),
+        (680, [(100, "105.0"), (140, "106.0"), (180, "107.0")]),
+        (640, [(40, "前年比")]),
+        (620, [(100, "１月"), (140, "２月"), (180, "３月")]),
+        (600, [(40, "既存店売上高")]),
+        (580, [(100, "101.0"), (140, "102.0"), (180, "103.0")])]),
+        "2026-04-10", 4, "2026年3月度 月次売上")
+    if not g or len(g["rows"]) != 3 or len({r["metric"] for r in g["rows"]}) != 1:
+        print("!! 사) 전점·기존점 표를 섞었다", g)
         ok = False
 
     print("montable 스스로 시험:", "통과" if ok else "떨어짐")

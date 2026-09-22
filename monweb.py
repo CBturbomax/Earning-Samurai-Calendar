@@ -36,7 +36,7 @@ import html as _html
 import re
 from datetime import date
 
-__all__ = ["BRANDS", "read", "article_links"]
+__all__ = ["BRANDS", "read", "article_links", "older"]
 
 # 브랜드/약칭 -> (종목코드, 상장사 이름). **아는 것만** 적는다.
 BRANDS = {
@@ -172,6 +172,36 @@ def article_links(page_html: str):
             seen.add(u)
             out.append(u)
     return out
+
+
+SALES_LINK = re.compile(
+    r'<a[^>]+href="(https://www\.ryutsuu\.biz/sales/s\d+\.html)"[^>]*>(.*?)</a>',
+    re.S)
+
+
+def older(page: str, url: str):
+    """같은 회사의 **지난달 기사** 주소들.
+
+    목록 쪽은 두 달치뿐이라 그것만 훑으면 회사마다 서너 달에서 끊긴다 —
+    띄엄띄엄한 막대는 전년동월비를 견줄 수가 없다. 그런데 기사 안에 지난달
+    기사가 그대로 링크돼 있다(「マクドナルド／7月の既存店売上高5.1％増」).
+    이것을 타고 거슬러 가면 회사마다 이력이 이어진다.
+
+    **앞머리(／ 앞)가 같을 때만** 같은 회사로 본다. 기사에는 같은 업종의 다른
+    회사 기사도 함께 걸려 있어서, 그것까지 타면 엉뚱한 회사의 달이 섞인다.
+    """
+    tm = re.search(r"(?is)<title>(.*?)</title>", page)
+    title = _txt(tm.group(1)) if tm else ""
+    if "／" not in title:
+        return []
+    head = title.split("／")[0].strip()
+    if not head:
+        return []
+    out = []
+    for u, lab in SALES_LINK.findall(page):
+        if u != url and _txt(lab).startswith(head + "／"):
+            out.append(u)
+    return list(dict.fromkeys(out))
 
 
 def _grid(tb: str):

@@ -15,40 +15,64 @@ jobs:
         with:
           python-version: '3.12'
 
-      # 65차 — 표 꼴 셋을 더 읽게 고쳤다. 얼마나 늘었고, 엉뚱한 것이 안 들어왔나.
-      # 전수로 훑어 종목마다 값을 늘어놓고 눈으로 본다.
-      - name: 🏬 표 꼴 셋을 더한 뒤 (65차)
-        timeout-minutes: 14
+      # 67차 — 고친 것 둘을 실제로 돌려 본다(커밋하지 않는다).
+      #   · PDF: 한 공시의 표를 이름표가 같은 것끼리 합친다 (작년표+올해표)
+      #   · 기사: 지난달 기사 링크를 타고 거슬러 간다
+      # 달이 몇 개가 되고, 이어지는지(구멍)를 잰다.
+      - name: 📈 이력이 이어지나 (67차)
+        timeout-minutes: 16
         env:
-          WEB_PER_RUN: '260'
-          WEB_SECS: '560'
-          WEB_DEEP: '14'
+          MON_PDF_PER_RUN: '300'
+          MON_SECS: '330'
+          WEB_PER_RUN: '600'
+          WEB_SECS: '420'
+          WEB_DEEP: '12'
         run: |
           set -o pipefail
+          python montable.py
           python monweb.py
-          python scrape_mon_web.py
-          python - <<'EOF' 2>&1 | tail -180
+          python scrape_mon_jp.py  | tail -6
+          python scrape_mon_web.py | tail -4
+          python - <<'EOF' 2>&1 | tail -150
           import json
-          d = json.load(open("data/monthly_web_jp.json"))
-          codes = d["codes"]
-          C = (json.load(open("data/caps.json")).get("caps")
-               or json.load(open("data/caps.json")))
-          have = {r["code"] for r in json.load(
-              open("data/monthly_jp.json"))["rows"]}
 
+          def runs(ms):
+              """가장 긴 **이어진** 달 수와 구멍 수."""
+              k = sorted((+p[:4]) * 12 + (+p[5:7]) for p in ms)
+              best = cur = 1
+              holes = 0
+              for a, b in zip(k, k[1:]):
+                  if b - a == 1:
+                      cur += 1
+                      best = max(best, cur)
+                  else:
+                      cur = 1
+                      holes += b - a - 1
+              return best, holes
+
+          C = json.load(open("data/caps.json")); C = C.get("caps") or C
           def cap(c):
               v = C.get("jp:" + c)
               return (v.get("cap") if isinstance(v, dict) else v) or 0
 
-          print(f"\n종목 {d['companies']} · 달 {d['months']} · 본 기사 "
-                f"{len(d['done'])} · 쪽 {d['deep']}"
-                f"{' (끝까지)' if d.get('deep_done') else ''}")
-          print(f"우리 목록에 없던 회사 {sum(1 for c in codes if c not in have)}")
-          for c, v in sorted(codes.items(), key=lambda kv: -cap(kv[0])):
-              ms = sorted(v["months"])
-              print(f"\n{c} {v['name'][:24]} [{v['brand']}] {cap(c):.2f}조원 "
-                    f"{'새' if c not in have else '겹침'}")
-              print("   " + " ".join(
-                  f"{m[2:]}:{v['months'][m].get('same','-')}/"
-                  f"{v['months'][m].get('all','-')}" for m in ms[-13:]))
+          rows = []
+          for src, path, key in (("PDF", "data/monthly_nums_jp.json", "months"),
+                                 ("기사", "data/monthly_web_jp.json", "months")):
+              d = json.load(open(path))
+              for c, v in d["codes"].items():
+                  ms = v.get(key) or {}
+                  if not ms:
+                      continue
+                  b, h = runs(ms)
+                  rows.append((cap(c), c, v.get("name", "")[:16], src,
+                               len(ms), b, h, min(ms), max(ms)))
+          rows.sort(key=lambda r: -r[0])
+          n24 = sum(1 for r in rows if r[5] >= 24)
+          n13 = sum(1 for r in rows if r[5] >= 13)
+          n6 = sum(1 for r in rows if r[5] >= 6)
+          print(f"\n종목 {len(rows)} · 이어진 달 24+ {n24} · 13+ {n13} · 6+ {n6}")
+          print(f"{'코드':6s}{'이름':18s}{'출처':5s} 달 이어짐 구멍  범위")
+          for capv, c, n, src, tot, b, h, lo, hi in rows[:60]:
+              print(f"{c:6s}{n:18s}{src:5s}{tot:3d}{b:5d}{h:5d}  {lo}~{hi}"
+                    f"  {capv:.2f}조")
           EOF
