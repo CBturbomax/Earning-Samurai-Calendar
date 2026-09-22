@@ -474,24 +474,37 @@ def _run(content: bytes, fonts: dict, res: dict):
             if o in ("'", '"'):
                 tlm = _mul((1.0, 0.0, 0.0, 1.0, 0.0, -lead), tlm)
                 tm = tlm
-            # **TJ 배열은 조각마다 따로 낸다.** 한 덩어리로 묶어 한 자리에
-            # 내면 표의 칸이 통째로 붙는다 — ABC마트(2670)의 「-6.66.77.0」,
-            # 하드오프의 「100.8 92.1 104.1 128.4」 가 그렇게 한 칸이 되어
-            # 어느 달 값인지 알 수 없었다(73차에 89건을 뜯어 보고 찾았다).
-            # 배열의 음수가 곧 칸 사이의 빈틈이다(1/1000 em). 조각마다 자리를
-            # 옮겨 가며 내면 `extract_cells` 가 다시 칸으로 갈라 준다 — 한
-            # 낱말 안의 작은 커닝은 거기서 도로 붙으므로 낱말은 안 쪼개진다.
+            # **TJ 배열은 크게 건너뛰는 자리에서만 쪼갠다.**
+            # 통째로 한 자리에 내면 표의 칸이 붙는다 — ABC마트(2670)의
+            # 「-6.66.77.0」, 하드오프의 「100.8 92.1 104.1 128.4」 가 그렇게
+            # 한 칸이 되어 어느 달 값인지 알 수 없었다(73차에 89건을 뜯어
+            # 보고 찾았다). 반대로 조각마다 무조건 쪼개도 깨진다 — 스기HD
+            # (7649)의 머리줄 「26年3月」 에서 `月` 이 떨어져 나가 다음 칸에
+            # 붙었고 그 공시가 통째로 안 읽혔다(75차).
+            # 배열의 음수는 1/1000 em 이다. 낱말 안의 커닝은 몇십이고 칸
+            # 사이는 천 단위라, **0.25 em 을 넘게 건너뛸 때만** 칸을 끊는다.
+            buf, bx, by, bsz = "", 0.0, 0.0, size
+
+            def _flush():
+                nonlocal buf
+                if buf.strip():
+                    out.append((round(by, 1), round(bx, 1), buf, bsz))
+                buf = ""
+
             for kind, v in stack:
                 if kind == "s":
-                    t, codes = _decode(v, cmap, nb)
-                    if t.strip():
+                    txt, codes = _decode(v, cmap, nb)
+                    if not buf:
                         a, b, c, d, e, f = _mul(tm, ctm)
-                        out.append((round(f, 1), round(e, 1), t,
-                                    size * abs(d or 1.0)))
+                        bx, by, bsz = e, f, size * abs(d or 1.0)
+                    buf += txt
                     adv = sum(wmap.get(c, dw) for c in codes) / 1000.0 * size
                     tm = _mul((1.0, 0.0, 0.0, 1.0, adv, 0.0), tm)
                 elif kind == "n" and o == "TJ":
+                    if -v >= 250:
+                        _flush()
                     tm = _mul((1.0, 0.0, 0.0, 1.0, -v / 1000.0 * size, 0.0), tm)
+            _flush()
         stack = []
     return out
 

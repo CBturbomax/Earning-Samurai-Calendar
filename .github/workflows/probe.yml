@@ -15,16 +15,17 @@ jobs:
         with:
           python-version: '3.12'
 
-      # 75차 — TJ 조각 내기로 스기HD(7649)가 5달 -> 0 이 됐다. 왜인지 본다.
-      # 74차는 전체로는 나아졌다(공시 14->15 · 달 83->107). 하나가 조용히
-      # 사라지는 것은 그냥 넘기지 않는다 — 옛 판·새 판의 칸을 나란히 찍는다.
-      - name: 🔬 스기HD 가 왜 사라졌나 (75차)
-        timeout-minutes: 10
+      # 76차 — 쪼개는 문턱을 0.25 em 으로 좁힌 뒤 다시 A/B.
+      # 74차(무조건 쪼개기)는 공시 14->15 · 달 83->107 이었지만 스기HD 를
+      # 잃었다(75차에 머리줄의 「月」 이 떨어져 나간 것을 봤다). 이제 크게
+      # 건너뛰는 자리에서만 끊는다 — 같은 80건에 옛 판과 나란히 돌린다.
+      - name: ⚖ 쪼개는 문턱 A/B (76차)
+        timeout-minutes: 14
         run: |
           git fetch --depth=1 origin main
           git show FETCH_HEAD:pdftext.py > /tmp/old_pdftext.py
           python - <<'EOF'
-          import importlib.util, json, sys, urllib.request
+          import importlib.util, json, sys, time, urllib.request
           import montable, pdftext
 
           spec = importlib.util.spec_from_file_location("old_pdftext",
@@ -34,25 +35,47 @@ jobs:
           spec.loader.exec_module(old)
 
           UA = {"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64)"}
+          n = json.load(open("data/monthly_nums_jp.json", encoding="utf-8"))
           mon = json.load(open("data/monthly_jp.json", encoding="utf-8"))
-          rows = [r for r in mon["rows"] if r.get("code") == "7649"]
-          print("7649 공시", len(rows), "건")
-          for r in rows[:1]:
-              raw = urllib.request.urlopen(
-                  urllib.request.Request(r["doc"], headers=UA), timeout=30).read()
-              print(r["title"][:70], "·", len(raw) // 1024, "KB")
-              for tag, mod in (("옛", old), ("새", pdftext)):
+          info = {r.get("doc"): r for r in (mon.get("rows") or [])}
+
+          bad = [u for u, why in n["skip"].items() if why == "표없음"]
+          good = list(n["done"])
+          docs = bad[:45] + good[:35]
+          print(f"표없음 {len(bad[:45])}건 + 잘 읽히던 {len(good[:35])}건")
+
+          tot = {"old": [0, 0], "new": [0, 0]}
+          diffs = []
+          for u in docs:
+              r = info.get(u) or {}
+              try:
+                  raw = urllib.request.urlopen(
+                      urllib.request.Request(u, headers=UA), timeout=30).read()
+              except Exception as e:
+                  print("!!", u[-18:], type(e).__name__, getattr(e, "code", ""))
+                  continue
+              time.sleep(0.5)
+              got = {}
+              for tag, mod in (("old", old), ("new", pdftext)):
                   montable.pdftext = mod
-                  got = montable.read(raw, r["date"], title=r.get("title", ""))
-                  print(f"\n===== {tag} 판 · 읽은 달 "
-                        f"{len((got or {}).get('rows') or [])} "
-                        f"· 이름표 {(got or {}).get('amount_label','')!r}"
-                        f"/{(got or {}).get('yoy_label','')!r}")
-                  for x in ((got or {}).get("rows") or [])[:6]:
-                      print("   ", x)
-                  cells = mod.extract_cells(raw, 3)
-                  print(f"  -- 칸 {len(cells)}줄 --")
-                  for c in cells[:26]:
-                      print("   | " + " | ".join(f"{x:.0f}:{v[:18]}"
-                                                 for x, v in c[:10]))
+                  try:
+                      res = montable.read(raw, r.get("date", "2026-09-01"),
+                                          title=r.get("title", ""))
+                  except Exception as e:
+                      print("  ! 터짐", tag, u[-18:], type(e).__name__,
+                            str(e)[:40])
+                      res = None
+                  k = len((res or {}).get("rows") or [])
+                  got[tag] = k
+                  if k:
+                      tot[tag][0] += 1
+                      tot[tag][1] += k
+              if got["old"] != got["new"]:
+                  diffs.append((r.get("code", "?"), got["old"], got["new"],
+                                (r.get("title") or "")[:34]))
+          print(f"\n옛 판: 읽힌 공시 {tot['old'][0]} · 달 {tot['old'][1]}")
+          print(f"새 판: 읽힌 공시 {tot['new'][0]} · 달 {tot['new'][1]}")
+          print(f"\n달라진 공시 {len(diffs)}건 (줄어든 것이 먼저)")
+          for code, a, b, ti in sorted(diffs, key=lambda x: x[2] - x[1]):
+              print(f"   {code}  {a} -> {b}   {ti}")
           EOF
