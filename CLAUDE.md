@@ -1022,6 +1022,18 @@ HPE 가 Compute·Storage·Intelligent Edge 를 Cloud&AI·Networking 으로 바�
 | `monthly.yml` | 10분 | `data/monthly_nums_jp.json` (월매출 수치 — 첨부 PDF) · `data/monthly_web_jp.json` (월매출 — 流通ニュース) |
 | `segments_hist.yml` | 하루 1번 | `data/segments_jp_hist.json` (EDINETDB_KEY 있을 때만) |
 
+**워크플로는 저를 부른 커밋을 꺼내 온다 — 줄을 서면 그게 벌써 낡은 것이다.**
+`actions/checkout` 은 그 실행을 부른 SHA 를 체크아웃한다. 실행이 concurrency
+대기줄에 서 있는 동안 앞 실행이 수집분을 커밋해도 **뒤 실행은 그것을 못 보고**
+자기 기준(낡은 SHA)에서 같은 일을 처음부터 다시 한다. 실제로 09:22 와 09:32
+두 실행이 流通ニュース 기사 **250건을 똑같이** 받아 왔고, 결과가 글자까지 같아
+커밋 diff 에도 안 보였다 — 7분 동안 아무 일도 안 일어난 것처럼 보이고 남의
+서버만 두 배로 두드렸다. 한동안 사이트가 우리를 막은 줄 알고 수집기를 낮췄는데
+두드려 보니 1초에 200 이었다(81차). **막힌 것처럼 보이면 먼저 우리 쪽을 의심할
+것.** 지금은 다섯 수집 워크플로가 모두 들머리에서 `git fetch origin main &&
+git reset --hard origin/main` 으로 맞추고 시작한다(fresh.yml 의 `sync_code()`
+와 같은 이치다).
+
 **공개 저장소라 GitHub Actions 시간이 무제한 무료다.** 그래서 주기를 늦출 이유가
 없다 — 이미 받아둔 것은 캐시로 몇 초 만에 건너뛰므로, 자주 도는 값은 새로 생긴
 것이 있을 때만 비싸다. 처음에는 지금보다 늦게(1시간·30분·3시간) 잡았다가
