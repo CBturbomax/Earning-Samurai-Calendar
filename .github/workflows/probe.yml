@@ -15,80 +15,73 @@ jobs:
         with:
           python-version: '3.12'
 
-      # 60차 — 칸을 가를 때 **진짜 글자폭**을 쓰는 것이 나은가 옛 어림이 나은가.
-      # 59차에서 하드오프(2674)의 머리줄 「2026年４月2026年５月…」 이 한 칸으로
-      # 뭉쳐 통째로 안 읽혔다. 전각에서 폭이 커져 칸이 덜 갈린 것이다. 한 번
-      # 받아 두 판으로 뜯어 **같은 자료에서** 견준다.
-      - name: ⚖ 글자폭 켜고 끄고 (60차)
-        timeout-minutes: 15
+      # 61차 — 流通ニュース 는 열린다. 기사 **본문**에 무엇이 들어 있나,
+      # 그리고 지난 달치를 어디까지 거슬러 볼 수 있나(이력이 이 소스의 값이다).
+      - name: 📰 流通ニュース 본문과 이력 (61차)
+        timeout-minutes: 8
         run: |
-          set -o pipefail
-          python - <<'EOF' 2>&1 | tail -220
-          import json, time, urllib.request
-          import pdftext, montable
+          python - <<'EOF'
+          import re, time, urllib.request, html as H2
 
-          rows = json.load(open("data/monthly_jp.json"))["rows"]
-          old = json.load(open("data/monthly_nums_jp.json"))
-          had = set(old["codes"])
-          H = {"User-Agent": "Mozilla/5.0 (compatible; earnings-samurai/1.0)"}
-          WATCH = ("2674", "9832", "7476", "6627", "7685", "7134", "7649", "7185")
+          UA = {"User-Agent": ("Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
+                               "AppleWebKit/537.36 (KHTML, like Gecko) "
+                               "Chrome/131.0.0.0 Safari/537.36"),
+                "Accept-Language": "ja,en;q=0.8"}
 
-          out = {True: {}, False: {}}
-          t0 = time.time()
-          n = 0
-          for r in rows:
-              if time.time() - t0 > 760:
-                  print(f"  …시간이 다 됐다({n}/{len(rows)})")
-                  break
+          def get(u, cap=900_000):
               try:
                   with urllib.request.urlopen(
-                          urllib.request.Request(r["doc"], headers=H),
-                          timeout=20) as f:
-                      pdf = f.read()
-              except Exception:
-                  continue
-              n += 1
-              for adv in (True, False):
-                  pdftext.ADV = adv
-                  try:
-                      res = montable.read(pdf, r["date"], 12, r["title"])
-                  except Exception:
-                      res = None
-                  if not res:
-                      continue
-                  rec = out[adv].setdefault(r["code"], {"n": r["name"], "m": {}})
-                  rec["lab"] = res.get("amount_label", "")
-                  rec["y"] = res.get("yoy_label", "")
-                  for x in res["rows"]:
-                      rec["m"][x["period"]] = (x.get("rev"), x.get("yoy"))
-                  if r["code"] in WATCH:
-                      rec.setdefault("dbg", []).append(
-                          (adv, res.get("amount_label"), res.get("yoy_label"),
-                           [(x["period"], x.get("rev"), x.get("yoy"))
-                            for x in res["rows"][:4]]))
+                          urllib.request.Request(u, headers=UA), timeout=20) as r:
+                      return r.status, r.read(cap).decode("utf-8", "ignore")
+              except Exception as e:
+                  return type(e).__name__ + str(getattr(e, "code", ""))[:6], ""
 
-          for adv in (True, False):
-              g = out[adv]
-              print(f"\n글자폭 {'켬' if adv else '끔'}: 종목 {len(g)} · "
-                    f"달 {sum(len(v['m']) for v in g.values())} · "
-                    f"헌 것 중 사라진 것 {sorted(had - set(g))}")
-          a, b = set(out[True]), set(out[False])
-          print(f"\n켰을 때만: {sorted(a - b)}")
-          print(f"껐을 때만: {sorted(b - a)}")
+          print("=" * 72)
+          print("(가) 거슬러 가기 — 목록에 쪽이 있나")
+          for u in ("https://www.ryutsuu.biz/sales/page/2/",
+                    "https://www.ryutsuu.biz/sales/page/12/",
+                    "https://www.ryutsuu.biz/sales/page/60/",
+                    "https://www.ryutsuu.biz/sales/index_2.html",
+                    "https://www.ryutsuu.biz/sales/?paged=2"):
+              st, t = get(u)
+              n = len(set(re.findall(r'href="(https://www\.ryutsuu\.biz/sales/s\d+\.html)"', t)))
+              first = re.search(r"<title>(.*?)</title>", t, re.S)
+              print(f"  {u:52s} {st}  기사 {n}  "
+                    f"{re.sub(r'\s+', ' ', first.group(1))[:40] if first else ''}")
+              time.sleep(0.6)
 
-          print("\n" + "=" * 72)
-          print("눈여겨보는 종목")
-          for c in WATCH:
-              for adv in (True, False):
-                  v = out[adv].get(c)
-                  tag = "켬" if adv else "끔"
-                  if not v:
-                      print(f"  {c} {tag}: 못 읽음")
-                      continue
-                  ms = sorted(v["m"])
-                  print(f"  {c} {v['n']} {tag}: 금액={v['lab']!r} 전년비={v['y']!r}")
-                  print("      " + " ".join(
-                      f"{m[2:]}:{('%.4g' % x) if x else '-'}/"
-                      f"{('%.1f' % y) if y else '-'}"
-                      for m in ms for x, y in [v["m"][m]]))
+          print()
+          print("=" * 72)
+          print("(나) 기사 본문 — 표가 통째로 오나")
+          for u in ("https://www.ryutsuu.biz/sales/s091872.html",
+                    "https://www.ryutsuu.biz/sales/s091142.html",
+                    "https://www.ryutsuu.biz/sales/s090948.html"):
+              st, t = get(u)
+              print(f"\n{'-'*72}\n{u}  {st}")
+              # 본문 덩어리를 찾는다
+              for pat in (r'(?is)<div[^>]+class="[^"]*entry[^"]*"[^>]*>(.*?)</div>\s*<(?:/div|footer|aside)',
+                          r"(?is)<article[^>]*>(.*?)</article>",
+                          r"(?is)<main[^>]*>(.*?)</main>"):
+                  m = re.search(pat, t)
+                  if m and len(m.group(1)) > 400:
+                      body = m.group(1)
+                      print(f"   덩어리 {pat[:28]}… {len(body)}자")
+                      break
+              else:
+                  body = t
+                  print("   덩어리를 못 찾아 전체를 본다")
+              tbs = re.findall(r"(?is)<table[^>]*>(.*?)</table>", body)
+              print(f"   표 {len(tbs)}개")
+              for tb in tbs[:2]:
+                  for tr in re.findall(r"(?is)<tr[^>]*>(.*?)</tr>", tb)[:8]:
+                      cs = [re.sub(r"\s+", " ", H2.unescape(
+                          re.sub(r"<[^>]+>", "", c))).strip()
+                          for _, c in re.findall(r"(?is)<(t[dh])[^>]*>(.*?)</\1>", tr)]
+                      if cs:
+                          print("      " + " | ".join(x[:16] for x in cs[:10]))
+                  print("      ----")
+              flat = re.sub(r"\s+", " ", H2.unescape(
+                  re.sub(r"(?is)<(script|style)[^>]*>.*?</\1>", " ",
+                         re.sub(r"<[^>]+>", " ", body))))
+              print("   글: " + flat[:700])
           EOF
