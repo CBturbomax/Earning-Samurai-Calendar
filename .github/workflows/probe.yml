@@ -15,57 +15,44 @@ jobs:
         with:
           python-version: '3.12'
 
-      # 72차 — 날짜별 보관함이 그 달을 통째로 주는가.
-      # 기사 주소 앞글자가 해마다 바뀐다(2026 s · 2025 r · 2024 q). 그래서
-      # 71차까지 못 잡았다. 이제 쪽 나눔이 있는지, 몇 쪽까지 가는지 본다.
-      - name: 📅 보관함 쪽 나눔 (72차)
-        timeout-minutes: 10
+      # 73차 — 「표없음」으로 버려지는 89건 안을 본다.
+      # 읽은 210건 중 89건(42%)이 표를 못 찾고 버려진다. 무엇이 들어 있는지
+      # 봐야 규칙을 어디로 넓힐지 안다. 여섯 건만 뜯어 칸을 그대로 찍는다.
+      - name: 🔍 표없음 공시 속 (73차)
+        timeout-minutes: 12
         run: |
           python - <<'EOF'
-          import gzip, io, re, time, urllib.request, html as H2
+          import json, time, urllib.request
+          import pdftext
 
-          UA = {"User-Agent": ("Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
-                               "AppleWebKit/537.36 (KHTML, like Gecko) "
-                               "Chrome/131.0.0.0 Safari/537.36"),
-                "Accept-Encoding": "gzip, deflate"}
-
-          def get(u, cap=6_000_000):
+          UA = {"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64)"}
+          n = json.load(open("data/monthly_nums_jp.json", encoding="utf-8"))
+          mon = json.load(open("data/monthly_jp.json", encoding="utf-8"))
+          who = {}
+          for r in (mon.get("rows") or []):
+              if isinstance(r, dict):
+                  who[r.get("doc") or r.get("url") or ""] = (
+                      r.get("code", ""), r.get("title", ""))
+          bad = [u for u, why in n["skip"].items() if why == "표없음"]
+          print(f"표없음 {len(bad)}건 중 여섯 건을 뜯는다")
+          for u in bad[:6]:
+              code, title = who.get(u, ("?", "?"))
               try:
-                  r = urllib.request.urlopen(
-                      urllib.request.Request(u, headers=UA), timeout=25)
-                  raw = r.read(cap)
-                  if r.headers.get("Content-Encoding") == "gzip":
-                      raw = gzip.GzipFile(fileobj=io.BytesIO(raw)).read()
-                  return r.status, raw.decode("utf-8", "ignore")
+                  raw = urllib.request.urlopen(
+                      urllib.request.Request(u, headers=UA), timeout=30).read()
               except Exception as e:
-                  return type(e).__name__ + str(getattr(e, "code", "")), ""
-
-          B = "https://www.ryutsuu.biz"
-          ART = re.compile(r'href="(https://www\.ryutsuu\.biz/[a-z_]+/[a-z]\d+\.html)"')
-
-          def look(u):
-              st, t = get(u)
-              # 본문 목록 구역만 본다 (사이드바·최신뉴스를 빼려고)
-              m = re.search(r'(?is)<section id="archive".*?</section>', t)
-              body = m.group(0) if m else t
-              arts = list(dict.fromkeys(ART.findall(body)))
-              sal = [a for a in arts if "/sales/" in a]
-              days = re.findall(r"date-list-title\"[^>]*>([^<]+)<", body)
-              pg = re.search(r'(?is)<div class="[^"]*pag[^"]*".*?</div>', t)
-              print(f"  {u}  {st} · {len(t)//1024}KB · 기사 {len(arts)} (sales {len(sal)})"
-                    f" · 날짜머리 {len(days)}")
-              if days:
-                  print("      날짜:", days[0], "~", days[-1])
-              if pg:
-                  print("      쪽나눔:", re.sub(r"\s+", " ", pg.group(0))[:400])
-              return len(arts)
-
-          print("■ 달 보관함 쪽 나눔")
-          for u in (f"{B}/2024/01/", f"{B}/2024/01/page/2/", f"{B}/2024/01/page/3/",
-                    f"{B}/2024/01/page/9/"):
-              look(u); time.sleep(0.6)
-
-          print("\n■ 갈래(sales) 목록이 얼마나 깊은가")
-          for n in (9, 12, 20, 40, 80):
-              look(f"{B}/sales/page/{n}/"); time.sleep(0.6)
+                  print("!!", u, type(e).__name__, getattr(e, "code", ""))
+                  continue
+              time.sleep(0.8)
+              print("\n" + "=" * 72)
+              print(f"{code} · {title[:60]}")
+              print(f"{u} · {len(raw)//1024}KB · 암호 {pdftext.is_encrypted(raw)}")
+              try:
+                  rows = pdftext.extract_cells(raw, max_pages=3)
+              except Exception as e:
+                  print("  글자 못 꺼냄:", type(e).__name__, str(e)[:70])
+                  continue
+              print(f"  줄 {len(rows)}")
+              for cells in rows[:34]:
+                  print("   | " + " | ".join(f"{x:.0f}:{v[:22]}" for x, v in cells[:9]))
           EOF
