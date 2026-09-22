@@ -3162,10 +3162,22 @@ function mnFmtJPY(v) {
    금액 없이 전년비만 내는 회사가 많아서(소매업이 특히), 그때는 100 을 기준선으로
    놓고 **위아래로** 그린다 — 0 부터 그리면 95% 와 105% 가 거의 같은 높이가 되어
    좋아졌는지 나빠졌는지가 안 보인다. */
-function mnChart(m) {
+/* 빠진 달을 **빈칸으로 남긴다.** 있는 달만 나란히 붙여 그리면 2월 다음이
+   5월인데도 옆칸에 서서 구멍이 안 보이고, 전년동월비 선이 이어진 것처럼
+   거짓말을 한다. 달을 축으로 삼아야 띄엄띄엄한 것이 띄엄띄엄 보인다. */
+function mnDense(m) {
+  const key = p => (+p.slice(0, 4)) * 12 + (+p.slice(5, 7)) - 1;
+  const a = key(m[0][0]), b = key(m[m.length - 1][0]);
+  const out = new Array(b - a + 1).fill(null);
+  for (const r of m) out[key(r[0]) - a] = r;
+  return out;
+}
+
+function mnChart(src) {
+  if (!src || !src.length) return '';
+  const m = mnDense(src);
   const n = m.length;
-  if (!n) return '';
-  const hasRev = m.some(r => r[1] != null);
+  const hasRev = m.some(r => r && r[1] != null);
   const W = Math.max(400, n * 15), H = 118, L = 6, R = 6, T = 8, B = 15;
   const step = (W - L - R) / n;
   const cx = i => L + step * i + step / 2;
@@ -3175,22 +3187,24 @@ function mnChart(m) {
         (m[i][1] != null ? mnFmtJPY(m[i][1]) : '') +
         (m[i][2] != null ? (m[i][1] != null ? ' · ' : '') + '전년비 ' +
                            m[i][2].toFixed(1) + '%' : '');
+  // 빈 달은 자리를 비워 둔다 — 자리는 있고 막대만 없다.
+  const at = i => m[i];
   let body = '';
   if (hasRev) {
     /* 막대는 금액, 주황 선은 전년비, 옅은 녹색 선은 석 달 이동평균이다.
        전년비 축은 **그 종목의 값 언저리로 좁게** 잡는다 — 0~200% 로 넓게
        잡으면 100 언저리의 오르내림이 한 줄로 눌려 보이지 않는다
        (실적 차트의 영업이익률 축과 같은 이치). */
-    const mx = Math.max(...m.map(r => r[1] || 0), 1);
+    const mx = Math.max(...m.map(r => (r && r[1]) || 0), 1);
     for (let i = 0; i < n; i++) {
-      const v = m[i][1];
+      const v = at(i) && m[i][1];
       if (v == null) continue;
       const h = Math.max(1, (base - T) * (v / mx));
       body += '<rect class="bar" x="' + (cx(i) - bw / 2).toFixed(1) + '" y="' +
               (base - h).toFixed(1) + '" width="' + bw.toFixed(1) + '" height="' +
               h.toFixed(1) + '" rx="1.5"><title>' + tip(i) + '</title></rect>';
     }
-    const ys = m.map(r => r[2]).filter(v => v != null);
+    const ys = m.map(r => r && r[2]).filter(v => v != null);
     if (ys.length >= 2) {
       const lo = Math.min(...ys), hi = Math.max(...ys);
       const pad = Math.max(3, (hi - lo) * 0.15);
@@ -3198,7 +3212,7 @@ function mnChart(m) {
       const yy = v => base - (base - T) * (v - a) / Math.max(1e-6, b2 - a);
       let d = '', started = false;
       for (let i = 0; i < n; i++) {
-        if (m[i][2] == null) { started = false; continue; }
+        if (!at(i) || m[i][2] == null) { started = false; continue; }
         d += (started ? 'L' : 'M') + cx(i).toFixed(1) + ',' + yy(m[i][2]).toFixed(1);
         started = true;
       }
@@ -3208,7 +3222,8 @@ function mnChart(m) {
     if (n >= 4) {
       let d = '', started = false;
       for (let i = 2; i < n; i++) {
-        const w = [m[i - 2][1], m[i - 1][1], m[i][1]];
+        const w = [at(i - 2) && m[i - 2][1], at(i - 1) && m[i - 1][1],
+                   at(i) && m[i][1]];
         if (w.some(v => v == null)) { started = false; continue; }
         const av = (w[0] + w[1] + w[2]) / 3;
         d += (started ? 'L' : 'M') + cx(i).toFixed(1) + ',' +
@@ -3220,7 +3235,7 @@ function mnChart(m) {
   } else {
     /* 전년비만 있는 회사는 100%를 기준선으로 위아래로 그린다 — 0 부터 그리면
        95%와 105%가 거의 같은 높이라 좋아졌는지가 안 보인다. */
-    const dev = m.map(r => r[2] == null ? null : r[2] - 100);
+    const dev = m.map(r => (r && r[2] != null) ? r[2] - 100 : null);
     const mx = Math.max(10, ...dev.filter(v => v != null).map(Math.abs));
     const mid = T + (base - T) / 2;
     body += '<line class="zero" x1="' + L + '" y1="' + mid.toFixed(1) +
@@ -3238,10 +3253,17 @@ function mnChart(m) {
   }
   // x 이름표는 여섯 달마다. 촘촘하면 서로 붙어 도리어 안 읽힌다.
   const gap = n > 14 ? 6 : (n > 7 ? 3 : 1);
+  // 이름표는 **비어 있는 달에도** 붙인다 — 축이 달이므로 그 자리의 달을
+  // 첫 달에서 세어 적는다. 그래야 구멍이 몇 달짜리인지 읽힌다.
+  const k0 = (+src[0][0].slice(0, 4)) * 12 + (+src[0][0].slice(5, 7)) - 1;
+  const lab = i => {
+    const k = k0 + i;
+    return String(Math.floor(k / 12)).slice(2) + '/' +
+           String(k % 12 + 1).padStart(2, '0');
+  };
   for (let i = n - 1; i >= 0; i -= gap)
     body += '<text class="xl" x="' + cx(i).toFixed(1) + '" y="' + (H - 3) +
-            '" text-anchor="middle">' + m[i][0].slice(2, 4) + '/' +
-            m[i][0].slice(5, 7) + '</text>';
+            '" text-anchor="middle">' + lab(i) + '</text>';
   return '<svg class="mchart" viewBox="0 0 ' + W + ' ' + H +
          '" preserveAspectRatio="xMidYMid meet">' + body + '</svg>';
 }
@@ -3331,9 +3353,12 @@ function mnCard(c) {
     const mm = num.m, lr = mm[mm.length - 1];
     const prev = mm.length > 1 ? mm[mm.length - 2] : null;
     const yoy = lr[2];
-    // 전월비는 **금액이 둘 다 있을 때만** 낸다. 전년비끼리 빼면 그건
-    // 전월비가 아니라 전년비의 변화폭이라 뜻이 다르다.
-    const mom = (lr[1] != null && prev && prev[1]) ? (lr[1] / prev[1] - 1) * 100 : null;
+    // 전월비는 **금액이 둘 다 있고 바로 앞 달일 때만** 낸다. 전년비끼리 빼면
+    // 그건 전월비가 아니라 전년비의 변화폭이고, 사이에 구멍이 있으면 석 달
+    // 만의 변화를 '전월비'라 적는 셈이다.
+    const key = p => (+p.slice(0, 4)) * 12 + (+p.slice(5, 7));
+    const adj = prev && key(lr[0]) - key(prev[0]) === 1;
+    const mom = (lr[1] != null && adj && prev[1]) ? (lr[1] / prev[1] - 1) * 100 : null;
     stat = '<div class="mstat"><div>' +
       '<div class="v">' + (lr[1] != null ? mnFmtJPY(lr[1]) :
                            (yoy != null ? yoy.toFixed(1) + '%' : '—')) + '</div>' +

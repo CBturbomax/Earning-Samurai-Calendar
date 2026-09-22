@@ -37,7 +37,7 @@ OUT = HERE / "data" / "monthly_web_jp.json"
 VER = 1
 # 읽는 규칙의 판. 올리면 **본 기사 기록만** 비우고 모아둔 값은 그대로 둔다 —
 # 창 밖으로 밀려난 달을 영영 잃지 않기 위해서다(월매출 수치 쪽과 같은 규칙).
-RULE_VER = 2
+RULE_VER = 3
 
 BASE = "https://www.ryutsuu.biz/sales/"
 UA = {"User-Agent": ("Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
@@ -68,19 +68,22 @@ def load():
     try:
         old = json.loads(OUT.read_text(encoding="utf-8"))
     except (ValueError, OSError):
-        return {}, set(), 0, False
+        return {}, set(), 0, False, []
     by = old.get("codes") or {}
     done = set(old.get("done") or [])
     deep = int(old.get("deep") or 0)
     end = bool(old.get("deep_done"))
+    # 아직 못 본 '지난달 기사' 줄. 한 실행에 다 못 보므로 파일에 남긴다 —
+    # 안 남기면 다음 실행이 이미 본 기사를 건너뛰어 그 링크에 영영 못 닿는다.
+    queue = list(old.get("queue") or [])
     if old.get("rv") != RULE_VER:
         print(f"  읽는 규칙이 바뀌었다(rv {old.get('rv')} -> {RULE_VER})."
               f" 모아둔 값은 두고 본 기사 기록만 비운다.")
-        done, deep, end = set(), 0, False
-    return by, done, deep, end
+        done, deep, end, queue = set(), 0, False, []
+    return by, done, deep, end, queue
 
 
-def save(by, done, deep, end):
+def save(by, done, deep, end, queue=()):
     months = sum(len(v.get("months") or {}) for v in by.values())
     OUT.parent.mkdir(parents=True, exist_ok=True)
     payload = {
@@ -97,6 +100,7 @@ def save(by, done, deep, end):
         "done": sorted(done)[-4000:],
         "deep": deep,
         "deep_done": end,
+        "queue": sorted(set(queue))[:4000],
     }
     tmp = OUT.with_suffix(".tmp")
     tmp.write_text(json.dumps(payload, ensure_ascii=False), encoding="utf-8")
@@ -134,11 +138,13 @@ def main():
         for u in links[:6]:
             print("  ", u)
         if links:
-            got = monweb.read(get(links[0]), links[0])
-            print(json.dumps(got, ensure_ascii=False, indent=1)[:1200])
+            page = get(links[0])
+            got = monweb.read(page, links[0])
+            print(json.dumps(got, ensure_ascii=False, indent=1)[:900])
+            print("  지난달 기사:", monweb.older(page, links[0]))
         return
 
-    by, done, deep, end = load()
+    by, done, deep, end, queue = load()
     t0 = time.time()
 
     # 어느 쪽을 볼까 — 앞 두 쪽은 늘 보고(새 기사), 그 뒤는 조금씩 거슬러 간다.
@@ -162,9 +168,13 @@ def main():
     if seen_pages > deep:
         deep = seen_pages
 
-    todo = list(dict.fromkeys(todo))[:PER_RUN]
-    print(f"  볼 기사 {len(todo)}건 (본 기사 {len(done)} · 거슬러 간 쪽 {deep}"
-          f"{' · 끝까지' if end else ''})")
+    # 목록에서 온 새 기사가 먼저고, 그 뒤가 **거슬러 가기 줄**이다.
+    # 목록 쪽은 두 달치뿐이라 이력은 이 줄로만 길어진다.
+    todo = list(dict.fromkeys(todo + [u for u in queue if u not in done]))
+    queue = todo[PER_RUN:]
+    todo = todo[:PER_RUN]
+    print(f"  볼 기사 {len(todo)}건 (본 기사 {len(done)} · 거슬러 갈 줄 "
+          f"{len(queue)} · 쪽 {deep}{' · 끝까지' if end else ''})")
 
     added = new_docs = 0
     for u in todo:
@@ -184,11 +194,17 @@ def main():
             continue
         for rec in recs:
             added += merge(by, rec)
+        # 이 기사가 가리키는 지난달 기사를 줄에 세운다.
+        for u2 in monweb.older(page, u):
+            if u2 not in done:
+                queue.append(u2)
         if new_docs % 30 == 0:
-            save(by, done, deep, end)
+            save(by, done, deep, end, queue)
 
-    codes, months = save(by, done, deep, end)
-    print(f"  기사 {new_docs}건 · 달 {added}개 담았다 -> 종목 {codes} · 달 {months}")
+    queue = [u for u in dict.fromkeys(queue) if u not in done]
+    codes, months = save(by, done, deep, end, queue)
+    print(f"  기사 {new_docs}건 · 달 {added}개 담았다 -> 종목 {codes} · 달 {months}"
+          f" · 거슬러 갈 줄 {len(queue)}")
 
 
 if __name__ == "__main__":
