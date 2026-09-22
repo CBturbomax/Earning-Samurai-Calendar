@@ -112,10 +112,19 @@ def _years(cols, filled, ann: date, given=None):
 
 
 def _headers(cells):
-    """달 이름표 줄이면 [(x, 달, 해 또는 None)] 을 준다. 아니면 None."""
+    """달 이름표 줄이면 [(x, 달, 해 또는 None)] 을 준다. 아니면 None.
+
+    **「6」과 「月」이 다른 칸으로 갈라져 오는 공시가 있다**(아스쿨 2678 의
+    「6 月 7 月 8 月」). 그러면 한 칸도 달로 안 읽혀 그 표가 통째로 버려진다.
+    그래서 옆 칸과 붙여서도 본다 — MONTH_HDR 이 통째로 맞아야 하는 규칙이라
+    「月7」 같은 엉뚱한 짝은 저절로 걸러진다.
+    """
     got = []
-    for x, t in cells:
-        m = MONTH_HDR.match(_norm(t))
+    for k, (x, t) in enumerate(cells):
+        s = _norm(t)
+        m = MONTH_HDR.match(s)
+        if not m and k + 1 < len(cells):
+            m = MONTH_HDR.match(s + _norm(cells[k + 1][1]))
         if m and 1 <= int(m.group(2)) <= 12:
             y = m.group(1)
             if y is not None:
@@ -267,6 +276,130 @@ def _same_kind(amt, yoy):
     return _KIND_DROP.sub("", _norm(lab))
 
 
+# 세로 표에서 **지난해 칸**을 가리키는 이름표. 「前年同月比」 처럼 비율
+# 이름에 들어간 '前年' 은 지난해 칸이 아니므로 뒤에 '비'가 붙으면 봐준다.
+DOWN_PREV = re.compile(r"前期|昨年|前年(?!同?月?比)")
+
+
+def _down(table, aday, title_metric, tm):
+    """**달이 세로로 선 표**를 읽는다 — 줄마다 한 달이고 첫 칸이 달 이름표다.
+
+    트레저팩토리(3093)·세리아(2782) 꼴이다. 달 이름표가 한 줄에 셋 이상 서야
+    표로 보던 시절에는 이 꼴이 통째로 안 읽혔다.
+
+    **이름표를 못 찾은 칸은 쓰지 않는다.** 세리아의 표에는 「全社」 아래
+    이름 없는 칸(당월 전년비)과 「前年」 칸이 나란히 서는데, 어느 것이 올해
+    값인지 표만 보고는 알 수 없다 — 그런 칸은 버리고, 남는 칸이 없으면 그
+    표를 통째로 건너뛴다. 어림해서 지난해 값을 올해 자리에 앉히면 그게 빈
+    자리보다 나쁘다.
+    """
+    out, i = [], 0
+    while i < len(table):
+        run, j = [], i
+        while j < len(table):
+            cells = table[j]
+            if not cells:
+                break
+            m = MONTH_HDR.match(_norm(cells[0][1]))
+            nums = [(x, _num(t)) for x, t in cells[1:] if _num(t) is not None]
+            if not (m and 1 <= int(m.group(2)) <= 12 and nums):
+                break
+            yr = m.group(1)
+            if yr is not None:
+                yr = int(yr) + (2000 if int(yr) < 100 else 0)
+            run.append((int(m.group(2)), yr, nums))
+            j += 1
+        if len(run) >= 3:
+            c = _down_table(table, run, i, aday, title_metric, tm)
+            if c:
+                out.append(c)
+            i = max(j, i + 1)
+        else:
+            i += 1
+    return out
+
+
+def _down_table(table, run, start, aday, title_metric, tm):
+    xs = sorted(x for _m, _y, nums in run for x, _v in nums)
+    groups = []
+    for x in xs:
+        if groups and x - groups[-1][-1] <= 6:
+            groups[-1].append(x)
+        else:
+            groups.append([x])
+    cx = [sum(g) / len(g) for g in groups]
+    if not cx:
+        return None
+    pitch = min((b - a for a, b in zip(cx, cx[1:])), default=40.0)
+    tol = max(pitch * 0.55, 7.0)
+
+    # 이름표는 달 줄 **위**에 여러 층으로 선다(「売上高 / 全店 / 当期」).
+    lab_rows = []
+    for k in range(max(0, start - 4), start):
+        row = [(x, _norm(t)) for x, t in table[k]
+               if _num(t) is None and _norm(t)]
+        if row:
+            lab_rows.append(row)
+    if not lab_rows:
+        return None
+    cap_txt = "".join(s for row in lab_rows for _x, s in row)
+    decl = UNIT_DECL.search(cap_txt)
+    if decl and not re.search(r"[円%％]", decl.group(1)):
+        return None
+    cap_unit, cap_mul = _unit(cap_txt)
+    cap_yoy = bool(CAP_YOY.search(cap_txt)) and not cap_mul
+
+    labs = []
+    for c in cx:
+        parts = []
+        for row in lab_rows:
+            best, bd = None, 1e9
+            for x, s in row:
+                d = abs(x - c)
+                if d < bd:
+                    best, bd = s, d
+            if best is not None and bd <= tol:
+                parts.append(best)
+        labs.append("".join(parts))
+
+    pick = None
+    for k, lab in enumerate(labs):
+        if not lab or lab_has_other(lab) or DOWN_PREV.search(lab):
+            continue
+        if SKIP_LABEL.search(lab):
+            continue
+        if not (AMOUNT_LABEL.search(lab) or cap_yoy or cap_mul):
+            continue
+        pick = (k, lab)
+        break
+    if pick is None:
+        return None
+    col, lab = pick
+
+    vals = {}
+    for r, (_mo, _yr, nums) in enumerate(run):
+        for x, v in nums:
+            if abs(x - cx[col]) <= tol:
+                vals[r] = v
+                break
+    if len(vals) < 3:
+        return None
+
+    hdr = [(r, mo, yr) for r, (mo, yr, _n) in enumerate(run)]
+    amounts, yoys = [], []
+    if cap_mul:
+        amounts.append((lab or title_metric, cap_unit, cap_mul, vals))
+    else:
+        if DELTA_LABEL.search(lab) or _looks_delta(vals):
+            vals = {k2: v + 100.0 for k2, v in vals.items()}
+        yoys.append((lab or title_metric, vals))
+    cols = [m for _x, m, _y in hdr]
+    given = [y for _x, _m, y in hdr]
+    yrs = _years(cols, sorted(vals), aday, given)
+    newest = max((yrs[k] * 12 + cols[k] for k in vals), default=0)
+    return (newest, len(vals), start, hdr, amounts, yoys)
+
+
 def read(data: bytes, ann: str, max_pages: int = 12, title: str = ""):
     """PDF -> {'rows': [...], 'basis': ...} 또는 None.
 
@@ -402,6 +535,10 @@ def read(data: bytes, ann: str, max_pages: int = 12, title: str = ""):
         newest = max((yrs[k] * 12 + cols[k] for k in filled), default=0)
         cands.append((newest, len(have), i, hdr, amounts, yoys))
 
+    # **달이 세로로 선 표**도 본다(트레저팩토리 3093 꼴). 가로 표에서 아무것도
+    # 못 건졌을 때만 — 같은 표를 두 길로 읽어 두 줄로 세우지 않는다.
+    if not cands:
+        cands = _down(table, aday, title_metric, tm)
     if not cands:
         return _sentence(table, aday)
 
@@ -676,6 +813,40 @@ def _selftest():                                          # pragma: no cover
     got = {r["period"]: r.get("yoy") for r in (g or {}).get("rows") or []}
     if len(got) != 4 or got.get("2026-01") != 132.8 or got.get("2026-04") != 118.6:
         print("!! 카) ％ 단위 전년비 표", got)
+        ok = False
+
+    # (타) **달이 세로로 선 표**(트레저팩토리 3093 꼴). 「当期」 칸만 집고
+    #      「前期」·객수·점포수 칸은 안 집는다.
+    ta = _pdf([(700, [(178, "売上高"), (258, "(単位：%)"), (384, "店舗数")]),
+               (688, [(192, "全店"), (279, "既存店")]),
+               (676, [(168, "当期"), (217, "前期"), (261, "当期"),
+                      (309, "前期"), (360, "出店")]),
+               (660, [(132, "3月"), (171, "111.3"), (222, "112.4"),
+                      (264, "101.6"), (315, "104.4"), (389, "3")]),
+               (644, [(132, "4月"), (171, "116.9"), (222, "110.8"),
+                      (264, "105.5"), (315, "103.6"), (389, "3")]),
+               (628, [(132, "5月"), (171, "123.7"), (222, "113.3"),
+                      (264, "112.7"), (315, "105.2"), (389, "3")]),
+               (612, [(132, "6月"), (171, "110.0"), (222, "108.4"),
+                      (264, "100.4"), (315, "100.3"), (389, "2")])])
+    g = read(ta, "2026-07-07", title="2026年6月 月次売上概況")
+    got = {r["period"]: r.get("yoy") for r in (g or {}).get("rows") or []}
+    if len(got) != 4 or got.get("2026-03") != 111.3 or got.get("2026-06") != 110.0:
+        print("!! 타) 달이 세로인 표", got)
+        ok = False
+
+    # (파) 어느 칸이 올해인지 알 수 없는 세로 표(세리아 2782 꼴)는 **안 집는다.**
+    #      「全社」 아래 이름 없는 칸과 「前年」 칸이 나란히 선다.
+    pa = _pdf([(700, [(143, "全社"), (274, "既存店")]),
+               (688, [(170, "前年"), (257, "前年"), (301, "客数")]),
+               (672, [(85, "4月"), (126, "114.2"), (172, "104.7"),
+                      (214, "111.1"), (258, "101.8"), (301, "107.5")]),
+               (656, [(85, "5月"), (126, "118.0"), (172, "104.1"),
+                      (214, "114.4"), (258, "101.4"), (301, "111.2")]),
+               (640, [(85, "6月"), (126, "112.9"), (172, "103.5"),
+                      (214, "109.2"), (258, "101.0"), (301, "105.7")])])
+    if read(pa, "2026-07-07", title="月次売上高前年比"):
+        print("!! 파) 이름 없는 칸을 집었다", read(pa, "2026-07-07"))
         ok = False
 
     print("montable 스스로 시험:", "통과" if ok else "떨어짐")

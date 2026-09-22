@@ -15,74 +15,70 @@ jobs:
         with:
           python-version: '3.12'
 
-      # 79차 — 못 읽은 공시의 **꼴**을 센다. 새 규칙을 짜기 전에 그것이
-      # 몇 건짜리 이야기인지 먼저 재 둔다(짐작으로 100줄을 쓰지 않는다).
-      #   ㄱ) 달이 세로 — 첫 칸이 달인 줄이 셋 이상 (세리아 2782 꼴)
-      #   ㄴ) 달이 가로 — 한 줄에 달 이름표가 셋 이상 (이미 읽는 꼴인데 왜 못 읽나)
-      #   ㄷ) 달이 아예 안 보임 — 그림이거나 한 달치만 적힌 공시
-      - name: 📐 못 읽은 공시의 꼴을 센다 (79차)
+      # 80차 — 세로 표 읽기 + 갈라진 달 머리줄 A/B.
+      # 79차에서 못 읽은 공시의 꼴을 봤다: 3093 은 달이 세로, 2678(ASKUL)은
+      # 「6」과 「月」이 다른 칸으로 갈라져 머리줄을 못 알아봤다. 둘을 고쳤으니
+      # 같은 공시에 옛 판과 나란히 돌려 잃는 것이 없는지 본다.
+      - name: ⚖ 세로 표 A/B (80차)
         timeout-minutes: 14
         run: |
+          git fetch --depth=1 origin main
+          git show FETCH_HEAD:montable.py > /tmp/old_montable.py
           python - <<'EOF'
-          import collections, json, re, time, urllib.request
-          import pdftext, montable
+          import importlib.util, json, sys, time, urllib.request
+          import montable
+
+          spec = importlib.util.spec_from_file_location("old_montable",
+                                                        "/tmp/old_montable.py")
+          old = importlib.util.module_from_spec(spec)
+          sys.modules["old_montable"] = old
+          spec.loader.exec_module(old)
 
           UA = {"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64)"}
           n = json.load(open("data/monthly_nums_jp.json", encoding="utf-8"))
           mon = json.load(open("data/monthly_jp.json", encoding="utf-8"))
           info = {r.get("doc"): r for r in (mon.get("rows") or [])}
-          bad = [u for u, why in n["skip"].items() if why == "표없음"]
-          print(f"표없음 {len(bad)}건을 전부 훑는다")
 
-          kind = collections.Counter()
-          down_ex, cross_ex = [], []
-          for u in bad:
+          bad = [u for u, why in n["skip"].items() if why == "표없음"]
+          good = list(n["done"])
+          docs = bad[:55] + good[:40]
+          print(f"표없음 {len(bad[:55])}건 + 잘 읽히던 {len(good[:40])}건")
+
+          tot = {"old": [0, 0], "new": [0, 0]}
+          diffs = []
+          for u in docs:
               r = info.get(u) or {}
               try:
                   raw = urllib.request.urlopen(
                       urllib.request.Request(u, headers=UA), timeout=30).read()
               except Exception as e:
-                  kind["못 받음"] += 1
+                  print("!!", u[-18:], type(e).__name__, getattr(e, "code", ""))
                   continue
-              time.sleep(0.25)
-              try:
-                  tb = pdftext.extract_cells(raw, 4)
-              except Exception:
-                  kind["글자 못 꺼냄"] += 1
-                  continue
-              if not tb:
-                  kind["글자 0줄(그림)"] += 1
-                  continue
-              cross = sum(1 for cells in tb if montable._headers(cells))
-              down = 0
-              for cells in tb:
-                  if not cells:
-                      continue
-                  x0, t0 = cells[0]
-                  m = montable.MONTH_HDR.match(montable._norm(t0))
-                  if m and 1 <= int(m.group(2)) <= 12 and any(
-                          montable._num(t) is not None for _x, t in cells[1:]):
-                      down += 1
-              if down >= 3 and not cross:
-                  kind["ㄱ 달이 세로"] += 1
-                  if len(down_ex) < 3:
-                      down_ex.append((r.get("code"), r.get("title", "")[:40], tb))
-              elif cross:
-                  kind["ㄴ 달이 가로인데 못 읽음"] += 1
-                  if len(cross_ex) < 2:
-                      cross_ex.append((r.get("code"), r.get("title", "")[:40], tb))
-              elif down >= 3:
-                  kind["ㄱ+ㄴ 둘 다"] += 1
-              else:
-                  kind["ㄷ 달이 안 보임"] += 1
-          print("\n꼴:", dict(kind.most_common()))
-
-          def dump(tag, ex):
-              for code, ti, tb in ex:
-                  print(f"\n--- {tag} {code} {ti}")
-                  for cells in tb[:18]:
-                      print("   | " + " | ".join(f"{x:.0f}:{v[:14]}"
-                                                 for x, v in cells[:9]))
-          dump("세로", down_ex)
-          dump("가로", cross_ex)
+              time.sleep(0.35)
+              got, first = {}, {}
+              for tag, mod in (("old", old), ("new", montable)):
+                  try:
+                      res = mod.read(raw, r.get("date", "2026-09-01"),
+                                     title=r.get("title", ""))
+                  except Exception as e:
+                      print("  ! 터짐", tag, u[-18:], type(e).__name__,
+                            str(e)[:40])
+                      res = None
+                  rows = (res or {}).get("rows") or []
+                  got[tag] = len(rows)
+                  first[tag] = rows[0] if rows else None
+                  if rows:
+                      tot[tag][0] += 1
+                      tot[tag][1] += len(rows)
+              if got["old"] != got["new"]:
+                  diffs.append((r.get("code", "?"), got["old"], got["new"],
+                                (r.get("title") or "")[:30], first["new"]))
+              elif got["old"] and first["old"] != first["new"]:
+                  print(f"  △ 값이 바뀌었다 {r.get('code')} "
+                        f"{first['old']} -> {first['new']}")
+          print(f"\n옛 판: 읽힌 공시 {tot['old'][0]} · 달 {tot['old'][1]}")
+          print(f"새 판: 읽힌 공시 {tot['new'][0]} · 달 {tot['new'][1]}")
+          print(f"\n달라진 공시 {len(diffs)}건 (줄어든 것이 먼저)")
+          for code, a, b, ti, f in sorted(diffs, key=lambda x: x[2] - x[1]):
+              print(f"   {code}  {a} -> {b}   {ti}   {f}")
           EOF
