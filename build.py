@@ -1592,6 +1592,45 @@ def _base_of(lab: str) -> str:
     return ""
 
 
+def _back_fill(rows, same_base):
+    """**전년 같은 달을 되짚는다.**
+
+    첨부 표에는 달마다 금액과 전년동월비가 나란히 적혀 있다. 그러면
+    `금액 ÷ (전년동월비/100)` 이 곧 회사가 그 표에 함께 적어 둔 **전년 같은
+    달의 금액**이다 — 홍콩 부문에서 비중에 총매출을 곱해 금액을 만드는 것과
+    같은 규칙이다(회사가 낸 두 값의 산술이지 지어낸 값이 아니다).
+
+    이게 필요한 이유는 표가 회계연도치만 싣기 때문이다. 3월 결산 회사가
+    8월분을 내면 표에 4~8월 다섯 칸뿐이라 전년과 견줄 칸이 없다. 되짚으면
+    그 다섯 달의 전년 같은 달이 서서 한 해가 나란해진다.
+
+    - **기준이 같을 때만 한다.** 금액이 全店인데 전년비가 既存店이면 몫이
+      전년 금액이 아니다(`same_base`).
+    - **이미 값이 있는 달은 건드리지 않는다.** 실제로 받은 값이 언제나 위다.
+    - **한 번만 되짚는다.** 되짚은 달에는 전년비를 달지 않으므로 그 달에서
+      또 되짚는 일이 없다(어림이 어림을 낳지 않게).
+    """
+    if not same_base:
+        return rows, 0
+    have = {r[0] for r in rows if r[1] is not None}
+    add = {}
+    for per, rev, yoy in rows:
+        if rev is None or yoy is None or not 20 <= yoy <= 500:
+            continue
+        y, mo = int(per[:4]), int(per[5:7])
+        prev = f"{y - 1:04d}-{mo:02d}"
+        if prev in have or prev in add:
+            continue
+        add[prev] = round(rev * 100.0 / yoy)
+    if not add:
+        return rows, 0
+    # 되짚은 달은 네 번째 자리에 1 을 달아 둔다 — 화면이 옅게 그리고
+    # 짚어 보는 글에 「전년 수치에서 되짚음」이라 적는다.
+    rows = rows + [[k, v, None, 1] for k, v in add.items()]
+    rows.sort(key=lambda r: r[0])
+    return rows, len(add)
+
+
 def load_monthly_nums():
     """월매출의 **달별 수치** — `scrape_mon_jp.py` 가 첨부 PDF 표에서 읽은 것.
 
@@ -1607,12 +1646,15 @@ def load_monthly_nums():
     except (ValueError, OSError) as e:
         print(f"  ! monthly_nums_jp.json 읽기 실패: {e}")
         return {}
-    out = {}
+    out, back = {}, 0
     for code, rec in (got.get("codes") or {}).items():
         months = rec.get("months") or {}
         rows = [[k, v.get("rev"), v.get("yoy")] for k, v in sorted(months.items())]
         if not rows:
             continue
+        base = _base_of(rec.get("amount_label", ""))
+        rows, n_back = _back_fill(rows, base == _base_of(rec.get("yoy_label", "")))
+        back += n_back
         # 카드에 내는 것은 **매출과 YoY 둘뿐**이므로 긴 이름표는 안 내려보낸다.
         # 다만 기존점 기준인지 전점 기준인지는 뜻이 다르므로 한 낱말만 남긴다.
         out[code] = {"m": rows, "base": _base_of(rec.get("amount_label", "") +
@@ -1636,6 +1678,8 @@ def load_monthly_nums():
             continue
         out[code] = {"m": rows, "src": "流通ニュース",
                      "base": "기존점" if key == "same" else "전점"}
+    if back:
+        print(f"     전년 같은 달 되짚기 {back}달 (금액 ÷ 전년동월비)")
     return out
 
 
@@ -2158,6 +2202,8 @@ __FLAGCSS__
 .mchart { display:block; width:100%; height:auto; margin:4px 0 2px; }
 .mchart .bar { fill:#3b7fc4; } .mchart .bar.y { fill:#3d7f5c; }
 .mchart .bar.yn { fill:#8a4a46; }
+/* 전년 수치에서 되짚은 달 — 회사가 낸 두 값의 몫이라 옅게 그린다. */
+.mchart .bar.back { fill:#3b7fc4; opacity:.45; }
 .mchart .ln { fill:none; stroke:#e08a4a; stroke-width:1.6; }
 .mchart .ma { fill:none; stroke:#5fbf92; stroke-width:1.2; opacity:.75; }
 .mchart .xl { fill:var(--mute); font-size:11px; }
@@ -3209,7 +3255,8 @@ function mnChart(src) {
         (m[i][1] != null ? mnFmtJPY(m[i][1]) : '') +
         (m[i][2] != null ? (m[i][1] != null ? ' · ' : '') +
                            (m[i][2] >= 100 ? '+' : '') +
-                           (m[i][2] - 100).toFixed(1) + '%' : '');
+                           (m[i][2] - 100).toFixed(1) + '%' : '') +
+        (m[i][3] ? ' (전년 수치에서 되짚음)' : '');
   // 빈 달은 자리를 비워 둔다 — 자리는 있고 막대만 없다.
   const at = i => m[i];
   let body = '';
@@ -3223,7 +3270,8 @@ function mnChart(src) {
       const v = at(i) && m[i][1];
       if (v == null) continue;
       const h = Math.max(1, (base - T) * (v / mx));
-      body += '<rect class="bar" x="' + (cx(i) - bw / 2).toFixed(1) + '" y="' +
+      body += '<rect class="bar' + (m[i][3] ? ' back' : '') +
+              '" x="' + (cx(i) - bw / 2).toFixed(1) + '" y="' +
               (base - h).toFixed(1) + '" width="' + bw.toFixed(1) + '" height="' +
               h.toFixed(1) + '" rx="1.5"><title>' + tip(i) + '</title></rect>';
     }
