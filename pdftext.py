@@ -474,20 +474,24 @@ def _run(content: bytes, fonts: dict, res: dict):
             if o in ("'", '"'):
                 tlm = _mul((1.0, 0.0, 0.0, 1.0, 0.0, -lead), tlm)
                 tm = tlm
-            txt, adv = "", 0.0
-            # TJ 배열의 음수는 글자 사이를 좁히는 값이다(1/1000 em). 표에서는
-            # 이것이 칸 사이의 빈틈으로 오는 일이 있어 가로 자리에 같이 넣는다.
+            # **TJ 배열은 조각마다 따로 낸다.** 한 덩어리로 묶어 한 자리에
+            # 내면 표의 칸이 통째로 붙는다 — ABC마트(2670)의 「-6.66.77.0」,
+            # 하드오프의 「100.8 92.1 104.1 128.4」 가 그렇게 한 칸이 되어
+            # 어느 달 값인지 알 수 없었다(73차에 89건을 뜯어 보고 찾았다).
+            # 배열의 음수가 곧 칸 사이의 빈틈이다(1/1000 em). 조각마다 자리를
+            # 옮겨 가며 내면 `extract_cells` 가 다시 칸으로 갈라 준다 — 한
+            # 낱말 안의 작은 커닝은 거기서 도로 붙으므로 낱말은 안 쪼개진다.
             for kind, v in stack:
                 if kind == "s":
                     t, codes = _decode(v, cmap, nb)
-                    txt += t
-                    adv += sum(wmap.get(c, dw) for c in codes) / 1000.0 * size
+                    if t.strip():
+                        a, b, c, d, e, f = _mul(tm, ctm)
+                        out.append((round(f, 1), round(e, 1), t,
+                                    size * abs(d or 1.0)))
+                    adv = sum(wmap.get(c, dw) for c in codes) / 1000.0 * size
+                    tm = _mul((1.0, 0.0, 0.0, 1.0, adv, 0.0), tm)
                 elif kind == "n" and o == "TJ":
-                    adv -= v / 1000.0 * size
-            if txt.strip():
-                a, b, c, d, e, f = _mul(tm, ctm)
-                out.append((round(f, 1), round(e, 1), txt, size * abs(d or 1.0)))
-                tm = _mul((1.0, 0.0, 0.0, 1.0, adv, 0.0), tm)
+                    tm = _mul((1.0, 0.0, 0.0, 1.0, -v / 1000.0 * size, 0.0), tm)
         stack = []
     return out
 
