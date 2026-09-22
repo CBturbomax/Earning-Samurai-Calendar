@@ -339,6 +339,18 @@ def read(data: bytes, ann: str, max_pages: int = 12, title: str = ""):
                 lab, pending = pending, ""
             else:
                 pending = ""
+            # **이름표가 값 줄 아래에도 온다.** 라쿠스(3923)는 「全社（連結）」가
+            # 값 줄 **위**에, 「売上高」가 값 줄 **아래**에 따로 앉는다. 위만
+            # 보면 이름표가 「全社（連結）」뿐이라 매출 낱말이 없어 통째로
+            # 버려진다. 단위를 아랫줄에서 찾는 것과 같은 자리다.
+            if lab and not AMOUNT_LABEL.search(lab) and k + 1 < len(table):
+                below = table[k + 1]
+                if len(_assign(below, hdr)) < 2:
+                    lab2 = _label(below, hdr)
+                    if (AMOUNT_LABEL.search(lab2 or "")
+                            and not lab_has_other(lab2)
+                            and "単位" not in lab2):
+                        lab += lab2
             if SKIP_LABEL.search(lab or ""):
                 continue
             rowtext = "".join(_norm(t) for _, t in cells2)
@@ -676,6 +688,22 @@ def _selftest():                                          # pragma: no cover
     got = {r["period"]: r.get("yoy") for r in (g or {}).get("rows") or []}
     if len(got) != 4 or got.get("2026-01") != 132.8 or got.get("2026-04") != 118.6:
         print("!! 카) ％ 단위 전년비 표", got)
+        ok = False
+
+    # (하) 이름표가 값 줄 **아래**에 앉는 표(라쿠스 3923). 위에는 「全社（連結）」
+    #      만 있어 매출 낱말이 없고, 「売上高」는 값 줄 다음에 온다.
+    ha = _pdf([(720, [(440, "(単位：百万円)")]),
+               (700, hdr),
+               (686, [(40, "全社")]),
+               (670, [(100, "4,796"), (140, "4,975"), (180, "5,209"),
+                      (220, "5,067")]),
+               (654, [(40, "売上高")]),
+               (638, [(40, "前年同月比"), (100, "122.4"), (140, "125.5"),
+                      (180, "125.1"), (220, "121.7")])])
+    g = read(ha, "2026-05-10", title="月次売上高のお知らせ")
+    got = {r["period"]: r.get("rev") for r in (g or {}).get("rows") or []}
+    if len(got) != 4 or got.get("2026-01") != 4796000000:
+        print("!! 하) 이름표가 값 줄 아래", got)
         ok = False
 
     print("montable 스스로 시험:", "통과" if ok else "떨어짐")

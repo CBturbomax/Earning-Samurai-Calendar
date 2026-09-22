@@ -15,38 +15,74 @@ jobs:
         with:
           python-version: '3.12'
 
-      # 81차 — 流通ニュース 가 우리를 거절하기 시작했나.
-      # 09:24~09:31 사이 7분 동안 기사를 **한 건도** 못 받았다(done 750 그대로,
-      # 대기줄 846 그대로). 250건을 25초 타임아웃으로 두드리다 예산을 다 쓴
-      # 꼴이다. **두 번만** 두드려 확인한다 — 막힌 곳을 계속 두드리지 않는다.
-      - name: 🚦 流通ニュース 가 아직 열리나 (81차)
-        timeout-minutes: 6
+      # 82차 — 이름표가 값 줄 **아래**에 앉는 표(라쿠스 3923) A/B.
+      # 위에는 「全社（連結）」만 있어 매출 낱말이 없고 「売上高」는 값 줄
+      # 다음 줄에 온다. 단위를 아랫줄에서 찾는 것과 같은 자리라 한 줄만 더
+      # 본다. 넓히면 반드시 뭔가 새어드니 같은 공시로 견준다.
+      - name: ⚖ 아랫줄 이름표 A/B (82차)
+        timeout-minutes: 14
         run: |
+          git fetch --depth=1 origin main
+          git show FETCH_HEAD:montable.py > /tmp/old_montable.py
           python - <<'EOF'
-          import json, time, urllib.error, urllib.request
+          import importlib.util, json, sys, time, urllib.request
+          import montable
 
-          UA = {"User-Agent": ("Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
-                               "AppleWebKit/537.36 (KHTML, like Gecko) "
-                               "Chrome/131.0.0.0 Safari/537.36"),
-                "Accept-Language": "ja,en;q=0.8"}
+          spec = importlib.util.spec_from_file_location("old_montable",
+                                                        "/tmp/old_montable.py")
+          old = importlib.util.module_from_spec(spec)
+          sys.modules["old_montable"] = old
+          spec.loader.exec_module(old)
 
-          def knock(u):
-              t0 = time.time()
+          UA = {"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64)"}
+          n = json.load(open("data/monthly_nums_jp.json", encoding="utf-8"))
+          mon = json.load(open("data/monthly_jp.json", encoding="utf-8"))
+          info = {r.get("doc"): r for r in (mon.get("rows") or [])}
+          live = set(info)
+
+          bad = [u for u, why in n["skip"].items()
+                 if why == "표없음" and u in live]
+          good = [u for u in n["done"] if u in live]
+          docs = bad[:55] + good[:45]
+          print(f"표없음 {len(bad[:55])}건 + 잘 읽히던 {len(good[:45])}건")
+
+          tot = {"old": [0, 0], "new": [0, 0]}
+          diffs, changed = [], 0
+          for u in docs:
+              r = info.get(u) or {}
               try:
-                  r = urllib.request.urlopen(
-                      urllib.request.Request(u, headers=UA), timeout=12)
-                  raw = r.read(400_000)
-                  return f"{r.status} · {len(raw)//1024}KB · {time.time()-t0:.1f}초"
-              except urllib.error.HTTPError as e:
-                  return f"HTTP {e.code} · {time.time()-t0:.1f}초"
+                  raw = urllib.request.urlopen(
+                      urllib.request.Request(u, headers=UA), timeout=20).read()
               except Exception as e:
-                  return f"{type(e).__name__} · {time.time()-t0:.1f}초"
-
-          print("목록 1쪽 :", knock("https://www.ryutsuu.biz/sales/"))
-          time.sleep(3)
-          w = json.load(open("data/monthly_web_jp.json", encoding="utf-8"))
-          q = (w.get("queue") or [])
-          print("대기줄", len(q), "건 · 그중 한 건을 두드린다")
-          if q:
-              print("기사 한 장 :", knock(q[0]), q[0])
+                  print("!!", u[-18:], type(e).__name__, getattr(e, "code", ""))
+                  continue
+              time.sleep(0.35)
+              got, first = {}, {}
+              for tag, mod in (("old", old), ("new", montable)):
+                  try:
+                      res = mod.read(raw, r.get("date", "2026-09-01"),
+                                     title=r.get("title", ""))
+                  except Exception as e:
+                      print("  ! 터짐", tag, u[-18:], type(e).__name__,
+                            str(e)[:40])
+                      res = None
+                  rows = (res or {}).get("rows") or []
+                  got[tag] = len(rows)
+                  first[tag] = rows[0] if rows else None
+                  if rows:
+                      tot[tag][0] += 1
+                      tot[tag][1] += len(rows)
+              if got["old"] != got["new"]:
+                  diffs.append((r.get("code", "?"), got["old"], got["new"],
+                                (r.get("title") or "")[:30], first["new"]))
+              elif got["old"] and first["old"] != first["new"]:
+                  changed += 1
+                  print(f"  △ 값이 바뀌었다 {r.get('code')} "
+                        f"{first['old']} -> {first['new']}")
+          print(f"\n옛 판: 읽힌 공시 {tot['old'][0]} · 달 {tot['old'][1]}")
+          print(f"새 판: 읽힌 공시 {tot['new'][0]} · 달 {tot['new'][1]}"
+                f" · 값이 바뀐 공시 {changed}")
+          print(f"\n달라진 공시 {len(diffs)}건 (줄어든 것이 먼저)")
+          for code, a, b, ti, f in sorted(diffs, key=lambda x: x[2] - x[1]):
+              print(f"   {code}  {a} -> {b}   {ti}   {f}")
           EOF
