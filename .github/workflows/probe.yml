@@ -15,63 +15,90 @@ jobs:
         with:
           python-version: '3.12'
 
-      # 53차 — 회원님이 "마이크론이고 뭐고 실적발표 아닌데" 라고 짚으셨다.
-      # scrape_us.py 는 **한 번 받은 날을 다시 안 받는다**(캐시). 나스닥이 처음
-      # 주는 날짜는 회사가 확정하지 않은 **추정일**이라, 뒤에 바뀌어도 우리
-      # 화면은 처음 값으로 굳는다. 짐작하지 말고 지금 나스닥에 대고 대조한다.
-      - name: 🇺🇸 이번 주 미국 일정이 지금도 맞나 (53차)
-        timeout-minutes: 10
+      # 54차 — 월매출 수치를 첨부 PDF 에서 읽는 길은 209종목 중 29종목뿐이다.
+      # 회원님이 "저렇게 해서는 아예 없애는 게 나을 정도" 라고 하셨다. 다른
+      # 소스를 제대로 뒤진다. 전에 403 이던 곳들은 **헤더를 허술하게 준 탓**일
+      # 수 있으므로 브라우저가 보내는 것을 그대로 붙여 다시 두드리고,
+      # 월차Web(kabubiz)은 목록이 열렸으니 **그 안에 자료가 들어 있는지** 본다.
+      - name: 🗾 월매출 — 다른 소스를 뒤진다 (54차)
+        timeout-minutes: 13
         run: |
           python - <<'EOF'
-          import json, time, urllib.request, gzip
-          from datetime import date, timedelta
+          import gzip, re, time, urllib.request, urllib.error
 
-          BASE = "https://api.nasdaq.com/api/calendar/earnings?date="
           UA = ("Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 "
-                "(KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36")
+                "(KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36")
+          # 브라우저가 실제로 보내는 것. 전에는 UA 만 줬다.
+          FULL = {
+              "User-Agent": UA,
+              "Accept": ("text/html,application/xhtml+xml,application/xml;q=0.9,"
+                         "image/avif,image/webp,*/*;q=0.8"),
+              "Accept-Language": "ja,en-US;q=0.9,en;q=0.8",
+              "Accept-Encoding": "gzip, deflate",
+              "Sec-Fetch-Dest": "document", "Sec-Fetch-Mode": "navigate",
+              "Sec-Fetch-Site": "none", "Sec-Fetch-User": "?1",
+              "Upgrade-Insecure-Requests": "1",
+              "Connection": "keep-alive",
+          }
 
-          def get(day):
-              req = urllib.request.Request(BASE + day, headers={
-                  "User-Agent": UA, "Accept": "application/json",
-                  "Accept-Language": "en-US,en;q=0.9"})
-              with urllib.request.urlopen(req, timeout=40) as r:
-                  return json.loads(r.read().decode("utf-8", "replace"))
-
-          ours = json.load(open("data/earnings_us.json", encoding="utf-8"))["rows"]
-          by = {}
-          for r in ours:
-              by.setdefault(r["date"], {})[r["code"]] = r
-
-          d0 = date.today()
-          days = [(d0 + timedelta(days=i)).isoformat() for i in range(-1, 12)]
-          allnew, allold = {}, {}
-          for day in days:
+          def get(url, extra=None, timeout=25):
+              h = dict(FULL)
+              if extra:
+                  h.update(extra)
               try:
-                  j = get(day)
+                  with urllib.request.urlopen(
+                          urllib.request.Request(url, headers=h), timeout=timeout) as r:
+                      raw = r.read()
+                      if r.headers.get("Content-Encoding") == "gzip":
+                          raw = gzip.decompress(raw)
+                      return r.status, raw
+              except urllib.error.HTTPError as e:
+                  return e.code, b""
               except Exception as e:
-                  print(f"{day} 받기 실패 {str(e)[:40]}"); continue
-              st = (j.get("status") or {})
-              rows = ((j.get("data") or {}).get("rows")) or []
-              now = {r["symbol"]: r for r in rows}
-              old = by.get(day, {})
-              allnew[day] = set(now); allold[day] = set(old)
-              add = sorted(set(now) - set(old))
-              gone = sorted(set(old) - set(now))
-              print(f"{day} 나스닥 {len(now):>3}건 · 우리 {len(old):>3}건 "
-                    f"· 나스닥에만 {len(add)} · 우리에만 {len(gone)}"
-                    f" (rCode={st.get('rCode')})")
-              if add:
-                  print(f"    나스닥에만: {' '.join(add[:14])}")
-              if gone:
-                  print(f"    우리에만  : {' '.join(gone[:14])}")
-              time.sleep(0.6)
+                  return str(e)[:44], b""
+
+          def mark(t):
+              return [m for m in ("月次", "既存店", "全店", "前年同月", "売上高", "月別")
+                      if m in t]
+
+          print("=" * 70)
+          print("(A) 전에 막혔던 곳 — 브라우저 헤더를 그대로 붙여 다시")
+          print("=" * 70)
+          AGAIN = [
+              ("irbank 월차",   "https://irbank.net/9843/gs", None),
+              ("irbank 종목",   "https://irbank.net/9843", None),
+              ("minkabu",       "https://minkabu.jp/stock/9843", None),
+              ("kabutan",       "https://kabutan.jp/stock/?code=9843",
+               {"Referer": "https://kabutan.jp/"}),
+              ("ullet",         "https://www.ullet.com/9843.html", None),
+              ("kabubiz 종목",  "https://kabubiz.com/getuji/code/9843/",
+               {"Referer": "https://kabubiz.com/getuji/"}),
+          ]
+          for name, url, extra in AGAIN:
+              st, data = get(url, extra)
+              t = data.decode("utf-8", "ignore") if data else ""
+              print(f"  {name:14s} {st}  {len(data)//1024}KB  {mark(t)}")
+              time.sleep(0.5)
 
           print()
-          print("── 마이크론(MU)이 나스닥에서 어느 날에 있나 ──")
-          for day in days:
-              if "MU" in allnew.get(day, ()):
-                  print(f"   나스닥: {day}")
-          for day in days:
-              if "MU" in allold.get(day, ()):
-                  print(f"   우리  : {day}")
+          print("=" * 70)
+          print("(B) 월차Web(kabubiz) — 목록 안에 자료가 있나, 어디서 불러오나")
+          print("=" * 70)
+          st, data = get("https://kabubiz.com/getuji/",
+                         {"Referer": "https://kabubiz.com/"})
+          t = data.decode("utf-8", "ignore") if data else ""
+          print(f"  목록 {st} · {len(data)//1024}KB · {mark(t)}")
+          if t:
+              # 자바스크립트가 어디서 자료를 가져오나
+              srcs = sorted(set(re.findall(r'src=[\'"]([^\'"]+\.js[^\'"]*)', t)))
+              print(f"  스크립트 {len(srcs)}개:")
+              for x in srcs[:12]:
+                  print(f"     {x}")
+              urls = sorted(set(re.findall(r'[\'"](/[a-zA-Z0-9_./-]*(?:json|php|api|csv)[a-zA-Z0-9_./?=&-]*)', t)))
+              print(f"  자료처럼 보이는 주소 {len(urls)}개: {urls[:10]}")
+              for kw in ("既存店", "月次", "table", "tbody"):
+                  j = t.find(kw)
+                  if j > 0:
+                      near = re.sub(r"\s+", " ", t[max(0, j - 120):j + 160])[:240]
+                      print("  " + kw + " 주변: " + near)
           EOF
