@@ -297,7 +297,11 @@ def read(data: bytes, ann: str, max_pages: int = 12, title: str = ""):
         cap_txt = "".join(_norm(t) for row in table[max(0, i - 2):i + 1]
                           for _x, t in row)
         decl = UNIT_DECL.search(cap_txt)
-        if decl and "円" not in decl.group(1):
+        # **％는 막지 않는다.** 아즈원(7476)의 「（単位：日）」 를 막으려고 둔
+        # 규칙인데, 「月次前年比（単位：％）」 로 **전년비만 내는 표**까지 같이
+        # 막고 있었다 — 워크맨(7564)·시마추 같은 회사가 통째로 안 읽혔다.
+        # 날수·점포수·대수는 여전히 막힌다.
+        if decl and not re.search(r"[円%％]", decl.group(1)):
             continue
         cap_unit, cap_mul = _unit(cap_txt)
         # 표 바깥에 돈 단위가 적혀 있으면 그 표의 숫자는 **돈**이다.
@@ -458,6 +462,12 @@ def _selftest():                                          # pragma: no cover
             code.setdefault(c, 33 + len(code))
 
     def _pdf(lines):
+        # **글자를 먼저 담고 나서** 글자표를 만든다. 거꾸로 하면 그 시험에서
+        # 처음 쓰는 글자가 표에 안 들어가 원문 그대로(바이트)로 읽힌다 —
+        # 「％」 하나 때문에 시험이 엉뚱하게 떨어졌다.
+        for _y, cells in lines:
+            for _x, s in cells:
+                _add(s)
         cm = (b"/CIDInit /ProcSet findresource begin\n12 dict begin begincmap\n"
               b"1 begincodespacerange\n<00> <FF>\nendcodespacerange\n"
               b"%d beginbfchar\n" % len(code)
@@ -652,6 +662,21 @@ def _selftest():                                          # pragma: no cover
         if len(got) != 4 or got.get("2026-04") != 980_000_000:
             print(f"!! 차) TJ 표 ({what})", got)
             ok = False
+
+    # (카) 전년비만 내는 표 — 표가 스스로 「（単位：％）」 라고 적어 둔다.
+    #      날수·점포수 표를 막는 규칙이 여기까지 막아 워크맨(7564)이 통째로
+    #      안 읽혔다. ％ 는 막지 않는다.
+    k = _pdf([(720, [(60, "2027年3月期 月次前年比"), (440, "(単位：％)")]),
+              (700, hdr),
+              (680, [(40, "売上高"), (100, "132.8"), (140, "132.9"),
+                     (180, "95.4"), (220, "118.6")]),
+              (660, [(40, "客数"), (100, "122.0"), (140, "126.3"),
+                     (180, "94.1"), (220, "113.1")])])
+    g = read(k, "2026-05-10", title="2027年3月期 月次前年比速報に関するお知らせ")
+    got = {r["period"]: r.get("yoy") for r in (g or {}).get("rows") or []}
+    if len(got) != 4 or got.get("2026-01") != 132.8 or got.get("2026-04") != 118.6:
+        print("!! 카) ％ 단위 전년비 표", got)
+        ok = False
 
     print("montable 스스로 시험:", "통과" if ok else "떨어짐")
     return 0 if ok else 1

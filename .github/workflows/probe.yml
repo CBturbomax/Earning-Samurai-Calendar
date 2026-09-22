@@ -15,47 +15,66 @@ jobs:
         with:
           python-version: '3.12'
 
-      # 77차 — 화면에 오르는 57종목 중 39종목에 수치가 없다. 그게 하필
-      # 제일 큰 회사들이다(이온 23조·ABC마트·J프론트·오다큐·워크맨…).
-      # 큰 것부터 여덟 곳의 표를 그대로 찍어 어떤 꼴인지 본다.
-      - name: 🏢 큰 회사들의 표 생김새 (77차)
-        timeout-minutes: 12
+      # 78차 — ％ 단위 표를 막던 규칙을 푼 뒤 A/B.
+      # 「（単位：日）」 를 막으려던 규칙이 「月次前年比（単位：％）」 까지 막아
+      # 워크맨(7564) 같은 **전년비만 내는 표**가 통째로 버려졌다(77차).
+      # pdftext 는 그대로이므로 montable 만 옛 판과 견준다.
+      - name: ⚖ ％ 단위 표 A/B (78차)
+        timeout-minutes: 14
         run: |
+          git fetch --depth=1 origin main
+          git show FETCH_HEAD:montable.py > /tmp/old_montable.py
           python - <<'EOF'
-          import json, time, urllib.request
-          import pdftext, montable
+          import importlib.util, json, sys, time, urllib.request
+          import montable
+
+          spec = importlib.util.spec_from_file_location("old_montable",
+                                                        "/tmp/old_montable.py")
+          old = importlib.util.module_from_spec(spec)
+          sys.modules["old_montable"] = old
+          spec.loader.exec_module(old)
 
           UA = {"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64)"}
+          n = json.load(open("data/monthly_nums_jp.json", encoding="utf-8"))
           mon = json.load(open("data/monthly_jp.json", encoding="utf-8"))
-          byc = {}
-          for r in mon["rows"]:
-              byc.setdefault(r["code"], []).append(r)
-          for code in ("8267", "2670", "3086", "9007", "7564", "3923",
-                       "4680", "2782"):
-              rs = byc.get(code) or []
-              if not rs:
-                  print(f"\n{code} 공시 없음")
-                  continue
-              r = rs[-1]
+          info = {r.get("doc"): r for r in (mon.get("rows") or [])}
+
+          bad = [u for u, why in n["skip"].items() if why == "표없음"]
+          good = list(n["done"])
+          docs = bad[:50] + good[:35]
+          print(f"표없음 {len(bad[:50])}건 + 잘 읽히던 {len(good[:35])}건")
+
+          tot = {"old": [0, 0], "new": [0, 0]}
+          diffs = []
+          for u in docs:
+              r = info.get(u) or {}
               try:
                   raw = urllib.request.urlopen(
-                      urllib.request.Request(r["doc"], headers=UA),
-                      timeout=30).read()
+                      urllib.request.Request(u, headers=UA), timeout=30).read()
               except Exception as e:
-                  print(f"\n{code} !! {type(e).__name__}", getattr(e, "code", ""))
+                  print("!!", u[-18:], type(e).__name__, getattr(e, "code", ""))
                   continue
-              time.sleep(0.6)
-              print("\n" + "=" * 74)
-              got = montable.read(raw, r["date"], title=r.get("title", ""))
-              print(f"{code} {r['name'][:12]} · {r['title'][:44]}")
-              print(f"  {len(raw)//1024}KB · 암호 {pdftext.is_encrypted(raw)}"
-                    f" · 읽은 달 {len((got or {}).get('rows') or [])}")
-              try:
-                  cells = pdftext.extract_cells(raw, 2)
-              except Exception as e:
-                  print("  글자 못 꺼냄:", type(e).__name__, str(e)[:60])
-                  continue
-              print(f"  칸 {len(cells)}줄")
-              for c in cells[:22]:
-                  print("   | " + " | ".join(f"{x:.0f}:{v[:16]}" for x, v in c[:10]))
+              time.sleep(0.4)
+              got = {}
+              for tag, mod in (("old", old), ("new", montable)):
+                  try:
+                      res = mod.read(raw, r.get("date", "2026-09-01"),
+                                     title=r.get("title", ""))
+                  except Exception as e:
+                      print("  ! 터짐", tag, u[-18:], type(e).__name__,
+                            str(e)[:40])
+                      res = None
+                  k = len((res or {}).get("rows") or [])
+                  got[tag] = k
+                  if k:
+                      tot[tag][0] += 1
+                      tot[tag][1] += k
+              if got["old"] != got["new"]:
+                  diffs.append((r.get("code", "?"), got["old"], got["new"],
+                                (r.get("title") or "")[:34]))
+          print(f"\n옛 판: 읽힌 공시 {tot['old'][0]} · 달 {tot['old'][1]}")
+          print(f"새 판: 읽힌 공시 {tot['new'][0]} · 달 {tot['new'][1]}")
+          print(f"\n달라진 공시 {len(diffs)}건 (줄어든 것이 먼저)")
+          for code, a, b, ti in sorted(diffs, key=lambda x: x[2] - x[1]):
+              print(f"   {code}  {a} -> {b}   {ti}")
           EOF
