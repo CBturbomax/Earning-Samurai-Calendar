@@ -1578,6 +1578,20 @@ def load_monthly(packed):
     return out
 
 
+def _base_of(lab: str) -> str:
+    """이름표에서 **기준 한 낱말만** 뽑는다(기존점/전점).
+
+    카드에는 「103」 같은 지수도 「전년동월비」라는 말도 안 쓴다 — 회원님이
+    그렇게 정하셨다. 다만 같은 매출이라도 기존점 기준과 전점 기준은 뜻이
+    달라서 그 한 낱말은 남긴다. 둘 다 아니면 아무것도 안 적는다.
+    """
+    if "既存店" in lab:
+        return "기존점"
+    if "全店" in lab or "チェーン全店" in lab:
+        return "전점"
+    return ""
+
+
 def load_monthly_nums():
     """월매출의 **달별 수치** — `scrape_mon_jp.py` 가 첨부 PDF 표에서 읽은 것.
 
@@ -1599,14 +1613,10 @@ def load_monthly_nums():
         rows = [[k, v.get("rev"), v.get("yoy")] for k, v in sorted(months.items())]
         if not rows:
             continue
-        out[code] = {
-            "m": rows,
-            "lab": rec.get("amount_label", ""),
-            "ylab": rec.get("yoy_label", ""),
-            # 단위는 달마다 같다 — 마지막 것을 대표로 쓴다.
-            "unit": next((v.get("unit") for v in reversed(list(months.values()))
-                          if v.get("unit")), ""),
-        }
+        # 카드에 내는 것은 **매출과 YoY 둘뿐**이므로 긴 이름표는 안 내려보낸다.
+        # 다만 기존점 기준인지 전점 기준인지는 뜻이 다르므로 한 낱말만 남긴다.
+        out[code] = {"m": rows, "base": _base_of(rec.get("amount_label", "") +
+                                                 rec.get("yoy_label", ""))}
     # **회사마다 한 소스만 쓴다.** 첨부 PDF 에서 읽은 값이 있으면 그쪽이다 —
     # 두 소스를 한 줄에 섞으면 「全社売上高」와 「既存店」처럼 **뜻이 다른 값**이
     # 한 막대에 나란히 서서 거짓말을 한다.
@@ -1624,11 +1634,8 @@ def load_monthly_nums():
                 if v.get(key) is not None]
         if not rows:
             continue
-        out[code] = {
-            "m": rows, "lab": "", "unit": "",
-            "ylab": "기존점 전년동월비" if key == "same" else "전점 전년동월비",
-            "src": "流通ニュース",
-        }
+        out[code] = {"m": rows, "src": "流通ニュース",
+                     "base": "기존점" if key == "same" else "전점"}
     return out
 
 
@@ -3197,10 +3204,12 @@ function mnChart(src) {
   const cx = i => L + step * i + step / 2;
   const bw = Math.min(13, step * 0.66);
   const base = H - B;
+  // 짚어 보는 글도 **매출과 YoY 둘뿐**이고, 지수(103)가 아니라 +3.0% 로 적는다.
   const tip = i => m[i][0].slice(2).replace('-', '/') + ' ' +
         (m[i][1] != null ? mnFmtJPY(m[i][1]) : '') +
-        (m[i][2] != null ? (m[i][1] != null ? ' · ' : '') + '전년비 ' +
-                           m[i][2].toFixed(1) + '%' : '');
+        (m[i][2] != null ? (m[i][1] != null ? ' · ' : '') +
+                           (m[i][2] >= 100 ? '+' : '') +
+                           (m[i][2] - 100).toFixed(1) + '%' : '');
   // 빈 달은 자리를 비워 둔다 — 자리는 있고 막대만 없다.
   const at = i => m[i];
   let body = '';
@@ -3361,29 +3370,23 @@ function mnCard(c) {
   const key = 'jp:' + c.code;
   const desc = (D.descKo && D.descKo[key]) || (D.desc && D.desc[key]) || '';
 
+  /* 카드에 내는 수치는 **매출과 YoY 둘뿐이다.** 회원님이 그렇게 정하셨다 —
+     「103」 같은 지수 표기도, 「전년동월비」라는 말도 쓰지 않는다. 100을 뺀
+     +3.0% 로 적고, 오르내림은 색으로 가른다. 전월비는 뺐다(둘만 본다). */
   let stat = '';
   if (num) {
     const mm = num.m, lr = mm[mm.length - 1];
-    const prev = mm.length > 1 ? mm[mm.length - 2] : null;
-    const yoy = lr[2];
-    // 전월비는 **금액이 둘 다 있고 바로 앞 달일 때만** 낸다. 전년비끼리 빼면
-    // 그건 전월비가 아니라 전년비의 변화폭이고, 사이에 구멍이 있으면 석 달
-    // 만의 변화를 '전월비'라 적는 셈이다.
-    const key = p => (+p.slice(0, 4)) * 12 + (+p.slice(5, 7));
-    const adj = prev && key(lr[0]) - key(prev[0]) === 1;
-    const mom = (lr[1] != null && adj && prev[1]) ? (lr[1] / prev[1] - 1) * 100 : null;
-    stat = '<div class="mstat"><div>' +
-      '<div class="v">' + (lr[1] != null ? mnFmtJPY(lr[1]) :
-                           (yoy != null ? yoy.toFixed(1) + '%' : '—')) + '</div>' +
-      '<div class="k">' + lr[0].slice(0, 4) + '년 ' + (+lr[0].slice(5, 7)) + '월' +
-      (lr[1] != null ? '' : ' · 전년동월비') + '</div></div>' +
-      '<div class="r"><b>' +
-      (yoy != null ? '<span class="' + (yoy >= 100 ? 'up' : 'dn') + '">' +
-        (yoy >= 100 ? '+' : '') + (yoy - 100).toFixed(1) + '</span>' : '—') +
-      (mom != null ? ' / <span class="' + (mom >= 0 ? 'up' : 'dn') + '">' +
-        (mom >= 0 ? '+' : '') + mom.toFixed(1) + '</span>' : '') +
-      '</b><div class="k">전년비% ' + (mom != null ? '/ 전월비%' : '') + '</div>' +
-      '</div></div>';
+    const yoy = lr[2] == null ? null : lr[2] - 100;
+    const ytxt = yoy == null ? '—' :
+      '<span class="' + (yoy >= 0 ? 'up' : 'dn') + '">' +
+      (yoy >= 0 ? '+' : '') + yoy.toFixed(1) + '%</span>';
+    const when = lr[0].slice(0, 4) + '.' + lr[0].slice(5, 7);
+    stat = lr[1] != null
+      ? '<div class="mstat"><div><div class="v">' + mnFmtJPY(lr[1]) + '</div>' +
+        '<div class="k">' + when + ' 매출</div></div>' +
+        '<div class="r"><b>' + ytxt + '</b><div class="k">YoY</div></div></div>'
+      : '<div class="mstat"><div><div class="v">' + ytxt + '</div>' +
+        '<div class="k">' + when + ' YoY</div></div></div>';
   } else {
     stat = '<div class="mstat"><div><div class="v">—</div>' +
       '<div class="k">' + last[0].slice(5) + ' 공시 · 수치 못 읽음</div></div></div>';
@@ -3398,8 +3401,7 @@ function mnCard(c) {
     '</div>' +
     '<div class="msub">' + esc(c.sect) +
     (c.cap ? ' · ' + c.cap.toFixed(2) + '조원' : '') +
-    (num && (num.lab || num.ylab) ? ' · ' + esc((num.lab || num.ylab).slice(0, 14))
-                                  : '') +
+    (num && num.base ? ' · ' + esc(num.base) : '') +
     (num && num.src ? ' · <span class="msrc">' + esc(num.src) + '</span>' : '') +
     '</div>' +
     stat + (num ? mnChart(num.m) : '') +
