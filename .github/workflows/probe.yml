@@ -15,64 +15,71 @@ jobs:
         with:
           python-version: '3.12'
 
-      # 67차 — 고친 것 둘을 실제로 돌려 본다(커밋하지 않는다).
-      #   · PDF: 한 공시의 표를 이름표가 같은 것끼리 합친다 (작년표+올해표)
-      #   · 기사: 지난달 기사 링크를 타고 거슬러 간다
-      # 달이 몇 개가 되고, 이어지는지(구멍)를 잰다.
-      - name: 📈 이력이 이어지나 (67차)
-        timeout-minutes: 16
-        env:
-          MON_PDF_PER_RUN: '300'
-          MON_SECS: '330'
-          WEB_PER_RUN: '600'
-          WEB_SECS: '420'
-          WEB_DEEP: '12'
+      # 68차 — 회원님: "숫자는 다 공개돼 있는데 왜 24년 1월부터 못 채우나."
+      # 기사 안에 **회사별 태그 쪽** 링크가 있다(/tag/mcdonalds). 그게 그 회사
+      # 기사 전체 목록이면 한 칸씩 거슬러 갈 것 없이 통째로 받을 수 있다.
+      # 쪽이 넘어가나, 2024년까지 가나, 옛 기사에도 표가 있나를 본다.
+      - name: 🏷 회사별 태그 쪽 (68차)
+        timeout-minutes: 8
         run: |
-          set -o pipefail
-          python montable.py
-          python monweb.py
-          python scrape_mon_jp.py  | tail -6
-          python scrape_mon_web.py | tail -4
-          python - <<'EOF' 2>&1 | tail -150
-          import json
+          python - <<'EOF'
+          import re, time, urllib.request, html as H2
+          import monweb
 
-          def runs(ms):
-              """가장 긴 **이어진** 달 수와 구멍 수."""
-              k = sorted((+p[:4]) * 12 + (+p[5:7]) for p in ms)
-              best = cur = 1
-              holes = 0
-              for a, b in zip(k, k[1:]):
-                  if b - a == 1:
-                      cur += 1
-                      best = max(best, cur)
-                  else:
-                      cur = 1
-                      holes += b - a - 1
-              return best, holes
+          UA = {"User-Agent": ("Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
+                               "AppleWebKit/537.36 (KHTML, like Gecko) "
+                               "Chrome/131.0.0.0 Safari/537.36")}
 
-          C = json.load(open("data/caps.json")); C = C.get("caps") or C
-          def cap(c):
-              v = C.get("jp:" + c)
-              return (v.get("cap") if isinstance(v, dict) else v) or 0
+          def get(u):
+              try:
+                  with urllib.request.urlopen(
+                          urllib.request.Request(u, headers=UA), timeout=20) as r:
+                      return r.status, r.read(900_000).decode("utf-8", "ignore")
+              except Exception as e:
+                  return type(e).__name__ + str(getattr(e, "code", "")), ""
 
-          rows = []
-          for src, path, key in (("PDF", "data/monthly_nums_jp.json", "months"),
-                                 ("기사", "data/monthly_web_jp.json", "months")):
-              d = json.load(open(path))
-              for c, v in d["codes"].items():
-                  ms = v.get(key) or {}
-                  if not ms:
-                      continue
-                  b, h = runs(ms)
-                  rows.append((cap(c), c, v.get("name", "")[:16], src,
-                               len(ms), b, h, min(ms), max(ms)))
-          rows.sort(key=lambda r: -r[0])
-          n24 = sum(1 for r in rows if r[5] >= 24)
-          n13 = sum(1 for r in rows if r[5] >= 13)
-          n6 = sum(1 for r in rows if r[5] >= 6)
-          print(f"\n종목 {len(rows)} · 이어진 달 24+ {n24} · 13+ {n13} · 6+ {n6}")
-          print(f"{'코드':6s}{'이름':18s}{'출처':5s} 달 이어짐 구멍  범위")
-          for capv, c, n, src, tot, b, h, lo, hi in rows[:60]:
-              print(f"{c:6s}{n:18s}{src:5s}{tot:3d}{b:5d}{h:5d}  {lo}~{hi}"
-                    f"  {capv:.2f}조")
+          TAG = re.compile(
+              r'<a[^>]+href="(https://www\.ryutsuu\.biz/tag/[^"]+)"[^>]*>(.*?)</a>', re.S)
+
+          st, a = get("https://www.ryutsuu.biz/sales/s090944.html")
+          print("맥도날드 8월 기사", st)
+          print("  태그 링크 — 이름표가 브랜드와 같은 것이 그 회사 태그다")
+          hit = None
+          for u, lab in TAG.findall(a):
+              lab = monweb._txt(lab)
+              print(f"    {lab:16s} {u}")
+              if lab == "マクドナルド":
+                  hit = u
+          print("  -> 회사 태그:", hit)
+
+          for page in (1, 2, 4, 8):
+              u = hit if page == 1 else hit.rstrip("/") + f"/page/{page}/"
+              time.sleep(0.6)
+              st, t = get(u)
+              arts = re.findall(
+                  r'<a[^>]+href="(https://www\.ryutsuu\.biz/sales/s\d+\.html)"[^>]*>(.*?)</a>',
+                  t, re.S)
+              labs = []
+              seen = set()
+              for x, lab in arts:
+                  lab = monweb._txt(lab)
+                  if x not in seen:
+                      seen.add(x)
+                      labs.append(lab)
+              print(f"\n  {page}쪽 {st} · sales 기사 {len(seen)}")
+              for lab in labs[:8]:
+                  print("     " + lab[:56])
+
+          # 옛 기사 하나를 열어 표가 있는지 본다
+          print("\n  옛 기사에도 표가 있나")
+          st, t = get(hit)
+          old = re.findall(r'href="(https://www\.ryutsuu\.biz/sales/s\d+\.html)"', t)
+          for u in old[-2:]:
+              time.sleep(0.6)
+              st2, page = get(u)
+              got = monweb.read(page, u)
+              tm = re.search(r"(?is)<title>(.*?)</title>", page)
+              print(f"    {monweb._txt(tm.group(1))[:44] if tm else ''}  {st2}")
+              for g in got:
+                  print("      ", g["code"], sorted(g["months"]), g["months"])
           EOF
