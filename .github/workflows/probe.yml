@@ -15,76 +15,40 @@ jobs:
         with:
           python-version: '3.12'
 
-      # 64차 — 시운전에서 220건을 읽어 13종목뿐이었다. 목록에는 세븐일레븐·
-      # 맥도날드·니토리·야마다·비쿠카메라가 분명히 있는데 왜 안 담겼나.
-      # 사전에는 있는 이름인데 빈손으로 돌아온 기사를 골라 속을 본다.
-      - name: 🔍 왜 안 담겼나 (64차)
-        timeout-minutes: 10
+      # 65차 — 표 꼴 셋을 더 읽게 고쳤다. 얼마나 늘었고, 엉뚱한 것이 안 들어왔나.
+      # 전수로 훑어 종목마다 값을 늘어놓고 눈으로 본다.
+      - name: 🏬 표 꼴 셋을 더한 뒤 (65차)
+        timeout-minutes: 14
+        env:
+          WEB_PER_RUN: '260'
+          WEB_SECS: '560'
+          WEB_DEEP: '14'
         run: |
           set -o pipefail
-          python - <<'EOF' 2>&1 | tail -260
-          import re, time, urllib.request
-          import monweb
+          python monweb.py
+          python scrape_mon_web.py
+          python - <<'EOF' 2>&1 | tail -180
+          import json
+          d = json.load(open("data/monthly_web_jp.json"))
+          codes = d["codes"]
+          C = (json.load(open("data/caps.json")).get("caps")
+               or json.load(open("data/caps.json")))
+          have = {r["code"] for r in json.load(
+              open("data/monthly_jp.json"))["rows"]}
 
-          UA = {"User-Agent": ("Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
-                               "AppleWebKit/537.36 (KHTML, like Gecko) "
-                               "Chrome/131.0.0.0 Safari/537.36"),
-                "Accept-Language": "ja,en;q=0.8"}
+          def cap(c):
+              v = C.get("jp:" + c)
+              return (v.get("cap") if isinstance(v, dict) else v) or 0
 
-          def get(u):
-              try:
-                  with urllib.request.urlopen(
-                          urllib.request.Request(u, headers=UA), timeout=20) as r:
-                      return r.read(1_200_000).decode("utf-8", "ignore")
-              except Exception as e:
-                  return ""
-
-          links = []
-          for p in (1, 2, 3, 4):
-              links += monweb.article_links(
-                  get("https://www.ryutsuu.biz/sales/" if p == 1
-                      else f"https://www.ryutsuu.biz/sales/page/{p}/"))
-              time.sleep(0.5)
-          links = list(dict.fromkeys(links))
-          print(f"기사 {len(links)}건")
-
-          empty, filled, nobrand = [], 0, {}
-          for u in links[:130]:
-              page = get(u)
-              time.sleep(0.4)
-              if not page:
-                  continue
-              tm = re.search(r"(?is)<title>(.*?)</title>", page)
-              title = monweb._txt(tm.group(1)) if tm else ""
-              head = title.split("／")[0].strip() if "／" in title else ""
-              got = monweb.read(page, u)
-              if got:
-                  filled += 1
-                  continue
-              if head and head not in monweb.BRANDS:
-                  nobrand[head] = nobrand.get(head, 0) + 1
-              empty.append((head, title, u, page))
-
-          print(f"담긴 기사 {filled} · 빈손 {len(empty)}")
-          print("\n사전에 없는 이름(윗머리 25):")
-          for k, v in sorted(nobrand.items(), key=lambda kv: -kv[1])[:25]:
-              print(f"   {v:3d}  {k}")
-
-          print("\n사전에는 있는데 빈손인 기사 — 속을 본다")
-          shown = 0
-          for head, title, u, page in empty:
-              if head not in monweb.BRANDS or shown >= 7:
-                  continue
-              shown += 1
-              m = monweb.MAIN_RE.search(page)
-              body = m.group(1) if m else page
-              tbs = monweb.TABLE_RE.findall(body)
-              print(f"\n{'='*70}\n{title[:70]}\n  {u}\n  표 {len(tbs)}개")
-              for tb in tbs[:2]:
-                  for r in monweb._grid(tb)[:8]:
-                      print("    | " + " | ".join(x[:18] for x in r[:8]))
-                  print("    ----")
-              flat = monweb._txt(body)
-              k = flat.find(head)
-              print("  글: " + flat[max(0, k):k + 420])
+          print(f"\n종목 {d['companies']} · 달 {d['months']} · 본 기사 "
+                f"{len(d['done'])} · 쪽 {d['deep']}"
+                f"{' (끝까지)' if d.get('deep_done') else ''}")
+          print(f"우리 목록에 없던 회사 {sum(1 for c in codes if c not in have)}")
+          for c, v in sorted(codes.items(), key=lambda kv: -cap(kv[0])):
+              ms = sorted(v["months"])
+              print(f"\n{c} {v['name'][:24]} [{v['brand']}] {cap(c):.2f}조원 "
+                    f"{'새' if c not in have else '겹침'}")
+              print("   " + " ".join(
+                  f"{m[2:]}:{v['months'][m].get('same','-')}/"
+                  f"{v['months'][m].get('all','-')}" for m in ms[-13:]))
           EOF

@@ -45,6 +45,9 @@ BRANDS = {
     "セブンイレブン": ("3382", "セブン＆アイ・ホールディングス"),
     "ミニストップ": ("9946", "ミニストップ"),
     "イオン": ("8267", "イオン"),
+    "イオン北海道": ("7512", "イオン北海道"),
+    "イオン九州": ("2653", "イオン九州"),
+    "フジ": ("8278", "フジ"),
     "ヤオコー": ("8279", "ヤオコー"),
     "ライフ": ("8194", "ライフコーポレーション"),
     "ベルク": ("9974", "ベルク"),
@@ -136,6 +139,7 @@ BRANDS = {
     "PPIH": ("7532", "パン・パシフィック・インターナショナルホールディングス"),
     "ドン・キホーテ": ("7532", "パン・パシフィック・インターナショナルホールディングス"),
     "トライアル": ("141A", "トライアルホールディングス"),
+    "トライアルHD": ("141A", "トライアルホールディングス"),
     "ゲオ": ("2681", "ゲオホールディングス"),
     "ハードオフ": ("2674", "ハードオフコーポレーション"),
     "セリア": ("2782", "セリア"),
@@ -235,6 +239,44 @@ def _years(months, last_year, last_month):
     return yrs
 
 
+# 제목의 달. 「2026年3月期」 의 3 을 집으면 안 되므로 期 를 피한다
+# (montable 의 「N月期」 규칙과 같은 자리다).
+TITLE_MONTH = re.compile(r"(\d{1,2})月(?!期)")
+
+
+def _title_period(title, day):
+    """제목이 말하는 달 -> 'YYYY-MM'. 표에 달이 안 적힌 꼴에 쓴다."""
+    m = TITLE_MONTH.search(title.translate(ZEN))
+    if not m:
+        return None
+    mo = int(m.group(1))
+    if not 1 <= mo <= 12:
+        return None
+    yr = day.year if mo <= day.month else day.year - 1
+    return f"{yr:04d}-{mo:02d}"
+
+
+def _pick(lab, cell, rec, only_same=False):
+    """이름표를 보고 값을 담는다. 매출이 아닌 열(객수·객단가·품목)은 버린다.
+
+    **이름표에 「売上」이 없어도 「既存店」·「全店」이면 매출로 본다.** 이온
+    기사의 표는 열 이름이 「前年同期比 / 全店 · 既存店」뿐이고 무엇의 값인지는
+    기사 본문이 말한다. 대신 객수·객단가·품목 이름은 먼저 쳐내므로, 야마다의
+    「デンキ · 住建」 이나 조신의 「テレビ · パソコン」 같은 품목 열은 안 들어온다.
+    """
+    if NOT_SALES.search(lab):
+        return
+    if not (SALES.search(lab) or SAME.search(lab) or ALL.search(lab)):
+        return
+    v = _val(cell)
+    if v is None:
+        return
+    if SAME.search(lab):
+        rec.setdefault("same", v)
+    elif ALL.search(lab) and not only_same:
+        rec.setdefault("all", v)
+
+
 TITLE_SAME = re.compile(r"既存店[^、。]*?([\d.]+)[%％](増|減)")
 TITLE_ALL = re.compile(r"全店[^、。]*?([\d.]+)[%％](増|減)")
 
@@ -284,7 +326,8 @@ def read(page: str, url: str):
     out, used_single = [], False
     for tb in TABLE_RE.findall(body):
         rows = [r for r in _grid(tb) if r]
-        if len(rows) < 3:
+        # 머리줄 하나 + 값줄 하나면 표다(맥도날드 기사가 그 꼴이다).
+        if len(rows) < 2:
             continue
         width = max(len(r) for r in rows)
         rows = [r + [""] * (width - len(r)) for r in rows]
@@ -327,36 +370,67 @@ def read(page: str, url: str):
             used_single = True
             continue
 
-        # (나) 달이 머리에 하나, 줄마다 회사 — 한 달, 여러 회사
+        # 아래 세 꼴은 달이 표 안에 한 번만 있거나 아예 없다. 그럴 때 달은
+        # **제목**이 말한다(「8月の既存店売上高…」). 제목에 달이 없으면 안 담는다.
         mh = MONTH_CELL.match(rows[0][0].translate(ZEN))
-        if not mh:
+        per = (f"{day.year if int(mh.group(1)) <= day.month else day.year - 1:04d}"
+               f"-{int(mh.group(1)):02d}") if mh else _title_period(title, day)
+        if not per:
             continue
-        mo = int(mh.group(1))
-        yr = day.year if mo <= day.month else day.year - 1
-        labs = rows[0]
-        per = f"{yr:04d}-{mo:02d}"
-        for r in rows[1:]:
-            brand = r[0].strip()
-            if brand not in BRANDS:
+
+        # (나) 줄마다 회사 — 한 달, 여러 회사.
+        # **회사 칸이 첫 칸이 아닐 수 있다.** 이온 기사는 「業態 | 社名 | …」 이라
+        # 첫 칸이 업태다. 앞 세 칸에서 아는 이름을 찾는다.
+        n_hdr = 1
+        for i, r in enumerate(rows):
+            if any(_val(x) is not None for x in r):
+                n_hdr = i
+                break
+        n_hdr = max(n_hdr, 1)
+        labs = _cols(rows, n_hdr, width)
+        hit = False
+        for r in rows[n_hdr:]:
+            bi = next((c for c in range(min(3, width))
+                       if r[c].strip() in BRANDS), None)
+            if bi is None:
                 continue
+            brand = r[bi].strip()
             rec = {}
-            for c in range(1, width):
-                lab = labs[c]
-                if not SALES.search(lab) or NOT_SALES.search(lab):
-                    continue
-                v = _val(r[c])
-                if v is None:
-                    continue
-                if SAME.search(lab):
-                    rec.setdefault("same", v)
-                elif ALL.search(lab):
-                    rec.setdefault("all", v)
+            for c in range(bi + 1, width):
+                _pick(labs[c], r[c], rec)
             if not rec:
                 continue
             code, name = BRANDS[brand]
             out.append({"code": code, "brand": brand, "name": name,
                         "day": day.isoformat(), "doc": url,
                         "months": {per: rec}})
+            hit = True
+        if hit or used_single or head not in BRANDS:
+            continue
+
+        # 여기부터는 **제목의 회사 하나**에 대한 표다.
+        code, name = BRANDS[head]
+        rec = {}
+        # (다) 열 이름표 + 값 한 줄 — 「8月 | 既存店売上高 | … / 前年比 | 3.5％増 | …」
+        for r in rows[n_hdr:]:
+            for c in range(width):
+                _pick(labs[c], r[c], rec)
+        # (라) 행 이름표 — 「既存店 | 売上高 | 0.3％増」 이 세로로 선다.
+        # **여기서는 既存店 매출 하나만 담는다.** 세븐일레븐 기사의 표는 이름표와
+        # 값이 한 칸씩 밀려 있었다(客数 0.7％増 / 客単価 1.9％減 — 본문과 거꾸로).
+        # 제목이 보증하는 값만 담으면 그런 오식에 끌려가지 않는다.
+        if not rec:
+            for r in rows:
+                vs = [c for c in range(width) if _val(r[c]) is not None]
+                if len(vs) != 1:
+                    continue
+                lab = "".join(r[c] for c in range(vs[0]))
+                _pick(lab, r[vs[0]], rec, only_same=True)
+        if not rec or not _check(title, rec):
+            continue
+        out.append({"code": code, "brand": head, "name": name,
+                    "day": day.isoformat(), "doc": url, "months": {per: rec}})
+        used_single = True
     return out
 
 
@@ -423,6 +497,61 @@ def _selftest():                                          # pragma: no cover
     g = read(d, "u")
     if any(x["brand"] == "どこかの非上場店" for x in g) or len(g) != 3:
         print("!! 라) 모르는 브랜드", g)
+        ok = False
+
+    # (마) 이온 꼴 — 회사 칸이 **첫 칸이 아니다**(첫 칸은 업태).
+    e = """<html><title>イオン／8月イオンリテール既存店売上高横ばい | 流通ニュース</title>
+    <main>2026年09月10日 16:43 ／ 月次
+    <table>
+      <tr><th rowspan="2">業態</th><th rowspan="2">社名</th><th colspan="2">前年同期比</th></tr>
+      <tr><th>全店</th><th>既存店</th></tr>
+      <tr><td>GMS</td><td>イオンリテール</td><td>1.7％増</td><td>横ばい</td></tr>
+      <tr><td>GMS</td><td>イオン北海道</td><td>2.1％増</td><td>2.5％増</td></tr>
+      <tr><td>SM</td><td>マックスバリュ東海</td><td>1.0％増</td><td>0.4％減</td></tr>
+    </table></main></html>"""
+    g = {x["code"]: x for x in read(e, "u")}
+    if len(g) != 2 or g["7512"]["months"]["2026-08"] != {"all": 102.1, "same": 102.5} \
+            or g["8198"]["months"]["2026-08"] != {"all": 101.0, "same": 99.6}:
+        print("!! 마) 회사 칸이 둘째인 표", g)
+        ok = False
+
+    # (바) 세븐일레븐 꼴 — 행 이름표. **既存店 매출 하나만** 담는다.
+    f = """<html><title>セブンイレブン／8月の既存店売上高0.3％増、客数1.9％減 | 流通ニュース</title>
+    <main>2026年09月10日 15:57 ／ 月次
+    <table>
+      <tr><td>既存店</td><td>売上高</td><td>0.3％増</td></tr>
+      <tr><td>既存店</td><td>客数</td><td>0.7％増</td></tr>
+      <tr><td>既存店</td><td>客単価</td><td>1.9％減</td></tr>
+      <tr><td>全店</td><td>売上高</td><td>2.2％増</td></tr>
+    </table></main></html>"""
+    g = read(f, "u")
+    if len(g) != 1 or g[0]["code"] != "3382" \
+            or g[0]["months"]["2026-08"] != {"same": 100.3}:
+        print("!! 바) 행 이름표 표", g)
+        ok = False
+
+    # (사) 맥도날드 꼴 — 열 이름표 + 값 한 줄. 객수·객단가는 안 담는다.
+    h = """<html><title>マクドナルド／8月の既存店売上高3.5％増、客数は1.3％増 | 流通ニュース</title>
+    <main>2026年09月09日 10:15 ／ 月次
+    <table>
+      <tr><th>8月</th><th>既存店売上高</th><th>既存店客数</th><th>既存店客単価</th><th>全店売上高</th></tr>
+      <tr><td>前年比</td><td>3.5％増</td><td>1.3％増</td><td>2.2％増</td><td>5.8％増</td></tr>
+    </table></main></html>"""
+    g = read(h, "u")
+    if len(g) != 1 or g[0]["code"] != "2702" \
+            or g[0]["months"]["2026-08"] != {"same": 103.5, "all": 105.8}:
+        print("!! 사) 열 이름표 한 줄 표", g)
+        ok = False
+
+    # (아) 야마다 꼴 — 열이 세그먼트다. 회사 전체 매출이 아니므로 담지 않는다.
+    i = """<html><title>ヤマダHD／8月のデンキセグメント2.5％減 | 流通ニュース</title>
+    <main>2026年09月09日 10:00 ／ 月次
+    <table>
+      <tr><th>8月</th><th>デンキ</th><th>住建</th><th>金融</th><th>環境</th></tr>
+      <tr><td>前年比</td><td>2.5%減</td><td>11.4％増</td><td>2.9％減</td><td>6.6％増</td></tr>
+    </table></main></html>"""
+    if read(i, "u"):
+        print("!! 아) 세그먼트 표를 집었다", read(i, "u"))
         ok = False
 
     print("monweb 스스로 시험:", "통과" if ok else "떨어짐")
