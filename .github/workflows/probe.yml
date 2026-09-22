@@ -15,73 +15,46 @@ jobs:
         with:
           python-version: '3.12'
 
-      # 61차 — 流通ニュース 는 열린다. 기사 **본문**에 무엇이 들어 있나,
-      # 그리고 지난 달치를 어디까지 거슬러 볼 수 있나(이력이 이 소스의 값이다).
-      - name: 📰 流通ニュース 본문과 이력 (61차)
-        timeout-minutes: 8
+      # 62차 — 새 수집기를 **실제로 돌려 본다**(여기서는 커밋하지 않는다).
+      # 몇 종목·몇 달이 들어오나, 브랜드를 잘못 이은 것은 없나 눈으로 본다.
+      - name: 🏬 流通ニュース 수집기 시운전 (62차)
+        timeout-minutes: 14
+        env:
+          WEB_PER_RUN: '220'
+          WEB_SECS: '540'
+          WEB_DEEP: '14'
         run: |
+          set -o pipefail
+          python monweb.py
+          python scrape_mon_web.py
           python - <<'EOF'
-          import re, time, urllib.request, html as H2
+          import json
+          d = json.load(open("data/monthly_web_jp.json"))
+          codes = d["codes"]
+          caps = json.load(open("data/caps.json"))
+          C = caps.get("caps") or caps
+          have = {r["code"] for r in json.load(
+              open("data/monthly_jp.json"))["rows"]}
 
-          UA = {"User-Agent": ("Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
-                               "AppleWebKit/537.36 (KHTML, like Gecko) "
-                               "Chrome/131.0.0.0 Safari/537.36"),
-                "Accept-Language": "ja,en;q=0.8"}
+          def cap(c):
+              v = C.get("jp:" + c)
+              return (v.get("cap") if isinstance(v, dict) else v) or 0
 
-          def get(u, cap=900_000):
-              try:
-                  with urllib.request.urlopen(
-                          urllib.request.Request(u, headers=UA), timeout=20) as r:
-                      return r.status, r.read(cap).decode("utf-8", "ignore")
-              except Exception as e:
-                  return type(e).__name__ + str(getattr(e, "code", ""))[:6], ""
-
-          print("=" * 72)
-          print("(가) 거슬러 가기 — 목록에 쪽이 있나")
-          for u in ("https://www.ryutsuu.biz/sales/page/2/",
-                    "https://www.ryutsuu.biz/sales/page/12/",
-                    "https://www.ryutsuu.biz/sales/page/60/",
-                    "https://www.ryutsuu.biz/sales/index_2.html",
-                    "https://www.ryutsuu.biz/sales/?paged=2"):
-              st, t = get(u)
-              n = len(set(re.findall(r'href="(https://www\.ryutsuu\.biz/sales/s\d+\.html)"', t)))
-              first = re.search(r"<title>(.*?)</title>", t, re.S)
-              print(f"  {u:52s} {st}  기사 {n}  "
-                    f"{re.sub(r'\s+', ' ', first.group(1))[:40] if first else ''}")
-              time.sleep(0.6)
-
-          print()
-          print("=" * 72)
-          print("(나) 기사 본문 — 표가 통째로 오나")
-          for u in ("https://www.ryutsuu.biz/sales/s091872.html",
-                    "https://www.ryutsuu.biz/sales/s091142.html",
-                    "https://www.ryutsuu.biz/sales/s090948.html"):
-              st, t = get(u)
-              print(f"\n{'-'*72}\n{u}  {st}")
-              # 본문 덩어리를 찾는다
-              for pat in (r'(?is)<div[^>]+class="[^"]*entry[^"]*"[^>]*>(.*?)</div>\s*<(?:/div|footer|aside)',
-                          r"(?is)<article[^>]*>(.*?)</article>",
-                          r"(?is)<main[^>]*>(.*?)</main>"):
-                  m = re.search(pat, t)
-                  if m and len(m.group(1)) > 400:
-                      body = m.group(1)
-                      print(f"   덩어리 {pat[:28]}… {len(body)}자")
-                      break
-              else:
-                  body = t
-                  print("   덩어리를 못 찾아 전체를 본다")
-              tbs = re.findall(r"(?is)<table[^>]*>(.*?)</table>", body)
-              print(f"   표 {len(tbs)}개")
-              for tb in tbs[:2]:
-                  for tr in re.findall(r"(?is)<tr[^>]*>(.*?)</tr>", tb)[:8]:
-                      cs = [re.sub(r"\s+", " ", H2.unescape(
-                          re.sub(r"<[^>]+>", "", c))).strip()
-                          for _, c in re.findall(r"(?is)<(t[dh])[^>]*>(.*?)</\1>", tr)]
-                      if cs:
-                          print("      " + " | ".join(x[:16] for x in cs[:10]))
-                  print("      ----")
-              flat = re.sub(r"\s+", " ", H2.unescape(
-                  re.sub(r"(?is)<(script|style)[^>]*>.*?</\1>", " ",
-                         re.sub(r"<[^>]+>", " ", body))))
-              print("   글: " + flat[:700])
+          print(f"\n종목 {d['companies']} · 달 {d['months']} · "
+                f"본 기사 {len(d['done'])} · 거슬러 간 쪽 {d['deep']} "
+                f"{'(끝까지)' if d.get('deep_done') else ''}")
+          rows = sorted(codes.items(), key=lambda kv: -cap(kv[0]))
+          print(f"우리 목록에 없던 회사 {sum(1 for c in codes if c not in have)}")
+          for c, v in rows:
+              ms = sorted(v["months"])
+              gap = ""
+              if len(ms) > 1:
+                  n = [int(x[:4]) * 12 + int(x[5:]) for x in ms]
+                  if max(n) - min(n) + 1 != len(n):
+                      gap = " ⚠띄엄띄엄"
+              print(f"\n{c} {v['name'][:22]} [{v['brand']}] "
+                    f"{cap(c):.2f}조원 {'새' if c not in have else '겹침'}{gap}")
+              print("   " + " ".join(
+                  f"{m[2:]}:{v['months'][m].get('same','-')}/"
+                  f"{v['months'][m].get('all','-')}" for m in ms[-14:]))
           EOF
