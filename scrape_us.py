@@ -17,13 +17,14 @@ https://api.nasdaq.com/api/calendar/earnings?date=YYYY-MM-DD
 결과: data/earnings_us.json
 """
 import json
+import os
 import re
 import sys
 import time
 import urllib.error
 import urllib.parse
 import urllib.request
-from datetime import date, timedelta
+from datetime import date, datetime, timedelta, timezone
 from pathlib import Path
 
 BASE = "https://api.nasdaq.com/api/calendar/earnings"
@@ -174,20 +175,45 @@ def scrape_day(day: date, exch: dict):
     return out
 
 
+# **앞날은 다시 받아야 한다.** 나스닥이 처음 주는 날짜는 회사가 확정하지 않은
+# **추정일**이다. 한 번 받고 캐시로 굳혀 두었더니 마이크론이 우리 화면에서는
+# 9/22 였는데 나스닥에서는 9/30 이었다 — 여드레가 틀렸고, 그 주 9/30 에 있어야
+# 할 일곱 건이 우리에겐 아예 없었다. 회원님이 "마이크론이고 뭐고 실적발표
+# 아닌데" 라고 짚으셔서 알았다.
+#
+# 지난 날은 굳는다(이미 발표한 것은 안 바뀐다). **어제부터 앞으로**는 이 시간이
+# 지나면 다시 받는다. 하루 네 번꼴이고 앞으로 60일이면 240요청/일이라 싸다.
+FRESH_HOURS = float(os.environ.get("US_FRESH_HOURS", "6"))
+
+
 def load_cache():
     if not OUT.exists():
-        return {}
+        return {}, {}
     try:
         old = json.loads(OUT.read_text(encoding="utf-8"))
     except (ValueError, OSError):
-        return {}
+        return {}, {}
     by_day = {d: [] for d in old.get("ok_days", [])}
     for r in old.get("rows", []):
         by_day.setdefault(r["date"], []).append(r)
-    return by_day
+    return by_day, dict(old.get("seen") or {})
 
 
-def save(by_day: dict, start: date, end: date):
+def stale(key: str, seen: dict, today: date) -> bool:
+    """이 날을 다시 받아야 하나. 지난 날은 안 받는다."""
+    if key < (today - timedelta(days=1)).isoformat():
+        return False
+    ts = seen.get(key)
+    if not ts:
+        return True
+    try:
+        got = datetime.fromisoformat(ts)
+    except ValueError:
+        return True
+    return (datetime.now(timezone.utc) - got).total_seconds() > FRESH_HOURS * 3600
+
+
+def save(by_day: dict, start: date, end: date, seen: dict):
     ok_days = sorted(by_day)
     rows = [r for d in ok_days for r in by_day[d]]
     payload = {
@@ -197,6 +223,8 @@ def save(by_day: dict, start: date, end: date):
         "count": len(rows),
         "ok_days": ok_days,
         "per_day": {d: len(by_day[d]) for d in ok_days},
+        # 날마다 '언제 받았나'. 앞날을 다시 받을지 가르는 데 쓴다.
+        "seen": {d: t for d, t in seen.items() if d in by_day},
         "rows": rows,
     }
     tmp = OUT.with_suffix(".tmp")
@@ -207,21 +235,24 @@ def save(by_day: dict, start: date, end: date):
 
 def main(start: date, end: date):
     OUT.parent.mkdir(parents=True, exist_ok=True)
-    by_day = load_cache()
+    by_day, seen = load_cache()
+    today = date.today()
     # 받을 날이 하나도 없으면 심볼 디렉터리도 굳이 받지 않는다.
     pending = [i for i in range((end - start).days + 1)
-               if (start + timedelta(days=i)).isoformat() not in by_day]
+               for k in [(start + timedelta(days=i)).isoformat()]
+               if k not in by_day or stale(k, seen, today)]
     exch = load_exchanges() if pending else {}
     failed = []
 
     day, streak = start, 0
     while day <= end:
         key = day.isoformat()
-        if key in by_day:
+        if key in by_day and not stale(key, seen, today):
             print(f"{key} {len(by_day[key]):>4}건 (캐시)", flush=True)
         else:
+            was = {r["code"] for r in by_day.get(key, [])}
             try:
-                by_day[key] = scrape_day(day, exch)
+                got = scrape_day(day, exch)
             except Exception as e:
                 failed.append(key)
                 streak += 1
@@ -232,12 +263,23 @@ def main(start: date, end: date):
                     break
             else:
                 streak = 0
-                print(f"{key} {len(by_day[key]):>4}건", flush=True)
-                save(by_day, start, end)
+                by_day[key] = got
+                seen[key] = datetime.now(timezone.utc).isoformat(timespec="seconds")
+                now = {r["code"] for r in got}
+                # 날짜가 옮겨 간 종목을 로그에 남긴다 — 조용히 바뀌면 왜 어제와
+                # 다른지 알 길이 없다.
+                add, gone = sorted(now - was), sorted(was - now)
+                extra = ""
+                if was and (add or gone):
+                    extra = (f"  (+{len(add)} -{len(gone)}"
+                             + (" " + " ".join(add[:6]) if add else "")
+                             + (" / " + " ".join(gone[:6]) if gone else "") + ")")
+                print(f"{key} {len(got):>4}건{extra}", flush=True)
+                save(by_day, start, end, seen)
             time.sleep(1.2)
         day += timedelta(days=1)
 
-    n, days = save(by_day, start, end)
+    n, days = save(by_day, start, end, seen)
     print(f"\n총 {n}건 / {days}일 -> {OUT}")
     if failed:
         print(f"미수집 {len(failed)}일: {', '.join(failed)} (재실행하면 이어서 받는다)")
