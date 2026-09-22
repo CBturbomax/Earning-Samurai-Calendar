@@ -15,55 +15,68 @@ jobs:
         with:
           python-version: '3.12'
 
-      # 70차 — 날짜별 보관함(/2024/01/)이 200 이고 제목도 맞다. 그런데 기사
-      # 링크가 안 잡혔다. 주소 꼴이 다른 것뿐인지 본다 — 이것이 열리면
-      # 2024-01 부터 기사를 통째로 열거해 전부 채울 수 있다.
-      - name: 🗓 날짜별 보관함 속 (70차)
-        timeout-minutes: 8
+      # 71차 — 두 갈래를 한꺼번에 본다.
+      #  (1) sitemap.xml 은 사이트맵 색인이었다(All in One SEO). 자식 목록을
+      #      전부 찍고 하나를 열어 기사 주소·날짜가 오는지 본다.
+      #  (2) /2024/01/ 에는 기사 제목이 분명히 있는데 우리 정규식(/s숫자6.html)
+      #      으로는 안 잡혔다. 그 쪽의 /sales/ 링크를 있는 그대로 찍는다.
+      - name: 🗺 사이트맵 색인과 옛 기사 주소 꼴 (71차)
+        timeout-minutes: 10
         run: |
           python - <<'EOF'
-          import gzip, io, re, time, urllib.request, html as H2
+          import gzip, io, re, urllib.request
+
           UA = {"User-Agent": ("Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
                                "AppleWebKit/537.36 (KHTML, like Gecko) "
                                "Chrome/131.0.0.0 Safari/537.36"),
                 "Accept-Encoding": "gzip, deflate"}
 
-          def get(u, cap=3_000_000):
+          def get(u, cap=6_000_000):
               try:
                   r = urllib.request.urlopen(
                       urllib.request.Request(u, headers=UA), timeout=25)
                   raw = r.read(cap)
                   if r.headers.get("Content-Encoding") == "gzip":
                       raw = gzip.GzipFile(fileobj=io.BytesIO(raw)).read()
-                  return r.status, raw
+                  return r.status, raw.decode("utf-8", "ignore")
               except Exception as e:
-                  return type(e).__name__ + str(getattr(e, "code", "")), b""
+                  return type(e).__name__ + str(getattr(e, "code", "")), ""
 
           B = "https://www.ryutsuu.biz"
-          for u in (f"{B}/2026/08/", f"{B}/2024/01/"):
-              st, raw = get(u)
-              t = raw.decode("utf-8", "ignore")
-              print(f"\n{'='*70}\n{u}  {st} · {len(raw)//1024}KB")
-              hrefs = re.findall(r'href="([^"]+)"', t)
-              import collections
-              kind = collections.Counter()
-              for h in hrefs:
-                  m = re.match(r"(?:https://www\.ryutsuu\.biz)?/([a-z_]+)/", h)
-                  kind[m.group(1) if m else h[:14]] += 1
-              print("  링크 갈래:", dict(kind.most_common(10)))
-              arts = [h for h in hrefs if re.search(r"/s\d{6}\.html", h)]
-              print(f"  기사꼴 링크 {len(set(arts))}개")
-              for h in list(dict.fromkeys(arts))[:10]:
-                  print("     " + h)
-              # 글자로도 본다 — 목록이 자바스크립트로 그려지는지
-              flat = re.sub(r"\s+", " ", H2.unescape(
-                  re.sub(r"(?is)<(script|style)[^>]*>.*?</\1>", " ",
-                         re.sub(r"<[^>]+>", " ", t))))
-              i = flat.find("月次")
-              print("  글: " + flat[max(0, i - 80):i + 320])
 
-          print("\n사이트맵 원문 앞부분")
-          st, raw = get(f"{B}/sitemap.xml")
-          print(" ", st, len(raw), "바이트")
-          print(" ", raw[:400])
+          st, t = get(f"{B}/sitemap.xml")
+          locs = re.findall(r"<loc>([^<]+)</loc>", t)
+          print(f"사이트맵 색인 {st} · 자식 {len(locs)}개")
+          for u in locs[:60]:
+              print("   ", u)
+
+          # 기사 본문이 들어 있을 만한 자식 하나를 연다
+          for u in locs:
+              if re.search(r"(post|sales|news)[^/]*sitemap", u):
+                  st, t = get(u)
+                  urls = re.findall(r"<loc>([^<]+)</loc>", t)
+                  sal = [x for x in urls if "/sales/" in x]
+                  lm = re.findall(r"<lastmod>([^<]+)</lastmod>", t)
+                  print(f"\n{u}  {st} · 주소 {len(urls)}개 · 그중 sales {len(sal)}")
+                  if lm:
+                      print("   날짜 범위", min(lm)[:10], "~", max(lm)[:10])
+                  for x in sal[:6]:
+                      print("    ", x)
+                  for x in urls[:4]:
+                      print("    (아무거나)", x)
+                  break
+
+          # 옛 날짜 보관함의 기사 주소 꼴
+          for mon in ("2024/01", "2025/06"):
+              st, t = get(f"{B}/{mon}/")
+              hrefs = re.findall(r'href="([^"]+)"', t)
+              sal = [h for h in hrefs if "/sales/" in h]
+              print(f"\n{B}/{mon}/  {st} · sales 링크 {len(set(sal))}")
+              for h in list(dict.fromkeys(sal))[:12]:
+                  print("   ", h)
+              # 제목과 링크가 같이 앉은 자리를 통째로 본다
+              m = re.search(r"(?is)(.{0,400}2024年1月31日の記事一覧.{0,900})", t) \
+                  or re.search(r"(?is)(.{0,300}記事一覧.{0,900})", t)
+              if m:
+                  print("   조각:", re.sub(r"\s+", " ", m.group(1))[-900:])
           EOF
