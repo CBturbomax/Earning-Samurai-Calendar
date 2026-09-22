@@ -15,71 +15,62 @@ jobs:
         with:
           python-version: '3.12'
 
-      # 68차 — 회원님: "숫자는 다 공개돼 있는데 왜 24년 1월부터 못 채우나."
-      # 기사 안에 **회사별 태그 쪽** 링크가 있다(/tag/mcdonalds). 그게 그 회사
-      # 기사 전체 목록이면 한 칸씩 거슬러 갈 것 없이 통째로 받을 수 있다.
-      # 쪽이 넘어가나, 2024년까지 가나, 옛 기사에도 표가 있나를 본다.
-      - name: 🏷 회사별 태그 쪽 (68차)
+      # 69차 — 회원님: "숫자는 다 공개돼 있는데 왜 24년 1월부터 못 채우나."
+      # 태그 쪽은 9건뿐이고 쪽 넘김이 안 된다. 기사를 **전부 열거**할 길이
+      # 있어야 24-01 부터 채운다. 워드프레스면 사이트맵·날짜별 보관함이 있다.
+      - name: 🗺 기사를 전부 열거할 길 (69차)
         timeout-minutes: 8
         run: |
           python - <<'EOF'
-          import re, time, urllib.request, html as H2
-          import monweb
-
+          import gzip, io, re, time, urllib.request
           UA = {"User-Agent": ("Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
                                "AppleWebKit/537.36 (KHTML, like Gecko) "
-                               "Chrome/131.0.0.0 Safari/537.36")}
+                               "Chrome/131.0.0.0 Safari/537.36"),
+                "Accept-Encoding": "gzip, deflate"}
 
-          def get(u):
+          def get(u, cap=2_000_000):
               try:
-                  with urllib.request.urlopen(
-                          urllib.request.Request(u, headers=UA), timeout=20) as r:
-                      return r.status, r.read(900_000).decode("utf-8", "ignore")
+                  r = urllib.request.urlopen(
+                      urllib.request.Request(u, headers=UA), timeout=20)
+                  raw = r.read(cap)
+                  if r.headers.get("Content-Encoding") == "gzip":
+                      raw = gzip.GzipFile(fileobj=io.BytesIO(raw)).read()
+                  return r.status, raw.decode("utf-8", "ignore")
               except Exception as e:
                   return type(e).__name__ + str(getattr(e, "code", "")), ""
 
-          TAG = re.compile(
-              r'<a[^>]+href="(https://www\.ryutsuu\.biz/tag/[^"]+)"[^>]*>(.*?)</a>', re.S)
-
-          st, a = get("https://www.ryutsuu.biz/sales/s090944.html")
-          print("맥도날드 8월 기사", st)
-          print("  태그 링크 — 이름표가 브랜드와 같은 것이 그 회사 태그다")
-          hit = None
-          for u, lab in TAG.findall(a):
-              lab = monweb._txt(lab)
-              print(f"    {lab:16s} {u}")
-              if lab == "マクドナルド":
-                  hit = u
-          print("  -> 회사 태그:", hit)
-
-          for page in (1, 2, 4, 8):
-              u = hit if page == 1 else hit.rstrip("/") + f"/page/{page}/"
-              time.sleep(0.6)
+          B = "https://www.ryutsuu.biz"
+          print("(가) 사이트맵 — 글 주소를 통째로 준다면 이게 답이다")
+          for u in (f"{B}/sitemap.xml", f"{B}/wp-sitemap.xml",
+                    f"{B}/sitemap_index.xml", f"{B}/sitemap-1.xml",
+                    f"{B}/robots.txt"):
+              time.sleep(0.5)
               st, t = get(u)
-              arts = re.findall(
-                  r'<a[^>]+href="(https://www\.ryutsuu\.biz/sales/s\d+\.html)"[^>]*>(.*?)</a>',
-                  t, re.S)
-              labs = []
-              seen = set()
-              for x, lab in arts:
-                  lab = monweb._txt(lab)
-                  if x not in seen:
-                      seen.add(x)
-                      labs.append(lab)
-              print(f"\n  {page}쪽 {st} · sales 기사 {len(seen)}")
-              for lab in labs[:8]:
-                  print("     " + lab[:56])
+              locs = re.findall(r"<loc>([^<]+)</loc>", t)
+              sales = [x for x in locs if "/sales/" in x]
+              extra = ""
+              if u.endswith("robots.txt"):
+                  extra = " | " + " ".join(re.findall(r"(?im)^sitemap:\s*(\S+)", t))
+              print(f"  {u:44s} {st}  loc {len(locs)}  sales {len(sales)}{extra}")
+              for x in locs[:4]:
+                  print("      " + x)
 
-          # 옛 기사 하나를 열어 표가 있는지 본다
-          print("\n  옛 기사에도 표가 있나")
-          st, t = get(hit)
-          old = re.findall(r'href="(https://www\.ryutsuu\.biz/sales/s\d+\.html)"', t)
-          for u in old[-2:]:
-              time.sleep(0.6)
-              st2, page = get(u)
-              got = monweb.read(page, u)
-              tm = re.search(r"(?is)<title>(.*?)</title>", page)
-              print(f"    {monweb._txt(tm.group(1))[:44] if tm else ''}  {st2}")
-              for g in got:
-                  print("      ", g["code"], sorted(g["months"]), g["months"])
+          print()
+          print("(나) 날짜별 보관함 — /2024/01/ · ?m=202401")
+          for u in (f"{B}/2024/01/", f"{B}/?m=202401", f"{B}/sales/2024/01/",
+                    f"{B}/2026/08/", f"{B}/?m=202608"):
+              time.sleep(0.5)
+              st, t = get(u)
+              n = len(set(re.findall(r'href="(https://www\.ryutsuu\.biz/sales/s\d+\.html)"', t)))
+              ti = re.search(r"<title>(.*?)</title>", t, re.S)
+              print(f"  {u:40s} {st}  sales {n}  "
+                    f"{re.sub(r'\s+', ' ', ti.group(1))[:40] if ti else ''}")
+
+          print()
+          print("(다) 목록 쪽을 더 밀어 본다 — 9쪽이 정말 끝인가")
+          for p in (8, 9, 10, 20):
+              time.sleep(0.5)
+              st, t = get(f"{B}/sales/page/{p}/")
+              n = len(set(re.findall(r'href="(https://www\.ryutsuu\.biz/sales/s\d+\.html)"', t)))
+              print(f"  /sales/page/{p}/  {st}  sales {n}")
           EOF
