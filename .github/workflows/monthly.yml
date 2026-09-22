@@ -72,6 +72,9 @@ jobs:
         env:
           WEB_PER_RUN: '250'
           WEB_SECS: '440'
+          # 2024년 1월까지 서른몇 쪽을 거슬러 가야 한다. 다 채우고 나면
+          # 저절로 앞쪽만 본다(끝에 닿으면 deep_done).
+          WEB_DEEP: '10'
         run: |
           set -o pipefail
           python scrape_mon_web.py | tee web.log

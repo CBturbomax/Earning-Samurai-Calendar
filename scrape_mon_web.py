@@ -15,10 +15,13 @@ JPX TDnet API·QUICK 은 유료) 이 사이트만 200 을 준다. **막힌 곳�
 표에는 비율만 온다. 지어 넣지 않는다.
 
   목록   https://www.ryutsuu.biz/sales/        (그 뒤는 /sales/page/N/)
-  기사   https://www.ryutsuu.biz/sales/sMMDDNN.html
+  기사   https://www.ryutsuu.biz/sales/q013144.html   (앞글자가 해다)
 
-**쌓아 두고 지우지 않는다.** 목록은 열몇 쪽뿐이라 지난 기사는 창 밖으로
-밀려난다 — 한 번 받아 둔 기사는 `done` 으로 건너뛰고 값은 계속 남긴다.
+**목록은 여든 쪽이 넘는다.** 한동안 여덟 쪽에서 끊기는 줄 알았는데 그건
+우리 정규식이 2026년 기사(`s…`)만 찾았기 때문이었다 — 9쪽부터 2025년
+기사(`r…`)라 링크가 0건이 되어 수집기가 스스로 "끝"이라 적었다. 한 쪽에
+50건이고 한 달에 50건쯤이라 **2024년 1월은 서른몇 쪽 뒤**고, 거기까지
+거슬러 간다(`START`). 받아 둔 기사는 `done` 으로 건너뛴다.
 """
 import json
 import os
@@ -37,7 +40,7 @@ OUT = HERE / "data" / "monthly_web_jp.json"
 VER = 1
 # 읽는 규칙의 판. 올리면 **본 기사 기록만** 비우고 모아둔 값은 그대로 둔다 —
 # 창 밖으로 밀려난 달을 영영 잃지 않기 위해서다(월매출 수치 쪽과 같은 규칙).
-RULE_VER = 3
+RULE_VER = 4
 
 BASE = "https://www.ryutsuu.biz/sales/"
 UA = {"User-Agent": ("Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
@@ -50,7 +53,11 @@ BUDGET = float(os.environ.get("WEB_SECS", "300"))
 # 남의 서버다. 한 번 두드리고 쉰다.
 PAUSE = float(os.environ.get("WEB_PAUSE", "0.5"))
 # 한 실행에서 새로 거슬러 갈 쪽 수. 첫 몇 바퀴만 일하고 그 뒤에는 앞쪽만 본다.
-DEEP_PER_RUN = int(os.environ.get("WEB_DEEP", "4"))
+DEEP_PER_RUN = int(os.environ.get("WEB_DEEP", "8"))
+# **어디까지 거슬러 갈까.** 한 쪽이 50건이고 한 달에 50건쯤 실리므로 2024년
+# 1월은 서른몇 쪽 뒤다. 주소만 보고 그 달을 알 수 있으므로(monweb.url_ym)
+# 받아 보지 않고 끊는다.
+START = (2024, 1)
 
 
 def get(url, timeout=25):
@@ -97,7 +104,10 @@ def save(by, done, deep, end, queue=()):
         "codes": by,
         "companies": len(by),
         "months": months,
-        "done": sorted(done)[-4000:],
+        # 주소를 정렬해 뒤에서 자르면 앞글자가 작은 옛 해(q=2024)부터
+        # 잘려 나간다. 이력을 2024년까지 채우면 2천 건이 넘으므로 넉넉히
+        # 둔다 — 지워도 값은 안 잃지만 그 기사를 다시 받게 된다.
+        "done": sorted(done)[-12000:],
         "deep": deep,
         "deep_done": end,
         "queue": sorted(set(queue))[:4000],
@@ -164,7 +174,12 @@ def main():
                 print(f"  {p}쪽에 기사가 없다 — 여기가 끝이다.")
             break
         seen_pages = max(seen_pages, p)
-        todo += [u for u in links if u not in done]
+        fresh = [u for u in links if (monweb.url_ym(u) or START) >= START]
+        if p > 2 and not fresh:
+            end = True
+            print(f"  {p}쪽은 전부 {START[0]}년 {START[1]}월보다 옛 기사다 — 여기까지.")
+            break
+        todo += [u for u in fresh if u not in done]
     if seen_pages > deep:
         deep = seen_pages
 
@@ -196,7 +211,7 @@ def main():
             added += merge(by, rec)
         # 이 기사가 가리키는 지난달 기사를 줄에 세운다.
         for u2 in monweb.older(page, u):
-            if u2 not in done:
+            if u2 not in done and (monweb.url_ym(u2) or START) >= START:
                 queue.append(u2)
         if new_docs % 30 == 0:
             save(by, done, deep, end, queue)
