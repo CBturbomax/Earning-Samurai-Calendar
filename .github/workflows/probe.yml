@@ -15,46 +15,76 @@ jobs:
         with:
           python-version: '3.12'
 
-      # 63차 — 새 수집기를 **실제로 돌려 본다**(여기서는 커밋하지 않는다).
-      # 몇 종목·몇 달이 들어오나, 브랜드를 잘못 이은 것은 없나 눈으로 본다.
-      - name: 🏬 流通ニュース 수집기 시운전 (63차)
-        timeout-minutes: 6
-        env:
-          WEB_PER_RUN: '55'
-          WEB_SECS: '170'
-          WEB_DEEP: '2'
+      # 64차 — 시운전에서 220건을 읽어 13종목뿐이었다. 목록에는 세븐일레븐·
+      # 맥도날드·니토리·야마다·비쿠카메라가 분명히 있는데 왜 안 담겼나.
+      # 사전에는 있는 이름인데 빈손으로 돌아온 기사를 골라 속을 본다.
+      - name: 🔍 왜 안 담겼나 (64차)
+        timeout-minutes: 10
         run: |
           set -o pipefail
-          python monweb.py
-          python scrape_mon_web.py
-          python - <<'EOF'
-          import json
-          d = json.load(open("data/monthly_web_jp.json"))
-          codes = d["codes"]
-          caps = json.load(open("data/caps.json"))
-          C = caps.get("caps") or caps
-          have = {r["code"] for r in json.load(
-              open("data/monthly_jp.json"))["rows"]}
+          python - <<'EOF' 2>&1 | tail -260
+          import re, time, urllib.request
+          import monweb
 
-          def cap(c):
-              v = C.get("jp:" + c)
-              return (v.get("cap") if isinstance(v, dict) else v) or 0
+          UA = {"User-Agent": ("Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
+                               "AppleWebKit/537.36 (KHTML, like Gecko) "
+                               "Chrome/131.0.0.0 Safari/537.36"),
+                "Accept-Language": "ja,en;q=0.8"}
 
-          print(f"\n종목 {d['companies']} · 달 {d['months']} · "
-                f"본 기사 {len(d['done'])} · 거슬러 간 쪽 {d['deep']} "
-                f"{'(끝까지)' if d.get('deep_done') else ''}")
-          rows = sorted(codes.items(), key=lambda kv: -cap(kv[0]))
-          print(f"우리 목록에 없던 회사 {sum(1 for c in codes if c not in have)}")
-          for c, v in rows:
-              ms = sorted(v["months"])
-              gap = ""
-              if len(ms) > 1:
-                  n = [int(x[:4]) * 12 + int(x[5:]) for x in ms]
-                  if max(n) - min(n) + 1 != len(n):
-                      gap = " ⚠띄엄띄엄"
-              print(f"\n{c} {v['name'][:22]} [{v['brand']}] "
-                    f"{cap(c):.2f}조원 {'새' if c not in have else '겹침'}{gap}")
-              print("   " + " ".join(
-                  f"{m[2:]}:{v['months'][m].get('same','-')}/"
-                  f"{v['months'][m].get('all','-')}" for m in ms[-14:]))
+          def get(u):
+              try:
+                  with urllib.request.urlopen(
+                          urllib.request.Request(u, headers=UA), timeout=20) as r:
+                      return r.read(1_200_000).decode("utf-8", "ignore")
+              except Exception as e:
+                  return ""
+
+          links = []
+          for p in (1, 2, 3, 4):
+              links += monweb.article_links(
+                  get("https://www.ryutsuu.biz/sales/" if p == 1
+                      else f"https://www.ryutsuu.biz/sales/page/{p}/"))
+              time.sleep(0.5)
+          links = list(dict.fromkeys(links))
+          print(f"기사 {len(links)}건")
+
+          empty, filled, nobrand = [], 0, {}
+          for u in links[:130]:
+              page = get(u)
+              time.sleep(0.4)
+              if not page:
+                  continue
+              tm = re.search(r"(?is)<title>(.*?)</title>", page)
+              title = monweb._txt(tm.group(1)) if tm else ""
+              head = title.split("／")[0].strip() if "／" in title else ""
+              got = monweb.read(page, u)
+              if got:
+                  filled += 1
+                  continue
+              if head and head not in monweb.BRANDS:
+                  nobrand[head] = nobrand.get(head, 0) + 1
+              empty.append((head, title, u, page))
+
+          print(f"담긴 기사 {filled} · 빈손 {len(empty)}")
+          print("\n사전에 없는 이름(윗머리 25):")
+          for k, v in sorted(nobrand.items(), key=lambda kv: -kv[1])[:25]:
+              print(f"   {v:3d}  {k}")
+
+          print("\n사전에는 있는데 빈손인 기사 — 속을 본다")
+          shown = 0
+          for head, title, u, page in empty:
+              if head not in monweb.BRANDS or shown >= 7:
+                  continue
+              shown += 1
+              m = monweb.MAIN_RE.search(page)
+              body = m.group(1) if m else page
+              tbs = monweb.TABLE_RE.findall(body)
+              print(f"\n{'='*70}\n{title[:70]}\n  {u}\n  표 {len(tbs)}개")
+              for tb in tbs[:2]:
+                  for r in monweb._grid(tb)[:8]:
+                      print("    | " + " | ".join(x[:18] for x in r[:8]))
+                  print("    ----")
+              flat = monweb._txt(body)
+              k = flat.find(head)
+              print("  글: " + flat[max(0, k):k + 420])
           EOF
