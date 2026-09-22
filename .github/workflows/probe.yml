@@ -15,114 +15,189 @@ jobs:
         with:
           python-version: '3.12'
 
-      # 56차 — 우리가 '표없음' 으로 넘긴 209건이 정말 못 읽는 것인가.
-      # 55차에서 월차Web(kabubiz)이 여섯 주소 전부 timeout 이었다. 54차에는
-      # 들머리가 200·33KB 로 열렸으니 **두드리자마자 막힌 것**이다. 아무도
-      # 안 여는 소스에 매달리는 대신, 손에 있는 공시를 제대로 읽는 쪽을 잰다.
-      # 209건을 **전수로** 분류한다 — 글자가 없나(그림), 달이 세로로 섰나,
-      # 한 장에 한 달만 실렸나.
-      - name: 🔍 '표없음' 209건의 속 (56차)
-        timeout-minutes: 12
+      # 57차 (가) — 56차에서 '표없음' 209건 중 **107건이 가로 달 이름표를
+      # 갖고 있었다**. 머리줄이 있는데 왜 못 읽었나. read() 의 문을 하나씩
+      # 재서 **어디서 막히는지** 센다. 고칠 자리를 짚는 것이 목적이다.
+      - name: 🔬 머리줄은 있는데 왜 못 읽나 (57-가)
+        timeout-minutes: 11
         run: |
           set -o pipefail
-          python - <<'EOF' 2>&1 | tail -400
-          import collections, json, re, time, urllib.request
-          import pdftext
+          python - <<'EOF' 2>&1 | tail -330
+          import collections, json, time, urllib.request
+          from datetime import date
+          import pdftext, montable as MT
 
           rows = json.load(open("data/monthly_jp.json"))["rows"]
-          nums = json.load(open("data/monthly_nums_jp.json"))
-          skip = nums["skip"]
+          skip = json.load(open("data/monthly_nums_jp.json"))["skip"]
           none = [r for r in rows if skip.get(r["doc"]) == "표없음"]
-          print(f"'표없음' {len(none)}건 — 전수로 뜯어 본다")
-
-          MON = re.compile(r"^\(?(?:(?:\d{2}|\d{4})年)?(\d{1,2})月(度|分|期)?\)?$")
-          ZEN = str.maketrans("０１２３４５６７８９．％，－　", "0123456789.%,- ")
           H = {"User-Agent": "Mozilla/5.0 (compatible; earnings-samurai/1.0)"}
 
-          def norm(s):
-              return s.translate(ZEN).replace(" ", "")
+          def hdr_of(cells):
+              got = []
+              for x, t in cells:
+                  m = MT.MONTH_HDR.match(MT._norm(t))
+                  if m and 1 <= int(m.group(2)) <= 12:
+                      y = m.group(1)
+                      if y is not None:
+                          y = int(y)
+                          y += 2000 if y < 100 else 0
+                      got.append((x, int(m.group(2)), y))
+              return got
 
-          def classify(cells):
-              if not cells:
-                  return "글자없음", 0, 0
-              # 가로 이름표 줄
-              wide = 0
-              for row in cells:
-                  n = sum(1 for _, c in row if MON.fullmatch(norm(c)))
-                  wide = max(wide, n)
-              # 세로 이름표 열 — 줄의 **첫 칸**이 달인 줄
-              tall = sum(1 for row in cells
-                         if row and MON.fullmatch(norm(row[0][1])))
-              # 아무 데나 달 낱말
-              any_m = sum(1 for row in cells for _, c in row
-                          if MON.fullmatch(norm(c)))
-              if wide >= 3:
-                  return "가로표(왜 못읽었나)", wide, tall
-              if tall >= 3:
-                  return "세로표", wide, tall
-              if any_m >= 1:
-                  return f"달 {any_m}개뿐", wide, tall
-              return "달 표기 없음", wide, tall
+          def diag(table, aday, title):
+              """read() 와 같은 길을 걸으며 **처음 막히는 문**을 돌려준다."""
+              tm = MT.TITLE_METRIC.search(MT._norm(title or ""))
+              wide = [i for i, c in enumerate(table) if len(hdr_of(c)) >= 3]
+              if not wide:
+                  return "머리줄 없음", None
+              dup = 0
+              seen_hdr = False
+              thin = 0
+              noname = 0
+              detail = None
+              for i in wide:
+                  got = hdr_of(table[i])
+                  if len({(y, m) for _x, m, y in got}) != len(got):
+                      dup += 1
+                      continue
+                  seen_hdr = True
+                  hdr = got
+                  cap_txt = "".join(MT._norm(t) for row in table[max(0, i - 2):i + 1]
+                                    for _x, t in row)
+                  cap_unit, cap_mul = MT._unit(cap_txt)
+                  amt = yoy = 0
+                  rowlog = []
+                  for cells2 in table[i + 1:i + 9]:
+                      if len(hdr_of(cells2)) >= 3:
+                          break
+                      lab = MT._label(cells2, hdr)
+                      if MT.SKIP_LABEL.search(lab or ""):
+                          rowlog.append(("건너뜀", lab[:28], 0))
+                          continue
+                      vals = MT._assign(cells2, hdr)
+                      if len(vals) < 2:
+                          rowlog.append(("값<2", lab[:28], len(vals)))
+                          continue
+                      rowtext = "".join(MT._norm(t) for _, t in cells2)
+                      if MT.YOY_LABEL.search(lab) and not MT.lab_has_other(lab):
+                          yoy += 1
+                          rowlog.append(("전년비", lab[:28], len(vals)))
+                          continue
+                      unit, mul = MT._unit(lab, rowtext)
+                      if mul and (MT.AMOUNT_LABEL.search(lab or "") or "円" in rowtext):
+                          amt += 1
+                          rowlog.append(("금액", lab[:28], len(vals)))
+                      elif cap_mul and tm and MT.WEAK_LABEL.fullmatch(lab or ""):
+                          amt += 1
+                          rowlog.append(("금액(약)", lab[:28], len(vals)))
+                      else:
+                          noname += 1
+                          rowlog.append(("이름표 못붙임", lab[:28], len(vals)))
+                  if amt or yoy:
+                      return "읽혔어야 한다", (i, hdr, rowlog)
+                  if detail is None:
+                      detail = (i, hdr, rowlog)
+                  thin += 1
+              if not seen_hdr:
+                  return "머리줄 거절(같은 달 두 번)", None
+              if noname:
+                  return "값은 붙었는데 이름표를 못 붙임", detail
+              return "머리줄 아래에 값 줄이 없음", detail
 
           cnt = collections.Counter()
           shown = collections.Counter()
           t0 = time.time()
-          for i, r in enumerate(none, 1):
-              if time.time() - t0 > 540:
-                  print(f"  …시간이 다 됐다. {i-1}건까지 봤다.")
+          for n, r in enumerate(none, 1):
+              if time.time() - t0 > 520:
+                  print(f"  …시간이 다 됐다({n-1}건까지)")
                   break
               try:
                   with urllib.request.urlopen(
                           urllib.request.Request(r["doc"], headers=H),
                           timeout=20) as f:
                       pdf = f.read()
-                  cells = pdftext.extract_cells(pdf, 4)
-              except Exception as e:
+                  table = pdftext.extract_cells(pdf, 12)
+              except Exception:
                   cnt["받기실패"] += 1
                   continue
-              kind, wide, tall = classify(cells)
+              try:
+                  kind, det = diag(table, date.fromisoformat(r["date"]), r["title"])
+              except Exception as e:
+                  cnt["터짐:" + type(e).__name__] += 1
+                  continue
+              if kind == "머리줄 없음":
+                  cnt["머리줄 없음(다른 갈래)"] += 1
+                  continue
               cnt[kind] += 1
-              # 갈래마다 셋씩만 속을 보여 준다
-              if shown[kind] < 3 and kind != "글자없음":
+              if shown[kind] < 4:
                   shown[kind] += 1
-                  print(f"\n{'='*72}\n[{kind}] {r['code']} {r['name']} {r['period']}"
-                        f"  가로{wide} 세로{tall}")
-                  print(f"  {r['title'][:64]}")
+                  print(f"\n{'='*72}\n[{kind}] {r['code']} {r['name']} {r['period']}")
+                  print(f"  {r['title'][:62]}")
                   print(f"  {r['doc']}")
-                  for row in cells[:22]:
-                      print("   | " + "  ".join(c for _, c in row)[:120])
-              if i % 40 == 0:
-                  print(f"  …{i}건  {dict(cnt)}")
+                  if det:
+                      i, hdr, rowlog = det
+                      print(f"  머리줄 {i}: " +
+                            " ".join(f"{m}月@{int(x)}" + (f"/{y}" if y else "")
+                                     for x, m, y in hdr))
+                      for row in table[max(0, i - 2):i + 1]:
+                          print("   머리 | " + "  ".join(c for _, c in row)[:118])
+                      for tag, lab, k in rowlog:
+                          print(f"   · {tag:14s} 이름표={lab!r} 값{k}")
+                      for row in table[i + 1:i + 5]:
+                          print("   아래 | " + "  ".join(c for _, c in row)[:118])
 
           print("\n" + "=" * 72)
-          print("갈래별 건수")
           for k, v in cnt.most_common():
-              print(f"  {k:22s} {v}")
+              print(f"  {k:30s} {v}")
           EOF
 
-      # 월차Web 이 정말 막힌 것인지 **한 번만** 더 두드린다(더 두드리지 않는다).
-      - name: 🗾 월차Web 다시 한 번 (56차)
-        timeout-minutes: 3
+      # 57차 (나) — 流通ニュース(ryutsuu.biz) 는 열린다(200·134KB, 낱말 다 있음).
+      # 소매·외식의 월별 매출을 기사로 낸다. 목록과 기사 한 장의 생김새를 본다.
+      - name: 📰 流通ニュース 생김새 (57-나)
+        timeout-minutes: 5
         run: |
           python - <<'EOF'
-          import urllib.request, urllib.error
-          H = {"User-Agent": ("Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
-                              "AppleWebKit/537.36 (KHTML, like Gecko) "
-                              "Chrome/131.0.0.0 Safari/537.36"),
-               "Accept": "text/html,*/*;q=0.8",
-               "Accept-Language": "ja,en;q=0.8"}
-          for u in ("https://kabubiz.com/getuji/code/3333.php",
-                    "https://www.ryutsuu.biz/sales/"):
-              try:
-                  with urllib.request.urlopen(
-                          urllib.request.Request(u, headers=H), timeout=20) as r:
-                      d = r.read(400_000)
-                  print(f"  {u}  {r.status} · {len(d)//1024}KB")
-                  t = d.decode("utf-8", "ignore")
-                  print("     낱말:", [m for m in ("月次", "既存店", "全店",
-                                                   "前年同月", "売上高") if m in t])
-              except urllib.error.HTTPError as e:
-                  print(f"  {u}  {e.code}")
-              except Exception as e:
-                  print(f"  {u}  {type(e).__name__}: {str(e)[:40]}")
+          import re, time, urllib.request, html as H2
+
+          UA = {"User-Agent": ("Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
+                               "AppleWebKit/537.36 (KHTML, like Gecko) "
+                               "Chrome/131.0.0.0 Safari/537.36"),
+                "Accept-Language": "ja,en;q=0.8"}
+          TAG = re.compile(r"<[^>]+>")
+
+          def get(u, cap=600_000):
+              with urllib.request.urlopen(
+                      urllib.request.Request(u, headers=UA), timeout=20) as r:
+                  return r.status, r.read(cap).decode("utf-8", "ignore")
+
+          def txt(s):
+              s = re.sub(r"(?is)<(script|style)[^>]*>.*?</\1>", " ", s)
+              return re.sub(r"[ \t　]+", " ",
+                            H2.unescape(TAG.sub("\n", s)))
+
+          st, t = get("https://www.ryutsuu.biz/sales/")
+          print(f"목록 {st} · {len(t)//1024}KB")
+          arts = re.findall(r'<a[^>]+href="(https://www\.ryutsuu\.biz/sales/[^"]+)"[^>]*>(.*?)</a>',
+                            t, re.S)
+          seen = []
+          for u, lab in arts:
+              lab = re.sub(r"\s+", " ", TAG.sub("", H2.unescape(lab))).strip()
+              if lab and (u, lab) not in seen:
+                  seen.append((u, lab))
+          print(f"기사 링크 {len(seen)}개 — 앞 25")
+          for u, lab in seen[:25]:
+              print(f"   {lab[:52]:54s} {u}")
+
+          for u, lab in seen[:3]:
+              time.sleep(0.8)
+              st, a = get(u)
+              body = txt(a)
+              body = re.sub(r"\n{2,}", "\n", body).strip()
+              print(f"\n{'='*72}\n{lab}\n  {u}  {st}")
+              lines = [x.strip() for x in body.splitlines() if x.strip()]
+              # 기사 본문이 시작하는 자리를 대충 집는다
+              k = next((i for i, x in enumerate(lines)
+                        if "既存店" in x or "前年" in x or "%" in x), 0)
+              for x in lines[max(0, k - 4):k + 34]:
+                  print("   " + x[:120])
           EOF
