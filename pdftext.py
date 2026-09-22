@@ -40,10 +40,6 @@ REF_RE = re.compile(rb"(\d+)\s+\d+\s+R")
 RES_REF_RE = re.compile(rb"/Resources\s+(\d+)\s+\d+\s+R")
 ONE_BYTE_RE = re.compile(rb"begincodespacerange\s*<([0-9A-Fa-f]+)>")
 
-# 칸을 가를 때 **진짜 글자폭**을 쓸 것인가. 끄면 옛 어림('글자 크기의 절반')
-# 으로 돌아간다 — 어느 쪽이 더 많이 읽히는지 재 보려고 남겨 둔 손잡이다.
-ADV = True
-
 
 ENC_RE = re.compile(rb"/Encrypt\s+\d+\s+\d+\s+R")
 
@@ -488,19 +484,10 @@ def _run(content: bytes, fonts: dict, res: dict):
                     adv += sum(wmap.get(c, dw) for c in codes) / 1000.0 * size
                 elif kind == "n" and o == "TJ":
                     adv -= v / 1000.0 * size
-            # **밀어 둔 폭을 돌려준다.** 칸을 가를 때 쓰던 '글자 크기의 절반'
-            # 어림은 전각(한자·가나)에서 늘 짧아, 이름표가 여러 칸으로 쪼개지고
-            # 숫자가 붙은 칸이 갈렸다. 여기서는 폰트의 진짜 폭을 이미 더해 두었
-            # 으므로 그 값을 그대로 내보낸다.
-            m1 = _mul(tm, ctm)
-            tm = _mul((1.0, 0.0, 0.0, 1.0, adv, 0.0), tm)
             if txt.strip():
-                m2 = _mul(tm, ctm)
-                dx = m2[4] - m1[4]
-                if dx <= 0:                      # 세로쓰기·회전은 어림으로 둔다
-                    dx = len(txt) * size * 0.5
-                out.append((round(m1[5], 1), round(m1[4], 1), txt,
-                            size * abs(m1[3] or 1.0), round(dx, 1)))
+                a, b, c, d, e, f = _mul(tm, ctm)
+                out.append((round(f, 1), round(e, 1), txt, size * abs(d or 1.0)))
+                tm = _mul((1.0, 0.0, 0.0, 1.0, adv, 0.0), tm)
         stack = []
     return out
 
@@ -533,23 +520,22 @@ def extract_cells(data: bytes, max_pages: int = 40):
             continue
         # y 로 줄을 묶는다. 같은 줄인데 글자마다 조금씩 어긋나 오므로 여유를 준다.
         buckets = []
-        for y, x, txt, size, adv in sorted(_run(content, fonts, res),
-                                           key=lambda r: -r[0]):
+        for y, x, txt, size in sorted(_run(content, fonts, res), key=lambda r: -r[0]):
             if buckets and abs(buckets[-1][0] - y) <= 1.5:
-                buckets[-1][1].append((x, txt, size, adv))
+                buckets[-1][1].append((x, txt, size))
             else:
-                buckets.append((y, [(x, txt, size, adv)]))
+                buckets.append((y, [(x, txt, size)]))
         for _y, frags in buckets:
             frags.sort()
             cells, cx, cur, csz = [], None, "", 10.0
-            for x, txt, size, adv in frags:
+            for x, txt, size in frags:
                 if cur and x - cx > max(size, 6.0) * 0.45:
                     cells.append((round(cx0, 1), cur))
                     cur = ""
                 if not cur:
                     cx0 = x
                 cur += txt
-                cx = x + (adv if ADV else len(txt) * size * 0.5)
+                cx = x + len(txt) * size * 0.5   # 다음 조각과의 틈을 재는 어림
                 csz = size
             if cur:
                 cells.append((round(cx0, 1), cur))
