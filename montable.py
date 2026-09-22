@@ -50,6 +50,14 @@ UNIT = (("百万円", 1_000_000), ("千円", 1_000), ("億円", 100_000_000),
         ("万円", 10_000), ("円", 1))
 PCT = re.compile(r"[%％]")
 
+# **표 제목이 「전년비」라고 적힌 표**가 있다. 스기HD 의 「前年比の推移 / %
+# Change Over Previous Year」 가 그렇다 — 값 줄의 이름표는 「全店売上高」뿐이라
+# '전년' 이 없어 전년비로 못 알아봤고, 통화 단위도 없어 금액으로도 못 알아봤다.
+# 회사가 표 위에 적어 둔 것을 읽는 것이지 지어내는 것이 아니다. 다만 이 길로
+# 담을 때는 **이름표가 매출 낱말일 때만** 담는다(객수·가동률이 섞이지 않게).
+CAP_YOY = re.compile(r"前年比|前年同月比|前年同期比|対前年|昨対|"
+                     r"ChangeOverPreviousYear")
+
 # 누계·예상은 그 달의 값이 아니다. 회사 정보 줄(2654 의 「株式会社」)도 아니다 —
 # 표가 아닌 줄에 달 이름표가 우연히 걸린 것이라, 그대로 두면 아무 숫자나 실린다.
 SKIP_LABEL = re.compile(r"累計|累積|予想|計画|見通|通期|上期|下期|前年同月の|前期|"
@@ -272,16 +280,38 @@ def read(data: bytes, ann: str, max_pages: int = 12, title: str = ""):
         cap_txt = "".join(_norm(t) for row in table[max(0, i - 2):i + 1]
                           for _x, t in row)
         cap_unit, cap_mul = _unit(cap_txt)
+        cap_yoy = bool(CAP_YOY.search(cap_txt))
         amounts, yoys = [], []
+        # **이름과 숫자가 다른 줄에 찍히는 공시가 많다.** 실측: '표없음'으로
+        # 버린 209건 중 **92건**이 이것 하나였다. 히로세통상(7185)이 그 꼴이다.
+        #
+        #     営業収益                       <- 이름표만 있는 줄
+        #     749  832  1,026 …  759         <- 값만 있는 줄 (이름표가 빈다)
+        #     (単位：百万円)                  <- 단위는 값 **아래**에
+        #
+        # 한 줄만 보면 이름표도 단위도 없는 숫자 열두 개라 통째로 버려진다.
+        # 그래서 값 없는 줄의 이름표를 다음 값 줄에 **물려주고**, 단위는 바로
+        # 아랫줄까지 본다. 지어내는 것이 아니라 같은 표의 같은 줄을 읽는 것이다.
+        pending = ""
         # 이름표 줄 아래로 여덟 줄까지 본다. 그 아래는 다른 표다.
-        for cells2 in table[i + 1:i + 9]:
+        for k in range(i + 1, min(i + 9, len(table))):
+            cells2 = table[k]
             if _headers(cells2):
                 break
             lab = _label(cells2, hdr)
-            if SKIP_LABEL.search(lab or ""):
-                continue
             vals = _assign(cells2, hdr)
             if len(vals) < 2:
+                # 값이 없는 줄은 다음 줄의 이름표일 수 있다. 단위 안내줄
+                # (「(単位：百万円)」)은 이름이 아니므로 물려주지 않는다 —
+                # 그것이 이름표가 되면 매출 줄이 단위 줄로 둔갑한다.
+                if lab and "単位" not in lab:
+                    pending = lab
+                continue
+            if not lab:
+                lab, pending = pending, ""
+            else:
+                pending = ""
+            if SKIP_LABEL.search(lab or ""):
                 continue
             rowtext = "".join(_norm(t) for _, t in cells2)
             # **전년비 줄은 이름표에 '전년'이 있어야 한다.** 한때 '％가 있고
@@ -289,21 +319,35 @@ def read(data: bytes, ann: str, max_pages: int = 12, title: str = ""):
             # 전년비로 실렸다. 백분율이라고 다 전년비가 아니다.
             if YOY_LABEL.search(lab) and not lab_has_other(lab):
                 if DELTA_LABEL.search(lab) or _looks_delta(vals):
-                    vals = {k: v + 100.0 for k, v in vals.items()}
+                    vals = {k2: v + 100.0 for k2, v in vals.items()}
                 yoys.append((lab, vals))
-            else:
-                unit, mul = _unit(lab, rowtext)
-                # **이름표가 약해도 줄에 통화 단위가 있으면 금액 줄이다.**
-                # 값 줄의 이름표가 결산기(「2026年12月期」)뿐인 공시가 흔한데,
-                # 낱말 사전만 보면 그런 표가 통째로 버려진다(3276·3983).
-                if mul and (AMOUNT_LABEL.search(lab or "") or "円" in rowtext):
-                    amounts.append((lab or title_metric, unit, mul, vals))
-                elif cap_mul and tm and WEAK_LABEL.fullmatch(lab or ""):
-                    # 이름표가 약하고 줄에도 단위가 없다 — 그래도 **표 바깥 단위·
-                    # 공시 제목의 '매출'·머리줄 아래 첫 줄** 셋이 함께 가리키면
-                    # 금액 줄로 본다(스기HD 의 「26年3月…」 표가 그랬다).
-                    # 셋 중 하나라도 없으면 담지 않는다.
-                    amounts.append((lab or title_metric, cap_unit, cap_mul, vals))
+                continue
+            unit, mul = _unit(lab, rowtext)
+            if not mul and k + 1 < len(table):
+                # 단위가 값 **아래** 줄에 적히는 표(7185). 「単位」라고 적힌
+                # 줄만 본다 — 아무 아랫줄이나 보면 다음 표의 단위를 끌어온다.
+                nxt = "".join(_norm(t) for _x, t in table[k + 1])
+                if "単位" in nxt:
+                    unit, mul = _unit(nxt)
+            # **이름표가 약해도 줄에 통화 단위가 있으면 금액 줄이다.**
+            # 값 줄의 이름표가 결산기(「2026年12月期」)뿐인 공시가 흔한데,
+            # 낱말 사전만 보면 그런 표가 통째로 버려진다(3276·3983).
+            if mul and (AMOUNT_LABEL.search(lab or "") or "円" in rowtext):
+                amounts.append((lab or title_metric, unit, mul, vals))
+            elif cap_mul and tm and WEAK_LABEL.fullmatch(lab or ""):
+                # 이름표가 약하고 줄에도 단위가 없다 — 그래도 **표 바깥 단위·
+                # 공시 제목의 '매출'·머리줄 아래 첫 줄** 셋이 함께 가리키면
+                # 금액 줄로 본다(스기HD 의 「26年3月…」 표가 그랬다).
+                # 셋 중 하나라도 없으면 담지 않는다.
+                amounts.append((lab or title_metric, cap_unit, cap_mul, vals))
+            elif cap_yoy and not mul and AMOUNT_LABEL.search(lab or "") \
+                    and not lab_has_other(lab):
+                # 표 제목이 「前年比の推移」인데 값 줄에는 '전년'이 없는 표.
+                # 매출 낱말 이름표에만 건다 — 같은 표의 객수·가동률 줄이
+                # 딸려 들어오면 그게 더 나쁜 거짓말이다.
+                if DELTA_LABEL.search(lab) or _looks_delta(vals):
+                    vals = {k2: v + 100.0 for k2, v in vals.items()}
+                yoys.append((lab, vals))
         if not amounts and not yoys:
             continue
         # **가장 꽉 찬 표를 고르면 안 된다.** 지난 회계연도 표는 열두 달이 다
