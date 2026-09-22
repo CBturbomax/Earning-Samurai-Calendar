@@ -240,17 +240,30 @@ TITLE_ALL = re.compile(r"全店[^、。]*?([\d.]+)[%％](増|減)")
 
 
 def _check(title, got):
-    """기사 제목의 수치와 표의 마지막 달이 맞는가. 안 맞으면 그 표가 아니다."""
+    """기사 제목의 수치와 표의 마지막 달이 맞는가. 안 맞으면 그 표가 아니다.
+
+    **하나라도 맞고 어긋나는 것이 없어야** 받는다. 제목이 既存店 을 말하는데
+    표에 既存店 열이 없으면(全店 만 있는 기사) 그것으로 버리지 않고 全店 쪽을
+    본다 — 검산은 엉뚱한 표를 거르자는 것이지 멀쩡한 표를 버리자는 게 아니다.
+    """
     t = title.translate(ZEN)
+    hit = bad = 0
     for pat, key in ((TITLE_SAME, "same"), (TITLE_ALL, "all")):
         m = pat.search(t)
-        if not m:
+        have = got.get(key)
+        if not m or have is None:
             continue
         want = 100.0 + (float(m.group(1)) if m.group(2) == "増"
                         else -float(m.group(1)))
-        have = got.get(key)
-        return have is not None and abs(have - want) < 0.05
-    return True                       # 제목에 수치가 없으면 검산할 것이 없다
+        if abs(have - want) < 0.05:
+            hit += 1
+        else:
+            bad += 1
+    if hit or bad:
+        return hit > 0 and bad == 0
+    # 제목의 수치와 견줄 열이 하나도 없다. 제목에 수치가 아예 없으면 검산할
+    # 것이 없으니 받고, 수치가 있는데 못 견줬으면 **그 표가 아닌 것**으로 본다.
+    return not (TITLE_SAME.search(t) or TITLE_ALL.search(t))
 
 
 def read(page: str, url: str):
