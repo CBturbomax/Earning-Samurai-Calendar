@@ -8,131 +8,121 @@ on:
 jobs:
   probe:
     runs-on: ubuntu-latest
-    timeout-minutes: 14
+    timeout-minutes: 20
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
         with:
           python-version: '3.12'
 
-      # 55차 — 월차Web(kabubiz) 의 진짜 속살을 본다.
-      # 54차에서 /getuji/ 목록만 두드려 "자료 없음" 으로 보였는데, 그건 들머리
-      # 한 장이었다. 실제 자료는 .php 여러 장에 흩어져 있다(rank_z · category/…).
-      # 표가 서버에서 그려져 오는지, 종목코드와 월별 수치가 같이 오는지 본다.
-      - name: 🗾 월차Web 속살 (55차)
-        timeout-minutes: 13
+      # 56차 — 우리가 '표없음' 으로 넘긴 209건이 정말 못 읽는 것인가.
+      # 55차에서 월차Web(kabubiz)이 여섯 주소 전부 timeout 이었다. 54차에는
+      # 들머리가 200·33KB 로 열렸으니 **두드리자마자 막힌 것**이다. 아무도
+      # 안 여는 소스에 매달리는 대신, 손에 있는 공시를 제대로 읽는 쪽을 잰다.
+      # 209건을 **전수로** 분류한다 — 글자가 없나(그림), 달이 세로로 섰나,
+      # 한 장에 한 달만 실렸나.
+      - name: 🔍 '표없음' 209건의 속 (56차)
+        timeout-minutes: 12
         run: |
-          python - <<'EOF'
-          import gzip, re, time, urllib.request, urllib.error, html as H
+          set -o pipefail
+          python - <<'EOF' 2>&1 | tail -400
+          import collections, json, re, time, urllib.request
+          import pdftext
 
-          UA = ("Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 "
-                "(KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36")
-          FULL = {
-              "User-Agent": UA,
-              "Accept": ("text/html,application/xhtml+xml,application/xml;q=0.9,"
-                         "image/avif,image/webp,*/*;q=0.8"),
-              "Accept-Language": "ja,en-US;q=0.9,en;q=0.8",
-              "Accept-Encoding": "gzip, deflate",
-              "Referer": "https://kabubiz.com/getuji/",
-              "Sec-Fetch-Dest": "document", "Sec-Fetch-Mode": "navigate",
-              "Sec-Fetch-Site": "same-origin",
-              "Upgrade-Insecure-Requests": "1", "Connection": "keep-alive",
-          }
+          rows = json.load(open("data/monthly_jp.json"))["rows"]
+          nums = json.load(open("data/monthly_nums_jp.json"))
+          skip = nums["skip"]
+          none = [r for r in rows if skip.get(r["doc"]) == "표없음"]
+          print(f"'표없음' {len(none)}건 — 전수로 뜯어 본다")
 
-          def get(url, extra=None, timeout=25):
-              h = dict(FULL)
-              if extra:
-                  h.update(extra)
+          MON = re.compile(r"^\(?(?:(?:\d{2}|\d{4})年)?(\d{1,2})月(度|分|期)?\)?$")
+          ZEN = str.maketrans("０１２３４５６７８９．％，－　", "0123456789.%,- ")
+          H = {"User-Agent": "Mozilla/5.0 (compatible; earnings-samurai/1.0)"}
+
+          def norm(s):
+              return s.translate(ZEN).replace(" ", "")
+
+          def classify(cells):
+              if not cells:
+                  return "글자없음", 0, 0
+              # 가로 이름표 줄
+              wide = 0
+              for row in cells:
+                  n = sum(1 for _, c in row if MON.fullmatch(norm(c)))
+                  wide = max(wide, n)
+              # 세로 이름표 열 — 줄의 **첫 칸**이 달인 줄
+              tall = sum(1 for row in cells
+                         if row and MON.fullmatch(norm(row[0][1])))
+              # 아무 데나 달 낱말
+              any_m = sum(1 for row in cells for _, c in row
+                          if MON.fullmatch(norm(c)))
+              if wide >= 3:
+                  return "가로표(왜 못읽었나)", wide, tall
+              if tall >= 3:
+                  return "세로표", wide, tall
+              if any_m >= 1:
+                  return f"달 {any_m}개뿐", wide, tall
+              return "달 표기 없음", wide, tall
+
+          cnt = collections.Counter()
+          shown = collections.Counter()
+          t0 = time.time()
+          for i, r in enumerate(none, 1):
+              if time.time() - t0 > 540:
+                  print(f"  …시간이 다 됐다. {i-1}건까지 봤다.")
+                  break
               try:
                   with urllib.request.urlopen(
-                          urllib.request.Request(url, headers=h), timeout=timeout) as r:
-                      raw = r.read()
-                      if r.headers.get("Content-Encoding") == "gzip":
-                          raw = gzip.decompress(raw)
-                      return r.status, raw
-              except urllib.error.HTTPError as e:
-                  return e.code, b""
+                          urllib.request.Request(r["doc"], headers=H),
+                          timeout=20) as f:
+                      pdf = f.read()
+                  cells = pdftext.extract_cells(pdf, 4)
               except Exception as e:
-                  return str(e)[:44], b""
+                  cnt["받기실패"] += 1
+                  continue
+              kind, wide, tall = classify(cells)
+              cnt[kind] += 1
+              # 갈래마다 셋씩만 속을 보여 준다
+              if shown[kind] < 3 and kind != "글자없음":
+                  shown[kind] += 1
+                  print(f"\n{'='*72}\n[{kind}] {r['code']} {r['name']} {r['period']}"
+                        f"  가로{wide} 세로{tall}")
+                  print(f"  {r['title'][:64]}")
+                  print(f"  {r['doc']}")
+                  for row in cells[:22]:
+                      print("   | " + "  ".join(c for _, c in row)[:120])
+              if i % 40 == 0:
+                  print(f"  …{i}건  {dict(cnt)}")
 
-          TAG = re.compile(r"<[^>]+>")
+          print("\n" + "=" * 72)
+          print("갈래별 건수")
+          for k, v in cnt.most_common():
+              print(f"  {k:22s} {v}")
+          EOF
 
-          def txt(s):
-              s = re.sub(r"(?is)<(script|style).*?</\1>", " ", s)
-              return re.sub(r"\s+", " ", H.unescape(TAG.sub(" ", s))).strip()
-
-          def tables(t):
-              return re.findall(r"(?is)<table[^>]*>(.*?)</table>", t)
-
-          def rows(tb):
-              out = []
-              for tr in re.findall(r"(?is)<tr[^>]*>(.*?)</tr>", tb):
-                  cells = [txt(c) for _, c in
-                           re.findall(r"(?is)<(t[dh])[^>]*>(.*?)</\1>", tr)]
-                  if cells:
-                      out.append(cells)
-              return out
-
-          def dump(name, url):
-              st, data = get(url)
-              t = data.decode("utf-8", "ignore") if data else ""
-              if not t:
-                  t = data.decode("shift_jis", "ignore") if data else ""
-              print(f"\n{'='*72}\n{name}  {url}\n  {st} · {len(data)//1024}KB")
-              if not t:
-                  return ""
-              # 인코딩 확인
-              cs = re.search(r'(?i)charset=["\']?([\w-]+)', t[:2000])
-              print(f"  charset={cs.group(1) if cs else '?'}  "
-                    f"낱말={[m for m in ('月次','既存店','全店','前年同月','売上高') if m in t]}")
-              tbs = tables(t)
-              print(f"  표 {len(tbs)}개")
-              for i, tb in enumerate(tbs):
-                  rs = rows(tb)
-                  if len(rs) < 3:
-                      continue
-                  print(f"  ── 표{i}: {len(rs)}행 x {max(len(r) for r in rs)}열")
-                  for r in rs[:4]:
-                      print("      " + " | ".join(x[:18] for x in r[:12]))
-                  if len(rs) > 4:
-                      print("      ...")
-                      print("      " + " | ".join(x[:18] for x in rs[-1][:12]))
-                  break
-              # 종목 상세로 가는 링크 모양
-              links = sorted(set(re.findall(r'href=["\']([^"\']*getuji[^"\']*)', t)))
-              print(f"  getuji 링크 {len(links)}개 (앞 8)")
-              for x in links[:8]:
-                  print("      " + x)
-              codes = sorted(set(re.findall(r"\b([0-9]{4}[0-9A-Z]?)\b",
-                                            " ".join(links))))
-              print(f"  링크 속 코드 같은 것 {len(codes)}개: {codes[:12]}")
-              return t
-
-          PAGES = [
-              ("들머리",        "https://kabubiz.com/getuji/"),
-              ("전점 랭킹",     "https://kabubiz.com/getuji/rank_z.php"),
-              ("기존점 전업종", "https://kabubiz.com/getuji/category/kison_all.php"),
-              ("식품·슈퍼",     "https://kabubiz.com/getuji/category/zen_food.php"),
-              ("외식 신착",     "https://kabubiz.com/getuji/category/new_eat.php"),
-              ("예정일 달력",   "https://kabubiz.com/getuji/category/calendar_other.php"),
-          ]
-          got = {}
-          for name, url in PAGES:
-              got[name] = dump(name, url)
-              time.sleep(0.8)
-
-          # 목록에서 찾은 종목 상세 주소를 실제로 하나 열어 본다
-          print(f"\n{'='*72}\n종목 상세 — 목록에서 찾은 주소를 그대로 연다")
-          cand = []
-          for t in got.values():
-              if t:
-                  cand += re.findall(r'href=["\']([^"\']*getuji[^"\']*\d{4}[^"\']*)', t)
-          cand = sorted(set(cand))[:4]
-          print(f"  후보 {len(cand)}: {cand}")
-          for c in cand[:3]:
-              u = c if c.startswith("http") else ("https://kabubiz.com" + c
-                                                  if c.startswith("/") else
-                                                  "https://kabubiz.com/getuji/" + c)
-              dump("  상세", u)
-              time.sleep(0.8)
+      # 월차Web 이 정말 막힌 것인지 **한 번만** 더 두드린다(더 두드리지 않는다).
+      - name: 🗾 월차Web 다시 한 번 (56차)
+        timeout-minutes: 3
+        run: |
+          python - <<'EOF'
+          import urllib.request, urllib.error
+          H = {"User-Agent": ("Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
+                              "AppleWebKit/537.36 (KHTML, like Gecko) "
+                              "Chrome/131.0.0.0 Safari/537.36"),
+               "Accept": "text/html,*/*;q=0.8",
+               "Accept-Language": "ja,en;q=0.8"}
+          for u in ("https://kabubiz.com/getuji/code/3333.php",
+                    "https://www.ryutsuu.biz/sales/"):
+              try:
+                  with urllib.request.urlopen(
+                          urllib.request.Request(u, headers=H), timeout=20) as r:
+                      d = r.read(400_000)
+                  print(f"  {u}  {r.status} · {len(d)//1024}KB")
+                  t = d.decode("utf-8", "ignore")
+                  print("     낱말:", [m for m in ("月次", "既存店", "全店",
+                                                   "前年同月", "売上高") if m in t])
+              except urllib.error.HTTPError as e:
+                  print(f"  {u}  {e.code}")
+              except Exception as e:
+                  print(f"  {u}  {type(e).__name__}: {str(e)[:40]}")
           EOF
