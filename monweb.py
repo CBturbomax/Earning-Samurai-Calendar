@@ -36,7 +36,7 @@ import html as _html
 import re
 from datetime import date
 
-__all__ = ["BRANDS", "read", "article_links", "older"]
+__all__ = ["BRANDS", "read", "article_links", "older", "url_ym"]
 
 # 브랜드/약칭 -> (종목코드, 상장사 이름). **아는 것만** 적는다.
 BRANDS = {
@@ -151,7 +151,12 @@ CELL_RE = re.compile(r"(?is)<(t[dh])([^>]*)>(.*?)</\1>")
 SPAN_RE = re.compile(r'(?i)\b(colspan|rowspan)\s*=\s*"?\'?(\d+)')
 TABLE_RE = re.compile(r"(?is)<table[^>]*>(.*?)</table>")
 MAIN_RE = re.compile(r"(?is)<main[^>]*>(.*?)</main>")
-LINK_RE = re.compile(r'href="(https://www\.ryutsuu\.biz/sales/s\d+\.html)"')
+# **기사 주소의 앞글자는 해마다 바뀐다** — 2024 는 q, 2025 는 r, 2026 은 s
+# (`/sales/q013144.html`). 한동안 `s` 만 찾고 있었는데, 그래서 목록 9쪽부터
+# (2025년 기사부터) 링크가 0건이 되어 수집기가 **거기가 끝인 줄 알고 멈췄다.**
+# 실제로는 80쪽에도 기사가 50건씩 있다(72차 실측). 글자 하나가 이력 전체를
+# 막고 있었다 — 앞글자를 가리지 말 것.
+LINK_RE = re.compile(r'href="(https://www\.ryutsuu\.biz/sales/[a-z]\d+\.html)"')
 DATE_RE = re.compile(r"(20\d{2})年\s*(\d{1,2})月\s*(\d{1,2})日")
 MONTH_CELL = re.compile(r"^\(?(\d{1,2})月(度|分)?\)?$")
 # 「2.0％増」·「1.3%減」. 「横ばい」·「－」 는 담지 않는다 — 0 인지 없는 것인지 모른다.
@@ -162,6 +167,32 @@ ZEN = str.maketrans("０１２３４５６７８９．％，－　", "0123456789
 def _txt(s: str) -> str:
     s = re.sub(r"(?is)<(script|style)[^>]*>.*?</\1>", " ", s)
     return re.sub(r"\s+", " ", _html.unescape(TAG.sub("", s))).strip()
+
+
+ART_DATE = re.compile(r"/([a-z])(\d+)\.html$")
+
+
+def url_ym(u: str):
+    """기사 주소에서 **연·월**을 읽는다. 없으면 None.
+
+    두 꼴이 있다. `q013144`(앞글자가 해 · 그 뒤 MMDD+일련번호)와
+    `r20250630001`(앞글자 뒤에 YYYYMMDD 가 통째로). 앞글자는 2024 가 q 이고
+    한 해에 한 글자씩 나아간다 — 71·72차에 세 해를 직접 확인했다.
+
+    거슬러 갈 끝을 정하는 데 쓴다. 주소만 보고 알 수 있으므로 **받아 보지
+    않고** 2024년 1월보다 옛 기사를 걸러낼 수 있다.
+    """
+    m = ART_DATE.search(u)
+    if not m:
+        return None
+    ch, ds = m.group(1), m.group(2)
+    if len(ds) >= 8 and 2000 <= int(ds[:4]) <= 2099:
+        y, mo = int(ds[:4]), int(ds[4:6])
+    else:
+        y, mo = 2024 + (ord(ch) - ord("q")), int(ds[:2])
+    if not 1 <= mo <= 12 or not 2015 <= y <= 2099:
+        return None
+    return y, mo
 
 
 def article_links(page_html: str):
@@ -175,7 +206,7 @@ def article_links(page_html: str):
 
 
 SALES_LINK = re.compile(
-    r'<a[^>]+href="(https://www\.ryutsuu\.biz/sales/s\d+\.html)"[^>]*>(.*?)</a>',
+    r'<a[^>]+href="(https://www\.ryutsuu\.biz/sales/[a-z]\d+\.html)"[^>]*>(.*?)</a>',
     re.S)
 
 
@@ -582,6 +613,23 @@ def _selftest():                                          # pragma: no cover
     </table></main></html>"""
     if read(i, "u"):
         print("!! 아) 세그먼트 표를 집었다", read(i, "u"))
+        ok = False
+
+    # (자) 기사 주소의 **앞글자가 해**다. 여기를 놓치면 목록 9쪽부터 링크가
+    #      0건이 되어 수집기가 "끝"이라 적고 이력이 통째로 막힌다.
+    B = "https://www.ryutsuu.biz/sales/"
+    for u, want in ((B + "q013144.html", (2024, 1)),
+                    (B + "r063072.html", (2025, 6)),
+                    (B + "r20250630001.html", (2025, 6)),
+                    (B + "s091872.html", (2026, 9)),
+                    (B + "p120144.html", (2023, 12))):
+        if url_ym(u) != want:
+            print("!! 자) 주소에서 연·월", u, url_ym(u), "≠", want)
+            ok = False
+    got = article_links(' '.join(f'href="{B}{x}.html"'
+                                 for x in ("q013144", "r063072", "s091872")))
+    if len(got) != 3:
+        print("!! 자) 해 지난 기사 링크를 놓쳤다", got)
         ok = False
 
     print("monweb 스스로 시험:", "통과" if ok else "떨어짐")
