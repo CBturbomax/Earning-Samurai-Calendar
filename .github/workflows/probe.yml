@@ -15,14 +15,14 @@ jobs:
         with:
           python-version: '3.12'
 
-      # 62차 — 새 수집기를 **실제로 돌려 본다**(여기서는 커밋하지 않는다).
+      # 63차 — 새 수집기를 **실제로 돌려 본다**(여기서는 커밋하지 않는다).
       # 몇 종목·몇 달이 들어오나, 브랜드를 잘못 이은 것은 없나 눈으로 본다.
-      - name: 🏬 流通ニュース 수집기 시운전 (62차)
-        timeout-minutes: 14
+      - name: 🏬 流通ニュース 수집기 시운전 (63차)
+        timeout-minutes: 6
         env:
-          WEB_PER_RUN: '220'
-          WEB_SECS: '540'
-          WEB_DEEP: '14'
+          WEB_PER_RUN: '55'
+          WEB_SECS: '170'
+          WEB_DEEP: '2'
         run: |
           set -o pipefail
           python monweb.py
