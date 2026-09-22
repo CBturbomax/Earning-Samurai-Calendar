@@ -40,6 +40,10 @@ REF_RE = re.compile(rb"(\d+)\s+\d+\s+R")
 RES_REF_RE = re.compile(rb"/Resources\s+(\d+)\s+\d+\s+R")
 ONE_BYTE_RE = re.compile(rb"begincodespacerange\s*<([0-9A-Fa-f]+)>")
 
+# 칸을 가를 때 **진짜 글자폭**을 쓸 것인가. 끄면 옛 어림('글자 크기의 절반')
+# 으로 돌아간다 — 어느 쪽이 더 많이 읽히는지 재 보려고 남겨 둔 손잡이다.
+ADV = True
+
 
 ENC_RE = re.compile(rb"/Encrypt\s+\d+\s+\d+\s+R")
 
@@ -545,7 +549,7 @@ def extract_cells(data: bytes, max_pages: int = 40):
                 if not cur:
                     cx0 = x
                 cur += txt
-                cx = x + adv                     # 진짜 글자폭으로 잰 다음 자리
+                cx = x + (adv if ADV else len(txt) * size * 0.5)
                 csz = size
             if cur:
                 cells.append((round(cx0, 1), cur))

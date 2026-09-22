@@ -15,85 +15,80 @@ jobs:
         with:
           python-version: '3.12'
 
-      # 59차 — 58차에서 52종목·288달로 늘었지만 **두 종목(2674·9832)이 사라졌고**
-      # 아즈원(7476)의 달이 띄엄띄엄이라(2025-05·09·10·2026-01) 미심쩍다.
-      # 늘어난 것만 세고 넘어가면 조용히 틀린 값을 싣는다. 눈으로 본다.
-      - name: 🔎 사라진 둘과 미심쩍은 하나 (59차)
-        timeout-minutes: 6
+      # 60차 — 칸을 가를 때 **진짜 글자폭**을 쓰는 것이 나은가 옛 어림이 나은가.
+      # 59차에서 하드오프(2674)의 머리줄 「2026年４月2026年５月…」 이 한 칸으로
+      # 뭉쳐 통째로 안 읽혔다. 전각에서 폭이 커져 칸이 덜 갈린 것이다. 한 번
+      # 받아 두 판으로 뜯어 **같은 자료에서** 견준다.
+      - name: ⚖ 글자폭 켜고 끄고 (60차)
+        timeout-minutes: 15
         run: |
-          python - <<'EOF'
-          import json, urllib.request
+          set -o pipefail
+          python - <<'EOF' 2>&1 | tail -220
+          import json, time, urllib.request
           import pdftext, montable
 
           rows = json.load(open("data/monthly_jp.json"))["rows"]
+          old = json.load(open("data/monthly_nums_jp.json"))
+          had = set(old["codes"])
           H = {"User-Agent": "Mozilla/5.0 (compatible; earnings-samurai/1.0)"}
-          WANT = ("2674", "9832", "7476")
-          for r in rows:
-              if r["code"] not in WANT:
-                  continue
-              try:
-                  with urllib.request.urlopen(
-                          urllib.request.Request(r["doc"], headers=H),
-                          timeout=20) as f:
-                      pdf = f.read()
-              except Exception as e:
-                  print(f"{r['code']} 받기실패 {e}")
-                  continue
-              print(f"\n{'='*72}\n{r['code']} {r['name']} {r['period']} {r['date']}")
-              print(f"  {r['title'][:66]}")
-              got = montable.read(pdf, r["date"], 12, r["title"])
-              print(f"  -> {json.dumps(got, ensure_ascii=False)[:420] if got else None}")
-              for row in pdftext.extract_cells(pdf, 3)[:30]:
-                  print("   | " + "  ".join(c for _, c in row)[:120])
-          EOF
+          WATCH = ("2674", "9832", "7476", "6627", "7685", "7134", "7649", "7185")
 
-      # 59차 (나) — 새로 읽힌 것 전부를 종목별로 늘어놓는다. 달이 이어지는지,
-      # 값이 그럴듯한지 눈으로 본다. 여기서 이상한 것을 못 보면 화면에 실린다.
-      - name: 👀 새로 읽힌 것 전부 (59-나)
-        timeout-minutes: 13
-        run: |
-          set -o pipefail
-          python - <<'EOF' 2>&1 | tail -300
-          import json, time, urllib.request
-          import montable
-
-          rows = json.load(open("data/monthly_jp.json"))["rows"]
-          old = set(json.load(open("data/monthly_nums_jp.json"))["codes"])
-          H = {"User-Agent": "Mozilla/5.0 (compatible; earnings-samurai/1.0)"}
-          got = {}
+          out = {True: {}, False: {}}
           t0 = time.time()
+          n = 0
           for r in rows:
-              if time.time() - t0 > 640:
-                  print("  …시간이 다 됐다")
+              if time.time() - t0 > 760:
+                  print(f"  …시간이 다 됐다({n}/{len(rows)})")
                   break
               try:
                   with urllib.request.urlopen(
                           urllib.request.Request(r["doc"], headers=H),
                           timeout=20) as f:
                       pdf = f.read()
-                  res = montable.read(pdf, r["date"], 12, r["title"])
               except Exception:
                   continue
-              if not res:
-                  continue
-              rec = got.setdefault(r["code"], {"n": r["name"], "m": {}, "t": r["title"]})
-              rec["lab"] = res.get("amount_label", "")
-              rec["y"] = res.get("yoy_label", "")
-              for x in res["rows"]:
-                  rec["m"][x["period"]] = (x.get("rev"), x.get("yoy"), x.get("unit", ""))
-          print(f"종목 {len(got)} · 달 {sum(len(v['m']) for v in got.values())}")
-          for c in sorted(got, key=lambda c: (c in old, c)):
-              v = got[c]
-              mark = "헌" if c in old else "새"
-              ms = sorted(v["m"])
-              gap = ""
-              if len(ms) > 1:
-                  n = [int(x[:4]) * 12 + int(x[5:]) for x in ms]
-                  if max(n) - min(n) + 1 != len(n):
-                      gap = "  ⚠달이 띄엄띄엄"
-              print(f"\n[{mark}] {c} {v['n']} · 금액={v['lab']!r} 전년비={v['y']!r}{gap}")
-              print(f"     {v['t'][:60]}")
-              print("     " + " ".join(
-                  f"{m[2:]}:{('%.4g' % r) if r else '-'}/{('%.1f' % y) if y else '-'}"
-                  for m in ms for r, y, _u in [v["m"][m]]))
+              n += 1
+              for adv in (True, False):
+                  pdftext.ADV = adv
+                  try:
+                      res = montable.read(pdf, r["date"], 12, r["title"])
+                  except Exception:
+                      res = None
+                  if not res:
+                      continue
+                  rec = out[adv].setdefault(r["code"], {"n": r["name"], "m": {}})
+                  rec["lab"] = res.get("amount_label", "")
+                  rec["y"] = res.get("yoy_label", "")
+                  for x in res["rows"]:
+                      rec["m"][x["period"]] = (x.get("rev"), x.get("yoy"))
+                  if r["code"] in WATCH:
+                      rec.setdefault("dbg", []).append(
+                          (adv, res.get("amount_label"), res.get("yoy_label"),
+                           [(x["period"], x.get("rev"), x.get("yoy"))
+                            for x in res["rows"][:4]]))
+
+          for adv in (True, False):
+              g = out[adv]
+              print(f"\n글자폭 {'켬' if adv else '끔'}: 종목 {len(g)} · "
+                    f"달 {sum(len(v['m']) for v in g.values())} · "
+                    f"헌 것 중 사라진 것 {sorted(had - set(g))}")
+          a, b = set(out[True]), set(out[False])
+          print(f"\n켰을 때만: {sorted(a - b)}")
+          print(f"껐을 때만: {sorted(b - a)}")
+
+          print("\n" + "=" * 72)
+          print("눈여겨보는 종목")
+          for c in WATCH:
+              for adv in (True, False):
+                  v = out[adv].get(c)
+                  tag = "켬" if adv else "끔"
+                  if not v:
+                      print(f"  {c} {tag}: 못 읽음")
+                      continue
+                  ms = sorted(v["m"])
+                  print(f"  {c} {v['n']} {tag}: 금액={v['lab']!r} 전년비={v['y']!r}")
+                  print("      " + " ".join(
+                      f"{m[2:]}:{('%.4g' % x) if x else '-'}/"
+                      f"{('%.1f' % y) if y else '-'}"
+                      for m in ms for x, y in [v["m"][m]]))
           EOF

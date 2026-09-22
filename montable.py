@@ -58,6 +58,13 @@ PCT = re.compile(r"[%％]")
 CAP_YOY = re.compile(r"前年比|前年同月比|前年同期比|対前年|昨対|"
                      r"ChangeOverPreviousYear")
 
+# **표가 스스로 「단위」를 적어 두는데 그것이 돈이 아니면 매출이 아니다.**
+# 아즈원(7476)의 「※参考 営業日数（単位：日）」 표에서 「前年同月比 ±0 △2
+# +1」 을 집어 98%·99% 로 실었다 — 날수 차이지 매출이 아니다. 요시크스의
+# 「（単位：店）」(점포수)·오토서버의 「単位：台」(대수)·오로의 「（単位：千
+# ライセンス）」도 같은 자리다. 적어 둔 단위에 円 이 없으면 그 표를 안 본다.
+UNIT_DECL = re.compile(r"単位[：:]([^)）]{0,8})")
+
 # 누계·예상은 그 달의 값이 아니다. 회사 정보 줄(2654 의 「株式会社」)도 아니다 —
 # 표가 아닌 줄에 달 이름표가 우연히 걸린 것이라, 그대로 두면 아무 숫자나 실린다.
 SKIP_LABEL = re.compile(r"累計|累積|予想|計画|見通|通期|上期|下期|前年同月の|前期|"
@@ -279,9 +286,16 @@ def read(data: bytes, ann: str, max_pages: int = 12, title: str = ""):
         # 통째로 버려진다. 머리줄과 그 위 두 줄까지 본다.
         cap_txt = "".join(_norm(t) for row in table[max(0, i - 2):i + 1]
                           for _x, t in row)
+        decl = UNIT_DECL.search(cap_txt)
+        if decl and "円" not in decl.group(1):
+            continue
         cap_unit, cap_mul = _unit(cap_txt)
-        cap_yoy = bool(CAP_YOY.search(cap_txt))
-        amounts, yoys = [], []
+        # 표 바깥에 돈 단위가 적혀 있으면 그 표의 숫자는 **돈**이다.
+        # 그럴 때는 제목이 「前年比」라 해도 값 줄을 비율로 읽지 않는다 —
+        # 테라프로브(6627)·바이셀(7685)·업개러지(7134)의 백만엔 금액이
+        # 전년비 칸에 실려 4,124% 같은 값이 나왔다.
+        cap_yoy = bool(CAP_YOY.search(cap_txt)) and not cap_mul
+        amounts, yoys, cap_yoys = [], [], []
         # **이름과 숫자가 다른 줄에 찍히는 공시가 많다.** 실측: '표없음'으로
         # 버린 209건 중 **92건**이 이것 하나였다. 히로세통상(7185)이 그 꼴이다.
         #
@@ -334,11 +348,14 @@ def read(data: bytes, ann: str, max_pages: int = 12, title: str = ""):
             # 낱말 사전만 보면 그런 표가 통째로 버려진다(3276·3983).
             if mul and (AMOUNT_LABEL.search(lab or "") or "円" in rowtext):
                 amounts.append((lab or title_metric, unit, mul, vals))
-            elif cap_mul and tm and WEAK_LABEL.fullmatch(lab or ""):
-                # 이름표가 약하고 줄에도 단위가 없다 — 그래도 **표 바깥 단위·
-                # 공시 제목의 '매출'·머리줄 아래 첫 줄** 셋이 함께 가리키면
-                # 금액 줄로 본다(스기HD 의 「26年3月…」 표가 그랬다).
-                # 셋 중 하나라도 없으면 담지 않는다.
+            elif cap_mul and (AMOUNT_LABEL.search(lab or "")
+                              and not lab_has_other(lab)
+                              or tm and WEAK_LABEL.fullmatch(lab or "")):
+                # 줄에는 단위가 없지만 **표 바깥에 돈 단위가 적혀 있다.**
+                # 이름표가 매출 낱말이면 그대로 금액 줄이다(테라프로브 6627 의
+                # 「月次売上高 4,124 …」 는 백만엔이지 4,124% 가 아니다).
+                # 이름표가 결산기뿐일 만큼 약할 때는 **공시 제목에도 '매출'이
+                # 적혀 있을 때만** 담는다(스기HD 의 「26年3月…」 표).
                 amounts.append((lab or title_metric, cap_unit, cap_mul, vals))
             elif cap_yoy and not mul and AMOUNT_LABEL.search(lab or "") \
                     and not lab_has_other(lab):
@@ -347,7 +364,11 @@ def read(data: bytes, ann: str, max_pages: int = 12, title: str = ""):
                 # 딸려 들어오면 그게 더 나쁜 거짓말이다.
                 if DELTA_LABEL.search(lab) or _looks_delta(vals):
                     vals = {k2: v + 100.0 for k2, v in vals.items()}
-                yoys.append((lab, vals))
+                cap_yoys.append((lab, vals))
+        # 제목만 보고 읽은 줄은 **마지막 수단**이다. 같은 표에서 금액 줄이나
+        # 제대로 된 전년비 줄을 찾았으면 그쪽이 옳다.
+        if not amounts and not yoys:
+            yoys = cap_yoys
         if not amounts and not yoys:
             continue
         # **가장 꽉 찬 표를 고르면 안 된다.** 지난 회계연도 표는 열두 달이 다
@@ -393,3 +414,120 @@ def read(data: bytes, ann: str, max_pages: int = 12, title: str = ""):
     return {"rows": out,
             "amount_label": amt[0][:24] if amt else "",
             "yoy_label": yoy[0][:24] if yoy else ""}
+
+
+# ── 스스로 시험 ─────────────────────────────────────────────────────────────
+# `python montable.py` — 밖으로 못 나가는 자리라 **손으로 PDF 를 만들어** 본다.
+# 여기 세 꼴은 실제 공시에서 겪은 것이다: 이름표가 값 줄 위에 따로 서고 단위가
+# 값 줄 아래에 적히는 표(히로세통상 7185), 표 제목만 「前年比」인 표(스기HD
+# 7649), 그리고 **집으면 안 되는** 가동률 표(9163·7059).
+def _selftest():                                          # pragma: no cover
+    _chars = ("0123456789,.()%１２３４５６７８９０ ："
+              "月営業収益単位百万千円前年比の推移全店売上高客数稼働率既存"
+              "参考日数当期次△±")
+    code = {c: 33 + i for i, c in enumerate(dict.fromkeys(_chars))}
+
+    def _add(t):                       # 시험 글월에 쓰인 글자를 그때그때 담는다
+        for c in t:
+            code.setdefault(c, 33 + len(code))
+
+    def _pdf(lines):
+        cm = (b"/CIDInit /ProcSet findresource begin\n12 dict begin begincmap\n"
+              b"1 begincodespacerange\n<00> <FF>\nendcodespacerange\n"
+              b"%d beginbfchar\n" % len(code)
+              + b"".join(b"<%02X> <%s>\n"
+                         % (v, c.encode("utf-16-be").hex().upper().encode())
+                         for c, v in sorted(code.items(), key=lambda kv: kv[1]))
+              + b"endbfchar\nendcmap\nend end\n")
+        for _y, cells in lines:
+            for _x, t in cells:
+                _add(t)
+        cs = [b"BT\n/F1 10 Tf\n"]
+        for y, cells in lines:
+            for x, t in cells:
+                cs.append(b"1 0 0 1 %d %d Tm (%s) Tj\n"
+                          % (x, y, bytes(code[c] for c in t)
+                             .replace(b"\\", b"\\\\").replace(b"(", b"\\(")
+                             .replace(b")", b"\\)")))
+        cs = b"".join(cs) + b"ET\n"
+        objs = [
+            b"<< /Type /Catalog /Pages 2 0 R >>",
+            b"<< /Type /Pages /Kids [3 0 R] /Count 1 >>",
+            b"<< /Type /Page /Parent 2 0 R /MediaBox [0 0 612 792] /Resources "
+            b"<< /Font << /F1 4 0 R >> >> /Contents 6 0 R >>",
+            b"<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica /FirstChar 32 "
+            b"/LastChar 126 /Widths [" + b" ".join(b"600" for _ in range(95))
+            + b"] /ToUnicode 5 0 R >>",
+            b"<< /Length %d >>\nstream\n" % len(cm) + cm + b"\nendstream",
+            b"<< /Length %d >>\nstream\n" % len(cs) + cs + b"\nendstream",
+        ]
+        return (b"%PDF-1.4\n"
+                + b"".join(b"%d 0 obj\n" % i + o + b"\nendobj\n"
+                           for i, o in enumerate(objs, 1))
+                + b"trailer << /Root 1 0 R >>\n%%EOF\n")
+
+    hdr = [(100, "１月"), (140, "２月"), (180, "３月"), (220, "４月")]
+    ok = True
+
+    # 가) 이름표는 값 줄 **위**에, 단위는 값 줄 **아래**에.
+    a = read(_pdf([(700, hdr), (680, [(40, "営業収益")]),
+                   (660, [(100, "749"), (140, "832"), (180, "1,026"),
+                          (220, "1,096")]),
+                   (640, [(40, "(単位：百万円)")])]),
+             "2026-05-10", 4, "2026年4月度 月次売上速報")
+    if not a or len(a["rows"]) != 4 or a["rows"][0].get("rev") != 749e6:
+        print("!! 가) 이름표 물려주기·아랫줄 단위", a)
+        ok = False
+
+    # 나) 표 제목만 「前年比」 — 매출 줄만 담고 객수 줄은 안 담는다.
+    b = read(_pdf([(720, [(40, "前年比の推移")]), (700, hdr),
+                   (680, [(40, "全店売上高")]),
+                   (660, [(100, "108.5"), (140, "108.2"), (180, "109.3"),
+                          (220, "104.5")]),
+                   (640, [(40, "全店客数")]),
+                   (620, [(100, "101.1"), (140, "100.2"), (180, "99.3"),
+                          (220, "98.5")])]),
+             "2026-05-10", 4, "2026年4月度 月次速報")
+    if not b or len(b["rows"]) != 4 or abs(b["rows"][0].get("yoy", 0) - 108.5) > .01 \
+            or "客数" in (b.get("yoy_label") or ""):
+        print("!! 나) 제목이 전년비인 표", b)
+        ok = False
+
+    # 다) 가동률은 백분율이지만 전년비가 아니다. 집으면 안 된다.
+    c = read(_pdf([(700, hdr), (680, [(40, "稼働率")]),
+                   (660, [(100, "74.8"), (140, "75.2"), (180, "80.1"),
+                          (220, "78.5")])]),
+             "2026-05-10", 4, "2026年4月度 月次")
+    if c:
+        print("!! 다) 가동률을 집었다", c)
+        ok = False
+
+    # 라) 표가 「（単位：日）」 라고 적었으면 그 숫자는 매출이 아니다.
+    d = read(_pdf([(720, [(40, "参考 営業日数")]), (710, [(40, "(単位：日)")]),
+                   (700, hdr), (680, [(40, "当期")]),
+                   (660, [(100, "21"), (140, "18"), (180, "22"), (220, "22")]),
+                   (640, [(40, "前年同月比")]),
+                   (620, [(100, "0"), (140, "2"), (180, "1"), (220, "0")])]),
+             "2026-05-10", 4, "2026年4月度 月次業績")
+    if d:
+        print("!! 라) 영업일수 표를 집었다", d)
+        ok = False
+
+    # 마) 제목이 「前年比」여도 표에 돈 단위가 적혀 있으면 그 숫자는 **돈**이다.
+    e = read(_pdf([(730, [(40, "前年比")]), (720, [(40, "(単位：百万円)")]),
+                   (700, hdr), (680, [(40, "月次売上高")]),
+                   (660, [(100, "4,124"), (140, "4,088"), (180, "4,509"),
+                          (220, "4,541")])]),
+             "2026-05-10", 4, "2026年4月度 月次売上高")
+    if not e or e["rows"][0].get("yoy") is not None \
+            or e["rows"][0].get("rev") != 4124e6:
+        print("!! 마) 백만엔 금액이 전년비로 실렸다", e)
+        ok = False
+
+    print("montable 스스로 시험:", "통과" if ok else "떨어짐")
+    return 0 if ok else 1
+
+
+if __name__ == "__main__":                                # pragma: no cover
+    import sys as _sys
+    _sys.exit(_selftest())
