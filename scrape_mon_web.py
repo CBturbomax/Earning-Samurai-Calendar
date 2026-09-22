@@ -37,7 +37,7 @@ OUT = HERE / "data" / "monthly_web_jp.json"
 VER = 1
 # 읽는 규칙의 판. 올리면 **본 기사 기록만** 비우고 모아둔 값은 그대로 둔다 —
 # 창 밖으로 밀려난 달을 영영 잃지 않기 위해서다(월매출 수치 쪽과 같은 규칙).
-RULE_VER = 1
+RULE_VER = 2
 
 BASE = "https://www.ryutsuu.biz/sales/"
 UA = {"User-Agent": ("Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
