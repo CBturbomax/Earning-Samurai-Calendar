@@ -112,19 +112,10 @@ def _years(cols, filled, ann: date, given=None):
 
 
 def _headers(cells):
-    """달 이름표 줄이면 [(x, 달, 해 또는 None)] 을 준다. 아니면 None.
-
-    **「6」과 「月」이 다른 칸으로 갈라져 오는 공시가 있다**(아스쿨 2678 의
-    「6 月 7 月 8 月」). 그러면 한 칸도 달로 안 읽혀 그 표가 통째로 버려진다.
-    그래서 옆 칸과 붙여서도 본다 — MONTH_HDR 이 통째로(^…$) 맞아야 하는
-    규칙이라 「月7」 같은 엉뚱한 짝은 저절로 걸러진다.
-    """
+    """달 이름표 줄이면 [(x, 달, 해 또는 None)] 을 준다. 아니면 None."""
     got = []
-    for k, (x, t) in enumerate(cells):
-        s = _norm(t)
-        m = MONTH_HDR.match(s)
-        if not m and k + 1 < len(cells):
-            m = MONTH_HDR.match(s + _norm(cells[k + 1][1]))
+    for x, t in cells:
+        m = MONTH_HDR.match(_norm(t))
         if m and 1 <= int(m.group(2)) <= 12:
             y = m.group(1)
             if y is not None:
