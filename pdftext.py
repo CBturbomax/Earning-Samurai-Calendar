@@ -474,20 +474,37 @@ def _run(content: bytes, fonts: dict, res: dict):
             if o in ("'", '"'):
                 tlm = _mul((1.0, 0.0, 0.0, 1.0, 0.0, -lead), tlm)
                 tm = tlm
-            txt, adv = "", 0.0
-            # TJ 배열의 음수는 글자 사이를 좁히는 값이다(1/1000 em). 표에서는
-            # 이것이 칸 사이의 빈틈으로 오는 일이 있어 가로 자리에 같이 넣는다.
+            # **TJ 배열은 크게 건너뛰는 자리에서만 쪼갠다.**
+            # 통째로 한 자리에 내면 표의 칸이 붙는다 — ABC마트(2670)의
+            # 「-6.66.77.0」, 하드오프의 「100.8 92.1 104.1 128.4」 가 그렇게
+            # 한 칸이 되어 어느 달 값인지 알 수 없었다(73차에 89건을 뜯어
+            # 보고 찾았다). 반대로 조각마다 무조건 쪼개도 깨진다 — 스기HD
+            # (7649)의 머리줄 「26年3月」 에서 `月` 이 떨어져 나가 다음 칸에
+            # 붙었고 그 공시가 통째로 안 읽혔다(75차).
+            # 배열의 음수는 1/1000 em 이다. 낱말 안의 커닝은 몇십이고 칸
+            # 사이는 천 단위라, **0.25 em 을 넘게 건너뛸 때만** 칸을 끊는다.
+            buf, bx, by, bsz = "", 0.0, 0.0, size
+
+            def _flush():
+                nonlocal buf
+                if buf.strip():
+                    out.append((round(by, 1), round(bx, 1), buf, bsz))
+                buf = ""
+
             for kind, v in stack:
                 if kind == "s":
-                    t, codes = _decode(v, cmap, nb)
-                    txt += t
-                    adv += sum(wmap.get(c, dw) for c in codes) / 1000.0 * size
+                    txt, codes = _decode(v, cmap, nb)
+                    if not buf:
+                        a, b, c, d, e, f = _mul(tm, ctm)
+                        bx, by, bsz = e, f, size * abs(d or 1.0)
+                    buf += txt
+                    adv = sum(wmap.get(c, dw) for c in codes) / 1000.0 * size
+                    tm = _mul((1.0, 0.0, 0.0, 1.0, adv, 0.0), tm)
                 elif kind == "n" and o == "TJ":
-                    adv -= v / 1000.0 * size
-            if txt.strip():
-                a, b, c, d, e, f = _mul(tm, ctm)
-                out.append((round(f, 1), round(e, 1), txt, size * abs(d or 1.0)))
-                tm = _mul((1.0, 0.0, 0.0, 1.0, adv, 0.0), tm)
+                    if -v >= 250:
+                        _flush()
+                    tm = _mul((1.0, 0.0, 0.0, 1.0, -v / 1000.0 * size, 0.0), tm)
+            _flush()
         stack = []
     return out
 

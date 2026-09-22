@@ -39,7 +39,10 @@ jobs:
   monthly:
     runs-on: ubuntu-latest
     if: github.ref_name == 'main'
-    timeout-minutes: 20
+    # 두 수집기가 스스로 재는 시간을 더하면 10분 + 7분이다. 여기를 20분으로
+    # 두면 둘 다 제 예산을 다 쓰는 날 **일이 끝나기 전에 잘려** 그 실행의
+    # 커밋이 통째로 사라진다(수집기는 디스크에 저장했는데 되커밋을 못 한다).
+    timeout-minutes: 30
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
