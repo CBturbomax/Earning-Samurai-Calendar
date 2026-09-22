@@ -15,11 +15,11 @@ jobs:
         with:
           python-version: '3.12'
 
-      # 78차 — ％ 단위 표를 막던 규칙을 푼 뒤 A/B.
-      # 「（単位：日）」 를 막으려던 규칙이 「月次前年比（単位：％）」 까지 막아
-      # 워크맨(7564) 같은 **전년비만 내는 표**가 통째로 버려졌다(77차).
-      # pdftext 는 그대로이므로 montable 만 옛 판과 견준다.
-      - name: ⚖ ％ 단위 표 A/B (78차)
+      # 80차 — 세로 표 읽기 + 갈라진 달 머리줄 A/B.
+      # 79차에서 못 읽은 공시의 꼴을 봤다: 3093 은 달이 세로, 2678(ASKUL)은
+      # 「6」과 「月」이 다른 칸으로 갈라져 머리줄을 못 알아봤다. 둘을 고쳤으니
+      # 같은 공시에 옛 판과 나란히 돌려 잃는 것이 없는지 본다.
+      - name: ⚖ 세로 표 A/B (80차)
         timeout-minutes: 14
         run: |
           git fetch --depth=1 origin main
@@ -41,8 +41,8 @@ jobs:
 
           bad = [u for u, why in n["skip"].items() if why == "표없음"]
           good = list(n["done"])
-          docs = bad[:50] + good[:35]
-          print(f"표없음 {len(bad[:50])}건 + 잘 읽히던 {len(good[:35])}건")
+          docs = bad[:55] + good[:40]
+          print(f"표없음 {len(bad[:55])}건 + 잘 읽히던 {len(good[:40])}건")
 
           tot = {"old": [0, 0], "new": [0, 0]}
           diffs = []
@@ -54,8 +54,8 @@ jobs:
               except Exception as e:
                   print("!!", u[-18:], type(e).__name__, getattr(e, "code", ""))
                   continue
-              time.sleep(0.4)
-              got = {}
+              time.sleep(0.35)
+              got, first = {}, {}
               for tag, mod in (("old", old), ("new", montable)):
                   try:
                       res = mod.read(raw, r.get("date", "2026-09-01"),
@@ -64,17 +64,21 @@ jobs:
                       print("  ! 터짐", tag, u[-18:], type(e).__name__,
                             str(e)[:40])
                       res = None
-                  k = len((res or {}).get("rows") or [])
-                  got[tag] = k
-                  if k:
+                  rows = (res or {}).get("rows") or []
+                  got[tag] = len(rows)
+                  first[tag] = rows[0] if rows else None
+                  if rows:
                       tot[tag][0] += 1
-                      tot[tag][1] += k
+                      tot[tag][1] += len(rows)
               if got["old"] != got["new"]:
                   diffs.append((r.get("code", "?"), got["old"], got["new"],
-                                (r.get("title") or "")[:34]))
+                                (r.get("title") or "")[:30], first["new"]))
+              elif got["old"] and first["old"] != first["new"]:
+                  print(f"  △ 값이 바뀌었다 {r.get('code')} "
+                        f"{first['old']} -> {first['new']}")
           print(f"\n옛 판: 읽힌 공시 {tot['old'][0]} · 달 {tot['old'][1]}")
           print(f"새 판: 읽힌 공시 {tot['new'][0]} · 달 {tot['new'][1]}")
           print(f"\n달라진 공시 {len(diffs)}건 (줄어든 것이 먼저)")
-          for code, a, b, ti in sorted(diffs, key=lambda x: x[2] - x[1]):
-              print(f"   {code}  {a} -> {b}   {ti}")
+          for code, a, b, ti, f in sorted(diffs, key=lambda x: x[2] - x[1]):
+              print(f"   {code}  {a} -> {b}   {ti}   {f}")
           EOF
