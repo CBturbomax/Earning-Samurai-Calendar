@@ -15,62 +15,55 @@ jobs:
         with:
           python-version: '3.12'
 
-      # 69차 — 회원님: "숫자는 다 공개돼 있는데 왜 24년 1월부터 못 채우나."
-      # 태그 쪽은 9건뿐이고 쪽 넘김이 안 된다. 기사를 **전부 열거**할 길이
-      # 있어야 24-01 부터 채운다. 워드프레스면 사이트맵·날짜별 보관함이 있다.
-      - name: 🗺 기사를 전부 열거할 길 (69차)
+      # 70차 — 날짜별 보관함(/2024/01/)이 200 이고 제목도 맞다. 그런데 기사
+      # 링크가 안 잡혔다. 주소 꼴이 다른 것뿐인지 본다 — 이것이 열리면
+      # 2024-01 부터 기사를 통째로 열거해 전부 채울 수 있다.
+      - name: 🗓 날짜별 보관함 속 (70차)
         timeout-minutes: 8
         run: |
           python - <<'EOF'
-          import gzip, io, re, time, urllib.request
+          import gzip, io, re, time, urllib.request, html as H2
           UA = {"User-Agent": ("Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
                                "AppleWebKit/537.36 (KHTML, like Gecko) "
                                "Chrome/131.0.0.0 Safari/537.36"),
                 "Accept-Encoding": "gzip, deflate"}
 
-          def get(u, cap=2_000_000):
+          def get(u, cap=3_000_000):
               try:
                   r = urllib.request.urlopen(
-                      urllib.request.Request(u, headers=UA), timeout=20)
+                      urllib.request.Request(u, headers=UA), timeout=25)
                   raw = r.read(cap)
                   if r.headers.get("Content-Encoding") == "gzip":
                       raw = gzip.GzipFile(fileobj=io.BytesIO(raw)).read()
-                  return r.status, raw.decode("utf-8", "ignore")
+                  return r.status, raw
               except Exception as e:
-                  return type(e).__name__ + str(getattr(e, "code", "")), ""
+                  return type(e).__name__ + str(getattr(e, "code", "")), b""
 
           B = "https://www.ryutsuu.biz"
-          print("(가) 사이트맵 — 글 주소를 통째로 준다면 이게 답이다")
-          for u in (f"{B}/sitemap.xml", f"{B}/wp-sitemap.xml",
-                    f"{B}/sitemap_index.xml", f"{B}/sitemap-1.xml",
-                    f"{B}/robots.txt"):
-              time.sleep(0.5)
-              st, t = get(u)
-              locs = re.findall(r"<loc>([^<]+)</loc>", t)
-              sales = [x for x in locs if "/sales/" in x]
-              extra = ""
-              if u.endswith("robots.txt"):
-                  extra = " | " + " ".join(re.findall(r"(?im)^sitemap:\s*(\S+)", t))
-              print(f"  {u:44s} {st}  loc {len(locs)}  sales {len(sales)}{extra}")
-              for x in locs[:4]:
-                  print("      " + x)
+          for u in (f"{B}/2026/08/", f"{B}/2024/01/"):
+              st, raw = get(u)
+              t = raw.decode("utf-8", "ignore")
+              print(f"\n{'='*70}\n{u}  {st} · {len(raw)//1024}KB")
+              hrefs = re.findall(r'href="([^"]+)"', t)
+              import collections
+              kind = collections.Counter()
+              for h in hrefs:
+                  m = re.match(r"(?:https://www\.ryutsuu\.biz)?/([a-z_]+)/", h)
+                  kind[m.group(1) if m else h[:14]] += 1
+              print("  링크 갈래:", dict(kind.most_common(10)))
+              arts = [h for h in hrefs if re.search(r"/s\d{6}\.html", h)]
+              print(f"  기사꼴 링크 {len(set(arts))}개")
+              for h in list(dict.fromkeys(arts))[:10]:
+                  print("     " + h)
+              # 글자로도 본다 — 목록이 자바스크립트로 그려지는지
+              flat = re.sub(r"\s+", " ", H2.unescape(
+                  re.sub(r"(?is)<(script|style)[^>]*>.*?</\1>", " ",
+                         re.sub(r"<[^>]+>", " ", t))))
+              i = flat.find("月次")
+              print("  글: " + flat[max(0, i - 80):i + 320])
 
-          print()
-          print("(나) 날짜별 보관함 — /2024/01/ · ?m=202401")
-          for u in (f"{B}/2024/01/", f"{B}/?m=202401", f"{B}/sales/2024/01/",
-                    f"{B}/2026/08/", f"{B}/?m=202608"):
-              time.sleep(0.5)
-              st, t = get(u)
-              n = len(set(re.findall(r'href="(https://www\.ryutsuu\.biz/sales/s\d+\.html)"', t)))
-              ti = re.search(r"<title>(.*?)</title>", t, re.S)
-              print(f"  {u:40s} {st}  sales {n}  "
-                    f"{re.sub(r'\s+', ' ', ti.group(1))[:40] if ti else ''}")
-
-          print()
-          print("(다) 목록 쪽을 더 밀어 본다 — 9쪽이 정말 끝인가")
-          for p in (8, 9, 10, 20):
-              time.sleep(0.5)
-              st, t = get(f"{B}/sales/page/{p}/")
-              n = len(set(re.findall(r'href="(https://www\.ryutsuu\.biz/sales/s\d+\.html)"', t)))
-              print(f"  /sales/page/{p}/  {st}  sales {n}")
+          print("\n사이트맵 원문 앞부분")
+          st, raw = get(f"{B}/sitemap.xml")
+          print(" ", st, len(raw), "바이트")
+          print(" ", raw[:400])
           EOF
