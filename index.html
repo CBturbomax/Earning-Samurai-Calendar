@@ -562,7 +562,7 @@ svg.bars rect.b:hover { fill:var(--a3); }
 <body>
 <div class="wrap">
 
-<div class="topline"><span class="fl fl-us" role="img" aria-label="미국"></span> 미국 <b>12,307</b> · <span class="fl fl-jp" role="img" aria-label="일본"></span> 일본 <b>4,659</b> · <span class="fl fl-hk" role="img" aria-label="홍콩"></span> 홍콩 <b>8,894</b> · 합계 <b>25,860건</b> · 수집 <b>2025-07-09 ~ 2026-11-21</b> · 갱신 2026-09-22 16:07 KST</div>
+<div class="topline"><span class="fl fl-us" role="img" aria-label="미국"></span> 미국 <b>12,307</b> · <span class="fl fl-jp" role="img" aria-label="일본"></span> 일본 <b>4,659</b> · <span class="fl fl-hk" role="img" aria-label="홍콩"></span> 홍콩 <b>8,894</b> · 합계 <b>25,860건</b> · 수집 <b>2025-07-09 ~ 2026-11-21</b> · 갱신 2026-09-22 16:10 KST</div>
 <h1><span class="mark" aria-hidden="true"></span>Earning <span class="jp">Samurai</span>
     <span class="byline">by CB</span></h1>
 <p class="sub">미국 · 일본 · 홍콩 주간 실적발표 일정 — 누가 언제 무엇을 발표했는지</p>
@@ -1175,14 +1175,28 @@ function mnFmtJPY(v) {
    금액 없이 전년비만 내는 회사가 많아서(소매업이 특히), 그때는 100 을 기준선으로
    놓고 **위아래로** 그린다 — 0 부터 그리면 95% 와 105% 가 거의 같은 높이가 되어
    좋아졌는지 나빠졌는지가 안 보인다. */
-/* 빠진 달을 **빈칸으로 남긴다.** 있는 달만 나란히 붙여 그리면 2월 다음이
-   5월인데도 옆칸에 서서 구멍이 안 보이고, 전년동월비 선이 이어진 것처럼
-   거짓말을 한다. 달을 축으로 삼아야 띄엄띄엄한 것이 띄엄띄엄 보인다. */
+/* **모든 카드가 같은 축을 쓴다 — 2024년 1월부터 가장 최근 달까지.**
+   카드마다 제 자료의 첫 달부터 그리면 옆 카드와 달이 어긋나 나란히 놓고
+   비교할 수가 없고, 빠진 달을 건너뛰고 붙여 그리면 2월 다음이 5월인데도
+   옆칸에 서서 구멍이 안 보인다(전년동월비 선도 이어진 것처럼 거짓말을 한다).
+   축을 달로 고정하면 있는 달은 있는 자리에, 없는 달은 빈자리로 보인다. */
+const MN_KEY = p => (+p.slice(0, 4)) * 12 + (+p.slice(5, 7)) - 1;
+const MN_A = MN_KEY('2024-01');
+const MN_B = (() => {
+  let b = MN_A + 11;
+  for (const k in MNUM) {
+    const mm = MNUM[k].m;
+    if (mm && mm.length) b = Math.max(b, MN_KEY(mm[mm.length - 1][0]));
+  }
+  return b;
+})();
+
 function mnDense(m) {
-  const key = p => (+p.slice(0, 4)) * 12 + (+p.slice(5, 7)) - 1;
-  const a = key(m[0][0]), b = key(m[m.length - 1][0]);
-  const out = new Array(b - a + 1).fill(null);
-  for (const r of m) out[key(r[0]) - a] = r;
+  const out = new Array(MN_B - MN_A + 1).fill(null);
+  for (const r of m) {
+    const i = MN_KEY(r[0]) - MN_A;
+    if (i >= 0 && i < out.length) out[i] = r;
+  }
   return out;
 }
 
@@ -1191,7 +1205,7 @@ function mnChart(src) {
   const m = mnDense(src);
   const n = m.length;
   const hasRev = m.some(r => r && r[1] != null);
-  const W = Math.max(400, n * 15), H = 118, L = 6, R = 6, T = 8, B = 15;
+  const W = Math.max(400, n * 14), H = 118, L = 6, R = 6, T = 8, B = 15;
   const step = (W - L - R) / n;
   const cx = i => L + step * i + step / 2;
   const bw = Math.min(13, step * 0.66);
@@ -1267,10 +1281,9 @@ function mnChart(src) {
   // x 이름표는 여섯 달마다. 촘촘하면 서로 붙어 도리어 안 읽힌다.
   const gap = n > 14 ? 6 : (n > 7 ? 3 : 1);
   // 이름표는 **비어 있는 달에도** 붙인다 — 축이 달이므로 그 자리의 달을
-  // 첫 달에서 세어 적는다. 그래야 구멍이 몇 달짜리인지 읽힌다.
-  const k0 = (+src[0][0].slice(0, 4)) * 12 + (+src[0][0].slice(5, 7)) - 1;
+  // 세어 적는다. 그래야 구멍이 몇 달짜리인지 읽힌다.
   const lab = i => {
-    const k = k0 + i;
+    const k = MN_A + i;
     return String(Math.floor(k / 12)).slice(2) + '/' +
            String(k % 12 + 1).padStart(2, '0');
   };

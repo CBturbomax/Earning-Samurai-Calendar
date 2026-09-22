@@ -68,10 +68,10 @@ jobs:
       # (니토리·패스트리·시마무라·젠쇼…)이 위 목록에는 아예 없다. 남의 뉴스
       # 서버라 한 번 두드리고 쉬며(WEB_PAUSE) 스스로 시간을 잰다.
       - name: 🏬 월매출 (流通ニュース)
-        timeout-minutes: 8
+        timeout-minutes: 13
         env:
-          WEB_PER_RUN: '150'
-          WEB_SECS: '300'
+          WEB_PER_RUN: '250'
+          WEB_SECS: '440'
         run: |
           set -o pipefail
           python scrape_mon_web.py | tee web.log
