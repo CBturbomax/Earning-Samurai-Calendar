@@ -15,16 +15,14 @@ jobs:
         with:
           python-version: '3.12'
 
-      # 71차 — 두 갈래를 한꺼번에 본다.
-      #  (1) sitemap.xml 은 사이트맵 색인이었다(All in One SEO). 자식 목록을
-      #      전부 찍고 하나를 열어 기사 주소·날짜가 오는지 본다.
-      #  (2) /2024/01/ 에는 기사 제목이 분명히 있는데 우리 정규식(/s숫자6.html)
-      #      으로는 안 잡혔다. 그 쪽의 /sales/ 링크를 있는 그대로 찍는다.
-      - name: 🗺 사이트맵 색인과 옛 기사 주소 꼴 (71차)
+      # 72차 — 날짜별 보관함이 그 달을 통째로 주는가.
+      # 기사 주소 앞글자가 해마다 바뀐다(2026 s · 2025 r · 2024 q). 그래서
+      # 71차까지 못 잡았다. 이제 쪽 나눔이 있는지, 몇 쪽까지 가는지 본다.
+      - name: 📅 보관함 쪽 나눔 (72차)
         timeout-minutes: 10
         run: |
           python - <<'EOF'
-          import gzip, io, re, urllib.request
+          import gzip, io, re, time, urllib.request, html as H2
 
           UA = {"User-Agent": ("Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
                                "AppleWebKit/537.36 (KHTML, like Gecko) "
@@ -43,40 +41,31 @@ jobs:
                   return type(e).__name__ + str(getattr(e, "code", "")), ""
 
           B = "https://www.ryutsuu.biz"
+          ART = re.compile(r'href="(https://www\.ryutsuu\.biz/[a-z_]+/[a-z]\d+\.html)"')
 
-          st, t = get(f"{B}/sitemap.xml")
-          locs = re.findall(r"<loc>([^<]+)</loc>", t)
-          print(f"사이트맵 색인 {st} · 자식 {len(locs)}개")
-          for u in locs[:60]:
-              print("   ", u)
+          def look(u):
+              st, t = get(u)
+              # 본문 목록 구역만 본다 (사이드바·최신뉴스를 빼려고)
+              m = re.search(r'(?is)<section id="archive".*?</section>', t)
+              body = m.group(0) if m else t
+              arts = list(dict.fromkeys(ART.findall(body)))
+              sal = [a for a in arts if "/sales/" in a]
+              days = re.findall(r"date-list-title\"[^>]*>([^<]+)<", body)
+              pg = re.search(r'(?is)<div class="[^"]*pag[^"]*".*?</div>', t)
+              print(f"  {u}  {st} · {len(t)//1024}KB · 기사 {len(arts)} (sales {len(sal)})"
+                    f" · 날짜머리 {len(days)}")
+              if days:
+                  print("      날짜:", days[0], "~", days[-1])
+              if pg:
+                  print("      쪽나눔:", re.sub(r"\s+", " ", pg.group(0))[:400])
+              return len(arts)
 
-          # 기사 본문이 들어 있을 만한 자식 하나를 연다
-          for u in locs:
-              if re.search(r"(post|sales|news)[^/]*sitemap", u):
-                  st, t = get(u)
-                  urls = re.findall(r"<loc>([^<]+)</loc>", t)
-                  sal = [x for x in urls if "/sales/" in x]
-                  lm = re.findall(r"<lastmod>([^<]+)</lastmod>", t)
-                  print(f"\n{u}  {st} · 주소 {len(urls)}개 · 그중 sales {len(sal)}")
-                  if lm:
-                      print("   날짜 범위", min(lm)[:10], "~", max(lm)[:10])
-                  for x in sal[:6]:
-                      print("    ", x)
-                  for x in urls[:4]:
-                      print("    (아무거나)", x)
-                  break
+          print("■ 달 보관함 쪽 나눔")
+          for u in (f"{B}/2024/01/", f"{B}/2024/01/page/2/", f"{B}/2024/01/page/3/",
+                    f"{B}/2024/01/page/9/"):
+              look(u); time.sleep(0.6)
 
-          # 옛 날짜 보관함의 기사 주소 꼴
-          for mon in ("2024/01", "2025/06"):
-              st, t = get(f"{B}/{mon}/")
-              hrefs = re.findall(r'href="([^"]+)"', t)
-              sal = [h for h in hrefs if "/sales/" in h]
-              print(f"\n{B}/{mon}/  {st} · sales 링크 {len(set(sal))}")
-              for h in list(dict.fromkeys(sal))[:12]:
-                  print("   ", h)
-              # 제목과 링크가 같이 앉은 자리를 통째로 본다
-              m = re.search(r"(?is)(.{0,400}2024年1月31日の記事一覧.{0,900})", t) \
-                  or re.search(r"(?is)(.{0,300}記事一覧.{0,900})", t)
-              if m:
-                  print("   조각:", re.sub(r"\s+", " ", m.group(1))[-900:])
+          print("\n■ 갈래(sales) 목록이 얼마나 깊은가")
+          for n in (9, 12, 20, 40, 80):
+              look(f"{B}/sales/page/{n}/"); time.sleep(0.6)
           EOF
