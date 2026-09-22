@@ -15,72 +15,85 @@ jobs:
         with:
           python-version: '3.12'
 
-      # 58차 — 고친 규칙(이름표 물려주기·아랫줄 단위·제목이 전년비인 표·
-      # 진짜 글자폭)을 **264건 전부**에 걸어 얼마나 늘었는지, 그리고 **엉뚱한
-      # 것이 섞이지 않았는지** 본다. 넣기 전에 눈으로 보는 자리다.
-      - name: 🧪 고친 규칙으로 264건 다시 읽기 (58차)
-        timeout-minutes: 14
+      # 59차 — 58차에서 52종목·288달로 늘었지만 **두 종목(2674·9832)이 사라졌고**
+      # 아즈원(7476)의 달이 띄엄띄엄이라(2025-05·09·10·2026-01) 미심쩍다.
+      # 늘어난 것만 세고 넘어가면 조용히 틀린 값을 싣는다. 눈으로 본다.
+      - name: 🔎 사라진 둘과 미심쩍은 하나 (59차)
+        timeout-minutes: 6
+        run: |
+          python - <<'EOF'
+          import json, urllib.request
+          import pdftext, montable
+
+          rows = json.load(open("data/monthly_jp.json"))["rows"]
+          H = {"User-Agent": "Mozilla/5.0 (compatible; earnings-samurai/1.0)"}
+          WANT = ("2674", "9832", "7476")
+          for r in rows:
+              if r["code"] not in WANT:
+                  continue
+              try:
+                  with urllib.request.urlopen(
+                          urllib.request.Request(r["doc"], headers=H),
+                          timeout=20) as f:
+                      pdf = f.read()
+              except Exception as e:
+                  print(f"{r['code']} 받기실패 {e}")
+                  continue
+              print(f"\n{'='*72}\n{r['code']} {r['name']} {r['period']} {r['date']}")
+              print(f"  {r['title'][:66]}")
+              got = montable.read(pdf, r["date"], 12, r["title"])
+              print(f"  -> {json.dumps(got, ensure_ascii=False)[:420] if got else None}")
+              for row in pdftext.extract_cells(pdf, 3)[:30]:
+                  print("   | " + "  ".join(c for _, c in row)[:120])
+          EOF
+
+      # 59차 (나) — 새로 읽힌 것 전부를 종목별로 늘어놓는다. 달이 이어지는지,
+      # 값이 그럴듯한지 눈으로 본다. 여기서 이상한 것을 못 보면 화면에 실린다.
+      - name: 👀 새로 읽힌 것 전부 (59-나)
+        timeout-minutes: 13
         run: |
           set -o pipefail
-          python - <<'EOF' 2>&1 | tail -360
-          import collections, json, re, time, urllib.request
+          python - <<'EOF' 2>&1 | tail -300
+          import json, time, urllib.request
           import montable
 
           rows = json.load(open("data/monthly_jp.json"))["rows"]
-          old = json.load(open("data/monthly_nums_jp.json"))
-          had = {c for c in old["codes"]}
+          old = set(json.load(open("data/monthly_nums_jp.json"))["codes"])
           H = {"User-Agent": "Mozilla/5.0 (compatible; earnings-samurai/1.0)"}
-          BAD = re.compile(r"客数|客単価|店舗数|会員数|稼働|口座|台数|人数|"
-                           r"件数|坪|面積|日数|単価")
-
           got = {}
-          fail = collections.Counter()
-          shown = 0
           t0 = time.time()
-          for n, r in enumerate(rows, 1):
-              if time.time() - t0 > 700:
-                  print(f"  …시간이 다 됐다({n-1}/{len(rows)})")
+          for r in rows:
+              if time.time() - t0 > 640:
+                  print("  …시간이 다 됐다")
                   break
               try:
                   with urllib.request.urlopen(
                           urllib.request.Request(r["doc"], headers=H),
                           timeout=20) as f:
                       pdf = f.read()
-              except Exception:
-                  fail["받기실패"] += 1
-                  continue
-              try:
                   res = montable.read(pdf, r["date"], 12, r["title"])
-              except Exception as e:
-                  fail["터짐:" + type(e).__name__] += 1
+              except Exception:
                   continue
               if not res:
-                  fail["못읽음"] += 1
                   continue
-              rec = got.setdefault(r["code"], {"name": r["name"], "m": {}})
-              for x in res["rows"]:
-                  rec["m"][x["period"]] = x
+              rec = got.setdefault(r["code"], {"n": r["name"], "m": {}, "t": r["title"]})
               rec["lab"] = res.get("amount_label", "")
-              rec["ylab"] = res.get("yoy_label", "")
-              lab = (res.get("amount_label", "") or "") + (res.get("yoy_label", "") or "")
-              if BAD.search(lab):
-                  print(f"  ‼ 매출이 아닌 것 같다: {r['code']} {r['name']} "
-                        f"lab={res.get('amount_label')!r} ylab={res.get('yoy_label')!r}")
-              if r["code"] not in had and shown < 22:
-                  shown += 1
-                  print(f"\n── 새로 읽힘 {r['code']} {r['name']} · {r['title'][:44]}")
-                  print(f"   금액이름표={res.get('amount_label')!r} "
-                        f"전년비이름표={res.get('yoy_label')!r}")
-                  for x in res["rows"][:14]:
-                      print(f"     {x['period']}  rev={x.get('rev')}  "
-                            f"yoy={x.get('yoy')}  unit={x.get('unit','')}")
-
-          months = sum(len(v["m"]) for v in got.values())
-          print("\n" + "=" * 72)
-          print(f"  전:  종목 {len(had)} · 달 {old['months']}")
-          print(f"  후:  종목 {len(got)} · 달 {months}")
-          print(f"  새로 들어온 종목 {len(set(got) - had)}")
-          print(f"  없어진 종목 {sorted(had - set(got))}")
-          for k, v in fail.most_common():
-              print(f"  {k}: {v}")
+              rec["y"] = res.get("yoy_label", "")
+              for x in res["rows"]:
+                  rec["m"][x["period"]] = (x.get("rev"), x.get("yoy"), x.get("unit", ""))
+          print(f"종목 {len(got)} · 달 {sum(len(v['m']) for v in got.values())}")
+          for c in sorted(got, key=lambda c: (c in old, c)):
+              v = got[c]
+              mark = "헌" if c in old else "새"
+              ms = sorted(v["m"])
+              gap = ""
+              if len(ms) > 1:
+                  n = [int(x[:4]) * 12 + int(x[5:]) for x in ms]
+                  if max(n) - min(n) + 1 != len(n):
+                      gap = "  ⚠달이 띄엄띄엄"
+              print(f"\n[{mark}] {c} {v['n']} · 금액={v['lab']!r} 전년비={v['y']!r}{gap}")
+              print(f"     {v['t'][:60]}")
+              print("     " + " ".join(
+                  f"{m[2:]}:{('%.4g' % r) if r else '-'}/{('%.1f' % y) if y else '-'}"
+                  for m in ms for r, y, _u in [v["m"][m]]))
           EOF
