@@ -52,6 +52,16 @@ jobs:
     timeout-minutes: 29
     steps:
       - uses: actions/checkout@v4
+      # **최신 main 으로 맞추고 시작한다.** checkout 은 이 실행을 부른 커밋을
+      # 꺼내 오는데, 실행이 줄을 서면 그게 벌써 낡은 것이다 — 앞 실행이 방금
+      # 커밋한 수집분을 못 보고 **같은 일을 처음부터 다시 한다.** 실제로
+      # 그랬다(09:22 와 09:32 두 실행이 기사 250건을 똑같이 받아 왔고, 결과가
+      # 글자까지 같아 커밋에도 안 보였다 — 남의 서버만 두 배로 두드린 셈이다).
+      - name: 최신 main 으로 맞춘다
+        run: |
+          git fetch origin main
+          git reset --hard origin/main
+
       - uses: actions/setup-python@v5
         with:
           python-version: '3.12'

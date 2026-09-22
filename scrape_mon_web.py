@@ -48,19 +48,28 @@ UA = {"User-Agent": ("Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
                      "Chrome/131.0.0.0 Safari/537.36"),
       "Accept-Language": "ja,en;q=0.8"}
 
-PER_RUN = int(os.environ.get("WEB_PER_RUN", "150"))
+PER_RUN = int(os.environ.get("WEB_PER_RUN", "120"))
 BUDGET = float(os.environ.get("WEB_SECS", "300"))
 # 남의 서버다. 한 번 두드리고 쉰다.
-PAUSE = float(os.environ.get("WEB_PAUSE", "0.5"))
+PAUSE = float(os.environ.get("WEB_PAUSE", "0.8"))
 # 한 실행에서 새로 거슬러 갈 쪽 수. 첫 몇 바퀴만 일하고 그 뒤에는 앞쪽만 본다.
-DEEP_PER_RUN = int(os.environ.get("WEB_DEEP", "8"))
+DEEP_PER_RUN = int(os.environ.get("WEB_DEEP", "4"))
 # **어디까지 거슬러 갈까.** 한 쪽이 50건이고 한 달에 50건쯤 실리므로 2024년
 # 1월은 서른몇 쪽 뒤다. 주소만 보고 그 달을 알 수 있으므로(monweb.url_ym)
 # 받아 보지 않고 끊는다.
 START = (2024, 1)
 
 
-def get(url, timeout=25):
+# **연속으로 못 받으면 그 바퀴를 접는다.** 한 번 7분 동안 아무것도 안 들어온
+# 실행이 있었다. 처음에는 사이트가 우리를 막은 줄 알았는데 두드려 보니 1초에
+# 200 이었다(81차) — 진짜 원인은 **워크플로가 낡은 커밋을 체크아웃해** 앞
+# 실행이 방금 받아 둔 것을 못 보고 같은 250건을 다시 받은 것이었다. 그래도
+# 이 안전장치는 남긴다: 정말 막혔을 때 25초씩 250번을 두드리면 예산만 태우고
+# 로그에는 아무것도 안 남아 **겉으로는 멀쩡해 보인다.**
+GIVE_UP_AFTER = int(os.environ.get("WEB_GIVE_UP", "6"))
+
+
+def get(url, timeout=10):
     try:
         with urllib.request.urlopen(
                 urllib.request.Request(url, headers=UA), timeout=timeout) as r:
@@ -191,7 +200,7 @@ def main():
     print(f"  볼 기사 {len(todo)}건 (본 기사 {len(done)} · 거슬러 갈 줄 "
           f"{len(queue)} · 쪽 {deep}{' · 끝까지' if end else ''})")
 
-    added = new_docs = 0
+    added = new_docs = miss = 0
     for u in todo:
         if time.time() - t0 > BUDGET:
             print("  시간이 다 됐다 — 여기까지 담고 다음 실행에서 잇는다.")
@@ -199,7 +208,15 @@ def main():
         page = get(u)
         time.sleep(PAUSE)
         if not page:
+            miss += 1
+            if miss >= GIVE_UP_AFTER:
+                # **연속으로 막히면 접는다.** 계속 두드리면 예산만 태우고
+                # 로그에는 아무것도 안 남아, 겉으로는 멀쩡해 보인다.
+                print(f"  {miss}건 잇달아 못 받았다 — 이 바퀴는 접는다."
+                      f" (남의 뉴스 서버다)")
+                break
             continue
+        miss = 0
         done.add(u)
         new_docs += 1
         try:

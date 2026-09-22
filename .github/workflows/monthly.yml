@@ -45,6 +45,16 @@ jobs:
     timeout-minutes: 30
     steps:
       - uses: actions/checkout@v4
+      # **최신 main 으로 맞추고 시작한다.** checkout 은 이 실행을 부른 커밋을
+      # 꺼내 오는데, 실행이 줄을 서면 그게 벌써 낡은 것이다 — 앞 실행이 방금
+      # 커밋한 수집분을 못 보고 **같은 일을 처음부터 다시 한다.** 실제로
+      # 그랬다(09:22 와 09:32 두 실행이 기사 250건을 똑같이 받아 왔고, 결과가
+      # 글자까지 같아 커밋에도 안 보였다 — 남의 서버만 두 배로 두드린 셈이다).
+      - name: 최신 main 으로 맞춘다
+        run: |
+          git fetch origin main
+          git reset --hard origin/main
+
       - uses: actions/setup-python@v5
         with:
           python-version: '3.12'
@@ -71,13 +81,14 @@ jobs:
       # (니토리·패스트리·시마무라·젠쇼…)이 위 목록에는 아예 없다. 남의 뉴스
       # 서버라 한 번 두드리고 쉬며(WEB_PAUSE) 스스로 시간을 잰다.
       - name: 🏬 월매출 (流通ニュース)
-        timeout-minutes: 13
+        timeout-minutes: 8
         env:
-          WEB_PER_RUN: '250'
-          WEB_SECS: '440'
-          # 2024년 1월까지 서른몇 쪽을 거슬러 가야 한다. 다 채우고 나면
-          # 저절로 앞쪽만 본다(끝에 닿으면 deep_done).
-          WEB_DEEP: '10'
+          # 한 바퀴에 120건씩 0.8초 간격. 250건·0.5초에서 낮췄다 — 남의 뉴스
+          # 서버이고, 10분마다 도니 이걸로도 한 시간에 700건이다.
+          WEB_PER_RUN: '120'
+          WEB_SECS: '300'
+          WEB_PAUSE: '0.8'
+          WEB_DEEP: '4'
         run: |
           set -o pipefail
           python scrape_mon_web.py | tee web.log
