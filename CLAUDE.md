@@ -12,6 +12,7 @@ scrape.py      ──> data/earnings.json     ┐   '언제 발표하나'
 scrape_jp_tdnet.py ─> earnings_jp_past.json│   (일본은 소스가 셋이다)
                  └─> monthly_jp.json      │   '이번 달 얼마 팔았나'(월매출)
 scrape_mon_jp.py  ─> monthly_nums_jp.json │   (+ pdftext.py + montable.py)
+scrape_mon_web.py ─> monthly_web_jp.json  │   (流通ニュース · + monweb.py)
 scrape_jp_sched.py ─> earnings_jp_sched.json│
 scrape_us.py   ──> data/earnings_us.json  │
 scrape_hk.py   ──> data/earnings_hk.json  │
@@ -52,6 +53,10 @@ python scrape_jp_tdnet.py                   # 일본 발표 완료분 (TDnet, �
 python scrape_jp_tdnet.py --probe           # 목록 생김새만 떠보기
 python scrape_mon_jp.py                     # 월매출 수치 (첨부 PDF 표에서)
 python scrape_mon_jp.py --probe 7685        # 한 종목의 PDF 를 뜯어 본다
+python scrape_mon_web.py                    # 월매출 (流通ニュース 월차 기사)
+python scrape_mon_web.py --probe            # 목록·기사 한 장만 떠본다
+python monweb.py                            # 기사 표 읽기 스스로 시험
+python montable.py                          # PDF 표 읽기 스스로 시험
 python pdftext.py 어떤.pdf                  # PDF 에서 글자만 꺼내 본다
 python scrape_jp_sched.py                   # 일본 발표 예정 (JPX 공식 엑셀)
 python scrape_jp_sched.py --probe           # 파일·열 매핑만 떠보기
@@ -98,6 +103,7 @@ python scrape_desc.py                       # 사업 설명 원문
 | 일본 부문 **연간** 이력(수집만, 화면엔 안 냄) | `scrape_seg_jp_edinetdb.py` |
 | 일본 **월매출(月次)** 공시 | 수집은 `scrape_jp_tdnet.py` 의 `is_monthly`/`monthly_period`, 화면은 `build.py` 의 `load_monthly`/`renderMonthly` |
 | 월매출 **수치**(금액·전년비) | `scrape_mon_jp.py` — 글자 꺼내기는 `pdftext.py`, 표 읽기는 `montable.py`, 차트는 `build.py` 의 `mnChart` |
+| 월매출 — 공시를 안 내는 회사 | `scrape_mon_web.py` — 표 읽기와 브랜드→코드 사전은 `monweb.py` 의 `BRANDS` |
 | 부문 이름 한글 표기 | `markets.py`의 `SEG_KO_FULL`/`SEG_KO_EN`/`SEG_KO_CJK` — 옮기기는 `build.py`의 `seg_ko` |
 | 부문을 어느 축으로 가를까 | `scrape_seg_sec.py`의 `axis_rank` / `AXIS_KO` |
 | 회사 사업 설명(한국어) | `descriptions.py`의 `DESC_KO` — 원문 수집은 `scrape_desc.py` |
@@ -425,10 +431,37 @@ zip 에서 같이 뽑는 것과 같은 규칙 — 남의 서버를 두 배로 �
   | 有報キャッチャー AtomAPI | 서비스 종료 |
   | TDnet API (JPX 공식) | 유료 — 기본료 7만엔 + 건당, 대략 24만엔 |
   | QUICK Data Factory 月次売上高 | 유료 상품 |
-  | 流通ニュース(ryutsuu.biz) | **열린다**(200·119KB) — 다만 소매·외식 대기업 ~50곳의 기사고 **종목코드가 없다** |
+  | 流通ニュース(ryutsuu.biz) | **열린다**(200·119KB) — 소매·외식 대기업의 월차 기사. 종목코드가 없어 브랜드를 손으로 이어야 한다 |
 
   그래서 알맹이는 여전히 TDnet 첨부 PDF 이고, 늘릴 길은 **우리가 그것을 더 잘
   읽는 것**이다. 막힌 곳을 다시 두드리지 말 것 — 한 번 두드리면 그 IP 가 막힌다.
+
+- **流通ニュース 는 다른 우주를 메운다 — 공시를 안 내는 큰 회사들이다.**
+  적시공시로 월매출을 내는 회사는 209곳인데, 실측한 큰 소매·외식 33곳 가운데
+  **23곳이 그 목록에 아예 없었다**(니토리 9843 · 패스트리 9983 · 시마무라 8227 ·
+  젠쇼 7550 · 요시노야 9861 · 세븐&아이 3382 · 야마다 9831 · 비쿠카메라 3048 …).
+  자사 IR 페이지에만 올리는 회사가 많아서다. `scrape_mon_web.py` 가 기사에서
+  **표를 통째로** 읽는다(`monweb.py`).
+
+  - **기사 표가 두 꼴이다.** 「月度」가 세로로 선 표는 한 회사의 여러 달이고,
+    머리에 「8月」 하나만 있고 줄마다 회사가 선 표는 한 달의 여러 회사다.
+  - **colspan·rowspan 을 풀어야 한다.** 「売上高」이 두 칸을 덮고 「月度」가 두
+    줄을 덮어 줄마다 칸 수가 다르다. 안 풀면 어느 칸이 既存店 이고 어느 칸이
+    客数 인지 알 수 없어 **객수를 매출로 싣는다.**
+  - **회사 이름이 브랜드로 온다**(「ユニクロ」·「すき家」·「Joshin」). `monweb`
+    의 `BRANDS` 에 **아는 것만** 손으로 잇는다 — 자회사·비상장·상장폐지된
+    이름은 넣지 않는다(ローソン 은 2024년 상장폐지, ファミマ·オーケー·카인즈는
+    비상장, いなげや·カスミ 는 USMH 자회사).
+  - **기사 제목의 수치로 스스로 검산한다.** 「バロー／8月の既存店売上高2.0％増」
+    의 2.0 이 표의 마지막 달과 안 맞으면 그 기사를 버린다 — 한 기사에 표가
+    둘인 경우(바로의 슈퍼와 드럭스토어)에 엉뚱한 표를 집는 것을 막는다.
+  - **회사마다 소스는 하나다.** 첨부 PDF 에서 읽은 값이 있으면 그쪽을 쓴다.
+    두 소스를 한 줄에 섞으면 「全社売上高」와 「既存店」처럼 뜻이 다른 값이 한
+    막대에 나란히 서서 거짓말을 한다. 화면에도 출처를 적는다(`.msrc`).
+  - **금액은 안 온다.** 표에 실리는 것은 전년동월비(%)뿐이다. 지어 넣지 않는다.
+  - **목록은 열몇 쪽뿐이다.** 지난 기사는 창 밖으로 밀려나므로 한 번 받은
+    기사는 `done` 으로 건너뛰고 값은 쌓아 둔다. 거슬러 가기는 한 실행에 네
+    쪽씩(`WEB_DEEP`) — 남의 뉴스 서버다.
 
 - **의무가 아니라 회사 선택이다.** 스시로(3563)·니토리(9843)는 45일 동안 월매출을
   한 건도 안 냈다 — 자사 IR 페이지에만 올리는 회사가 많다. 안 나온다고 수집
@@ -909,7 +942,7 @@ HPE 가 Compute·Storage·Intelligent Edge 를 Cloud&AI·Networking 으로 바�
 | `collect.yml` | **5분**(크론 하한) | `data/earnings.json` · `data/earnings_jp_sched.json` · `data/earnings_us.json` · `data/earnings_hk.json` · `data/caps.json` |
 | `numbers.yml` | **5분**(크론 하한) | `data/financials.json` · `data/financials_intl.json` · `data/segments.json` · `data/segments_hk.json` · `data/desc.json` |
 | `segments.yml` | 30분 | `data/segments_sec.json` · `data/segments_edgar.json` · `data/segments_fpi.json` · `data/financials_fpi.json` |
-| `monthly.yml` | 10분 | `data/monthly_nums_jp.json` (월매출 수치 — 첨부 PDF) |
+| `monthly.yml` | 10분 | `data/monthly_nums_jp.json` (월매출 수치 — 첨부 PDF) · `data/monthly_web_jp.json` (월매출 — 流通ニュース) |
 | `segments_hist.yml` | 하루 1번 | `data/segments_jp_hist.json` (EDINETDB_KEY 있을 때만) |
 
 **공개 저장소라 GitHub Actions 시간이 무제한 무료다.** 그래서 주기를 늦출 이유가

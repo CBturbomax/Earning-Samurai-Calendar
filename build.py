@@ -1496,6 +1496,24 @@ def pack_seg(rec, fin_rec):
     return out
 
 
+def load_monthly_web():
+    """일본 월매출 — **流通ニュース 월차 기사**에서 온 것(`scrape_mon_web.py`).
+
+    TDnet 첨부 PDF 와 **다른 우주를 메운다.** 월매출을 적시공시로 내는 회사는
+    209곳인데, 니토리·패스트리·시마무라·젠쇼·요시노야·세븐&아이·야마다처럼
+    **자사 IR 페이지에만 올리는 큰 회사**는 그 목록에 아예 없다(실측한 큰
+    소매·외식 33곳 중 23곳). 값은 전년동월비(%)뿐이고 금액은 오지 않는다.
+    """
+    p = HERE / "data" / "monthly_web_jp.json"
+    if not p.exists():
+        return {}
+    try:
+        return (json.loads(p.read_text(encoding="utf-8")).get("codes") or {})
+    except (ValueError, OSError) as e:
+        print(f"  ! monthly_web_jp.json 읽기 실패: {e}")
+        return {}
+
+
 def load_monthly(packed):
     """일본 **월매출(月次)** 공시 — `scrape_jp_tdnet.py` 가 결산단신과 같은 목록에서
     같이 건진 것. 회사가 분기 실적과 별개로 매달 내는 매출·KPI 속보다.
@@ -1536,6 +1554,26 @@ def load_monthly(packed):
                     r.get("name", ""), r.get("period", ""), int(r.get("pok", 1)),
                     r.get("title", ""), r.get("doc", ""),
                     CAPS.get("jp:" + code, 0), sect.get(code, "")])
+    # **流通ニュース 에만 있는 회사를 더한다.** 적시공시를 안 내는 큰 소매·외식
+    # (니토리·패스트리·시마무라…)은 위 목록에 아예 없어 화면에서 통째로 빠졌다.
+    # 공시 한 줄이 없으므로 기사 한 장을 그 자리에 세운다 — 날짜·대상월·원문이
+    # 다 기사에서 온 값이라 지어내는 것이 없다.
+    seen = {r[2] for r in out}
+    for code, rec in sorted(load_monthly_web().items()):
+        if code in seen:
+            continue
+        months = rec.get("months") or {}
+        if not months:
+            continue
+        per = max(months)
+        last = months[per]
+        ko = known.get(code)
+        if not ko:
+            ko, _lvl = to_korean(rec.get("name", ""),
+                                 companies.NOTABLE.get(code, ("",))[0])
+        out.append([last.get("day", ""), "", code, ko, rec.get("name", ""),
+                    per, 1, "流通ニュース 월차 기사", last.get("doc", ""),
+                    CAPS.get("jp:" + code, 0), sect.get(code, "")])
     out.sort(key=lambda x: (x[0], -x[9], x[2]), reverse=False)
     return out
 
@@ -1568,6 +1606,28 @@ def load_monthly_nums():
             # 단위는 달마다 같다 — 마지막 것을 대표로 쓴다.
             "unit": next((v.get("unit") for v in reversed(list(months.values()))
                           if v.get("unit")), ""),
+        }
+    # **회사마다 한 소스만 쓴다.** 첨부 PDF 에서 읽은 값이 있으면 그쪽이다 —
+    # 두 소스를 한 줄에 섞으면 「全社売上高」와 「既存店」처럼 **뜻이 다른 값**이
+    # 한 막대에 나란히 서서 거짓말을 한다.
+    for code, rec in load_monthly_web().items():
+        if code in out:
+            continue
+        months = rec.get("months") or {}
+        # 같은 가게 기준(既存店)과 전점 기준 중 **더 많이 실린 쪽 하나만** 쓴다.
+        n_same = sum(1 for v in months.values() if v.get("same") is not None)
+        n_all = sum(1 for v in months.values() if v.get("all") is not None)
+        if not (n_same or n_all):
+            continue
+        key = "same" if n_same >= n_all else "all"
+        rows = [[p, None, v[key]] for p, v in sorted(months.items())
+                if v.get(key) is not None]
+        if not rows:
+            continue
+        out[code] = {
+            "m": rows, "lab": "", "unit": "",
+            "ylab": "기존점 전년동월비" if key == "same" else "전점 전년동월비",
+            "src": "流通ニュース",
         }
     return out
 
@@ -2076,6 +2136,9 @@ __FLAGCSS__
 .mhd .morig { color:var(--mute); font-size:14px; overflow:hidden;
               text-overflow:ellipsis; border-bottom:1px dotted #3a4a59; }
 .msub { color:var(--mute); font-size:14px; margin:1px 0 6px; }
+/* 수치가 공시가 아니라 기사에서 온 회사임을 적는다 — 출처를 감추지 않는다. */
+.msrc { color:var(--mute); border:1px solid var(--line); border-radius:4px;
+        padding:0 4px; font-size:12px; }
 /* 최신월 한 줄 — 왼쪽에 값, 오른쪽에 전년비·전월비. 큰 글자는 이 둘뿐이다. */
 .mstat { display:flex; align-items:flex-end; justify-content:space-between;
          background:#111a21; border-radius:8px; padding:6px 10px; }
@@ -3298,7 +3361,9 @@ function mnCard(c) {
     '<div class="msub">' + esc(c.sect) +
     (c.cap ? ' · ' + c.cap.toFixed(2) + '조원' : '') +
     (num && (num.lab || num.ylab) ? ' · ' + esc((num.lab || num.ylab).slice(0, 14))
-                                  : '') + '</div>' +
+                                  : '') +
+    (num && num.src ? ' · <span class="msrc">' + esc(num.src) + '</span>' : '') +
+    '</div>' +
     stat + (num ? mnChart(num.m) : '') +
     '<div class="mft">' +
     (last[6] ? '' : '<span>대상월 어림</span>') +
