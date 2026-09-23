@@ -15,74 +15,54 @@ jobs:
         with:
           python-version: '3.12'
 
-      # 82차 — 이름표가 값 줄 **아래**에 앉는 표(라쿠스 3923) A/B.
-      # 위에는 「全社（連結）」만 있어 매출 낱말이 없고 「売上高」는 값 줄
-      # 다음 줄에 온다. 단위를 아랫줄에서 찾는 것과 같은 자리라 한 줄만 더
-      # 본다. 넓히면 반드시 뭔가 새어드니 같은 공시로 견준다.
-      - name: ⚖ 아랫줄 이름표 A/B (82차)
-        timeout-minutes: 14
+      # 83차 — 낡아서 화면에서 뺀 다섯 회사(ABC마트·스시로·세리아·쿠라스시·
+      # 유나이티드애로우즈)가 **우리가 놓친 것인지, 사이트가 안 싣는 것인지.**
+      # 다섯 다 2024년 10~11월에서 멈췄다. 목록 앞쪽 여남은 쪽의 제목을 훑어
+      # 그 브랜드가 최근에 나오는지 본다 — 기사를 받지 않고 제목만 본다.
+      - name: 🔎 멈춘 회사들이 최근 기사에 나오나 (83차)
+        timeout-minutes: 10
         run: |
-          git fetch --depth=1 origin main
-          git show FETCH_HEAD:montable.py > /tmp/old_montable.py
           python - <<'EOF'
-          import importlib.util, json, sys, time, urllib.request
-          import montable
+          import html as H, json, re, time, urllib.request
 
-          spec = importlib.util.spec_from_file_location("old_montable",
-                                                        "/tmp/old_montable.py")
-          old = importlib.util.module_from_spec(spec)
-          sys.modules["old_montable"] = old
-          spec.loader.exec_module(old)
+          UA = {"User-Agent": ("Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
+                               "AppleWebKit/537.36 (KHTML, like Gecko) "
+                               "Chrome/131.0.0.0 Safari/537.36"),
+                "Accept-Language": "ja,en;q=0.8"}
+          B = "https://www.ryutsuu.biz/sales/"
+          WANT = ["ABCマート", "スシロー", "セリア", "くら寿司",
+                  "ユナイテッドアローズ", "ニトリ", "ユニクロ"]
+          LINK = re.compile(
+              r'<a[^>]+href="(https://www\.ryutsuu\.biz/sales/[a-z]\d+\.html)"'
+              r'[^>]*>(.*?)</a>', re.S)
 
-          UA = {"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64)"}
-          n = json.load(open("data/monthly_nums_jp.json", encoding="utf-8"))
-          mon = json.load(open("data/monthly_jp.json", encoding="utf-8"))
-          info = {r.get("doc"): r for r in (mon.get("rows") or [])}
-          live = set(info)
-
-          bad = [u for u, why in n["skip"].items()
-                 if why == "표없음" and u in live]
-          good = [u for u in n["done"] if u in live]
-          docs = bad[:55] + good[:45]
-          print(f"표없음 {len(bad[:55])}건 + 잘 읽히던 {len(good[:45])}건")
-
-          tot = {"old": [0, 0], "new": [0, 0]}
-          diffs, changed = [], 0
-          for u in docs:
-              r = info.get(u) or {}
+          def get(u):
               try:
-                  raw = urllib.request.urlopen(
-                      urllib.request.Request(u, headers=UA), timeout=20).read()
+                  with urllib.request.urlopen(
+                          urllib.request.Request(u, headers=UA), timeout=15) as r:
+                      return r.read(900_000).decode("utf-8", "ignore")
               except Exception as e:
-                  print("!!", u[-18:], type(e).__name__, getattr(e, "code", ""))
-                  continue
-              time.sleep(0.35)
-              got, first = {}, {}
-              for tag, mod in (("old", old), ("new", montable)):
-                  try:
-                      res = mod.read(raw, r.get("date", "2026-09-01"),
-                                     title=r.get("title", ""))
-                  except Exception as e:
-                      print("  ! 터짐", tag, u[-18:], type(e).__name__,
-                            str(e)[:40])
-                      res = None
-                  rows = (res or {}).get("rows") or []
-                  got[tag] = len(rows)
-                  first[tag] = rows[0] if rows else None
-                  if rows:
-                      tot[tag][0] += 1
-                      tot[tag][1] += len(rows)
-              if got["old"] != got["new"]:
-                  diffs.append((r.get("code", "?"), got["old"], got["new"],
-                                (r.get("title") or "")[:30], first["new"]))
-              elif got["old"] and first["old"] != first["new"]:
-                  changed += 1
-                  print(f"  △ 값이 바뀌었다 {r.get('code')} "
-                        f"{first['old']} -> {first['new']}")
-          print(f"\n옛 판: 읽힌 공시 {tot['old'][0]} · 달 {tot['old'][1]}")
-          print(f"새 판: 읽힌 공시 {tot['new'][0]} · 달 {tot['new'][1]}"
-                f" · 값이 바뀐 공시 {changed}")
-          print(f"\n달라진 공시 {len(diffs)}건 (줄어든 것이 먼저)")
-          for code, a, b, ti, f in sorted(diffs, key=lambda x: x[2] - x[1]):
-              print(f"   {code}  {a} -> {b}   {ti}   {f}")
+                  print("  !", u, type(e).__name__, getattr(e, "code", ""))
+                  return ""
+
+          hit = {w: [] for w in WANT}
+          seen = 0
+          for n in range(1, 13):
+              u = B if n == 1 else f"{B}page/{n}/"
+              page = get(u)
+              time.sleep(0.8)
+              if not page:
+                  break
+              for url, lab in LINK.findall(page):
+                  ti = re.sub(r"\s+", " ", H.unescape(re.sub(r"<[^>]+>", "", lab)))
+                  seen += 1
+                  for w in WANT:
+                      if w in ti:
+                          hit[w].append((url[-16:], ti[:52]))
+          print(f"제목 {seen}개를 훑었다 (목록 12쪽)")
+          for w in WANT:
+              v = hit[w]
+              print(f"\n{w}: {len(v)}건")
+              for u, ti in v[:4]:
+                  print("   ", u, ti)
           EOF
