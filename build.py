@@ -1514,6 +1514,60 @@ def load_monthly_web():
         return {}
 
 
+MON_STALE_GAP = 3          # 달
+
+
+def mon_stale_codes():
+    """**마지막 달이 석 달 넘게 뒤처진 종목** — 화면에 안 낸다.
+
+    회원님이 ABC마트(2670) 카드를 짚으셨다. 2024년 11월 값 하나가 카드 맨 위에
+    「+14.7% · 2024.11 YoY」로 크게 걸려 있고 그 뒤 스물두 달이 통째로 비어
+    있었다 — "이런건 뭐야? 왜 옛날 데이터 일부만 읽혀있고. 이럴거면 하지마 그냥."
+    옳은 지적이다. **낡은 값을 최신인 양 내놓는 것은 빈 카드보다 나쁘다** —
+    나스닥 추정일을 캐시로 굳히면 안 된다는 것과 같은 규칙이다(틀린 날짜는 빈
+    날짜보다 나쁘다).
+
+    잣대는 **다른 회사들이 어디까지 냈는가**다(오늘 날짜가 아니라). 대부분은
+    한두 달 전까지 내므로, 거기서 석 달 넘게 뒤처졌으면 그 회사는 우리 쪽에서
+    끊긴 것이다 — 실측하면 99종목 중 89종목이 1~2달 전이고 10종목만 여기 걸린다
+    (그중 다섯은 스물두 달 전에서 멈췄다: 스시로·ABC마트·세리아·쿠라스시·
+    유니메이트. 전부 流通ニュース 가 2024년 말에 다루기를 그만둔 회사다).
+
+    **자료는 그대로 쌓아 둔다.** 다시 실리기 시작하면 저절로 살아난다.
+    """
+    return _stale_from(_mon_last_months())
+
+
+def _mon_key(p):
+    return int(p[:4]) * 12 + int(p[5:7])
+
+
+def _mon_last_months():
+    """종목마다 **우리가 가진 마지막 달**. 두 소스를 합쳐서 본다."""
+    last = {}
+    try:
+        got = json.loads((HERE / "data" / "monthly_nums_jp.json")
+                         .read_text(encoding="utf-8"))
+        for code, rec in (got.get("codes") or {}).items():
+            ms = rec.get("months") or {}
+            if ms:
+                last[code] = max(last.get(code, ""), max(ms))
+    except (ValueError, OSError):
+        pass
+    for code, rec in load_monthly_web().items():
+        ms = rec.get("months") or {}
+        if ms:
+            last[code] = max(last.get(code, ""), max(ms))
+    return last
+
+
+def _stale_from(last):
+    if not last:
+        return set()
+    newest = _mon_key(max(last.values()))
+    return {c for c, p in last.items() if newest - _mon_key(p) >= MON_STALE_GAP}
+
+
 def load_monthly(packed):
     """일본 **월매출(月次)** 공시 — `scrape_jp_tdnet.py` 가 결산단신과 같은 목록에서
     같이 건진 것. 회사가 분기 실적과 별개로 매달 내는 매출·KPI 속보다.
@@ -1559,8 +1613,11 @@ def load_monthly(packed):
     # 공시 한 줄이 없으므로 기사 한 장을 그 자리에 세운다 — 날짜·대상월·원문이
     # 다 기사에서 온 값이라 지어내는 것이 없다.
     seen = {r[2] for r in out}
+    stale = mon_stale_codes()
     for code, rec in sorted(load_monthly_web().items()):
-        if code in seen:
+        # 낡아서 화면에 안 낼 종목이면 그 자리에 카드도 세우지 않는다 —
+        # 수치 없는 카드만 덩그러니 남으면 그게 더 헷갈린다.
+        if code in seen or code in stale:
             continue
         months = rec.get("months") or {}
         if not months:
@@ -1647,7 +1704,10 @@ def load_monthly_nums():
         print(f"  ! monthly_nums_jp.json 읽기 실패: {e}")
         return {}
     out, back = {}, 0
+    stale = mon_stale_codes()
     for code, rec in (got.get("codes") or {}).items():
+        if code in stale:
+            continue
         months = rec.get("months") or {}
         rows = [[k, v.get("rev"), v.get("yoy")] for k, v in sorted(months.items())]
         if not rows:
@@ -1663,7 +1723,7 @@ def load_monthly_nums():
     # 두 소스를 한 줄에 섞으면 「全社売上高」와 「既存店」처럼 **뜻이 다른 값**이
     # 한 막대에 나란히 서서 거짓말을 한다.
     for code, rec in load_monthly_web().items():
-        if code in out:
+        if code in out or code in stale:
             continue
         months = rec.get("months") or {}
         # 같은 가게 기준(既存店)과 전점 기준 중 **더 많이 실린 쪽 하나만** 쓴다.
@@ -1680,6 +1740,12 @@ def load_monthly_nums():
                      "base": "기존점" if key == "same" else "전점"}
     if back:
         print(f"     전년 같은 달 되짚기 {back}달 (금액 ÷ 전년동월비)")
+    if stale:
+        # **조용히 빼지 않는다.** 왜 어떤 회사가 화면에서 사라졌는지 로그에
+        # 남아야 한다(부문 커버리지를 빌드마다 찍는 것과 같은 자리).
+        print(f"     낡아서 뺀 종목 {len(stale)}개 — 마지막 달이 다른 회사보다"
+              f" {MON_STALE_GAP}달 넘게 뒤처졌다: " +
+              ", ".join(sorted(stale)[:12]))
     return out
 
 
