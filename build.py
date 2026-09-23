@@ -2174,7 +2174,12 @@ __FLAGCSS__
 .mgrp > h3 em { font-style:normal; color:#d8b877; font-size:16px;
                 font-weight:600; margin-left:8px; }
 .mgrid { display:grid; grid-template-columns:repeat(auto-fill, minmax(430px, 1fr));
-         gap:12px; }
+         gap:12px; grid-auto-flow:dense; }
+/* **그림이 있는 카드는 한 줄을 통째로 쓴다.** 달마다 이름표와 숫자를 적으려면
+   한 달에 42px 가 필요하고, 서른세 달이면 1,400px 다 — 석 장씩 늘어놓으면
+   그 숫자가 다시 안 보인다. 수치가 없는 카드는 그대로 여러 장씩 늘어선다
+   (`dense` 가 그 자리를 메운다). */
+.mcard.wide { grid-column:1 / -1; }
 .mcard { border:1px solid var(--line); border-radius:11px; background:var(--panel);
          padding:11px 14px 9px; display:flex; flex-direction:column; }
 .mcard.hit { cursor:pointer; }
@@ -2200,14 +2205,31 @@ __FLAGCSS__
 .mstat .r b { font-size:19px; font-variant-numeric:tabular-nums; }
 .mstat .up { color:#e2857f; } .mstat .dn { color:#6fd39b; }
 .mchart { display:block; width:100%; height:auto; margin:4px 0 2px; }
-.mchart .bar { fill:#3b7fc4; } .mchart .bar.y { fill:#3d7f5c; }
-.mchart .bar.yn { fill:#8a4a46; }
+/* **막대 색은 카드 위 큰 숫자와 같은 규칙이다.** 전에는 거꾸로였다 —
+   같은 카드에서 「-1.3%」는 초록인데 그 달 막대는 빨강이었다. 오른 달이
+   빨강, 내린 달이 초록(한국·일본 관례). 금액 막대는 그대로 파랑이다. */
+.mchart .bar { fill:#3b7fc4; } .mchart .bar.y { fill:#b8635d; }
+.mchart .bar.yn { fill:#4e9b74; }
 /* 전년 수치에서 되짚은 달 — 회사가 낸 두 값의 몫이라 옅게 그린다. */
 .mchart .bar.back { fill:#3b7fc4; opacity:.45; }
 .mchart .ln { fill:none; stroke:#e08a4a; stroke-width:1.6; }
 .mchart .ma { fill:none; stroke:#5fbf92; stroke-width:1.2; opacity:.75; }
-.mchart .xl { fill:var(--mute); font-size:11px; }
+.mchart .xl { fill:var(--mute); font-size:12px;
+              font-variant-numeric:tabular-nums; }
+/* 해가 바뀌는 1월만 「24.01」로 적고 밝게 둔다 — 몇 년 몇 월인지 세지 않게. */
+.mchart .xl.yr { fill:#9fb0bf; font-weight:700; }
+.mchart .ysep { stroke:#233240; stroke-width:1; }
 .mchart .zero { stroke:#33465a; stroke-width:1; }
+/* 막대 위 금액(단위는 왼쪽 위에 한 번만) · 축 아래 전년비 */
+.mchart .vl { fill:#8fa6ba; font-size:10.5px; letter-spacing:-.2px; font-variant-numeric:tabular-nums; }
+.mchart .unit { fill:var(--mute); font-size:11px; }
+/* **칸 폭에 맞춰 글자를 정한다.** 12px 로 뒀더니 「+25.3%+22.1%」처럼 옆
+   글자와 붙어 도리어 안 읽혔다 — 그림은 카드 폭에 맞춰 통째로 줄어드므로
+   한 달에 실제로 쓸 수 있는 가로는 42px 남짓이고, 여섯 글자가 거기 들어가려면
+   10.5px 가 한계다. 넓히려면 칸이 아니라 카드를 넓혀야 한다. */
+.mchart .yv { font-size:10.5px; font-weight:700; letter-spacing:-.2px;
+              font-variant-numeric:tabular-nums; }
+.mchart .yv.up { fill:#e2857f; } .mchart .yv.dn { fill:#6fd39b; }
 .mdesc { color:#9fb0bf; font-size:14px; border-top:1px dotted #26333f;
          padding-top:6px; margin-top:auto; overflow:hidden;
          display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; }
@@ -3245,11 +3267,22 @@ function mnChart(src) {
   const m = mnDense(src);
   const n = m.length;
   const hasRev = m.some(r => r && r[1] != null);
-  const W = Math.max(400, n * 14), H = 118, L = 6, R = 6, T = 8, B = 15;
-  const step = (W - L - R) / n;
-  const cx = i => L + step * i + step / 2;
-  const bw = Math.min(13, step * 0.66);
+  /* **달마다 이름표와 숫자를 전부 적는다.** 회원님이 "이 표가 정확히 언제
+     데이터가 몇 퍼센트인지 알 수가 없다 · 월도 진짜 매월 똑바로 알려주고 ·
+     차라리 그래프 크기를 키우더라도 숫자를 월별로 전부"라고 하셨다.
+     전에는 한 달이 14px 라 여섯 달에 한 번만 이름표를 달 수 있었고 값은
+     짚어 봐야 나왔다 — 그건 읽는 그림이 아니다. 한 달에 42px 를 주고
+     카드도 한 줄을 통째로 쓴다(`.mcard.wide`). 좁게 그리고 촘촘히 적으면
+     글자가 겹쳐 도리어 안 읽힌다. */
+  const CW = 42, L = 12, R = 12;
+  const W = L + R + n * CW;
+  const B = hasRev ? 40 : 24;          // 축 아래 — 전년비 줄 + 달 이름표 줄
+  const T = hasRev ? 30 : 22;
+  const H = hasRev ? 212 : 178;
   const base = H - B;
+  const cx = i => L + CW * i + CW / 2;
+  const bw = 22;
+  const at = i => m[i];
   // 짚어 보는 글도 **매출과 YoY 둘뿐**이고, 지수(103)가 아니라 +3.0% 로 적는다.
   const tip = i => m[i][0].slice(2).replace('-', '/') + ' ' +
         (m[i][1] != null ? mnFmtJPY(m[i][1]) : '') +
@@ -3257,23 +3290,40 @@ function mnChart(src) {
                            (m[i][2] >= 100 ? '+' : '') +
                            (m[i][2] - 100).toFixed(1) + '%' : '') +
         (m[i][3] ? ' (전년 수치에서 되짚음)' : '');
-  // 빈 달은 자리를 비워 둔다 — 자리는 있고 막대만 없다.
-  const at = i => m[i];
+  /* **막대마다 붙이는 글에는 「%」를 안 쓴다.** 「%」 한 글자가 숫자 두 자리만큼
+     자리를 먹어서 「+27.3%+26.5%」처럼 옆 글자와 붙어 버린다. 줄머리에 「전년비 %」
+     라고 한 번 적고 숫자는 크게 둔다 — 카드 위 큰 숫자에는 그대로 「+3.5%」다. */
+  const pct = i => {
+    const v = at(i) && m[i][2];
+    if (v == null) return null;
+    const d = v - 100;
+    return [(d >= 0 ? '+' : '') + d.toFixed(Math.abs(d) >= 100 ? 0 : 1),
+            d >= 0 ? 'up' : 'dn'];
+  };
   let body = '';
   if (hasRev) {
     /* 막대는 금액, 주황 선은 전년비, 옅은 녹색 선은 석 달 이동평균이다.
-       전년비 축은 **그 종목의 값 언저리로 좁게** 잡는다 — 0~200% 로 넓게
-       잡으면 100 언저리의 오르내림이 한 줄로 눌려 보이지 않는다
-       (실적 차트의 영업이익률 축과 같은 이치). */
+       금액은 막대 위에 **단위를 뗀 숫자**로 적고 단위는 왼쪽 위에 한 번만
+       적는다 — 막대마다 「억엔」을 달면 그것만 서른세 번이다. */
     const mx = Math.max(...m.map(r => (r && r[1]) || 0), 1);
+    const u = mx >= 1e12 ? ['조엔', 1e12] : mx >= 1e8 ? ['억엔', 1e8]
+            : mx >= 1e6 ? ['백만엔', 1e6] : ['엔', 1];
+    body += '<text class="unit" x="' + L + '" y="11">막대 ' + u[0] +
+            ' · 아래 줄 전년비 %</text>';
     for (let i = 0; i < n; i++) {
       const v = at(i) && m[i][1];
       if (v == null) continue;
       const h = Math.max(1, (base - T) * (v / mx));
       body += '<rect class="bar' + (m[i][3] ? ' back' : '') +
               '" x="' + (cx(i) - bw / 2).toFixed(1) + '" y="' +
-              (base - h).toFixed(1) + '" width="' + bw.toFixed(1) + '" height="' +
-              h.toFixed(1) + '" rx="1.5"><title>' + tip(i) + '</title></rect>';
+              (base - h).toFixed(1) + '" width="' + bw +
+              '" height="' + h.toFixed(1) + '" rx="2"><title>' + tip(i) +
+              '</title></rect>';
+      const s = v / u[1];
+      body += '<text class="vl" x="' + cx(i).toFixed(1) + '" y="' +
+              (base - h - 5).toFixed(1) + '" text-anchor="middle">' +
+              (s >= 100 ? Math.round(s).toLocaleString() : s.toFixed(1)) +
+              '</text>';
     }
     const ys = m.map(r => r && r[2]).filter(v => v != null);
     if (ys.length >= 2) {
@@ -3303,37 +3353,53 @@ function mnChart(src) {
       }
       if (d) body += '<path class="ma" d="' + d + '"/>';
     }
+    // 전년비는 축 바로 아래 줄에 달마다 적는다.
+    for (let i = 0; i < n; i++) {
+      const p = pct(i);
+      if (!p) continue;
+      body += '<text class="yv ' + p[1] + '" x="' + cx(i).toFixed(1) + '" y="' +
+              (base + 14) + '" text-anchor="middle">' + p[0] + '</text>';
+    }
   } else {
     /* 전년비만 있는 회사는 100%를 기준선으로 위아래로 그린다 — 0 부터 그리면
-       95%와 105%가 거의 같은 높이라 좋아졌는지가 안 보인다. */
+       95%와 105%가 거의 같은 높이라 좋아졌는지가 안 보인다. 값은 막대 **바깥**
+       에 적는다(막대 안에 넣으면 짧은 막대에서 글자가 삐져나온다). */
     const dev = m.map(r => (r && r[2] != null) ? r[2] - 100 : null);
     const mx = Math.max(10, ...dev.filter(v => v != null).map(Math.abs));
-    const mid = T + (base - T) / 2;
+    const half = (base - T) / 2, mid = T + half;
+    body += '<text class="unit" x="' + L + '" y="11">전년비 %</text>';
     body += '<line class="zero" x1="' + L + '" y1="' + mid.toFixed(1) +
             '" x2="' + (W - R) + '" y2="' + mid.toFixed(1) + '"/>';
     for (let i = 0; i < n; i++) {
       const d = dev[i];
       if (d == null) continue;
-      const h = (base - T) / 2 * (Math.abs(d) / mx);
+      const h = Math.max(2, half * 0.78 * (Math.abs(d) / mx));
       body += '<rect class="bar ' + (d >= 0 ? 'y' : 'yn') + '" x="' +
               (cx(i) - bw / 2).toFixed(1) + '" y="' +
-              (d >= 0 ? mid - h : mid).toFixed(1) + '" width="' + bw.toFixed(1) +
-              '" height="' + Math.max(1, h).toFixed(1) + '" rx="1.5"><title>' +
+              (d >= 0 ? mid - h : mid).toFixed(1) + '" width="' + bw +
+              '" height="' + h.toFixed(1) + '" rx="2"><title>' +
               tip(i) + '</title></rect>';
+      const p = pct(i);
+      body += '<text class="yv ' + p[1] + '" x="' + cx(i).toFixed(1) + '" y="' +
+              (d >= 0 ? mid - h - 5 : mid + h + 12).toFixed(1) +
+              '" text-anchor="middle">' + p[0] + '</text>';
     }
   }
-  // x 이름표는 여섯 달마다. 촘촘하면 서로 붙어 도리어 안 읽힌다.
-  const gap = n > 14 ? 6 : (n > 7 ? 3 : 1);
-  // 이름표는 **비어 있는 달에도** 붙인다 — 축이 달이므로 그 자리의 달을
-  // 세어 적는다. 그래야 구멍이 몇 달짜리인지 읽힌다.
-  const lab = i => {
-    const k = MN_A + i;
-    return String(Math.floor(k / 12)).slice(2) + '/' +
-           String(k % 12 + 1).padStart(2, '0');
-  };
-  for (let i = n - 1; i >= 0; i -= gap)
-    body += '<text class="xl" x="' + cx(i).toFixed(1) + '" y="' + (H - 3) +
-            '" text-anchor="middle">' + lab(i) + '</text>';
+  /* 달 이름표는 **한 달도 빠짐없이** 단다. 해가 바뀌는 1월에만 「24.01」처럼
+     해를 함께 적고 세로 금을 그어, 몇 년 몇 월인지 세어 보지 않아도 되게 한다.
+     값이 없는 달에도 이름표는 붙인다 — 구멍이 몇 달짜리인지 읽혀야 한다. */
+  for (let i = 0; i < n; i++) {
+    const k = MN_A + i, mo = k % 12 + 1, jan = mo === 1;
+    if (jan && i) {
+      const x = (L + CW * i).toFixed(1);
+      body += '<line class="ysep" x1="' + x + '" y1="' + (T - 8) +
+              '" x2="' + x + '" y2="' + base + '"/>';
+    }
+    body += '<text class="xl' + (jan ? ' yr' : '') + '" x="' + cx(i).toFixed(1) +
+            '" y="' + (base + (hasRev ? 30 : 15)) + '" text-anchor="middle">' +
+            (jan ? String(Math.floor(k / 12)).slice(2) + '.01'
+                 : String(mo).padStart(2, '0')) + '</text>';
+  }
   return '<svg class="mchart" viewBox="0 0 ' + W + ' ' + H +
          '" preserveAspectRatio="xMidYMid meet">' + body + '</svg>';
 }
@@ -3440,7 +3506,7 @@ function mnCard(c) {
       '<div class="k">' + last[0].slice(5) + ' 공시 · 수치 못 읽음</div></div></div>';
   }
 
-  return '<div class="mcard' + (has ? ' hit' : '') + '"' +
+  return '<div class="mcard' + (has ? ' hit' : '') + (num ? ' wide' : '') + '"' +
     (has ? ' data-mkey="' + esc(key) + '" data-mdate="' +
            esc(mnDate.get(c.code)) + '"' : '') + '>' +
     '<div class="mhd"><span class="mc">' + esc(c.code) + '</span>' +
