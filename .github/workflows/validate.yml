@@ -1,0 +1,38 @@
+name: 코드 검증
+
+on:
+  pull_request:
+    paths:
+      - '*.py'
+      - 'data/monthly_universe_jp.json'
+      - '.github/workflows/*.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Python 문법 검사
+        run: |
+          python -m py_compile monir.py scrape_mon_ir.py scrape_caps.py build.py
+      - name: 월차 seed JSON 검사
+        run: |
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          p = Path("data/monthly_universe_jp.json")
+          d = json.loads(p.read_text(encoding="utf-8"))
+          codes = d.get("codes") or []
+          assert len(codes) >= 300, len(codes)
+          assert len(codes) == len(set(codes)), "duplicate monthly seed code"
+          print("monthly seed", len(codes))
+          PY
+      - name: 페이지 빌드 회귀 검사
+        run: python build.py
