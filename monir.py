@@ -422,6 +422,13 @@ def pdf_links(page: str, base: str):
 # ── 月次 페이지 찾기 ────────────────────────────────────────────────────────
 IR_HINT = re.compile(r"(IR情報|投資家|IRライブラリ|株主・投資家|^IR$)")
 IR_PATH = re.compile(r"/(ir|investor)s?(/|$|\.)", re.I)
+MONTHLY_LINK_HINT = re.compile(
+    r"(月次|月度|月別|月間|売上速報|営業概況|月間売上|既存店|全店|月次KPI|主要KPI|"
+    r"月次受注|受注速報|輸送実績|取扱高|Monthly(?:\\s+Sales|\\s+Results|\\s+Data|"
+    r"\\s+Report|\\s+KPI)?)", re.I)
+MONTHLY_PATH_HINT = re.compile(
+    r"(monthly|getuji|getsuj|month[-_]?sales|monthly[-_]?sales|sales[-_]?flash|"
+    r"monthly[-_]?data|monthly[-_]?results)", re.I)
 
 
 def find_monthly(page: str, base: str):
