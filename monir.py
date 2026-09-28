@@ -29,7 +29,8 @@ from datetime import date
 
 import monweb
 
-__all__ = ["IR_SITES", "read", "find_monthly"]
+__all__ = ["IR_SITES", "read", "find_monthly", "find_ir",
+           "pdf_links", "pdf_when"]
 
 ZEN = monweb.ZEN
 TAG = re.compile(r"<[^>]+>")
@@ -313,6 +314,86 @@ def read(page: str, today=None, near: int = 3):
         if any(p in out for p in got):
             continue
         out.update(got)
+    return out
+
+
+# ── PDF 목록 ────────────────────────────────────────────────────────────────
+# 月次 페이지의 둘째 꼴이다(85차). 표를 안 싣고 **달마다 PDF 한 장**을 거는
+# 회사가 많다 — J프론트는 2007년치까지 96건, 야마다는 36건이다. 그 PDF 는
+# TDnet 첨부와 같은 꼴이라 **이미 있는 연장**(`pdftext`+`montable`)이 읽는다.
+#
+# 여기서 하는 일은 둘뿐이다. **월매출 PDF 만 고르고**, 그 PDF 가 **언제 것인지**
+# 말해 주는 것. `montable` 은 발표일에서 해를 정하므로 이 값이 어긋나면
+# 엉뚱한 달에 숫자가 붙는다 — 그래서 **못 알아보면 안 읽는다.**
+PDF_A = re.compile(r'(?is)<a[^>]+href="([^"]+?\.pdf[^"]*)"[^>]*>(.*?)</a>')
+# 월매출 PDF 를 가리키는 말. 결산단신·유가증권보고서·회사안내는 여기 없다.
+PDF_WANT = re.compile(r"(月次|月度|月別|売上|sokuho|monthly|getuji|month)", re.I)
+PDF_SKIP = re.compile(r"(決算短信|有価証券報告書|説明資料|会社案内|中期経営計画"
+                      r"|統合報告書|コーポレート・?ガバナンス|招集通知|アニュアル)")
+
+HEISEI = re.compile(r"平成\s*(\d{1,2})\s*年\s*(\d{1,2})\s*月")
+LAB_YM = re.compile(r"(20\d{2})\s*年\s*(\d{1,2})\s*月\s*(?:度|次|分)")
+URL_YMD = re.compile(r"(?<!\d)(\d{2})(\d{2})(\d{2})(?!\d)")
+URL_YM = re.compile(r"(?<!\d)(20\d{2})(\d{2})(?!\d)")
+
+
+def _next_month(y, m):
+    return date(y + (m == 12), 1 if m == 12 else m + 1, 1)
+
+
+def pdf_when(url: str, label: str):
+    """그 PDF 가 **언제 나온 것인가** -> 'YYYY-MM-DD' 또는 None.
+
+    `montable` 이 해를 정하는 데 쓰는 값이다. 어긋나면 엉뚱한 달에 숫자가
+    붙으므로 **못 알아보면 None 을 낸다**(그 PDF 는 안 읽는다).
+
+    보고 대상 달만 알 때는 **그 다음 달 1일**을 발표일로 삼는다 — 월매출은
+    다음 달 초에 나온다. 어림이지만 해를 가르는 데는 그것으로 넉넉하다.
+    """
+    lab = label.translate(ZEN)
+    m = HEISEI.search(lab)                       # 「平成19年7月度」 (J프론트)
+    if m:
+        y = 1988 + int(m.group(1))
+        mo = int(m.group(2))
+        if 1 <= mo <= 12 and 1989 <= y <= 2019:
+            return _next_month(y, mo).isoformat()
+    m = LAB_YM.search(lab)                       # 「2026年8月度」
+    if m and 1 <= int(m.group(2)) <= 12:
+        return _next_month(int(m.group(1)), int(m.group(2))).isoformat()
+    name = url.rsplit("/", 1)[-1]
+    for m in URL_YMD.finditer(name):             # 「260907.pdf」 = 발표일
+        y, mo, d = 2000 + int(m.group(1)), int(m.group(2)), int(m.group(3))
+        try:
+            got = date(y, mo, d)
+        except ValueError:
+            continue
+        if 2000 <= y <= 2099:
+            return got.isoformat()
+    m = URL_YM.search(name)                      # 「sokuho202608.pdf」 = 대상 달
+    if m and 1 <= int(m.group(2)) <= 12:
+        return _next_month(int(m.group(1)), int(m.group(2))).isoformat()
+    m = FY_END.search(lab)                       # 「2026年8月期」 = 결산기말
+    if m and 1 <= int(m.group(2)) <= 12:
+        return _next_month(int(m.group(1)), int(m.group(2))).isoformat()
+    return None
+
+
+def pdf_links(page: str, base: str):
+    """月次 페이지 -> [(주소, 이름표, 발표일)]. **언제인지 모르면 안 담는다.**"""
+    import urllib.parse
+    out, seen = [], set()
+    for href, lab in PDF_A.findall(SCRIPT.sub(" ", page)):
+        t = _txt(lab)
+        if PDF_SKIP.search(t) or not (PDF_WANT.search(t) or PDF_WANT.search(href)):
+            continue
+        u = urllib.parse.urljoin(base, href)
+        if u in seen:
+            continue
+        when = pdf_when(u, t)
+        if not when:
+            continue
+        seen.add(u)
+        out.append((u, t, when))
     return out
 
 
@@ -619,6 +700,37 @@ def _selftest():                                          # pragma: no cover
       </table>"""
     eq("(하) 제목의 회계연도", sorted(read(lead, T)),
        ["2024-12", "2025-01", "2025-02"])
+
+    # (너) **PDF 가 언제 것인지 못 알아보면 안 읽는다.** montable 이 발표일에서
+    #     해를 정하므로 이 값이 어긋나면 엉뚱한 달에 숫자가 붙는다.
+    for u, lab, want in [
+        # 야마다: 파일 이름이 발표일(YYMMDD)
+        ("https://x.jp/ir/monthly/2026/260907.pdf", "8月 月次速報", "2026-09-07"),
+        # J프론트: 이름표가 연호. 보고 달의 **다음 달 1일**을 발표일로 삼는다
+        ("https://x.jp/ir/pdf/monthly/h19_2007/mon0707.pdf",
+         "平成19年7月度 （PDF 73KB）", "2007-08-01"),
+        ("https://x.jp/_data/ir_monthly/1102_renketsu110315.pdf",
+         "2月度連結営業報告", "2011-03-15"),
+        # 패스트리: 한 장에 회계연도 열두 달. 결산기말 다음 달.
+        ("https://x.jp/ir/monthly/pdf/MonthlySales_2026.pdf",
+         "2026年8月期 (80KB)", "2026-09-01"),
+        # UA: 이름표는 결산기말(2027年3月期)인데 **파일 이름이 보고 달**이다.
+        # 이름표를 먼저 믿으면 앞날(2027-04)이 된다.
+        ("https://x.jp/wp-content/uploads/2026/09/sokuho202608.pdf",
+         "2027年3月期 月次売上概況", "2026-09-01"),
+        # 알 길이 없는 것과 월매출이 아닌 것은 None
+        ("https://x.jp/ir/upload/hp0916month.pdf", "月次報告書を更新しました", None),
+        ("https://x.jp/ir/pdf/2026q2.pdf", "決算短信", None),
+    ]:
+        eq("(너) PDF 발표일 " + u[-22:], pdf_when(u, lab), want)
+
+    # 목록에서 고르는 것도 같은 규칙이다 — 결산단신·설명자료는 안 담고,
+    # 언제인지 모르는 것도 안 담는다.
+    lst = ("""<a href="/ir/monthly/2026/260907.pdf">8月 月次速報</a>"""
+           """<a href="/ir/pdf/2026q2.pdf">決算短信</a>"""
+           """<a href="/ir/upload/hp0916month.pdf">月次報告書</a>""")
+    eq("(너) PDF 목록", pdf_links(lst, "https://x.jp/"),
+       [("https://x.jp/ir/monthly/2026/260907.pdf", "8月 月次速報", "2026-09-07")])
 
     if bad:
         print("monir 스스로 시험 실패:")
