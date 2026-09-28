@@ -22,6 +22,10 @@ jobs:
       - name: Python 문법 검사
         run: |
           python -m py_compile monir.py scrape_mon_ir.py scrape_caps.py build.py
+      - name: 월차 parser self-test
+        run: python monir.py
+      - name: 월차 coverage 구조 검사
+        run: python scrape_mon_ir.py --coverage
       - name: 월차 seed JSON 검사
         run: |
           python - <<'PY'
