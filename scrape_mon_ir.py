@@ -107,11 +107,13 @@ def get(url, timeout=15):
 
 def load():
     if not OUT.exists():
-        return {"v": VER, "rv": RULE_VER, "sites": {}, "codes": {}}
+        return {"v": VER, "rv": RULE_VER, "sites": {}, "codes": {},
+                "done": [], "skip": {}, "homes": {}, "profile_miss": {}}
     try:
         got = json.loads(OUT.read_text(encoding="utf-8"))
     except (ValueError, OSError):
-        return {"v": VER, "rv": RULE_VER, "sites": {}, "codes": {}}
+        return {"v": VER, "rv": RULE_VER, "sites": {}, "codes": {},
+                "done": [], "skip": {}, "homes": {}, "profile_miss": {}}
     got.setdefault("sites", {})
     got.setdefault("codes", {})
     got.setdefault("done", [])
@@ -154,12 +156,36 @@ def save(rec):
 
 
 def universe_codes():
-    """월차 seed. 없으면 기존 IR_SITES 만으로도 계속 돈다."""
+    """seed + 이미 관측한 월차 소스의 합집합.
+
+    seed 파일은 discovery 출발점일 뿐 정답표가 아니다. TDnet/기사/IR 에 새 코드가
+    먼저 나타나면 다음 실행부터 자동으로 universe 에 들어온다.
+    """
+    out, seen = [], set()
     try:
         d = json.loads(UNIVERSE.read_text(encoding="utf-8"))
-        return [str(x).strip() for x in d.get("codes") or [] if str(x).strip()]
+        base = d.get("codes") or []
     except (ValueError, OSError):
-        return []
+        base = []
+    for code in list(monir.IR_SITES) + [str(x).strip() for x in base]:
+        if code and code not in seen:
+            seen.add(code); out.append(code)
+    for fn in ("monthly_jp.json", "monthly_web_jp.json", "monthly_ir_jp.json"):
+        p = HERE / "data" / fn
+        if not p.exists():
+            continue
+        try:
+            d = json.loads(p.read_text(encoding="utf-8"))
+        except (ValueError, OSError):
+            continue
+        if fn == "monthly_jp.json":
+            more = [str(r.get("code") or "") for r in d.get("rows") or []]
+        else:
+            more = list((d.get("codes") or {}).keys())
+        for code in more:
+            if code and code not in seen:
+                seen.add(code); out.append(code)
+    return out
 
 
 def known_names():
