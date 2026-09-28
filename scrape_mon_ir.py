@@ -45,7 +45,7 @@ VER = 1
 # 그대로 두었다. 회사 IR 페이지는 **늘 거기 있다.** 다시 받는 값이 싸므로,
 # 규칙이 아직 어린 지금은 **틀린 값을 안고 가느니 다시 받는 편**이 낫다
 # (오검출 하나가 놓침 하나보다 나쁘다). 규칙이 굳으면 그때 바꾼다.
-RULE_VER = 2
+RULE_VER = 3
 
 UA = {"User-Agent": ("Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
                      "AppleWebKit/537.36 (KHTML, like Gecko) "
@@ -77,6 +77,25 @@ PDF_FRESH_HOURS = float(os.environ.get("IR_PDF_FRESH_HOURS", "24"))
 # 월차 잡이 10분마다 도니 한 바퀴에 12개면 하루 안에 300여 종목을 한 번 돈다.
 HOME_PER_RUN = int(os.environ.get("IR_HOME_PER_RUN", "24"))
 PROFILE_MISS_DAYS = float(os.environ.get("IR_PROFILE_MISS_DAYS", "14"))
+
+# **수집일과 발표일은 완전히 다르다.**
+# 회사의 rolling 月次 페이지가 "최종 업데이트"를 명시할 때만 실제 공개일 후보로 쓴다.
+# 그런 표기가 없으면 빈칸으로 둔다. 오늘 긁었다고 오늘 발표한 것으로 만들지 않는다.
+PAGE_UPDATED = re.compile(
+    r"(?:最終更新日|最終更新|更新日|Last\s+Updated)\s*[:：]?\s*"
+    r"(20\d{2})\s*[./年]\s*(\d{1,2})\s*[./月]\s*(\d{1,2})\s*日?",
+    re.I)
+
+
+def page_updated_day(page):
+    text = monir._txt(page or "")
+    m = PAGE_UPDATED.search(text)
+    if not m:
+        return ""
+    try:
+        return date(int(m.group(1)), int(m.group(2)), int(m.group(3))).isoformat()
+    except ValueError:
+        return ""
 
 
 def get_bytes(url, timeout=25):
@@ -128,6 +147,7 @@ def load():
         print(f"  규칙 판이 바뀌었다({got.get('rv')} -> {RULE_VER})"
               f" — 모아 둔 것을 비우고 다시 받는다")
         got["sites"], got["codes"] = {}, {}
+        got["done"], got["skip"] = [], {}
         got["rv"] = RULE_VER
     return got
 
@@ -366,8 +386,9 @@ def read_pdfs(page, url, pdf, rec, today, budget):
             per = r.get("period") or ""
             if not per or per >= cur:
                 continue
-            row = {"day": (pdf.get(per) or {}).get("day") or today.isoformat(),
-                   "doc": u}
+            # PDF 를 **오늘 내려받았다는 사실은 발표일이 아니다.**
+            # 역사 수치에는 원문 URL만 보관하고, 공개일은 별도 이벤트 소스에서 정한다.
+            row = {"doc": u}
             if r.get("rev") is not None:
                 row["rev"] = r["rev"]
             if r.get("yoy") is not None:
@@ -486,13 +507,18 @@ def main():
             new_months += n_new
         # **이미 받아 둔 달을 빈 결과로 덮지 않는다.** 회사 사이트가 회계연도를
         # 넘기며 옛 표를 내려도 우리 이력은 그대로 남아야 한다.
-        months = dict(cur.get("months") or {})
+        months = {
+            p: {k: val for k, val in (v or {}).items() if k != "day"}
+            for p, v in (cur.get("months") or {}).items()
+        }
+        pdf = {
+            p: {k: val for k, val in (v or {}).items() if k != "day"}
+            for p, v in pdf.items()
+        }
         for p, v in got.items():
-            # **처음 본 날을 지킨다.** 회사 IR 표에는 공시일이 안 적혀 있어
-            # 우리가 아는 날은 '우리가 처음 본 날'뿐이다. 실행할 때마다
-            # 오늘로 덮으면 그 날짜가 날마다 흔들려 아무 뜻이 없어진다.
-            row = {"day": (months.get(p) or {}).get("day") or today.isoformat()}
-            row.update({k: val for k, val in v.items() if k in ("same", "all")})
+            # 회사 표의 달별 수치에는 발표일을 억지로 달지 않는다.
+            # "처음 본 날"도 발표일이 아니므로 저장하지 않는다.
+            row = {k: val for k, val in v.items() if k in ("same", "all")}
             if p not in months:
                 new_months += 1
             months[p] = row
@@ -501,6 +527,11 @@ def main():
             continue
         codes[code] = {"name": name, "page": url, "months": months,
                        "ts": now.isoformat(timespec="seconds")}
+        updated = page_updated_day(page)
+        if updated:
+            codes[code]["updated"] = updated
+        elif cur.get("updated"):
+            codes[code]["updated"] = cur["updated"]
         if looked:
             codes[code]["pdf_ts"] = now.isoformat(timespec="seconds")
         elif cur.get("pdf_ts"):
