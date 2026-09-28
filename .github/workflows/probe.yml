@@ -15,11 +15,12 @@ jobs:
         with:
           python-version: '3.12'
 
-      # 93차 — **JS 로 그리는 月次 페이지는 자료를 어디서 받아오나.**
-      # 표도 PDF 도 안 실려 오는 곳이 넷이다(이온 8267 · 젠쇼 7550 ·
-      # 물어코퍼 3097 · 파크24 4666). 이온은 시총 23조엔으로 목록에서 가장 크다.
-      # 스크립트가 부르는 주소를 눈으로 보고 나서 붙인다.
-      - name: 🔎 JS 로 그리는 곳 (93차)
+      # 94차 — **eir-parts 위젯이 부르는 주소.** 이온(8267)·파크24(4666)가
+      # `.eir[data-area-name]` · `/ir/eir/eir.js` 로 그리고, 브ックオフ(9278)의
+      # 월매출 PDF 도 `ssl4.eir-parts.net/doc/9278/tdnet/…` 에 있다. 같은 벤더가
+      # **지난 공시를 영구 보관**한다면 「TDnet 첨부는 한 달만 남는다」는 벽이
+      # 무너진다 — 우리 월매출 이력을 가로막는 바로 그 벽이다.
+      - name: 🔎 eir-parts 가 부르는 주소 (94차)
         timeout-minutes: 12
         run: |
           python - <<'EOF'
@@ -29,52 +30,39 @@ jobs:
                                "AppleWebKit/537.36 (KHTML, like Gecko) "
                                "Chrome/131.0.0.0 Safari/537.36"),
                 "Accept-Language": "ja,en;q=0.8"}
-          PAGES = [
-              ("8267", "イオン", "https://www.aeon.info/ir/library/monthly/"),
-              ("7550", "ゼンショー", "https://www.zensho.co.jp/jp/ir/finance/monthly/"),
-              ("3097", "物語コーポ", "https://www.monogatari.co.jp/ir/date/"),
-              ("4666", "パーク２４", "https://www.park24.co.jp/ir/financial/monthly.html"),
+          JS = [
+              ("파크24 eir.js", "https://www.park24.co.jp/ir/eir/eir.js"),
+              ("이온 script.js",
+               "https://www.aeon.info/wp-content/plugins/aeon_init/js/script.js"),
+              ("이온 common.js",
+               "https://www.aeon.info/wp-content/themes/aeon_corp/_assets/_common/js/common.js"),
           ]
-          SRC = re.compile(r'(?is)<script[^>]+src="([^"]+)"')
-          IFR = re.compile(r'(?is)<iframe[^>]+src="([^"]+)"')
-          Q = "[\"'(]"
-          NQ = "[^\"'()\\s]"
-          URLS = re.compile(Q + "(" + NQ + "{4,120}[.](?:json|csv|xlsx?|php|aspx?))",
-                            re.I)
-          API = re.compile(Q + "(/?" + NQ + "{4,120}"
-                           "(?:api|ajax|data|monthly|getsuji)" + NQ + "{0,60})",
-                           re.I)
+          URL = re.compile(r"https?://[^\s\"'`<>()]{6,140}")
+          PATH = re.compile(r"[\"'`](/[^\s\"'`<>()]{4,140})[\"'`]")
 
           def get(u):
               try:
                   with urllib.request.urlopen(
-                          urllib.request.Request(u, headers=UA), timeout=15) as r:
-                      raw = r.read(1_500_000)
-                      h = raw[:2500].decode("ascii", "ignore").lower()
-                      enc = ("cp932" if "shift_jis" in h or "shift-jis" in h
-                             else "euc-jp" if "euc-jp" in h else "utf-8")
-                      return r.status, raw.decode(enc, "ignore")
+                          urllib.request.Request(u, headers=UA), timeout=20) as r:
+                      return r.status, r.read(900_000).decode("utf-8", "ignore")
               except urllib.error.HTTPError as e:
                   return e.code, ""
               except Exception as e:
                   return type(e).__name__, ""
 
-          for code, name, url in PAGES:
-              st, page = get(url); time.sleep(0.6)
+          for name, u in JS:
+              st, body_ = get(u); time.sleep(0.6)
               print("=" * 78)
-              print("%-5s %-12s %s · %dKB" % (code, name, st, len(page) // 1024))
-              if not page:
+              print("%s %s · %dKB" % (name, st, len(body_) // 1024))
+              if not body_:
                   continue
-              for u in dict.fromkeys(IFR.findall(page)):
-                  print("   iframe", u[:100])
-              for u in list(dict.fromkeys(SRC.findall(page)))[:12]:
-                  print("   script", u[:100])
-              hits = list(dict.fromkeys(URLS.findall(page)))[:12]
-              for u in hits:
-                  print("   파일  ", u[:100])
-              for u in list(dict.fromkeys(API.findall(page)))[:12]:
-                  print("   주소  ", u[:100])
-              # 페이지 안에 달 이름이 몇 번 나오나 — 값이 통째로 박혀 있을 수도 있다
-              print("   「月」 %d · 「%%」 %d · 「前年」 %d"
-                    % (page.count("月"), page.count("%"), page.count("前年")))
+              hits = [x for x in dict.fromkeys(URL.findall(body_))
+                      if "eir" in x or "json" in x or "api" in x]
+              for x in hits[:16]:
+                  print("   url ", x[:120])
+              for x in list(dict.fromkeys(PATH.findall(body_)))[:16]:
+                  print("   path", x[:120])
+              if "eir-parts" in body_:
+                  i = body_.find("eir-parts")
+                  print("   ...", body_[max(0, i - 180):i + 180].replace("\n", " "))
           EOF
