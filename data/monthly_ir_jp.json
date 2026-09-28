@@ -1,6 +1,6 @@
 {
  "v": 1,
- "rv": 3,
+ "rv": 4,
  "sites": {
   "8267": {
    "page": "https://www.aeon.info/ir/library/monthly/",
@@ -373,6 +373,27 @@
   "3038": {
    "page": "https://www.kobebussan.co.jp/ir/monthly.php",
    "found": "2026-09-28"
+  },
+  "3046": {
+   "miss": "2026-09-28"
+  },
+  "3048": {
+   "miss": "2026-09-28"
+  },
+  "3053": {
+   "page": "https://www.pepper-fs.co.jp/ir/monthly_report/library.php",
+   "found": "2026-09-28"
+  },
+  "3058": {
+   "page": "https://ir.sanyodo.co.jp/ir/eigyou.html",
+   "found": "2026-09-28"
+  },
+  "3064": {
+   "miss": "2026-09-28"
+  },
+  "3068": {
+   "page": "https://www.wdi.co.jp/ir/monthly.html",
+   "found": "2026-09-28"
   }
  },
  "codes": {
@@ -401,15 +422,15 @@
      "all": 107.1
     }
    },
-   "ts": "2026-09-28T04:38:54+00:00"
+   "ts": "2026-09-28T05:04:54+00:00"
   },
   "9983": {
    "name": "ファストリ",
    "page": "https://www.fastretailing.com/jp/ir/monthly/",
    "months": {},
-   "ts": "2026-09-28T04:38:54+00:00",
+   "ts": "2026-09-28T05:04:54+00:00",
    "updated": "2026-09-02",
-   "pdf_ts": "2026-09-28T04:38:54+00:00",
+   "pdf_ts": "2026-09-28T05:04:54+00:00",
    "pdf": {
     "2025-09": {
      "doc": "https://www.fastretailing.com/jp/ir/monthly/pdf/MonthlySales_2026.pdf",
@@ -682,7 +703,7 @@
      "all": 100.7
     }
    },
-   "ts": "2026-09-28T04:38:54+00:00",
+   "ts": "2026-09-28T05:04:54+00:00",
    "updated": "2026-09-15"
   },
   "3563": {
@@ -782,8 +803,8 @@
      "same": 104.7
     }
    },
-   "ts": "2026-09-28T04:38:54+00:00",
-   "pdf_ts": "2026-09-28T04:38:54+00:00"
+   "ts": "2026-09-28T05:04:54+00:00",
+   "pdf_ts": "2026-09-28T05:04:54+00:00"
   },
   "7564": {
    "name": "ワークマン",
@@ -1046,8 +1067,8 @@
      "same": 117.7
     }
    },
-   "ts": "2026-09-28T04:38:54+00:00",
-   "pdf_ts": "2026-09-28T04:38:54+00:00",
+   "ts": "2026-09-28T05:04:54+00:00",
+   "pdf_ts": "2026-09-28T05:04:54+00:00",
    "pdf": {
     "2026-04": {
      "doc": "https://www.workman.co.jp/ir_info/pdf/2027/26_09.pdf",
@@ -1096,7 +1117,7 @@
      "all": 111.1
     }
    },
-   "ts": "2026-09-28T04:38:54+00:00"
+   "ts": "2026-09-28T05:04:54+00:00"
   },
   "8016": {
    "name": "オンワードＨＤ",
@@ -1247,7 +1268,7 @@
      "all": 74.8
     }
    },
-   "ts": "2026-09-28T04:38:54+00:00"
+   "ts": "2026-09-28T05:04:54+00:00"
   },
   "9948": {
    "name": "アークス",
@@ -1326,7 +1347,7 @@
      "same": 102.3
     }
    },
-   "ts": "2026-09-28T04:38:54+00:00"
+   "ts": "2026-09-28T05:04:54+00:00"
   },
   "7532": {
    "name": "ＰＰＩＨ",
@@ -1337,7 +1358,7 @@
      "all": 100.3
     }
    },
-   "ts": "2026-09-28T04:38:54+00:00"
+   "ts": "2026-09-28T05:04:54+00:00"
   },
   "2790": {
    "name": "ナフコ",
@@ -1508,14 +1529,14 @@
      "all": 93.1
     }
    },
-   "ts": "2026-09-28T04:38:54+00:00"
+   "ts": "2026-09-28T05:04:54+00:00"
   }
  },
  "source": "회사 IR 페이지 (月次 표)",
  "note": "회사가 제 사이트에 올린 월차 표에서 읽는다. 값은 전년동월비(%)뿐이고 금액은 없다. 회계연도가 적힌 표는 그 해로 읽으므로 옛 회계연도 표를 함께 싣는 회사는 이력이 길다.",
  "companies": 10,
  "months": 199,
- "ts": "2026-09-28T04:46:28+00:00",
+ "ts": "2026-09-28T05:12:56+00:00",
  "done": [
   "https://food-and-life.co.jp/wp-content/uploads/2024/11/fy2021_sales.pdf",
   "https://food-and-life.co.jp/wp-content/uploads/2024/11/fy2022_sales.pdf",
@@ -1614,11 +1635,35 @@
   "3028": "https://www.alpen-group.jp",
   "3030": "https://www.pub-hub.co.jp",
   "3034": "https://www.qolhd.co.jp",
-  "3038": "https://www.kobebussan.co.jp"
+  "3038": "https://www.kobebussan.co.jp",
+  "3046": "https://jinsholdings.com",
+  "3048": "https://www.biccamera.com",
+  "3053": "https://www.pepper-fs.co.jp",
+  "3058": "https://www.sanyodo.co.jp",
+  "3064": "https://corp.monotaro.com",
+  "3068": "https://www.wdi.co.jp",
+  "3069": "https://j-fla.com",
+  "3077": "https://www.horiifood.co.jp",
+  "3080": "https://www.jason.co.jp",
+  "3082": "https://www.kichiri.co.jp",
+  "3083": "https://starseeds.co.jp",
+  "3087": "https://www.dnh.co.jp",
+  "3088": "https://www.matsukiyococokara.com",
+  "3135": "https://www.marketenterprise.co.jp",
+  "3148": "https://www.createsdhd.co.jp",
+  "3160": "https://www.oomitsu.com",
+  "3175": "https://apcompany.jp",
+  "3178": "https://www.chimney.co.jp",
+  "3179": "https://www.syuppin.co.jp",
+  "3181": "https://www.okoku.jp",
+  "3191": "https://www.joyfulhonda.com",
+  "3193": "https://eternal-hospitality.co.jp",
+  "3195": "https://www.genepa.com"
  },
  "profile_miss": {
   "2686": "2026-09-28",
-  "3032": "2026-09-28"
+  "3032": "2026-09-28",
+  "3066": "2026-09-28"
  },
- "cursor": 0
+ "cursor": 115
 }
