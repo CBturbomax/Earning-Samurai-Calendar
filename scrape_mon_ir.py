@@ -255,7 +255,14 @@ def iter_targets(rec, today):
         else:
             name, fixed = names.get(code, code), ""
             home = rec.setdefault("homes", {}).get(code, "")
-            if not home and left > 0:
+            due = True
+            missed = rec.setdefault("profile_miss", {}).get(code)
+            if missed:
+                try:
+                    due = (today - date.fromisoformat(missed)).days >= PROFILE_MISS_DAYS
+                except ValueError:
+                    pass
+            if not home and due and left > 0:
                 home = profile_home(code, rec, today)
                 left -= 1
         if home:
