@@ -15,28 +15,41 @@ jobs:
         with:
           python-version: '3.12'
 
-      # 92차 — **月次 링크를 못 찾은 열세 곳은 왜 못 찾았나.**
-      # 맨 위가 안 열린 것과, 열렸는데 링크 이름이 달라 못 알아본 것은 다르다.
-      # 짐작해서 규칙을 넓히지 말고 **그 페이지의 링크 이름을 눈으로 보고** 넓힌다.
-      - name: 🔎 못 찾은 열세 곳 (92차)
-        timeout-minutes: 16
+      # 93차 — **JS 로 그리는 月次 페이지는 자료를 어디서 받아오나.**
+      # 표도 PDF 도 안 실려 오는 곳이 넷이다(이온 8267 · 젠쇼 7550 ·
+      # 물어코퍼 3097 · 파크24 4666). 이온은 시총 23조엔으로 목록에서 가장 크다.
+      # 스크립트가 부르는 주소를 눈으로 보고 나서 붙인다.
+      - name: 🔎 JS 로 그리는 곳 (93차)
+        timeout-minutes: 12
         run: |
           python - <<'EOF'
-          import json, re, time, urllib.error, urllib.request
-          from pathlib import Path
-
-          import monir
+          import re, time, urllib.error, urllib.request
 
           UA = {"User-Agent": ("Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
                                "AppleWebKit/537.36 (KHTML, like Gecko) "
                                "Chrome/131.0.0.0 Safari/537.36"),
                 "Accept-Language": "ja,en;q=0.8"}
+          PAGES = [
+              ("8267", "イオン", "https://www.aeon.info/ir/library/monthly/"),
+              ("7550", "ゼンショー", "https://www.zensho.co.jp/jp/ir/finance/monthly/"),
+              ("3097", "物語コーポ", "https://www.monogatari.co.jp/ir/date/"),
+              ("4666", "パーク２４", "https://www.park24.co.jp/ir/financial/monthly.html"),
+          ]
+          SRC = re.compile(r'(?is)<script[^>]+src="([^"]+)"')
+          IFR = re.compile(r'(?is)<iframe[^>]+src="([^"]+)"')
+          Q = "[\"'(]"
+          NQ = "[^\"'()\\s]"
+          URLS = re.compile(Q + "(" + NQ + "{4,120}[.](?:json|csv|xlsx?|php|aspx?))",
+                            re.I)
+          API = re.compile(Q + "(/?" + NQ + "{4,120}"
+                           "(?:api|ajax|data|monthly|getsuji)" + NQ + "{0,60})",
+                           re.I)
 
           def get(u):
               try:
                   with urllib.request.urlopen(
                           urllib.request.Request(u, headers=UA), timeout=15) as r:
-                      raw = r.read(1_200_000)
+                      raw = r.read(1_500_000)
                       h = raw[:2500].decode("ascii", "ignore").lower()
                       enc = ("cp932" if "shift_jis" in h or "shift-jis" in h
                              else "euc-jp" if "euc-jp" in h else "utf-8")
@@ -46,35 +59,22 @@ jobs:
               except Exception as e:
                   return type(e).__name__, ""
 
-          d = json.loads(Path("data/monthly_ir_jp.json").read_text(encoding="utf-8"))
-          miss = sorted(c for c, v in (d.get("sites") or {}).items()
-                        if v.get("miss"))
-          print("못 찾은 곳", len(miss), miss)
-          WANT = re.compile(r"(月次|月別|月度|売上|業績|実績|IR情報|投資家)")
-          for code in miss:
-              name, top, _f = monir.IR_SITES[code]
-              st, page = get(top); time.sleep(0.6)
-              print("─" * 78)
-              print("%-5s %-14s 맨 위 %s · %dKB" % (code, name, st,
-                                                   len(page) // 1024))
+          for code, name, url in PAGES:
+              st, page = get(url); time.sleep(0.6)
+              print("=" * 78)
+              print("%-5s %-12s %s · %dKB" % (code, name, st, len(page) // 1024))
               if not page:
                   continue
-              ir = monir.find_ir(page, top)
-              print("      IR 링크:", ir or "(없음)")
-              if not ir:
-                  continue
-              st2, ip = get(ir); time.sleep(0.6)
-              print("      IR %s · %dKB · 「月次」 %d"
-                    % (st2, len(ip) // 1024, ip.count("月次")))
-              if not ip:
-                  continue
-              seen = set()
-              for href, lab in monir.A.findall(ip):
-                  t = monir._txt(lab)
-                  if not t or not WANT.search(t + href) or t in seen:
-                      continue
-                  seen.add(t)
-                  print("        %-26s %s" % (t[:26], href[:64]))
-                  if len(seen) >= 14:
-                      break
+              for u in dict.fromkeys(IFR.findall(page)):
+                  print("   iframe", u[:100])
+              for u in list(dict.fromkeys(SRC.findall(page)))[:12]:
+                  print("   script", u[:100])
+              hits = list(dict.fromkeys(URLS.findall(page)))[:12]
+              for u in hits:
+                  print("   파일  ", u[:100])
+              for u in list(dict.fromkeys(API.findall(page)))[:12]:
+                  print("   주소  ", u[:100])
+              # 페이지 안에 달 이름이 몇 번 나오나 — 값이 통째로 박혀 있을 수도 있다
+              print("   「月」 %d · 「%%」 %d · 「前年」 %d"
+                    % (page.count("月"), page.count("%"), page.count("前年")))
           EOF
