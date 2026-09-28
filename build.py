@@ -1755,23 +1755,31 @@ def _ratio_rows(months):
 
 
 def _ir_pick(rec):
-    """회사 IR 기록 -> (달별 줄, 기준 낱말, 카드에 쓸 달 사전).
+    """회사 IR의 HTML 표와 PDF 중 **더 최신 대상월**을 가진 쪽을 고른다.
 
-    한 회사 안에서도 **표와 PDF 를 섞지 않는다** — 「全社売上高」와 「既存店」
-    처럼 뜻이 다른 값이 한 막대에 나란히 서면 거짓말이 된다. 달이 더 많은
-    쪽 하나만 쓰고, 같으면 **금액이 오는 PDF 쪽**을 쓴다.
+    과거 PDF가 10년치라 길다는 이유로 올해 HTML 표보다 이기면 안 된다.
+    같은 최신월이면 금액까지 주는 PDF를 우선하고, 그 외에는 HTML 표를 쓴다.
     """
     tbl = rec.get("months") or {}
     pdf = rec.get("pdf") or {}
-    if pdf and len(pdf) >= len(tbl):
-        rows = [[p, v.get("rev"), v.get("yoy")] for p, v in sorted(pdf.items())
-                if v.get("rev") is not None or v.get("yoy") is not None]
-        if rows:
-            lab = "".join(v.get("metric", "") for v in pdf.values())
-            return rows, _base_of(lab), pdf
-    rows, base = _ratio_rows(tbl)
-    return rows, base, tbl
 
+    trows, tbase = _ratio_rows(tbl)
+    prows = [[p, v.get("rev"), v.get("yoy")] for p, v in sorted(pdf.items())
+             if v.get("rev") is not None or v.get("yoy") is not None]
+    plab = "".join(v.get("metric", "") for v in pdf.values())
+    pbase = _base_of(plab)
+
+    tlast = trows[-1][0] if trows else ""
+    plast = prows[-1][0] if prows else ""
+
+    if prows and (plast > tlast or
+                  (plast == tlast and any(r[1] is not None for r in prows))):
+        return prows, pbase, pdf
+    if trows:
+        return trows, tbase, tbl
+    if prows:
+        return prows, pbase, pdf
+    return [], "", {}
 
 def load_monthly_nums():
     """회사마다 **가장 최신 대상월을 가진 한 소스**만 고른다.
