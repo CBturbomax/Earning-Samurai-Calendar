@@ -13,6 +13,7 @@ scrape_jp_tdnet.py ─> earnings_jp_past.json│   (일본은 소스가 셋이�
                  └─> monthly_jp.json      │   '이번 달 얼마 팔았나'(월매출)
 scrape_mon_jp.py  ─> monthly_nums_jp.json │   (+ pdftext.py + montable.py)
 scrape_mon_web.py ─> monthly_web_jp.json  │   (流通ニュース · + monweb.py)
+scrape_mon_ir.py  ─> monthly_ir_jp.json   │   (회사 IR 페이지 · + monir.py)
 scrape_jp_sched.py ─> earnings_jp_sched.json│
 scrape_us.py   ──> data/earnings_us.json  │
 scrape_hk.py   ──> data/earnings_hk.json  │
@@ -55,6 +56,9 @@ python scrape_mon_jp.py                     # 월매출 수치 (첨부 PDF 표�
 python scrape_mon_jp.py --probe 7685        # 한 종목의 PDF 를 뜯어 본다
 python scrape_mon_web.py                    # 월매출 (流通ニュース 월차 기사)
 python scrape_mon_web.py --probe            # 목록·기사 한 장만 떠본다
+python scrape_mon_ir.py                     # 월매출 (회사 IR 페이지 월차 표)
+python scrape_mon_ir.py --probe 9843        # 한 회사의 月次 페이지를 뜯어 본다
+python monir.py                             # IR 표 읽기 스스로 시험
 python monweb.py                            # 기사 표 읽기 스스로 시험
 python montable.py                          # PDF 표 읽기 스스로 시험
 python pdftext.py 어떤.pdf                  # PDF 에서 글자만 꺼내 본다
@@ -104,6 +108,7 @@ python scrape_desc.py                       # 사업 설명 원문
 | 일본 **월매출(月次)** 공시 | 수집은 `scrape_jp_tdnet.py` 의 `is_monthly`/`monthly_period`, 화면은 `build.py` 의 `load_monthly`/`renderMonthly` |
 | 월매출 **수치**(금액·전년비) | `scrape_mon_jp.py` — 글자 꺼내기는 `pdftext.py`, 표 읽기는 `montable.py`, 차트는 `build.py` 의 `mnChart` |
 | 월매출 — 공시를 안 내는 회사 | `scrape_mon_web.py` — 표 읽기와 브랜드→코드 사전은 `monweb.py` 의 `BRANDS` |
+| 월매출 — 회사 IR 페이지 | `scrape_mon_ir.py` — 표 읽기는 `monir.py`, 손으로 잇는 주소는 `monir.py` 의 `IR_SITES` |
 | 부문 이름 한글 표기 | `markets.py`의 `SEG_KO_FULL`/`SEG_KO_EN`/`SEG_KO_CJK` — 옮기기는 `build.py`의 `seg_ko` |
 | 부문을 어느 축으로 가를까 | `scrape_seg_sec.py`의 `axis_rank` / `AXIS_KO` |
 | 회사 사업 설명(한국어) | `descriptions.py`의 `DESC_KO` — 원문 수집은 `scrape_desc.py` |
@@ -576,6 +581,63 @@ zip 에서 같이 뽑는 것과 같은 규칙 — 남의 서버를 두 배로 �
     2024년 1월(`START`)보다 옛 기사를 끊는다. 한 쪽 50건 · 한 달 50건쯤이라
     서른몇 쪽이면 닿는다. 거슬러 가기는 한 실행에 열 쪽씩(`WEB_DEEP`)이고
     못 본 기사는 `queue` 에 남는다 — 남의 뉴스 서버라 한 번에 250건씩만 본다.
+
+- **세 번째 우주는 회사 IR 페이지다 — 집계 사이트와 달리 안 막는다.**
+  회원님이 "가용한 정보를 다 긁어서라도" 라고 하신 자리다. 집계 사이트는
+  여덟 곳이 전부 막혔는데(irbank·minkabu·가부탄·월차Web…), **회사 제 사이트를
+  두드려 보니 24곳 중 21곳이 열렸다**(84차). 그중 16곳에서 月次 페이지를 찾았다.
+  `scrape_mon_ir.py` + `monir.py` 가 읽고 `data/monthly_ir_jp.json` 에 쓴다.
+  **못 연 곳은 다시 두드리지 않는다**: 시마무라 8227·ABC마트 2670 은 403,
+  비쿠카메라 3048 은 timeout 이다.
+
+  - **손으로 잇는 것은 맨 위 주소 하나뿐이다**(`monir.IR_SITES`). 月次 페이지는
+    수집기가 찾아 파일의 `sites` 에 적어 두고 다음부터 곧장 간다. 회사마다
+    파서를 두면 백 개의 파서가 되고 사이트를 고칠 때마다 깨진다 — 표를 읽는
+    규칙은 하나고, 그 규칙이 못 읽는 표는 **안 읽고 넘어간다.**
+  - **생김새가 셋이다**(85차). 표(니토리·스카이락·온워드·UA·세븐＆아이) ·
+    PDF 목록(J프론트는 2007년치까지 96건 · 야마다 · 쿠라스시 · 패스트리) ·
+    JS로 그리는 곳(이온·젠쇼·물어코퍼·파크24는 표도 PDF 도 안 실려 온다).
+    지금 읽는 것은 **표**다. PDF 목록은 이미 있는 연장(`pdftext`+`montable`)이
+    읽을 수 있고, JS 쪽은 자료를 어디서 받아오는지 따로 떠봐야 한다.
+  - **해를 표의 마지막 이름표에 맞추면 안 된다 — 값이 있는 마지막 달에 맞춘다.**
+    회사 사이트는 회계연도 열두 달을 미리 그려 두고 안 온 달을 비운다.
+    니토리(4月~3月 중 8月까지 참)와 스카이락(1月~12月 중 8月까지)이 그래서
+    한 해가 통째로 밀려 **0달**이었다. `montable` 이 값 있는 맨 오른쪽 칸을
+    기준으로 삼는 것과 같은 규칙이다.
+  - **한 표에 절(節)이 둘이면 첫 절만 읽는다.** 온워드(8016)의 표는 「合計」
+    절과 「店舗売上」 절이 둘 다 「既存店」 줄을 갖고 있어 같은 종류가 둘로
+    잡혔고, 그 바람에 표가 통째로 버려졌다. **칸이 전부 같은 글자인 줄**이
+    절의 머리다 — 회사가 맨 위에 둔 것이 회사 전체다.
+  - **옛 회계연도 표를 올해로 읽지 않는다.** 스시로(3563) 페이지에는 달 이름표가
+    똑같은 표가 둘인데 값이 다르다 — 이번 회계연도와 지난 회계연도다. 그대로
+    합쳤더니 **2026-09** 가 실렸다. 9월 28일에 9월 월매출이 있을 수 없다
+    (월매출은 다음 달 초에 나온다). 그래서 셋을 건다 — **당월 값이 찍힌 표는
+    버리고**, **이미 담은 달을 다시 내는 표도 버리고**, 표 바로 위 제목의
+    회계연도 표기(「2026年9月期」)는 읽어서 쓴다. 셋째 덕에 스시로가 거꾸로
+    **23달(2024-10~2026-08)**이 됐다.
+  - **「YYYY年度」 는 시작하는 해다 — 4월 시작이라고 넘겨짚지 말 것.**
+    온워드는 2월 결산이라 「2025年度」 가 2025년 3월에 시작한다. 4월 시작으로
+    보았더니 각 회계연도의 3月 한 칸이 한 해 앞으로 밀렸다(35달 중 다섯 달).
+    회계연도의 첫 달은 표가 스스로 말해 주므로, 달 번호가 거꾸로 가는 자리마다
+    해를 하나 넘기며 읽는다. 2021년 4월 既存店 **198.7%**(전년 코로나 휴점)가
+    해가 맞는지 짚어 주었다. 「2026年2月期」 꼴은 끝나는 해라 따로 읽는다.
+  - **갈리는 종류만 버린다 — 표를 통째로 버리지 않는다.** 세븐＆아이의 해외사업
+    표는 7-Eleven,Inc. 과 7-Eleven Australia 의 既存店 이 나란히 서서 어느 쪽이
+    회사인지 못 가르므로 버려야 하지만, 유나이티드애로우즈의 표에는 「全社」 가
+    한 줄뿐이다. 종류(기존점/전점)마다 따로 세어 **갈리는 종류만** 버리면 그
+    한 줄이 살아난다.
+  - **부호가 붙은 칸은 안 담는다.** 「△2.0」 이 전년비 증감률인지 비율인지
+    표마다 달라서, 비율로 읽으면 98 을 2 로 적는다. 놓치는 편이 낫다.
+  - **규칙 판(`RULE_VER`)을 올리면 통째로 다시 받는다 — 다른 월매출 수집기와
+    반대다.** TDnet 첨부도 流通ニュース 기사도 창 밖으로 밀려나면 다시 못 받아
+    그쪽은 값을 남겨 두지만, **회사 IR 페이지는 늘 거기 있다.** 다시 받는 값이
+    싸므로 규칙이 아직 어린 지금은 틀린 값을 안고 가느니 다시 받는다.
+  - **화면에서는 달이 더 많은 쪽 하나만 쓴다.** 첨부 PDF 에 금액이 있으면 늘
+    그쪽이고, 남은 둘(IR·流通ニュース)은 비율뿐이라 우열이 없다. 그래서 달이
+    더 많은 쪽을 쓰고 같으면 회사가 제 손으로 낸 IR 을 쓴다. **섞지 않는다** —
+    「全社売上高」와 「既存店」이 한 막대에 나란히 서면 거짓말이 된다.
+  - 스스로 시험은 `python monir.py` 다. 85·87차에 **실제로 본 표 열네 꼴**을
+    그대로 밟는다. **규칙을 넓히기 전후로 돌릴 것.**
 
 - **의무가 아니라 회사 선택이다.** 스시로(3563)·니토리(9843)는 45일 동안 월매출을
   한 건도 안 냈다 — 자사 IR 페이지에만 올리는 회사가 많다. 안 나온다고 수집
@@ -1056,7 +1118,7 @@ HPE 가 Compute·Storage·Intelligent Edge 를 Cloud&AI·Networking 으로 바�
 | `collect.yml` | **5분**(크론 하한) | `data/earnings.json` · `data/earnings_jp_sched.json` · `data/earnings_us.json` · `data/earnings_hk.json` · `data/caps.json` |
 | `numbers.yml` | **5분**(크론 하한) | `data/financials.json` · `data/financials_intl.json` · `data/segments.json` · `data/segments_hk.json` · `data/desc.json` |
 | `segments.yml` | 30분 | `data/segments_sec.json` · `data/segments_edgar.json` · `data/segments_fpi.json` · `data/financials_fpi.json` |
-| `monthly.yml` | 10분 | `data/monthly_nums_jp.json` (월매출 수치 — 첨부 PDF) · `data/monthly_web_jp.json` (월매출 — 流通ニュース) |
+| `monthly.yml` | 10분 | `data/monthly_nums_jp.json` (월매출 수치 — 첨부 PDF) · `data/monthly_web_jp.json` (월매출 — 流通ニュース) · `data/monthly_ir_jp.json` (월매출 — 회사 IR) |
 | `segments_hist.yml` | 하루 1번 | `data/segments_jp_hist.json` (EDINETDB_KEY 있을 때만) |
 
 **워크플로는 저를 부른 커밋을 꺼내 온다 — 줄을 서면 그게 벌써 낡은 것이다.**
