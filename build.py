@@ -1637,9 +1637,9 @@ def load_monthly(packed):
     for label, src in (("회사 IR 월차 표", load_monthly_ir()),
                        ("流通ニュース 월차 기사", load_monthly_web())):
         for code, rec in sorted(src.items()):
-            # 낡아서 화면에 안 낼 종목이면 그 자리에 카드도 세우지 않는다 —
-            # 수치 없는 카드만 덩그러니 남으면 그게 더 헷갈린다.
-            if code in seen or code in stale:
+            # 오래된 종목도 숨기지 않는다. 최신 발표일 순 목록에서 자연히 아래로
+            # 내려가고, 상세창에는 '오래된 데이터' 경고를 붙인다.
+            if code in seen:
                 continue
             months = rec.get("months") or {}
             if label.startswith("회사 IR"):
@@ -1766,8 +1766,6 @@ def load_monthly_nums():
     out, back = {}, 0
     stale = mon_stale_codes()
     for code, rec in (got.get("codes") or {}).items():
-        if code in stale:
-            continue
         months = rec.get("months") or {}
         rows = [[k, v.get("rev"), v.get("yoy")] for k, v in sorted(months.items())]
         if not rows:
@@ -1784,7 +1782,7 @@ def load_monthly_nums():
     # 한 막대에 나란히 서서 거짓말을 한다. 금액이 오는 쪽이 늘 이긴다.
     ir_c, web_c = load_monthly_ir(), load_monthly_web()
     for code in sorted(set(ir_c) | set(web_c)):
-        if code in out or code in stale:
+        if code in out:
             continue
         cand = []
         for src, rec in (("회사 IR", ir_c.get(code)),
