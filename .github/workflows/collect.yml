@@ -44,6 +44,7 @@ on:
       - 'markets.py'
       - 'companies*.py'
       - 'translit.py'
+      - 'data/monthly_universe_jp.json'
       - '.github/workflows/collect.yml'
 
 permissions:
