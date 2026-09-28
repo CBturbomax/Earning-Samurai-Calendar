@@ -24,6 +24,7 @@ TDnet 첨부(`scrape_mon_jp.py`)도 流通ニュース(`scrape_mon_web.py`)도 �
 예외를 두기 시작하면 백 개의 파서가 되고, 사이트를 고칠 때마다 깨진다.
 """
 import re
+from collections import Counter
 from datetime import date
 
 import monweb
@@ -98,21 +99,28 @@ def _fy(text: str):
     return None
 
 
-def _years(months, fy, today):
+def _years(months, filled, fy, today):
     """달 목록에 해를 붙인다.
 
-    회계연도를 알면 그걸로 가른다 — 결산기말보다 큰 달은 앞해다. 모르면
-    **맨 뒤 달을 오늘에 맞추고** 거꾸로 올라가며 달 번호가 커지는 자리마다
-    해를 하나 뺀다(`monweb._years`·`montable._years` 와 같은 규칙).
+    회계연도를 알면 그걸로 가른다 — 결산기말보다 큰 달은 앞해다.
+
+    모르면 **값이 있는 마지막 달**에 오늘을 맞추고 양쪽으로 훑는다. 표의
+    마지막 *이름표*에 맞추면 안 된다 — 회사 사이트의 표는 회계연도 열두 달을
+    미리 그려 두고 아직 안 온 달을 비워 두기 때문에, 이름표에 맞추면 통째로
+    한 해가 밀린다. 니토리(4月~3月 중 8月까지만 참)와 스카이락(1月~12月 중
+    8月까지)이 그래서 0달이었다. `montable._years` 가 값 있는 맨 오른쪽 칸을
+    기준으로 삼는 것과 같은 규칙이다.
     """
     if fy:
         fy_y, fy_m = fy
         return [fy_y if m <= fy_m else fy_y - 1 for m in months]
-    last = months[-1]
-    y = today.year if last <= today.month else today.year - 1
-    out = [y] * len(months)
-    for i in range(len(months) - 2, -1, -1):
+    idx = max((i for i, f in enumerate(filled) if f), default=len(months) - 1)
+    out = [None] * len(months)
+    out[idx] = today.year if months[idx] <= today.month else today.year - 1
+    for i in range(idx - 1, -1, -1):
         out[i] = out[i + 1] - 1 if months[i] > months[i + 1] else out[i + 1]
+    for i in range(idx + 1, len(months)):
+        out[i] = out[i - 1] + 1 if months[i] < months[i - 1] else out[i - 1]
     return out
 
 
@@ -138,79 +146,105 @@ def _label_ok(lab: str):
 # 한 표에서 **이름표가 같은 계열이 둘 이상**이면 그 표를 안 읽는다.
 # 세븐＆아이·스시로처럼 브랜드마다 줄이 선 표가 그렇다 — 어느 줄이 회사
 # 전체인지 규칙으로 못 가르므로, 엉뚱한 브랜드를 회사 매출로 싣느니 버린다.
-def _series(rows, width, today, near):
-    """표 하나 -> {'YYYY-MM': {'same'|'all': 비율}} 또는 {}."""
+def _series(rows, width, today, near, lead=""):
+    """표 하나 -> {'YYYY-MM': {'same'|'all': 비율}} 또는 {}.
+
+    `lead` 는 **표 바로 앞의 글**이다. 회계연도가 표 안이 아니라 그 위
+    제목에 적히는 일이 흔해서(「2026年2月期 月次売上高」), 그것까지 봐야
+    옛 회계연도 표를 제 해에 앉힐 수 있다.
+    """
     # (가) 달이 **가로**로 선 표 — 머리줄에 1月…12月
     for r in range(min(4, len(rows))):
         cols = [c for c in range(width) if _month(rows[r][c]) is not None]
         if len(cols) >= 3:
-            return _horizontal(rows, width, r, cols, today, near)
+            return _horizontal(rows, width, r, cols, today, near, lead)
     # (나) 달이 **세로**로 선 표 — 첫 칸(또는 둘째 칸)에 4月…
     for c0 in (0, 1):
         mrows = [i for i in range(len(rows))
                  if width > c0 and _month(rows[i][c0]) is not None]
         if len(mrows) >= 3 and mrows[0] >= 1:
-            return _vertical(rows, width, c0, mrows, today, near)
+            return _vertical(rows, width, c0, mrows, today, near, lead)
     return {}
 
 
-def _collect(pairs, months, years, today, near):
-    """(이름표종류, 값목록) 들 -> 달별 기록. 계열이 겹치면 통째로 버린다."""
-    kinds = [k for k, _ in pairs]
-    if len(kinds) != len(set(kinds)):
+def _collect(pairs, months, years, today, near, fy):
+    """(이름표종류, 값목록) 들 -> 달별 기록.
+
+    **이름표가 같은 계열이 둘 이상이면 그 종류만 버린다.** 세븐＆아이의
+    해외사업 표는 7-Eleven,Inc. 과 7-Eleven Australia 의 既存店 이 나란히
+    서는데, 어느 쪽이 회사인지 규칙으로 못 가른다. 표를 통째로 버리는 대신
+    **갈리는 종류만** 버리면 유나이티드애로우즈처럼 「全社」 한 줄이 또렷한
+    표는 살아난다.
+    """
+    kinds = Counter(k for k, _ in pairs)
+    use = [(k, v) for k, v in pairs if kinds[k] == 1]
+    if not use:
         return {}
     got = {}
-    for kind, vals in pairs:
+    for kind, vals in use:
         for i, v in enumerate(vals):
             if v is None:
                 continue
-            p = f"{years[i]:04d}-{months[i]:02d}"
-            # **앞날은 안 담는다.** 해를 잘못 짚으면 여기서 먼저 걸린다.
-            if p > today.strftime("%Y-%m"):
-                continue
-            got.setdefault(p, {})[kind] = v
+            got.setdefault(f"{years[i]:04d}-{months[i]:02d}", {})[kind] = v
     if not got:
         return {}
+    cur = today.strftime("%Y-%m")
+    if fy:
+        # 회계연도가 적혀 있으면 그 해를 그대로 믿되, **앞날은 담지 않는다.**
+        return {p: v for p, v in got.items() if p < cur}
+    # **당월 값은 아직 나올 수 없다.** 월매출은 다음 달 초에 나온다 — 9월
+    # 28일에 9월치가 찍힌 표는 우리가 해를 잘못 짚은 것이다. 스시로 페이지의
+    # 둘째 표(지난 회계연도)가 그렇게 2026-09 를 만들었다. 어느 해인지 모르는
+    # 채로 한 해를 밀어 맞추느니 그 표를 통째로 버린다.
+    if max(got) >= cur:
+        return {}
     # **지금 갱신되는 표만 읽는다.** 회계연도가 적혀 있지 않은 옛 표를 오늘에
-    # 맞춰 읽으면 지난해 값이 올해 자리에 앉는다. 적혀 있으면 그대로 믿는다.
-    if near is not None:
-        newest = max(got)
-        y, m = int(newest[:4]), int(newest[5:])
-        gap = (today.year - y) * 12 + (today.month - m)
-        if gap > near:
-            return {}
-    return got
+    # 맞춰 읽으면 지난해 값이 올해 자리에 앉는다.
+    newest = max(got)
+    gap = (today.year - int(newest[:4])) * 12 + (today.month - int(newest[5:]))
+    return {} if gap > near else got
 
 
-def _horizontal(rows, width, hr, cols, today, near):
+def _section_row(row):
+    """**절 이름 한 줄** — 칸이 전부 같은 글자고 값이 없는 줄.
+
+    온워드의 표가 한 장에 「合計」 절과 「店舗売上」 절을 담는데, 두 절 모두
+    「既存店」 줄을 갖고 있어 같은 종류가 둘로 잡혔다. 절이 바뀌는 자리를
+    알면 **첫 절만** 읽을 수 있다 — 회사가 맨 위에 둔 것이 회사 전체다.
+    """
+    vals = [x for x in row if x.strip()]
+    return len(vals) >= 3 and len(set(vals)) == 1 and _ratio(vals[0]) is None
+
+
+def _horizontal(rows, width, hr, cols, today, near, lead=""):
     months = [_month(rows[hr][c]) for c in cols]
-    # 머리줄이 여러 겹이면 값이 처음 나오는 줄부터가 자료다.
     first = min(cols)
     pairs = []
     for i in range(hr + 1, len(rows)):
         r = rows[i]
+        if _section_row(r):
+            # 첫 절을 다 읽었으면 여기서 멈춘다. 아직 아무것도 못 읽었으면
+            # 이 줄이 첫 절의 머리다.
+            if pairs:
+                break
+            continue
         if any(_signed(r[c]) for c in cols):
             continue
         vals = [_ratio(r[c]) for c in cols]
         if sum(v is not None for v in vals) < 2:
             continue
-        lab = "".join(r[c] for c in range(first))
-        # 이름표가 그 줄에 없으면 위로 올라가며 찾는다(rowspan 을 _grid 가
-        # 이미 풀어 주므로 대개는 그 줄에 있다).
-        kind = _label_ok(lab)
+        kind = _label_ok("".join(r[c] for c in range(first)))
         if kind:
             pairs.append((kind, vals))
     if not pairs:
         return {}
-    fy = _fy(_all_text(rows))
-    # **회계연도가 적혀 있으면 그 해를 그대로 믿는다.** 회사가 표에 적어 둔
-    # 값이지 어림이 아니므로 '낡았는가' 를 따지지 않는다 — 옛 회계연도 표를
-    # 그대로 읽어야 이력이 길어진다.
-    return _collect(pairs, months, _years(months, fy, today),
-                    today, None if fy else near)
+    filled = [any(v[i] is not None for _k, v in pairs) for i in range(len(months))]
+    fy = _fy(lead + " " + _all_text(rows))
+    return _collect(pairs, months, _years(months, filled, fy, today),
+                    today, near, fy)
 
 
-def _vertical(rows, width, c0, mrows, today, near):
+def _vertical(rows, width, c0, mrows, today, near, lead=""):
     n_hdr = mrows[0]
     months = [_month(rows[i][c0]) for i in mrows]
     labs = ["".join(rows[r][c] for r in range(n_hdr)) for c in range(width)]
@@ -226,12 +260,10 @@ def _vertical(rows, width, c0, mrows, today, near):
             pairs.append((kind, vals))
     if not pairs:
         return {}
-    fy = _fy(_all_text(rows))
-    # **회계연도가 적혀 있으면 그 해를 그대로 믿는다.** 회사가 표에 적어 둔
-    # 값이지 어림이 아니므로 '낡았는가' 를 따지지 않는다 — 옛 회계연도 표를
-    # 그대로 읽어야 이력이 길어진다.
-    return _collect(pairs, months, _years(months, fy, today),
-                    today, None if fy else near)
+    filled = [any(v[i] is not None for _k, v in pairs) for i in range(len(months))]
+    fy = _fy(lead + " " + _all_text(rows))
+    return _collect(pairs, months, _years(months, filled, fy, today),
+                    today, near, fy)
 
 
 def read(page: str, today=None, near: int = 3):
@@ -245,20 +277,27 @@ def read(page: str, today=None, near: int = 3):
     """
     today = today or date.today()
     body = SCRIPT.sub(" ", page)
-    out = {}
-    for tb in TABLE_AT.findall(body):
-        rows = [r for r in monweb.grid(tb) if r]
+    out, at = {}, 0
+    for m in TABLE_AT.finditer(body):
+        lead = _txt(body[max(at, m.start() - 400):m.start()])[-160:]
+        at = m.end()
+        rows = [r for r in monweb.grid(m.group(1)) if r]
         if len(rows) < 2:
             continue
         width = max(len(r) for r in rows)
         if width < 3:
             continue
         rows = [[_txt(x) for x in r] + [""] * (width - len(r)) for r in rows]
-        for p, rec in _series(rows, width, today, near).items():
-            # **먼저 읽은 표를 이기지 못한다.** 한 장에 표가 여럿이면 앞엣것이
-            # 대개 회사 전체고 뒤엣것이 브랜드별이다.
-            out.setdefault(p, {}).update(
-                {k: v for k, v in rec.items() if k not in out[p]})
+        got = _series(rows, width, today, near, lead)
+        if not got:
+            continue
+        # **이미 담은 달을 다시 내는 표는 옛 회계연도 표다 — 버린다.**
+        # 회사 사이트는 같은 생김새의 표를 회계연도마다 하나씩 쌓아 둔다.
+        # 스시로 페이지의 둘째 표가 첫 표와 달이 똑같은데 값이 달랐다 —
+        # 합치면 어느 해 값인지 모르는 숫자가 섞인다. 앞엣것이 새것이다.
+        if any(p in out for p in got):
+            continue
+        out.update(got)
     return out
 
 
@@ -409,6 +448,109 @@ def _selftest():                                          # pragma: no cover
        find_monthly('<a href="/ir/monthly/">月次売上高</a>',
                     "https://x.co.jp/"),
        "https://x.co.jp/ir/monthly/")
+
+    # (아) **값이 있는 마지막 달에 해를 맞춘다** — 니토리(9843) 꼴.
+    #     회사 사이트는 회계연도 열두 달을 미리 그려 두고 안 온 달을 비운다.
+    #     표의 마지막 이름표(3月)에 맞추면 4月~12月 이 통째로 지난해가 된다.
+    nitori12 = ("""<table>
+      <tr><th></th><th colspan="2">売上（%）</th><th>店舗数</th></tr>
+      <tr><th></th><th>既存店</th><th>全店</th><th>全店</th></tr>"""
+                + "".join(f"<tr><td>{m}月</td><td>{v[0]}</td><td>{v[1]}</td>"
+                          f"<td>79{m%10}</td></tr>"
+                          for m, v in [(4, ("96.8", "99.8")),
+                                       (5, ("107.1", "110.5")),
+                                       (6, ("86.8", "89.2")),
+                                       (7, ("103.7", "106.2")),
+                                       (8, ("104.4", "107.1"))])
+                + "".join(f"<tr><td>{m}月</td><td></td><td></td><td></td></tr>"
+                          for m in (9, 10, 11, 12, 1, 2, 3))
+                + "</table>")
+    eq("(아) 값 있는 마지막 달", sorted(read(nitori12, T)),
+       ["2026-04", "2026-05", "2026-06", "2026-07", "2026-08"])
+
+    # (자) 같은 병이 **달이 가로로 선 표**에도 있다 — 스카이락(3197) 꼴.
+    #     1月~12月 중 8月까지만 차 있는데 12月 에 맞추면 한 해가 밀린다.
+    sky12 = ("<table><tr><th></th><th></th>"
+             + "".join(f"<th>{m}月</th>" for m in range(1, 13))
+             + "<th>累計</th></tr>"
+             + '<tr><th>全店</th><th>売上高前年比</th>'
+             + "".join(f"<td>{v}%</td>" for v in
+                       ("112.0", "107.4", "103.9", "108.4", "114.9",
+                        "105.2", "108.5", "107.2"))
+             + "<td></td><td></td><td></td><td></td><td>108.1%</td></tr>"
+             + '<tr><th>既存店</th><th>客数前年比</th>'
+             + "".join(f"<td>{v}%</td>" for v in
+                       ("105.6", "100.2", "97.4", "101.4", "106.0",
+                        "98.8", "100.7", "100.4"))
+             + "<td></td><td></td><td></td><td></td><td>101.3%</td></tr>"
+             + "</table>")
+    got = read(sky12, T)
+    eq("(자) 가로 표의 마지막 찬 달", sorted(got),
+       [f"2026-{m:02d}" for m in range(1, 9)])
+    eq("(자) 객수는 안 담는다", got["2026-08"], {"all": 107.2})
+
+    # (차) **한 표에 절이 둘이면 첫 절만 읽는다** — 온워드(8016) 꼴.
+    #     「合計」 절과 「店舗売上」 절이 둘 다 「既存店」 줄을 갖고 있어
+    #     같은 종류가 둘로 잡혔고, 그 바람에 표가 통째로 버려졌다.
+    onward = """<table>
+      <tr><th colspan="3"></th><th>6月</th><th>7月</th><th>8月</th></tr>
+      <tr><td colspan="6">合計</td></tr>
+      <tr><td></td><td colspan="2">既存店</td><td>92.5</td><td>104.8</td>
+          <td>96.3</td></tr>
+      <tr><td></td><td colspan="2">全店</td><td>92.3</td><td>104.8</td>
+          <td>96.4</td></tr>
+      <tr><td colspan="6">店舗売上</td></tr>
+      <tr><td></td><td></td><td>既存店</td><td>92.2</td><td>105.2</td>
+          <td>98.4</td></tr></table>"""
+    eq("(차) 첫 절만", read(onward, T), {
+        "2026-06": {"same": 92.5, "all": 92.3},
+        "2026-07": {"same": 104.8, "all": 104.8},
+        "2026-08": {"same": 96.3, "all": 96.4}})
+
+    # (카) **갈리는 종류만 버린다** — 유나이티드애로우즈(7606) 꼴.
+    #     브랜드마다 既存 줄이 서지만 「全社」 는 한 줄뿐이다. 표를 통째로
+    #     버리면 그 한 줄까지 잃는다.
+    ua = """<table>
+      <tr><th colspan="2"></th><th>６月</th><th>７月</th><th>８月</th></tr>
+      <tr><td>Company Total</td><td>全社</td><td>101.4</td><td>107.0</td>
+          <td>111.1</td></tr>
+      <tr><td>Retail</td><td>小売 既存</td><td>95.4</td><td>105.8</td>
+          <td>110.3</td></tr>
+      <tr><td>Online</td><td>ネット通販 既存</td><td>112.2</td><td>103.1</td>
+          <td>111.5</td></tr></table>"""
+    eq("(카) 全社 한 줄은 살린다", read(ua, T), {
+        "2026-06": {"all": 101.4}, "2026-07": {"all": 107.0},
+        "2026-08": {"all": 111.1}})
+
+    # (타) **당월 값이 찍힌 표는 해를 잘못 짚은 것이다.** 월매출은 다음 달
+    #     초에 나온다 — 9월 28일에 9월치가 있을 수 없다. 스시로(3563)
+    #     페이지의 둘째 표(지난 회계연도)가 그렇게 2026-09 를 만들었다.
+    cur_month = """<table>
+      <tr><th></th><th>7月</th><th>8月</th><th>9月</th></tr>
+      <tr><th>既存店売上高</th><td>110.2</td><td>109.4</td><td>104.7</td></tr>
+      </table>"""
+    eq("(타) 당월 값", read(cur_month, T), {})
+
+    # (파) **한 페이지에 같은 달의 표가 둘이면 뒤엣것은 옛 회계연도다.**
+    two = """<table>
+      <tr><th></th><th>6月</th><th>7月</th><th>8月</th></tr>
+      <tr><th>既存店売上高</th><td>100.4</td><td>107.7</td><td>109.6</td></tr>
+      </table><table>
+      <tr><th></th><th>6月</th><th>7月</th><th>8月</th></tr>
+      <tr><th>既存店売上高</th><td>114.5</td><td>110.2</td><td>114.8</td></tr>
+      </table>"""
+    eq("(파) 달이 겹치는 뒤 표", read(two, T), {
+        "2026-06": {"same": 100.4}, "2026-07": {"same": 107.7},
+        "2026-08": {"same": 109.6}})
+
+    # (하) **표 위 제목의 회계연도도 본다.** 표 안에 적히지 않고 바로 위
+    #     제목에만 있는 일이 흔하다.
+    lead = """<h3>2025年2月期 月次売上高</h3><table>
+      <tr><th></th><th>12月</th><th>1月</th><th>2月</th></tr>
+      <tr><th>既存店売上高</th><td>104.1</td><td>99.8</td><td>101.2</td></tr>
+      </table>"""
+    eq("(하) 제목의 회계연도", sorted(read(lead, T)),
+       ["2024-12", "2025-01", "2025-02"])
 
     if bad:
         print("monir 스스로 시험 실패:")
