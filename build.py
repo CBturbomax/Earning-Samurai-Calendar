@@ -3744,10 +3744,11 @@ function mnLatestNumber(code) {
 }
 
 function mnYoyHtml(code, targetPeriod) {
-  const r = mnLatestNumber(code);
-  // **다른 달 숫자를 최신 발표 옆에 붙이지 않는다.**
+  const n = MNUM[code], r = mnLatestNumber(code);
   if (!r || r[0] !== targetPeriod || r[2] == null)
-    return '<span class="myoy none">수치 미파싱</span>';
+    return '<span class="myoy none">수치 없음</span>';
+  if (!n.verified)
+    return '<span class="myoy none">검증중</span>';
   const d = r[2] - 100;
   return '<span class="myoy ' + (d >= 0 ? 'up' : 'dn') + '">' +
          (d >= 0 ? '+' : '') + d.toFixed(1) + '%</span>';
@@ -3783,9 +3784,12 @@ function renderMonthly() {
     list.push(x);
   }
   // 핵심 정렬: **가장 최근 월차 발표가 먼저**, 같은 날이면 **시총 큰 순**.
-  list.sort((a,b) => b.last[0].localeCompare(a.last[0]) ||
-                     (b.cap || 0) - (a.cap || 0) ||
-                     a.code.localeCompare(b.code));
+  list.sort((a,b) => {
+    const ao = a.last[11] === 'official', bo = b.last[11] === 'official';
+    if (ao !== bo) return bo - ao; // 공식 발표일 확인된 회사가 먼저
+    if (a.last[0] !== b.last[0]) return b.last[0].localeCompare(a.last[0]);
+    return (b.cap || 0) - (a.cap || 0) || a.code.localeCompare(b.code);
+  });
 
   document.getElementById('mnCnt').innerHTML =
     '<b>' + list.length.toLocaleString() + '</b>개사';
@@ -3801,11 +3805,16 @@ function renderMonthly() {
       '<span>최신 YoY</span><span>시가총액</span><span>출처</span></div>' +
     list.map(x => {
       const r = x.last, per = r[5] || (mnLatestNumber(x.code) || ['—'])[0] || '—';
+      const srcLabel = r[7] === '기사' ? '기사' : (r[7] || '원문');
       const src = r[8] ? '<a class="mpdf" href="' + esc(r[8]) +
                   '" target="_blank" rel="noopener">' +
-                  esc(r[7] || '원문') + ' ↗</a>' : '';
+                  esc(srcLabel) + ' ↗</a>' : '';
+      const dateTxt = r[11] === 'official'
+        ? esc(r[0])
+        : ('<span class="dim">미확인</span>' +
+           (r[12] ? '<small class="dim"> · 기사 ' + esc(r[12].slice(5)) + '</small>' : ''));
       return '<div class="mnrow" data-mcode="' + esc(x.code) + '">' +
-        '<span class="mdate">' + esc(r[0] || '미확인') + '</span>' +
+        '<span class="mdate">' + dateTxt + '</span>' +
         '<span class="mcode">' + esc(x.code) + '</span>' +
         '<span class="mname">' + esc(x.ko) +
           (x.orig && x.orig !== x.ko ? '<small>' + esc(x.orig) + '</small>' : '') +
@@ -3825,6 +3834,7 @@ function monthlyBlock(code) {
   const lr = num && num.m && num.m.length ? num.m[num.m.length - 1] : null;
   const target = last && last[5] || '';
   const current = lr && (!target || lr[0] === target);
+  const verified = !!(num && num.verified && current);
   const stale = lr ? (MN_B - MN_KEY(lr[0]) >= 3) : false;
   let head = '<div class="finhead">월매출 <span class="dim">(月次)</span>';
   if (target) head += '<span class="now">대상 ' + esc(target.replace('-', '.')) + '</span>';
@@ -3832,7 +3842,7 @@ function monthlyBlock(code) {
   head += '</div>';
 
   let stat = '';
-  if (current) {
+  if (verified) {
     const yoy = lr[2] == null ? null : lr[2] - 100;
     const ytxt = yoy == null ? '—' :
       '<span class="' + (yoy >= 0 ? 'up' : 'dn') + '">' +
@@ -3844,16 +3854,22 @@ function monthlyBlock(code) {
       (lr[1] != null ? '<div class="r"><b>' + ytxt +
        '</b><div class="k">YoY</div></div>' : '') + '</div>';
   } else {
-    const have = lr ? ' (현재 숫자는 ' + esc(lr[0].replace('-', '.')) + '까지)' : '';
-    stat = '<p class="finnote">최신 대상월 ' + esc(target || '—') +
-           '의 숫자는 아직 파싱하지 못했습니다.' + have + '</p>';
+    const have = lr ? ' (자동 추출 이력은 ' + esc(lr[0].replace('-', '.')) + '까지)' : '';
+    const why = current && num && !num.verified
+      ? '자동 파싱값이 있지만 정합성 검증을 통과하지 못해 숨겼습니다.'
+      : '최신 대상월 숫자를 아직 검증하지 못했습니다.';
+    stat = '<p class="finnote">' + why + have + '</p>';
   }
 
-  const chart = num && num.m && num.m.length
+  // 검증 실패한 자동 PDF 수치를 차트로 그리면 '검증중'이라고 해놓고 다시
+  // 틀린 숫자를 보여주는 셈이다. 검증된 series 만 그린다.
+  const chart = num && num.verified && num.m && num.m.length
     ? '<div class="mnmodalchart">' + mnChart(num.m) + '</div>' : '';
   const src = last && last[8]
-    ? '<div class="finlegend"><span class="src">발표일 ' +
-      esc(last[0] || '미확인') + ' · 대상 ' + esc(last[5] || '—') +
+    ? '<div class="finlegend"><span class="src">' +
+      (last[11] === 'official' ? '공식 발표일 ' + esc(last[0]) : '공식 발표일 미확인') +
+      ' · 대상 ' + esc(last[5] || '—') +
+      (num && num.src ? ' · 수치 ' + esc(num.src) : '') +
       '</span><a class="mpdf" href="' + esc(last[8]) +
       '" target="_blank" rel="noopener">' + esc(last[7] || '원문') +
       ' ↗</a></div>' : '';
@@ -3876,7 +3892,8 @@ function openMonthly(code) {
     ' (' + esc(code) + ')';
   document.getElementById('mdSub').textContent = r[4] && r[4] !== r[3] ? r[4] : '';
   document.getElementById('mdList').innerHTML =
-    '<dt>최근 월차 발표</dt><dd>' + esc(r[0] || '미확인') + '</dd>' +
+    '<dt>최근 월차 발표</dt><dd>' +
+      (r[11] === 'official' ? esc(r[0]) : '미확인') + '</dd>' +
     '<dt>대상월</dt><dd>' + esc(r[5] || '—') + '</dd>' +
     (r[9] ? '<dt>시가총액</dt><dd>' + capKo(r[9]) + '</dd>' : '') +
     (r[10] ? '<dt>업종</dt><dd>' + esc(r[10]) + '</dd>' : '') +
