@@ -507,8 +507,26 @@ def main():
     save(rec)
 
 
+def print_coverage():
+    """네트워크 없이 현재 저장 파일만으로 coverage 요약을 찍는다."""
+    rec = load()
+    save_coverage(rec)
+    try:
+        d = json.loads(COVERAGE.read_text(encoding="utf-8"))
+    except (ValueError, OSError) as e:
+        print(f"coverage 읽기 실패: {e}")
+        return
+    print(f"월차 universe {d.get('seed', 0)}개 · 공식 홈페이지 {d.get('homes', 0)}개"
+          f" · IR 숫자 {d.get('official_ir_data', 0)}개"
+          f" · 어느 소스로든 coverage {d.get('covered_any', 0)}개")
+    for k, v in sorted((d.get("status") or {}).items()):
+        print(f"  {k}: {v}")
+
+
 if __name__ == "__main__":
-    if "--probe" in sys.argv:
+    if "--coverage" in sys.argv:
+        print_coverage()
+    elif "--probe" in sys.argv:
         # 한 회사만 떠본다: python scrape_mon_ir.py --probe 9843
         code = sys.argv[sys.argv.index("--probe") + 1]
         if code in monir.IR_SITES:
