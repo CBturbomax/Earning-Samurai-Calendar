@@ -333,12 +333,28 @@ PDF_SKIP = re.compile(r"(決算短信|有価証券報告書|説明資料|会社�
 
 HEISEI = re.compile(r"平成\s*(\d{1,2})\s*年\s*(\d{1,2})\s*月")
 LAB_YM = re.compile(r"(20\d{2})\s*年\s*(\d{1,2})\s*月\s*(?:度|次|分)")
+# 「2026年8月 月次の売上状況について」 — 달과 「月次」 가 떨어져 있는 꼴.
+# **월매출이라는 말이 있을 때만** 맨 달을 보고 읽는다. 「N月期」(결산기말)는
+# 피한다 — montable·monweb 과 같은 자리다.
+LAB_MON = re.compile(r"月次|月度|月別|月間")
+LAB_ANY_YM = re.compile(r"(20\d{2})\s*年\s*(\d{1,2})\s*月(?!\s*期)")
 URL_YMD = re.compile(r"(?<!\d)(\d{2})(\d{2})(\d{2})(?!\d)")
 URL_YM = re.compile(r"(?<!\d)(20\d{2})(\d{2})(?!\d)")
 
 
 def _next_month(y, m):
     return date(y + (m == 12), 1 if m == 12 else m + 1, 1)
+
+
+# **이름표는 앞머리만 믿는다.** J프론트의 목록은 `<a>` 가 망가져 있어 옆
+# 항목의 글까지 딸려 온다(「2月度連結営業報告 （PDF 115KB） 1月度連…」).
+# 그대로 두면 옆 항목의 「平成19年8月」 을 이 PDF 의 날로 읽는다.
+LAB_CUT = re.compile(r"(（\s*PDF|\(\s*PDF|\d+\s*KB|\d+\s*MB)")
+
+
+def _lab_head(label: str) -> str:
+    m = LAB_CUT.search(label)
+    return (label[:m.start()] if m else label)[:40]
 
 
 def pdf_when(url: str, label: str):
@@ -350,7 +366,7 @@ def pdf_when(url: str, label: str):
     보고 대상 달만 알 때는 **그 다음 달 1일**을 발표일로 삼는다 — 월매출은
     다음 달 초에 나온다. 어림이지만 해를 가르는 데는 그것으로 넉넉하다.
     """
-    lab = label.translate(ZEN)
+    lab = _lab_head(label).translate(ZEN)
     m = HEISEI.search(lab)                       # 「平成19年7月度」 (J프론트)
     if m:
         y = 1988 + int(m.group(1))
@@ -360,6 +376,10 @@ def pdf_when(url: str, label: str):
     m = LAB_YM.search(lab)                       # 「2026年8月度」
     if m and 1 <= int(m.group(2)) <= 12:
         return _next_month(int(m.group(1)), int(m.group(2))).isoformat()
+    if LAB_MON.search(lab):                      # 「2026年8月 月次の売上状況」
+        m = LAB_ANY_YM.search(lab)
+        if m and 1 <= int(m.group(2)) <= 12:
+            return _next_month(int(m.group(1)), int(m.group(2))).isoformat()
     name = url.rsplit("/", 1)[-1]
     for m in URL_YMD.finditer(name):             # 「260907.pdf」 = 발표일
         y, mo, d = 2000 + int(m.group(1)), int(m.group(2)), int(m.group(3))
@@ -387,13 +407,15 @@ def pdf_links(page: str, base: str):
         if PDF_SKIP.search(t) or not (PDF_WANT.search(t) or PDF_WANT.search(href)):
             continue
         u = urllib.parse.urljoin(base, href)
-        if u in seen:
+        # 같은 파일에 물음표만 붙여 두 번 거는 목록이 있다(패스트리).
+        key = u.split("?")[0]
+        if key in seen:
             continue
         when = pdf_when(u, t)
         if not when:
             continue
-        seen.add(u)
-        out.append((u, t, when))
+        seen.add(key)
+        out.append((key, _lab_head(t).strip(), when))
     return out
 
 
@@ -403,19 +425,37 @@ IR_PATH = re.compile(r"/(ir|investor)s?(/|$|\.)", re.I)
 
 
 def find_monthly(page: str, base: str):
-    """페이지에서 **月次로 가는 링크**를 찾는다 -> 주소 또는 ''."""
+    """페이지에서 **月次 페이지로 가는 링크**를 찾는다 -> 주소 또는 ''.
+
+    **PDF 는 안 고른다.** 달마다 PDF 한 장을 거는 회사(브ックオフ 9278)에서
+    첫 PDF 를 月次 '페이지'로 잡으면 그 한 장만 보고 목록을 통째로 놓친다.
+    그럴 때는 **그 PDF 들이 걸린 페이지 자체**가 목록이다(`has_monthly_pdf`).
+    """
     import urllib.parse
     for href, lab in A.findall(page):
+        if href.lower().startswith(("javascript:", "mailto:", "tel:")):
+            continue
         t = _txt(lab)
         if "月次" in t or "月次" in href or "monthly" in href.lower():
-            return urllib.parse.urljoin(base, href)
+            u = urllib.parse.urljoin(base, href)
+            if u.split("?")[0].lower().endswith(".pdf"):
+                continue
+            return u
     return ""
 
 
+def has_monthly_pdf(page: str, base: str) -> bool:
+    """이 페이지에 **월매출 PDF 가 걸려 있는가.** 있으면 여기가 목록이다."""
+    return bool(pdf_links(page, base))
+
+
 def find_ir(page: str, base: str):
-    """IR 로 가는 링크."""
+    """IR 로 가는 링크. `javascript:void(0)` 같은 것은 링크가 아니다 —
+    실제로 그걸 주소로 알고 두드리다 실패한 곳이 둘 있었다(92차)."""
     import urllib.parse
     for href, lab in A.findall(page):
+        if href.lower().startswith(("javascript:", "mailto:", "tel:")):
+            continue
         t = _txt(lab)
         if IR_HINT.search(t) or IR_PATH.search(href):
             return urllib.parse.urljoin(base, href)
@@ -451,8 +491,6 @@ IR_SITES = {
     "2702": ("日本マクドナルド", "https://www.mcd-holdings.co.jp/", ""),
     "3092": ("ＺＯＺＯ", "https://corp.zozo.com/", ""),
     "8237": ("松屋", "https://www.matsuya.com/", ""),
-    "8219": ("青山商", "https://www.aoyama-syouji.co.jp/", ""),
-    "9267": ("ゲンキードラッグ", "https://www.genky-ds.jp/", ""),
     "3399": ("山岡家", "https://www.yamaokaya.com/", ""),
     "3608": ("ＴＳＩ ＨＤ", "https://www.tsi-holdings.com/", ""),
     "2698": ("キャンドゥ", "https://www.cando-web.co.jp/", ""),
@@ -464,7 +502,6 @@ IR_SITES = {
     "9861": ("吉野家ＨＤ", "https://www.yoshinoya-holdings.com/", ""),
     "3387": ("クリエイトＲ", "https://www.createrestaurants.com/", ""),
     "7581": ("サイゼリヤ", "https://www.saizeriya.co.jp/", ""),
-    "2681": ("ゲオＨＤ", "https://www.geonet.co.jp/", ""),
     "3050": ("ＤＣＭ", "https://www.dcm-hldgs.co.jp/", ""),
     "8273": ("イズミ", "https://www.izumi.co.jp/", ""),
     "9948": ("アークス", "https://www.arcs-g.co.jp/", ""),
@@ -474,6 +511,8 @@ IR_SITES = {
     "2664": ("カワチ薬品", "https://www.kawachi.co.jp/", ""),
     "3222": ("ＵＳＭＨ", "https://www.usmh.co.jp/", ""),
     "7532": ("ＰＰＩＨ", "https://ppih.co.jp/", ""),
+    # **막힌 곳은 넣지 않는다**(92차): 게오HD 2681 · 아오야마상사 8219 는 403,
+    # 겐키드러그 9267 은 주소가 안 닿는다. 다시 두드리지 말 것.
     "8279": ("ヤオコー", "https://www.yaoko-net.com/", ""),
     "7616": ("コロワイド", "https://www.colowide.co.jp/", ""),
 }
@@ -731,6 +770,65 @@ def _selftest():                                          # pragma: no cover
            """<a href="/ir/upload/hp0916month.pdf">月次報告書</a>""")
     eq("(너) PDF 목록", pdf_links(lst, "https://x.jp/"),
        [("https://x.jp/ir/monthly/2026/260907.pdf", "8月 月次速報", "2026-09-07")])
+
+    # **이름표는 앞머리만 믿는다.** J프론트의 목록은 `<a>` 가 망가져 옆 항목의
+    # 글까지 딸려 온다 — 그대로 두면 옆 항목의 연호를 이 PDF 의 날로 읽는다.
+    eq("(너) 딸려 온 이름표",
+       pdf_when("https://x.jp/_data/ir_monthly/1102_renketsu110315.pdf",
+                "2月度連結営業報告 （PDF 115KB） 1月度連結営業報告 平成19年8月度"),
+       "2011-03-15")
+    # **달과 「月次」 가 떨어져 있는 꼴**(브ックオフ 9278). 월매출이라는 말이
+    # 있을 때만 맨 달을 읽고, 「N月期」(결산기말)는 피한다.
+    eq("(너) 달과 月次 가 떨어진 이름표",
+       pdf_when("https://ssl4.eir-parts.net/doc/9278/tdnet/2881878/00.pdf",
+                "2026年8月 月次の売上状況について"), "2026-09-01")
+    eq("(너) 월매출이 아닌 공시",
+       pdf_when("https://ssl4.eir-parts.net/doc/9278/tdnet/2789577/00.pdf",
+                "業績予想の修正に関するお知らせ"), None)
+
+    # (더) **PDF 는 月次 '페이지' 로 고르지 않는다.** 달마다 PDF 한 장을 거는
+    #     회사에서 첫 PDF 를 페이지로 잡으면 그 한 장만 보고 목록을 놓친다 —
+    #     그럴 때는 **그 PDF 들이 걸린 페이지 자체**가 목록이다.
+    both = ('<a href="https://s.jp/doc/9278/tdnet/2881878/00.pdf">'
+            '2026年8月 月次の売上状況について</a>'
+            '<a href="/ir/monthly/">月次売上</a>')
+    eq("(더) PDF 는 페이지가 아니다", find_monthly(both, "https://x.jp/"),
+       "https://x.jp/ir/monthly/")
+    only_pdf = ('<a href="https://s.jp/doc/9278/tdnet/2881878/00.pdf">'
+                '2026年8月 月次の売上状況について</a>')
+    eq("(더) PDF 만 있으면 여기가 목록", find_monthly(only_pdf, "https://x.jp/"), "")
+    eq("(더) PDF 목록인가", has_monthly_pdf(only_pdf, "https://x.jp/"), True)
+    # `javascript:void(0)` 는 링크가 아니다 — 그걸 주소로 알고 두드리다
+    # 실패한 곳이 둘 있었다(92차).
+    eq("(더) javascript 는 링크가 아니다",
+       find_ir('<a href="javascript:void(0);">IR情報</a>'
+               '<a href="/ir/top/">株主・投資家情報</a>', "https://x.jp/"),
+       "https://x.jp/ir/top/")
+
+    # 같은 파일에 물음표만 붙여 두 번 거는 목록이 있다(패스트리).
+    # (더) **PDF 는 月次 '페이지' 로 고르지 않는다.** 달마다 PDF 한 장을 거는
+    #     회사에서 첫 PDF 를 페이지로 잡으면 그 한 장만 보고 목록을 놓친다 —
+    #     그럴 때는 **그 PDF 들이 걸린 페이지 자체**가 목록이다.
+    both = ('<a href="https://s.jp/doc/9278/tdnet/2881878/00.pdf">'
+            '2026年8月 月次の売上状況について</a>'
+            '<a href="/ir/monthly/">月次売上</a>')
+    eq("(더) PDF 는 페이지가 아니다", find_monthly(both, "https://x.jp/"),
+       "https://x.jp/ir/monthly/")
+    only_pdf = ('<a href="https://s.jp/doc/9278/tdnet/2881878/00.pdf">'
+                '2026年8月 月次の売上状況について</a>')
+    eq("(더) PDF 만 있으면 여기가 목록", find_monthly(only_pdf, "https://x.jp/"), "")
+    eq("(더) PDF 목록인가", has_monthly_pdf(only_pdf, "https://x.jp/"), True)
+    # `javascript:void(0)` 는 링크가 아니다 — 그걸 주소로 알고 두드리다
+    # 실패한 곳이 둘 있었다(92차).
+    eq("(더) javascript 는 링크가 아니다",
+       find_ir('<a href="javascript:void(0);">IR情報</a>'
+               '<a href="/ir/top/">株主・投資家情報</a>', "https://x.jp/"),
+       "https://x.jp/ir/top/")
+
+    eq("(너) 물음표만 다른 같은 파일",
+       len(pdf_links('<a href="/p/MonthlySales_2026.pdf?=0902">2026年8月期</a>'
+                     '<a href="/p/MonthlySales_2026.pdf">2026年8月期 (80KB)</a>',
+                     "https://x.jp/")), 1)
 
     if bad:
         print("monir 스스로 시험 실패:")

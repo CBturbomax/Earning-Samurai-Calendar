@@ -723,11 +723,340 @@
     }
    },
    "ts": "2026-09-28T01:04:25+00:00"
+  },
+  "9983": {
+   "name": "ファストリ",
+   "page": "https://www.fastretailing.com/jp/ir/monthly/",
+   "months": {},
+   "ts": "2026-09-28T01:23:43+00:00",
+   "pdf": {
+    "2025-09": {
+     "day": "2026-09-28",
+     "doc": "https://www.fastretailing.com/jp/ir/monthly/pdf/MonthlySales_2026.pdf",
+     "yoy": 99.0,
+     "metric": "既存店売上高"
+    },
+    "2025-10": {
+     "day": "2026-09-28",
+     "doc": "https://www.fastretailing.com/jp/ir/monthly/pdf/MonthlySales_2026.pdf",
+     "yoy": 125.1,
+     "metric": "既存店売上高"
+    },
+    "2025-11": {
+     "day": "2026-09-28",
+     "doc": "https://www.fastretailing.com/jp/ir/monthly/pdf/MonthlySales_2026.pdf",
+     "yoy": 107.6,
+     "metric": "既存店売上高"
+    },
+    "2025-12": {
+     "day": "2026-09-28",
+     "doc": "https://www.fastretailing.com/jp/ir/monthly/pdf/MonthlySales_2026.pdf",
+     "yoy": 93.4,
+     "metric": "既存店売上高"
+    },
+    "2026-01": {
+     "day": "2026-09-28",
+     "doc": "https://www.fastretailing.com/jp/ir/monthly/pdf/MonthlySales_2026.pdf",
+     "yoy": 114.0,
+     "metric": "既存店売上高"
+    },
+    "2026-02": {
+     "day": "2026-09-28",
+     "doc": "https://www.fastretailing.com/jp/ir/monthly/pdf/MonthlySales_2026.pdf",
+     "yoy": 104.6,
+     "metric": "既存店売上高"
+    },
+    "2026-03": {
+     "day": "2026-09-28",
+     "doc": "https://www.fastretailing.com/jp/ir/monthly/pdf/MonthlySales_2026.pdf",
+     "yoy": 109.2,
+     "metric": "既存店売上高"
+    },
+    "2026-04": {
+     "day": "2026-09-28",
+     "doc": "https://www.fastretailing.com/jp/ir/monthly/pdf/MonthlySales_2026.pdf",
+     "yoy": 110.2,
+     "metric": "既存店売上高"
+    },
+    "2026-05": {
+     "day": "2026-09-28",
+     "doc": "https://www.fastretailing.com/jp/ir/monthly/pdf/MonthlySales_2026.pdf",
+     "yoy": 110.1,
+     "metric": "既存店売上高"
+    },
+    "2026-06": {
+     "day": "2026-09-28",
+     "doc": "https://www.fastretailing.com/jp/ir/monthly/pdf/MonthlySales_2026.pdf",
+     "yoy": 85.9,
+     "metric": "既存店売上高"
+    },
+    "2026-07": {
+     "day": "2026-09-28",
+     "doc": "https://www.fastretailing.com/jp/ir/monthly/pdf/MonthlySales_2026.pdf",
+     "yoy": 104.3,
+     "metric": "既存店売上高"
+    },
+    "2026-08": {
+     "day": "2026-09-28",
+     "doc": "https://www.fastretailing.com/jp/ir/monthly/pdf/MonthlySales_2026.pdf",
+     "yoy": 98.7,
+     "metric": "既存店売上高"
+    },
+    "2024-09": {
+     "day": "2026-09-28",
+     "doc": "https://www.fastretailing.com/jp/ir/monthly/pdf/MonthlySales_2025.pdf",
+     "yoy": 122.1,
+     "metric": "既存店売上高"
+    },
+    "2024-10": {
+     "day": "2026-09-28",
+     "doc": "https://www.fastretailing.com/jp/ir/monthly/pdf/MonthlySales_2025.pdf",
+     "yoy": 92.5,
+     "metric": "既存店売上高"
+    },
+    "2024-11": {
+     "day": "2026-09-28",
+     "doc": "https://www.fastretailing.com/jp/ir/monthly/pdf/MonthlySales_2025.pdf",
+     "yoy": 112.2,
+     "metric": "既存店売上高"
+    },
+    "2024-12": {
+     "day": "2026-09-28",
+     "doc": "https://www.fastretailing.com/jp/ir/monthly/pdf/MonthlySales_2025.pdf",
+     "yoy": 115.3,
+     "metric": "既存店売上高"
+    },
+    "2025-01": {
+     "day": "2026-09-28",
+     "doc": "https://www.fastretailing.com/jp/ir/monthly/pdf/MonthlySales_2025.pdf",
+     "yoy": 108.6,
+     "metric": "既存店売上高"
+    },
+    "2025-02": {
+     "day": "2026-09-28",
+     "doc": "https://www.fastretailing.com/jp/ir/monthly/pdf/MonthlySales_2025.pdf",
+     "yoy": 112.2,
+     "metric": "既存店売上高"
+    },
+    "2025-03": {
+     "day": "2026-09-28",
+     "doc": "https://www.fastretailing.com/jp/ir/monthly/pdf/MonthlySales_2025.pdf",
+     "yoy": 111.5,
+     "metric": "既存店売上高"
+    },
+    "2025-04": {
+     "day": "2026-09-28",
+     "doc": "https://www.fastretailing.com/jp/ir/monthly/pdf/MonthlySales_2025.pdf",
+     "yoy": 98.7,
+     "metric": "既存店売上高"
+    },
+    "2025-05": {
+     "day": "2026-09-28",
+     "doc": "https://www.fastretailing.com/jp/ir/monthly/pdf/MonthlySales_2025.pdf",
+     "yoy": 113.1,
+     "metric": "既存店売上高"
+    },
+    "2025-06": {
+     "day": "2026-09-28",
+     "doc": "https://www.fastretailing.com/jp/ir/monthly/pdf/MonthlySales_2025.pdf",
+     "yoy": 106.4,
+     "metric": "既存店売上高"
+    },
+    "2025-07": {
+     "day": "2026-09-28",
+     "doc": "https://www.fastretailing.com/jp/ir/monthly/pdf/MonthlySales_2025.pdf",
+     "yoy": 102.4,
+     "metric": "既存店売上高"
+    },
+    "2025-08": {
+     "day": "2026-09-28",
+     "doc": "https://www.fastretailing.com/jp/ir/monthly/pdf/MonthlySales_2025.pdf",
+     "yoy": 105.3,
+     "metric": "既存店売上高"
+    },
+    "2023-09": {
+     "day": "2026-09-28",
+     "doc": "https://www.fastretailing.com/jp/ir/monthly/pdf/MonthlySales_2024.pdf",
+     "yoy": 95.4,
+     "metric": "既存店売上高"
+    },
+    "2023-10": {
+     "day": "2026-09-28",
+     "doc": "https://www.fastretailing.com/jp/ir/monthly/pdf/MonthlySales_2024.pdf",
+     "yoy": 91.5,
+     "metric": "既存店売上高"
+    },
+    "2023-11": {
+     "day": "2026-09-28",
+     "doc": "https://www.fastretailing.com/jp/ir/monthly/pdf/MonthlySales_2024.pdf",
+     "yoy": 110.0,
+     "metric": "既存店売上高"
+    },
+    "2023-12": {
+     "day": "2026-09-28",
+     "doc": "https://www.fastretailing.com/jp/ir/monthly/pdf/MonthlySales_2024.pdf",
+     "yoy": 84.6,
+     "metric": "既存店売上高"
+    },
+    "2024-01": {
+     "day": "2026-09-28",
+     "doc": "https://www.fastretailing.com/jp/ir/monthly/pdf/MonthlySales_2024.pdf",
+     "yoy": 100.4,
+     "metric": "既存店売上高"
+    },
+    "2024-02": {
+     "day": "2026-09-28",
+     "doc": "https://www.fastretailing.com/jp/ir/monthly/pdf/MonthlySales_2024.pdf",
+     "yoy": 107.2,
+     "metric": "既存店売上高"
+    },
+    "2024-03": {
+     "day": "2026-09-28",
+     "doc": "https://www.fastretailing.com/jp/ir/monthly/pdf/MonthlySales_2024.pdf",
+     "yoy": 98.5,
+     "metric": "既存店売上高"
+    },
+    "2024-04": {
+     "day": "2026-09-28",
+     "doc": "https://www.fastretailing.com/jp/ir/monthly/pdf/MonthlySales_2024.pdf",
+     "yoy": 118.9,
+     "metric": "既存店売上高"
+    },
+    "2024-05": {
+     "day": "2026-09-28",
+     "doc": "https://www.fastretailing.com/jp/ir/monthly/pdf/MonthlySales_2024.pdf",
+     "yoy": 108.4,
+     "metric": "既存店売上高"
+    },
+    "2024-06": {
+     "day": "2026-09-28",
+     "doc": "https://www.fastretailing.com/jp/ir/monthly/pdf/MonthlySales_2024.pdf",
+     "yoy": 114.9,
+     "metric": "既存店売上高"
+    },
+    "2024-07": {
+     "day": "2026-09-28",
+     "doc": "https://www.fastretailing.com/jp/ir/monthly/pdf/MonthlySales_2024.pdf",
+     "yoy": 108.1,
+     "metric": "既存店売上高"
+    },
+    "2024-08": {
+     "day": "2026-09-28",
+     "doc": "https://www.fastretailing.com/jp/ir/monthly/pdf/MonthlySales_2024.pdf",
+     "yoy": 125.3,
+     "metric": "既存店売上高"
+    },
+    "2022-09": {
+     "day": "2026-09-28",
+     "doc": "https://www.fastretailing.com/jp/ir/monthly/pdf/MonthlySales_2023.pdf",
+     "yoy": 111.0,
+     "metric": "既存店売上高"
+    },
+    "2022-10": {
+     "day": "2026-09-28",
+     "doc": "https://www.fastretailing.com/jp/ir/monthly/pdf/MonthlySales_2023.pdf",
+     "yoy": 112.8,
+     "metric": "既存店売上高"
+    },
+    "2022-11": {
+     "day": "2026-09-28",
+     "doc": "https://www.fastretailing.com/jp/ir/monthly/pdf/MonthlySales_2023.pdf",
+     "yoy": 96.2,
+     "metric": "既存店売上高"
+    },
+    "2022-12": {
+     "day": "2026-09-28",
+     "doc": "https://www.fastretailing.com/jp/ir/monthly/pdf/MonthlySales_2023.pdf",
+     "yoy": 116.9,
+     "metric": "既存店売上高"
+    },
+    "2023-01": {
+     "day": "2026-09-28",
+     "doc": "https://www.fastretailing.com/jp/ir/monthly/pdf/MonthlySales_2023.pdf",
+     "yoy": 110.9,
+     "metric": "既存店売上高"
+    },
+    "2023-02": {
+     "day": "2026-09-28",
+     "doc": "https://www.fastretailing.com/jp/ir/monthly/pdf/MonthlySales_2023.pdf",
+     "yoy": 121.3,
+     "metric": "既存店売上高"
+    },
+    "2023-03": {
+     "day": "2026-09-28",
+     "doc": "https://www.fastretailing.com/jp/ir/monthly/pdf/MonthlySales_2023.pdf",
+     "yoy": 111.9,
+     "metric": "既存店売上高"
+    },
+    "2023-04": {
+     "day": "2026-09-28",
+     "doc": "https://www.fastretailing.com/jp/ir/monthly/pdf/MonthlySales_2023.pdf",
+     "yoy": 101.7,
+     "metric": "既存店売上高"
+    },
+    "2023-05": {
+     "day": "2026-09-28",
+     "doc": "https://www.fastretailing.com/jp/ir/monthly/pdf/MonthlySales_2023.pdf",
+     "yoy": 104.4,
+     "metric": "既存店売上高"
+    },
+    "2023-06": {
+     "day": "2026-09-28",
+     "doc": "https://www.fastretailing.com/jp/ir/monthly/pdf/MonthlySales_2023.pdf",
+     "yoy": 96.6,
+     "metric": "既存店売上高"
+    },
+    "2023-07": {
+     "day": "2026-09-28",
+     "doc": "https://www.fastretailing.com/jp/ir/monthly/pdf/MonthlySales_2023.pdf",
+     "yoy": 108.7,
+     "metric": "既存店売上高"
+    },
+    "2023-08": {
+     "day": "2026-09-28",
+     "doc": "https://www.fastretailing.com/jp/ir/monthly/pdf/MonthlySales_2023.pdf",
+     "yoy": 107.1,
+     "metric": "既存店売上高"
+    }
+   }
   }
  },
  "source": "회사 IR 페이지 (月次 표)",
  "note": "회사가 제 사이트에 올린 월차 표에서 읽는다. 값은 전년동월비(%)뿐이고 금액은 없다. 회계연도가 적힌 표는 그 해로 읽으므로 옛 회계연도 표를 함께 싣는 회사는 이력이 길다.",
- "companies": 8,
+ "companies": 9,
  "months": 102,
- "ts": "2026-09-28T01:06:47+00:00"
+ "ts": "2026-09-28T01:24:56+00:00",
+ "done": [
+  "https://www.fastretailing.com/jp/ir/monthly/pdf/MonthlySales_2023.pdf",
+  "https://www.fastretailing.com/jp/ir/monthly/pdf/MonthlySales_2024.pdf",
+  "https://www.fastretailing.com/jp/ir/monthly/pdf/MonthlySales_2025.pdf",
+  "https://www.fastretailing.com/jp/ir/monthly/pdf/MonthlySales_2026.pdf",
+  "https://www.j-front-retailing.com/_data/ir_monthly/1102_renketsu110315.pdf",
+  "https://www.j-front-retailing.com/ir/pdf/monthly/daimaru/h19_2007/mon0705.pdf",
+  "https://www.j-front-retailing.com/ir/pdf/monthly/daimaru/h19_2007/mon0706.pdf",
+  "https://www.j-front-retailing.com/ir/pdf/monthly/daimaru/h19_2007/mon0707.pdf",
+  "https://www.kurasushi.co.jp/company/ir/upload_file/m005-m005_05/1121month.pdf",
+  "https://www.kurasushi.co.jp/company/ir/upload_file/m005-m005_05/2110month.pdf",
+  "https://www.kurasushi.co.jp/company/ir/upload_file/m005-m005_05/2210month.pdf",
+  "https://www.kurasushi.co.jp/company/ir/upload_file/m005-m005_05/ir2020month.pdf",
+  "https://www.yamada-holdings.jp/ir/monthly/2026/260605.pdf",
+  "https://www.yamada-holdings.jp/ir/monthly/2026/260706.pdf",
+  "https://www.yamada-holdings.jp/ir/monthly/2026/260806.pdf",
+  "https://www.yamada-holdings.jp/ir/monthly/2026/260907.pdf"
+ ],
+ "skip": {
+  "https://www.j-front-retailing.com/_data/ir_monthly/1102_renketsu110315.pdf": "표없음",
+  "https://www.j-front-retailing.com/ir/pdf/monthly/daimaru/h19_2007/mon0707.pdf": "표없음",
+  "https://www.j-front-retailing.com/ir/pdf/monthly/daimaru/h19_2007/mon0706.pdf": "표없음",
+  "https://www.j-front-retailing.com/ir/pdf/monthly/daimaru/h19_2007/mon0705.pdf": "표없음",
+  "https://www.yamada-holdings.jp/ir/monthly/2026/260907.pdf": "표없음",
+  "https://www.yamada-holdings.jp/ir/monthly/2026/260806.pdf": "표없음",
+  "https://www.yamada-holdings.jp/ir/monthly/2026/260706.pdf": "표없음",
+  "https://www.yamada-holdings.jp/ir/monthly/2026/260605.pdf": "표없음",
+  "https://www.kurasushi.co.jp/company/ir/upload_file/m005-m005_05/1121month.pdf": "표없음",
+  "https://www.kurasushi.co.jp/company/ir/upload_file/m005-m005_05/2210month.pdf": "표없음",
+  "https://www.kurasushi.co.jp/company/ir/upload_file/m005-m005_05/2110month.pdf": "표없음",
+  "https://www.kurasushi.co.jp/company/ir/upload_file/m005-m005_05/ir2020month.pdf": "표없음"
+ },
+ "pdf_months": 48
 }

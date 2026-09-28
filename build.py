@@ -1574,7 +1574,8 @@ def _mon_last_months():
         pass
     for src in (load_monthly_web(), load_monthly_ir()):
         for code, rec in src.items():
-            ms = rec.get("months") or {}
+            ms = dict(rec.get("months") or {})
+            ms.update(rec.get("pdf") or {})
             if ms:
                 last[code] = max(last.get(code, ""), max(ms))
     return last
@@ -1641,6 +1642,8 @@ def load_monthly(packed):
             if code in seen or code in stale:
                 continue
             months = rec.get("months") or {}
+            if label.startswith("회사 IR"):
+                _rows, _base, months = _ir_pick(rec)
             if not months:
                 continue
             per = max(months)
@@ -1726,6 +1729,25 @@ def _ratio_rows(months):
     return rows, ("기존점" if key == "same" else "전점")
 
 
+def _ir_pick(rec):
+    """회사 IR 기록 -> (달별 줄, 기준 낱말, 카드에 쓸 달 사전).
+
+    한 회사 안에서도 **표와 PDF 를 섞지 않는다** — 「全社売上高」와 「既存店」
+    처럼 뜻이 다른 값이 한 막대에 나란히 서면 거짓말이 된다. 달이 더 많은
+    쪽 하나만 쓰고, 같으면 **금액이 오는 PDF 쪽**을 쓴다.
+    """
+    tbl = rec.get("months") or {}
+    pdf = rec.get("pdf") or {}
+    if pdf and len(pdf) >= len(tbl):
+        rows = [[p, v.get("rev"), v.get("yoy")] for p, v in sorted(pdf.items())
+                if v.get("rev") is not None or v.get("yoy") is not None]
+        if rows:
+            lab = "".join(v.get("metric", "") for v in pdf.values())
+            return rows, _base_of(lab), pdf
+    rows, base = _ratio_rows(tbl)
+    return rows, base, tbl
+
+
 def load_monthly_nums():
     """월매출의 **달별 수치** — `scrape_mon_jp.py` 가 첨부 PDF 표에서 읽은 것.
 
@@ -1769,7 +1791,10 @@ def load_monthly_nums():
                          ("流通ニュース", web_c.get(code))):
             if not rec:
                 continue
-            rows, base = _ratio_rows(rec.get("months") or {})
+            if src == "회사 IR":
+                rows, base, _m = _ir_pick(rec)
+            else:
+                rows, base = _ratio_rows(rec.get("months") or {})
             if rows:
                 cand.append((len(rows), src, rows, base))
         if not cand:

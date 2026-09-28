@@ -15,72 +15,37 @@ jobs:
         with:
           python-version: '3.12'
 
-      # 91차 — **月次 페이지의 PDF 를 montable 이 읽는가.**
-      # 표를 안 싣고 달마다 PDF 한 장을 거는 회사가 많다(J프론트 2007년치까지
-      # 96건 · 야마다 36건 · 패스트리는 회계연도 한 장에 열두 달). 그 PDF 는
-      # TDnet 첨부와 같은 꼴이라 이미 있는 연장이 읽을 수 있다 — **정말 읽히는지
-      # 먼저 재고** 나서 수집기를 붙인다.
-      - name: 🔎 IR 페이지의 PDF (91차)
-        timeout-minutes: 16
+      # 95차 — eir.js 가 주소를 어떻게 짓는가. 94차에서 `ssl4.eir-parts.net`
+      # 과 `/Custom/public/v5parts/` 까지는 봤다. 회사 번호를 어디서 가져오는지,
+      # 그리고 **지난 공시 목록**을 주는 자리가 있는지 본다.
+      - name: 🔎 eir.js 를 통째로 (95차)
+        timeout-minutes: 12
         run: |
           python - <<'EOF'
-          import time, urllib.error, urllib.request
-          from datetime import date
-
-          import monir, montable
+          import re, urllib.error, urllib.request
 
           UA = {"User-Agent": ("Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
                                "AppleWebKit/537.36 (KHTML, like Gecko) "
-                               "Chrome/131.0.0.0 Safari/537.36"),
-                "Accept-Language": "ja,en;q=0.8"}
-          PAGES = [
-              ("9983", "ファストリ", "https://www.fastretailing.com/jp/ir/monthly/"),
-              ("7606", "Uアローズ", "https://www.united-arrows.co.jp/ir/monthly/"),
-              ("9831", "ヤマダ", "https://www.yamada-holdings.jp/ir/monthly.html"),
-              ("3086", "Ｊフロント",
-               "https://www.j-front-retailing.com/ir/finance/monthly.html"),
-              ("2695", "くら寿司",
-               "https://www.kurasushi.co.jp/company/ir/library/monthly_reports.html"),
-          ]
+                               "Chrome/131.0.0.0 Safari/537.36")}
 
-          def get(u, binary=False):
+          def get(u):
               try:
                   with urllib.request.urlopen(
                           urllib.request.Request(u, headers=UA), timeout=20) as r:
-                      raw = r.read(4_000_000)
-                      if binary:
-                          return raw
-                      h = raw[:2500].decode("ascii", "ignore").lower()
-                      enc = ("cp932" if "shift_jis" in h or "shift-jis" in h
-                             else "euc-jp" if "euc-jp" in h else "utf-8")
-                      return raw.decode(enc, "ignore")
+                      return r.status, r.read(900_000).decode("utf-8", "ignore")
+              except urllib.error.HTTPError as e:
+                  return e.code, ""
               except Exception as e:
-                  print("   !", type(e).__name__, getattr(e, "code", ""))
-                  return b"" if binary else ""
+                  return type(e).__name__, ""
 
-          tot_ok = tot_m = 0
-          for code, name, url in PAGES:
-              page = get(url); time.sleep(0.6)
-              print("=" * 78)
-              links = monir.pdf_links(page, url) if page else []
-              print("%s %s · PDF %d건 (그중 언제인지 아는 것만)"
-                    % (code, name, len(links)))
-              for u, lab, when in links[:4]:
-                  data = get(u, binary=True); time.sleep(0.6)
-                  if not data:
-                      continue
-                  got = montable.read(data, when, title=lab)
-                  rows = (got or {}).get("rows") or []
-                  print("   %-52s %s %s" % (u[-52:], when, lab[:20]))
-                  if not rows:
-                      print("      -> 표없음 (%dKB)" % (len(data) // 1024))
-                      continue
-                  tot_ok += 1; tot_m += len(rows)
-                  print("      -> %d달 · 기준 %s" % (len(rows), (got or {}).get("basis")))
-                  for r in rows[:14]:
-                      print("         %s rev=%s yoy=%s %s" %
-                            (r.get("period"), r.get("rev"), r.get("yoy"),
-                             (r.get("metric") or "")[:14]))
-          print()
-          print("== 91차: 읽힌 PDF %d · 달 %d ==" % (tot_ok, tot_m))
+          st, js = get("https://www.park24.co.jp/ir/eir/eir.js")
+          print("eir.js", st, len(js), "bytes")
+          txt = re.sub(r"[ \t]+", " ", js)
+          for line in txt.splitlines():
+              line = line.strip()
+              if not line or line.startswith("//"):
+                  continue
+              if re.search(r"(eirUrl|eirPass|Custom|v5parts|qir|uniCode|"
+                           r"\.html|\.aspx|\.js|src|href|append)", line):
+                  print("  ", line[:150])
           EOF

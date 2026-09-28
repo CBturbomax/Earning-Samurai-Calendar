@@ -42,10 +42,11 @@ jobs:
   monthly:
     runs-on: ubuntu-latest
     if: github.ref_name == 'main'
-    # 두 수집기가 스스로 재는 시간을 더하면 10분 + 7분이다. 여기를 20분으로
-    # 두면 둘 다 제 예산을 다 쓰는 날 **일이 끝나기 전에 잘려** 그 실행의
-    # 커밋이 통째로 사라진다(수집기는 디스크에 저장했는데 되커밋을 못 한다).
-    timeout-minutes: 30
+    # 세 수집기가 스스로 재는 시간을 더하면 10분 + 15분 + 8분이다. 여기를
+    # 그보다 짧게 두면 셋 다 제 예산을 다 쓰는 날 **일이 끝나기 전에 잘려**
+    # 그 실행의 커밋이 통째로 사라진다(수집기는 디스크에 저장했는데 되커밋을
+    # 못 한다). 빌드·되커밋까지 넉넉히 잡는다.
+    timeout-minutes: 50
     steps:
       - uses: actions/checkout@v4
       # **최신 main 으로 맞추고 시작한다.** checkout 은 이 실행을 부른 커밋을
@@ -109,10 +110,11 @@ jobs:
       # 사이트에는 월차 표를 올린다. 집계 사이트와 달리 데이터센터 IP 를
       # 막지 않는다(84차: 24곳 중 21곳 열림). 손으로 잇는 것은 주소 하나뿐이다.
       - name: 🏢 월매출 (회사 IR 페이지)
-        timeout-minutes: 8
+        timeout-minutes: 10
         env:
-          IR_SECS: '420'
+          IR_SECS: '480'
           IR_PAUSE: '1.0'
+          IR_PDF_PER_RUN: '20'
         run: |
           set -o pipefail
           python scrape_mon_ir.py | tee ir.log
