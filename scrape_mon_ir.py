@@ -427,15 +427,16 @@ def main():
     start = int(rec.get("cursor") or 0) % len(targets) if targets else 0
     targets = targets[start:] + targets[:start]
     for pos, (code, name, top, fixed) in enumerate(targets):
-        # 다음 실행은 여기 다음 회사에서 시작한다. 300개로 넓힌 뒤에도
-        # 앞쪽 회사의 느린 응답/실패 때문에 뒤쪽이 영원히 굶지 않게 한다.
-        rec["cursor"] = (start + pos + 1) % len(targets) if targets else 0
         if time.time() - t0 > BUDGET:
             print("  시간이 다 됐다 — 여기까지 저장하고 다음 실행에 잇는다")
             break
         if miss >= GIVE_UP_AFTER:
             print(f"  연속 {miss}번 못 받았다 — 이 바퀴는 접는다")
             break
+        # 다음 실행은 여기 다음 회사에서 시작한다. 300개로 넓힌 뒤에도
+        # 앞쪽 회사의 느린 응답/실패 때문에 뒤쪽이 영원히 굶지 않게 한다.
+        # 중단 조건을 지난 뒤에만 옮겨, 아직 처리하지 않은 회사를 건너뛰지 않는다.
+        rec["cursor"] = (start + pos + 1) % len(targets) if targets else 0
         cur = codes.get(code) or {}
         # 이미 달이 쌓인 회사는 자주 안 두드린다. 한 달에 한 번 올라오는 값이다.
         if cur.get("months") and cur.get("ts") and cur.get("pdf_ts"):
