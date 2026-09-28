@@ -78,6 +78,7 @@ PDF_FRESH_HOURS = float(os.environ.get("IR_PDF_FRESH_HOURS", "24"))
 # 월차 잡이 10분마다 도니 한 바퀴에 12개면 하루 안에 300여 종목을 한 번 돈다.
 HOME_PER_RUN = int(os.environ.get("IR_HOME_PER_RUN", "24"))
 PROFILE_MISS_DAYS = float(os.environ.get("IR_PROFILE_MISS_DAYS", "14"))
+PARSE_MISS_HOURS = float(os.environ.get("IR_PARSE_MISS_HOURS", "6"))
 
 # **수집일과 발표일은 완전히 다르다.**
 # 회사의 rolling 月次 페이지가 "최종 업데이트"를 명시할 때만 실제 공개일 후보로 쓴다.
@@ -229,6 +230,34 @@ def known_names():
     return out
 
 
+def cap_map():
+    """caps.json 의 일본 시총(USD bn). 수집 우선순위에만 쓴다."""
+    p = HERE / "data" / "caps.json"
+    if not p.exists():
+        return {}
+    try:
+        raw = json.loads(p.read_text(encoding="utf-8")).get("caps") or {}
+    except (ValueError, OSError):
+        return {}
+    out = {}
+    for k, v in raw.items():
+        if not k.startswith("jp:"):
+            continue
+        try:
+            out[k[3:]] = float(v or 0)
+        except (TypeError, ValueError):
+            pass
+    return out
+
+
+def codes_with_numbers(rec):
+    """어느 소스에서든 월차 숫자를 이미 가진 종목."""
+    got = set((rec.get("codes") or {}).keys())
+    for fn in ("monthly_nums_jp.json", "monthly_web_jp.json"):
+        got |= _load_codes_file(fn)
+    return got
+
+
 def profile_home(code, rec, today):
     """Yahoo assetProfile 에서 공식 홈페이지를 한 번 찾아 cache 한다."""
     homes = rec.setdefault("homes", {})
@@ -266,6 +295,12 @@ def iter_targets(rec, today):
             continue
         seen.add(code)
         order.append(code)
+
+    # **수치 없는 큰 회사부터** 본다. 월차 화면 기본값이 1조원 이상이므로
+    # 대형주가 비어 있는데 소형주부터 round-robin 도는 것은 사용자 가치가 낮다.
+    caps = cap_map()
+    have = codes_with_numbers(rec)
+    order.sort(key=lambda code: (code in have, -(caps.get(code) or 0), code))
 
     # 공식 홈페이지를 아직 모르는 종목은 한 실행에 HOME_PER_RUN 개만 새로 찾는다.
     left = HOME_PER_RUN
@@ -446,19 +481,13 @@ def main():
     pdf_left = PDF_PER_RUN
 
     targets = iter_targets(rec, today)
-    start = int(rec.get("cursor") or 0) % len(targets) if targets else 0
-    targets = targets[start:] + targets[:start]
-    for pos, (code, name, top, fixed) in enumerate(targets):
+    for code, name, top, fixed in targets:
         if time.time() - t0 > BUDGET:
             print("  시간이 다 됐다 — 여기까지 저장하고 다음 실행에 잇는다")
             break
         if miss >= GIVE_UP_AFTER:
             print(f"  연속 {miss}번 못 받았다 — 이 바퀴는 접는다")
             break
-        # 다음 실행은 여기 다음 회사에서 시작한다. 300개로 넓힌 뒤에도
-        # 앞쪽 회사의 느린 응답/실패 때문에 뒤쪽이 영원히 굶지 않게 한다.
-        # 중단 조건을 지난 뒤에만 옮겨, 아직 처리하지 않은 회사를 건너뛰지 않는다.
-        rec["cursor"] = (start + pos + 1) % len(targets) if targets else 0
         cur = codes.get(code) or {}
         # 이미 달이 쌓인 회사는 자주 안 두드린다. 한 달에 한 번 올라오는 값이다.
         if cur.get("months") and cur.get("ts") and cur.get("pdf_ts"):
@@ -471,6 +500,15 @@ def main():
             except ValueError:
                 pass
         site = sites.get(code) or {}
+        # 월차 페이지는 찾았지만 표를 못 읽은 회사는 매 10분마다 같은 실패를
+        # 반복하지 않는다. 6시간 쉬게 하면 그 사이 다음 대형주를 계속 채울 수 있다.
+        if not (cur.get("months") or cur.get("pdf")) and site.get("parse_miss"):
+            try:
+                age = (now - datetime.fromisoformat(site["parse_miss"])).total_seconds()
+                if age < PARSE_MISS_HOURS * 3600:
+                    continue
+            except ValueError:
+                pass
         url = fixed or site.get("page") or ""
         if not url:
             # 얼마 전에 못 찾은 곳은 건너뛴다.
@@ -528,7 +566,9 @@ def main():
             months[p] = row
         if not (months or pdf):
             print(f"  {code} {name}: 0달 ({url})")
+            sites.setdefault(code, {})["parse_miss"] = now.isoformat(timespec="seconds")
             continue
+        sites.setdefault(code, {}).pop("parse_miss", None)
         codes[code] = {"name": name, "page": url, "months": months,
                        "ts": now.isoformat(timespec="seconds")}
         if updated:
