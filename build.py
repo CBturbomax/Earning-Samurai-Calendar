@@ -32,6 +32,7 @@ from translit import to_korean
 
 HERE = Path(__file__).parent
 OUT = HERE / "index.html"
+VERSION = HERE / "version.txt"
 
 # 시장별 주목종목 사전. 코드가 시장 사이에 겹치므로(일본 8035 / 홍콩 08035)
 # 합칠 때는 "jp:8035" 처럼 시장을 앞에 붙여 키를 만든다.
@@ -2291,8 +2292,9 @@ def build():
     # **러너는 UTC 로 돈다.** 예전에는 datetime.now() 에 "KST" 만 붙였는데,
     # 그러면 화면에 늘 아홉 시간 뒤처진 시각이 뜬다 — 오후 5시에 봤는데
     # "갱신 07:49 KST" 라고 적혀 있으니 하루 종일 안 돌아간 것처럼 보인다.
-    stamp = (datetime.now(timezone.utc) + timedelta(hours=9)
-             ).strftime("%Y-%m-%d %H:%M KST")
+    now_utc = datetime.now(timezone.utc)
+    stamp = (now_utc + timedelta(hours=9)).strftime("%Y-%m-%d %H:%M KST")
+    build_ver = now_utc.strftime("%Y%m%d%H%M%S")
     parts = " · ".join(f'{flag_html(m)} {MARKETS[m]["ko"]} <b>{len(data[m]["rows"]):,}</b>'
                        for m in have)
     head = (f'{parts} · 합계 <b>{len(packed):,}건</b> · '
@@ -2317,9 +2319,11 @@ def build():
                    .replace("__HEAD__", head) \
                    .replace("__TLNOTE__", tl_note) \
                    .replace("__MKTCSS__", mkt_css) \
+                   .replace("__BUILDVER__", build_ver) \
                    .replace("__DATA__", json.dumps(payload, ensure_ascii=False,
                                                    separators=(",", ":")))
     OUT.write_text(html, encoding="utf-8")
+    VERSION.write_text(build_ver + "\n", encoding="utf-8")
     kb = OUT.stat().st_size / 1024
     print(f"{OUT}  ({kb:,.0f} KB)")
     for m in MARKET_ORDER:
@@ -2364,6 +2368,22 @@ try {
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
 <meta http-equiv="Pragma" content="no-cache">
 <meta http-equiv="Expires" content="0">
+<script>
+/* GitHub Pages/CDN 이 예전 index.html 을 잡고 있어도, 한 번 최신판을 받은 뒤부터는
+   version.txt 를 no-store 로 확인해 새 빌드가 있으면 query string 을 바꿔 강제 갱신한다. */
+const ES_BUILD = "__BUILDVER__";
+setTimeout(() => {
+  fetch('./version.txt?t=' + Date.now(), {cache:'no-store'})
+    .then(r => r.ok ? r.text() : '')
+    .then(v => {
+      v = (v || '').trim();
+      if (!v || v === ES_BUILD) return;
+      const u = new URL(location.href);
+      u.searchParams.set('_v', v);
+      location.replace(u.toString());
+    }).catch(() => {});
+}, 800);
+</script>
 <title>Earning Samurai — 글로벌 실적발표 캘린더</title>
 <!-- 대표 아이콘. 그림 파일을 따로 두지 않고 SVG 를 그대로 심는다.
      제목 옆 로고와 **같은 곳(build.py 의 LOGO_SVG)** 에서 온다. -->
