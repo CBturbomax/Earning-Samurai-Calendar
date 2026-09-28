@@ -435,13 +435,7 @@ def find_monthly(page: str, base: str):
     for href, lab in A.findall(page):
         if href.lower().startswith(("javascript:", "mailto:", "tel:")):
             continue
-        t = _txt(lab)
-        if "月次" in t or "月次" in href or "monthly" in href.lower():
-            u = urllib.parse.urljoin(base, href)
-            if u.split("?")[0].lower().endswith(".pdf"):
-                continue
-            return u
-    return ""
+        t = _txt(lab)\n        if (MONTHLY_LINK_HINT.search(t) or MONTHLY_LINK_HINT.search(href) or\n                MONTHLY_PATH_HINT.search(href)):\n            u = urllib.parse.urljoin(base, href)\n            if u.split("?")[0].lower().endswith(".pdf"):\n                continue\n            return u\n    return ""
 
 
 def has_monthly_pdf(page: str, base: str) -> bool:
