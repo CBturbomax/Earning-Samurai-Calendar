@@ -1900,13 +1900,13 @@ def load_monthly_nums(monthly):
         if rec:
             rows, base = _ir_series(rec)
             if rows:
-                cand.append((0, "회사 IR", rows, base, True))
+                cand.append((0, "회사 IR", rows, base, True, rec))
 
         rec = web_c.get(code)
         if rec:
             rows, base = _web_series(rec)
             if rows:
-                cand.append((1, "기사 수치", rows, base, True))
+                cand.append((1, "기사 수치", rows, base, True, rec))
 
         rec = (got.get("codes") or {}).get(code)
         if rec:
@@ -1915,17 +1915,17 @@ def load_monthly_nums(monthly):
                 base = _base_of(rec.get("amount_label", "") +
                                 rec.get("yoy_label", ""))
                 cand.append((2, "TDnet PDF", rows, base,
-                             _tdnet_trusted(rows, want)))
+                             _tdnet_trusted(rows, want), rec))
 
         if not cand:
             continue
 
         # 최신 공식 대상월보다 뒤의 자동 오독 달은 절대 차트에 싣지 않는다.
         norm = []
-        for rank, src, rows, base, trusted in cand:
+        for rank, src, rows, base, trusted, rawrec in cand:
             clipped = [r for r in rows if not want or r[0] <= want]
             if clipped:
-                norm.append((rank, src, clipped, base, trusted))
+                norm.append((rank, src, clipped, base, trusted, rawrec))
         if not norm:
             continue
 
@@ -1933,7 +1933,7 @@ def load_monthly_nums(monthly):
         exact = [x for x in norm if want and any(r[0] == want for r in x[2])]
         pool = exact or norm
         pool.sort(key=lambda x: x[0])
-        rank, src, rows, base, trusted = pool[0]
+        rank, src, rows, base, trusted, rawrec = pool[0]
 
         latest = next((r for r in reversed(rows) if not want or r[0] == want),
                       rows[-1])
@@ -1945,12 +1945,41 @@ def load_monthly_nums(monthly):
             if list_doc and latest_doc and list_doc != latest_doc:
                 trusted = False
 
+        snap = {"period": latest[0]}
+        if latest[1] is not None:
+            snap["rev"] = latest[1]
+        if latest[2] is not None:
+            snap["yoy"] = latest[2]
+        if base:
+            snap["base"] = base
+
+        # 최신월에 전점/기존점이 둘 다 있는 소스라면 둘 다 화면에 보여준다.
+        # 차트는 한 기준만 쓰더라도 최신 스냅샷까지 하나로 뭉개지 않는다.
+        if src == "회사 IR":
+            mv = (rawrec.get("months") or {}).get(latest[0]) or {}
+            if mv.get("same") is not None:
+                snap["same"] = mv["same"]
+            if mv.get("all") is not None:
+                snap["all"] = mv["all"]
+            pv = (rawrec.get("pdf") or {}).get(latest[0]) or {}
+            if snap.get("rev") is None and pv.get("rev") is not None:
+                snap["rev"] = pv["rev"]
+            if snap.get("yoy") is None and pv.get("yoy") is not None:
+                snap["yoy"] = pv["yoy"]
+        elif src == "기사 수치":
+            mv = (rawrec.get("months") or {}).get(latest[0]) or {}
+            if mv.get("same") is not None:
+                snap["same"] = mv["same"]
+            if mv.get("all") is not None:
+                snap["all"] = mv["all"]
+
         out[code] = {
             "m": [r[:4] for r in rows],
             "src": src,
             "base": base,
             "verified": bool(trusted and (not want or latest[0] == want)),
             "doc": latest_doc,
+            "latest": snap,
         }
 
     return out
