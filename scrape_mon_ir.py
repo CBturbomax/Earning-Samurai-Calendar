@@ -170,7 +170,10 @@ def main():
         # 넘기며 옛 표를 내려도 우리 이력은 그대로 남아야 한다.
         months = dict(cur.get("months") or {})
         for p, v in got.items():
-            row = {"day": today.isoformat()}
+            # **처음 본 날을 지킨다.** 회사 IR 표에는 공시일이 안 적혀 있어
+            # 우리가 아는 날은 '우리가 처음 본 날'뿐이다. 실행할 때마다
+            # 오늘로 덮으면 그 날짜가 날마다 흔들려 아무 뜻이 없어진다.
+            row = {"day": (months.get(p) or {}).get("day") or today.isoformat()}
             row.update({k: val for k, val in v.items() if k in ("same", "all")})
             if p not in months:
                 new_months += 1

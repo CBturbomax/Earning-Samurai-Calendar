@@ -15,69 +15,34 @@ jobs:
         with:
           python-version: '3.12'
 
-      # 87차 — **표가 실제로 어떻게 펴지는가.** 86차에서 읽힐 줄 알았던
-      # 니토리·스카이락·온워드가 0달이고, 버리려던 세븐＆아이·스시로가 담겼다.
-      # 짐작하지 말고 _grid 가 낸 칸을 그대로 찍어 본다.
-      - name: 🔎 표를 펴서 눈으로 본다 (87차)
+      # 89차 — **수집기를 그대로 돌려 본다.** 「2025年度」 를 4월 시작으로
+      # 넘겨짚던 것을 고친 뒤(온워드 3月 이 한 해 앞으로 밀렸다) 무엇이
+      # 담기는지 끝까지 본다. probe 는 아무것도 커밋하지 않는다.
+      - name: 🔎 수집기를 그대로 (89차)
         timeout-minutes: 16
+        env:
+          IR_SECS: '600'
+          IR_PAUSE: '1.0'
         run: |
+          python scrape_mon_ir.py
           python - <<'EOF'
-          import re, time, urllib.error, urllib.request
-          from datetime import date
-
-          import monir, monweb
-
-          UA = {"User-Agent": ("Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
-                               "AppleWebKit/537.36 (KHTML, like Gecko) "
-                               "Chrome/131.0.0.0 Safari/537.36"),
-                "Accept-Language": "ja,en;q=0.8"}
-          PAGES = [
-              ("9843", "ニトリ", "https://www.nitorihd.co.jp/ir/performance/sales.html"),
-              ("3197", "すかいらーく", "https://corp.skylark.co.jp/ir/financial/performance/"),
-              ("8016", "オンワード", "https://www.onward-hd.co.jp/ir/finance/monthly.html"),
-              ("7606", "Uアローズ", "https://www.united-arrows.co.jp/ir/monthly/"),
-              ("3382", "セブン＆アイ", "https://www.7andi.com/ir/financial/monthly_highlight.html"),
-              ("3563", "スシロー", "https://food-and-life.co.jp/investor/monthly-information"),
-          ]
-
-          def get(u):
-              try:
-                  with urllib.request.urlopen(
-                          urllib.request.Request(u, headers=UA), timeout=15) as r:
-                      raw = r.read(1_500_000)
-                      h = raw[:2500].decode("ascii", "ignore").lower()
-                      enc = ("cp932" if "shift_jis" in h or "shift-jis" in h
-                             else "euc-jp" if "euc-jp" in h else "utf-8")
-                      return raw.decode(enc, "ignore")
-              except Exception as e:
-                  print("  !", type(e).__name__); return ""
-
-          T = date.today()
-          for code, name, url in PAGES:
-              page = get(url); time.sleep(0.6)
-              print("=" * 78)
-              print(code, name, len(page) // 1024, "KB")
-              if not page:
-                  continue
-              body_ = monir.SCRIPT.sub(" ", page)
-              for ti, tb in enumerate(monir.TABLE_AT.findall(body_)):
-                  rows = [r for r in monweb.grid(tb) if r]
-                  if len(rows) < 2:
-                      continue
-                  width = max(len(r) for r in rows)
-                  if width < 3:
-                      continue
-                  rows = [[monir._txt(x) for x in r] + [""] * (width - len(r))
-                          for r in rows]
-                  flat = " ".join(x for r in rows for x in r)
-                  if "月" not in flat:
-                      continue
-                  got = monir._series(rows, width, T, 3)
-                  print(" ── 표 %d · %d줄 x %d칸 · 회계연도 %s · 담김 %d달"
-                        % (ti, len(rows), width, monir._fy(flat), len(got)))
-                  for r in rows[:7]:
-                      print("    | " + " | ".join(x[:11] for x in r[:13]))
-                  if got:
-                      for k in sorted(got)[:3] + sorted(got)[-2:]:
-                          print("      >>", k, got[k])
+          import json
+          from pathlib import Path
+          d = json.loads(Path("data/monthly_ir_jp.json").read_text(encoding="utf-8"))
+          print()
+          print("== 89차: %d사 · %d달 ==" % (d["companies"], d["months"]))
+          for code, rec in sorted(d["codes"].items(),
+                                  key=lambda kv: -len(kv[1]["months"])):
+              ks = sorted(rec["months"])
+              print("%-5s %-14s %2d달 %s ~ %s" % (code, rec["name"], len(ks),
+                                                 ks[0], ks[-1]))
+              print("      " + " · ".join(
+                  "%s %s" % (k[2:], "/".join(
+                      "%g" % rec["months"][k][x]
+                      for x in ("same", "all") if x in rec["months"][k]))
+                  for k in ks))
+          print()
+          print("찾아 둔 月次 주소")
+          for code, st in sorted(d["sites"].items()):
+              print("  %-5s %s" % (code, st["page"]))
           EOF

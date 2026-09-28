@@ -1514,6 +1514,24 @@ def load_monthly_web():
         return {}
 
 
+def load_monthly_ir():
+    """일본 월매출 — **회사 IR 페이지의 月次 표**에서 온 것(`scrape_mon_ir.py`).
+
+    TDnet 첨부 PDF 도 流通ニュース 도 못 닿는 자리를 메운다. 이온·세븐＆아이·
+    니토리·야마다·스카이락처럼 큰 회사가 여기서 들어온다 — 회사 제 사이트는
+    집계 사이트와 달리 데이터센터 IP 를 막지 않는다(84차: 24곳 중 21곳 열림).
+    값은 전년동월비(%)뿐이고 금액은 없다.
+    """
+    p = HERE / "data" / "monthly_ir_jp.json"
+    if not p.exists():
+        return {}
+    try:
+        return (json.loads(p.read_text(encoding="utf-8")).get("codes") or {})
+    except (ValueError, OSError) as e:
+        print(f"  ! monthly_ir_jp.json 읽기 실패: {e}")
+        return {}
+
+
 MON_STALE_GAP = 3          # 달
 
 
@@ -1554,10 +1572,11 @@ def _mon_last_months():
                 last[code] = max(last.get(code, ""), max(ms))
     except (ValueError, OSError):
         pass
-    for code, rec in load_monthly_web().items():
-        ms = rec.get("months") or {}
-        if ms:
-            last[code] = max(last.get(code, ""), max(ms))
+    for src in (load_monthly_web(), load_monthly_ir()):
+        for code, rec in src.items():
+            ms = rec.get("months") or {}
+            if ms:
+                last[code] = max(last.get(code, ""), max(ms))
     return last
 
 
@@ -1614,23 +1633,27 @@ def load_monthly(packed):
     # 다 기사에서 온 값이라 지어내는 것이 없다.
     seen = {r[2] for r in out}
     stale = mon_stale_codes()
-    for code, rec in sorted(load_monthly_web().items()):
-        # 낡아서 화면에 안 낼 종목이면 그 자리에 카드도 세우지 않는다 —
-        # 수치 없는 카드만 덩그러니 남으면 그게 더 헷갈린다.
-        if code in seen or code in stale:
-            continue
-        months = rec.get("months") or {}
-        if not months:
-            continue
-        per = max(months)
-        last = months[per]
-        ko = known.get(code)
-        if not ko:
-            ko, _lvl = to_korean(rec.get("name", ""),
-                                 companies.NOTABLE.get(code, ("",))[0])
-        out.append([last.get("day", ""), "", code, ko, rec.get("name", ""),
-                    per, 1, "流通ニュース 월차 기사", last.get("doc", ""),
-                    CAPS.get("jp:" + code, 0), sect.get(code, "")])
+    for label, src in (("회사 IR 월차 표", load_monthly_ir()),
+                       ("流通ニュース 월차 기사", load_monthly_web())):
+        for code, rec in sorted(src.items()):
+            # 낡아서 화면에 안 낼 종목이면 그 자리에 카드도 세우지 않는다 —
+            # 수치 없는 카드만 덩그러니 남으면 그게 더 헷갈린다.
+            if code in seen or code in stale:
+                continue
+            months = rec.get("months") or {}
+            if not months:
+                continue
+            per = max(months)
+            last = months[per]
+            ko = known.get(code)
+            if not ko:
+                ko, _lvl = to_korean(rec.get("name", ""),
+                                     companies.NOTABLE.get(code, ("",))[0])
+            out.append([last.get("day", ""), "", code, ko, rec.get("name", ""),
+                        per, 1, label,
+                        last.get("doc") or rec.get("page", ""),
+                        CAPS.get("jp:" + code, 0), sect.get(code, "")])
+            seen.add(code)
     out.sort(key=lambda x: (x[0], -x[9], x[2]), reverse=False)
     return out
 
@@ -1688,6 +1711,21 @@ def _back_fill(rows, same_base):
     return rows, len(add)
 
 
+def _ratio_rows(months):
+    """{달: {same, all}} -> ([[달, None, 비율], …], 기준 한 낱말).
+
+    같은 가게 기준(既存店)과 전점 기준 중 **더 많이 실린 쪽 하나만** 쓴다.
+    """
+    n_same = sum(1 for v in months.values() if v.get("same") is not None)
+    n_all = sum(1 for v in months.values() if v.get("all") is not None)
+    if not (n_same or n_all):
+        return [], ""
+    key = "same" if n_same >= n_all else "all"
+    rows = [[p, None, v[key]] for p, v in sorted(months.items())
+            if v.get(key) is not None]
+    return rows, ("기존점" if key == "same" else "전점")
+
+
 def load_monthly_nums():
     """월매출의 **달별 수치** — `scrape_mon_jp.py` 가 첨부 PDF 표에서 읽은 것.
 
@@ -1721,23 +1759,26 @@ def load_monthly_nums():
                                                  rec.get("yoy_label", ""))}
     # **회사마다 한 소스만 쓴다.** 첨부 PDF 에서 읽은 값이 있으면 그쪽이다 —
     # 두 소스를 한 줄에 섞으면 「全社売上高」와 「既存店」처럼 **뜻이 다른 값**이
-    # 한 막대에 나란히 서서 거짓말을 한다.
-    for code, rec in load_monthly_web().items():
+    # 한 막대에 나란히 서서 거짓말을 한다. 금액이 오는 쪽이 늘 이긴다.
+    ir_c, web_c = load_monthly_ir(), load_monthly_web()
+    for code in sorted(set(ir_c) | set(web_c)):
         if code in out or code in stale:
             continue
-        months = rec.get("months") or {}
-        # 같은 가게 기준(既存店)과 전점 기준 중 **더 많이 실린 쪽 하나만** 쓴다.
-        n_same = sum(1 for v in months.values() if v.get("same") is not None)
-        n_all = sum(1 for v in months.values() if v.get("all") is not None)
-        if not (n_same or n_all):
+        cand = []
+        for src, rec in (("회사 IR", ir_c.get(code)),
+                         ("流通ニュース", web_c.get(code))):
+            if not rec:
+                continue
+            rows, base = _ratio_rows(rec.get("months") or {})
+            if rows:
+                cand.append((len(rows), src, rows, base))
+        if not cand:
             continue
-        key = "same" if n_same >= n_all else "all"
-        rows = [[p, None, v[key]] for p, v in sorted(months.items())
-                if v.get(key) is not None]
-        if not rows:
-            continue
-        out[code] = {"m": rows, "src": "流通ニュース",
-                     "base": "기존점" if key == "same" else "전점"}
+        # 둘 다 비율뿐이라 우열이 없다. **달이 더 많은 쪽**을 쓰고, 같으면
+        # 회사가 제 손으로 낸 쪽(IR)을 쓴다. 섞지는 않는다.
+        cand.sort(key=lambda t: (-t[0], t[1] != "회사 IR"))
+        _n, src, rows, base = cand[0]
+        out[code] = {"m": rows, "src": src, "base": base}
     if back:
         print(f"     전년 같은 달 되짚기 {back}달 (금액 ÷ 전년동월비)")
     if stale:
