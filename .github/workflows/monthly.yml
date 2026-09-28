@@ -29,6 +29,8 @@ on:
       - 'monweb.py'
       - 'scrape_mon_ir.py'
       - 'monir.py'
+      - 'scrape_caps.py'
+      - 'data/monthly_universe_jp.json'
       - '.github/workflows/monthly.yml'
 
 permissions:
