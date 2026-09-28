@@ -341,6 +341,17 @@ def _next_month(y, m):
     return date(y + (m == 12), 1 if m == 12 else m + 1, 1)
 
 
+# **이름표는 앞머리만 믿는다.** J프론트의 목록은 `<a>` 가 망가져 있어 옆
+# 항목의 글까지 딸려 온다(「2月度連結営業報告 （PDF 115KB） 1月度連…」).
+# 그대로 두면 옆 항목의 「平成19年8月」 을 이 PDF 의 날로 읽는다.
+LAB_CUT = re.compile(r"(（\s*PDF|\(\s*PDF|\d+\s*KB|\d+\s*MB)")
+
+
+def _lab_head(label: str) -> str:
+    m = LAB_CUT.search(label)
+    return (label[:m.start()] if m else label)[:40]
+
+
 def pdf_when(url: str, label: str):
     """그 PDF 가 **언제 나온 것인가** -> 'YYYY-MM-DD' 또는 None.
 
@@ -350,7 +361,7 @@ def pdf_when(url: str, label: str):
     보고 대상 달만 알 때는 **그 다음 달 1일**을 발표일로 삼는다 — 월매출은
     다음 달 초에 나온다. 어림이지만 해를 가르는 데는 그것으로 넉넉하다.
     """
-    lab = label.translate(ZEN)
+    lab = _lab_head(label).translate(ZEN)
     m = HEISEI.search(lab)                       # 「平成19年7月度」 (J프론트)
     if m:
         y = 1988 + int(m.group(1))
@@ -387,13 +398,15 @@ def pdf_links(page: str, base: str):
         if PDF_SKIP.search(t) or not (PDF_WANT.search(t) or PDF_WANT.search(href)):
             continue
         u = urllib.parse.urljoin(base, href)
-        if u in seen:
+        # 같은 파일에 물음표만 붙여 두 번 거는 목록이 있다(패스트리).
+        key = u.split("?")[0]
+        if key in seen:
             continue
         when = pdf_when(u, t)
         if not when:
             continue
-        seen.add(u)
-        out.append((u, t, when))
+        seen.add(key)
+        out.append((key, _lab_head(t).strip(), when))
     return out
 
 
@@ -731,6 +744,18 @@ def _selftest():                                          # pragma: no cover
            """<a href="/ir/upload/hp0916month.pdf">月次報告書</a>""")
     eq("(너) PDF 목록", pdf_links(lst, "https://x.jp/"),
        [("https://x.jp/ir/monthly/2026/260907.pdf", "8月 月次速報", "2026-09-07")])
+
+    # **이름표는 앞머리만 믿는다.** J프론트의 목록은 `<a>` 가 망가져 옆 항목의
+    # 글까지 딸려 온다 — 그대로 두면 옆 항목의 연호를 이 PDF 의 날로 읽는다.
+    eq("(너) 딸려 온 이름표",
+       pdf_when("https://x.jp/_data/ir_monthly/1102_renketsu110315.pdf",
+                "2月度連結営業報告 （PDF 115KB） 1月度連結営業報告 平成19年8月度"),
+       "2011-03-15")
+    # 같은 파일에 물음표만 붙여 두 번 거는 목록이 있다(패스트리).
+    eq("(너) 물음표만 다른 같은 파일",
+       len(pdf_links('<a href="/p/MonthlySales_2026.pdf?=0902">2026年8月期</a>'
+                     '<a href="/p/MonthlySales_2026.pdf">2026年8月期 (80KB)</a>',
+                     "https://x.jp/")), 1)
 
     if bad:
         print("monir 스스로 시험 실패:")
