@@ -1,16 +1,17 @@
 {
  "v": 1,
- "ts": "2026-09-28T04:06:49+00:00",
+ "ts": "2026-09-28T04:17:18+00:00",
  "seed": 361,
- "homes": 53,
+ "homes": 86,
  "official_ir_data": 9,
  "covered_any": 236,
  "status": {
-  "covered_elsewhere": 197,
-  "home_pending": 111,
-  "no_monthly_found": 15,
+  "covered_elsewhere": 183,
+  "home_pending": 92,
+  "no_monthly_found": 25,
   "ok": 9,
-  "parser_failed": 29
+  "parser_failed": 46,
+  "pending_discovery": 6
  },
  "codes": {
   "8267": {
@@ -48,7 +49,7 @@
    "home": "https://www.fastretailing.com/jp/",
    "source_url": "https://www.fastretailing.com/jp/ir/monthly/",
    "latest_month": "2022-08",
-   "months": 48,
+   "months": 96,
    "tdnet": false,
    "web": true,
    "ir": true
@@ -423,6 +424,106 @@
    "web": false,
    "ir": false
   },
+  "7453": {
+   "status": "pending_discovery",
+   "home": "https://www.ryohin-keikaku.jp/",
+   "source_url": "",
+   "latest_month": "",
+   "months": 0,
+   "tdnet": false,
+   "web": false,
+   "ir": false
+  },
+  "9989": {
+   "status": "pending_discovery",
+   "home": "https://www.sundrug.co.jp/",
+   "source_url": "",
+   "latest_month": "",
+   "months": 0,
+   "tdnet": false,
+   "web": false,
+   "ir": false
+  },
+  "9142": {
+   "status": "pending_discovery",
+   "home": "https://www.jrkyushu.co.jp/",
+   "source_url": "",
+   "latest_month": "",
+   "months": 0,
+   "tdnet": false,
+   "web": false,
+   "ir": false
+  },
+  "9020": {
+   "status": "pending_discovery",
+   "home": "https://www.jreast.co.jp/",
+   "source_url": "",
+   "latest_month": "",
+   "months": 0,
+   "tdnet": false,
+   "web": false,
+   "ir": false
+  },
+  "8233": {
+   "status": "pending_discovery",
+   "home": "https://www.takashimaya.co.jp/",
+   "source_url": "",
+   "latest_month": "",
+   "months": 0,
+   "tdnet": false,
+   "web": false,
+   "ir": false
+  },
+  "8242": {
+   "status": "pending_discovery",
+   "home": "https://www.h2o-retailing.co.jp/",
+   "source_url": "",
+   "latest_month": "",
+   "months": 0,
+   "tdnet": false,
+   "web": false,
+   "ir": false
+  },
+  "3099": {
+   "status": "parser_failed",
+   "home": "https://www.imhds.co.jp/",
+   "source_url": "https://www.imhds.co.jp/content/imhds/corporate/ir/finance/monthly-report.html",
+   "latest_month": "",
+   "months": 0,
+   "tdnet": false,
+   "web": false,
+   "ir": false
+  },
+  "9021": {
+   "status": "parser_failed",
+   "home": "https://www.westjr.co.jp/",
+   "source_url": "https://www.westjr.co.jp/company/ir/finance/monthly/",
+   "latest_month": "",
+   "months": 0,
+   "tdnet": false,
+   "web": false,
+   "ir": false
+  },
+  "9022": {
+   "status": "no_monthly_found",
+   "home": "https://company.jr-central.co.jp/",
+   "source_url": "",
+   "latest_month": "",
+   "months": 0,
+   "tdnet": false,
+   "web": false,
+   "ir": false
+  },
+  "9023": {
+   "status": "no_monthly_found",
+   "home": "https://www.tokyometro.jp/corporate/",
+   "source_url": "",
+   "latest_month": "",
+   "months": 0,
+   "tdnet": false,
+   "web": false,
+   "ir": false
+  },
   "1379": {
    "status": "parser_failed",
    "home": "https://www.hokto-kinoko.co.jp",
@@ -544,9 +645,9 @@
    "ir": false
   },
   "2311": {
-   "status": "covered_elsewhere",
-   "home": "",
-   "source_url": "",
+   "status": "parser_failed",
+   "home": "https://www.epco.co.jp",
+   "source_url": "https://www.epco.co.jp",
    "latest_month": "",
    "months": 0,
    "tdnet": true,
@@ -554,8 +655,8 @@
    "ir": false
   },
   "2317": {
-   "status": "home_pending",
-   "home": "",
+   "status": "no_monthly_found",
+   "home": "https://www.systena.co.jp",
    "source_url": "",
    "latest_month": "",
    "months": 0,
@@ -564,8 +665,8 @@
    "ir": false
   },
   "245A": {
-   "status": "covered_elsewhere",
-   "home": "",
+   "status": "no_monthly_found",
+   "home": "https://ingsinc.co.jp",
    "source_url": "",
    "latest_month": "",
    "months": 0,
@@ -574,9 +675,9 @@
    "ir": false
   },
   "2461": {
-   "status": "covered_elsewhere",
-   "home": "",
-   "source_url": "",
+   "status": "parser_failed",
+   "home": "https://www.fancs.com",
+   "source_url": "https://www.fancs.com/news/376546549/",
    "latest_month": "",
    "months": 0,
    "tdnet": true,
@@ -584,9 +685,9 @@
    "ir": false
   },
   "2502": {
-   "status": "home_pending",
-   "home": "",
-   "source_url": "",
+   "status": "parser_failed",
+   "home": "https://www.asahigroup-holdings.com/en/",
+   "source_url": "https://www.asahigroup-holdings.com/en/ir/financial_data/monthly_data/",
    "latest_month": "",
    "months": 0,
    "tdnet": false,
@@ -594,9 +695,9 @@
    "ir": false
   },
   "2590": {
-   "status": "covered_elsewhere",
-   "home": "",
-   "source_url": "",
+   "status": "parser_failed",
+   "home": "https://www.dydo-ghd.co.jp",
+   "source_url": "https://www.dydo-ghd.co.jp/ir/data/monthly_report/",
    "latest_month": "",
    "months": 0,
    "tdnet": true,
@@ -604,9 +705,9 @@
    "ir": false
   },
   "2593": {
-   "status": "home_pending",
-   "home": "",
-   "source_url": "",
+   "status": "parser_failed",
+   "home": "https://www.itoen.co.jp",
+   "source_url": "https://www.itoen.co.jp/ir/library/monthly_sales_backnumber/",
    "latest_month": "",
    "months": 0,
    "tdnet": false,
@@ -614,9 +715,9 @@
    "ir": false
   },
   "262A": {
-   "status": "covered_elsewhere",
-   "home": "",
-   "source_url": "",
+   "status": "parser_failed",
+   "home": "https://www.zoff.com",
+   "source_url": "https://www.zoff.com/ir/monthly/",
    "latest_month": "",
    "months": 0,
    "tdnet": true,
@@ -624,8 +725,8 @@
    "ir": false
   },
   "2652": {
-   "status": "home_pending",
-   "home": "",
+   "status": "no_monthly_found",
+   "home": "https://www.mandarake.co.jp",
    "source_url": "",
    "latest_month": "",
    "months": 0,
@@ -634,8 +735,8 @@
    "ir": false
   },
   "2653": {
-   "status": "covered_elsewhere",
-   "home": "",
+   "status": "no_monthly_found",
+   "home": "https://www.aeon-kyushu.info",
    "source_url": "",
    "latest_month": "",
    "months": 0,
@@ -644,9 +745,9 @@
    "ir": false
   },
   "2654": {
-   "status": "covered_elsewhere",
-   "home": "",
-   "source_url": "",
+   "status": "parser_failed",
+   "home": "https://www.asmo1.co.jp",
+   "source_url": "https://www.asmo1.co.jp",
    "latest_month": "",
    "months": 0,
    "tdnet": true,
@@ -654,8 +755,8 @@
    "ir": false
   },
   "2659": {
-   "status": "home_pending",
-   "home": "",
+   "status": "no_monthly_found",
+   "home": "https://www.san-a.co.jp",
    "source_url": "",
    "latest_month": "",
    "months": 0,
@@ -664,8 +765,8 @@
    "ir": false
   },
   "2668": {
-   "status": "home_pending",
-   "home": "",
+   "status": "no_monthly_found",
+   "home": "https://tabio.com/jp/",
    "source_url": "",
    "latest_month": "",
    "months": 0,
@@ -674,9 +775,9 @@
    "ir": false
   },
   "2669": {
-   "status": "covered_elsewhere",
-   "home": "",
-   "source_url": "",
+   "status": "parser_failed",
+   "home": "https://www.kanemi-foods.co.jp",
+   "source_url": "https://www.kanemi-foods.co.jp/ir/monthly.html",
    "latest_month": "",
    "months": 0,
    "tdnet": true,
@@ -684,9 +785,9 @@
    "ir": false
   },
   "2670": {
-   "status": "covered_elsewhere",
-   "home": "",
-   "source_url": "",
+   "status": "parser_failed",
+   "home": "https://www.abc-mart.co.jp",
+   "source_url": "https://www.abc-mart.co.jp/ir/getsujijoho.html",
    "latest_month": "",
    "months": 0,
    "tdnet": true,
@@ -694,9 +795,9 @@
    "ir": false
   },
   "2674": {
-   "status": "covered_elsewhere",
-   "home": "",
-   "source_url": "",
+   "status": "parser_failed",
+   "home": "https://www.hardoff.co.jp",
+   "source_url": "https://www.hardoff.co.jp/ir/library/sales/",
    "latest_month": "",
    "months": 0,
    "tdnet": true,
@@ -704,8 +805,8 @@
    "ir": false
   },
   "2678": {
-   "status": "covered_elsewhere",
-   "home": "",
+   "status": "no_monthly_found",
+   "home": "https://www.askul.co.jp",
    "source_url": "",
    "latest_month": "",
    "months": 0,
@@ -714,8 +815,8 @@
    "ir": false
   },
   "2681": {
-   "status": "home_pending",
-   "home": "",
+   "status": "no_monthly_found",
+   "home": "https://www.geonet.co.jp",
    "source_url": "",
    "latest_month": "",
    "months": 0,
@@ -724,9 +825,9 @@
    "ir": false
   },
   "2685": {
-   "status": "covered_elsewhere",
-   "home": "",
-   "source_url": "",
+   "status": "parser_failed",
+   "home": "https://www.andst-hd.co.jp",
+   "source_url": "https://www.andst-hd.co.jp/news/ir/entry-17218/",
    "latest_month": "",
    "months": 0,
    "tdnet": true,
@@ -744,9 +845,9 @@
    "ir": false
   },
   "2705": {
-   "status": "covered_elsewhere",
-   "home": "",
-   "source_url": "",
+   "status": "parser_failed",
+   "home": "https://www.ootoya.jp",
+   "source_url": "https://www.ootoya.jp/ir/financial/",
    "latest_month": "",
    "months": 0,
    "tdnet": true,
@@ -754,9 +855,9 @@
    "ir": false
   },
   "2722": {
-   "status": "covered_elsewhere",
-   "home": "",
-   "source_url": "",
+   "status": "parser_failed",
+   "home": "https://www.ai-kei.co.jp",
+   "source_url": "https://www.ai-kei.co.jp",
    "latest_month": "",
    "months": 0,
    "tdnet": true,
@@ -764,9 +865,9 @@
    "ir": false
   },
   "2726": {
-   "status": "home_pending",
-   "home": "",
-   "source_url": "",
+   "status": "parser_failed",
+   "home": "https://www.palgroup.holdings",
+   "source_url": "https://www.palgroup.holdings",
    "latest_month": "",
    "months": 0,
    "tdnet": false,
@@ -774,9 +875,9 @@
    "ir": false
   },
   "2730": {
-   "status": "home_pending",
-   "home": "",
-   "source_url": "",
+   "status": "parser_failed",
+   "home": "https://www.edion.co.jp",
+   "source_url": "https://www.edion.co.jp",
    "latest_month": "",
    "months": 0,
    "tdnet": false,
@@ -1161,16 +1262,6 @@
    "months": 0,
    "tdnet": false,
    "web": true,
-   "ir": false
-  },
-  "3099": {
-   "status": "home_pending",
-   "home": "",
-   "source_url": "",
-   "latest_month": "",
-   "months": 0,
-   "tdnet": false,
-   "web": false,
    "ir": false
   },
   "3135": {
@@ -1973,16 +2064,6 @@
    "web": false,
    "ir": false
   },
-  "7453": {
-   "status": "home_pending",
-   "home": "",
-   "source_url": "",
-   "latest_month": "",
-   "months": 0,
-   "tdnet": false,
-   "web": false,
-   "ir": false
-  },
   "7475": {
    "status": "home_pending",
    "home": "",
@@ -2583,26 +2664,6 @@
    "web": true,
    "ir": false
   },
-  "8233": {
-   "status": "home_pending",
-   "home": "",
-   "source_url": "",
-   "latest_month": "",
-   "months": 0,
-   "tdnet": false,
-   "web": false,
-   "ir": false
-  },
-  "8242": {
-   "status": "home_pending",
-   "home": "",
-   "source_url": "",
-   "latest_month": "",
-   "months": 0,
-   "tdnet": false,
-   "web": false,
-   "ir": false
-  },
   "8244": {
    "status": "home_pending",
    "home": "",
@@ -2663,46 +2724,6 @@
    "web": false,
    "ir": false
   },
-  "9020": {
-   "status": "home_pending",
-   "home": "",
-   "source_url": "",
-   "latest_month": "",
-   "months": 0,
-   "tdnet": false,
-   "web": false,
-   "ir": false
-  },
-  "9021": {
-   "status": "home_pending",
-   "home": "",
-   "source_url": "",
-   "latest_month": "",
-   "months": 0,
-   "tdnet": false,
-   "web": false,
-   "ir": false
-  },
-  "9022": {
-   "status": "home_pending",
-   "home": "",
-   "source_url": "",
-   "latest_month": "",
-   "months": 0,
-   "tdnet": false,
-   "web": false,
-   "ir": false
-  },
-  "9023": {
-   "status": "home_pending",
-   "home": "",
-   "source_url": "",
-   "latest_month": "",
-   "months": 0,
-   "tdnet": false,
-   "web": false,
-   "ir": false
-  },
   "9039": {
    "status": "covered_elsewhere",
    "home": "",
@@ -2710,16 +2731,6 @@
    "latest_month": "",
    "months": 0,
    "tdnet": true,
-   "web": false,
-   "ir": false
-  },
-  "9142": {
-   "status": "home_pending",
-   "home": "",
-   "source_url": "",
-   "latest_month": "",
-   "months": 0,
-   "tdnet": false,
    "web": false,
    "ir": false
   },
@@ -3030,16 +3041,6 @@
    "latest_month": "",
    "months": 0,
    "tdnet": true,
-   "web": false,
-   "ir": false
-  },
-  "9989": {
-   "status": "home_pending",
-   "home": "",
-   "source_url": "",
-   "latest_month": "",
-   "months": 0,
-   "tdnet": false,
    "web": false,
    "ir": false
   },
