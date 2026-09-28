@@ -15,22 +15,30 @@ jobs:
         with:
           python-version: '3.12'
 
-      # 86차 — **monir 가 진짜 페이지에서 무엇을 담는가.**
-      # 규칙은 하나고 손으로 잇는 것은 주소뿐이다. 담기는 달을 눈으로 본 뒤에
-      # 수집기를 붙인다 — 먼저 붙이고 나중에 보면 엉뚱한 값이 실린 채로 돈다.
-      - name: 🔎 monir 가 담는 것 (86차)
+      # 87차 — **표가 실제로 어떻게 펴지는가.** 86차에서 읽힐 줄 알았던
+      # 니토리·스카이락·온워드가 0달이고, 버리려던 세븐＆아이·스시로가 담겼다.
+      # 짐작하지 말고 _grid 가 낸 칸을 그대로 찍어 본다.
+      - name: 🔎 표를 펴서 눈으로 본다 (87차)
         timeout-minutes: 16
         run: |
           python - <<'EOF'
-          import time, urllib.error, urllib.request
+          import re, time, urllib.error, urllib.request
           from datetime import date
 
-          import monir
+          import monir, monweb
 
           UA = {"User-Agent": ("Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
                                "AppleWebKit/537.36 (KHTML, like Gecko) "
                                "Chrome/131.0.0.0 Safari/537.36"),
                 "Accept-Language": "ja,en;q=0.8"}
+          PAGES = [
+              ("9843", "ニトリ", "https://www.nitorihd.co.jp/ir/performance/sales.html"),
+              ("3197", "すかいらーく", "https://corp.skylark.co.jp/ir/financial/performance/"),
+              ("8016", "オンワード", "https://www.onward-hd.co.jp/ir/finance/monthly.html"),
+              ("7606", "Uアローズ", "https://www.united-arrows.co.jp/ir/monthly/"),
+              ("3382", "セブン＆アイ", "https://www.7andi.com/ir/financial/monthly_highlight.html"),
+              ("3563", "スシロー", "https://food-and-life.co.jp/investor/monthly-information"),
+          ]
 
           def get(u):
               try:
@@ -40,46 +48,36 @@ jobs:
                       h = raw[:2500].decode("ascii", "ignore").lower()
                       enc = ("cp932" if "shift_jis" in h or "shift-jis" in h
                              else "euc-jp" if "euc-jp" in h else "utf-8")
-                      return r.status, raw.decode(enc, "ignore")
-              except urllib.error.HTTPError as e:
-                  return e.code, ""
+                      return raw.decode(enc, "ignore")
               except Exception as e:
-                  return type(e).__name__, ""
+                  print("  !", type(e).__name__); return ""
 
           T = date.today()
-          tot_c = tot_m = 0
-          for code, (name, top, fixed) in monir.IR_SITES.items():
-              page_url = fixed
-              if not page_url:
-                  st, top_html = get(top)
-                  time.sleep(0.5)
-                  if not top_html:
-                      print("%-5s %-12s 맨 위 %s" % (code, name, st)); continue
-                  page_url = monir.find_monthly(top_html, top)
-                  if not page_url:
-                      ir = monir.find_ir(top_html, top)
-                      if ir:
-                          st2, ir_html = get(ir)
-                          time.sleep(0.5)
-                          page_url = monir.find_monthly(ir_html, ir) if ir_html else ""
-                  if not page_url:
-                      print("%-5s %-12s 月次 링크 못 찾음" % (code, name)); continue
-              st, page = get(page_url)
-              time.sleep(0.5)
+          for code, name, url in PAGES:
+              page = get(url); time.sleep(0.6)
+              print("=" * 78)
+              print(code, name, len(page) // 1024, "KB")
               if not page:
-                  print("%-5s %-12s 月次 %s %s" % (code, name, st, page_url))
                   continue
-              got = monir.read(page, T)
-              pdfs = page.lower().count(".pdf")
-              if got:
-                  tot_c += 1; tot_m += len(got)
-                  ks = sorted(got)
-                  print("%-5s %-12s %2d달 %s ~ %s" % (code, name, len(got), ks[0], ks[-1]))
-                  for k in ks[-4:]:
-                      print("        %s %s" % (k, got[k]))
-              else:
-                  print("%-5s %-12s 0달 (표 %d · pdf %d) %s"
-                        % (code, name, page.count("<table"), pdfs, page_url[:60]))
-          print()
-          print("== 86차: 담긴 회사 %d · 달 %d ==" % (tot_c, tot_m))
+              body_ = monir.SCRIPT.sub(" ", page)
+              for ti, tb in enumerate(monir.TABLE_AT.findall(body_)):
+                  rows = [r for r in monweb.grid(tb) if r]
+                  if len(rows) < 2:
+                      continue
+                  width = max(len(r) for r in rows)
+                  if width < 3:
+                      continue
+                  rows = [[monir._txt(x) for x in r] + [""] * (width - len(r))
+                          for r in rows]
+                  flat = " ".join(x for r in rows for x in r)
+                  if "月" not in flat:
+                      continue
+                  got = monir._series(rows, width, T, 3)
+                  print(" ── 표 %d · %d줄 x %d칸 · 회계연도 %s · 담김 %d달"
+                        % (ti, len(rows), width, monir._fy(flat), len(got)))
+                  for r in rows[:7]:
+                      print("    | " + " | ".join(x[:11] for x in r[:13]))
+                  if got:
+                      for k in sorted(got)[:3] + sorted(got)[-2:]:
+                          print("      >>", k, got[k])
           EOF
