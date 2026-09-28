@@ -435,7 +435,14 @@ def find_monthly(page: str, base: str):
     for href, lab in A.findall(page):
         if href.lower().startswith(("javascript:", "mailto:", "tel:")):
             continue
-        t = _txt(lab)\n        if (MONTHLY_LINK_HINT.search(t) or MONTHLY_LINK_HINT.search(href) or\n                MONTHLY_PATH_HINT.search(href)):\n            u = urllib.parse.urljoin(base, href)\n            if u.split("?")[0].lower().endswith(".pdf"):\n                continue\n            return u\n    return ""
+        t = _txt(lab)
+        if (MONTHLY_LINK_HINT.search(t) or MONTHLY_LINK_HINT.search(href) or
+                MONTHLY_PATH_HINT.search(href)):
+            u = urllib.parse.urljoin(base, href)
+            if u.split("?")[0].lower().endswith(".pdf"):
+                continue
+            return u
+    return ""
 
 
 def has_monthly_pdf(page: str, base: str) -> bool:
@@ -521,7 +528,9 @@ def _selftest():                                          # pragma: no cover
 
     def eq(name, got, want):
         if got != want:
-            bad.append(f"{name}\n      받음 {got}\n      바람 {want}")
+            bad.append(f"{name}
+      받음 {got}
+      바람 {want}")
 
     # (가) 달이 **세로** · 머리줄이 두 겹 — 니토리(9843) 꼴.
     #     客数·店舗数 열은 이름표에서 걸러져야 한다.
