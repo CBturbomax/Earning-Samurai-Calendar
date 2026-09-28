@@ -61,7 +61,7 @@ MISS_DAYS = float(os.environ.get("IR_MISS_DAYS", "3"))
 BUDGET = float(os.environ.get("IR_SECS", "420"))
 PAUSE = float(os.environ.get("IR_PAUSE", "1.0"))
 # 연속으로 못 받으면 그 바퀴를 접는다(다른 수집기와 같은 안전장치).
-GIVE_UP_AFTER = int(os.environ.get("IR_GIVE_UP", "6"))
+GIVE_UP_AFTER = int(os.environ.get("IR_GIVE_UP", "10"))
 
 # **月次 페이지의 둘째 꼴 — PDF 목록.** 표를 안 싣고 달마다(또는 회계연도마다)
 # PDF 한 장을 거는 회사가 많다. 그 PDF 는 TDnet 첨부와 같은 꼴이라 이미 있는
@@ -75,7 +75,7 @@ PDF_PER_RUN = int(os.environ.get("IR_PDF_PER_RUN", "20"))
 PDF_FRESH_HOURS = float(os.environ.get("IR_PDF_FRESH_HOURS", "24"))
 # 공식 홈페이지를 모르는 seed 종목은 Yahoo assetProfile 에서 조금씩만 채운다.
 # 월차 잡이 10분마다 도니 한 바퀴에 12개면 하루 안에 300여 종목을 한 번 돈다.
-HOME_PER_RUN = int(os.environ.get("IR_HOME_PER_RUN", "12"))
+HOME_PER_RUN = int(os.environ.get("IR_HOME_PER_RUN", "24"))
 PROFILE_MISS_DAYS = float(os.environ.get("IR_PROFILE_MISS_DAYS", "14"))
 
 
