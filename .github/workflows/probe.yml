@@ -15,89 +15,71 @@ jobs:
         with:
           python-version: '3.12'
 
-      # 85차 — 열린 16곳의 **月次 페이지가 어떤 꼴인가.**
-      # 표(HTML)면 monweb 의 _grid 로, PDF 목록이면 pdftext+montable 로 읽는다 —
-      # 둘 다 이미 있는 연장이다. 회사마다 파서를 새로 쓰는 것이 아니라
-      # **주소 하나만** 손으로 잇는 것이 되는지 여기서 가른다.
-      - name: 🔎 月次 페이지 생김새 (85차)
+      # 86차 — **monir 가 진짜 페이지에서 무엇을 담는가.**
+      # 규칙은 하나고 손으로 잇는 것은 주소뿐이다. 담기는 달을 눈으로 본 뒤에
+      # 수집기를 붙인다 — 먼저 붙이고 나중에 보면 엉뚱한 값이 실린 채로 돈다.
+      - name: 🔎 monir 가 담는 것 (86차)
         timeout-minutes: 16
         run: |
           python - <<'EOF'
-          import html as H, re, time, urllib.error, urllib.parse, urllib.request
+          import time, urllib.error, urllib.request
+          from datetime import date
+
+          import monir
 
           UA = {"User-Agent": ("Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
                                "AppleWebKit/537.36 (KHTML, like Gecko) "
                                "Chrome/131.0.0.0 Safari/537.36"),
                 "Accept-Language": "ja,en;q=0.8"}
 
-          PAGES = [
-              ("8267", "イオン",     "https://www.aeon.info/ir/library/monthly/"),
-              ("3086", "Jフロント",   "https://www.j-front-retailing.com/ir/finance/monthly.html"),
-              ("9843", "ニトリ",     "https://www.nitorihd.co.jp/ir/performance/sales.html"),
-              ("9983", "ファストリ",  "https://www.fastretailing.com/jp/ir/monthly/"),
-              ("7550", "ゼンショー",  "https://www.zensho.co.jp/jp/ir/finance/monthly/"),
-              ("3382", "セブン＆アイ","https://www.7andi.com/ir/financial/monthly_highlight.html"),
-              ("9831", "ヤマダ",     "https://www.yamada-holdings.jp/ir/monthly.html"),
-              ("3563", "スシロー",   "https://food-and-life.co.jp/investor/monthly-information"),
-              ("7564", "ワークマン",  "https://www.workman.co.jp/ir_info/"),
-              ("2695", "くら寿司",   "https://www.kurasushi.co.jp/company/ir/library/monthly_reports.html"),
-              ("7606", "Uアローズ",   "https://www.united-arrows.co.jp/ir/monthly/"),
-              ("3097", "物語コーポ",  "https://www.monogatari.co.jp/ir/date/"),
-              ("3197", "すかいらーく","https://corp.skylark.co.jp/ir/financial/performance/"),
-              ("4666", "パーク24",   "https://www.park24.co.jp/ir/financial/monthly.html"),
-              ("8016", "オンワード",  "https://www.onward-hd.co.jp/ir/finance/monthly.html"),
-              ("7476", "アズワン",   "https://www.as-1.co.jp/ir/"),
-              # IR 링크를 못 찾았거나 月次 0건이던 다섯 — 아는 주소로 한 번 더
-              ("2782", "セリア",     "https://www.seria-group.com/ir/"),
-              ("4680", "ラウンドワン", "https://www.round1.co.jp/ir/"),
-              ("2702", "マクドナルド", "https://www.mcd-holdings.co.jp/ir/library/monthly.html"),
-              ("3092", "ZOZO",      "https://corp.zozo.com/ir/library/monthly/"),
-              ("2678", "アスクル",   "https://pdf.irpocket.com/C2678/"),
-          ]
-
-          TAG = re.compile(r"<[^>]+>")
-          TABLE = re.compile(r"(?is)<table[^>]*>(.*?)</table>")
-          ROW = re.compile(r"(?is)<tr[^>]*>(.*?)</tr>")
-          CELL = re.compile(r"(?is)<(t[dh])[^>]*>(.*?)</\1>")
-          A = re.compile(r'(?is)<a[^>]+href="([^"#]+)"[^>]*>(.*?)</a>')
-
-          def txt(s):
-              return re.sub(r"\s+", " ", H.unescape(TAG.sub(" ", s))).strip()
-
           def get(u):
               try:
                   with urllib.request.urlopen(
                           urllib.request.Request(u, headers=UA), timeout=15) as r:
-                      raw = r.read(1_200_000)
-                      head = raw[:2500].decode("ascii", "ignore").lower()
-                      enc = ("cp932" if "shift_jis" in head or "shift-jis" in head
-                             else "euc-jp" if "euc-jp" in head else "utf-8")
+                      raw = r.read(1_500_000)
+                      h = raw[:2500].decode("ascii", "ignore").lower()
+                      enc = ("cp932" if "shift_jis" in h or "shift-jis" in h
+                             else "euc-jp" if "euc-jp" in h else "utf-8")
                       return r.status, raw.decode(enc, "ignore")
               except urllib.error.HTTPError as e:
                   return e.code, ""
               except Exception as e:
                   return type(e).__name__, ""
 
-          for code, name, url in PAGES:
-              st, page = get(url)
-              print("─" * 78)
-              print("%-5s %-12s %-6s %s" % (code, name, st, url))
+          T = date.today()
+          tot_c = tot_m = 0
+          for code, (name, top, fixed) in monir.IR_SITES.items():
+              page_url = fixed
+              if not page_url:
+                  st, top_html = get(top)
+                  time.sleep(0.5)
+                  if not top_html:
+                      print("%-5s %-12s 맨 위 %s" % (code, name, st)); continue
+                  page_url = monir.find_monthly(top_html, top)
+                  if not page_url:
+                      ir = monir.find_ir(top_html, top)
+                      if ir:
+                          st2, ir_html = get(ir)
+                          time.sleep(0.5)
+                          page_url = monir.find_monthly(ir_html, ir) if ir_html else ""
+                  if not page_url:
+                      print("%-5s %-12s 月次 링크 못 찾음" % (code, name)); continue
+              st, page = get(page_url)
+              time.sleep(0.5)
               if not page:
-                  time.sleep(0.6); continue
-              tbs = TABLE.findall(page)
-              pdfs = [(urllib.parse.urljoin(url, h), txt(l))
-                      for h, l in A.findall(page) if ".pdf" in h.lower()]
-              print("   %dKB · 표 %d · PDF 링크 %d · 「月次」 %d · 「売上」 %d"
-                    % (len(page) // 1024, len(tbs), len(pdfs),
-                       page.count("月次"), page.count("売上")))
-              # 가장 큰 표의 앞 네 줄
-              if tbs:
-                  big = max(tbs, key=len)
-                  for r in ROW.findall(big)[:4]:
-                      cs = [txt(c)[:12] for _t, c in CELL.findall(r)]
-                      if cs:
-                          print("   | " + " | ".join(cs[:14]))
-              for u, l in pdfs[:4]:
-                  print("   pdf %-70s %s" % (u[-70:], l[:26]))
-              time.sleep(0.6)
+                  print("%-5s %-12s 月次 %s %s" % (code, name, st, page_url))
+                  continue
+              got = monir.read(page, T)
+              pdfs = page.lower().count(".pdf")
+              if got:
+                  tot_c += 1; tot_m += len(got)
+                  ks = sorted(got)
+                  print("%-5s %-12s %2d달 %s ~ %s" % (code, name, len(got), ks[0], ks[-1]))
+                  for k in ks[-4:]:
+                      print("        %s %s" % (k, got[k]))
+              else:
+                  print("%-5s %-12s 0달 (표 %d · pdf %d) %s"
+                        % (code, name, page.count("<table"), pdfs, page_url[:60]))
+          print()
+          print("== 86차: 담긴 회사 %d · 달 %d ==" % (tot_c, tot_m))
           EOF

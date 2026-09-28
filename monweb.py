@@ -36,7 +36,10 @@ import html as _html
 import re
 from datetime import date
 
-__all__ = ["BRANDS", "read", "article_links", "older", "url_ym"]
+# `_grid`(colspan·rowspan 풀기)는 `monir.py` 도 쓴다 — 표를 네모로 펴는
+# 규칙을 두 군데 적어 두면 반드시 갈라진다.
+__all__ = ["BRANDS", "read", "article_links", "older", "url_ym",
+           "grid", "SALES", "NOT_SALES", "SAME", "ALL", "ZEN"]
 
 # 브랜드/약칭 -> (종목코드, 상장사 이름). **아는 것만** 적는다.
 BRANDS = {
@@ -235,7 +238,7 @@ def older(page: str, url: str):
     return list(dict.fromkeys(out))
 
 
-def _grid(tb: str):
+def grid(tb: str):
     """표 -> 네모난 칸 배열. **colspan·rowspan 을 풀어 준다.**
 
     머리줄이 두 줄로 겹쳐 오고(「売上高」이 두 칸을 덮고 「月度」가 두 줄을 덮는다)
@@ -386,7 +389,7 @@ def read(page: str, url: str):
 
     out, used_single = [], False
     for tb in TABLE_RE.findall(body):
-        rows = [r for r in _grid(tb) if r]
+        rows = [r for r in grid(tb) if r]
         # 머리줄 하나 + 값줄 하나면 표다(맥도날드 기사가 그 꼴이다).
         if len(rows) < 2:
             continue
