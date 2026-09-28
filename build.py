@@ -1978,6 +1978,7 @@ def load_monthly_nums(monthly):
             "src": src,
             "base": base,
             "verified": bool(trusted and (not want or latest[0] == want)),
+            "historyVerified": bool(trusted),
             "doc": latest_doc,
             "latest": snap,
         }
@@ -3017,10 +3018,10 @@ svg.bars rect.b:hover { fill:var(--a3); }
   <select id="mnCap">
     <option value="0">시총 가리지 않기</option>
     <option value="0.5">시총 5,000억원 이상</option>
-    <option value="1">1조원 이상</option>
+    <option value="1" selected>1조원 이상</option>
     <option value="3">3조원 이상</option>
   </select>
-  <label class="chk"><input type="checkbox" id="mnNum">수치 있는 종목만</label>
+  <label class="chk"><input type="checkbox" id="mnNum" checked>수치 있는 종목만</label>
   <span class="count" id="mnCnt"></span>
 </div>
 <div class="mn" id="mnList"></div>
@@ -3763,15 +3764,45 @@ function mnLatestNumber(code) {
   return n.m[n.m.length - 1];
 }
 
-function mnYoyHtml(code, targetPeriod) {
+function mnDisplayValue(code, targetPeriod) {
   const n = MNUM[code], r = mnLatestNumber(code);
-  if (!r || r[0] !== targetPeriod || r[2] == null)
-    return '<span class="myoy none">수치 없음</span>';
-  if (!n.verified)
-    return '<span class="myoy none">검증중</span>';
-  const d = r[2] - 100;
-  return '<span class="myoy ' + (d >= 0 ? 'up' : 'dn') + '">' +
-         (d >= 0 ? '+' : '') + d.toFixed(1) + '%</span>';
+  if (!n || !r) return null;
+
+  const exact = r[0] === targetPeriod && n.verified;
+  const trustedOld = r[0] !== targetPeriod && n.historyVerified;
+  if (!exact && !trustedOld) return null;
+
+  const s = n.latest && n.latest.period === r[0] ? n.latest : null;
+  let val = null, cls = '', lab = '';
+
+  const pct = v => {
+    if (v == null) return null;
+    const d = v - 100;
+    return {txt:(d >= 0 ? '+' : '') + d.toFixed(1) + '%',
+            cls:d >= 0 ? 'up' : 'dn'};
+  };
+  if (s && s.same != null) {
+    const p = pct(s.same); val = p.txt; cls = p.cls; lab = ' 기존점';
+  } else if (s && s.all != null) {
+    const p = pct(s.all); val = p.txt; cls = p.cls; lab = ' 전점';
+  } else if (r[2] != null) {
+    const p = pct(r[2]); val = p.txt; cls = p.cls;
+    lab = n.base ? ' ' + n.base : '';
+  } else if (r[1] != null) {
+    val = mnFmtJPY(r[1]); lab = ' 매출';
+  }
+  if (!val) return null;
+  return {html:'<span class="myoy ' + cls + '">' + esc(val) +
+               '<small>' + esc(lab) + (trustedOld ? ' · ' + r[0].slice(5) + '월' : '') +
+               '</small></span>',
+          period:r[0], exact:exact};
+}
+
+function mnYoyHtml(code, targetPeriod) {
+  const d = mnDisplayValue(code, targetPeriod);
+  if (d) return d.html;
+  const n = MNUM[code];
+  return '<span class="myoy none">' + (n ? '검증중' : '수치 없음') + '</span>';
 }
 
 function renderMonthly() {
@@ -3787,29 +3818,27 @@ function renderMonthly() {
 
   const nMon = Object.keys(MNUM).length;
   if (meta) meta.textContent = byCode.size.toLocaleString() +
-    '개사 · 수치 ' + nMon.toLocaleString() + '개사 · 최신 발표일 → 시총순';
+    '개사 · 수치 ' + nMon.toLocaleString() + '개사 · 시총순';
 
   const q = (document.getElementById('mnQ').value || '').trim().toLowerCase();
-  const capMin = +document.getElementById('mnCap').value;
+  const capMinJo = +document.getElementById('mnCap').value;
+  const capJo = b => b ? b * 1e9 * D.usdKrw / 1e12 : 0;
   const numBox = document.getElementById('mnNum');
   if (!nMon) { numBox.checked = false; numBox.disabled = true; }
   const numOnly = numBox.checked;
 
   const list = [];
   for (const x of byCode.values()) {
-    if (capMin && x.cap && x.cap < capMin) continue;
-    if (numOnly && !MNUM[x.code]) continue;
-    if (q && !(x.code + ' ' + x.ko + ' ' + x.orig).toLowerCase().includes(q)) continue;
     x.last = x.rows[x.rows.length - 1];
+    if (capMinJo && capJo(x.cap) < capMinJo) continue;
+    if (numOnly && !mnDisplayValue(x.code, x.last[5])) continue;
+    if (q && !(x.code + ' ' + x.ko + ' ' + x.orig).toLowerCase().includes(q)) continue;
     list.push(x);
   }
-  // 핵심 정렬: **가장 최근 월차 발표가 먼저**, 같은 날이면 **시총 큰 순**.
-  list.sort((a,b) => {
-    const ao = a.last[11] === 'official', bo = b.last[11] === 'official';
-    if (ao !== bo) return bo - ao; // 공식 발표일 확인된 회사가 먼저
-    if (a.last[0] !== b.last[0]) return b.last[0].localeCompare(a.last[0]);
-    return (b.cap || 0) - (a.cap || 0) || a.code.localeCompare(b.code);
-  });
+  // 월차 기본 화면은 **시총 큰 순**. 발표일은 정보 열로만 보여준다.
+  list.sort((a,b) => (b.cap || 0) - (a.cap || 0) ||
+                     b.last[0].localeCompare(a.last[0]) ||
+                     a.code.localeCompare(b.code));
 
   document.getElementById('mnCnt').innerHTML =
     '<b>' + list.length.toLocaleString() + '</b>개사';
@@ -3822,7 +3851,7 @@ function renderMonthly() {
   host.innerHTML =
     '<div class="mnrows"><div class="mnhead">' +
       '<span>발표일</span><span>코드</span><span>회사</span><span>대상월</span>' +
-      '<span>최신 YoY</span><span>시가총액</span><span>출처</span></div>' +
+      '<span>최신 월차</span><span>시가총액</span><span>출처</span></div>' +
     list.map(x => {
       const r = x.last, per = r[5] || (mnLatestNumber(x.code) || ['—'])[0] || '—';
       const srcLabel = r[7] === '기사' ? '기사' : (r[7] || '원문');
