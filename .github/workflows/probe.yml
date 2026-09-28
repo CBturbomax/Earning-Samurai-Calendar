@@ -15,66 +15,37 @@ jobs:
         with:
           python-version: '3.12'
 
-      # 92차 — **月次 링크를 못 찾은 열세 곳은 왜 못 찾았나.**
-      # 맨 위가 안 열린 것과, 열렸는데 링크 이름이 달라 못 알아본 것은 다르다.
-      # 짐작해서 규칙을 넓히지 말고 **그 페이지의 링크 이름을 눈으로 보고** 넓힌다.
-      - name: 🔎 못 찾은 열세 곳 (92차)
-        timeout-minutes: 16
+      # 95차 — eir.js 가 주소를 어떻게 짓는가. 94차에서 `ssl4.eir-parts.net`
+      # 과 `/Custom/public/v5parts/` 까지는 봤다. 회사 번호를 어디서 가져오는지,
+      # 그리고 **지난 공시 목록**을 주는 자리가 있는지 본다.
+      - name: 🔎 eir.js 를 통째로 (95차)
+        timeout-minutes: 12
         run: |
           python - <<'EOF'
-          import json, re, time, urllib.error, urllib.request
-          from pathlib import Path
-
-          import monir
+          import re, urllib.error, urllib.request
 
           UA = {"User-Agent": ("Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
                                "AppleWebKit/537.36 (KHTML, like Gecko) "
-                               "Chrome/131.0.0.0 Safari/537.36"),
-                "Accept-Language": "ja,en;q=0.8"}
+                               "Chrome/131.0.0.0 Safari/537.36")}
 
           def get(u):
               try:
                   with urllib.request.urlopen(
-                          urllib.request.Request(u, headers=UA), timeout=15) as r:
-                      raw = r.read(1_200_000)
-                      h = raw[:2500].decode("ascii", "ignore").lower()
-                      enc = ("cp932" if "shift_jis" in h or "shift-jis" in h
-                             else "euc-jp" if "euc-jp" in h else "utf-8")
-                      return r.status, raw.decode(enc, "ignore")
+                          urllib.request.Request(u, headers=UA), timeout=20) as r:
+                      return r.status, r.read(900_000).decode("utf-8", "ignore")
               except urllib.error.HTTPError as e:
                   return e.code, ""
               except Exception as e:
                   return type(e).__name__, ""
 
-          d = json.loads(Path("data/monthly_ir_jp.json").read_text(encoding="utf-8"))
-          miss = sorted(c for c, v in (d.get("sites") or {}).items()
-                        if v.get("miss"))
-          print("못 찾은 곳", len(miss), miss)
-          WANT = re.compile(r"(月次|月別|月度|売上|業績|実績|IR情報|投資家)")
-          for code in miss:
-              name, top, _f = monir.IR_SITES[code]
-              st, page = get(top); time.sleep(0.6)
-              print("─" * 78)
-              print("%-5s %-14s 맨 위 %s · %dKB" % (code, name, st,
-                                                   len(page) // 1024))
-              if not page:
+          st, js = get("https://www.park24.co.jp/ir/eir/eir.js")
+          print("eir.js", st, len(js), "bytes")
+          txt = re.sub(r"[ \t]+", " ", js)
+          for line in txt.splitlines():
+              line = line.strip()
+              if not line or line.startswith("//"):
                   continue
-              ir = monir.find_ir(page, top)
-              print("      IR 링크:", ir or "(없음)")
-              if not ir:
-                  continue
-              st2, ip = get(ir); time.sleep(0.6)
-              print("      IR %s · %dKB · 「月次」 %d"
-                    % (st2, len(ip) // 1024, ip.count("月次")))
-              if not ip:
-                  continue
-              seen = set()
-              for href, lab in monir.A.findall(ip):
-                  t = monir._txt(lab)
-                  if not t or not WANT.search(t + href) or t in seen:
-                      continue
-                  seen.add(t)
-                  print("        %-26s %s" % (t[:26], href[:64]))
-                  if len(seen) >= 14:
-                      break
+              if re.search(r"(eirUrl|eirPass|Custom|v5parts|qir|uniCode|"
+                           r"\.html|\.aspx|\.js|src|href|append)", line):
+                  print("  ", line[:150])
           EOF
