@@ -15,30 +15,18 @@ jobs:
         with:
           python-version: '3.12'
 
-      # 94차 — **eir-parts 위젯이 부르는 주소.** 이온(8267)·파크24(4666)가
-      # `.eir[data-area-name]` · `/ir/eir/eir.js` 로 그리고, 브ックオフ(9278)의
-      # 월매출 PDF 도 `ssl4.eir-parts.net/doc/9278/tdnet/…` 에 있다. 같은 벤더가
-      # **지난 공시를 영구 보관**한다면 「TDnet 첨부는 한 달만 남는다」는 벽이
-      # 무너진다 — 우리 월매출 이력을 가로막는 바로 그 벽이다.
-      - name: 🔎 eir-parts 가 부르는 주소 (94차)
+      # 95차 — eir.js 가 주소를 어떻게 짓는가. 94차에서 `ssl4.eir-parts.net`
+      # 과 `/Custom/public/v5parts/` 까지는 봤다. 회사 번호를 어디서 가져오는지,
+      # 그리고 **지난 공시 목록**을 주는 자리가 있는지 본다.
+      - name: 🔎 eir.js 를 통째로 (95차)
         timeout-minutes: 12
         run: |
           python - <<'EOF'
-          import re, time, urllib.error, urllib.request
+          import re, urllib.error, urllib.request
 
           UA = {"User-Agent": ("Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
                                "AppleWebKit/537.36 (KHTML, like Gecko) "
-                               "Chrome/131.0.0.0 Safari/537.36"),
-                "Accept-Language": "ja,en;q=0.8"}
-          JS = [
-              ("파크24 eir.js", "https://www.park24.co.jp/ir/eir/eir.js"),
-              ("이온 script.js",
-               "https://www.aeon.info/wp-content/plugins/aeon_init/js/script.js"),
-              ("이온 common.js",
-               "https://www.aeon.info/wp-content/themes/aeon_corp/_assets/_common/js/common.js"),
-          ]
-          URL = re.compile(r"https?://[^\s\"'`<>()]{6,140}")
-          PATH = re.compile(r"[\"'`](/[^\s\"'`<>()]{4,140})[\"'`]")
+                               "Chrome/131.0.0.0 Safari/537.36")}
 
           def get(u):
               try:
@@ -50,19 +38,14 @@ jobs:
               except Exception as e:
                   return type(e).__name__, ""
 
-          for name, u in JS:
-              st, body_ = get(u); time.sleep(0.6)
-              print("=" * 78)
-              print("%s %s · %dKB" % (name, st, len(body_) // 1024))
-              if not body_:
+          st, js = get("https://www.park24.co.jp/ir/eir/eir.js")
+          print("eir.js", st, len(js), "bytes")
+          txt = re.sub(r"[ \t]+", " ", js)
+          for line in txt.splitlines():
+              line = line.strip()
+              if not line or line.startswith("//"):
                   continue
-              hits = [x for x in dict.fromkeys(URL.findall(body_))
-                      if "eir" in x or "json" in x or "api" in x]
-              for x in hits[:16]:
-                  print("   url ", x[:120])
-              for x in list(dict.fromkeys(PATH.findall(body_)))[:16]:
-                  print("   path", x[:120])
-              if "eir-parts" in body_:
-                  i = body_.find("eir-parts")
-                  print("   ...", body_[max(0, i - 180):i + 180].replace("\n", " "))
+              if re.search(r"(eirUrl|eirPass|Custom|v5parts|qir|uniCode|"
+                           r"\.html|\.aspx|\.js|src|href|append)", line):
+                  print("  ", line[:150])
           EOF
