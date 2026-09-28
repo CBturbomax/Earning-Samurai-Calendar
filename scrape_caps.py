@@ -178,6 +178,28 @@ def us_sectors():
 
 PROFILE = ("https://query1.finance.yahoo.com/v10/finance/quoteSummary/"
            "{sym}?modules=assetProfile&crumb={crumb}")
+
+
+def asset_profile(symbol):
+    """Yahoo quoteSummary 의 assetProfile 한 건.
+
+    월차 수집기가 일본 300여 회사의 **공식 홈페이지 URL**을 처음 한 번만
+    알아낼 때도 쓴다. bootstrap()을 이미 불렀다면 그 세션을 그대로 쓰고,
+    아니면 여기서 한 번 만든다.
+    """
+    global _opener, _crumb
+    if _opener is None or not _crumb:
+        bootstrap()
+    url = PROFILE.format(sym=urllib.parse.quote(symbol),
+                         crumb=urllib.parse.quote(_crumb))
+    req = urllib.request.Request(url, headers={
+        "User-Agent": UA, "Accept": "application/json"})
+    with _opener.open(req, timeout=30) as r:
+        body = json.loads(r.read().decode("utf-8", "replace"))
+    res = (body.get("quoteSummary") or {}).get("result") or []
+    return (res[0].get("assetProfile") or {}) if res else {}
+
+
 # 한 번 실행에 새로 받을 홍콩 업종 수. 종목당 한 번씩 물어야 해서 느리다.
 # 업종은 잘 안 바뀌므로 한 번 받으면 계속 쓰고, 새 종목만 조금씩 채운다.
 HK_SECTOR_PER_RUN = 250
@@ -226,6 +248,20 @@ def main():
                     ("jp", "earnings_jp_sched.json"), ("hk", "earnings_hk.json")]:
         for sym, code in load_codes(mkt, fn).items():
             todo[sym] = (mkt, code)
+
+    # 월차 전용 종목도 시총이 있어야 **일본 월차 화면을 진짜 시총순**으로
+    # 정렬할 수 있다. 실적 캘린더에 아직 안 오른 신규/반기 종목이 월차에는
+    # 먼저 잡힐 수 있으므로 seed universe 도 시총 대상에 합친다.
+    up = HERE / "data" / "monthly_universe_jp.json"
+    if up.exists():
+        try:
+            u = json.loads(up.read_text(encoding="utf-8"))
+            for code in u.get("codes") or []:
+                todo[f"{code}.T"] = ("jp", code)
+            print(f"  jp 월차 universe {len(u.get('codes') or []):,}종목을 시총 대상에 추가")
+        except (ValueError, OSError) as e:
+            print(f"  ! monthly_universe_jp.json 읽기 실패: {e}", file=sys.stderr)
+
     if not todo:
         print("받을 종목이 없다.")
         return
