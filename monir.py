@@ -535,9 +535,7 @@ def _selftest():                                          # pragma: no cover
 
     def eq(name, got, want):
         if got != want:
-            bad.append(f"{name}
-      받음 {got}
-      바람 {want}")
+            bad.append(f"{name}\n      받음 {got}\n      바람 {want}")
 
     # (가) 달이 **세로** · 머리줄이 두 겹 — 니토리(9843) 꼴.
     #     客数·店舗数 열은 이름표에서 걸러져야 한다.
