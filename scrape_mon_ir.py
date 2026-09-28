@@ -29,6 +29,7 @@ from datetime import date, datetime, timezone
 from pathlib import Path
 
 import monir
+import montable
 
 HERE = Path(__file__).resolve().parent
 OUT = HERE / "data" / "monthly_ir_jp.json"
@@ -59,6 +60,24 @@ PAUSE = float(os.environ.get("IR_PAUSE", "1.0"))
 # 연속으로 못 받으면 그 바퀴를 접는다(다른 수집기와 같은 안전장치).
 GIVE_UP_AFTER = int(os.environ.get("IR_GIVE_UP", "6"))
 
+# **月次 페이지의 둘째 꼴 — PDF 목록.** 표를 안 싣고 달마다(또는 회계연도마다)
+# PDF 한 장을 거는 회사가 많다. 그 PDF 는 TDnet 첨부와 같은 꼴이라 이미 있는
+# 연장(`pdftext`+`montable`)이 읽는다. 첨부는 무거우므로(수백 KB) 한 번 본
+# 주소는 건너뛰고 한 바퀴에 조금씩만 본다.
+PDF_PER_COMPANY = int(os.environ.get("IR_PDF_PER_COMPANY", "4"))
+PDF_PER_RUN = int(os.environ.get("IR_PDF_PER_RUN", "20"))
+
+
+def get_bytes(url, timeout=25):
+    try:
+        with urllib.request.urlopen(
+                urllib.request.Request(url, headers=UA), timeout=timeout) as r:
+            return r.read(6_000_000)
+    except (urllib.error.HTTPError, urllib.error.URLError,
+            TimeoutError, OSError, ValueError) as e:
+        print(f"  ! {url} {type(e).__name__} {str(e)[:40]}")
+        return b""
+
 
 def get(url, timeout=15):
     try:
@@ -84,6 +103,8 @@ def load():
         return {"v": VER, "rv": RULE_VER, "sites": {}, "codes": {}}
     got.setdefault("sites", {})
     got.setdefault("codes", {})
+    got.setdefault("done", [])
+    got.setdefault("skip", {})
     if got.get("rv") != RULE_VER:
         # 회사 IR 페이지는 늘 거기 있으므로 통째로 다시 받는다(위 주석).
         print(f"  규칙 판이 바뀌었다({got.get('rv')} -> {RULE_VER})"
@@ -95,6 +116,7 @@ def load():
 
 def save(rec):
     months = sum(len(v.get("months") or {}) for v in rec["codes"].values())
+    pdf_months = sum(len(v.get("pdf") or {}) for v in rec["codes"].values())
     rec.update({
         "v": VER, "rv": RULE_VER,
         "source": "회사 IR 페이지 (月次 표)",
@@ -103,12 +125,15 @@ def save(rec):
                  " 옛 회계연도 표를 함께 싣는 회사는 이력이 길다."),
         "companies": len(rec["codes"]),
         "months": months,
+        "pdf_months": pdf_months,
+        "done": sorted(rec["done"])[-4000:],
         "ts": datetime.now(timezone.utc).isoformat(timespec="seconds"),
     })
     OUT.parent.mkdir(parents=True, exist_ok=True)
     OUT.write_text(json.dumps(rec, ensure_ascii=False, indent=1),
                    encoding="utf-8")
-    print(f"  저장 {len(rec['codes'])}사 · {months}달 -> {OUT.name}")
+    print(f"  저장 {len(rec['codes'])}사 · 표 {months}달 · PDF {pdf_months}달"
+          f" -> {OUT.name}")
 
 
 def discover(top):
@@ -129,6 +154,58 @@ def discover(top):
     return monir.find_monthly(ir_page, ir), 2
 
 
+def read_pdfs(page, url, name, pdf, rec, today, budget):
+    """月次 페이지에 걸린 **월매출 PDF** 를 뜯는다 -> (달 기록, 새 달 수, 남은 예산).
+
+    `montable` 이 TDnet 첨부에 쓰는 규칙을 그대로 쓴다 — 같은 판단을 두 군데
+    적어 두면 반드시 갈라진다. **못 읽은 PDF 는 그냥 지나간다**(지어내지 않는다).
+    """
+    done, skip = set(rec["done"]), rec["skip"]
+    cur = today.strftime("%Y-%m")
+    new = 0
+    n = 0
+    for u, lab, when in monir.pdf_links(page, url):
+        if budget <= 0 or n >= PDF_PER_COMPANY:
+            break
+        if u in done or u in skip:
+            continue
+        data = get_bytes(u)
+        time.sleep(PAUSE)
+        budget -= 1
+        n += 1
+        if not data:
+            continue
+        rec["done"].append(u)
+        try:
+            got = montable.read(data, when, title=lab)
+        except Exception as e:                       # 깨진 PDF 하나가 실행을
+            skip[u] = type(e).__name__               # 통째로 죽이지 않게 한다
+            continue
+        rows = (got or {}).get("rows") or []
+        if not rows:
+            skip[u] = "표없음"
+            continue
+        for r in rows:
+            per = r.get("period") or ""
+            # **당월과 앞날은 담지 않는다** — 월매출은 다음 달 초에 나온다.
+            if not per or per >= cur:
+                continue
+            row = {"day": (pdf.get(per) or {}).get("day") or today.isoformat(),
+                   "doc": u}
+            if r.get("rev") is not None:
+                row["rev"] = r["rev"]
+            if r.get("yoy") is not None:
+                row["yoy"] = r["yoy"]
+            if r.get("metric"):
+                row["metric"] = r["metric"]
+            if not ("rev" in row or "yoy" in row):
+                continue
+            if per not in pdf:
+                new += 1
+            pdf[per] = row
+    return pdf, new, budget
+
+
 def main():
     rec = load()
     sites, codes = rec["sites"], rec["codes"]
@@ -136,6 +213,7 @@ def main():
     now = datetime.now(timezone.utc)
     t0 = time.time()
     fresh = new_months = miss = 0
+    pdf_left = PDF_PER_RUN
 
     for code, (name, top, fixed) in monir.IR_SITES.items():
         if time.time() - t0 > BUDGET:
@@ -180,6 +258,14 @@ def main():
         miss = 0
         got = monir.read(page, today)
         fresh += 1
+        # **PDF 목록 꼴도 같이 본다.** 표를 안 싣고 달마다 PDF 한 장을 거는
+        # 회사가 많다 — 패스트리는 회계연도 한 장에 열두 달이라 세 장으로
+        # 36달이 들어온다(91차). 못 읽는 PDF 는 그냥 지나간다.
+        pdf = dict(cur.get("pdf") or {})
+        if pdf_left > 0:
+            pdf, n_new, pdf_left = read_pdfs(page, url, name, pdf, rec,
+                                             today, pdf_left)
+            new_months += n_new
         # **이미 받아 둔 달을 빈 결과로 덮지 않는다.** 회사 사이트가 회계연도를
         # 넘기며 옛 표를 내려도 우리 이력은 그대로 남아야 한다.
         months = dict(cur.get("months") or {})
@@ -192,13 +278,16 @@ def main():
             if p not in months:
                 new_months += 1
             months[p] = row
-        if not months:
+        if not (months or pdf):
             print(f"  {code} {name}: 0달 ({url})")
             continue
         codes[code] = {"name": name, "page": url, "months": months,
                        "ts": now.isoformat(timespec="seconds")}
-        ks = sorted(months)
-        print(f"  {code} {name}: {len(months)}달 {ks[0]} ~ {ks[-1]}")
+        if pdf:
+            codes[code]["pdf"] = pdf
+        ks = sorted(months) or sorted(pdf)
+        print(f"  {code} {name}: 표 {len(months)}달 · PDF {len(pdf)}달"
+              f" ({ks[0]} ~ {ks[-1]})")
 
     print(f"  두드린 회사 {fresh} · 새 달 {new_months}")
     save(rec)
