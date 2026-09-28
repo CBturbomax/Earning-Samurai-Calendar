@@ -34,8 +34,13 @@ HERE = Path(__file__).resolve().parent
 OUT = HERE / "data" / "monthly_ir_jp.json"
 
 VER = 1
-# 읽는 규칙의 판. 올리면 **찾아 둔 月次 주소만** 비우고 모아 둔 값은 그대로
-# 둔다 — 회사 사이트에서 내려간 달을 영영 잃지 않기 위해서다.
+# 읽는 규칙의 판. 올리면 **모아 둔 것을 통째로 비우고 다시 받는다.**
+#
+# 다른 월매출 수집기와 반대인데, 까닭이 있다. TDnet 첨부도 流通ニュース 기사도
+# **창 밖으로 밀려나면 다시 못 받는다** — 그래서 그쪽은 규칙을 넓혀도 값은
+# 그대로 두었다. 회사 IR 페이지는 **늘 거기 있다.** 다시 받는 값이 싸므로,
+# 규칙이 아직 어린 지금은 **틀린 값을 안고 가느니 다시 받는 편**이 낫다
+# (오검출 하나가 놓침 하나보다 나쁘다). 규칙이 굳으면 그때 바꾼다.
 RULE_VER = 1
 
 UA = {"User-Agent": ("Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
@@ -46,6 +51,9 @@ UA = {"User-Agent": ("Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
 # **한 회사를 얼마나 자주 두드릴까.** 월매출은 한 달에 한 번 올라온다.
 # 자주 두드릴 값이 없고 남의 서버다. 아직 한 달도 못 받은 회사만 매번 본다.
 FRESH_HOURS = float(os.environ.get("IR_FRESH_HOURS", "6"))
+# **月次 링크를 못 찾은 곳도 기억한다.** 안 적어 두면 매 실행마다 그 회사의
+# 맨 위 페이지와 IR 페이지를 다시 받는다 — 값도 없이 남의 서버만 두드린다.
+MISS_DAYS = float(os.environ.get("IR_MISS_DAYS", "3"))
 BUDGET = float(os.environ.get("IR_SECS", "420"))
 PAUSE = float(os.environ.get("IR_PAUSE", "1.0"))
 # 연속으로 못 받으면 그 바퀴를 접는다(다른 수집기와 같은 안전장치).
@@ -77,11 +85,10 @@ def load():
     got.setdefault("sites", {})
     got.setdefault("codes", {})
     if got.get("rv") != RULE_VER:
-        # **찾아 둔 주소만 비운다.** 모아 둔 값은 그대로 둔다 — 규칙을 넓혔는데
-        # 값까지 지우면 회사 사이트에서 내려간 달을 영영 잃는다.
+        # 회사 IR 페이지는 늘 거기 있으므로 통째로 다시 받는다(위 주석).
         print(f"  규칙 판이 바뀌었다({got.get('rv')} -> {RULE_VER})"
-              f" — 찾아 둔 月次 주소를 비운다")
-        got["sites"] = {}
+              f" — 모아 둔 것을 비우고 다시 받는다")
+        got["sites"], got["codes"] = {}, {}
         got["rv"] = RULE_VER
     return got
 
@@ -92,8 +99,8 @@ def save(rec):
         "v": VER, "rv": RULE_VER,
         "source": "회사 IR 페이지 (月次 표)",
         "note": ("회사가 제 사이트에 올린 월차 표에서 읽는다. 값은 전년동월비"
-                 "(%)뿐이고 금액은 없다. 회사 사이트는 대개 이번 회계연도만"
-                 " 실으므로 이력은 여기 쌓인 만큼이다."),
+                 "(%)뿐이고 금액은 없다. 회계연도가 적힌 표는 그 해로 읽으므로"
+                 " 옛 회계연도 표를 함께 싣는 회사는 이력이 길다."),
         "companies": len(rec["codes"]),
         "months": months,
         "ts": datetime.now(timezone.utc).isoformat(timespec="seconds"),
@@ -149,11 +156,18 @@ def main():
         site = sites.get(code) or {}
         url = fixed or site.get("page") or ""
         if not url:
+            # 얼마 전에 못 찾은 곳은 건너뛴다.
+            if site.get("miss"):
+                try:
+                    if (today - date.fromisoformat(site["miss"])).days < MISS_DAYS:
+                        continue
+                except ValueError:
+                    pass
             url, _n = discover(top)
             time.sleep(PAUSE)
             if not url:
                 print(f"  {code} {name}: 月次 링크 못 찾음")
-                miss += 1
+                sites[code] = {"miss": today.isoformat()}
                 continue
             sites[code] = {"page": url, "found": today.isoformat()}
         page = get(url)

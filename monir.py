@@ -346,6 +346,7 @@ def find_ir(page: str, base: str):
 # **못 여는 곳은 넣지 않는다**(84차): 시마무라 8227·ABC마트 2670 은 403,
 # 비쿠카메라 3048 은 timeout 이다.
 IR_SITES = {
+    # ── 84·85·86·88차로 열리는 것을 확인한 곳 ─────────────────────────────
     "8267": ("イオン", "https://www.aeon.info/", ""),
     "3086": ("Ｊフロント", "https://www.j-front-retailing.com/", ""),
     "9843": ("ニトリ", "https://www.nitorihd.co.jp/", ""),
@@ -362,6 +363,38 @@ IR_SITES = {
     "4666": ("パーク２４", "https://www.park24.co.jp/", ""),
     "8016": ("オンワードＨＤ", "https://www.onward-hd.co.jp/", ""),
     "7476": ("アズワン", "https://www.as-1.co.jp/", ""),
+    # ── 90차에 더한 곳 ─────────────────────────────────────────────────
+    # 수치가 없는 소매·외식과, 적시공시도 流通ニュース 도 안 닿는 큰 회사들.
+    # 月次 페이지를 못 찾으면 수집기가 `sites` 에 적어 두고 사흘 동안 안
+    # 두드린다 — 값도 없이 남의 서버를 두드리지 않기 위해서다.
+    "2702": ("日本マクドナルド", "https://www.mcd-holdings.co.jp/", ""),
+    "3092": ("ＺＯＺＯ", "https://corp.zozo.com/", ""),
+    "8237": ("松屋", "https://www.matsuya.com/", ""),
+    "8219": ("青山商", "https://www.aoyama-syouji.co.jp/", ""),
+    "9267": ("ゲンキードラッグ", "https://www.genky-ds.jp/", ""),
+    "3399": ("山岡家", "https://www.yamaokaya.com/", ""),
+    "3608": ("ＴＳＩ ＨＤ", "https://www.tsi-holdings.com/", ""),
+    "2698": ("キャンドゥ", "https://www.cando-web.co.jp/", ""),
+    "9823": ("マミーマートＨＤ", "https://www.mammymart.co.jp/", ""),
+    "2780": ("コメ兵ＨＤ", "https://www.komehyo.co.jp/", ""),
+    "9278": ("ブックオフＧＨＤ", "https://www.bookoffgroup.co.jp/", ""),
+    "8142": ("トーホー", "https://www.to-ho.co.jp/", ""),
+    "3093": ("トレファク", "https://www.treasure-f.com/", ""),
+    "9861": ("吉野家ＨＤ", "https://www.yoshinoya-holdings.com/", ""),
+    "3387": ("クリエイトＲ", "https://www.createrestaurants.com/", ""),
+    "7581": ("サイゼリヤ", "https://www.saizeriya.co.jp/", ""),
+    "2681": ("ゲオＨＤ", "https://www.geonet.co.jp/", ""),
+    "3050": ("ＤＣＭ", "https://www.dcm-hldgs.co.jp/", ""),
+    "8273": ("イズミ", "https://www.izumi.co.jp/", ""),
+    "9948": ("アークス", "https://www.arcs-g.co.jp/", ""),
+    "7545": ("西松屋チェーン", "https://www.24028.jp/", ""),
+    "3549": ("クスリのアオキＨＤ", "https://www.kusuri-aoki.co.jp/", ""),
+    "9832": ("オートバックス", "https://www.autobacs.co.jp/", ""),
+    "2664": ("カワチ薬品", "https://www.kawachi.co.jp/", ""),
+    "3222": ("ＵＳＭＨ", "https://www.usmh.co.jp/", ""),
+    "7532": ("ＰＰＩＨ", "https://ppih.co.jp/", ""),
+    "8279": ("ヤオコー", "https://www.yaoko-net.com/", ""),
+    "7616": ("コロワイド", "https://www.colowide.co.jp/", ""),
 }
 
 
