@@ -84,18 +84,24 @@ def _month(cell: str):
 
 
 def _fy(text: str):
-    """표 언저리 글에서 **회계연도**를 읽는다 -> (해, 결산기말 달) 또는 None.
+    """표 언저리 글에서 **회계연도**를 읽는다 -> ('end'|'start', 해) 또는 None.
 
-    「2026年2月期」 면 (2026, 2) — 그 표의 달들은 결산기말보다 큰 달이 앞해다.
-    「2025年度」 면 (2026, 3) 로 본다(4월 시작이 일본의 관례다).
+    「2026年2月期」 는 **끝나는 해와 달**이다 — 결산기말보다 큰 달은 앞해다.
+    「2025年度」 는 **시작하는 해**다. 결산기말이 몇 월인지 말해 주지 않으므로
+    달 번호가 거꾸로 가는 자리에서 해를 하나 넘기며 읽는다.
+
+    **4월 시작이라고 넘겨짚지 말 것.** 「2025年度」 를 (2026, 3월결산)으로
+    보았더니 2월 결산인 온워드(8016)의 3月 이 한 해 앞으로 밀렸다 —
+    35달 중 다섯 달이 그렇게 어긋났다. 회계연도의 첫 달은 표가 스스로
+    말해 준다(맨 왼쪽 달 칸).
     """
     got = FY_END.findall(text)
     if got:
         y, m = max((int(a), int(b)) for a, b in got)
-        return y, m
+        return ("end", y, m)
     got = FY_JP.findall(text)
     if got:
-        return max(int(y) for y in got) + 1, 3
+        return ("start", max(int(y) for y in got), 0)
     return None
 
 
@@ -111,9 +117,18 @@ def _years(months, filled, fy, today):
     8月까지)이 그래서 0달이었다. `montable._years` 가 값 있는 맨 오른쪽 칸을
     기준으로 삼는 것과 같은 규칙이다.
     """
-    if fy:
-        fy_y, fy_m = fy
+    if fy and fy[0] == "end":
+        _k, fy_y, fy_m = fy
         return [fy_y if m <= fy_m else fy_y - 1 for m in months]
+    if fy:
+        # 「YYYY年度」 — 그 해에 시작한다. 달 번호가 거꾸로 가는 자리마다
+        # 해를 하나 넘긴다(결산기말이 몇 월인지 몰라도 된다).
+        out, y = [], fy[1]
+        for i, m in enumerate(months):
+            if i and m < months[i - 1]:
+                y += 1
+            out.append(y)
+        return out
     idx = max((i for i, f in enumerate(filled) if f), default=len(months) - 1)
     out = [None] * len(months)
     out[idx] = today.year if months[idx] <= today.month else today.year - 1
@@ -542,6 +557,26 @@ def _selftest():                                          # pragma: no cover
     eq("(파) 달이 겹치는 뒤 표", read(two, T), {
         "2026-06": {"same": 100.4}, "2026-07": {"same": 107.7},
         "2026-08": {"same": 109.6}})
+
+    # (거) **「YYYY年度」 는 시작하는 해다 — 4월 시작이라고 넘겨짚지 않는다.**
+    #     온워드(8016)는 2월 결산이라 「2025年度」 가 2025년 3월에 시작한다.
+    #     4월 시작으로 보면 3月 한 칸이 한 해 앞으로 밀린다(35달 중 다섯 달이
+    #     그렇게 어긋났다). 회계연도의 첫 달은 표가 스스로 말해 준다.
+    nendo = """<h3>2021年度 月次売上高</h3><table>
+      <tr><th colspan="3"></th><th>3月</th><th>4月</th><th>5月</th></tr>
+      <tr><td></td><td colspan="2">既存店</td><td>116.1</td><td>198.7</td>
+          <td>127.8</td></tr></table>"""
+    eq("(거) 年度 는 시작하는 해", sorted(read(nendo, T)),
+       ["2021-03", "2021-04", "2021-05"])
+
+    # 하반기 표도 같은 규칙으로 읽힌다 — 달 번호가 거꾸로 가는 자리에서 해가
+    # 하나 넘어간다(결산기말이 몇 월인지 몰라도 된다).
+    nendo2 = """<h3>2021年度 月次売上高</h3><table>
+      <tr><th colspan="3"></th><th>12月</th><th>1月</th><th>2月</th></tr>
+      <tr><td></td><td colspan="2">既存店</td><td>104.1</td><td>99.8</td>
+          <td>101.2</td></tr></table>"""
+    eq("(거) 年度 하반기", sorted(read(nendo2, T)),
+       ["2021-12", "2022-01", "2022-02"])
 
     # (하) **표 위 제목의 회계연도도 본다.** 표 안에 적히지 않고 바로 위
     #     제목에만 있는 일이 흔하다.

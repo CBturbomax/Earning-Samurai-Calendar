@@ -15,69 +15,34 @@ jobs:
         with:
           python-version: '3.12'
 
-      # 88차 — 고친 monir 를 **같은 열여섯 곳에 다시** 돌린다.
-      # 86차는 2사·18달이었고 그중 하나(스시로 2026-09)가 해를 잘못 짚은
-      # 값이었다. **넓히기 전후로 같은 자료에 돌려 본다.**
-      - name: 🔎 monir A/B (88차)
+      # 89차 — **수집기를 그대로 돌려 본다.** 「2025年度」 를 4월 시작으로
+      # 넘겨짚던 것을 고친 뒤(온워드 3月 이 한 해 앞으로 밀렸다) 무엇이
+      # 담기는지 끝까지 본다. probe 는 아무것도 커밋하지 않는다.
+      - name: 🔎 수집기를 그대로 (89차)
         timeout-minutes: 16
+        env:
+          IR_SECS: '600'
+          IR_PAUSE: '1.0'
         run: |
+          python scrape_mon_ir.py
           python - <<'EOF'
-          import time, urllib.error, urllib.request
-          from datetime import date
-
-          import monir
-
-          UA = {"User-Agent": ("Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
-                               "AppleWebKit/537.36 (KHTML, like Gecko) "
-                               "Chrome/131.0.0.0 Safari/537.36"),
-                "Accept-Language": "ja,en;q=0.8"}
-
-          def get(u):
-              try:
-                  with urllib.request.urlopen(
-                          urllib.request.Request(u, headers=UA), timeout=15) as r:
-                      raw = r.read(1_500_000)
-                      h = raw[:2500].decode("ascii", "ignore").lower()
-                      enc = ("cp932" if "shift_jis" in h or "shift-jis" in h
-                             else "euc-jp" if "euc-jp" in h else "utf-8")
-                      return r.status, raw.decode(enc, "ignore")
-              except urllib.error.HTTPError as e:
-                  return e.code, ""
-              except Exception as e:
-                  return type(e).__name__, ""
-
-          T = date.today()
-          tot_c = tot_m = 0
-          for code, (name, top, fixed) in monir.IR_SITES.items():
-              url = fixed
-              if not url:
-                  st, top_html = get(top); time.sleep(0.5)
-                  if not top_html:
-                      print("%-5s %-12s 맨 위 %s" % (code, name, st)); continue
-                  url = monir.find_monthly(top_html, top)
-                  if not url:
-                      ir = monir.find_ir(top_html, top)
-                      if ir:
-                          st2, ir_html = get(ir); time.sleep(0.5)
-                          url = monir.find_monthly(ir_html, ir) if ir_html else ""
-                  if not url:
-                      print("%-5s %-12s 月次 링크 못 찾음" % (code, name)); continue
-              st, page = get(url); time.sleep(0.5)
-              if not page:
-                  print("%-5s %-12s 月次 %s" % (code, name, st)); continue
-              got = monir.read(page, T)
-              if got:
-                  tot_c += 1; tot_m += len(got)
-                  ks = sorted(got)
-                  print("%-5s %-12s %2d달 %s ~ %s" % (code, name, len(got), ks[0], ks[-1]))
-                  print("        " + " · ".join(
-                      "%s %s" % (k[2:], "/".join(
-                          ("%g" % got[k][x]) for x in ("same", "all") if x in got[k]))
-                      for k in ks))
-              else:
-                  print("%-5s %-12s 0달 (표 %d · pdf %d) %s"
-                        % (code, name, page.count("<table"),
-                           page.lower().count(".pdf"), url[:58]))
+          import json
+          from pathlib import Path
+          d = json.loads(Path("data/monthly_ir_jp.json").read_text(encoding="utf-8"))
           print()
-          print("== 88차: 담긴 회사 %d · 달 %d (86차는 2사·18달) ==" % (tot_c, tot_m))
+          print("== 89차: %d사 · %d달 ==" % (d["companies"], d["months"]))
+          for code, rec in sorted(d["codes"].items(),
+                                  key=lambda kv: -len(kv[1]["months"])):
+              ks = sorted(rec["months"])
+              print("%-5s %-14s %2d달 %s ~ %s" % (code, rec["name"], len(ks),
+                                                 ks[0], ks[-1]))
+              print("      " + " · ".join(
+                  "%s %s" % (k[2:], "/".join(
+                      "%g" % rec["months"][k][x]
+                      for x in ("same", "all") if x in rec["months"][k]))
+                  for k in ks))
+          print()
+          print("찾아 둔 月次 주소")
+          for code, st in sorted(d["sites"].items()):
+              print("  %-5s %s" % (code, st["page"]))
           EOF
