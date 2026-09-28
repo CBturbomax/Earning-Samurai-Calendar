@@ -416,7 +416,13 @@ def main():
     fresh = new_months = miss = 0
     pdf_left = PDF_PER_RUN
 
-    for code, name, top, fixed in iter_targets(rec, today):
+    targets = iter_targets(rec, today)
+    start = int(rec.get("cursor") or 0) % len(targets) if targets else 0
+    targets = targets[start:] + targets[:start]
+    for pos, (code, name, top, fixed) in enumerate(targets):
+        # 다음 실행은 여기 다음 회사에서 시작한다. 300개로 넓힌 뒤에도
+        # 앞쪽 회사의 느린 응답/실패 때문에 뒤쪽이 영원히 굶지 않게 한다.
+        rec["cursor"] = (start + pos + 1) % len(targets) if targets else 0
         if time.time() - t0 > BUDGET:
             print("  시간이 다 됐다 — 여기까지 저장하고 다음 실행에 잇는다")
             break
