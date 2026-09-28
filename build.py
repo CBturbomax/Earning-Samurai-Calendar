@@ -1589,77 +1589,95 @@ def _stale_from(last):
 
 
 def load_monthly(packed):
-    """일본 **월매출(月次)** 공시 — `scrape_jp_tdnet.py` 가 결산단신과 같은 목록에서
-    같이 건진 것. 회사가 분기 실적과 별개로 매달 내는 매출·KPI 속보다.
+    """일본 월차를 **회사당 최신 1건**으로 정규화한다.
 
-    **숫자도 같이 낸다.** 한동안 "PDF 가 CID 인코딩이라 못 읽는다"고 적어
-    두었는데, 그건 압축을 안 풀고 원문 바이트에서 괄호 문자열만 긁어 본 것이었다.
-    `pdftext.py` 가 Flate 를 풀고 폰트의 ToUnicode 표로 글자를 되살리며,
-    `montable.py` 가 달 이름표 줄을 찾아 값을 붙인다(`scrape_mon_jp.py`).
-    **못 읽은 공시는 숫자 없이 지나간다** — 그 종목은 지금처럼 링크만 걸린다.
-    암호가 걸린 공시(실측 70건 중 4건)와 표가 그림인 공시가 그렇다.
-
-    한글 회사명은 캘린더에 이미 오른 종목이면 그쪽 것을 그대로 쓴다 — TDnet 이
-    주는 이름은 줄임말이라(`ＢＵＹＳＥＬＬ`) 따로 변환하면 같은 회사가 화면
-    두 군데에서 다른 이름으로 뜬다.
+    여기서 가장 중요한 규칙:
+    - 수집한 날 != 발표일.
+    - 발표일은 TDnet 공시일 / 해당월 기사일 / 공식 월차 페이지의 명시적
+      최종업데이트일 중 **그 대상월이 공개됐다고 확인되는 가장 이른 날짜**만 쓴다.
+    - 원문 링크는 회사 공식 월차 페이지 > TDnet > 기사 순.
+    - 날짜를 모르면 빈칸이다. 오늘 날짜를 지어 넣지 않는다.
     """
     p = HERE / "data" / "monthly_jp.json"
-    if not p.exists():
-        return []
     try:
-        rows = json.loads(p.read_text(encoding="utf-8")).get("rows", [])
+        td_rows = (json.loads(p.read_text(encoding="utf-8")).get("rows", [])
+                   if p.exists() else [])
     except (ValueError, OSError) as e:
         print(f"  ! monthly_jp.json 읽기 실패: {e}")
-        return []
+        td_rows = []
+
+    web = load_monthly_web()
+    ir = load_monthly_ir()
+
     known, sect = {}, {}
     for q in packed:
         if q[9] == "jp":
             known.setdefault(q[1], q[2])
             if q[5]:
                 sect.setdefault(q[1], q[5])
+
+    td_by = {}
+    for r in td_rows:
+        code = str(r.get("code") or "")
+        if code:
+            td_by.setdefault(code, []).append(r)
+
+    codes = sorted(set(td_by) | set(web) | set(ir))
     out = []
-    for r in rows:
-        code = r.get("code") or ""
+
+    for code in codes:
+        tds = td_by.get(code) or []
+        wr = web.get(code) or {}
+        irr = ir.get(code) or {}
+
+        periods = []
+        periods += [str(r.get("period") or "") for r in tds if r.get("period")]
+        periods += list((wr.get("months") or {}).keys())
+        periods += list((irr.get("months") or {}).keys())
+        periods += list((irr.get("pdf") or {}).keys())
+        periods = [x for x in periods if re.match(r"^20\d{2}-\d{2}$", x)]
+        if not periods:
+            continue
+        per = max(periods)
+
+        # 대상월에 정확히 대응하는 공개일 후보만 모은다.
+        dates = []
+        td_hit = [r for r in tds if r.get("period") == per and r.get("date")]
+        if td_hit:
+            dates += [r["date"] for r in td_hit]
+        wv = (wr.get("months") or {}).get(per) or {}
+        if wv.get("day"):
+            dates.append(wv["day"])
+        # rolling 공식 월차 페이지가 스스로 '최종 업데이트'를 적은 경우.
+        # scrape_mon_ir.py 의 updated 는 **오늘 긁은 날이 아니라 페이지 표기 날짜**다.
+        if irr.get("updated"):
+            dates.append(irr["updated"])
+        release = min(dates) if dates else ""
+
+        # 링크는 진짜 원문을 우선한다. 기사밖에 없으면 제목도 '기사'라고 밝힌다.
+        source_kind, source_url = "", ""
+        if irr.get("page"):
+            source_kind, source_url = "공식 IR", irr["page"]
+        elif td_hit:
+            best = sorted(td_hit, key=lambda r: (r.get("date", ""), r.get("time", "")))[-1]
+            source_kind, source_url = "TDnet", best.get("doc", "")
+        elif wv.get("doc"):
+            source_kind, source_url = "기사", wv["doc"]
+
+        raw_name = ""
+        if td_hit:
+            raw_name = td_hit[-1].get("name", "")
+        raw_name = raw_name or irr.get("name", "") or wr.get("name", "")
         ko = known.get(code)
         if not ko:
-            ko, _lvl = to_korean(r.get("name", ""),
+            ko, _lvl = to_korean(raw_name,
                                  companies.NOTABLE.get(code, ("",))[0])
-        out.append([r.get("date", ""), r.get("time", ""), code, ko,
-                    r.get("name", ""), r.get("period", ""), int(r.get("pok", 1)),
-                    r.get("title", ""), r.get("doc", ""),
-                    CAPS.get("jp:" + code, 0), sect.get(code, "")])
-    # **流通ニュース 에만 있는 회사를 더한다.** 적시공시를 안 내는 큰 소매·외식
-    # (니토리·패스트리·시마무라…)은 위 목록에 아예 없어 화면에서 통째로 빠졌다.
-    # 공시 한 줄이 없으므로 기사 한 장을 그 자리에 세운다 — 날짜·대상월·원문이
-    # 다 기사에서 온 값이라 지어내는 것이 없다.
-    seen = {r[2] for r in out}
-    stale = mon_stale_codes()
-    for label, src in (("회사 IR 월차 표", load_monthly_ir()),
-                       ("流通ニュース 월차 기사", load_monthly_web())):
-        for code, rec in sorted(src.items()):
-            # 오래된 종목도 숨기지 않는다. 최신 발표일 순 목록에서 자연히 아래로
-            # 내려가고, 상세창에는 '오래된 데이터' 경고를 붙인다.
-            if code in seen:
-                continue
-            months = rec.get("months") or {}
-            if label.startswith("회사 IR"):
-                _rows, _base, months = _ir_pick(rec)
-            if not months:
-                continue
-            per = max(months)
-            last = months[per]
-            ko = known.get(code)
-            if not ko:
-                ko, _lvl = to_korean(rec.get("name", ""),
-                                     companies.NOTABLE.get(code, ("",))[0])
-            out.append([last.get("day", ""), "", code, ko, rec.get("name", ""),
-                        per, 1, label,
-                        last.get("doc") or rec.get("page", ""),
-                        CAPS.get("jp:" + code, 0), sect.get(code, "")])
-            seen.add(code)
-    out.sort(key=lambda x: (x[0], -x[9], x[2]), reverse=False)
-    return out
 
+        out.append([release, "", code, ko, raw_name, per, 1,
+                    source_kind, source_url,
+                    CAPS.get("jp:" + code, 0), sect.get(code, "")])
+
+    return out
 
 def _base_of(lab: str) -> str:
     """이름표에서 **기준 한 낱말만** 뽑는다(기존점/전점).
@@ -1749,69 +1767,68 @@ def _ir_pick(rec):
 
 
 def load_monthly_nums():
-    """월매출의 **달별 수치** — `scrape_mon_jp.py` 가 첨부 PDF 표에서 읽은 것.
+    """회사마다 **가장 최신 대상월을 가진 한 소스**만 고른다.
 
-    회사마다 {달: [매출(엔), 전년동월비(%)]} 로 내려보낸다. 둘 중 하나만
-    있는 달이 흔하다 — 금액 없이 전년비만 내는 회사가 많다(소매업이 특히).
-    없는 값은 `null` 로 두고 화면이 그대로 비워 둔다. 지어 채우지 않는다.
+    예전 코드는 TDnet 숫자가 한 번이라도 있으면 그 소스를 영원히 우선해서,
+    회사 IR/기사에 더 최신 월이 있어도 옛 숫자를 '최신'처럼 보여줄 수 있었다.
+    지금은 latest period 가 먼저다. 같은 달이면 TDnet(공식 공시) > 회사 IR >
+    기사 순으로 고른다. 서로 뜻이 다른 지표를 월 사이에 섞지는 않는다.
     """
-    p = HERE / "data" / "monthly_nums_jp.json"
-    if not p.exists():
-        return {}
     try:
-        got = json.loads(p.read_text(encoding="utf-8"))
-    except (ValueError, OSError) as e:
-        print(f"  ! monthly_nums_jp.json 읽기 실패: {e}")
-        return {}
-    out, back = {}, 0
-    stale = mon_stale_codes()
-    for code, rec in (got.get("codes") or {}).items():
-        months = rec.get("months") or {}
-        rows = [[k, v.get("rev"), v.get("yoy")] for k, v in sorted(months.items())]
-        if not rows:
-            continue
-        base = _base_of(rec.get("amount_label", ""))
-        rows, n_back = _back_fill(rows, base == _base_of(rec.get("yoy_label", "")))
-        back += n_back
-        # 카드에 내는 것은 **매출과 YoY 둘뿐**이므로 긴 이름표는 안 내려보낸다.
-        # 다만 기존점 기준인지 전점 기준인지는 뜻이 다르므로 한 낱말만 남긴다.
-        out[code] = {"m": rows, "base": _base_of(rec.get("amount_label", "") +
-                                                 rec.get("yoy_label", ""))}
-    # **회사마다 한 소스만 쓴다.** 첨부 PDF 에서 읽은 값이 있으면 그쪽이다 —
-    # 두 소스를 한 줄에 섞으면 「全社売上高」와 「既存店」처럼 **뜻이 다른 값**이
-    # 한 막대에 나란히 서서 거짓말을 한다. 금액이 오는 쪽이 늘 이긴다.
+        got = json.loads((HERE / "data" / "monthly_nums_jp.json")
+                         .read_text(encoding="utf-8"))
+    except (ValueError, OSError):
+        got = {"codes": {}}
+
     ir_c, web_c = load_monthly_ir(), load_monthly_web()
-    for code in sorted(set(ir_c) | set(web_c)):
-        if code in out:
-            continue
+    all_codes = set((got.get("codes") or {})) | set(ir_c) | set(web_c)
+    out, back = {}, 0
+
+    for code in sorted(all_codes):
         cand = []
-        for src, rec in (("회사 IR", ir_c.get(code)),
-                         ("流通ニュース", web_c.get(code))):
-            if not rec:
-                continue
-            if src == "회사 IR":
-                rows, base, _m = _ir_pick(rec)
-            else:
-                rows, base = _ratio_rows(rec.get("months") or {})
+
+        # TDnet PDF 숫자
+        rec = (got.get("codes") or {}).get(code)
+        if rec:
+            months = rec.get("months") or {}
+            rows = [[k, v.get("rev"), v.get("yoy")]
+                    for k, v in sorted(months.items())]
             if rows:
-                cand.append((len(rows), src, rows, base))
+                base = _base_of(rec.get("amount_label", ""))
+                rows, n_back = _back_fill(
+                    rows, base == _base_of(rec.get("yoy_label", "")))
+                back += n_back
+                cand.append((rows[-1][0], 0, "TDnet", rows,
+                             _base_of(rec.get("amount_label", "") +
+                                      rec.get("yoy_label", ""))))
+
+        # 회사 공식 IR
+        rec = ir_c.get(code)
+        if rec:
+            rows, base, _m = _ir_pick(rec)
+            if rows:
+                cand.append((rows[-1][0], 1, "회사 IR", rows, base))
+
+        # 기사
+        rec = web_c.get(code)
+        if rec:
+            rows, base = _ratio_rows(rec.get("months") or {})
+            if rows:
+                cand.append((rows[-1][0], 2, "流通ニュース", rows, base))
+
         if not cand:
             continue
-        # 둘 다 비율뿐이라 우열이 없다. **달이 더 많은 쪽**을 쓰고, 같으면
-        # 회사가 제 손으로 낸 쪽(IR)을 쓴다. 섞지는 않는다.
-        cand.sort(key=lambda t: (-t[0], t[1] != "회사 IR"))
-        _n, src, rows, base = cand[0]
+        # 최신 대상월이 최우선, 같은 달일 때만 공식성 순위(숫자 낮을수록 우선).
+        cand.sort(key=lambda t: (t[0], -t[1]), reverse=True)
+        latest = max(t[0] for t in cand)
+        same = [t for t in cand if t[0] == latest]
+        same.sort(key=lambda t: t[1])
+        _per, _rank, src, rows, base = same[0]
         out[code] = {"m": rows, "src": src, "base": base}
+
     if back:
         print(f"     전년 같은 달 되짚기 {back}달 (금액 ÷ 전년동월비)")
-    if stale:
-        # **조용히 빼지 않는다.** 왜 어떤 회사가 화면에서 사라졌는지 로그에
-        # 남아야 한다(부문 커버리지를 빌드마다 찍는 것과 같은 자리).
-        print(f"     낡아서 뺀 종목 {len(stale)}개 — 마지막 달이 다른 회사보다"
-              f" {MON_STALE_GAP}달 넘게 뒤처졌다: " +
-              ", ".join(sorted(stale)[:12]))
     return out
-
 
 def pack_jp(r):
     """일본만 기계 변환을 거친다. 원본이 일본어라 그대로는 훑어보기가 안 된다."""
