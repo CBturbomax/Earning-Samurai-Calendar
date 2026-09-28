@@ -1595,15 +1595,36 @@ def _stale_from(last):
     return {c for c, p in last.items() if newest - _mon_key(p) >= MON_STALE_GAP}
 
 
-def load_monthly(packed):
-    """일본 월차를 **회사당 최신 1건**으로 정규화한다.
+MONTHLY_SALES_TITLE = re.compile(
+    r"売上|営業収益|営業収入|取扱高|販売高|月次業績|月商", re.I)
+MONTHLY_NONSALES_TITLE = re.compile(
+    r"在籍|技術者|稼働率|契約件数|口座|運用実績|客室|ADR|RevPAR|会員数|"
+    r"人員|KPI(?!.*売上)|輸送人員|乗車人員", re.I)
 
-    여기서 가장 중요한 규칙:
-    - 수집한 날 != 발표일.
-    - 발표일은 TDnet 공시일 / 해당월 기사일 / 공식 월차 페이지의 명시적
-      최종업데이트일 중 **그 대상월이 공개됐다고 확인되는 가장 이른 날짜**만 쓴다.
-    - 원문 링크는 회사 공식 월차 페이지 > TDnet > 기사 순.
-    - 날짜를 모르면 빈칸이다. 오늘 날짜를 지어 넣지 않는다.
+
+def _monthly_sales_td(r):
+    """TDnet 月次 중 **월매출/매출성 지표**만 남긴다.
+
+    '매달 내는 KPI' 전체와 '월매출'은 다르다. 가동률·기술자수·REIT 운용실적을
+    월매출 화면에 섞지 않는다.
+    """
+    title = str(r.get("title") or "")
+    return bool(MONTHLY_SALES_TITLE.search(title)) and not bool(
+        MONTHLY_NONSALES_TITLE.search(title))
+
+
+def load_monthly(packed):
+    """일본 월매출을 **회사당 최신 1건**으로 정규화한다.
+
+    핵심 원칙:
+    - 발표일은 **공식 소스에서 확인된 날짜만** 쓴다.
+    - 流通ニュース 의 기사 게시일은 발표일로 쓰지 않는다.
+    - 대상월/발표일/원문 링크는 같은 소스 묶음에서 가져온다.
+    - 공식 날짜가 없으면 빈칸으로 둔다. 틀린 날짜보다 빈 날짜가 낫다.
+
+    row 뒤 두 칸:
+      [11] 날짜 품질: official / unknown
+      [12] 보조 기사일(공식 발표일이 아닐 때만 참고)
     """
     p = HERE / "data" / "monthly_jp.json"
     try:
@@ -1612,6 +1633,7 @@ def load_monthly(packed):
     except (ValueError, OSError) as e:
         print(f"  ! monthly_jp.json 읽기 실패: {e}")
         td_rows = []
+    td_rows = [r for r in td_rows if _monthly_sales_td(r)]
 
     web = load_monthly_web()
     ir = load_monthly_ir()
@@ -1647,24 +1669,26 @@ def load_monthly(packed):
             continue
         per = max(periods)
 
-        # 대상월에 정확히 대응하는 공개일 후보만 모은다.
-        dates = []
         td_hit = [r for r in tds if r.get("period") == per and r.get("date")]
-        if td_hit:
-            dates += [r["date"] for r in td_hit]
+        iv = ((irr.get("pdf") or {}).get(per)
+              or (irr.get("months") or {}).get(per) or {})
         wv = (wr.get("months") or {}).get(per) or {}
-        if wv.get("day"):
-            dates.append(wv["day"])
-        # rolling 공식 월차 페이지가 스스로 '최종 업데이트'를 적은 경우.
-        # scrape_mon_ir.py 의 updated 는 **오늘 긁은 날이 아니라 페이지 표기 날짜**다.
-        if irr.get("updated"):
-            dates.append(irr["updated"])
-        release = min(dates) if dates else ""
 
-        # 링크는 진짜 원문을 우선한다. 기사밖에 없으면 제목도 '기사'라고 밝힌다.
+        # **공식 날짜만 발표일 후보**다.
+        official_dates = [r["date"] for r in td_hit if r.get("date")]
+        # 회사 IR의 updated 는 페이지에 실제로 적힌 최종 업데이트일이다.
+        # 그 페이지에 최신 대상월(per)이 실제 존재할 때만 쓴다.
+        if iv and irr.get("updated"):
+            official_dates.append(irr["updated"])
+        release = min(official_dates) if official_dates else ""
+        date_quality = "official" if release else "unknown"
+        article_day = wv.get("day", "") if not release else ""
+
+        # 원문은 **회사 공식 IR/PDF > TDnet > 기사**.
         source_kind, source_url = "", ""
-        if irr.get("page"):
-            source_kind, source_url = "공식 IR", irr["page"]
+        if iv and irr.get("page"):
+            source_kind = "공식 IR"
+            source_url = iv.get("doc") or irr.get("page")
         elif td_hit:
             best = sorted(td_hit, key=lambda r: (r.get("date", ""), r.get("time", "")))[-1]
             source_kind, source_url = "TDnet", best.get("doc", "")
@@ -1682,7 +1706,8 @@ def load_monthly(packed):
 
         out.append([release, "", code, ko, raw_name, per, 1,
                     source_kind, source_url,
-                    CAPS.get("jp:" + code, 0), sect.get(code, "")])
+                    CAPS.get("jp:" + code, 0), sect.get(code, ""),
+                    date_quality, article_day])
 
     return out
 
@@ -1781,14 +1806,82 @@ def _ir_pick(rec):
         return prows, pbase, pdf
     return [], "", {}
 
-def load_monthly_nums():
-    """회사마다 **가장 최신 대상월을 가진 한 소스**만 고른다.
+def _tdnet_series(rec):
+    months = rec.get("months") or {}
+    rows = []
+    for k, v in sorted(months.items()):
+        metric = str(v.get("metric") or "")
+        # 매출성 지표만. ADR/가동률/점포수 같은 것은 이 화면 숫자가 아니다.
+        if metric and not re.search(r"売上|営業収益|営業収入|取扱高|販売高|月商|前年|昨対",
+                                    metric):
+            continue
+        rows.append([k, v.get("rev"), v.get("yoy"), 0,
+                     v.get("doc", ""), v.get("day", ""), metric])
+    return rows
 
-    예전 코드는 TDnet 숫자가 한 번이라도 있으면 그 소스를 영원히 우선해서,
-    회사 IR/기사에 더 최신 월이 있어도 옛 숫자를 '최신'처럼 보여줄 수 있었다.
-    지금은 latest period 가 먼저다. 같은 달이면 TDnet(공식 공시) > 회사 IR >
-    기사 순으로 고른다. 서로 뜻이 다른 지표를 월 사이에 섞지는 않는다.
+
+def _tdnet_trusted(rows, target):
+    """TDnet PDF 자동파싱 최신값을 화면에 내도 되는 최소 조건.
+
+    자동 PDF parser 는 소수점/열 정렬 실패가 있을 수 있다. 같은 대상월이 있고,
+    값 분포가 월매출 비율로 상식적인 범위에 있을 때만 최신 숫자를 '검증됨'으로
+    취급한다. 통과 못 하면 원문은 남기되 숫자는 숨긴다.
     """
+    hit = next((r for r in rows if r[0] == target), None)
+    if not hit:
+        return False
+    yoy = hit[2]
+    if yoy is None:
+        return hit[1] is not None
+    if not 40 <= yoy <= 220:
+        return False
+    ys = [r[2] for r in rows[-12:] if r[2] is not None]
+    if ys and (sum(v < 30 or v > 250 for v in ys) >= max(2, len(ys) // 4)):
+        return False
+    return True
+
+
+def _ir_series(rec):
+    rows, base, picked = _ir_pick(rec)
+    if not rows:
+        return [], base
+    out = []
+    for r in rows:
+        p, rev, yoy = r[:3]
+        meta = picked.get(p) or {}
+        out.append([p, rev, yoy, 0,
+                    meta.get("doc") or rec.get("page", ""),
+                    meta.get("day") or rec.get("updated", ""),
+                    meta.get("metric", "")])
+    return out, base
+
+
+def _web_series(rec):
+    months = rec.get("months") or {}
+    n_same = sum(1 for v in months.values() if v.get("same") is not None)
+    n_all = sum(1 for v in months.values() if v.get("all") is not None)
+    key = "same" if n_same >= n_all else "all"
+    base = "기존점" if key == "same" else "전점"
+    rows = []
+    for p, v in sorted(months.items()):
+        if v.get(key) is None:
+            continue
+        rows.append([p, None, v[key], 0, v.get("doc", ""), v.get("day", ""), base])
+    return rows, base
+
+
+def load_monthly_nums(monthly):
+    """월매출 숫자를 source-aware 로 고른다.
+
+    1) 최신 대상월과 **정확히 같은 달**을 가진 소스만 최신 숫자로 인정.
+    2) 품질 우선순위: 회사 공식 IR > 기사 표 > TDnet PDF 자동파싱.
+       TDnet 은 공식 문서지만 parser 오류 가능성이 있어 sanity check 를 통과해야
+       최신 숫자를 화면에 낸다.
+    3) 차트도 최신 대상월 이후의 잘못 읽힌 미래 달은 잘라낸다.
+    """
+    target = {r[2]: r[5] for r in monthly}
+    meta = {r[2]: r for r in monthly}
+
     try:
         got = json.loads((HERE / "data" / "monthly_nums_jp.json")
                          .read_text(encoding="utf-8"))
@@ -1796,53 +1889,99 @@ def load_monthly_nums():
         got = {"codes": {}}
 
     ir_c, web_c = load_monthly_ir(), load_monthly_web()
-    all_codes = set((got.get("codes") or {})) | set(ir_c) | set(web_c)
-    out, back = {}, 0
+    all_codes = set(target) | set((got.get("codes") or {})) | set(ir_c) | set(web_c)
+    out = {}
 
     for code in sorted(all_codes):
+        want = target.get(code, "")
         cand = []
 
-        # TDnet PDF 숫자
-        rec = (got.get("codes") or {}).get(code)
-        if rec:
-            months = rec.get("months") or {}
-            rows = [[k, v.get("rev"), v.get("yoy")]
-                    for k, v in sorted(months.items())]
-            if rows:
-                base = _base_of(rec.get("amount_label", ""))
-                rows, n_back = _back_fill(
-                    rows, base == _base_of(rec.get("yoy_label", "")))
-                back += n_back
-                cand.append((rows[-1][0], 0, "TDnet", rows,
-                             _base_of(rec.get("amount_label", "") +
-                                      rec.get("yoy_label", ""))))
-
-        # 회사 공식 IR
         rec = ir_c.get(code)
         if rec:
-            rows, base, _m = _ir_pick(rec)
+            rows, base = _ir_series(rec)
             if rows:
-                cand.append((rows[-1][0], 1, "회사 IR", rows, base))
+                cand.append((0, "회사 IR", rows, base, True, rec))
 
-        # 기사
         rec = web_c.get(code)
         if rec:
-            rows, base = _ratio_rows(rec.get("months") or {})
+            rows, base = _web_series(rec)
             if rows:
-                cand.append((rows[-1][0], 2, "流通ニュース", rows, base))
+                cand.append((1, "기사 수치", rows, base, True, rec))
+
+        rec = (got.get("codes") or {}).get(code)
+        if rec:
+            rows = _tdnet_series(rec)
+            if rows:
+                base = _base_of(rec.get("amount_label", "") +
+                                rec.get("yoy_label", ""))
+                cand.append((2, "TDnet PDF", rows, base,
+                             _tdnet_trusted(rows, want), rec))
 
         if not cand:
             continue
-        # 최신 대상월이 최우선, 같은 달일 때만 공식성 순위(숫자 낮을수록 우선).
-        cand.sort(key=lambda t: (t[0], -t[1]), reverse=True)
-        latest = max(t[0] for t in cand)
-        same = [t for t in cand if t[0] == latest]
-        same.sort(key=lambda t: t[1])
-        _per, _rank, src, rows, base = same[0]
-        out[code] = {"m": rows, "src": src, "base": base}
 
-    if back:
-        print(f"     전년 같은 달 되짚기 {back}달 (금액 ÷ 전년동월비)")
+        # 최신 공식 대상월보다 뒤의 자동 오독 달은 절대 차트에 싣지 않는다.
+        norm = []
+        for rank, src, rows, base, trusted, rawrec in cand:
+            clipped = [r for r in rows if not want or r[0] <= want]
+            if clipped:
+                norm.append((rank, src, clipped, base, trusted, rawrec))
+        if not norm:
+            continue
+
+        # 최신 대상월을 실제로 가진 소스가 먼저, 그다음 신뢰도.
+        exact = [x for x in norm if want and any(r[0] == want for r in x[2])]
+        pool = exact or norm
+        pool.sort(key=lambda x: x[0])
+        rank, src, rows, base, trusted, rawrec = pool[0]
+
+        latest = next((r for r in reversed(rows) if not want or r[0] == want),
+                      rows[-1])
+        latest_doc = latest[4] if len(latest) > 4 else ""
+
+        # TDnet 은 리스트 원문과 같은 PDF일 때만 최신값을 검증 처리.
+        if src == "TDnet PDF" and code in meta:
+            list_doc = meta[code][8]
+            if list_doc and latest_doc and list_doc != latest_doc:
+                trusted = False
+
+        snap = {"period": latest[0]}
+        if latest[1] is not None:
+            snap["rev"] = latest[1]
+        if latest[2] is not None:
+            snap["yoy"] = latest[2]
+        if base:
+            snap["base"] = base
+
+        # 최신월에 전점/기존점이 둘 다 있는 소스라면 둘 다 화면에 보여준다.
+        # 차트는 한 기준만 쓰더라도 최신 스냅샷까지 하나로 뭉개지 않는다.
+        if src == "회사 IR":
+            mv = (rawrec.get("months") or {}).get(latest[0]) or {}
+            if mv.get("same") is not None:
+                snap["same"] = mv["same"]
+            if mv.get("all") is not None:
+                snap["all"] = mv["all"]
+            pv = (rawrec.get("pdf") or {}).get(latest[0]) or {}
+            if snap.get("rev") is None and pv.get("rev") is not None:
+                snap["rev"] = pv["rev"]
+            if snap.get("yoy") is None and pv.get("yoy") is not None:
+                snap["yoy"] = pv["yoy"]
+        elif src == "기사 수치":
+            mv = (rawrec.get("months") or {}).get(latest[0]) or {}
+            if mv.get("same") is not None:
+                snap["same"] = mv["same"]
+            if mv.get("all") is not None:
+                snap["all"] = mv["all"]
+
+        out[code] = {
+            "m": [r[:4] for r in rows],
+            "src": src,
+            "base": base,
+            "verified": bool(trusted and (not want or latest[0] == want)),
+            "doc": latest_doc,
+            "latest": snap,
+        }
+
     return out
 
 def pack_jp(r):
@@ -1976,7 +2115,7 @@ def build():
             notable[m + ":" + code] = list(v)
 
     monthly = load_monthly(packed)
-    monthly_nums = load_monthly_nums()
+    monthly_nums = load_monthly_nums(monthly)
     per_day = Counter(p[0] for p in packed)
     notable_hits = sum(1 for p in packed if p[9] + ":" + p[1] in notable)
     all_ok = sorted({d for m in ok_days for d in ok_days[m]})
@@ -2376,20 +2515,21 @@ __FLAGCSS__
 .mchart .bar.back { fill:#3b7fc4; opacity:.45; }
 .mchart .ln { fill:none; stroke:#e08a4a; stroke-width:1.6; }
 .mchart .ma { fill:none; stroke:#5fbf92; stroke-width:1.2; opacity:.75; }
-.mchart .xl { fill:var(--mute); font-size:12px;
+.mchart .xl { fill:var(--mute); font-size:13px;
               font-variant-numeric:tabular-nums; }
 /* 해가 바뀌는 1월만 「24.01」로 적고 밝게 둔다 — 몇 년 몇 월인지 세지 않게. */
 .mchart .xl.yr { fill:#9fb0bf; font-weight:700; }
 .mchart .ysep { stroke:#233240; stroke-width:1; }
 .mchart .zero { stroke:#33465a; stroke-width:1; }
 /* 막대 위 금액(단위는 왼쪽 위에 한 번만) · 축 아래 전년비 */
-.mchart .vl { fill:#8fa6ba; font-size:10.5px; letter-spacing:-.2px; font-variant-numeric:tabular-nums; }
-.mchart .unit { fill:var(--mute); font-size:11px; }
+.mchart .vl { fill:#a9bfd2; font-size:12.5px; font-weight:700;
+               letter-spacing:-.1px; font-variant-numeric:tabular-nums; }
+.mchart .unit { fill:var(--mute); font-size:12.5px; }
 /* **칸 폭에 맞춰 글자를 정한다.** 12px 로 뒀더니 「+25.3%+22.1%」처럼 옆
    글자와 붙어 도리어 안 읽혔다 — 그림은 카드 폭에 맞춰 통째로 줄어드므로
    한 달에 실제로 쓸 수 있는 가로는 42px 남짓이고, 여섯 글자가 거기 들어가려면
    10.5px 가 한계다. 넓히려면 칸이 아니라 카드를 넓혀야 한다. */
-.mchart .yv { font-size:10.5px; font-weight:700; letter-spacing:-.2px;
+.mchart .yv { font-size:12.5px; font-weight:800; letter-spacing:-.1px;
               font-variant-numeric:tabular-nums; }
 .mchart .yv.up { fill:#e2857f; } .mchart .yv.dn { fill:#6fd39b; }
 .mdesc { color:#9fb0bf; font-size:14px; border-top:1px dotted #26333f;
@@ -2432,8 +2572,17 @@ __FLAGCSS__
 /* 상세창 안의 월차. 전체 페이지를 잡아먹지 않게 여기에서만 큰 월별 차트를 본다. */
 .mndetail { margin-top:22px; padding-top:18px; border-top:1px solid var(--line); }
 .mndetail .mstat { margin:8px 0 10px; }
-.mnmodalchart { overflow-x:auto; padding-bottom:4px; }
-.mnmodalchart .mchart { min-width:1050px; }
+.mnlatest { display:grid; grid-template-columns:repeat(auto-fit,minmax(150px,1fr));
+            gap:10px; margin:10px 0 14px; }
+.mnlatest .cell { background:#111a21; border:1px solid #22303b; border-radius:9px;
+                  padding:11px 13px; min-height:66px; }
+.mnlatest .lab { color:var(--mute); font-size:13px; margin-bottom:3px; }
+.mnlatest .val { font-size:25px; font-weight:850; line-height:1.05;
+                 font-variant-numeric:tabular-nums; }
+.mnlatest .val.up { color:#e2857f; } .mnlatest .val.dn { color:#6fd39b; }
+.mnlatest .src { grid-column:1/-1; color:var(--mute); font-size:12px; margin-top:-3px; }
+.mnmodalchart { overflow:hidden; width:100%; padding:4px 0 0; }
+.mnmodalchart .mchart { width:100%; min-width:0; max-width:100%; height:auto; }
 .mnstale { color:#d8b877; font-size:13px; margin-left:8px; }
 @media (max-width: 900px) {
   .mnrow, .mnhead { grid-template-columns:88px 64px minmax(180px,1fr) 82px 95px; }
@@ -3454,84 +3603,82 @@ const MN_B = (() => {
   return b;
 })();
 
-function mnDense(m) {
-  const out = new Array(MN_B - MN_A + 1).fill(null);
-  for (const r of m) {
-    const i = MN_KEY(r[0]) - MN_A;
-    if (i >= 0 && i < out.length) out[i] = r;
+function mnRecentDense(src, count=12) {
+  const rows = (src || []).filter(r => r && /^20\d{2}-\d{2}$/.test(r[0]))
+                          .sort((a,b) => a[0].localeCompare(b[0]));
+  if (!rows.length) return {m:[], a:MN_A};
+  const z = MN_KEY(rows[rows.length - 1][0]);
+  const a = z - count + 1;
+  const m = new Array(count).fill(null);
+  for (const r of rows) {
+    const i = MN_KEY(r[0]) - a;
+    if (i >= 0 && i < count) m[i] = r;
   }
-  return out;
+  return {m, a};
 }
 
 function mnChart(src) {
   if (!src || !src.length) return '';
-  const m = mnDense(src);
-  const n = m.length;
+  // 상세창은 과거 전부가 아니라 **최근 12개월**을 크게 본다.
+  // 24~30개월을 억지로 넣어 가로 스크롤하는 것보다 월별 숫자가 읽히는 게 우선.
+  const dense = mnRecentDense(src, 12);
+  const m = dense.m, A = dense.a, n = m.length;
+  if (!n) return '';
   const hasRev = m.some(r => r && r[1] != null);
-  /* **달마다 이름표와 숫자를 전부 적는다.** 회원님이 "이 표가 정확히 언제
-     데이터가 몇 퍼센트인지 알 수가 없다 · 월도 진짜 매월 똑바로 알려주고 ·
-     차라리 그래프 크기를 키우더라도 숫자를 월별로 전부"라고 하셨다.
-     전에는 한 달이 14px 라 여섯 달에 한 번만 이름표를 달 수 있었고 값은
-     짚어 봐야 나왔다 — 그건 읽는 그림이 아니다. 한 달에 42px 를 주고
-     카드도 한 줄을 통째로 쓴다(`.mcard.wide`). 좁게 그리고 촘촘히 적으면
-     글자가 겹쳐 도리어 안 읽힌다. */
-  const CW = 42, L = 12, R = 12;
-  const W = L + R + n * CW;
-  const B = hasRev ? 40 : 24;          // 축 아래 — 전년비 줄 + 달 이름표 줄
-  const T = hasRev ? 30 : 22;
-  const H = hasRev ? 212 : 178;
+
+  const W = 960, L = 30, R = 16;
+  const CW = (W - L - R) / n;
+  const B = hasRev ? 52 : 36;
+  const T = hasRev ? 38 : 34;
+  const H = hasRev ? 286 : 250;
   const base = H - B;
   const cx = i => L + CW * i + CW / 2;
-  const bw = 22;
+  const bw = Math.min(48, CW * .62);
   const at = i => m[i];
-  // 짚어 보는 글도 **매출과 YoY 둘뿐**이고, 지수(103)가 아니라 +3.0% 로 적는다.
+
   const tip = i => m[i][0].slice(2).replace('-', '/') + ' ' +
         (m[i][1] != null ? mnFmtJPY(m[i][1]) : '') +
         (m[i][2] != null ? (m[i][1] != null ? ' · ' : '') +
                            (m[i][2] >= 100 ? '+' : '') +
-                           (m[i][2] - 100).toFixed(1) + '%' : '') +
-        (m[i][3] ? ' (전년 수치에서 되짚음)' : '');
-  /* **막대마다 붙이는 글에는 「%」를 안 쓴다.** 「%」 한 글자가 숫자 두 자리만큼
-     자리를 먹어서 「+27.3%+26.5%」처럼 옆 글자와 붙어 버린다. 줄머리에 「전년비 %」
-     라고 한 번 적고 숫자는 크게 둔다 — 카드 위 큰 숫자에는 그대로 「+3.5%」다. */
+                           (m[i][2] - 100).toFixed(1) + '%' : '');
+
   const pct = i => {
     const v = at(i) && m[i][2];
     if (v == null) return null;
     const d = v - 100;
-    return [(d >= 0 ? '+' : '') + d.toFixed(Math.abs(d) >= 100 ? 0 : 1),
-            d >= 0 ? 'up' : 'dn'];
+    return [(d >= 0 ? '+' : '') + d.toFixed(1), d >= 0 ? 'up' : 'dn'];
   };
+
   let body = '';
   if (hasRev) {
-    /* 막대는 금액, 주황 선은 전년비, 옅은 녹색 선은 석 달 이동평균이다.
-       금액은 막대 위에 **단위를 뗀 숫자**로 적고 단위는 왼쪽 위에 한 번만
-       적는다 — 막대마다 「억엔」을 달면 그것만 서른세 번이다. */
     const mx = Math.max(...m.map(r => (r && r[1]) || 0), 1);
     const u = mx >= 1e12 ? ['조엔', 1e12] : mx >= 1e8 ? ['억엔', 1e8]
             : mx >= 1e6 ? ['백만엔', 1e6] : ['엔', 1];
-    body += '<text class="unit" x="' + L + '" y="11">막대 ' + u[0] +
-            ' · 아래 줄 전년비 %</text>';
+    body += '<text class="unit" x="' + L + '" y="16">월매출 ' + u[0] +
+            ' · 막대 위 숫자 / 아래 YoY</text>';
+
     for (let i = 0; i < n; i++) {
       const v = at(i) && m[i][1];
       if (v == null) continue;
-      const h = Math.max(1, (base - T) * (v / mx));
+      const h = Math.max(2, (base - T) * (v / mx));
       body += '<rect class="bar' + (m[i][3] ? ' back' : '') +
               '" x="' + (cx(i) - bw / 2).toFixed(1) + '" y="' +
-              (base - h).toFixed(1) + '" width="' + bw +
-              '" height="' + h.toFixed(1) + '" rx="2"><title>' + tip(i) +
+              (base - h).toFixed(1) + '" width="' + bw.toFixed(1) +
+              '" height="' + h.toFixed(1) + '" rx="3"><title>' + tip(i) +
               '</title></rect>';
       const s = v / u[1];
       body += '<text class="vl" x="' + cx(i).toFixed(1) + '" y="' +
-              (base - h - 5).toFixed(1) + '" text-anchor="middle">' +
+              Math.max(T - 2, base - h - 7).toFixed(1) + '" text-anchor="middle">' +
               (s >= 100 ? Math.round(s).toLocaleString() : s.toFixed(1)) +
               '</text>';
     }
+
     const ys = m.map(r => r && r[2]).filter(v => v != null);
     if (ys.length >= 2) {
       const lo = Math.min(...ys), hi = Math.max(...ys);
-      const pad = Math.max(3, (hi - lo) * 0.15);
-      const a = lo - pad, b2 = hi + pad;
-      const yy = v => base - (base - T) * (v - a) / Math.max(1e-6, b2 - a);
+      const pad = Math.max(3, (hi - lo) * .18);
+      const aa = lo - pad, bb = hi + pad;
+      const yy = v => base - (base - T) * (v - aa) / Math.max(1e-6, bb - aa);
       let d = '', started = false;
       for (let i = 0; i < n; i++) {
         if (!at(i) || m[i][2] == null) { started = false; continue; }
@@ -3540,67 +3687,50 @@ function mnChart(src) {
       }
       if (d) body += '<path class="ln" d="' + d + '"/>';
     }
-    // 석 달 이동평균 — 달마다 들쭉날쭉한 것 밑에 깔린 흐름을 본다.
-    if (n >= 4) {
-      let d = '', started = false;
-      for (let i = 2; i < n; i++) {
-        const w = [at(i - 2) && m[i - 2][1], at(i - 1) && m[i - 1][1],
-                   at(i) && m[i][1]];
-        if (w.some(v => v == null)) { started = false; continue; }
-        const av = (w[0] + w[1] + w[2]) / 3;
-        d += (started ? 'L' : 'M') + cx(i).toFixed(1) + ',' +
-             (base - (base - T) * (av / mx)).toFixed(1);
-        started = true;
-      }
-      if (d) body += '<path class="ma" d="' + d + '"/>';
-    }
-    // 전년비는 축 바로 아래 줄에 달마다 적는다.
     for (let i = 0; i < n; i++) {
       const p = pct(i);
       if (!p) continue;
-      body += '<text class="yv ' + p[1] + '" x="' + cx(i).toFixed(1) + '" y="' +
-              (base + 14) + '" text-anchor="middle">' + p[0] + '</text>';
+      body += '<text class="yv ' + p[1] + '" x="' + cx(i).toFixed(1) +
+              '" y="' + (base + 18) + '" text-anchor="middle">' + p[0] + '</text>';
     }
   } else {
-    /* 전년비만 있는 회사는 100%를 기준선으로 위아래로 그린다 — 0 부터 그리면
-       95%와 105%가 거의 같은 높이라 좋아졌는지가 안 보인다. 값은 막대 **바깥**
-       에 적는다(막대 안에 넣으면 짧은 막대에서 글자가 삐져나온다). */
     const dev = m.map(r => (r && r[2] != null) ? r[2] - 100 : null);
-    const mx = Math.max(10, ...dev.filter(v => v != null).map(Math.abs));
+    const vals = dev.filter(v => v != null);
+    const mx = Math.max(6, ...(vals.length ? vals.map(Math.abs) : [6]));
     const half = (base - T) / 2, mid = T + half;
-    body += '<text class="unit" x="' + L + '" y="11">전년비 %</text>';
+    body += '<text class="unit" x="' + L + '" y="16">월매출 YoY % · 최근 12개월</text>';
     body += '<line class="zero" x1="' + L + '" y1="' + mid.toFixed(1) +
             '" x2="' + (W - R) + '" y2="' + mid.toFixed(1) + '"/>';
+
     for (let i = 0; i < n; i++) {
       const d = dev[i];
       if (d == null) continue;
-      const h = Math.max(2, half * 0.78 * (Math.abs(d) / mx));
+      const h = Math.max(3, half * .80 * (Math.abs(d) / mx));
       body += '<rect class="bar ' + (d >= 0 ? 'y' : 'yn') + '" x="' +
               (cx(i) - bw / 2).toFixed(1) + '" y="' +
-              (d >= 0 ? mid - h : mid).toFixed(1) + '" width="' + bw +
-              '" height="' + h.toFixed(1) + '" rx="2"><title>' +
-              tip(i) + '</title></rect>';
+              (d >= 0 ? mid - h : mid).toFixed(1) + '" width="' + bw.toFixed(1) +
+              '" height="' + h.toFixed(1) + '" rx="3"><title>' + tip(i) +
+              '</title></rect>';
       const p = pct(i);
       body += '<text class="yv ' + p[1] + '" x="' + cx(i).toFixed(1) + '" y="' +
-              (d >= 0 ? mid - h - 5 : mid + h + 12).toFixed(1) +
+              (d >= 0 ? mid - h - 8 : mid + h + 17).toFixed(1) +
               '" text-anchor="middle">' + p[0] + '</text>';
     }
   }
-  /* 달 이름표는 **한 달도 빠짐없이** 단다. 해가 바뀌는 1월에만 「24.01」처럼
-     해를 함께 적고 세로 금을 그어, 몇 년 몇 월인지 세어 보지 않아도 되게 한다.
-     값이 없는 달에도 이름표는 붙인다 — 구멍이 몇 달짜리인지 읽혀야 한다. */
+
   for (let i = 0; i < n; i++) {
-    const k = MN_A + i, mo = k % 12 + 1, jan = mo === 1;
+    const k = A + i, mo = k % 12 + 1, jan = mo === 1;
     if (jan && i) {
       const x = (L + CW * i).toFixed(1);
-      body += '<line class="ysep" x1="' + x + '" y1="' + (T - 8) +
+      body += '<line class="ysep" x1="' + x + '" y1="' + (T - 10) +
               '" x2="' + x + '" y2="' + base + '"/>';
     }
     body += '<text class="xl' + (jan ? ' yr' : '') + '" x="' + cx(i).toFixed(1) +
-            '" y="' + (base + (hasRev ? 30 : 15)) + '" text-anchor="middle">' +
+            '" y="' + (base + (hasRev ? 38 : 26)) + '" text-anchor="middle">' +
             (jan ? String(Math.floor(k / 12)).slice(2) + '.01'
                  : String(mo).padStart(2, '0')) + '</text>';
   }
+
   return '<svg class="mchart" viewBox="0 0 ' + W + ' ' + H +
          '" preserveAspectRatio="xMidYMid meet">' + body + '</svg>';
 }
@@ -3634,10 +3764,11 @@ function mnLatestNumber(code) {
 }
 
 function mnYoyHtml(code, targetPeriod) {
-  const r = mnLatestNumber(code);
-  // **다른 달 숫자를 최신 발표 옆에 붙이지 않는다.**
+  const n = MNUM[code], r = mnLatestNumber(code);
   if (!r || r[0] !== targetPeriod || r[2] == null)
-    return '<span class="myoy none">수치 미파싱</span>';
+    return '<span class="myoy none">수치 없음</span>';
+  if (!n.verified)
+    return '<span class="myoy none">검증중</span>';
   const d = r[2] - 100;
   return '<span class="myoy ' + (d >= 0 ? 'up' : 'dn') + '">' +
          (d >= 0 ? '+' : '') + d.toFixed(1) + '%</span>';
@@ -3673,9 +3804,12 @@ function renderMonthly() {
     list.push(x);
   }
   // 핵심 정렬: **가장 최근 월차 발표가 먼저**, 같은 날이면 **시총 큰 순**.
-  list.sort((a,b) => b.last[0].localeCompare(a.last[0]) ||
-                     (b.cap || 0) - (a.cap || 0) ||
-                     a.code.localeCompare(b.code));
+  list.sort((a,b) => {
+    const ao = a.last[11] === 'official', bo = b.last[11] === 'official';
+    if (ao !== bo) return bo - ao; // 공식 발표일 확인된 회사가 먼저
+    if (a.last[0] !== b.last[0]) return b.last[0].localeCompare(a.last[0]);
+    return (b.cap || 0) - (a.cap || 0) || a.code.localeCompare(b.code);
+  });
 
   document.getElementById('mnCnt').innerHTML =
     '<b>' + list.length.toLocaleString() + '</b>개사';
@@ -3691,11 +3825,16 @@ function renderMonthly() {
       '<span>최신 YoY</span><span>시가총액</span><span>출처</span></div>' +
     list.map(x => {
       const r = x.last, per = r[5] || (mnLatestNumber(x.code) || ['—'])[0] || '—';
+      const srcLabel = r[7] === '기사' ? '기사' : (r[7] || '원문');
       const src = r[8] ? '<a class="mpdf" href="' + esc(r[8]) +
                   '" target="_blank" rel="noopener">' +
-                  esc(r[7] || '원문') + ' ↗</a>' : '';
+                  esc(srcLabel) + ' ↗</a>' : '';
+      const dateTxt = r[11] === 'official'
+        ? esc(r[0])
+        : ('<span class="dim">미확인</span>' +
+           (r[12] ? '<small class="dim"> · 기사 ' + esc(r[12].slice(5)) + '</small>' : ''));
       return '<div class="mnrow" data-mcode="' + esc(x.code) + '">' +
-        '<span class="mdate">' + esc(r[0] || '미확인') + '</span>' +
+        '<span class="mdate">' + dateTxt + '</span>' +
         '<span class="mcode">' + esc(x.code) + '</span>' +
         '<span class="mname">' + esc(x.ko) +
           (x.orig && x.orig !== x.ko ? '<small>' + esc(x.orig) + '</small>' : '') +
@@ -3707,6 +3846,39 @@ function renderMonthly() {
     }).join('') + '</div>';
 }
 
+function mnPctText(v) {
+  if (v == null) return null;
+  const d = v - 100;
+  return {txt:(d >= 0 ? '+' : '') + d.toFixed(1) + '%', cls:d >= 0 ? 'up' : 'dn'};
+}
+
+function mnLatestSnapshot(num, target) {
+  if (!num || !num.verified || !num.latest) return '';
+  const s = num.latest;
+  if (target && s.period !== target) return '';
+  const cells = [];
+  if (s.rev != null)
+    cells.push(['실제 월매출', mnFmtJPY(s.rev), '']);
+  if (s.all != null) {
+    const p = mnPctText(s.all);
+    cells.push(['전점 YoY', p.txt, p.cls]);
+  }
+  if (s.same != null) {
+    const p = mnPctText(s.same);
+    cells.push(['기존점 YoY', p.txt, p.cls]);
+  }
+  if (s.all == null && s.same == null && s.yoy != null) {
+    const p = mnPctText(s.yoy);
+    cells.push([(s.base || num.base || '월매출') + ' YoY', p.txt, p.cls]);
+  }
+  if (!cells.length) return '';
+  return '<div class="mnlatest">' +
+    cells.map(x => '<div class="cell"><div class="lab">' + esc(x[0]) +
+      '</div><div class="val ' + x[2] + '">' + esc(x[1]) + '</div></div>').join('') +
+    '<div class="src">최신 ' + esc((s.period || target || '').replace('-', '.')) +
+      ' · ' + esc(num.src || '') + '</div></div>';
+}
+
 function monthlyBlock(code) {
   const all = MN.filter(r => r[2] === code).sort((a,b) => a[0].localeCompare(b[0]));
   const num = MNUM[code];
@@ -3715,14 +3887,15 @@ function monthlyBlock(code) {
   const lr = num && num.m && num.m.length ? num.m[num.m.length - 1] : null;
   const target = last && last[5] || '';
   const current = lr && (!target || lr[0] === target);
+  const verified = !!(num && num.verified && current);
   const stale = lr ? (MN_B - MN_KEY(lr[0]) >= 3) : false;
   let head = '<div class="finhead">월매출 <span class="dim">(月次)</span>';
   if (target) head += '<span class="now">대상 ' + esc(target.replace('-', '.')) + '</span>';
   if (stale) head += '<span class="mnstale">⚠ 수치 이력이 오래됨</span>';
   head += '</div>';
 
-  let stat = '';
-  if (current) {
+  let stat = mnLatestSnapshot(num, target);
+  if (!stat && verified) {
     const yoy = lr[2] == null ? null : lr[2] - 100;
     const ytxt = yoy == null ? '—' :
       '<span class="' + (yoy >= 0 ? 'up' : 'dn') + '">' +
@@ -3730,20 +3903,26 @@ function monthlyBlock(code) {
     stat = '<div class="mstat"><div><div class="v">' +
       (lr[1] != null ? mnFmtJPY(lr[1]) : ytxt) + '</div>' +
       '<div class="k">' + esc(lr[0].replace('-', '.')) +
-      (lr[1] != null ? ' 매출' : ' YoY') + '</div></div>' +
-      (lr[1] != null ? '<div class="r"><b>' + ytxt +
+      (lr[1] != null ? ' 실제 월매출' : ' 월매출 YoY') + '</div></div>' +
+      (lr[1] != null && yoy != null ? '<div class="r"><b>' + ytxt +
        '</b><div class="k">YoY</div></div>' : '') + '</div>';
-  } else {
-    const have = lr ? ' (현재 숫자는 ' + esc(lr[0].replace('-', '.')) + '까지)' : '';
-    stat = '<p class="finnote">최신 대상월 ' + esc(target || '—') +
-           '의 숫자는 아직 파싱하지 못했습니다.' + have + '</p>';
+  } else if (!stat && !verified) {
+    const have = lr ? ' (자동 추출 이력은 ' + esc(lr[0].replace('-', '.')) + '까지)' : '';
+    const why = current && num && !num.verified
+      ? '최신월 수치는 잡혔지만 정합성 검증 중입니다.'
+      : '최신 대상월 숫자를 아직 검증하지 못했습니다.';
+    stat = '<p class="finnote">' + why + have + '</p>';
   }
 
-  const chart = num && num.m && num.m.length
+  // 검증 실패한 자동 PDF 수치를 차트로 그리면 '검증중'이라고 해놓고 다시
+  // 틀린 숫자를 보여주는 셈이다. 검증된 series 만 그린다.
+  const chart = num && num.verified && num.m && num.m.length
     ? '<div class="mnmodalchart">' + mnChart(num.m) + '</div>' : '';
   const src = last && last[8]
-    ? '<div class="finlegend"><span class="src">발표일 ' +
-      esc(last[0] || '미확인') + ' · 대상 ' + esc(last[5] || '—') +
+    ? '<div class="finlegend"><span class="src">' +
+      (last[11] === 'official' ? '공식 발표일 ' + esc(last[0]) : '공식 발표일 미확인') +
+      ' · 대상 ' + esc(last[5] || '—') +
+      (num && num.src ? ' · 수치 ' + esc(num.src) : '') +
       '</span><a class="mpdf" href="' + esc(last[8]) +
       '" target="_blank" rel="noopener">' + esc(last[7] || '원문') +
       ' ↗</a></div>' : '';
@@ -3766,7 +3945,8 @@ function openMonthly(code) {
     ' (' + esc(code) + ')';
   document.getElementById('mdSub').textContent = r[4] && r[4] !== r[3] ? r[4] : '';
   document.getElementById('mdList').innerHTML =
-    '<dt>최근 월차 발표</dt><dd>' + esc(r[0] || '미확인') + '</dd>' +
+    '<dt>최근 월차 발표</dt><dd>' +
+      (r[11] === 'official' ? esc(r[0]) : '미확인') + '</dd>' +
     '<dt>대상월</dt><dd>' + esc(r[5] || '—') + '</dd>' +
     (r[9] ? '<dt>시가총액</dt><dd>' + capKo(r[9]) + '</dd>' : '') +
     (r[10] ? '<dt>업종</dt><dd>' + esc(r[10]) + '</dd>' : '') +

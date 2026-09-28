@@ -46,7 +46,7 @@ VER = 1
 # 그대로 두었다. 회사 IR 페이지는 **늘 거기 있다.** 다시 받는 값이 싸므로,
 # 규칙이 아직 어린 지금은 **틀린 값을 안고 가느니 다시 받는 편**이 낫다
 # (오검출 하나가 놓침 하나보다 나쁘다). 규칙이 굳으면 그때 바꾼다.
-RULE_VER = 3
+RULE_VER = 4
 
 UA = {"User-Agent": ("Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
                      "AppleWebKit/537.36 (KHTML, like Gecko) "

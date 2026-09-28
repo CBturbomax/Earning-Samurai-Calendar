@@ -267,6 +267,31 @@ def _same_kind(amt, yoy):
     return _KIND_DROP.sub("", _norm(lab))
 
 
+def _title_target_month(title: str, aday: date):
+    """공시 제목에 적힌 **이번 대상월**.
+
+    '2027年3月期 8月度'의 2027은 회계연도라 대상월의 해가 아니다. 그래서
+    '8月度' 자체를 먼저 잡고, 해는 발표일 기준으로 붙인다. 반대로
+    '2026年8月度'처럼 연월이 바로 붙은 경우만 그 해를 그대로 쓴다.
+    """
+    t = _norm(title or "")
+    ms = list(re.finditer(r"(?:(20\d{2})年)?(\d{1,2})月度", t))
+    if not ms:
+        ms = list(re.finditer(r"(\d{1,2})月(?:分|月次)", t))
+        if not ms:
+            return ""
+        mo = int(ms[-1].group(1))
+        yr = aday.year if mo <= aday.month else aday.year - 1
+        return f"{yr:04d}-{mo:02d}"
+    m = ms[-1]
+    mo = int(m.group(2))
+    if not 1 <= mo <= 12:
+        return ""
+    yr = int(m.group(1)) if m.group(1) else (
+        aday.year if mo <= aday.month else aday.year - 1)
+    return f"{yr:04d}-{mo:02d}"
+
+
 def read(data: bytes, ann: str, max_pages: int = 12, title: str = ""):
     """PDF -> {'rows': [...], 'basis': ...} 또는 None.
 
@@ -441,6 +466,13 @@ def read(data: bytes, ann: str, max_pages: int = 12, title: str = ""):
                 rec["yoy"] = yoy[1][k]
                 rec.setdefault("metric", yoy[0][:24])
     out = [r for _p, r in sorted(got.items()) if len(r) > 1]
+
+    # 제목이 '8月度'라고 명시하면 **9월 이후는 이 공시의 수치일 수 없다.**
+    # PDF 열 정렬 오독으로 미래 달이 생겨도 여기서 끊는다.
+    target = _title_target_month(title, aday)
+    if target:
+        out = [r for r in out if r.get("period", "") <= target]
+
     if not out:
         return None
     return {"rows": out, "amount_label": amt_lab, "yoy_label": yoy_lab}
