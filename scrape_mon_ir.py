@@ -495,6 +495,9 @@ def main():
             miss += 1
             continue
         miss = 0
+        updated = page_updated_day(page)
+        if updated:
+            sites.setdefault(code, {})["updated"] = updated
         got = monir.read(page, today)
         fresh += 1
         # **PDF 목록 꼴도 같이 본다.** 표를 안 싣고 달마다 PDF 한 장을 거는
@@ -528,7 +531,6 @@ def main():
             continue
         codes[code] = {"name": name, "page": url, "months": months,
                        "ts": now.isoformat(timespec="seconds")}
-        updated = page_updated_day(page)
         if updated:
             codes[code]["updated"] = updated
         elif cur.get("updated"):
