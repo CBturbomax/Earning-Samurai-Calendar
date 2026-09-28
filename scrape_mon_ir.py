@@ -30,9 +30,12 @@ from pathlib import Path
 
 import monir
 import montable
+import scrape_caps
 
 HERE = Path(__file__).resolve().parent
 OUT = HERE / "data" / "monthly_ir_jp.json"
+UNIVERSE = HERE / "data" / "monthly_universe_jp.json"
+COVERAGE = HERE / "data" / "monthly_coverage_jp.json"
 
 VER = 1
 # 읽는 규칙의 판. 올리면 **모아 둔 것을 통째로 비우고 다시 받는다.**
@@ -70,6 +73,10 @@ PDF_PER_RUN = int(os.environ.get("IR_PDF_PER_RUN", "20"))
 # 신선하다고 건너뛰면 그 회사의 PDF 를 영영 안 연다 — 실제로 첫 실행에서
 # 그랬다. 옛 PDF 는 안 바뀌므로 하루에 한 번이면 넉넉하다.
 PDF_FRESH_HOURS = float(os.environ.get("IR_PDF_FRESH_HOURS", "24"))
+# 공식 홈페이지를 모르는 seed 종목은 Yahoo assetProfile 에서 조금씩만 채운다.
+# 월차 잡이 10분마다 도니 한 바퀴에 12개면 하루 안에 300여 종목을 한 번 돈다.
+HOME_PER_RUN = int(os.environ.get("IR_HOME_PER_RUN", "12"))
+PROFILE_MISS_DAYS = float(os.environ.get("IR_PROFILE_MISS_DAYS", "14"))
 
 
 def get_bytes(url, timeout=25):
@@ -109,6 +116,8 @@ def load():
     got.setdefault("codes", {})
     got.setdefault("done", [])
     got.setdefault("skip", {})
+    got.setdefault("homes", {})
+    got.setdefault("profile_miss", {})
     # **'못 찾았다'고 적어 둔 것도 규칙 판이 바뀌면 비운다.** 안 그러면 넓힌
     # 규칙이 옛 miss 에 영영 안 닿는다 — 월매출 목록에서 겪은 것과 같은 병이다
     # ('훑은 날'과 '모은 줄'은 다른 것이다).
@@ -141,6 +150,203 @@ def save(rec):
                    encoding="utf-8")
     print(f"  저장 {len(rec['codes'])}사 · 표 {months}달 · PDF {pdf_months}달"
           f" -> {OUT.name}")
+    save_coverage(rec)
+
+
+def universe_codes():
+    """월차 seed. 없으면 기존 IR_SITES 만으로도 계속 돈다."""
+    try:
+        d = json.loads(UNIVERSE.read_text(encoding="utf-8"))
+        return [str(x).strip() for x in d.get("codes") or [] if str(x).strip()]
+    except (ValueError, OSError):
+        return []
+
+
+def known_names():
+    """저장소 안에서 이미 아는 일본 회사명을 모은다. 못 찾으면 코드 자체를 쓴다."""
+    out = {code: row[0] for code, row in monir.IR_SITES.items()}
+    for fn in ("earnings.json", "earnings_jp_past.json", "earnings_jp_sched.json",
+               "monthly_jp.json"):
+        p = HERE / "data" / fn
+        if not p.exists():
+            continue
+        try:
+            d = json.loads(p.read_text(encoding="utf-8"))
+        except (ValueError, OSError):
+            continue
+        for r in d.get("rows") or []:
+            code = str(r.get("code") or "").strip()
+            name = str(r.get("name") or "").strip()
+            if code and name:
+                out.setdefault(code, name)
+    return out
+
+
+def profile_home(code, rec, today):
+    """Yahoo assetProfile 에서 공식 홈페이지를 한 번 찾아 cache 한다."""
+    homes = rec.setdefault("homes", {})
+    if homes.get(code):
+        return homes[code]
+    miss = rec.setdefault("profile_miss", {}).get(code)
+    if miss:
+        try:
+            if (today - date.fromisoformat(miss)).days < PROFILE_MISS_DAYS:
+                return ""
+        except ValueError:
+            pass
+    try:
+        p = scrape_caps.asset_profile(f"{code}.T")
+        home = str(p.get("website") or "").strip()
+    except Exception as e:
+        print(f"  ! {code} 홈페이지 profile 실패: {type(e).__name__}")
+        home = ""
+    if home.startswith(("http://", "https://")):
+        homes[code] = home
+        rec["profile_miss"].pop(code, None)
+        return home
+    rec["profile_miss"][code] = today.isoformat()
+    return ""
+
+
+def iter_targets(rec, today):
+    """고정 IR_SITES + 300여 seed 를 하나의 (code,name,home,fixed) 목록으로."""
+    names = known_names()
+    seed = universe_codes()
+    order = []
+    seen = set()
+    for code in list(monir.IR_SITES) + seed:
+        if code in seen:
+            continue
+        seen.add(code)
+        order.append(code)
+
+    # 공식 홈페이지를 아직 모르는 종목은 한 실행에 HOME_PER_RUN 개만 새로 찾는다.
+    left = HOME_PER_RUN
+    out = []
+    for code in order:
+        if code in monir.IR_SITES:
+            name, home, fixed = monir.IR_SITES[code]
+        else:
+            name, fixed = names.get(code, code), ""
+            home = rec.setdefault("homes", {}).get(code, "")
+            if not home and left > 0:
+                home = profile_home(code, rec, today)
+                left -= 1
+        if home:
+            out.append((code, name, home, fixed))
+    return out
+
+
+def _load_codes_file(name):
+    p = HERE / "data" / name
+    if not p.exists():
+        return set()
+    try:
+        d = json.loads(p.read_text(encoding="utf-8"))
+    except (ValueError, OSError):
+        return set()
+    if name == "monthly_jp.json":
+        return {str(r.get("code") or "") for r in d.get("rows") or [] if r.get("code")}
+    return set((d.get("codes") or {}).keys())
+
+
+def save_coverage(rec):
+    """왜 어떤 회사가 안 보이는지 한 파일에서 바로 알 수 있게 한다."""
+    seed = universe_codes()
+    td = _load_codes_file("monthly_jp.json")
+    web = _load_codes_file("monthly_web_jp.json")
+    ir = set((rec.get("codes") or {}).keys())
+    sites = rec.get("sites") or {}
+    homes = rec.get("homes") or {}
+    rows = {}
+    for code in seed:
+        cr = (rec.get("codes") or {}).get(code) or {}
+        ms = dict(cr.get("months") or {})
+        ms.update(cr.get("pdf") or {})
+        site = sites.get(code) or {}
+        if code in ir and ms:
+            status = "ok"
+        elif site.get("page"):
+            status = "parser_failed"
+        elif site.get("miss"):
+            status = "no_monthly_found"
+        elif code in td or code in web:
+            status = "covered_elsewhere"
+        elif homes.get(code) or code in monir.IR_SITES:
+            status = "pending_discovery"
+        else:
+            status = "home_pending"
+        rows[code] = {
+            "status": status,
+            "home": homes.get(code) or (monir.IR_SITES.get(code) or ("", "", ""))[1],
+            "source_url": site.get("page") or cr.get("page") or "",
+            "latest_month": max(ms) if ms else "",
+            "months": len(ms),
+            "tdnet": code in td,
+            "web": code in web,
+            "ir": code in ir,
+        }
+    payload = {
+        "v": 1,
+        "ts": datetime.now(timezone.utc).isoformat(timespec="seconds"),
+        "seed": len(seed),
+        "homes": sum(bool(v.get("home")) for v in rows.values()),
+        "official_ir_data": sum(v["ir"] and bool(v["latest_month"]) for v in rows.values()),
+        "covered_any": sum(v["tdnet"] or v["web"] or v["ir"] for v in rows.values()),
+        "status": {k: sum(v["status"] == k for v in rows.values())
+                   for k in sorted({v["status"] for v in rows.values()})},
+        "codes": rows,
+    }
+    COVERAGE.write_text(json.dumps(payload, ensure_ascii=False, indent=1),
+                        encoding="utf-8")
+
+
+def read_pdfs(page, url, pdf, rec, today, budget):
+    """월차 페이지에 걸린 PDF 를 기존 montable 규칙으로 읽는다."""
+    done, skip = set(rec.get("done") or []), rec.setdefault("skip", {})
+    cur = today.strftime("%Y-%m")
+    new = n = 0
+    looked = False
+    for u, lab, when in monir.pdf_links(page, url):
+        if budget <= 0 or n >= PDF_PER_COMPANY:
+            break
+        if u in done or u in skip:
+            continue
+        looked = True
+        data = get_bytes(u)
+        time.sleep(PAUSE)
+        budget -= 1
+        n += 1
+        if not data:
+            continue
+        rec.setdefault("done", []).append(u)
+        try:
+            got = montable.read(data, when, title=lab)
+        except Exception as e:
+            skip[u] = type(e).__name__
+            continue
+        rows = (got or {}).get("rows") or []
+        if not rows:
+            skip[u] = "표없음"
+            continue
+        for r in rows:
+            per = r.get("period") or ""
+            if not per or per >= cur:
+                continue
+            row = {"day": (pdf.get(per) or {}).get("day") or today.isoformat(),
+                   "doc": u}
+            if r.get("rev") is not None:
+                row["rev"] = r["rev"]
+            if r.get("yoy") is not None:
+                row["yoy"] = r["yoy"]
+            if r.get("metric"):
+                row["metric"] = r["metric"]
+            if not ("rev" in row or "yoy" in row):
+                continue
+            if per not in pdf:
+                new += 1
+            pdf[per] = row
+    return pdf, new, budget, looked
 
 
 def discover(top):
@@ -184,7 +390,7 @@ def main():
     fresh = new_months = miss = 0
     pdf_left = PDF_PER_RUN
 
-    for code, (name, top, fixed) in monir.IR_SITES.items():
+    for code, name, top, fixed in iter_targets(rec, today):
         if time.time() - t0 > BUDGET:
             print("  시간이 다 됐다 — 여기까지 저장하고 다음 실행에 잇는다")
             break
@@ -273,8 +479,14 @@ if __name__ == "__main__":
     if "--probe" in sys.argv:
         # 한 회사만 떠본다: python scrape_mon_ir.py --probe 9843
         code = sys.argv[sys.argv.index("--probe") + 1]
-        name, top, fixed = monir.IR_SITES[code]
-        url = fixed or discover(top)[0]
+        if code in monir.IR_SITES:
+            name, top, fixed = monir.IR_SITES[code]
+        else:
+            rec = load()
+            name = known_names().get(code, code)
+            top = rec.setdefault("homes", {}).get(code) or profile_home(code, rec, date.today())
+            fixed = ""
+        url = fixed or (discover(top)[0] if top else "")
         print(name, url)
         page = get(url) if url else ""
         print(f"  {len(page)//1024}KB · 표 {page.count('<table')}")
