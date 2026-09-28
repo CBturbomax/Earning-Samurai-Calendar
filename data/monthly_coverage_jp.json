@@ -1,0 +1,3627 @@
+{
+ "v": 1,
+ "ts": "2026-09-28T04:06:49+00:00",
+ "seed": 361,
+ "homes": 53,
+ "official_ir_data": 9,
+ "covered_any": 236,
+ "status": {
+  "covered_elsewhere": 197,
+  "home_pending": 111,
+  "no_monthly_found": 15,
+  "ok": 9,
+  "parser_failed": 29
+ },
+ "codes": {
+  "8267": {
+   "status": "parser_failed",
+   "home": "https://www.aeon.info/",
+   "source_url": "https://www.aeon.info/ir/library/monthly/",
+   "latest_month": "",
+   "months": 0,
+   "tdnet": true,
+   "web": false,
+   "ir": false
+  },
+  "3086": {
+   "status": "parser_failed",
+   "home": "https://www.j-front-retailing.com/",
+   "source_url": "https://www.j-front-retailing.com/ir/finance/monthly.html",
+   "latest_month": "",
+   "months": 0,
+   "tdnet": true,
+   "web": false,
+   "ir": false
+  },
+  "9843": {
+   "status": "ok",
+   "home": "https://www.nitorihd.co.jp/",
+   "source_url": "https://www.nitorihd.co.jp/ir/performance/sales.html",
+   "latest_month": "2026-08",
+   "months": 5,
+   "tdnet": false,
+   "web": false,
+   "ir": true
+  },
+  "9983": {
+   "status": "ok",
+   "home": "https://www.fastretailing.com/jp/",
+   "source_url": "https://www.fastretailing.com/jp/ir/monthly/",
+   "latest_month": "2022-08",
+   "months": 48,
+   "tdnet": false,
+   "web": true,
+   "ir": true
+  },
+  "7550": {
+   "status": "parser_failed",
+   "home": "https://www.zensho.co.jp/jp/",
+   "source_url": "https://www.zensho.co.jp/jp/ir/finance/monthly/",
+   "latest_month": "",
+   "months": 0,
+   "tdnet": false,
+   "web": true,
+   "ir": false
+  },
+  "3382": {
+   "status": "ok",
+   "home": "https://www.7andi.com/",
+   "source_url": "https://www.7andi.com/ir/financial/monthly_highlight.html",
+   "latest_month": "2026-08",
+   "months": 6,
+   "tdnet": false,
+   "web": true,
+   "ir": true
+  },
+  "9831": {
+   "status": "parser_failed",
+   "home": "https://www.yamada-holdings.jp/",
+   "source_url": "https://www.yamada-holdings.jp/ir/monthly.html",
+   "latest_month": "",
+   "months": 0,
+   "tdnet": false,
+   "web": false,
+   "ir": false
+  },
+  "3563": {
+   "status": "ok",
+   "home": "https://food-and-life.co.jp/",
+   "source_url": "https://food-and-life.co.jp/investor/monthly-information",
+   "latest_month": "2026-08",
+   "months": 23,
+   "tdnet": false,
+   "web": true,
+   "ir": true
+  },
+  "7564": {
+   "status": "ok",
+   "home": "https://www.workman.co.jp/",
+   "source_url": "https://www.workman.co.jp/ir%e6%83%85%e5%a0%b1/%e6%9c%88%e6%ac%a1%e5%a0%b1%e5%91%8a",
+   "latest_month": "2026-08",
+   "months": 64,
+   "tdnet": true,
+   "web": false,
+   "ir": true
+  },
+  "2695": {
+   "status": "parser_failed",
+   "home": "https://www.kurasushi.co.jp/",
+   "source_url": "https://www.kurasushi.co.jp/company/ir/library/monthly_reports.html",
+   "latest_month": "",
+   "months": 0,
+   "tdnet": false,
+   "web": true,
+   "ir": false
+  },
+  "7606": {
+   "status": "ok",
+   "home": "https://www.united-arrows.co.jp/",
+   "source_url": "https://www.united-arrows.co.jp/ir/monthly/",
+   "latest_month": "2026-08",
+   "months": 5,
+   "tdnet": true,
+   "web": true,
+   "ir": true
+  },
+  "3097": {
+   "status": "parser_failed",
+   "home": "https://www.monogatari.co.jp/",
+   "source_url": "https://www.monogatari.co.jp/ir/date/",
+   "latest_month": "",
+   "months": 0,
+   "tdnet": true,
+   "web": false,
+   "ir": false
+  },
+  "3197": {
+   "status": "parser_failed",
+   "home": "https://corp.skylark.co.jp/",
+   "source_url": "https://corp.skylark.co.jp/ir/strategy/growth/existing_store/",
+   "latest_month": "",
+   "months": 0,
+   "tdnet": false,
+   "web": false,
+   "ir": false
+  },
+  "4666": {
+   "status": "parser_failed",
+   "home": "https://www.park24.co.jp/",
+   "source_url": "https://www.park24.co.jp/ir/financial/monthly.html",
+   "latest_month": "",
+   "months": 0,
+   "tdnet": true,
+   "web": false,
+   "ir": false
+  },
+  "8016": {
+   "status": "ok",
+   "home": "https://www.onward-hd.co.jp/",
+   "source_url": "https://www.onward-hd.co.jp/ir/finance/monthly.html",
+   "latest_month": "2026-08",
+   "months": 36,
+   "tdnet": true,
+   "web": false,
+   "ir": true
+  },
+  "7476": {
+   "status": "parser_failed",
+   "home": "https://www.as-1.co.jp/",
+   "source_url": "https://www.as-1.co.jp/",
+   "latest_month": "",
+   "months": 0,
+   "tdnet": true,
+   "web": false,
+   "ir": false
+  },
+  "2702": {
+   "status": "no_monthly_found",
+   "home": "https://www.mcd-holdings.co.jp/",
+   "source_url": "",
+   "latest_month": "",
+   "months": 0,
+   "tdnet": true,
+   "web": true,
+   "ir": false
+  },
+  "3092": {
+   "status": "no_monthly_found",
+   "home": "https://corp.zozo.com/",
+   "source_url": "",
+   "latest_month": "",
+   "months": 0,
+   "tdnet": false,
+   "web": false,
+   "ir": false
+  },
+  "8237": {
+   "status": "no_monthly_found",
+   "home": "https://www.matsuya.com/",
+   "source_url": "",
+   "latest_month": "",
+   "months": 0,
+   "tdnet": true,
+   "web": false,
+   "ir": false
+  },
+  "3399": {
+   "status": "no_monthly_found",
+   "home": "https://www.yamaokaya.com/",
+   "source_url": "",
+   "latest_month": "",
+   "months": 0,
+   "tdnet": true,
+   "web": false,
+   "ir": false
+  },
+  "3608": {
+   "status": "parser_failed",
+   "home": "https://www.tsi-holdings.com/",
+   "source_url": "https://www.tsi-holdings.com/tsuki.html",
+   "latest_month": "",
+   "months": 0,
+   "tdnet": true,
+   "web": false,
+   "ir": false
+  },
+  "2698": {
+   "status": "parser_failed",
+   "home": "https://www.cando-web.co.jp/",
+   "source_url": "https://www.cando-web.co.jp/ir/monthly_report/",
+   "latest_month": "",
+   "months": 0,
+   "tdnet": true,
+   "web": false,
+   "ir": false
+  },
+  "9823": {
+   "status": "no_monthly_found",
+   "home": "https://www.mammymart.co.jp/",
+   "source_url": "",
+   "latest_month": "",
+   "months": 0,
+   "tdnet": true,
+   "web": false,
+   "ir": false
+  },
+  "2780": {
+   "status": "no_monthly_found",
+   "home": "https://www.komehyo.co.jp/",
+   "source_url": "",
+   "latest_month": "",
+   "months": 0,
+   "tdnet": true,
+   "web": false,
+   "ir": false
+  },
+  "9278": {
+   "status": "parser_failed",
+   "home": "https://www.bookoffgroup.co.jp/",
+   "source_url": "https://www.bookoffgroup.co.jp/sustainable-260608/",
+   "latest_month": "",
+   "months": 0,
+   "tdnet": true,
+   "web": false,
+   "ir": false
+  },
+  "8142": {
+   "status": "parser_failed",
+   "home": "https://www.to-ho.co.jp/",
+   "source_url": "https://www.to-ho.co.jp/toho_news/news002058.html",
+   "latest_month": "",
+   "months": 0,
+   "tdnet": true,
+   "web": false,
+   "ir": false
+  },
+  "3093": {
+   "status": "parser_failed",
+   "home": "https://www.treasure-f.com/",
+   "source_url": "https://www.treasurefactory.co.jp/ir/monthly.html",
+   "latest_month": "",
+   "months": 0,
+   "tdnet": true,
+   "web": false,
+   "ir": false
+  },
+  "9861": {
+   "status": "parser_failed",
+   "home": "https://www.yoshinoya-holdings.com/",
+   "source_url": "https://www.yoshinoya-holdings.com/ir/report/yoshinoya/",
+   "latest_month": "",
+   "months": 0,
+   "tdnet": false,
+   "web": true,
+   "ir": false
+  },
+  "3387": {
+   "status": "no_monthly_found",
+   "home": "https://www.createrestaurants.com/",
+   "source_url": "",
+   "latest_month": "",
+   "months": 0,
+   "tdnet": false,
+   "web": false,
+   "ir": false
+  },
+  "7581": {
+   "status": "no_monthly_found",
+   "home": "https://www.saizeriya.co.jp/",
+   "source_url": "",
+   "latest_month": "",
+   "months": 0,
+   "tdnet": false,
+   "web": true,
+   "ir": false
+  },
+  "3050": {
+   "status": "parser_failed",
+   "home": "https://www.dcm-hldgs.co.jp/",
+   "source_url": "https://www.dcm-hldgs.co.jp/grp/ir/performance/monthly-report.html",
+   "latest_month": "",
+   "months": 0,
+   "tdnet": false,
+   "web": true,
+   "ir": false
+  },
+  "8273": {
+   "status": "parser_failed",
+   "home": "https://www.izumi.co.jp/",
+   "source_url": "https://www.izumi.co.jp/ir/finance/monthly/",
+   "latest_month": "",
+   "months": 0,
+   "tdnet": false,
+   "web": false,
+   "ir": false
+  },
+  "9948": {
+   "status": "ok",
+   "home": "https://www.arcs-g.co.jp/",
+   "source_url": "https://www.arcs-g.co.jp/ir/monthly-performance/index.html",
+   "latest_month": "2026-08",
+   "months": 18,
+   "tdnet": false,
+   "web": true,
+   "ir": true
+  },
+  "7545": {
+   "status": "parser_failed",
+   "home": "https://www.24028.jp/",
+   "source_url": "https://www.24028-net.jp/category/MONTHLY/?utm_source=monthly&utm_medium=banner&utm_campaign=ownedsite&utm_term=ver1",
+   "latest_month": "",
+   "months": 0,
+   "tdnet": true,
+   "web": true,
+   "ir": false
+  },
+  "3549": {
+   "status": "parser_failed",
+   "home": "https://www.kusuri-aoki.co.jp/",
+   "source_url": "https://kusuri-aoki-hd.co.jp/ir/finance/monthry/",
+   "latest_month": "",
+   "months": 0,
+   "tdnet": true,
+   "web": false,
+   "ir": false
+  },
+  "9832": {
+   "status": "parser_failed",
+   "home": "https://www.autobacs.co.jp/",
+   "source_url": "https://www.autobacs.co.jp/ja/ir/news/auto_20260907532362.html",
+   "latest_month": "",
+   "months": 0,
+   "tdnet": true,
+   "web": false,
+   "ir": false
+  },
+  "2664": {
+   "status": "no_monthly_found",
+   "home": "https://www.kawachi.co.jp/",
+   "source_url": "",
+   "latest_month": "",
+   "months": 0,
+   "tdnet": false,
+   "web": false,
+   "ir": false
+  },
+  "3222": {
+   "status": "parser_failed",
+   "home": "https://www.usmh.co.jp/",
+   "source_url": "https://www.usmh.co.jp/ir/monthly_reports",
+   "latest_month": "",
+   "months": 0,
+   "tdnet": false,
+   "web": false,
+   "ir": false
+  },
+  "7532": {
+   "status": "ok",
+   "home": "https://ppih.co.jp/",
+   "source_url": "https://ppih.co.jp/ir/highlight/monthly/",
+   "latest_month": "2026-08",
+   "months": 1,
+   "tdnet": true,
+   "web": true,
+   "ir": true
+  },
+  "8279": {
+   "status": "parser_failed",
+   "home": "https://www.yaoko-net.com/",
+   "source_url": "https://www.bluezonesholdings.co.jp/ir/finance/monthly.html",
+   "latest_month": "",
+   "months": 0,
+   "tdnet": false,
+   "web": true,
+   "ir": false
+  },
+  "7616": {
+   "status": "no_monthly_found",
+   "home": "https://www.colowide.co.jp/",
+   "source_url": "",
+   "latest_month": "",
+   "months": 0,
+   "tdnet": false,
+   "web": false,
+   "ir": false
+  },
+  "1379": {
+   "status": "parser_failed",
+   "home": "https://www.hokto-kinoko.co.jp",
+   "source_url": "https://www.hokto-kinoko.co.jp/oubo/oubo_monthlypresent09.php",
+   "latest_month": "",
+   "months": 0,
+   "tdnet": false,
+   "web": false,
+   "ir": false
+  },
+  "138A": {
+   "status": "no_monthly_found",
+   "home": "https://www.hikari-food-service.jp",
+   "source_url": "",
+   "latest_month": "",
+   "months": 0,
+   "tdnet": true,
+   "web": false,
+   "ir": false
+  },
+  "1417": {
+   "status": "parser_failed",
+   "home": "https://www.mirait-one.com",
+   "source_url": "https://www.mirait-one.com/info/001973.html",
+   "latest_month": "",
+   "months": 0,
+   "tdnet": false,
+   "web": false,
+   "ir": false
+  },
+  "1419": {
+   "status": "no_monthly_found",
+   "home": "https://www.tamahome.jp",
+   "source_url": "",
+   "latest_month": "",
+   "months": 0,
+   "tdnet": true,
+   "web": false,
+   "ir": false
+  },
+  "141A": {
+   "status": "parser_failed",
+   "home": "https://www.trial-holdings.inc",
+   "source_url": "https://www.trial-holdings.inc/ir/financial/monthly-sales/",
+   "latest_month": "",
+   "months": 0,
+   "tdnet": true,
+   "web": true,
+   "ir": false
+  },
+  "1878": {
+   "status": "no_monthly_found",
+   "home": "https://kentaku.co.jp",
+   "source_url": "",
+   "latest_month": "",
+   "months": 0,
+   "tdnet": false,
+   "web": false,
+   "ir": false
+  },
+  "1911": {
+   "status": "parser_failed",
+   "home": "https://sfc.jp",
+   "source_url": "https://sfc.jp/information/ir/zaimu/",
+   "latest_month": "",
+   "months": 0,
+   "tdnet": false,
+   "web": false,
+   "ir": false
+  },
+  "1925": {
+   "status": "no_monthly_found",
+   "home": "https://www.daiwahouse.co.jp",
+   "source_url": "",
+   "latest_month": "",
+   "months": 0,
+   "tdnet": false,
+   "web": false,
+   "ir": false
+  },
+  "1928": {
+   "status": "no_monthly_found",
+   "home": "https://www.sekisuihouse.co.jp",
+   "source_url": "",
+   "latest_month": "",
+   "months": 0,
+   "tdnet": false,
+   "web": false,
+   "ir": false
+  },
+  "205A": {
+   "status": "parser_failed",
+   "home": "https://logos-holdings.jp",
+   "source_url": "https://logos-holdings.jp/ir/order/",
+   "latest_month": "",
+   "months": 0,
+   "tdnet": true,
+   "web": false,
+   "ir": false
+  },
+  "2294": {
+   "status": "parser_failed",
+   "home": "https://www.kakiyasuhonten.co.jp",
+   "source_url": "https://www.kakiyasuhonten.co.jp/news/detail.php?id=2021",
+   "latest_month": "",
+   "months": 0,
+   "tdnet": true,
+   "web": false,
+   "ir": false
+  },
+  "2305": {
+   "status": "parser_failed",
+   "home": "https://www.studio-alice.co.jp",
+   "source_url": "https://ir.studio-alice.co.jp/ja/Finance/MonthlyReport.html",
+   "latest_month": "",
+   "months": 0,
+   "tdnet": true,
+   "web": false,
+   "ir": false
+  },
+  "2311": {
+   "status": "covered_elsewhere",
+   "home": "",
+   "source_url": "",
+   "latest_month": "",
+   "months": 0,
+   "tdnet": true,
+   "web": false,
+   "ir": false
+  },
+  "2317": {
+   "status": "home_pending",
+   "home": "",
+   "source_url": "",
+   "latest_month": "",
+   "months": 0,
+   "tdnet": false,
+   "web": false,
+   "ir": false
+  },
+  "245A": {
+   "status": "covered_elsewhere",
+   "home": "",
+   "source_url": "",
+   "latest_month": "",
+   "months": 0,
+   "tdnet": true,
+   "web": false,
+   "ir": false
+  },
+  "2461": {
+   "status": "covered_elsewhere",
+   "home": "",
+   "source_url": "",
+   "latest_month": "",
+   "months": 0,
+   "tdnet": true,
+   "web": false,
+   "ir": false
+  },
+  "2502": {
+   "status": "home_pending",
+   "home": "",
+   "source_url": "",
+   "latest_month": "",
+   "months": 0,
+   "tdnet": false,
+   "web": false,
+   "ir": false
+  },
+  "2590": {
+   "status": "covered_elsewhere",
+   "home": "",
+   "source_url": "",
+   "latest_month": "",
+   "months": 0,
+   "tdnet": true,
+   "web": false,
+   "ir": false
+  },
+  "2593": {
+   "status": "home_pending",
+   "home": "",
+   "source_url": "",
+   "latest_month": "",
+   "months": 0,
+   "tdnet": false,
+   "web": false,
+   "ir": false
+  },
+  "262A": {
+   "status": "covered_elsewhere",
+   "home": "",
+   "source_url": "",
+   "latest_month": "",
+   "months": 0,
+   "tdnet": true,
+   "web": false,
+   "ir": false
+  },
+  "2652": {
+   "status": "home_pending",
+   "home": "",
+   "source_url": "",
+   "latest_month": "",
+   "months": 0,
+   "tdnet": false,
+   "web": false,
+   "ir": false
+  },
+  "2653": {
+   "status": "covered_elsewhere",
+   "home": "",
+   "source_url": "",
+   "latest_month": "",
+   "months": 0,
+   "tdnet": false,
+   "web": true,
+   "ir": false
+  },
+  "2654": {
+   "status": "covered_elsewhere",
+   "home": "",
+   "source_url": "",
+   "latest_month": "",
+   "months": 0,
+   "tdnet": true,
+   "web": false,
+   "ir": false
+  },
+  "2659": {
+   "status": "home_pending",
+   "home": "",
+   "source_url": "",
+   "latest_month": "",
+   "months": 0,
+   "tdnet": false,
+   "web": false,
+   "ir": false
+  },
+  "2668": {
+   "status": "home_pending",
+   "home": "",
+   "source_url": "",
+   "latest_month": "",
+   "months": 0,
+   "tdnet": false,
+   "web": false,
+   "ir": false
+  },
+  "2669": {
+   "status": "covered_elsewhere",
+   "home": "",
+   "source_url": "",
+   "latest_month": "",
+   "months": 0,
+   "tdnet": true,
+   "web": false,
+   "ir": false
+  },
+  "2670": {
+   "status": "covered_elsewhere",
+   "home": "",
+   "source_url": "",
+   "latest_month": "",
+   "months": 0,
+   "tdnet": true,
+   "web": true,
+   "ir": false
+  },
+  "2674": {
+   "status": "covered_elsewhere",
+   "home": "",
+   "source_url": "",
+   "latest_month": "",
+   "months": 0,
+   "tdnet": true,
+   "web": false,
+   "ir": false
+  },
+  "2678": {
+   "status": "covered_elsewhere",
+   "home": "",
+   "source_url": "",
+   "latest_month": "",
+   "months": 0,
+   "tdnet": true,
+   "web": false,
+   "ir": false
+  },
+  "2681": {
+   "status": "home_pending",
+   "home": "",
+   "source_url": "",
+   "latest_month": "",
+   "months": 0,
+   "tdnet": false,
+   "web": false,
+   "ir": false
+  },
+  "2685": {
+   "status": "covered_elsewhere",
+   "home": "",
+   "source_url": "",
+   "latest_month": "",
+   "months": 0,
+   "tdnet": true,
+   "web": true,
+   "ir": false
+  },
+  "2686": {
+   "status": "home_pending",
+   "home": "",
+   "source_url": "",
+   "latest_month": "",
+   "months": 0,
+   "tdnet": false,
+   "web": false,
+   "ir": false
+  },
+  "2705": {
+   "status": "covered_elsewhere",
+   "home": "",
+   "source_url": "",
+   "latest_month": "",
+   "months": 0,
+   "tdnet": true,
+   "web": true,
+   "ir": false
+  },
+  "2722": {
+   "status": "covered_elsewhere",
+   "home": "",
+   "source_url": "",
+   "latest_month": "",
+   "months": 0,
+   "tdnet": true,
+   "web": false,
+   "ir": false
+  },
+  "2726": {
+   "status": "home_pending",
+   "home": "",
+   "source_url": "",
+   "latest_month": "",
+   "months": 0,
+   "tdnet": false,
+   "web": false,
+   "ir": false
+  },
+  "2730": {
+   "status": "home_pending",
+   "home": "",
+   "source_url": "",
+   "latest_month": "",
+   "months": 0,
+   "tdnet": false,
+   "web": false,
+   "ir": false
+  },
+  "2735": {
+   "status": "covered_elsewhere",
+   "home": "",
+   "source_url": "",
+   "latest_month": "",
+   "months": 0,
+   "tdnet": true,
+   "web": false,
+   "ir": false
+  },
+  "2736": {
+   "status": "covered_elsewhere",
+   "home": "",
+   "source_url": "",
+   "latest_month": "",
+   "months": 0,
+   "tdnet": true,
+   "web": false,
+   "ir": false
+  },
+  "2742": {
+   "status": "home_pending",
+   "home": "",
+   "source_url": "",
+   "latest_month": "",
+   "months": 0,
+   "tdnet": false,
+   "web": false,
+   "ir": false
+  },
+  "274A": {
+   "status": "covered_elsewhere",
+   "home": "",
+   "source_url": "",
+   "latest_month": "",
+   "months": 0,
+   "tdnet": true,
+   "web": false,
+   "ir": false
+  },
+  "2750": {
+   "status": "covered_elsewhere",
+   "home": "",
+   "source_url": "",
+   "latest_month": "",
+   "months": 0,
+   "tdnet": true,
+   "web": false,
+   "ir": false
+  },
+  "2752": {
+   "status": "home_pending",
+   "home": "",
+   "source_url": "",
+   "latest_month": "",
+   "months": 0,
+   "tdnet": false,
+   "web": false,
+   "ir": false
+  },
+  "2753": {
+   "status": "home_pending",
+   "home": "",
+   "source_url": "",
+   "latest_month": "",
+   "months": 0,
+   "tdnet": false,
+   "web": false,
+   "ir": false
+  },
+  "2764": {
+   "status": "covered_elsewhere",
+   "home": "",
+   "source_url": "",
+   "latest_month": "",
+   "months": 0,
+   "tdnet": true,
+   "web": false,
+   "ir": false
+  },
+  "2769": {
+   "status": "home_pending",
+   "home": "",
+   "source_url": "",
+   "latest_month": "",
+   "months": 0,
+   "tdnet": false,
+   "web": false,
+   "ir": false
+  },
+  "2778": {
+   "status": "covered_elsewhere",
+   "home": "",
+   "source_url": "",
+   "latest_month": "",
+   "months": 0,
+   "tdnet": true,
+   "web": false,
+   "ir": false
+  },
+  "2782": {
+   "status": "covered_elsewhere",
+   "home": "",
+   "source_url": "",
+   "latest_month": "",
+   "months": 0,
+   "tdnet": true,
+   "web": true,
+   "ir": false
+  },
+  "2789": {
+   "status": "covered_elsewhere",
+   "home": "",
+   "source_url": "",
+   "latest_month": "",
+   "months": 0,
+   "tdnet": true,
+   "web": false,
+   "ir": false
+  },
+  "2790": {
+   "status": "home_pending",
+   "home": "",
+   "source_url": "",
+   "latest_month": "",
+   "months": 0,
+   "tdnet": false,
+   "web": false,
+   "ir": false
+  },
+  "2791": {
+   "status": "home_pending",
+   "home": "",
+   "source_url": "",
+   "latest_month": "",
+   "months": 0,
+   "tdnet": false,
+   "web": false,
+   "ir": false
+  },
+  "2792": {
+   "status": "covered_elsewhere",
+   "home": "",
+   "source_url": "",
+   "latest_month": "",
+   "months": 0,
+   "tdnet": false,
+   "web": true,
+   "ir": false
+  },
+  "2818": {
+   "status": "home_pending",
+   "home": "",
+   "source_url": "",
+   "latest_month": "",
+   "months": 0,
+   "tdnet": false,
+   "web": false,
+   "ir": false
+  },
+  "2910": {
+   "status": "home_pending",
+   "home": "",
+   "source_url": "",
+   "latest_month": "",
+   "months": 0,
+   "tdnet": false,
+   "web": false,
+   "ir": false
+  },
+  "2926": {
+   "status": "covered_elsewhere",
+   "home": "",
+   "source_url": "",
+   "latest_month": "",
+   "months": 0,
+   "tdnet": true,
+   "web": false,
+   "ir": false
+  },
+  "2991": {
+   "status": "covered_elsewhere",
+   "home": "",
+   "source_url": "",
+   "latest_month": "",
+   "months": 0,
+   "tdnet": true,
+   "web": false,
+   "ir": false
+  },
+  "3028": {
+   "status": "home_pending",
+   "home": "",
+   "source_url": "",
+   "latest_month": "",
+   "months": 0,
+   "tdnet": false,
+   "web": false,
+   "ir": false
+  },
+  "3030": {
+   "status": "home_pending",
+   "home": "",
+   "source_url": "",
+   "latest_month": "",
+   "months": 0,
+   "tdnet": false,
+   "web": false,
+   "ir": false
+  },
+  "3032": {
+   "status": "covered_elsewhere",
+   "home": "",
+   "source_url": "",
+   "latest_month": "",
+   "months": 0,
+   "tdnet": true,
+   "web": false,
+   "ir": false
+  },
+  "3034": {
+   "status": "home_pending",
+   "home": "",
+   "source_url": "",
+   "latest_month": "",
+   "months": 0,
+   "tdnet": false,
+   "web": false,
+   "ir": false
+  },
+  "3038": {
+   "status": "covered_elsewhere",
+   "home": "",
+   "source_url": "",
+   "latest_month": "",
+   "months": 0,
+   "tdnet": true,
+   "web": false,
+   "ir": false
+  },
+  "3046": {
+   "status": "covered_elsewhere",
+   "home": "",
+   "source_url": "",
+   "latest_month": "",
+   "months": 0,
+   "tdnet": true,
+   "web": false,
+   "ir": false
+  },
+  "3048": {
+   "status": "home_pending",
+   "home": "",
+   "source_url": "",
+   "latest_month": "",
+   "months": 0,
+   "tdnet": false,
+   "web": false,
+   "ir": false
+  },
+  "3053": {
+   "status": "home_pending",
+   "home": "",
+   "source_url": "",
+   "latest_month": "",
+   "months": 0,
+   "tdnet": false,
+   "web": false,
+   "ir": false
+  },
+  "3058": {
+   "status": "covered_elsewhere",
+   "home": "",
+   "source_url": "",
+   "latest_month": "",
+   "months": 0,
+   "tdnet": true,
+   "web": false,
+   "ir": false
+  },
+  "3064": {
+   "status": "covered_elsewhere",
+   "home": "",
+   "source_url": "",
+   "latest_month": "",
+   "months": 0,
+   "tdnet": true,
+   "web": false,
+   "ir": false
+  },
+  "3066": {
+   "status": "covered_elsewhere",
+   "home": "",
+   "source_url": "",
+   "latest_month": "",
+   "months": 0,
+   "tdnet": true,
+   "web": false,
+   "ir": false
+  },
+  "3068": {
+   "status": "home_pending",
+   "home": "",
+   "source_url": "",
+   "latest_month": "",
+   "months": 0,
+   "tdnet": false,
+   "web": false,
+   "ir": false
+  },
+  "3069": {
+   "status": "home_pending",
+   "home": "",
+   "source_url": "",
+   "latest_month": "",
+   "months": 0,
+   "tdnet": false,
+   "web": false,
+   "ir": false
+  },
+  "3077": {
+   "status": "covered_elsewhere",
+   "home": "",
+   "source_url": "",
+   "latest_month": "",
+   "months": 0,
+   "tdnet": true,
+   "web": false,
+   "ir": false
+  },
+  "3080": {
+   "status": "home_pending",
+   "home": "",
+   "source_url": "",
+   "latest_month": "",
+   "months": 0,
+   "tdnet": false,
+   "web": false,
+   "ir": false
+  },
+  "3082": {
+   "status": "covered_elsewhere",
+   "home": "",
+   "source_url": "",
+   "latest_month": "",
+   "months": 0,
+   "tdnet": true,
+   "web": false,
+   "ir": false
+  },
+  "3083": {
+   "status": "home_pending",
+   "home": "",
+   "source_url": "",
+   "latest_month": "",
+   "months": 0,
+   "tdnet": false,
+   "web": false,
+   "ir": false
+  },
+  "3087": {
+   "status": "home_pending",
+   "home": "",
+   "source_url": "",
+   "latest_month": "",
+   "months": 0,
+   "tdnet": false,
+   "web": false,
+   "ir": false
+  },
+  "3088": {
+   "status": "covered_elsewhere",
+   "home": "",
+   "source_url": "",
+   "latest_month": "",
+   "months": 0,
+   "tdnet": false,
+   "web": true,
+   "ir": false
+  },
+  "3099": {
+   "status": "home_pending",
+   "home": "",
+   "source_url": "",
+   "latest_month": "",
+   "months": 0,
+   "tdnet": false,
+   "web": false,
+   "ir": false
+  },
+  "3135": {
+   "status": "covered_elsewhere",
+   "home": "",
+   "source_url": "",
+   "latest_month": "",
+   "months": 0,
+   "tdnet": true,
+   "web": false,
+   "ir": false
+  },
+  "3148": {
+   "status": "home_pending",
+   "home": "",
+   "source_url": "",
+   "latest_month": "",
+   "months": 0,
+   "tdnet": false,
+   "web": false,
+   "ir": false
+  },
+  "3160": {
+   "status": "covered_elsewhere",
+   "home": "",
+   "source_url": "",
+   "latest_month": "",
+   "months": 0,
+   "tdnet": true,
+   "web": false,
+   "ir": false
+  },
+  "3175": {
+   "status": "covered_elsewhere",
+   "home": "",
+   "source_url": "",
+   "latest_month": "",
+   "months": 0,
+   "tdnet": true,
+   "web": false,
+   "ir": false
+  },
+  "3178": {
+   "status": "covered_elsewhere",
+   "home": "",
+   "source_url": "",
+   "latest_month": "",
+   "months": 0,
+   "tdnet": true,
+   "web": false,
+   "ir": false
+  },
+  "3179": {
+   "status": "covered_elsewhere",
+   "home": "",
+   "source_url": "",
+   "latest_month": "",
+   "months": 0,
+   "tdnet": true,
+   "web": false,
+   "ir": false
+  },
+  "3181": {
+   "status": "covered_elsewhere",
+   "home": "",
+   "source_url": "",
+   "latest_month": "",
+   "months": 0,
+   "tdnet": true,
+   "web": false,
+   "ir": false
+  },
+  "3191": {
+   "status": "home_pending",
+   "home": "",
+   "source_url": "",
+   "latest_month": "",
+   "months": 0,
+   "tdnet": false,
+   "web": false,
+   "ir": false
+  },
+  "3193": {
+   "status": "covered_elsewhere",
+   "home": "",
+   "source_url": "",
+   "latest_month": "",
+   "months": 0,
+   "tdnet": true,
+   "web": false,
+   "ir": false
+  },
+  "3195": {
+   "status": "covered_elsewhere",
+   "home": "",
+   "source_url": "",
+   "latest_month": "",
+   "months": 0,
+   "tdnet": true,
+   "web": false,
+   "ir": false
+  },
+  "3196": {
+   "status": "home_pending",
+   "home": "",
+   "source_url": "",
+   "latest_month": "",
+   "months": 0,
+   "tdnet": false,
+   "web": false,
+   "ir": false
+  },
+  "3199": {
+   "status": "covered_elsewhere",
+   "home": "",
+   "source_url": "",
+   "latest_month": "",
+   "months": 0,
+   "tdnet": true,
+   "web": false,
+   "ir": false
+  },
+  "3221": {
+   "status": "covered_elsewhere",
+   "home": "",
+   "source_url": "",
+   "latest_month": "",
+   "months": 0,
+   "tdnet": true,
+   "web": false,
+   "ir": false
+  },
+  "3224": {
+   "status": "home_pending",
+   "home": "",
+   "source_url": "",
+   "latest_month": "",
+   "months": 0,
+   "tdnet": false,
+   "web": false,
+   "ir": false
+  },
+  "3317": {
+   "status": "covered_elsewhere",
+   "home": "",
+   "source_url": "",
+   "latest_month": "",
+   "months": 0,
+   "tdnet": true,
+   "web": false,
+   "ir": false
+  },
+  "3329": {
+   "status": "covered_elsewhere",
+   "home": "",
+   "source_url": "",
+   "latest_month": "",
+   "months": 0,
+   "tdnet": true,
+   "web": false,
+   "ir": false
+  },
+  "3333": {
+   "status": "covered_elsewhere",
+   "home": "",
+   "source_url": "",
+   "latest_month": "",
+   "months": 0,
+   "tdnet": true,
+   "web": false,
+   "ir": false
+  },
+  "3349": {
+   "status": "covered_elsewhere",
+   "home": "",
+   "source_url": "",
+   "latest_month": "",
+   "months": 0,
+   "tdnet": false,
+   "web": true,
+   "ir": false
+  },
+  "3358": {
+   "status": "covered_elsewhere",
+   "home": "",
+   "source_url": "",
+   "latest_month": "",
+   "months": 0,
+   "tdnet": true,
+   "web": false,
+   "ir": false
+  },
+  "3370": {
+   "status": "home_pending",
+   "home": "",
+   "source_url": "",
+   "latest_month": "",
+   "months": 0,
+   "tdnet": false,
+   "web": false,
+   "ir": false
+  },
+  "3391": {
+   "status": "covered_elsewhere",
+   "home": "",
+   "source_url": "",
+   "latest_month": "",
+   "months": 0,
+   "tdnet": false,
+   "web": true,
+   "ir": false
+  },
+  "3395": {
+   "status": "home_pending",
+   "home": "",
+   "source_url": "",
+   "latest_month": "",
+   "months": 0,
+   "tdnet": false,
+   "web": false,
+   "ir": false
+  },
+  "3397": {
+   "status": "covered_elsewhere",
+   "home": "",
+   "source_url": "",
+   "latest_month": "",
+   "months": 0,
+   "tdnet": false,
+   "web": true,
+   "ir": false
+  },
+  "3415": {
+   "status": "covered_elsewhere",
+   "home": "",
+   "source_url": "",
+   "latest_month": "",
+   "months": 0,
+   "tdnet": true,
+   "web": false,
+   "ir": false
+  },
+  "3542": {
+   "status": "covered_elsewhere",
+   "home": "",
+   "source_url": "",
+   "latest_month": "",
+   "months": 0,
+   "tdnet": true,
+   "web": false,
+   "ir": false
+  },
+  "3543": {
+   "status": "home_pending",
+   "home": "",
+   "source_url": "",
+   "latest_month": "",
+   "months": 0,
+   "tdnet": false,
+   "web": false,
+   "ir": false
+  },
+  "3544": {
+   "status": "home_pending",
+   "home": "",
+   "source_url": "",
+   "latest_month": "",
+   "months": 0,
+   "tdnet": false,
+   "web": false,
+   "ir": false
+  },
+  "3546": {
+   "status": "home_pending",
+   "home": "",
+   "source_url": "",
+   "latest_month": "",
+   "months": 0,
+   "tdnet": false,
+   "web": false,
+   "ir": false
+  },
+  "3547": {
+   "status": "covered_elsewhere",
+   "home": "",
+   "source_url": "",
+   "latest_month": "",
+   "months": 0,
+   "tdnet": true,
+   "web": false,
+   "ir": false
+  },
+  "3548": {
+   "status": "home_pending",
+   "home": "",
+   "source_url": "",
+   "latest_month": "",
+   "months": 0,
+   "tdnet": false,
+   "web": false,
+   "ir": false
+  },
+  "3557": {
+   "status": "covered_elsewhere",
+   "home": "",
+   "source_url": "",
+   "latest_month": "",
+   "months": 0,
+   "tdnet": true,
+   "web": false,
+   "ir": false
+  },
+  "3561": {
+   "status": "home_pending",
+   "home": "",
+   "source_url": "",
+   "latest_month": "",
+   "months": 0,
+   "tdnet": false,
+   "web": false,
+   "ir": false
+  },
+  "3566": {
+   "status": "covered_elsewhere",
+   "home": "",
+   "source_url": "",
+   "latest_month": "",
+   "months": 0,
+   "tdnet": true,
+   "web": false,
+   "ir": false
+  },
+  "3591": {
+   "status": "home_pending",
+   "home": "",
+   "source_url": "",
+   "latest_month": "",
+   "months": 0,
+   "tdnet": false,
+   "web": false,
+   "ir": false
+  },
+  "3612": {
+   "status": "covered_elsewhere",
+   "home": "",
+   "source_url": "",
+   "latest_month": "",
+   "months": 0,
+   "tdnet": true,
+   "web": false,
+   "ir": false
+  },
+  "3690": {
+   "status": "covered_elsewhere",
+   "home": "",
+   "source_url": "",
+   "latest_month": "",
+   "months": 0,
+   "tdnet": true,
+   "web": false,
+   "ir": false
+  },
+  "3733": {
+   "status": "covered_elsewhere",
+   "home": "",
+   "source_url": "",
+   "latest_month": "",
+   "months": 0,
+   "tdnet": true,
+   "web": false,
+   "ir": false
+  },
+  "3796": {
+   "status": "covered_elsewhere",
+   "home": "",
+   "source_url": "",
+   "latest_month": "",
+   "months": 0,
+   "tdnet": true,
+   "web": false,
+   "ir": false
+  },
+  "3817": {
+   "status": "covered_elsewhere",
+   "home": "",
+   "source_url": "",
+   "latest_month": "",
+   "months": 0,
+   "tdnet": true,
+   "web": false,
+   "ir": false
+  },
+  "386A": {
+   "status": "covered_elsewhere",
+   "home": "",
+   "source_url": "",
+   "latest_month": "",
+   "months": 0,
+   "tdnet": true,
+   "web": false,
+   "ir": false
+  },
+  "3910": {
+   "status": "home_pending",
+   "home": "",
+   "source_url": "",
+   "latest_month": "",
+   "months": 0,
+   "tdnet": false,
+   "web": false,
+   "ir": false
+  },
+  "3923": {
+   "status": "covered_elsewhere",
+   "home": "",
+   "source_url": "",
+   "latest_month": "",
+   "months": 0,
+   "tdnet": true,
+   "web": false,
+   "ir": false
+  },
+  "3927": {
+   "status": "home_pending",
+   "home": "",
+   "source_url": "",
+   "latest_month": "",
+   "months": 0,
+   "tdnet": false,
+   "web": false,
+   "ir": false
+  },
+  "4015": {
+   "status": "covered_elsewhere",
+   "home": "",
+   "source_url": "",
+   "latest_month": "",
+   "months": 0,
+   "tdnet": true,
+   "web": false,
+   "ir": false
+  },
+  "4019": {
+   "status": "home_pending",
+   "home": "",
+   "source_url": "",
+   "latest_month": "",
+   "months": 0,
+   "tdnet": false,
+   "web": false,
+   "ir": false
+  },
+  "4058": {
+   "status": "covered_elsewhere",
+   "home": "",
+   "source_url": "",
+   "latest_month": "",
+   "months": 0,
+   "tdnet": true,
+   "web": false,
+   "ir": false
+  },
+  "4193": {
+   "status": "covered_elsewhere",
+   "home": "",
+   "source_url": "",
+   "latest_month": "",
+   "months": 0,
+   "tdnet": true,
+   "web": false,
+   "ir": false
+  },
+  "428A": {
+   "status": "covered_elsewhere",
+   "home": "",
+   "source_url": "",
+   "latest_month": "",
+   "months": 0,
+   "tdnet": true,
+   "web": false,
+   "ir": false
+  },
+  "4343": {
+   "status": "covered_elsewhere",
+   "home": "",
+   "source_url": "",
+   "latest_month": "",
+   "months": 0,
+   "tdnet": true,
+   "web": false,
+   "ir": false
+  },
+  "4374": {
+   "status": "covered_elsewhere",
+   "home": "",
+   "source_url": "",
+   "latest_month": "",
+   "months": 0,
+   "tdnet": true,
+   "web": false,
+   "ir": false
+  },
+  "4659": {
+   "status": "home_pending",
+   "home": "",
+   "source_url": "",
+   "latest_month": "",
+   "months": 0,
+   "tdnet": false,
+   "web": false,
+   "ir": false
+  },
+  "4679": {
+   "status": "home_pending",
+   "home": "",
+   "source_url": "",
+   "latest_month": "",
+   "months": 0,
+   "tdnet": false,
+   "web": false,
+   "ir": false
+  },
+  "4680": {
+   "status": "covered_elsewhere",
+   "home": "",
+   "source_url": "",
+   "latest_month": "",
+   "months": 0,
+   "tdnet": true,
+   "web": false,
+   "ir": false
+  },
+  "4776": {
+   "status": "covered_elsewhere",
+   "home": "",
+   "source_url": "",
+   "latest_month": "",
+   "months": 0,
+   "tdnet": true,
+   "web": false,
+   "ir": false
+  },
+  "556A": {
+   "status": "covered_elsewhere",
+   "home": "",
+   "source_url": "",
+   "latest_month": "",
+   "months": 0,
+   "tdnet": true,
+   "web": false,
+   "ir": false
+  },
+  "5888": {
+   "status": "covered_elsewhere",
+   "home": "",
+   "source_url": "",
+   "latest_month": "",
+   "months": 0,
+   "tdnet": true,
+   "web": false,
+   "ir": false
+  },
+  "5892": {
+   "status": "home_pending",
+   "home": "",
+   "source_url": "",
+   "latest_month": "",
+   "months": 0,
+   "tdnet": false,
+   "web": false,
+   "ir": false
+  },
+  "6036": {
+   "status": "covered_elsewhere",
+   "home": "",
+   "source_url": "",
+   "latest_month": "",
+   "months": 0,
+   "tdnet": true,
+   "web": false,
+   "ir": false
+  },
+  "6045": {
+   "status": "covered_elsewhere",
+   "home": "",
+   "source_url": "",
+   "latest_month": "",
+   "months": 0,
+   "tdnet": true,
+   "web": false,
+   "ir": false
+  },
+  "6059": {
+   "status": "covered_elsewhere",
+   "home": "",
+   "source_url": "",
+   "latest_month": "",
+   "months": 0,
+   "tdnet": true,
+   "web": false,
+   "ir": false
+  },
+  "6073": {
+   "status": "covered_elsewhere",
+   "home": "",
+   "source_url": "",
+   "latest_month": "",
+   "months": 0,
+   "tdnet": true,
+   "web": false,
+   "ir": false
+  },
+  "6238": {
+   "status": "covered_elsewhere",
+   "home": "",
+   "source_url": "",
+   "latest_month": "",
+   "months": 0,
+   "tdnet": true,
+   "web": false,
+   "ir": false
+  },
+  "6537": {
+   "status": "home_pending",
+   "home": "",
+   "source_url": "",
+   "latest_month": "",
+   "months": 0,
+   "tdnet": false,
+   "web": false,
+   "ir": false
+  },
+  "6548": {
+   "status": "home_pending",
+   "home": "",
+   "source_url": "",
+   "latest_month": "",
+   "months": 0,
+   "tdnet": false,
+   "web": false,
+   "ir": false
+  },
+  "6561": {
+   "status": "covered_elsewhere",
+   "home": "",
+   "source_url": "",
+   "latest_month": "",
+   "months": 0,
+   "tdnet": true,
+   "web": false,
+   "ir": false
+  },
+  "6571": {
+   "status": "covered_elsewhere",
+   "home": "",
+   "source_url": "",
+   "latest_month": "",
+   "months": 0,
+   "tdnet": true,
+   "web": false,
+   "ir": false
+  },
+  "6627": {
+   "status": "covered_elsewhere",
+   "home": "",
+   "source_url": "",
+   "latest_month": "",
+   "months": 0,
+   "tdnet": true,
+   "web": false,
+   "ir": false
+  },
+  "7049": {
+   "status": "covered_elsewhere",
+   "home": "",
+   "source_url": "",
+   "latest_month": "",
+   "months": 0,
+   "tdnet": true,
+   "web": false,
+   "ir": false
+  },
+  "7062": {
+   "status": "covered_elsewhere",
+   "home": "",
+   "source_url": "",
+   "latest_month": "",
+   "months": 0,
+   "tdnet": true,
+   "web": false,
+   "ir": false
+  },
+  "7112": {
+   "status": "covered_elsewhere",
+   "home": "",
+   "source_url": "",
+   "latest_month": "",
+   "months": 0,
+   "tdnet": true,
+   "web": false,
+   "ir": false
+  },
+  "7127": {
+   "status": "covered_elsewhere",
+   "home": "",
+   "source_url": "",
+   "latest_month": "",
+   "months": 0,
+   "tdnet": true,
+   "web": false,
+   "ir": false
+  },
+  "7134": {
+   "status": "covered_elsewhere",
+   "home": "",
+   "source_url": "",
+   "latest_month": "",
+   "months": 0,
+   "tdnet": true,
+   "web": false,
+   "ir": false
+  },
+  "7157": {
+   "status": "covered_elsewhere",
+   "home": "",
+   "source_url": "",
+   "latest_month": "",
+   "months": 0,
+   "tdnet": true,
+   "web": false,
+   "ir": false
+  },
+  "7177": {
+   "status": "covered_elsewhere",
+   "home": "",
+   "source_url": "",
+   "latest_month": "",
+   "months": 0,
+   "tdnet": true,
+   "web": false,
+   "ir": false
+  },
+  "7185": {
+   "status": "covered_elsewhere",
+   "home": "",
+   "source_url": "",
+   "latest_month": "",
+   "months": 0,
+   "tdnet": true,
+   "web": false,
+   "ir": false
+  },
+  "7359": {
+   "status": "home_pending",
+   "home": "",
+   "source_url": "",
+   "latest_month": "",
+   "months": 0,
+   "tdnet": false,
+   "web": false,
+   "ir": false
+  },
+  "7412": {
+   "status": "home_pending",
+   "home": "",
+   "source_url": "",
+   "latest_month": "",
+   "months": 0,
+   "tdnet": false,
+   "web": false,
+   "ir": false
+  },
+  "7416": {
+   "status": "home_pending",
+   "home": "",
+   "source_url": "",
+   "latest_month": "",
+   "months": 0,
+   "tdnet": false,
+   "web": false,
+   "ir": false
+  },
+  "7421": {
+   "status": "home_pending",
+   "home": "",
+   "source_url": "",
+   "latest_month": "",
+   "months": 0,
+   "tdnet": false,
+   "web": false,
+   "ir": false
+  },
+  "7422": {
+   "status": "covered_elsewhere",
+   "home": "",
+   "source_url": "",
+   "latest_month": "",
+   "months": 0,
+   "tdnet": true,
+   "web": false,
+   "ir": false
+  },
+  "7453": {
+   "status": "home_pending",
+   "home": "",
+   "source_url": "",
+   "latest_month": "",
+   "months": 0,
+   "tdnet": false,
+   "web": false,
+   "ir": false
+  },
+  "7475": {
+   "status": "home_pending",
+   "home": "",
+   "source_url": "",
+   "latest_month": "",
+   "months": 0,
+   "tdnet": false,
+   "web": false,
+   "ir": false
+  },
+  "7480": {
+   "status": "covered_elsewhere",
+   "home": "",
+   "source_url": "",
+   "latest_month": "",
+   "months": 0,
+   "tdnet": true,
+   "web": false,
+   "ir": false
+  },
+  "7494": {
+   "status": "home_pending",
+   "home": "",
+   "source_url": "",
+   "latest_month": "",
+   "months": 0,
+   "tdnet": false,
+   "web": false,
+   "ir": false
+  },
+  "7506": {
+   "status": "covered_elsewhere",
+   "home": "",
+   "source_url": "",
+   "latest_month": "",
+   "months": 0,
+   "tdnet": true,
+   "web": false,
+   "ir": false
+  },
+  "7512": {
+   "status": "covered_elsewhere",
+   "home": "",
+   "source_url": "",
+   "latest_month": "",
+   "months": 0,
+   "tdnet": false,
+   "web": true,
+   "ir": false
+  },
+  "7513": {
+   "status": "home_pending",
+   "home": "",
+   "source_url": "",
+   "latest_month": "",
+   "months": 0,
+   "tdnet": false,
+   "web": false,
+   "ir": false
+  },
+  "7514": {
+   "status": "home_pending",
+   "home": "",
+   "source_url": "",
+   "latest_month": "",
+   "months": 0,
+   "tdnet": false,
+   "web": false,
+   "ir": false
+  },
+  "7516": {
+   "status": "covered_elsewhere",
+   "home": "",
+   "source_url": "",
+   "latest_month": "",
+   "months": 0,
+   "tdnet": false,
+   "web": true,
+   "ir": false
+  },
+  "7522": {
+   "status": "home_pending",
+   "home": "",
+   "source_url": "",
+   "latest_month": "",
+   "months": 0,
+   "tdnet": false,
+   "web": false,
+   "ir": false
+  },
+  "7524": {
+   "status": "covered_elsewhere",
+   "home": "",
+   "source_url": "",
+   "latest_month": "",
+   "months": 0,
+   "tdnet": true,
+   "web": false,
+   "ir": false
+  },
+  "7544": {
+   "status": "home_pending",
+   "home": "",
+   "source_url": "",
+   "latest_month": "",
+   "months": 0,
+   "tdnet": false,
+   "web": false,
+   "ir": false
+  },
+  "7554": {
+   "status": "covered_elsewhere",
+   "home": "",
+   "source_url": "",
+   "latest_month": "",
+   "months": 0,
+   "tdnet": true,
+   "web": true,
+   "ir": false
+  },
+  "7561": {
+   "status": "home_pending",
+   "home": "",
+   "source_url": "",
+   "latest_month": "",
+   "months": 0,
+   "tdnet": false,
+   "web": false,
+   "ir": false
+  },
+  "7562": {
+   "status": "home_pending",
+   "home": "",
+   "source_url": "",
+   "latest_month": "",
+   "months": 0,
+   "tdnet": false,
+   "web": false,
+   "ir": false
+  },
+  "7596": {
+   "status": "home_pending",
+   "home": "",
+   "source_url": "",
+   "latest_month": "",
+   "months": 0,
+   "tdnet": false,
+   "web": false,
+   "ir": false
+  },
+  "7601": {
+   "status": "home_pending",
+   "home": "",
+   "source_url": "",
+   "latest_month": "",
+   "months": 0,
+   "tdnet": false,
+   "web": false,
+   "ir": false
+  },
+  "7603": {
+   "status": "home_pending",
+   "home": "",
+   "source_url": "",
+   "latest_month": "",
+   "months": 0,
+   "tdnet": false,
+   "web": false,
+   "ir": false
+  },
+  "7604": {
+   "status": "home_pending",
+   "home": "",
+   "source_url": "",
+   "latest_month": "",
+   "months": 0,
+   "tdnet": false,
+   "web": false,
+   "ir": false
+  },
+  "7610": {
+   "status": "covered_elsewhere",
+   "home": "",
+   "source_url": "",
+   "latest_month": "",
+   "months": 0,
+   "tdnet": true,
+   "web": false,
+   "ir": false
+  },
+  "7611": {
+   "status": "covered_elsewhere",
+   "home": "",
+   "source_url": "",
+   "latest_month": "",
+   "months": 0,
+   "tdnet": true,
+   "web": true,
+   "ir": false
+  },
+  "7615": {
+   "status": "home_pending",
+   "home": "",
+   "source_url": "",
+   "latest_month": "",
+   "months": 0,
+   "tdnet": false,
+   "web": false,
+   "ir": false
+  },
+  "7621": {
+   "status": "home_pending",
+   "home": "",
+   "source_url": "",
+   "latest_month": "",
+   "months": 0,
+   "tdnet": false,
+   "web": false,
+   "ir": false
+  },
+  "7625": {
+   "status": "covered_elsewhere",
+   "home": "",
+   "source_url": "",
+   "latest_month": "",
+   "months": 0,
+   "tdnet": true,
+   "web": false,
+   "ir": false
+  },
+  "7630": {
+   "status": "home_pending",
+   "home": "",
+   "source_url": "",
+   "latest_month": "",
+   "months": 0,
+   "tdnet": false,
+   "web": false,
+   "ir": false
+  },
+  "7636": {
+   "status": "covered_elsewhere",
+   "home": "",
+   "source_url": "",
+   "latest_month": "",
+   "months": 0,
+   "tdnet": true,
+   "web": false,
+   "ir": false
+  },
+  "7640": {
+   "status": "covered_elsewhere",
+   "home": "",
+   "source_url": "",
+   "latest_month": "",
+   "months": 0,
+   "tdnet": true,
+   "web": false,
+   "ir": false
+  },
+  "7643": {
+   "status": "covered_elsewhere",
+   "home": "",
+   "source_url": "",
+   "latest_month": "",
+   "months": 0,
+   "tdnet": true,
+   "web": false,
+   "ir": false
+  },
+  "7646": {
+   "status": "home_pending",
+   "home": "",
+   "source_url": "",
+   "latest_month": "",
+   "months": 0,
+   "tdnet": false,
+   "web": false,
+   "ir": false
+  },
+  "7649": {
+   "status": "covered_elsewhere",
+   "home": "",
+   "source_url": "",
+   "latest_month": "",
+   "months": 0,
+   "tdnet": true,
+   "web": true,
+   "ir": false
+  },
+  "7674": {
+   "status": "covered_elsewhere",
+   "home": "",
+   "source_url": "",
+   "latest_month": "",
+   "months": 0,
+   "tdnet": true,
+   "web": false,
+   "ir": false
+  },
+  "7678": {
+   "status": "covered_elsewhere",
+   "home": "",
+   "source_url": "",
+   "latest_month": "",
+   "months": 0,
+   "tdnet": true,
+   "web": false,
+   "ir": false
+  },
+  "7679": {
+   "status": "covered_elsewhere",
+   "home": "",
+   "source_url": "",
+   "latest_month": "",
+   "months": 0,
+   "tdnet": true,
+   "web": false,
+   "ir": false
+  },
+  "7682": {
+   "status": "home_pending",
+   "home": "",
+   "source_url": "",
+   "latest_month": "",
+   "months": 0,
+   "tdnet": false,
+   "web": false,
+   "ir": false
+  },
+  "7683": {
+   "status": "covered_elsewhere",
+   "home": "",
+   "source_url": "",
+   "latest_month": "",
+   "months": 0,
+   "tdnet": true,
+   "web": false,
+   "ir": false
+  },
+  "7685": {
+   "status": "covered_elsewhere",
+   "home": "",
+   "source_url": "",
+   "latest_month": "",
+   "months": 0,
+   "tdnet": true,
+   "web": false,
+   "ir": false
+  },
+  "7686": {
+   "status": "covered_elsewhere",
+   "home": "",
+   "source_url": "",
+   "latest_month": "",
+   "months": 0,
+   "tdnet": true,
+   "web": false,
+   "ir": false
+  },
+  "7823": {
+   "status": "covered_elsewhere",
+   "home": "",
+   "source_url": "",
+   "latest_month": "",
+   "months": 0,
+   "tdnet": true,
+   "web": false,
+   "ir": false
+  },
+  "7865": {
+   "status": "covered_elsewhere",
+   "home": "",
+   "source_url": "",
+   "latest_month": "",
+   "months": 0,
+   "tdnet": true,
+   "web": false,
+   "ir": false
+  },
+  "7918": {
+   "status": "covered_elsewhere",
+   "home": "",
+   "source_url": "",
+   "latest_month": "",
+   "months": 0,
+   "tdnet": true,
+   "web": false,
+   "ir": false
+  },
+  "8008": {
+   "status": "home_pending",
+   "home": "",
+   "source_url": "",
+   "latest_month": "",
+   "months": 0,
+   "tdnet": false,
+   "web": false,
+   "ir": false
+  },
+  "8011": {
+   "status": "home_pending",
+   "home": "",
+   "source_url": "",
+   "latest_month": "",
+   "months": 0,
+   "tdnet": false,
+   "web": false,
+   "ir": false
+  },
+  "8153": {
+   "status": "home_pending",
+   "home": "",
+   "source_url": "",
+   "latest_month": "",
+   "months": 0,
+   "tdnet": false,
+   "web": false,
+   "ir": false
+  },
+  "8160": {
+   "status": "home_pending",
+   "home": "",
+   "source_url": "",
+   "latest_month": "",
+   "months": 0,
+   "tdnet": false,
+   "web": false,
+   "ir": false
+  },
+  "8163": {
+   "status": "home_pending",
+   "home": "",
+   "source_url": "",
+   "latest_month": "",
+   "months": 0,
+   "tdnet": false,
+   "web": false,
+   "ir": false
+  },
+  "8165": {
+   "status": "home_pending",
+   "home": "",
+   "source_url": "",
+   "latest_month": "",
+   "months": 0,
+   "tdnet": false,
+   "web": false,
+   "ir": false
+  },
+  "8166": {
+   "status": "covered_elsewhere",
+   "home": "",
+   "source_url": "",
+   "latest_month": "",
+   "months": 0,
+   "tdnet": true,
+   "web": false,
+   "ir": false
+  },
+  "8173": {
+   "status": "home_pending",
+   "home": "",
+   "source_url": "",
+   "latest_month": "",
+   "months": 0,
+   "tdnet": false,
+   "web": false,
+   "ir": false
+  },
+  "8179": {
+   "status": "home_pending",
+   "home": "",
+   "source_url": "",
+   "latest_month": "",
+   "months": 0,
+   "tdnet": false,
+   "web": false,
+   "ir": false
+  },
+  "8185": {
+   "status": "home_pending",
+   "home": "",
+   "source_url": "",
+   "latest_month": "",
+   "months": 0,
+   "tdnet": false,
+   "web": false,
+   "ir": false
+  },
+  "8194": {
+   "status": "covered_elsewhere",
+   "home": "",
+   "source_url": "",
+   "latest_month": "",
+   "months": 0,
+   "tdnet": false,
+   "web": true,
+   "ir": false
+  },
+  "8198": {
+   "status": "covered_elsewhere",
+   "home": "",
+   "source_url": "",
+   "latest_month": "",
+   "months": 0,
+   "tdnet": true,
+   "web": true,
+   "ir": false
+  },
+  "8200": {
+   "status": "covered_elsewhere",
+   "home": "",
+   "source_url": "",
+   "latest_month": "",
+   "months": 0,
+   "tdnet": true,
+   "web": true,
+   "ir": false
+  },
+  "8203": {
+   "status": "covered_elsewhere",
+   "home": "",
+   "source_url": "",
+   "latest_month": "",
+   "months": 0,
+   "tdnet": true,
+   "web": false,
+   "ir": false
+  },
+  "8207": {
+   "status": "home_pending",
+   "home": "",
+   "source_url": "",
+   "latest_month": "",
+   "months": 0,
+   "tdnet": false,
+   "web": false,
+   "ir": false
+  },
+  "8209": {
+   "status": "home_pending",
+   "home": "",
+   "source_url": "",
+   "latest_month": "",
+   "months": 0,
+   "tdnet": false,
+   "web": false,
+   "ir": false
+  },
+  "8214": {
+   "status": "home_pending",
+   "home": "",
+   "source_url": "",
+   "latest_month": "",
+   "months": 0,
+   "tdnet": false,
+   "web": false,
+   "ir": false
+  },
+  "8217": {
+   "status": "covered_elsewhere",
+   "home": "",
+   "source_url": "",
+   "latest_month": "",
+   "months": 0,
+   "tdnet": false,
+   "web": true,
+   "ir": false
+  },
+  "8218": {
+   "status": "covered_elsewhere",
+   "home": "",
+   "source_url": "",
+   "latest_month": "",
+   "months": 0,
+   "tdnet": false,
+   "web": true,
+   "ir": false
+  },
+  "8219": {
+   "status": "covered_elsewhere",
+   "home": "",
+   "source_url": "",
+   "latest_month": "",
+   "months": 0,
+   "tdnet": true,
+   "web": false,
+   "ir": false
+  },
+  "8227": {
+   "status": "covered_elsewhere",
+   "home": "",
+   "source_url": "",
+   "latest_month": "",
+   "months": 0,
+   "tdnet": false,
+   "web": true,
+   "ir": false
+  },
+  "8233": {
+   "status": "home_pending",
+   "home": "",
+   "source_url": "",
+   "latest_month": "",
+   "months": 0,
+   "tdnet": false,
+   "web": false,
+   "ir": false
+  },
+  "8242": {
+   "status": "home_pending",
+   "home": "",
+   "source_url": "",
+   "latest_month": "",
+   "months": 0,
+   "tdnet": false,
+   "web": false,
+   "ir": false
+  },
+  "8244": {
+   "status": "home_pending",
+   "home": "",
+   "source_url": "",
+   "latest_month": "",
+   "months": 0,
+   "tdnet": false,
+   "web": false,
+   "ir": false
+  },
+  "8255": {
+   "status": "covered_elsewhere",
+   "home": "",
+   "source_url": "",
+   "latest_month": "",
+   "months": 0,
+   "tdnet": true,
+   "web": false,
+   "ir": false
+  },
+  "8276": {
+   "status": "home_pending",
+   "home": "",
+   "source_url": "",
+   "latest_month": "",
+   "months": 0,
+   "tdnet": false,
+   "web": false,
+   "ir": false
+  },
+  "8278": {
+   "status": "covered_elsewhere",
+   "home": "",
+   "source_url": "",
+   "latest_month": "",
+   "months": 0,
+   "tdnet": false,
+   "web": true,
+   "ir": false
+  },
+  "8281": {
+   "status": "home_pending",
+   "home": "",
+   "source_url": "",
+   "latest_month": "",
+   "months": 0,
+   "tdnet": false,
+   "web": false,
+   "ir": false
+  },
+  "8282": {
+   "status": "home_pending",
+   "home": "",
+   "source_url": "",
+   "latest_month": "",
+   "months": 0,
+   "tdnet": false,
+   "web": false,
+   "ir": false
+  },
+  "9020": {
+   "status": "home_pending",
+   "home": "",
+   "source_url": "",
+   "latest_month": "",
+   "months": 0,
+   "tdnet": false,
+   "web": false,
+   "ir": false
+  },
+  "9021": {
+   "status": "home_pending",
+   "home": "",
+   "source_url": "",
+   "latest_month": "",
+   "months": 0,
+   "tdnet": false,
+   "web": false,
+   "ir": false
+  },
+  "9022": {
+   "status": "home_pending",
+   "home": "",
+   "source_url": "",
+   "latest_month": "",
+   "months": 0,
+   "tdnet": false,
+   "web": false,
+   "ir": false
+  },
+  "9023": {
+   "status": "home_pending",
+   "home": "",
+   "source_url": "",
+   "latest_month": "",
+   "months": 0,
+   "tdnet": false,
+   "web": false,
+   "ir": false
+  },
+  "9039": {
+   "status": "covered_elsewhere",
+   "home": "",
+   "source_url": "",
+   "latest_month": "",
+   "months": 0,
+   "tdnet": true,
+   "web": false,
+   "ir": false
+  },
+  "9142": {
+   "status": "home_pending",
+   "home": "",
+   "source_url": "",
+   "latest_month": "",
+   "months": 0,
+   "tdnet": false,
+   "web": false,
+   "ir": false
+  },
+  "9145": {
+   "status": "covered_elsewhere",
+   "home": "",
+   "source_url": "",
+   "latest_month": "",
+   "months": 0,
+   "tdnet": true,
+   "web": false,
+   "ir": false
+  },
+  "9223": {
+   "status": "home_pending",
+   "home": "",
+   "source_url": "",
+   "latest_month": "",
+   "months": 0,
+   "tdnet": false,
+   "web": false,
+   "ir": false
+  },
+  "9245": {
+   "status": "covered_elsewhere",
+   "home": "",
+   "source_url": "",
+   "latest_month": "",
+   "months": 0,
+   "tdnet": true,
+   "web": false,
+   "ir": false
+  },
+  "9251": {
+   "status": "covered_elsewhere",
+   "home": "",
+   "source_url": "",
+   "latest_month": "",
+   "months": 0,
+   "tdnet": true,
+   "web": false,
+   "ir": false
+  },
+  "9267": {
+   "status": "covered_elsewhere",
+   "home": "",
+   "source_url": "",
+   "latest_month": "",
+   "months": 0,
+   "tdnet": true,
+   "web": false,
+   "ir": false
+  },
+  "9279": {
+   "status": "covered_elsewhere",
+   "home": "",
+   "source_url": "",
+   "latest_month": "",
+   "months": 0,
+   "tdnet": true,
+   "web": false,
+   "ir": false
+  },
+  "9327": {
+   "status": "home_pending",
+   "home": "",
+   "source_url": "",
+   "latest_month": "",
+   "months": 0,
+   "tdnet": false,
+   "web": false,
+   "ir": false
+  },
+  "9603": {
+   "status": "home_pending",
+   "home": "",
+   "source_url": "",
+   "latest_month": "",
+   "months": 0,
+   "tdnet": false,
+   "web": false,
+   "ir": false
+  },
+  "9616": {
+   "status": "home_pending",
+   "home": "",
+   "source_url": "",
+   "latest_month": "",
+   "months": 0,
+   "tdnet": false,
+   "web": false,
+   "ir": false
+  },
+  "9627": {
+   "status": "home_pending",
+   "home": "",
+   "source_url": "",
+   "latest_month": "",
+   "months": 0,
+   "tdnet": false,
+   "web": false,
+   "ir": false
+  },
+  "9759": {
+   "status": "covered_elsewhere",
+   "home": "",
+   "source_url": "",
+   "latest_month": "",
+   "months": 0,
+   "tdnet": true,
+   "web": false,
+   "ir": false
+  },
+  "9828": {
+   "status": "home_pending",
+   "home": "",
+   "source_url": "",
+   "latest_month": "",
+   "months": 0,
+   "tdnet": false,
+   "web": false,
+   "ir": false
+  },
+  "9835": {
+   "status": "home_pending",
+   "home": "",
+   "source_url": "",
+   "latest_month": "",
+   "months": 0,
+   "tdnet": false,
+   "web": false,
+   "ir": false
+  },
+  "9842": {
+   "status": "covered_elsewhere",
+   "home": "",
+   "source_url": "",
+   "latest_month": "",
+   "months": 0,
+   "tdnet": false,
+   "web": true,
+   "ir": false
+  },
+  "9850": {
+   "status": "home_pending",
+   "home": "",
+   "source_url": "",
+   "latest_month": "",
+   "months": 0,
+   "tdnet": false,
+   "web": false,
+   "ir": false
+  },
+  "9854": {
+   "status": "home_pending",
+   "home": "",
+   "source_url": "",
+   "latest_month": "",
+   "months": 0,
+   "tdnet": false,
+   "web": false,
+   "ir": false
+  },
+  "9876": {
+   "status": "covered_elsewhere",
+   "home": "",
+   "source_url": "",
+   "latest_month": "",
+   "months": 0,
+   "tdnet": true,
+   "web": true,
+   "ir": false
+  },
+  "9887": {
+   "status": "covered_elsewhere",
+   "home": "",
+   "source_url": "",
+   "latest_month": "",
+   "months": 0,
+   "tdnet": false,
+   "web": true,
+   "ir": false
+  },
+  "9890": {
+   "status": "covered_elsewhere",
+   "home": "",
+   "source_url": "",
+   "latest_month": "",
+   "months": 0,
+   "tdnet": true,
+   "web": false,
+   "ir": false
+  },
+  "9900": {
+   "status": "home_pending",
+   "home": "",
+   "source_url": "",
+   "latest_month": "",
+   "months": 0,
+   "tdnet": false,
+   "web": false,
+   "ir": false
+  },
+  "9904": {
+   "status": "covered_elsewhere",
+   "home": "",
+   "source_url": "",
+   "latest_month": "",
+   "months": 0,
+   "tdnet": true,
+   "web": false,
+   "ir": false
+  },
+  "9927": {
+   "status": "home_pending",
+   "home": "",
+   "source_url": "",
+   "latest_month": "",
+   "months": 0,
+   "tdnet": false,
+   "web": false,
+   "ir": false
+  },
+  "9936": {
+   "status": "covered_elsewhere",
+   "home": "",
+   "source_url": "",
+   "latest_month": "",
+   "months": 0,
+   "tdnet": true,
+   "web": true,
+   "ir": false
+  },
+  "9941": {
+   "status": "covered_elsewhere",
+   "home": "",
+   "source_url": "",
+   "latest_month": "",
+   "months": 0,
+   "tdnet": true,
+   "web": false,
+   "ir": false
+  },
+  "9942": {
+   "status": "home_pending",
+   "home": "",
+   "source_url": "",
+   "latest_month": "",
+   "months": 0,
+   "tdnet": false,
+   "web": false,
+   "ir": false
+  },
+  "9946": {
+   "status": "covered_elsewhere",
+   "home": "",
+   "source_url": "",
+   "latest_month": "",
+   "months": 0,
+   "tdnet": false,
+   "web": true,
+   "ir": false
+  },
+  "9956": {
+   "status": "covered_elsewhere",
+   "home": "",
+   "source_url": "",
+   "latest_month": "",
+   "months": 0,
+   "tdnet": true,
+   "web": true,
+   "ir": false
+  },
+  "9962": {
+   "status": "home_pending",
+   "home": "",
+   "source_url": "",
+   "latest_month": "",
+   "months": 0,
+   "tdnet": false,
+   "web": false,
+   "ir": false
+  },
+  "9973": {
+   "status": "covered_elsewhere",
+   "home": "",
+   "source_url": "",
+   "latest_month": "",
+   "months": 0,
+   "tdnet": true,
+   "web": false,
+   "ir": false
+  },
+  "9974": {
+   "status": "home_pending",
+   "home": "",
+   "source_url": "",
+   "latest_month": "",
+   "months": 0,
+   "tdnet": false,
+   "web": false,
+   "ir": false
+  },
+  "9979": {
+   "status": "covered_elsewhere",
+   "home": "",
+   "source_url": "",
+   "latest_month": "",
+   "months": 0,
+   "tdnet": true,
+   "web": false,
+   "ir": false
+  },
+  "9989": {
+   "status": "home_pending",
+   "home": "",
+   "source_url": "",
+   "latest_month": "",
+   "months": 0,
+   "tdnet": false,
+   "web": false,
+   "ir": false
+  },
+  "9990": {
+   "status": "covered_elsewhere",
+   "home": "",
+   "source_url": "",
+   "latest_month": "",
+   "months": 0,
+   "tdnet": true,
+   "web": false,
+   "ir": false
+  },
+  "9993": {
+   "status": "home_pending",
+   "home": "",
+   "source_url": "",
+   "latest_month": "",
+   "months": 0,
+   "tdnet": false,
+   "web": false,
+   "ir": false
+  },
+  "9994": {
+   "status": "home_pending",
+   "home": "",
+   "source_url": "",
+   "latest_month": "",
+   "months": 0,
+   "tdnet": false,
+   "web": false,
+   "ir": false
+  },
+  "9997": {
+   "status": "covered_elsewhere",
+   "home": "",
+   "source_url": "",
+   "latest_month": "",
+   "months": 0,
+   "tdnet": true,
+   "web": false,
+   "ir": false
+  },
+  "509A": {
+   "status": "covered_elsewhere",
+   "home": "",
+   "source_url": "",
+   "latest_month": "",
+   "months": 0,
+   "tdnet": true,
+   "web": false,
+   "ir": false
+  },
+  "7585": {
+   "status": "covered_elsewhere",
+   "home": "",
+   "source_url": "",
+   "latest_month": "",
+   "months": 0,
+   "tdnet": true,
+   "web": false,
+   "ir": false
+  },
+  "3979": {
+   "status": "covered_elsewhere",
+   "home": "",
+   "source_url": "",
+   "latest_month": "",
+   "months": 0,
+   "tdnet": true,
+   "web": false,
+   "ir": false
+  },
+  "3983": {
+   "status": "covered_elsewhere",
+   "home": "",
+   "source_url": "",
+   "latest_month": "",
+   "months": 0,
+   "tdnet": true,
+   "web": false,
+   "ir": false
+  },
+  "8705": {
+   "status": "covered_elsewhere",
+   "home": "",
+   "source_url": "",
+   "latest_month": "",
+   "months": 0,
+   "tdnet": true,
+   "web": false,
+   "ir": false
+  },
+  "7059": {
+   "status": "covered_elsewhere",
+   "home": "",
+   "source_url": "",
+   "latest_month": "",
+   "months": 0,
+   "tdnet": true,
+   "web": false,
+   "ir": false
+  },
+  "9166": {
+   "status": "covered_elsewhere",
+   "home": "",
+   "source_url": "",
+   "latest_month": "",
+   "months": 0,
+   "tdnet": true,
+   "web": false,
+   "ir": false
+  },
+  "7043": {
+   "status": "covered_elsewhere",
+   "home": "",
+   "source_url": "",
+   "latest_month": "",
+   "months": 0,
+   "tdnet": true,
+   "web": false,
+   "ir": false
+  },
+  "9007": {
+   "status": "covered_elsewhere",
+   "home": "",
+   "source_url": "",
+   "latest_month": "",
+   "months": 0,
+   "tdnet": true,
+   "web": false,
+   "ir": false
+  },
+  "9252": {
+   "status": "covered_elsewhere",
+   "home": "",
+   "source_url": "",
+   "latest_month": "",
+   "months": 0,
+   "tdnet": true,
+   "web": false,
+   "ir": false
+  },
+  "3461": {
+   "status": "covered_elsewhere",
+   "home": "",
+   "source_url": "",
+   "latest_month": "",
+   "months": 0,
+   "tdnet": true,
+   "web": false,
+   "ir": false
+  },
+  "5580": {
+   "status": "covered_elsewhere",
+   "home": "",
+   "source_url": "",
+   "latest_month": "",
+   "months": 0,
+   "tdnet": true,
+   "web": false,
+   "ir": false
+  },
+  "9163": {
+   "status": "covered_elsewhere",
+   "home": "",
+   "source_url": "",
+   "latest_month": "",
+   "months": 0,
+   "tdnet": true,
+   "web": false,
+   "ir": false
+  },
+  "7370": {
+   "status": "covered_elsewhere",
+   "home": "",
+   "source_url": "",
+   "latest_month": "",
+   "months": 0,
+   "tdnet": true,
+   "web": false,
+   "ir": false
+  },
+  "8715": {
+   "status": "covered_elsewhere",
+   "home": "",
+   "source_url": "",
+   "latest_month": "",
+   "months": 0,
+   "tdnet": true,
+   "web": false,
+   "ir": false
+  },
+  "8798": {
+   "status": "covered_elsewhere",
+   "home": "",
+   "source_url": "",
+   "latest_month": "",
+   "months": 0,
+   "tdnet": true,
+   "web": false,
+   "ir": false
+  },
+  "3010": {
+   "status": "covered_elsewhere",
+   "home": "",
+   "source_url": "",
+   "latest_month": "",
+   "months": 0,
+   "tdnet": true,
+   "web": false,
+   "ir": false
+  },
+  "8963": {
+   "status": "covered_elsewhere",
+   "home": "",
+   "source_url": "",
+   "latest_month": "",
+   "months": 0,
+   "tdnet": true,
+   "web": false,
+   "ir": false
+  },
+  "8985": {
+   "status": "covered_elsewhere",
+   "home": "",
+   "source_url": "",
+   "latest_month": "",
+   "months": 0,
+   "tdnet": true,
+   "web": false,
+   "ir": false
+  },
+  "9206": {
+   "status": "covered_elsewhere",
+   "home": "",
+   "source_url": "",
+   "latest_month": "",
+   "months": 0,
+   "tdnet": true,
+   "web": false,
+   "ir": false
+  },
+  "2154": {
+   "status": "covered_elsewhere",
+   "home": "",
+   "source_url": "",
+   "latest_month": "",
+   "months": 0,
+   "tdnet": true,
+   "web": false,
+   "ir": false
+  },
+  "2687": {
+   "status": "covered_elsewhere",
+   "home": "",
+   "source_url": "",
+   "latest_month": "",
+   "months": 0,
+   "tdnet": true,
+   "web": false,
+   "ir": false
+  },
+  "8628": {
+   "status": "covered_elsewhere",
+   "home": "",
+   "source_url": "",
+   "latest_month": "",
+   "months": 0,
+   "tdnet": true,
+   "web": false,
+   "ir": false
+  },
+  "5589": {
+   "status": "covered_elsewhere",
+   "home": "",
+   "source_url": "",
+   "latest_month": "",
+   "months": 0,
+   "tdnet": true,
+   "web": false,
+   "ir": false
+  },
+  "8927": {
+   "status": "covered_elsewhere",
+   "home": "",
+   "source_url": "",
+   "latest_month": "",
+   "months": 0,
+   "tdnet": true,
+   "web": false,
+   "ir": false
+  },
+  "212A": {
+   "status": "covered_elsewhere",
+   "home": "",
+   "source_url": "",
+   "latest_month": "",
+   "months": 0,
+   "tdnet": true,
+   "web": false,
+   "ir": false
+  },
+  "6071": {
+   "status": "covered_elsewhere",
+   "home": "",
+   "source_url": "",
+   "latest_month": "",
+   "months": 0,
+   "tdnet": true,
+   "web": false,
+   "ir": false
+  },
+  "9399": {
+   "status": "covered_elsewhere",
+   "home": "",
+   "source_url": "",
+   "latest_month": "",
+   "months": 0,
+   "tdnet": true,
+   "web": false,
+   "ir": false
+  },
+  "8742": {
+   "status": "covered_elsewhere",
+   "home": "",
+   "source_url": "",
+   "latest_month": "",
+   "months": 0,
+   "tdnet": true,
+   "web": false,
+   "ir": false
+  },
+  "7138": {
+   "status": "covered_elsewhere",
+   "home": "",
+   "source_url": "",
+   "latest_month": "",
+   "months": 0,
+   "tdnet": true,
+   "web": false,
+   "ir": false
+  },
+  "2337": {
+   "status": "covered_elsewhere",
+   "home": "",
+   "source_url": "",
+   "latest_month": "",
+   "months": 0,
+   "tdnet": true,
+   "web": false,
+   "ir": false
+  },
+  "9282": {
+   "status": "covered_elsewhere",
+   "home": "",
+   "source_url": "",
+   "latest_month": "",
+   "months": 0,
+   "tdnet": true,
+   "web": false,
+   "ir": false
+  },
+  "2970": {
+   "status": "covered_elsewhere",
+   "home": "",
+   "source_url": "",
+   "latest_month": "",
+   "months": 0,
+   "tdnet": true,
+   "web": false,
+   "ir": false
+  },
+  "4177": {
+   "status": "covered_elsewhere",
+   "home": "",
+   "source_url": "",
+   "latest_month": "",
+   "months": 0,
+   "tdnet": true,
+   "web": false,
+   "ir": false
+  },
+  "150A": {
+   "status": "covered_elsewhere",
+   "home": "",
+   "source_url": "",
+   "latest_month": "",
+   "months": 0,
+   "tdnet": true,
+   "web": false,
+   "ir": false
+  },
+  "352A": {
+   "status": "covered_elsewhere",
+   "home": "",
+   "source_url": "",
+   "latest_month": "",
+   "months": 0,
+   "tdnet": true,
+   "web": false,
+   "ir": false
+  },
+  "8975": {
+   "status": "covered_elsewhere",
+   "home": "",
+   "source_url": "",
+   "latest_month": "",
+   "months": 0,
+   "tdnet": true,
+   "web": false,
+   "ir": false
+  },
+  "2997": {
+   "status": "covered_elsewhere",
+   "home": "",
+   "source_url": "",
+   "latest_month": "",
+   "months": 0,
+   "tdnet": true,
+   "web": false,
+   "ir": false
+  },
+  "8914": {
+   "status": "covered_elsewhere",
+   "home": "",
+   "source_url": "",
+   "latest_month": "",
+   "months": 0,
+   "tdnet": true,
+   "web": false,
+   "ir": false
+  },
+  "8739": {
+   "status": "covered_elsewhere",
+   "home": "",
+   "source_url": "",
+   "latest_month": "",
+   "months": 0,
+   "tdnet": true,
+   "web": false,
+   "ir": false
+  },
+  "3174": {
+   "status": "covered_elsewhere",
+   "home": "",
+   "source_url": "",
+   "latest_month": "",
+   "months": 0,
+   "tdnet": true,
+   "web": false,
+   "ir": false
+  },
+  "9285": {
+   "status": "covered_elsewhere",
+   "home": "",
+   "source_url": "",
+   "latest_month": "",
+   "months": 0,
+   "tdnet": true,
+   "web": false,
+   "ir": false
+  },
+  "3287": {
+   "status": "covered_elsewhere",
+   "home": "",
+   "source_url": "",
+   "latest_month": "",
+   "months": 0,
+   "tdnet": true,
+   "web": false,
+   "ir": false
+  },
+  "3663": {
+   "status": "covered_elsewhere",
+   "home": "",
+   "source_url": "",
+   "latest_month": "",
+   "months": 0,
+   "tdnet": true,
+   "web": false,
+   "ir": false
+  },
+  "369A": {
+   "status": "covered_elsewhere",
+   "home": "",
+   "source_url": "",
+   "latest_month": "",
+   "months": 0,
+   "tdnet": true,
+   "web": false,
+   "ir": false
+  },
+  "2998": {
+   "status": "covered_elsewhere",
+   "home": "",
+   "source_url": "",
+   "latest_month": "",
+   "months": 0,
+   "tdnet": true,
+   "web": false,
+   "ir": false
+  },
+  "401A": {
+   "status": "covered_elsewhere",
+   "home": "",
+   "source_url": "",
+   "latest_month": "",
+   "months": 0,
+   "tdnet": true,
+   "web": false,
+   "ir": false
+  },
+  "4880": {
+   "status": "covered_elsewhere",
+   "home": "",
+   "source_url": "",
+   "latest_month": "",
+   "months": 0,
+   "tdnet": true,
+   "web": false,
+   "ir": false
+  },
+  "9284": {
+   "status": "covered_elsewhere",
+   "home": "",
+   "source_url": "",
+   "latest_month": "",
+   "months": 0,
+   "tdnet": true,
+   "web": false,
+   "ir": false
+  },
+  "8410": {
+   "status": "covered_elsewhere",
+   "home": "",
+   "source_url": "",
+   "latest_month": "",
+   "months": 0,
+   "tdnet": true,
+   "web": false,
+   "ir": false
+  },
+  "3189": {
+   "status": "covered_elsewhere",
+   "home": "",
+   "source_url": "",
+   "latest_month": "",
+   "months": 0,
+   "tdnet": true,
+   "web": false,
+   "ir": false
+  },
+  "6040": {
+   "status": "covered_elsewhere",
+   "home": "",
+   "source_url": "",
+   "latest_month": "",
+   "months": 0,
+   "tdnet": true,
+   "web": false,
+   "ir": false
+  },
+  "1435": {
+   "status": "covered_elsewhere",
+   "home": "",
+   "source_url": "",
+   "latest_month": "",
+   "months": 0,
+   "tdnet": true,
+   "web": false,
+   "ir": false
+  },
+  "3276": {
+   "status": "covered_elsewhere",
+   "home": "",
+   "source_url": "",
+   "latest_month": "",
+   "months": 0,
+   "tdnet": true,
+   "web": false,
+   "ir": false
+  }
+ }
+}

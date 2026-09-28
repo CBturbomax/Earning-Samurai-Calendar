@@ -423,7 +423,8 @@ def pdf_links(page: str, base: str):
 IR_HINT = re.compile(r"(IR情報|投資家|IRライブラリ|株主・投資家|^IR$)")
 IR_PATH = re.compile(r"/(ir|investor)s?(/|$|\.)", re.I)
 MONTHLY_LINK_HINT = re.compile(
-    r"(月次|月度|月別|月間|売上速報|営業概況|月間売上|既存店|全店|月次KPI|主要KPI|"
+    r"(月次|月度(?:売上|実績|営業|速報|動向)|月別(?:売上|実績|営業)|売上(?:高)?速報|"
+    r"営業概況|営業報告|既存店(?:売上)?|全店(?:売上)?|月次KPI|主要KPI|"
     r"月次受注|受注速報|輸送実績|取扱高|Monthly(?:\s+Sales|\s+Results|\s+Data|"
     r"\s+Report|\s+KPI)?)", re.I)
 MONTHLY_PATH_HINT = re.compile(
@@ -523,6 +524,24 @@ IR_SITES = {
     # 겐키드러그 9267 은 주소가 안 닿는다. 다시 두드리지 말 것.
     "8279": ("ヤオコー", "https://www.yaoko-net.com/", ""),
     "7616": ("コロワイド", "https://www.colowide.co.jp/", ""),
+
+    # ── 대형 월차 회사: 자동 discovery 를 기다리지 않고 공식 URL을 우선 연결 ──
+    "7453": ("良品計画", "https://www.ryohin-keikaku.jp/",
+             "https://www.ryohin-keikaku.jp/ir/monthly"),
+    "9989": ("サンドラッグ", "https://www.sundrug.co.jp/",
+             "https://www.sundrug.co.jp/ir/irdata/monthly"),
+    "9142": ("ＪＲ九州", "https://www.jrkyushu.co.jp/",
+             "https://www.jrkyushu.co.jp/company/ir/finance/monthly/"),
+    "9020": ("ＪＲ東日本", "https://www.jreast.co.jp/",
+             "https://www.jreast.co.jp/company/ir/library/monthly/"),
+    "8233": ("高島屋", "https://www.takashimaya.co.jp/",
+             "https://www.takashimaya.co.jp/corp/shareholder/"),
+    "8242": ("Ｈ２Ｏリテイリング", "https://www.h2o-retailing.co.jp/",
+             "https://www.h2o-retailing.co.jp/ja/news.html"),
+    "3099": ("三越伊勢丹ＨＤ", "https://www.imhds.co.jp/", ""),
+    "9021": ("ＪＲ西日本", "https://www.westjr.co.jp/", ""),
+    "9022": ("ＪＲ東海", "https://company.jr-central.co.jp/", ""),
+    "9023": ("東京メトロ", "https://www.tokyometro.jp/corporate/", ""),
 }
 
 
