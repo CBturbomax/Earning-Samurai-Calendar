@@ -1515,21 +1515,28 @@ def load_monthly_web():
 
 
 def load_monthly_ir():
-    """일본 월매출 — **회사 IR 페이지의 月次 표**에서 온 것(`scrape_mon_ir.py`).
+    """회사 공식 월차 페이지 메타 + 읽힌 숫자.
 
-    TDnet 첨부 PDF 도 流通ニュース 도 못 닿는 자리를 메운다. 이온·세븐＆아이·
-    니토리·야마다·스카이락처럼 큰 회사가 여기서 들어온다 — 회사 제 사이트는
-    집계 사이트와 달리 데이터센터 IP 를 막지 않는다(84차: 24곳 중 21곳 열림).
-    값은 전년동월비(%)뿐이고 금액은 없다.
+    **parser 성공 여부와 공식 링크 존재 여부는 별개다.** 숫자를 못 읽었더라도
+    sites 에 공식 月次 페이지를 찾았다면 그 링크를 기사보다 우선해야 한다.
     """
     p = HERE / "data" / "monthly_ir_jp.json"
     if not p.exists():
         return {}
     try:
-        return (json.loads(p.read_text(encoding="utf-8")).get("codes") or {})
+        raw = json.loads(p.read_text(encoding="utf-8"))
     except (ValueError, OSError) as e:
         print(f"  ! monthly_ir_jp.json 읽기 실패: {e}")
         return {}
+    out = {k: dict(v or {}) for k, v in (raw.get("codes") or {}).items()}
+    for code, site in (raw.get("sites") or {}).items():
+        if not site.get("page"):
+            continue
+        rec = out.setdefault(code, {})
+        rec.setdefault("page", site.get("page", ""))
+        if site.get("updated"):
+            rec.setdefault("updated", site["updated"])
+    return out
 
 
 MON_STALE_GAP = 3          # 달
