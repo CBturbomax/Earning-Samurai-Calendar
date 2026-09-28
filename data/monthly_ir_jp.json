@@ -65,6 +65,101 @@
   "7476": {
    "page": "https://ssl4.eir-parts.net/doc/7476/tdnet/2883022/00.pdf",
    "found": "2026-09-28"
+  },
+  "2702": {
+   "miss": "2026-09-28"
+  },
+  "3092": {
+   "miss": "2026-09-28"
+  },
+  "8237": {
+   "miss": "2026-09-28"
+  },
+  "8219": {
+   "miss": "2026-09-28"
+  },
+  "9267": {
+   "miss": "2026-09-28"
+  },
+  "3399": {
+   "miss": "2026-09-28"
+  },
+  "3608": {
+   "page": "https://www.tsi-holdings.com/tsuki.html",
+   "found": "2026-09-28"
+  },
+  "2698": {
+   "page": "https://www.cando-web.co.jp/ir/monthly_report/",
+   "found": "2026-09-28"
+  },
+  "9823": {
+   "miss": "2026-09-28"
+  },
+  "2780": {
+   "miss": "2026-09-28"
+  },
+  "9278": {
+   "miss": "2026-09-28"
+  },
+  "8142": {
+   "page": "https://www.to-ho.co.jp/toho_news/news002058.html",
+   "found": "2026-09-28"
+  },
+  "3093": {
+   "page": "https://www.treasurefactory.co.jp/ir/monthly.html",
+   "found": "2026-09-28"
+  },
+  "9861": {
+   "page": "https://www.yoshinoya-holdings.com/ir/report/yoshinoya/",
+   "found": "2026-09-28"
+  },
+  "3387": {
+   "miss": "2026-09-28"
+  },
+  "2681": {
+   "miss": "2026-09-28"
+  },
+  "3050": {
+   "page": "https://www.dcm-hldgs.co.jp/grp/ir/performance/monthly-report.html",
+   "found": "2026-09-28"
+  },
+  "8273": {
+   "page": "https://www.izumi.co.jp/ir/finance/monthly/",
+   "found": "2026-09-28"
+  },
+  "9948": {
+   "page": "https://www.arcs-g.co.jp/ir/monthly-performance/index.html",
+   "found": "2026-09-28"
+  },
+  "7545": {
+   "page": "https://www.24028-net.jp/category/MONTHLY/?utm_source=monthly&utm_medium=banner&utm_campaign=ownedsite&utm_term=ver1",
+   "found": "2026-09-28"
+  },
+  "3549": {
+   "page": "https://kusuri-aoki-hd.co.jp/ir/finance/monthry/",
+   "found": "2026-09-28"
+  },
+  "9832": {
+   "page": "https://www.autobacs.co.jp/ja/ir/news/auto_20260907532362/pdfFile.pdf",
+   "found": "2026-09-28"
+  },
+  "2664": {
+   "miss": "2026-09-28"
+  },
+  "3222": {
+   "page": "https://www.usmh.co.jp/ir/monthly_reports",
+   "found": "2026-09-28"
+  },
+  "7532": {
+   "page": "https://ppih.co.jp/ir/highlight/monthly/",
+   "found": "2026-09-28"
+  },
+  "8279": {
+   "page": "https://www.bluezonesholdings.co.jp/ir/finance/monthly.html",
+   "found": "2026-09-28"
+  },
+  "7616": {
+   "miss": "2026-09-28"
   }
  },
  "codes": {
@@ -519,11 +614,120 @@
     }
    },
    "ts": "2026-09-28T00:57:41+00:00"
+  },
+  "9948": {
+   "name": "アークス",
+   "page": "https://www.arcs-g.co.jp/ir/monthly-performance/index.html",
+   "months": {
+    "2026-03": {
+     "day": "2026-09-28",
+     "all": 100.8,
+     "same": 100.6
+    },
+    "2026-04": {
+     "day": "2026-09-28",
+     "all": 102.2,
+     "same": 102.3
+    },
+    "2026-05": {
+     "day": "2026-09-28",
+     "all": 105.2,
+     "same": 105.3
+    },
+    "2026-06": {
+     "day": "2026-09-28",
+     "all": 99.0,
+     "same": 98.7
+    },
+    "2026-07": {
+     "day": "2026-09-28",
+     "all": 100.7,
+     "same": 100.2
+    },
+    "2026-08": {
+     "day": "2026-09-28",
+     "all": 101.8,
+     "same": 101.5
+    },
+    "2025-03": {
+     "day": "2026-09-28",
+     "all": 103.7,
+     "same": 103.8
+    },
+    "2025-04": {
+     "day": "2026-09-28",
+     "all": 103.7,
+     "same": 103.3
+    },
+    "2025-05": {
+     "day": "2026-09-28",
+     "all": 103.1,
+     "same": 103.0
+    },
+    "2025-06": {
+     "day": "2026-09-28",
+     "all": 102.5,
+     "same": 102.4
+    },
+    "2025-07": {
+     "day": "2026-09-28",
+     "all": 104.5,
+     "same": 103.6
+    },
+    "2025-08": {
+     "day": "2026-09-28",
+     "all": 103.5,
+     "same": 103.6
+    },
+    "2025-09": {
+     "day": "2026-09-28",
+     "all": 100.9,
+     "same": 100.9
+    },
+    "2025-10": {
+     "day": "2026-09-28",
+     "all": 103.1,
+     "same": 102.9
+    },
+    "2025-11": {
+     "day": "2026-09-28",
+     "all": 104.5,
+     "same": 104.5
+    },
+    "2025-12": {
+     "day": "2026-09-28",
+     "all": 101.3,
+     "same": 101.4
+    },
+    "2026-01": {
+     "day": "2026-09-28",
+     "all": 103.5,
+     "same": 103.5
+    },
+    "2026-02": {
+     "day": "2026-09-28",
+     "all": 102.3,
+     "same": 102.3
+    }
+   },
+   "ts": "2026-09-28T01:04:25+00:00"
+  },
+  "7532": {
+   "name": "ＰＰＩＨ",
+   "page": "https://ppih.co.jp/ir/highlight/monthly/",
+   "months": {
+    "2026-08": {
+     "day": "2026-09-28",
+     "same": 100.4,
+     "all": 100.3
+    }
+   },
+   "ts": "2026-09-28T01:04:25+00:00"
   }
  },
  "source": "회사 IR 페이지 (月次 표)",
- "note": "회사가 제 사이트에 올린 월차 표에서 읽는다. 값은 전년동월비(%)뿐이고 금액은 없다. 회사 사이트는 대개 이번 회계연도만 실으므로 이력은 여기 쌓인 만큼이다.",
- "companies": 6,
- "months": 83,
- "ts": "2026-09-28T00:59:04+00:00"
+ "note": "회사가 제 사이트에 올린 월차 표에서 읽는다. 값은 전년동월비(%)뿐이고 금액은 없다. 회계연도가 적힌 표는 그 해로 읽으므로 옛 회계연도 표를 함께 싣는 회사는 이력이 길다.",
+ "companies": 8,
+ "months": 102,
+ "ts": "2026-09-28T01:06:47+00:00"
 }
