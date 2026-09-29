@@ -74,6 +74,7 @@ PDF_PER_RUN = int(os.environ.get("IR_PDF_PER_RUN", "60"))
 # 신선하다고 건너뛰면 그 회사의 PDF 를 영영 안 연다 — 실제로 첫 실행에서
 # 그랬다. 옛 PDF 는 안 바뀌므로 하루에 한 번이면 넉넉하다.
 PDF_FRESH_HOURS = float(os.environ.get("IR_PDF_FRESH_HOURS", "24"))
+ARCHIVE_PER_COMPANY = int(os.environ.get("IR_ARCHIVE_PER_COMPANY", "4"))
 # 공식 홈페이지를 모르는 seed 종목은 Yahoo assetProfile 에서 조금씩만 채운다.
 # 월차 잡이 10분마다 도니 한 바퀴에 12개면 하루 안에 300여 종목을 한 번 돈다.
 HOME_PER_RUN = int(os.environ.get("IR_HOME_PER_RUN", "24"))
@@ -563,6 +564,18 @@ def main():
         if updated:
             sites.setdefault(code, {})["updated"] = updated
         got = monir.read(page, today)
+        # 현재 회계연도만 싣는 회사는 과거 연도 HTML 링크도 따라간다.
+        # 연도/백넘버 링크만, 같은 도메인만, 회사당 몇 장으로 제한한다.
+        for au in monir.archive_links(page, url, ARCHIVE_PER_COMPANY):
+            if time.time() - t0 > BUDGET - 5:
+                break
+            apage = get(au)
+            time.sleep(PAUSE)
+            if not apage:
+                continue
+            ago = monir.read(apage, today)
+            for p, v in ago.items():
+                got.setdefault(p, v)
         fresh += 1
         # **PDF 목록 꼴도 같이 본다.** 표를 안 싣고 달마다 PDF 한 장을 거는
         # 회사가 많다 — 패스트리는 회계연도 한 장에 열두 달이라 세 장으로

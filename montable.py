@@ -292,6 +292,36 @@ def _title_target_month(title: str, aday: date):
     return f"{yr:04d}-{mo:02d}"
 
 
+SINGLE_YOY = re.compile(
+    r"(?:店頭)?売上高(?:前年比|の前年比|前年同月比)?[^\d%％]{0,28}"
+    r"([+＋\-－△▲]?)(\d{1,3}(?:\.\d+)?)\s*[%％]")
+
+
+def _single_month_yoy(table, aday: date, title: str = ""):
+    """표가 아니라 한 달 설명문으로 매출 YoY를 내는 PDF의 마지막 안전망."""
+    target = _title_target_month(title, aday)
+    if not target:
+        return None
+    # 표 셀의 행 순서를 유지해 회사가 먼저 적은 대표 매출 YoY를 고른다.
+    for cells in table:
+        row = "".join(_norm(t) for _x, t in cells)
+        if re.search(r"客数|客単価|利益|粗利|商品別", row):
+            continue
+        m = SINGLE_YOY.search(row)
+        if not m:
+            continue
+        v = float(m.group(2))
+        sign = m.group(1)
+        if sign in ("-", "－", "△", "▲"):
+            v = -v
+        # 부호가 있거나 작은 수면 증감폭, 100대면 이미 지수다.
+        yoy = 100.0 + v if sign or abs(v) < 30 else v
+        if 20 <= yoy <= 500:
+            return {"rows": [{"period": target, "yoy": yoy,
+                              "metric": "월매출 전년비"}],
+                    "amount_label": "", "yoy_label": "売上高前年比"}
+    return None
+
 VERT_MONTH = re.compile(r"^(?:(\d{2}|\d{4})年)?(\d{1,2})月(?:[（(~～].*)?$")
 
 
@@ -490,7 +520,8 @@ def read(data: bytes, ann: str, max_pages: int = 12, title: str = ""):
 
     if not cands:
         vertical = _vertical_yoy(table, aday, title)
-        return vertical or _sentence(table, aday)
+        single = _single_month_yoy(table, aday, title)
+        return vertical or single or _sentence(table, aday)
 
     groups = {}
     for c in cands:
@@ -793,6 +824,13 @@ def _selftest():                                          # pragma: no cover
     got = {r["period"]: r.get("yoy") for r in (g or {}).get("rows") or []}
     if len(got) != 4 or got.get("2026-04") != 103.3 or got.get("2026-07") != 103.9:
         print("!! 파) 세로형 전년비 표", got)
+        ok = False
+    # (하) 다카시마야 꼴: 한 달 설명문에 매출 YoY만 적힌 PDF.
+    h = _pdf([(700, [(40, "百貨店売上高前年比 店頭売上高＋8.3％ 既存店＋9.6％")])])
+    g = read(h, "2026-08-03", title="2026年7月度 高島屋店頭売上速報")
+    got = (g or {}).get("rows") or []
+    if len(got) != 1 or got[0].get("period") != "2026-07" or got[0].get("yoy") != 108.3:
+        print("!! 하) 한 달 설명문 YoY", got)
         ok = False
     print("montable 스스로 시험:", "통과" if ok else "떨어짐")
     return 0 if ok else 1

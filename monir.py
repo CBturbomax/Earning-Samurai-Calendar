@@ -30,7 +30,7 @@ from datetime import date
 import monweb
 
 __all__ = ["IR_SITES", "read", "find_monthly", "find_ir",
-           "pdf_links", "pdf_when"]
+           "archive_links", "pdf_links", "pdf_when"]
 
 ZEN = monweb.ZEN
 TAG = re.compile(r"<[^>]+>")
@@ -38,7 +38,7 @@ SCRIPT = re.compile(r"(?is)<(script|style|noscript)[^>]*>.*?</\1>")
 TABLE_AT = re.compile(r"(?is)<table[^>]*>(.*?)</table>")
 A = re.compile(r'(?is)<a[^>]+href="([^"#]+)"[^>]*>(.*?)</a>')
 
-MONTH_CELL = re.compile(r"^\(?(\d{1,2})\s*月(度|分|次)?\)?$")
+MONTH_CELL = re.compile(r"^\(?(?:(?:\d{2}|\d{4})年)?(\d{1,2})\s*月(度|分|次)?\)?$")
 # 「2026年2月期」 처럼 **결산기말이 적힌** 표. 이게 있으면 해를 정확히 안다.
 FY_END = re.compile(r"(20\d{2})\s*年\s*(\d{1,2})\s*月期")
 # 「2025年度」 — 4월 시작이 일본의 관례다.
@@ -293,7 +293,10 @@ def _horizontal(rows, width, hr, cols, today, near, lead=""):
         vals = _row_ratios([r[c] for c in cols], delta_hint)
         if sum(v is not None for v in vals) < 2:
             continue
-        kind = _label_ok("".join(r[c] for c in range(first)), lead)
+        lab = "".join(r[c] for c in range(first))
+        if "累計" in lab or "累積" in lab:
+            continue
+        kind = _label_ok(lab, lead)
         if kind:
             pairs.append((kind, vals))
     if not pairs:
@@ -314,6 +317,10 @@ def _vertical(rows, width, c0, mrows, today, near, lead=""):
     for c in range(c0 + 1, width):
         vals = _row_ratios([rows[i][c] for i in mrows], delta_hint)
         if sum(v is not None for v in vals) < 2:
+            continue
+        # 累計 열은 그 달의 단월 값이 아니다. 단월/누계가 나란히 서는
+        # Create SD 같은 표에서 같은 kind가 둘로 잡혀 전부 버려지는 것을 막는다.
+        if "累計" in labs[c] or "累積" in labs[c]:
             continue
         kind = _label_ok(labs[c], lead)
         if kind:
@@ -526,6 +533,41 @@ def find_monthly(page: str, base: str):
     return max(cand)[2] if cand else ""
 
 
+ARCHIVE_LINK_HINT = re.compile(
+    r"(20\d{2}年(?:\d{1,2}月期|度)|過去|バックナンバー|Back\s*Number|Archive)", re.I)
+ARCHIVE_PATH_HINT = re.compile(r"(?:backnumber|archive|/monthly/20\d{2}(?:/|$))", re.I)
+
+
+def archive_links(page: str, base: str, limit: int = 4):
+    """월차 페이지에서 과거 회계연도 HTML 페이지를 찾는다.
+
+    PDF는 별도 수집기가 처리한다. 같은 도메인의 연도/백넘버 링크만 따라가며
+    현재 페이지 자체는 제외한다.
+    """
+    import urllib.parse
+    base_host = urllib.parse.urlparse(base).netloc
+    cur = base.split("?")[0].rstrip("/")
+    out, seen = [], set()
+    for href, lab in A.findall(page):
+        if href.lower().startswith(("javascript:", "mailto:", "tel:")):
+            continue
+        t = _txt(lab)
+        if not (ARCHIVE_LINK_HINT.search(t) or ARCHIVE_PATH_HINT.search(href)):
+            continue
+        u = urllib.parse.urljoin(base, href).split("#")[0]
+        if u.split("?")[0].lower().endswith(".pdf"):
+            continue
+        if urllib.parse.urlparse(u).netloc != base_host:
+            continue
+        key = u.split("?")[0].rstrip("/")
+        if key == cur or key in seen:
+            continue
+        seen.add(key)
+        out.append(u)
+        if len(out) >= limit:
+            break
+    return out
+
 def has_monthly_pdf(page: str, base: str) -> bool:
     """이 페이지에 **월매출 PDF 가 걸려 있는가.** 있으면 여기가 목록이다."""
     return bool(pdf_links(page, base))
@@ -578,7 +620,10 @@ IR_SITES = {
     # 두드린다 — 값도 없이 남의 서버를 두드리지 않기 위해서다.
     "2702": ("日本マクドナルド", "https://www.mcd-holdings.co.jp/", ""),
     "3092": ("ＺＯＺＯ", "https://corp.zozo.com/", ""),
-    "8237": ("松屋", "https://www.matsuya.com/", ""),
+    "8237": ("松屋", "https://www.matsuya.com/",
+             "https://www.matsuya.com/corp/ir/monthly-highlight/"),
+    "8153": ("モスフードサービス", "https://www.mos.co.jp/",
+             "https://www.mos.co.jp/company/ir/library/monthly_info/"),
     "3399": ("山岡家", "https://www.yamaokaya.com/", ""),
     "3608": ("ＴＳＩ ＨＤ", "https://www.tsi-holdings.com/", ""),
     "2698": ("キャンドゥ", "https://www.cando-web.co.jp/", ""),
@@ -615,15 +660,17 @@ IR_SITES = {
     "9020": ("ＪＲ東日本", "https://www.jreast.co.jp/",
              "https://www.jreast.co.jp/company/ir/library/monthly/"),
     "8233": ("高島屋", "https://www.takashimaya.co.jp/",
-             "https://www.takashimaya.co.jp/corp/shareholder/"),
+             "https://www.takashimaya.co.jp/corp/topics/"),
     "8242": ("Ｈ２Ｏリテイリング", "https://www.h2o-retailing.co.jp/",
-             "https://www.h2o-retailing.co.jp/ja/news.html"),
+             "https://www.h2o-retailing.co.jp/ja/ir/library/monthly.html"),
     "3099": ("三越伊勢丹ＨＤ", "https://www.imhds.co.jp/",
              "https://www.imhds.co.jp/corporate/ir/finance/monthly-report.html"),
     "9021": ("ＪＲ西日本", "https://www.westjr.co.jp/",
              "https://www.westjr.co.jp/company/ir/finance/monthly/"),
     "9022": ("ＪＲ東海", "https://company.jr-central.co.jp/", ""),
     "9023": ("東京メトロ", "https://www.tokyometro.jp/corporate/", ""),
+    "3148": ("クリエイトＳＤＨＤ", "https://www.createsdhd.co.jp/",
+             "https://www.createsdhd.co.jp/ir/monthly/"),
     "2502": ("アサヒグループ", "https://www.asahigroup-holdings.com/",
              "https://www.asahigroup-holdings.com/ir/financial_data/monthly_data/"),
     "2670": ("ＡＢＣマート", "https://www.abc-mart.co.jp/",
@@ -986,6 +1033,50 @@ def _selftest():                                          # pragma: no cover
     # v6: 행 이름이 前年比뿐이어도 표 제목이 매출이면 읽는다.
     eq("(어) 문맥형 前年比", _label_ok("前年比", "月次売上高"), "yoy")
     eq("(어) 비매출 문맥 차단", _label_ok("前年比", "粗利益"), None)
+    # v7: 달 이름표에 연도가 붙는 HTML 표 (무인양품/Create SD 꼴).
+    ym = """<h3>2026年8月期 国内売上</h3><table>
+      <tr><th></th><th>既存店 売上</th><th>全店 売上</th></tr>
+      <tr><td>25年9月</td><td>98.9</td><td>108.2</td></tr>
+      <tr><td>25年10月</td><td>115.8</td><td>126.2</td></tr>
+      <tr><td>26年1月</td><td>102.6</td><td>110.2</td></tr>
+      </table>"""
+    eq("(저) 연도 붙은 월칸", read(ym, T), {
+        "2025-09": {"same": 98.9, "all": 108.2},
+        "2025-10": {"same": 115.8, "all": 126.2},
+        "2026-01": {"same": 102.6, "all": 110.2}})
+
+    # v7: 과거 회계연도 HTML 링크를 같은 도메인에서만 따라간다.
+    arc = ('<a href="/ir/monthly/2025/domestic">2025年8月期</a>'
+           '<a href="/ir/monthly/2024/domestic">2024年8月期</a>'
+           '<a href="https://other.example/2023">2023年度</a>')
+    eq("(처) 과거 월차 링크", archive_links("".join(arc), "https://x.jp/ir/monthly/"),
+       ["https://x.jp/ir/monthly/2025/domestic",
+        "https://x.jp/ir/monthly/2024/domestic"])
+    # v7: 단월/누계가 나란히 있는 표에서는 누계 열을 버린다.
+    cum = """<h3>2027年5月期 月次業績</h3><table>
+      <tr><th></th><th colspan="2">既存店</th><th colspan="2">全店</th></tr>
+      <tr><th></th><th>単月 売上</th><th>累計 売上</th>
+          <th>単月 売上</th><th>累計 売上</th></tr>
+      <tr><td>26年6月</td><td>100.0</td><td>100.0</td><td>103.6</td><td>103.6</td></tr>
+      <tr><td>26年7月</td><td>103.4</td><td>101.7</td><td>107.1</td><td>105.3</td></tr>
+      <tr><td>26年8月</td><td>101.8</td><td>101.7</td><td>105.5</td><td>105.4</td></tr>
+      </table>"""
+    eq("(커) 단월/누계 열", read(cum, T), {
+        "2026-06": {"same": 100.0, "all": 103.6},
+        "2026-07": {"same": 103.4, "all": 107.1},
+        "2026-08": {"same": 101.8, "all": 105.5}})
+    # v7: 가로형 표도 단월/누계를 섞지 않는다(산드럭 꼴).
+    hc = """<h3>2026年度 売上高前年同月比較表</h3><table>
+      <tr><th></th><th></th><th>4月</th><th>5月</th><th>6月</th></tr>
+      <tr><th rowspan="2">既存店</th><th>単月</th><td>2.9</td><td>4.6</td><td>-4.4</td></tr>
+      <tr><th>累計</th><td>2.9</td><td>3.7</td><td>0.9</td></tr>
+      <tr><th rowspan="2">全店</th><th>単月</th><td>5.9</td><td>7.3</td><td>-1.9</td></tr>
+      <tr><th>累計</th><td>5.9</td><td>6.6</td><td>3.6</td></tr>
+      </table>"""
+    eq("(터) 가로 단월/누계", read(hc, T), {
+        "2026-04": {"same": 102.9, "all": 105.9},
+        "2026-05": {"same": 104.6, "all": 107.3},
+        "2026-06": {"same": 95.6, "all": 98.1}})
     if bad:
         print("monir 스스로 시험 실패:")
         for b in bad:
