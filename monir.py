@@ -184,21 +184,25 @@ def _all_text(rows):
     return " ".join(x for r in rows for x in r)
 
 
-def _label_ok(lab: str):
-    """이름표 -> 'same' · 'all' · 'yoy' · None.
+def _label_ok(lab: str, context: str = ""):
+    """이름표 -> same · all · yoy · None.
 
-    전에는 既存店/全店 두 줄만 받아서 Rakus·Asahi·MISUMI처럼 그냥
-    '売上高 前年比' 한 줄만 내는 회사가 전부 빠졌다. 매출 낱말이 명확하면
-    일반 월매출 YoY도 받는다. 객수·객단가·점포수는 여전히 먼저 버린다.
+    행 이름이 그냥 「前年比」여도 표 제목이 매출임을 명시하면 월매출로 읽는다.
+    반대로 利益/粗利/客数 같은 비매출 표는 문맥까지 함께 막는다.
     """
-    if monweb.NOT_SALES.search(lab):
+    if monweb.NOT_SALES.search(lab) or GENERIC_NOT_SALES.search(lab):
         return None
     same, allst = monweb.SAME.search(lab), monweb.ALL.search(lab)
     if same:
         return "same"
     if allst:
         return "all"
-    return "yoy" if GENERIC_SALES.search(lab) else None
+    if GENERIC_SALES.search(lab):
+        return "yoy"
+    if (YOY_CONTEXT.search(lab) and GENERIC_SALES.search(context)
+            and not GENERIC_NOT_SALES.search(context)):
+        return "yoy"
+    return None
 
 
 # 한 표에서 **이름표가 같은 계열이 둘 이상**이면 그 표를 안 읽는다.
@@ -289,7 +293,7 @@ def _horizontal(rows, width, hr, cols, today, near, lead=""):
         vals = _row_ratios([r[c] for c in cols], delta_hint)
         if sum(v is not None for v in vals) < 2:
             continue
-        kind = _label_ok("".join(r[c] for c in range(first)))
+        kind = _label_ok("".join(r[c] for c in range(first)), lead)
         if kind:
             pairs.append((kind, vals))
     if not pairs:
@@ -311,7 +315,7 @@ def _vertical(rows, width, c0, mrows, today, near, lead=""):
         vals = _row_ratios([rows[i][c] for i in mrows], delta_hint)
         if sum(v is not None for v in vals) < 2:
             continue
-        kind = _label_ok(labs[c])
+        kind = _label_ok(labs[c], lead)
         if kind:
             pairs.append((kind, vals))
     if not pairs:
@@ -491,24 +495,35 @@ MONTHLY_PATH_HINT = re.compile(
 
 
 def find_monthly(page: str, base: str):
-    """페이지에서 **月次 페이지로 가는 링크**를 찾는다 -> 주소 또는 ''.
+    """페이지에서 가장 그럴듯한 月次 페이지를 점수로 고른다.
 
-    **PDF 는 안 고른다.** 달마다 PDF 한 장을 거는 회사(브ックオフ 9278)에서
-    첫 PDF 를 月次 '페이지'로 잡으면 그 한 장만 보고 목록을 통째로 놓친다.
-    그럴 때는 **그 PDF 들이 걸린 페이지 자체**가 목록이다(`has_monthly_pdf`).
+    첫 매치를 바로 택하면 「既存店」이라는 말만 있는 전략 페이지를 월차로
+    오인할 수 있다. 月次/Monthly와 URL 경로를 강하게 우선하고 약한 힌트는
+    보조점수로만 쓴다.
     """
     import urllib.parse
+    cand = []
     for href, lab in A.findall(page):
         if href.lower().startswith(("javascript:", "mailto:", "tel:")):
             continue
         t = _txt(lab)
-        if (MONTHLY_LINK_HINT.search(t) or MONTHLY_LINK_HINT.search(href) or
-                MONTHLY_PATH_HINT.search(href)):
-            u = urllib.parse.urljoin(base, href)
-            if u.split("?")[0].lower().endswith(".pdf"):
-                continue
-            return u
-    return ""
+        u = urllib.parse.urljoin(base, href)
+        if u.split("?")[0].lower().endswith(".pdf"):
+            continue
+        score = 0
+        if re.search(r"月次|月度|月別|Monthly", t, re.I):
+            score += 100
+        if MONTHLY_PATH_HINT.search(href):
+            score += 80
+        if re.search(r"売上|営業概況|営業報告|KPI|取扱高|輸送実績", t, re.I):
+            score += 35
+        if re.search(r"既存店|全店", t):
+            score += 8
+        if MONTHLY_LINK_HINT.search(href):
+            score += 30
+        if score:
+            cand.append((score, -len(u), u))
+    return max(cand)[2] if cand else ""
 
 
 def has_monthly_pdf(page: str, base: str) -> bool:
