@@ -116,9 +116,12 @@ jobs:
         env:
           IR_SECS: '540'
           IR_PAUSE: '0.8'
-          IR_PDF_PER_COMPANY: '24'
-          IR_PDF_PER_RUN: '180'
-          IR_ARCHIVE_PER_COMPANY: '4'
+          IR_PDF_PER_COMPANY: '36'
+          IR_PDF_PER_RUN: '260'
+          IR_ARCHIVE_PER_COMPANY: '6'
+          IR_HOME_PER_RUN: '48'
+          IR_GIVE_UP: '30'
+          IR_PARSE_MISS_HOURS: '2'
         run: |
           set -o pipefail
           python scrape_mon_ir.py | tee ir.log
