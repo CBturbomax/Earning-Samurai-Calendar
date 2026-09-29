@@ -620,7 +620,10 @@ IR_SITES = {
     # 두드린다 — 값도 없이 남의 서버를 두드리지 않기 위해서다.
     "2702": ("日本マクドナルド", "https://www.mcd-holdings.co.jp/", ""),
     "3092": ("ＺＯＺＯ", "https://corp.zozo.com/", ""),
-    "8237": ("松屋", "https://www.matsuya.com/", ""),
+    "8237": ("松屋", "https://www.matsuya.com/",
+             "https://www.matsuya.com/corp/ir/monthly-highlight/"),
+    "8153": ("モスフードサービス", "https://www.mos.co.jp/",
+             "https://www.mos.co.jp/company/ir/library/monthly_info/"),
     "3399": ("山岡家", "https://www.yamaokaya.com/", ""),
     "3608": ("ＴＳＩ ＨＤ", "https://www.tsi-holdings.com/", ""),
     "2698": ("キャンドゥ", "https://www.cando-web.co.jp/", ""),
