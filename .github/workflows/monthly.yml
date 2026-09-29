@@ -118,6 +118,7 @@ jobs:
           IR_PAUSE: '0.8'
           IR_PDF_PER_COMPANY: '24'
           IR_PDF_PER_RUN: '180'
+          IR_ARCHIVE_PER_COMPANY: '4'
         run: |
           set -o pipefail
           python scrape_mon_ir.py | tee ir.log
