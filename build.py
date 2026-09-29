@@ -1766,18 +1766,24 @@ def _back_fill(rows, same_base):
 
 
 def _ratio_rows(months):
-    """{달: {same, all}} -> ([[달, None, 비율], …], 기준 한 낱말).
+    """{달: {same, all, yoy}} -> 월차 시계열.
 
-    같은 가게 기준(既存店)과 전점 기준 중 **더 많이 실린 쪽 하나만** 쓴다.
+    기존점/전점이 있으면 그중 더 긴 계열을 쓰고, 둘 다 없으면 일반 월매출
+    전년동월비(yoy)를 쓴다.
     """
     n_same = sum(1 for v in months.values() if v.get("same") is not None)
     n_all = sum(1 for v in months.values() if v.get("all") is not None)
-    if not (n_same or n_all):
-        return [], ""
-    key = "same" if n_same >= n_all else "all"
-    rows = [[p, None, v[key]] for p, v in sorted(months.items())
-            if v.get(key) is not None]
-    return rows, ("기존점" if key == "same" else "전점")
+    n_yoy = sum(1 for v in months.values() if v.get("yoy") is not None)
+    if n_same or n_all:
+        key = "same" if n_same >= n_all else "all"
+        rows = [[p, None, v[key]] for p, v in sorted(months.items())
+                if v.get(key) is not None]
+        return rows, ("기존점" if key == "same" else "전점")
+    if n_yoy:
+        rows = [[p, None, v["yoy"]] for p, v in sorted(months.items())
+                if v.get("yoy") is not None]
+        return rows, "월매출"
+    return [], ""
 
 
 def _ir_pick(rec):
@@ -1962,6 +1968,8 @@ def load_monthly_nums(monthly):
                 snap["same"] = mv["same"]
             if mv.get("all") is not None:
                 snap["all"] = mv["all"]
+            if mv.get("yoy") is not None:
+                snap["yoy"] = mv["yoy"]
             pv = (rawrec.get("pdf") or {}).get(latest[0]) or {}
             if snap.get("rev") is None and pv.get("rev") is not None:
                 snap["rev"] = pv["rev"]
@@ -2608,6 +2616,8 @@ __FLAGCSS__
 .mnmodalchart { overflow:hidden; width:100%; padding:4px 0 0; }
 .mnmodalchart .mchart { width:100%; min-width:0; max-width:100%; height:auto; }
 .mnstale { color:#d8b877; font-size:13px; margin-left:8px; }
+.mnquality { font-size:12px; color:#7f96a8; margin-left:8px; }
+.mnquality.warn { color:#d8b877; font-weight:700; }
 @media (max-width: 900px) {
   .mnrow, .mnhead { grid-template-columns:88px 64px minmax(180px,1fr) 82px 95px; }
   .mnrow .mcap, .mnrow .mpdf, .mnhead span:nth-child(6), .mnhead span:nth-child(7) { display:none; }
@@ -3663,14 +3673,15 @@ function mnChart(src) {
   const tip = i => m[i][0].slice(2).replace('-', '/') + ' ' +
         (m[i][1] != null ? mnFmtJPY(m[i][1]) : '') +
         (m[i][2] != null ? (m[i][1] != null ? ' · ' : '') +
-                           (m[i][2] >= 100 ? '+' : '') +
-                           (m[i][2] - 100).toFixed(1) + '%' : '');
+                           ((m[i][2] - 100) >= 0 ? '+' : '') +
+                           Math.round(m[i][2] - 100) + '%' : '');
 
   const pct = i => {
     const v = at(i) && m[i][2];
     if (v == null) return null;
     const d = v - 100;
-    return [(d >= 0 ? '+' : '') + d.toFixed(1) + '%', d >= 0 ? 'up' : 'dn'];
+    const n = Math.round(d);
+    return [(n >= 0 ? '+' : '') + n + '%', n >= 0 ? 'up' : 'dn'];
   };
 
   let body = '';
@@ -3810,8 +3821,9 @@ function mnDisplayValue(code, targetPeriod) {
   const pct = v => {
     if (v == null) return null;
     const d = v - 100;
-    return {txt:(d >= 0 ? '+' : '') + d.toFixed(1) + '%',
-            cls:d >= 0 ? 'up' : 'dn'};
+    const n = Math.round(d);
+    return {txt:(n >= 0 ? '+' : '') + n + '%',
+            cls:n >= 0 ? 'up' : 'dn'};
   };
   if (s && s.same != null) {
     const p = pct(s.same); val = p.txt; cls = p.cls; lab = ' 기존점';
@@ -3863,7 +3875,11 @@ function renderMonthly() {
   for (const x of byCode.values()) {
     x.last = x.rows[x.rows.length - 1];
     if (capMinJo && capJo(x.cap) < capMinJo) continue;
-    if (numOnly && !mnDisplayValue(x.code, x.last[5])) continue;
+    const dv = mnDisplayValue(x.code, x.last[5]);
+    // 기본 '수치 있는 종목만'은 **최근 3개월 안에 실제 월차가 있는 회사**만.
+    // 공시 중단 회사를 2024년 숫자로 현재 월차주처럼 보여주지 않는다.
+    const recent = x.last[5] && (MN_B - MN_KEY(x.last[5]) <= 2);
+    if (numOnly && (!dv || !recent)) continue;
     if (q && !(x.code + ' ' + x.ko + ' ' + x.orig).toLowerCase().includes(q)) continue;
     list.push(x);
   }
@@ -3910,7 +3926,8 @@ function renderMonthly() {
 function mnPctText(v) {
   if (v == null) return null;
   const d = v - 100;
-  return {txt:(d >= 0 ? '+' : '') + d.toFixed(1) + '%', cls:d >= 0 ? 'up' : 'dn'};
+  const n = Math.round(d);
+  return {txt:(n >= 0 ? '+' : '') + n + '%', cls:n >= 0 ? 'up' : 'dn'};
 }
 
 function mnLatestSnapshot(num, target) {
@@ -3940,6 +3957,13 @@ function mnLatestSnapshot(num, target) {
       ' · ' + esc(num.src || '') + '</div></div>';
 }
 
+function mnQuality(num) {
+  if (!num || !num.m || !num.m.length) return {have:0, total:24, gaps:24};
+  const d = mnRecentDense(num.m, 24).m;
+  const have = d.filter(Boolean).length;
+  return {have:have, total:24, gaps:24-have};
+}
+
 function monthlyBlock(code) {
   const all = MN.filter(r => r[2] === code).sort((a,b) => a[0].localeCompare(b[0]));
   const num = MNUM[code];
@@ -3952,6 +3976,10 @@ function monthlyBlock(code) {
   const stale = lr ? (MN_B - MN_KEY(lr[0]) >= 3) : false;
   let head = '<div class="finhead">월매출 <span class="dim">(月次)</span>';
   if (target) head += '<span class="now">대상 ' + esc(target.replace('-', '.')) + '</span>';
+  const q = mnQuality(num);
+  if (num) head += '<span class="mnquality' + (q.gaps ? ' warn' : '') + '">' +
+                   '수집 ' + q.have + '/24개월' +
+                   (q.gaps ? ' · ⚠ ' + q.gaps + '개월 미수집' : '') + '</span>';
   if (stale) head += '<span class="mnstale">⚠ 수치 이력이 오래됨</span>';
   head += '</div>';
 
@@ -3960,7 +3988,7 @@ function monthlyBlock(code) {
     const yoy = lr[2] == null ? null : lr[2] - 100;
     const ytxt = yoy == null ? '—' :
       '<span class="' + (yoy >= 0 ? 'up' : 'dn') + '">' +
-      (yoy >= 0 ? '+' : '') + yoy.toFixed(1) + '%</span>';
+      (Math.round(yoy) >= 0 ? '+' : '') + Math.round(yoy) + '%</span>';
     stat = '<div class="mstat"><div><div class="v">' +
       (lr[1] != null ? mnFmtJPY(lr[1]) : ytxt) + '</div>' +
       '<div class="k">' + esc(lr[0].replace('-', '.')) +
