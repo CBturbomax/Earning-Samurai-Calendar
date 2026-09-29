@@ -116,7 +116,7 @@ jobs:
         env:
           IR_SECS: '480'
           IR_PAUSE: '1.0'
-          IR_PDF_PER_RUN: '20'
+          IR_PDF_PER_RUN: '60'
         run: |
           set -o pipefail
           python scrape_mon_ir.py | tee ir.log
