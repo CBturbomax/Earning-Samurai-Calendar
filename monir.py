@@ -972,6 +972,20 @@ def _selftest():                                          # pragma: no cover
                      '<a href="/p/MonthlySales_2026.pdf">2026年8月期 (80KB)</a>',
                      "https://x.jp/")), 1)
 
+    # v6: URL 경로 자체가 대상월인 PDF (아사히 꼴).
+    eq("(버) /YYYY/MM.pdf 대상월",
+       pdf_when("https://x.jp/monthly/2026/08.pdf", "Monthly Sales"),
+       "2026-09-01")
+
+    # v6: 약한 既存店 링크가 먼저 있어도 진짜 月次 링크를 골라야 한다.
+    scored = ('<a href="/ir/strategy/existing_store/">既存店の成長</a>'
+              '<a href="/ir/financial/monthly/">月次売上高</a>')
+    eq("(서) 월차 링크 점수", find_monthly("".join(scored), "https://x.jp/"),
+       "https://x.jp/ir/financial/monthly/")
+
+    # v6: 행 이름이 前年比뿐이어도 표 제목이 매출이면 읽는다.
+    eq("(어) 문맥형 前年比", _label_ok("前年比", "月次売上高"), "yoy")
+    eq("(어) 비매출 문맥 차단", _label_ok("前年比", "粗利益"), None)
     if bad:
         print("monir 스스로 시험 실패:")
         for b in bad:
