@@ -334,6 +334,7 @@ def read(data: bytes, ann: str, max_pages: int = 12, title: str = ""):
         # 테라프로브(6627)·바이셀(7685)·업개러지(7134)의 백만엔 금액이
         # 전년비 칸에 실려 4,124% 같은 값이 나왔다.
         cap_yoy = bool(CAP_YOY.search(cap_txt)) and not cap_mul
+        pct_decl = bool(decl and re.search(r"[%％]", decl.group(1)))
         amounts, yoys, cap_yoys = [], [], []
         # **이름과 숫자가 다른 줄에 찍히는 공시가 많다.** 실측: '표없음'으로
         # 버린 209건 중 **92건**이 이것 하나였다. 히로세통상(7185)이 그 꼴이다.
@@ -396,14 +397,13 @@ def read(data: bytes, ann: str, max_pages: int = 12, title: str = ""):
                 # 이름표가 결산기뿐일 만큼 약할 때는 **공시 제목에도 '매출'이
                 # 적혀 있을 때만** 담는다(스기HD 의 「26年3月…」 표).
                 amounts.append((lab or title_metric, cap_unit, cap_mul, vals))
-            elif cap_yoy and not mul and AMOUNT_LABEL.search(lab or "") \
-                    and not lab_has_other(lab):
-                # 표 제목이 「前年比の推移」인데 값 줄에는 '전년'이 없는 표.
-                # 매출 낱말 이름표에만 건다 — 같은 표의 객수·가동률 줄이
-                # 딸려 들어오면 그게 더 나쁜 거짓말이다.
-                if DELTA_LABEL.search(lab) or _looks_delta(vals):
+            elif (cap_yoy or pct_decl) and not mul \
+                    and AMOUNT_LABEL.search(lab or "") and not lab_has_other(lab):
+                # 단위가 %이고 행 이름이 売上高/既存店売上高인 표도 전년비다.
+                # +8.5/-0.4식이면 108.5/99.6으로 정규화한다.
+                if DELTA_LABEL.search(lab or "") or _looks_delta(vals):
                     vals = {k2: v + 100.0 for k2, v in vals.items()}
-                cap_yoys.append((lab, vals))
+                cap_yoys.append((lab or title_metric, vals))
         # 제목만 보고 읽은 줄은 **마지막 수단**이다. 같은 표에서 금액 줄이나
         # 제대로 된 전년비 줄을 찾았으면 그쪽이 옳다.
         if not amounts and not yoys:
