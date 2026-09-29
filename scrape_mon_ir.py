@@ -564,8 +564,21 @@ def main():
         if updated:
             sites.setdefault(code, {})["updated"] = updated
         got = monir.read(page, today)
+        fresh += 1
+
+        # **PDF 목록 꼴도 같이 본다.** 표를 안 싣고 달마다 PDF 한 장을 거는
+        # 회사가 많다 — 패스트리는 회계연도 한 장에 열두 달이라 세 장으로
+        # 36달이 들어온다(91차). 못 읽는 PDF 는 그냥 지나간다.
+        pdf = dict(cur.get("pdf") or {})
+        looked = False
+        if pdf_left > 0:
+            pdf, n_new, pdf_left, looked = read_pdfs(page, url, pdf, rec,
+                                                     today, pdf_left)
+            new_months += n_new
+
         # 현재 회계연도만 싣는 회사는 과거 연도 HTML 링크도 따라간다.
-        # 연도/백넘버 링크만, 같은 도메인만, 회사당 몇 장으로 제한한다.
+        # **중요: 과거 페이지의 PDF도 같이 읽는다.** 전에는 HTML 표만 읽어서
+        # '백넘버' 페이지에 PDF로만 쌓인 회사는 여전히 5~8개월에서 끊겼다.
         for au in monir.archive_links(page, url, ARCHIVE_PER_COMPANY):
             if time.time() - t0 > BUDGET - 5:
                 break
@@ -576,16 +589,11 @@ def main():
             ago = monir.read(apage, today)
             for p, v in ago.items():
                 got.setdefault(p, v)
-        fresh += 1
-        # **PDF 목록 꼴도 같이 본다.** 표를 안 싣고 달마다 PDF 한 장을 거는
-        # 회사가 많다 — 패스트리는 회계연도 한 장에 열두 달이라 세 장으로
-        # 36달이 들어온다(91차). 못 읽는 PDF 는 그냥 지나간다.
-        pdf = dict(cur.get("pdf") or {})
-        looked = False
-        if pdf_left > 0:
-            pdf, n_new, pdf_left, looked = read_pdfs(page, url, pdf, rec,
-                                                     today, pdf_left)
-            new_months += n_new
+            if pdf_left > 0:
+                pdf, n_new, pdf_left, arch_looked = read_pdfs(
+                    apage, au, pdf, rec, today, pdf_left)
+                new_months += n_new
+                looked = looked or arch_looked
         # **이미 받아 둔 달을 빈 결과로 덮지 않는다.** 회사 사이트가 회계연도를
         # 넘기며 옛 표를 내려도 우리 이력은 그대로 남아야 한다.
         months = {
