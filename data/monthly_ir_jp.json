@@ -1,17 +1,17 @@
 {
  "v": 1,
- "rv": 5,
+ "rv": 6,
  "sites": {
   "8267": {
    "page": "https://www.aeon.info/ir/library/monthly/",
    "found": "2026-09-28",
-   "parse_miss": "2026-09-29T05:35:37+00:00"
+   "parse_miss": "2026-09-29T07:20:25+00:00"
   },
   "3086": {
    "page": "https://www.j-front-retailing.com/ir/finance/monthly.html",
    "found": "2026-09-28",
    "updated": "2025-11-12",
-   "parse_miss": "2026-09-29T05:35:37+00:00"
+   "parse_miss": "2026-09-29T07:20:25+00:00"
   },
   "9843": {
    "page": "https://www.nitorihd.co.jp/ir/performance/sales.html",
@@ -34,7 +34,7 @@
   "9831": {
    "page": "https://www.yamada-holdings.jp/ir/monthly.html",
    "found": "2026-09-28",
-   "parse_miss": "2026-09-29T05:35:37+00:00"
+   "parse_miss": "2026-09-29T07:20:25+00:00"
   },
   "3563": {
    "page": "https://food-and-life.co.jp/investor/monthly-information",
@@ -55,17 +55,16 @@
   "3097": {
    "page": "https://www.monogatari.co.jp/ir/date/",
    "found": "2026-09-28",
-   "parse_miss": "2026-09-29T05:35:37+00:00"
+   "parse_miss": "2026-09-29T07:20:25+00:00"
   },
   "3197": {
    "page": "https://corp.skylark.co.jp/ir/strategy/growth/existing_store/",
-   "found": "2026-09-28",
-   "parse_miss": "2026-09-29T05:35:37+00:00"
+   "found": "2026-09-28"
   },
   "4666": {
    "page": "https://www.park24.co.jp/ir/financial/monthly.html",
    "found": "2026-09-28",
-   "parse_miss": "2026-09-29T05:35:37+00:00"
+   "parse_miss": "2026-09-29T07:20:25+00:00"
   },
   "8016": {
    "page": "https://www.onward-hd.co.jp/ir/finance/monthly.html",
@@ -74,7 +73,7 @@
   "7476": {
    "page": "https://www.as-1.co.jp/",
    "found": "2026-09-28",
-   "parse_miss": "2026-09-29T05:35:37+00:00"
+   "parse_miss": "2026-09-29T07:20:25+00:00"
   },
   "2702": {},
   "3092": {
@@ -83,39 +82,28 @@
   "8237": {
    "miss": "2026-09-29"
   },
-  "3399": {
-   "miss": "2026-09-29"
-  },
+  "3399": {},
   "3608": {
    "page": "https://www.tsi-holdings.com/tsuki.html",
-   "found": "2026-09-28",
-   "parse_miss": "2026-09-29T05:35:37+00:00"
+   "found": "2026-09-28"
   },
   "2698": {
    "page": "https://www.cando-web.co.jp/ir/monthly_report/",
-   "found": "2026-09-28",
-   "parse_miss": "2026-09-29T05:35:37+00:00"
+   "found": "2026-09-28"
   },
-  "9823": {
-   "miss": "2026-09-29"
-  },
-  "2780": {
-   "miss": "2026-09-29"
-  },
+  "9823": {},
+  "2780": {},
   "9278": {
    "page": "https://www.bookoffgroup.co.jp/",
-   "found": "2026-09-28",
-   "parse_miss": "2026-09-29T05:35:37+00:00"
+   "found": "2026-09-28"
   },
   "8142": {
    "page": "https://www.to-ho.co.jp/toho_news/news002058.html",
-   "found": "2026-09-28",
-   "parse_miss": "2026-09-29T05:35:37+00:00"
+   "found": "2026-09-28"
   },
   "3093": {
    "page": "https://www.treasurefactory.co.jp/ir/monthly.html",
-   "found": "2026-09-28",
-   "parse_miss": "2026-09-29T05:35:37+00:00"
+   "found": "2026-09-28"
   },
   "9861": {
    "page": "https://www.yoshinoya-holdings.com/ir/report/yoshinoya/",
@@ -133,7 +121,7 @@
   "8273": {
    "page": "https://www.izumi.co.jp/ir/finance/monthly/",
    "found": "2026-09-28",
-   "parse_miss": "2026-09-29T05:35:37+00:00"
+   "parse_miss": "2026-09-29T07:20:25+00:00"
   },
   "9948": {
    "page": "https://www.arcs-g.co.jp/ir/monthly-performance/index.html",
@@ -147,13 +135,11 @@
    "page": "https://www.autobacs.co.jp/ja/ir/news/auto_20260907532362.html",
    "found": "2026-09-28"
   },
-  "2664": {
-   "miss": "2026-09-29"
-  },
+  "2664": {},
   "3222": {
    "page": "https://www.usmh.co.jp/ir/monthly_reports",
    "found": "2026-09-28",
-   "parse_miss": "2026-09-29T05:35:37+00:00"
+   "parse_miss": "2026-09-29T07:20:25+00:00"
   },
   "7532": {
    "page": "https://ppih.co.jp/ir/highlight/monthly/",
@@ -164,17 +150,18 @@
    "found": "2026-09-28"
   },
   "7616": {
-   "miss": "2026-09-29"
+   "page": "https://www.colowide.co.jp/ir/sale/",
+   "found": "2026-09-29",
+   "parse_miss": "2026-09-29T07:20:25+00:00"
   },
   "3099": {
    "page": "https://www.imhds.co.jp/content/imhds/corporate/ir/finance/monthly-report.html",
    "found": "2026-09-28",
-   "parse_miss": "2026-09-29T05:35:37+00:00"
+   "parse_miss": "2026-09-29T07:20:25+00:00"
   },
   "9021": {
    "page": "https://www.westjr.co.jp/company/ir/finance/monthly/",
-   "found": "2026-09-28",
-   "parse_miss": "2026-09-29T05:35:37+00:00"
+   "found": "2026-09-28"
   },
   "9022": {
    "miss": "2026-09-29"
@@ -184,18 +171,15 @@
   },
   "1379": {
    "page": "https://www.hokto-kinoko.co.jp/oubo/oubo_monthlypresent09.php",
-   "found": "2026-09-28",
-   "parse_miss": "2026-09-29T05:35:37+00:00"
+   "found": "2026-09-28"
   },
   "138A": {},
   "1417": {
    "page": "https://www.mirait-one.com/info/001973.html",
    "found": "2026-09-28",
-   "parse_miss": "2026-09-29T05:35:37+00:00"
+   "parse_miss": "2026-09-29T07:20:25+00:00"
   },
-  "1419": {
-   "miss": "2026-09-29"
-  },
+  "1419": {},
   "141A": {
    "page": "https://www.trial-holdings.inc/ir/financial/monthly-sales/",
    "found": "2026-09-28"
@@ -206,7 +190,7 @@
   "1911": {
    "page": "https://sfc.jp/information/ir/zaimu/",
    "found": "2026-09-28",
-   "parse_miss": "2026-09-29T05:35:37+00:00"
+   "parse_miss": "2026-09-29T07:20:25+00:00"
   },
   "1925": {
    "miss": "2026-09-29"
@@ -216,18 +200,15 @@
   },
   "205A": {
    "page": "https://logos-holdings.jp/ir/order/",
-   "found": "2026-09-28",
-   "parse_miss": "2026-09-29T05:49:47+00:00"
+   "found": "2026-09-28"
   },
   "2294": {
    "page": "https://www.kakiyasuhonten.co.jp/news/detail.php?id=2021",
-   "found": "2026-09-28",
-   "parse_miss": "2026-09-29T05:35:37+00:00"
+   "found": "2026-09-28"
   },
   "2305": {
    "page": "https://ir.studio-alice.co.jp/ja/Finance/MonthlyReport.html",
-   "found": "2026-09-28",
-   "parse_miss": "2026-09-29T05:35:37+00:00"
+   "found": "2026-09-28"
   },
   "2311": {
    "page": "https://www.epco.co.jp",
@@ -236,52 +217,42 @@
   "2317": {
    "miss": "2026-09-29"
   },
-  "245A": {
-   "miss": "2026-09-29"
-  },
+  "245A": {},
   "2461": {
    "page": "https://www.fancs.com/news/376546549/",
-   "found": "2026-09-28",
-   "parse_miss": "2026-09-29T05:35:37+00:00"
+   "found": "2026-09-28"
   },
   "2502": {
    "page": "https://www.asahigroup-holdings.com/en/ir/financial_data/monthly_data/",
    "found": "2026-09-28",
-   "parse_miss": "2026-09-29T05:35:37+00:00"
+   "parse_miss": "2026-09-29T07:20:25+00:00"
   },
   "2590": {
    "page": "https://www.dydo-ghd.co.jp/ir/data/monthly_report/",
-   "found": "2026-09-28",
-   "parse_miss": "2026-09-29T05:35:37+00:00"
+   "found": "2026-09-28"
   },
   "2593": {
    "page": "https://www.itoen.co.jp/ir/library/monthly_sales_backnumber/",
    "found": "2026-09-28",
-   "parse_miss": "2026-09-29T05:35:37+00:00"
+   "parse_miss": "2026-09-29T07:20:25+00:00"
   },
   "262A": {
    "page": "https://www.zoff.com/ir/monthly/",
    "found": "2026-09-28"
   },
-  "2652": {
-   "miss": "2026-09-29"
-  },
+  "2652": {},
   "2653": {},
   "2654": {
    "page": "https://www.asmo1.co.jp",
-   "found": "2026-09-28",
-   "parse_miss": "2026-09-29T05:49:47+00:00"
+   "found": "2026-09-28"
   },
   "2659": {
    "miss": "2026-09-29"
   },
-  "2668": {
-   "miss": "2026-09-29"
-  },
+  "2668": {},
   "2669": {
    "page": "https://www.kanemi-foods.co.jp/ir/monthly.html",
-   "found": "2026-09-28",
-   "parse_miss": "2026-09-29T05:35:37+00:00"
+   "found": "2026-09-28"
   },
   "2670": {
    "page": "https://www.abc-mart.co.jp/ir/getsujijoho.html",
@@ -292,11 +263,11 @@
    "found": "2026-09-28"
   },
   "2678": {
-   "miss": "2026-09-29"
+   "page": "https://www.askul.co.jp/snw/newsDispView/?newsId=19904",
+   "found": "2026-09-29",
+   "parse_miss": "2026-09-29T07:20:25+00:00"
   },
-  "2681": {
-   "miss": "2026-09-29"
-  },
+  "2681": {},
   "2685": {
    "page": "https://www.andst-hd.co.jp/news/ir/entry-17218/",
    "found": "2026-09-28"
@@ -307,64 +278,50 @@
   },
   "2722": {
    "page": "https://www.ai-kei.co.jp",
-   "found": "2026-09-28",
-   "parse_miss": "2026-09-29T05:49:47+00:00"
+   "found": "2026-09-28"
   },
   "2726": {
    "page": "https://www.palgroup.holdings",
    "found": "2026-09-28",
-   "parse_miss": "2026-09-29T05:35:37+00:00"
+   "parse_miss": "2026-09-29T07:20:25+00:00"
   },
   "2730": {
    "page": "https://www.edion.co.jp",
    "found": "2026-09-28",
-   "parse_miss": "2026-09-29T05:35:37+00:00"
+   "parse_miss": "2026-09-29T07:20:25+00:00"
   },
-  "2736": {
-   "miss": "2026-09-29"
-  },
+  "2736": {},
   "2742": {
    "page": "https://www.halows.com/ir/finance_monthly/",
-   "found": "2026-09-28",
-   "parse_miss": "2026-09-29T05:35:37+00:00"
+   "found": "2026-09-28"
   },
   "274A": {
    "page": "https://gardengroup.co.jp/",
    "found": "2026-09-28"
   },
-  "2750": {
-   "miss": "2026-09-29"
-  },
+  "2750": {},
   "2753": {
    "page": "https://prtimes.jp/main/html/rd/p/000000345.000130952.html",
-   "found": "2026-09-28",
-   "parse_miss": "2026-09-29T05:35:37+00:00"
+   "found": "2026-09-28"
   },
-  "2764": {
-   "miss": "2026-09-29"
-  },
+  "2764": {},
   "2769": {
    "page": "https://www.village-v.co.jp/company/ir/news/",
-   "found": "2026-09-29",
-   "parse_miss": "2026-09-29T05:49:47+00:00"
+   "found": "2026-09-29"
   },
   "2778": {
    "page": "https://palemo.co.jp/news/finance",
-   "found": "2026-09-28",
-   "parse_miss": "2026-09-29T05:49:47+00:00"
+   "found": "2026-09-28"
   },
   "2782": {},
-  "2789": {
-   "miss": "2026-09-29"
-  },
+  "2789": {},
   "2790": {
    "page": "https://www.nafco.tv/ir/financial/monthly.html",
    "found": "2026-09-28"
   },
   "2791": {
    "page": "https://www.e-dkt.co.jp/ir/",
-   "found": "2026-09-29",
-   "parse_miss": "2026-09-29T05:35:37+00:00"
+   "found": "2026-09-29"
   },
   "2792": {
    "page": "https://www.honeys.co.jp/ir/data",
@@ -372,31 +329,20 @@
   },
   "2818": {
    "page": "https://www.pietro.co.jp",
-   "found": "2026-09-28",
-   "parse_miss": "2026-09-29T05:49:47+00:00"
+   "found": "2026-09-28"
   },
   "2910": {
    "page": "https://www.rockfield.co.jp/ir/library/monthly/",
-   "found": "2026-09-28",
-   "parse_miss": "2026-09-29T05:35:37+00:00"
+   "found": "2026-09-28"
   },
-  "2926": {
-   "miss": "2026-09-29"
-  },
-  "2991": {
-   "miss": "2026-09-29"
-  },
-  "3028": {
-   "miss": "2026-09-29"
-  },
+  "2926": {},
+  "2991": {},
+  "3028": {},
   "3030": {
    "page": "https://www.pub-hub.co.jp/ir/month.html",
-   "found": "2026-09-28",
-   "parse_miss": "2026-09-29T05:49:47+00:00"
+   "found": "2026-09-28"
   },
-  "3034": {
-   "miss": "2026-09-29"
-  },
+  "3034": {},
   "3038": {
    "page": "https://www.kobebussan.co.jp/ir/monthly.php",
    "found": "2026-09-28"
@@ -407,8 +353,7 @@
   },
   "3053": {
    "page": "https://www.pepper-fs.co.jp/ir/monthly_report/library.php",
-   "found": "2026-09-28",
-   "parse_miss": "2026-09-29T05:49:47+00:00"
+   "found": "2026-09-28"
   },
   "3058": {
    "page": "https://ir.sanyodo.co.jp/ir/eigyou.html",
@@ -417,13 +362,11 @@
   "3064": {},
   "3068": {
    "page": "https://www.wdi.co.jp/ir/monthly.html",
-   "found": "2026-09-28",
-   "parse_miss": "2026-09-29T05:35:37+00:00"
+   "found": "2026-09-28"
   },
   "3069": {
    "page": "https://j-fla.com/ir/monthly/",
-   "found": "2026-09-28",
-   "parse_miss": "2026-09-29T05:49:47+00:00"
+   "found": "2026-09-28"
   },
   "3077": {
    "page": "https://pay.rakuten.co.jp/",
@@ -431,73 +374,51 @@
   },
   "3080": {
    "page": "https://jason.co.jp/ir/monthly_information_2027_2",
-   "found": "2026-09-28",
-   "parse_miss": "2026-09-29T05:49:47+00:00"
+   "found": "2026-09-28"
   },
   "3082": {
    "page": "https://www.kichiri.co.jp/news/2026/ir/4173/",
    "found": "2026-09-28"
   },
-  "3083": {
-   "miss": "2026-09-29"
-  },
+  "3083": {},
   "3087": {
    "page": "https://www.dnh.co.jp/ir/monthly/",
    "found": "2026-09-28",
-   "parse_miss": "2026-09-29T05:35:37+00:00"
+   "parse_miss": "2026-09-29T07:20:25+00:00"
   },
   "3088": {},
-  "3135": {
-   "miss": "2026-09-29"
-  },
+  "3135": {},
   "3148": {
    "miss": "2026-09-29"
   },
-  "3160": {
-   "miss": "2026-09-29"
-  },
+  "3160": {},
   "3175": {},
   "3178": {
    "page": "https://www.chimney.co.jp/ir/sales/",
-   "found": "2026-09-28",
-   "parse_miss": "2026-09-29T05:35:37+00:00"
+   "found": "2026-09-28"
   },
-  "3179": {
-   "miss": "2026-09-29"
-  },
-  "3181": {
-   "miss": "2026-09-29"
-  },
+  "3179": {},
+  "3181": {},
   "3191": {
    "miss": "2026-09-29"
   },
   "3193": {},
-  "3195": {
-   "miss": "2026-09-29"
-  },
+  "3195": {},
   "3196": {
    "page": "https://ir.hotland.co.jp/policy/monthlyinfo/",
-   "found": "2026-09-28",
-   "parse_miss": "2026-09-29T05:35:37+00:00"
+   "found": "2026-09-28"
   },
   "3199": {
    "page": "https://watahan.co.jp/ir/trends.html",
    "found": "2026-09-28"
   },
-  "3221": {
-   "miss": "2026-09-29"
-  },
-  "3224": {
-   "miss": "2026-09-29"
-  },
+  "3221": {},
+  "3224": {},
   "3329": {
    "page": "https://www.towafood-net.co.jp/investor/monthly/",
-   "found": "2026-09-28",
-   "parse_miss": "2026-09-29T05:35:37+00:00"
+   "found": "2026-09-28"
   },
-  "3333": {
-   "miss": "2026-09-29"
-  },
+  "3333": {},
   "3349": {},
   "3358": {
    "page": "https://thg-hd.com",
@@ -509,46 +430,35 @@
   },
   "3395": {
    "page": "https://www.saint-marc-hd.com",
-   "found": "2026-09-28",
-   "parse_miss": "2026-09-29T05:35:37+00:00"
+   "found": "2026-09-28"
   },
   "3397": {
    "page": "https://www.toridoll.com/ir/finance/report/",
    "found": "2026-09-28"
   },
-  "3415": {
-   "miss": "2026-09-29"
-  },
+  "3415": {},
   "3542": {
    "page": "https://www.vega-c.com/ir/library/monthly-report/",
-   "found": "2026-09-28",
-   "parse_miss": "2026-09-29T05:35:37+00:00"
+   "found": "2026-09-28"
   },
   "3543": {
    "page": "https://komeda-holdings.co.jp/monthly/",
    "found": "2026-09-28",
-   "parse_miss": "2026-09-29T05:35:37+00:00"
+   "parse_miss": "2026-09-29T07:20:25+00:00"
   },
-  "3544": {
-   "miss": "2026-09-29"
-  },
-  "3547": {
-   "miss": "2026-09-29"
-  },
+  "3544": {},
+  "3547": {},
   "3548": {
    "page": "https://www.baroque-global.com/jp/ir/monthly/",
-   "found": "2026-09-28",
-   "parse_miss": "2026-09-29T05:35:37+00:00"
+   "found": "2026-09-28"
   },
   "3557": {},
-  "3561": {
-   "miss": "2026-09-29"
-  },
+  "3561": {},
   "3566": {},
   "3591": {
    "page": "https://www.wacoalholdings.jp/ir/monthlydata/",
    "found": "2026-09-28",
-   "parse_miss": "2026-09-29T05:35:37+00:00"
+   "parse_miss": "2026-09-29T07:20:25+00:00"
   },
   "9962": {
    "page": "https://www.misumi.co.jp/ir/library/monthly_sales",
@@ -556,103 +466,100 @@
    "discontinued": "2026-09-29"
   },
   "8233": {
-   "parse_miss": "2026-09-29T05:35:37+00:00"
+   "parse_miss": "2026-09-29T07:20:25+00:00"
   },
   "9007": {
    "page": "https://www.odakyu.jp/company_information/",
    "found": "2026-09-28"
   },
-  "9142": {
-   "parse_miss": "2026-09-29T05:35:37+00:00"
-  },
+  "9142": {},
   "8985": {
    "page": "https://www.jhrth.co.jp",
    "found": "2026-09-28",
-   "parse_miss": "2026-09-29T05:35:37+00:00"
+   "parse_miss": "2026-09-29T07:20:25+00:00"
   },
   "8963": {
    "page": "https://www.invincible-inv.co.jp",
    "found": "2026-09-29",
-   "parse_miss": "2026-09-29T05:35:37+00:00"
+   "parse_miss": "2026-09-29T07:20:25+00:00"
   },
   "9989": {
-   "parse_miss": "2026-09-29T05:35:37+00:00"
+   "parse_miss": "2026-09-29T07:20:25+00:00"
   },
   "8410": {
    "page": "https://www.sevenbank.co.jp/ir/finance/monthly_trend/",
    "found": "2026-09-28",
-   "parse_miss": "2026-09-29T05:35:37+00:00"
+   "parse_miss": "2026-09-29T07:20:25+00:00"
   },
   "3923": {
    "page": "https://www.rakus.co.jp/ir/monthly-sales/",
    "found": "2026-09-28",
-   "parse_miss": "2026-09-29T05:35:37+00:00"
+   "parse_miss": "2026-09-29T07:20:25+00:00"
   },
   "8242": {
-   "parse_miss": "2026-09-29T05:35:37+00:00"
+   "parse_miss": "2026-09-29T07:20:25+00:00"
   },
   "4680": {
    "page": "https://www.round1.co.jp/service/amuse/momotetsu_world/index.html",
    "found": "2026-09-28",
-   "parse_miss": "2026-09-29T05:35:37+00:00"
+   "parse_miss": "2026-09-29T07:20:25+00:00"
   },
   "8628": {
    "page": "https://www.matsui.co.jp/company/?mnu=hd",
    "found": "2026-09-28",
-   "parse_miss": "2026-09-29T05:35:37+00:00"
+   "parse_miss": "2026-09-29T07:20:25+00:00"
   },
   "9616": {
    "page": "https://www.kyoritsugroup.co.jp",
    "found": "2026-09-28",
-   "parse_miss": "2026-09-29T05:35:37+00:00"
+   "parse_miss": "2026-09-29T07:20:25+00:00"
   },
   "8282": {
    "miss": "2026-09-29"
   },
   "9759": {
    "page": "https://www.nsd.co.jp/ir/irmaterial/sokuhou.html",
-   "found": "2026-09-28",
-   "parse_miss": "2026-09-29T05:35:37+00:00"
+   "found": "2026-09-28"
   },
   "9627": {
    "page": "https://www.ainj.co.jp/corporate/ir/",
    "found": "2026-09-28",
-   "parse_miss": "2026-09-29T05:35:37+00:00"
+   "parse_miss": "2026-09-29T07:20:25+00:00"
   },
   "7630": {
    "page": "https://www.ichibanya.jp/ir/finance/monthly/",
    "found": "2026-09-29",
-   "parse_miss": "2026-09-29T05:35:37+00:00"
+   "parse_miss": "2026-09-29T07:20:25+00:00"
   },
   "2154": {
    "page": "https://www.openupgroup.co.jp",
    "found": "2026-09-29",
-   "parse_miss": "2026-09-29T05:35:37+00:00"
+   "parse_miss": "2026-09-29T07:20:25+00:00"
   },
   "9279": {
    "page": "https://www.gift-group.co.jp/ir/library/04",
    "found": "2026-09-28",
-   "parse_miss": "2026-09-29T05:35:37+00:00"
+   "parse_miss": "2026-09-29T07:20:25+00:00"
   },
   "2337": {
    "page": "https://www.ichigo.gr.jp",
    "found": "2026-09-28",
-   "parse_miss": "2026-09-29T05:35:37+00:00"
+   "parse_miss": "2026-09-29T07:20:25+00:00"
   },
   "8214": {
    "page": "https://ir.aoki-hd.co.jp/ja/ir/finance/monthlyreport.html",
    "found": "2026-09-28",
-   "parse_miss": "2026-09-29T05:35:37+00:00"
+   "parse_miss": "2026-09-29T07:20:25+00:00"
   },
   "9974": {
    "page": "https://www.belc.jp/topics/20260920_nestle",
    "found": "2026-09-28",
-   "parse_miss": "2026-09-29T05:35:37+00:00"
+   "parse_miss": "2026-09-29T07:20:25+00:00"
   },
   "8276": {
    "page": "https://www.heiwado.jp/assets/file/news/attachment/92077e239129015e573bc4036e98a9d0",
    "found": "2026-09-28",
-   "parse_miss": "2026-09-29T05:35:37+00:00"
+   "parse_miss": "2026-09-29T07:20:25+00:00"
   },
   "8179": {
    "page": "https://www.royal-holdings.co.jp/ir/finance/sales/",
@@ -661,17 +568,17 @@
   "9039": {
    "page": "https://www.hikkoshi-sakai.co.jp",
    "found": "2026-09-28",
-   "parse_miss": "2026-09-29T05:35:37+00:00"
+   "parse_miss": "2026-09-29T07:20:25+00:00"
   },
   "9166": {
    "page": "https://genda.jp/2026/09/16/monthly-report-2609/",
    "found": "2026-09-28",
-   "parse_miss": "2026-09-29T05:35:37+00:00"
+   "parse_miss": "2026-09-29T07:20:25+00:00"
   },
   "3612": {
    "page": "https://corp.world.co.jp/ir/library/monthly/",
    "found": "2026-09-28",
-   "parse_miss": "2026-09-29T05:35:37+00:00"
+   "parse_miss": "2026-09-29T07:20:25+00:00"
   },
   "8153": {
    "miss": "2026-09-29"
@@ -686,7 +593,7 @@
   "7513": {
    "page": "https://www.kojima.net/corporation/ir/bulletin.html",
    "found": "2026-09-28",
-   "parse_miss": "2026-09-29T05:35:37+00:00"
+   "parse_miss": "2026-09-29T07:20:25+00:00"
   },
   "8255": {
    "page": "https://www.axial-r.com/ir/monthlysalestrends/",
@@ -694,8 +601,7 @@
   },
   "8173": {
    "page": "https://www.joshin.co.jp",
-   "found": "2026-09-28",
-   "parse_miss": "2026-09-29T05:35:37+00:00"
+   "found": "2026-09-28"
   },
   "8219": {
    "miss": "2026-09-29"
@@ -708,38 +614,31 @@
   },
   "6036": {
    "page": "https://keepergiken.co.jp/ir/irdata/monthly",
-   "found": "2026-09-28",
-   "parse_miss": "2026-09-29T05:35:37+00:00"
+   "found": "2026-09-28"
   },
   "9603": {
    "page": "https://www.his.co.jp/ir/monthly-report/",
-   "found": "2026-09-28",
-   "parse_miss": "2026-09-29T05:35:37+00:00"
+   "found": "2026-09-28"
   },
   "7421": {
    "page": "https://www.kappa-create.co.jp/monthly2026/",
-   "found": "2026-09-28",
-   "parse_miss": "2026-09-29T05:35:37+00:00"
+   "found": "2026-09-28"
   },
   "8244": {
    "page": "https://www.d-kintetsu.co.jp/corporate/ir/finance/recent_results.html",
-   "found": "2026-09-28",
-   "parse_miss": "2026-09-29T05:35:37+00:00"
+   "found": "2026-09-28"
   },
   "8715": {
    "page": "https://www.anicom.co.jp/ir/financial/business/",
-   "found": "2026-09-28",
-   "parse_miss": "2026-09-29T05:35:37+00:00"
+   "found": "2026-09-28"
   },
   "7412": {
    "page": "https://www.atom-corp.co.jp/fair/fair.php?fair_no=3834",
-   "found": "2026-09-28",
-   "parse_miss": "2026-09-29T05:35:37+00:00"
+   "found": "2026-09-28"
   },
   "8160": {
    "page": "https://www.kisoji.co.jp/ir/monthly.html",
-   "found": "2026-09-28",
-   "parse_miss": "2026-09-29T05:35:37+00:00"
+   "found": "2026-09-28"
   },
   "9900": {
    "page": "https://www.sagami-holdings.co.jp/ir/month/",
@@ -748,82 +647,57 @@
   },
   "3817": {
    "page": "https://www.sra-hd.co.jp/ir/ir-news/index_2026.html",
-   "found": "2026-09-28",
-   "parse_miss": "2026-09-29T05:35:37+00:00"
+   "found": "2026-09-28"
   },
-  "9828": {
-   "miss": "2026-09-29"
-  },
+  "9828": {},
   "3663": {
    "page": "https://www.celsys.com/irinfo_news/contents_type=47",
-   "found": "2026-09-28",
-   "parse_miss": "2026-09-29T05:35:37+00:00"
+   "found": "2026-09-28"
   },
-  "212A": {
-   "miss": "2026-09-29"
-  },
+  "212A": {},
   "8281": {
    "page": "https://www.xebio.co.jp/ja/ir/monthly.html",
-   "found": "2026-09-28",
-   "parse_miss": "2026-09-29T05:35:37+00:00"
+   "found": "2026-09-28"
   },
   "8008": {
    "page": "https://yondoshi.co.jp",
-   "found": "2026-09-28",
-   "parse_miss": "2026-09-29T05:35:37+00:00"
+   "found": "2026-09-28"
   },
   "8914": {
    "page": "https://www.arealink.co.jp/news/ir/p17078/",
    "found": "2026-09-28",
-   "updated": "2026-09-03",
-   "parse_miss": "2026-09-29T05:35:37+00:00"
+   "updated": "2026-09-03"
   },
   "8011": {
    "page": "https://www.sanyo-shokai.co.jp/ir/library/monthly/",
    "found": "2026-09-28"
   },
-  "3276": {
-   "miss": "2026-09-29"
-  },
-  "7059": {
-   "miss": "2026-09-29"
-  },
+  "3276": {},
+  "7059": {},
   "7522": {
    "page": "https://www.watami.co.jp/ir/library/recent/",
-   "found": "2026-09-29",
-   "parse_miss": "2026-09-29T05:35:37+00:00"
+   "found": "2026-09-29"
   },
   "8185": {
    "page": "https://www.chiyodagrp.co.jp/ir/",
    "found": "2026-09-29",
-   "updated": "2026-07-10",
-   "parse_miss": "2026-09-29T05:35:37+00:00"
+   "updated": "2026-07-10"
   },
-  "6071": {
-   "miss": "2026-09-29"
-  },
-  "9284": {
-   "miss": "2026-09-29"
-  },
+  "6071": {},
+  "9284": {},
   "7596": {
    "page": "https://uoriki.co.jp/ir/library/monthly.html",
-   "found": "2026-09-29",
-   "parse_miss": "2026-09-29T05:35:37+00:00"
+   "found": "2026-09-29"
   },
   "7475": {
    "page": "https://www.albis.co.jp/ir/monthly.html",
    "found": "2026-09-29"
   },
-  "3983": {
-   "miss": "2026-09-29"
-  },
-  "401A": {
-   "miss": "2026-09-29"
-  },
+  "3983": {},
+  "401A": {},
   "7823": {
    "page": "https://corp.artnature.co.jp/ja/ir/finance/monthly_info.html",
-   "found": "2026-09-29",
-   "parse_miss": "2026-09-29T05:35:37+00:00"
+   "found": "2026-09-29"
   },
   "8203": {
    "page": "https://www.mrmaxhd.co.jp/ir/ir-library/monthly/",
@@ -831,115 +705,74 @@
   },
   "9990": {
    "page": "https://www.sacs-bar.co.jp/ir/",
-   "found": "2026-09-29",
-   "parse_miss": "2026-09-29T05:35:37+00:00"
+   "found": "2026-09-29"
   },
-  "9850": {
-   "miss": "2026-09-29"
-  },
-  "9994": {
-   "miss": "2026-09-29"
-  },
-  "5589": {
-   "miss": "2026-09-29"
-  },
+  "9850": {},
+  "9994": {},
+  "5589": {},
   "9979": {
    "page": "https://www.daisyo.co.jp/company/ir/getsuji.html",
-   "found": "2026-09-29",
-   "discontinued": "2026-09-29"
+   "found": "2026-09-29"
   },
-  "6040": {
-   "miss": "2026-09-29"
-  },
+  "6040": {},
   "9163": {
    "page": "https://www.nareru-group.co.jp",
-   "found": "2026-09-29",
-   "parse_miss": "2026-09-29T05:35:37+00:00"
+   "found": "2026-09-29"
   },
-  "7621": {
-   "miss": "2026-09-29"
-  },
-  "2970": {
-   "miss": "2026-09-29"
-  },
+  "7621": {},
+  "2970": {},
   "7643": {
    "page": "https://www.daiichi-d.co.jp/post_event/post_event-21894",
-   "found": "2026-09-29",
-   "parse_miss": "2026-09-29T05:35:37+00:00"
+   "found": "2026-09-29"
   },
-  "2998": {
-   "miss": "2026-09-29"
-  },
+  "2998": {},
   "3370": {
    "page": "https://www.fujitacorp.co.jp/main/info/%e2%98%85%e6%9c%88%e6%ac%a1%e5%a3%b2%e4%b8%8a%e9%80%9f%e5%a0%b1%e6%9b%b4%e6%96%b0%e3%81%84%e3%81%9f%e3%81%97%e3%81%be%e3%81%97%e3%81%9f-80/",
-   "found": "2026-09-29",
-   "parse_miss": "2026-09-29T05:49:47+00:00"
+   "found": "2026-09-29"
   },
   "7562": {
    "page": "https://www.anrakutei.co.jp/jigyo.html",
-   "found": "2026-09-29",
-   "parse_miss": "2026-09-29T05:35:37+00:00"
+   "found": "2026-09-29"
   },
   "5892": {
    "page": "https://yutori.tokyo/ir/monthly/",
-   "found": "2026-09-29",
-   "parse_miss": "2026-09-29T05:49:47+00:00"
+   "found": "2026-09-29"
   },
   "6045": {
    "page": "https://www.rentracks.co.jp/ir/finance/others.html",
-   "found": "2026-09-29",
-   "parse_miss": "2026-09-29T05:49:47+00:00"
+   "found": "2026-09-29"
   },
-  "1435": {
-   "miss": "2026-09-29"
-  },
-  "8927": {
-   "miss": "2026-09-29"
-  },
+  "1435": {},
+  "8927": {},
   "6073": {
    "page": "https://asante.co.jp",
-   "found": "2026-09-29",
-   "parse_miss": "2026-09-29T05:49:47+00:00"
+   "found": "2026-09-29"
   },
   "7561": {
    "page": "https://www.hurxley.co.jp/ir_information/month/",
    "found": "2026-09-29"
   },
-  "3979": {
-   "miss": "2026-09-29"
-  },
+  "3979": {},
   "7646": {
    "page": "https://www.plant-co.jp/news/detail/177.html",
-   "found": "2026-09-29",
-   "parse_miss": "2026-09-29T05:49:47+00:00"
+   "found": "2026-09-29"
   },
-  "7686": {
-   "miss": "2026-09-29"
-  },
+  "7686": {},
   "9993": {
    "page": "https://yamazawa.co.jp/ir/term-month.html",
-   "found": "2026-09-29",
-   "parse_miss": "2026-09-29T05:49:47+00:00"
+   "found": "2026-09-29"
   },
   "8207": {
    "page": "https://www.teng.co.jp/ir/ir.html",
-   "found": "2026-09-29",
-   "parse_miss": "2026-09-29T05:49:47+00:00"
+   "found": "2026-09-29"
   },
-  "369A": {
-   "miss": "2026-09-29"
-  },
+  "369A": {},
   "7636": {
    "page": "https://www.handsman.co.jp/ir/sales_report",
-   "found": "2026-09-29",
-   "parse_miss": "2026-09-29T05:49:47+00:00"
+   "found": "2026-09-29"
   },
-  "4193": {
-   "miss": "2026-09-29"
-  },
-  "9252": {
-   "miss": "2026-09-29"
-  },
+  "4193": {},
+  "9252": {},
   "7416": {
    "page": "https://www.haruyama.co.jp/ir/ir_monthly_data.php",
    "found": "2026-09-29"
@@ -948,16 +781,11 @@
    "page": "https://www.hmry.jp/ir/library/monthly/?y=2026",
    "found": "2026-09-29"
   },
-  "4374": {
-   "miss": "2026-09-29"
-  },
-  "7610": {
-   "miss": "2026-09-29"
-  },
+  "4374": {},
+  "7610": {},
   "7604": {
    "page": "https://www.umenohana.co.jp/investor/archive?category=monthly_sales",
-   "found": "2026-09-29",
-   "parse_miss": "2026-09-29T05:49:47+00:00"
+   "found": "2026-09-29"
   },
   "7494": {
    "page": "https://www.konaka.co.jp/ir/getsuji_-2026.html",
@@ -965,92 +793,52 @@
   },
   "7682": {
    "page": "https://ir.hamayuu.co.jp/ja/ir.html",
-   "found": "2026-09-29",
-   "parse_miss": "2026-09-29T05:49:47+00:00"
+   "found": "2026-09-29"
   },
-  "4015": {
-   "miss": "2026-09-29"
-  },
+  "4015": {},
   "9206": {
    "page": "https://www.starflyer.jp/starflyer/ir/traffic_figures/",
-   "found": "2026-09-29",
-   "parse_miss": "2026-09-29T05:49:47+00:00"
+   "found": "2026-09-29"
   },
   "9285": {
    "page": "https://www.tokyo-infra.com",
-   "found": "2026-09-29",
-   "parse_miss": "2026-09-29T05:49:47+00:00"
+   "found": "2026-09-29"
   },
-  "352A": {
-   "miss": "2026-09-29"
-  },
-  "6059": {
-   "miss": "2026-09-29"
-  },
-  "7674": {
-   "miss": "2026-09-29"
-  },
+  "352A": {},
+  "6059": {},
+  "7674": {},
   "8742": {
    "page": "https://www.kobayashiyoko.com",
-   "found": "2026-09-29",
-   "parse_miss": "2026-09-29T05:49:47+00:00"
+   "found": "2026-09-29"
   },
-  "9904": {
-   "miss": "2026-09-29"
-  },
-  "4880": {
-   "miss": "2026-09-29"
-  },
+  "9904": {},
+  "4880": {},
   "9973": {
    "page": "https://kozohd.co.jp",
-   "found": "2026-09-29",
-   "parse_miss": "2026-09-29T05:49:47+00:00"
+   "found": "2026-09-29"
   },
-  "4019": {
-   "miss": "2026-09-29"
-  },
-  "4177": {
-   "miss": "2026-09-29"
-  },
-  "9854": {
-   "miss": "2026-09-29"
-  },
-  "3189": {
-   "miss": "2026-09-29"
-  },
+  "4019": {},
+  "4177": {},
+  "9854": {},
+  "3189": {},
   "3927": {
    "page": "https://www.fuva-brain.co.jp",
-   "found": "2026-09-29",
-   "parse_miss": "2026-09-29T05:49:47+00:00"
+   "found": "2026-09-29"
   },
-  "7625": {
-   "miss": "2026-09-29"
-  },
+  "7625": {},
   "8798": {
    "page": "https://www.advancecreate.co.jp/ir/topics/monthly_report/",
-   "found": "2026-09-29",
-   "parse_miss": "2026-09-29T05:49:47+00:00"
+   "found": "2026-09-29"
   },
-  "386A": {
-   "miss": "2026-09-29"
-  },
-  "9223": {
-   "miss": "2026-09-29"
-  },
-  "3796": {
-   "miss": "2026-09-29"
-  },
-  "7544": {
-   "miss": "2026-09-29"
-  },
+  "386A": {},
+  "9223": {},
+  "3796": {},
+  "7544": {},
   "9835": {
    "page": "https://www.juntendo.co.jp/ir/ir-library/monthly/",
-   "found": "2026-09-29",
-   "parse_miss": "2026-09-29T05:49:47+00:00"
+   "found": "2026-09-29"
   },
-  "3461": {
-   "miss": "2026-09-29"
-  }
+  "3461": {}
  },
  "codes": {
   "9843": {
@@ -3004,142 +2792,1021 @@
     }
    },
    "ts": "2026-09-29T05:49:47+00:00"
+  },
+  "9021": {
+   "name": "ＪＲ西日本",
+   "page": "https://www.westjr.co.jp/company/ir/finance/monthly/",
+   "months": {},
+   "ts": "2026-09-29T07:20:25+00:00",
+   "pdf_ts": "2026-09-29T07:20:25+00:00",
+   "pdf": {
+    "2026-05": {
+     "doc": "https://www.westjr.co.jp/company/ir/finance/monthly/pdf/27.pdf",
+     "yoy": 104.3,
+     "metric": "월매출/영업수입 전년비"
+    },
+    "2026-06": {
+     "doc": "https://www.westjr.co.jp/company/ir/finance/monthly/pdf/27.pdf",
+     "yoy": 99.4,
+     "metric": "월매출/영업수입 전년비"
+    },
+    "2026-07": {
+     "doc": "https://www.westjr.co.jp/company/ir/finance/monthly/pdf/27.pdf",
+     "yoy": 104.0,
+     "metric": "월매출/영업수입 전년비"
+    },
+    "2026-08": {
+     "doc": "https://www.westjr.co.jp/company/ir/finance/monthly/pdf/27.pdf",
+     "yoy": 103.9,
+     "metric": "월매출/영업수입 전년비"
+    },
+    "2026-01": {
+     "doc": "https://www.westjr.co.jp/company/ir/finance/monthly/pdf/26.pdf",
+     "yoy": 103.2,
+     "metric": "월매출/영업수입 전년비"
+    },
+    "2026-02": {
+     "doc": "https://www.westjr.co.jp/company/ir/finance/monthly/pdf/26.pdf",
+     "yoy": 103.9,
+     "metric": "월매출/영업수입 전년비"
+    },
+    "2026-03": {
+     "doc": "https://www.westjr.co.jp/company/ir/finance/monthly/pdf/26.pdf",
+     "yoy": 104.9,
+     "metric": "월매출/영업수입 전년비"
+    },
+    "2026-04": {
+     "doc": "https://www.westjr.co.jp/company/ir/finance/monthly/pdf/26.pdf",
+     "yoy": 103.8,
+     "metric": "월매출/영업수입 전년비"
+    },
+    "2025-05": {
+     "doc": "https://www.westjr.co.jp/company/ir/finance/monthly/pdf/26.pdf",
+     "yoy": 107.0,
+     "metric": "월매출/영업수입 전년비"
+    },
+    "2025-06": {
+     "doc": "https://www.westjr.co.jp/company/ir/finance/monthly/pdf/26.pdf",
+     "yoy": 106.7,
+     "metric": "월매출/영업수입 전년비"
+    },
+    "2025-07": {
+     "doc": "https://www.westjr.co.jp/company/ir/finance/monthly/pdf/26.pdf",
+     "yoy": 104.1,
+     "metric": "월매출/영업수입 전년비"
+    },
+    "2025-08": {
+     "doc": "https://www.westjr.co.jp/company/ir/finance/monthly/pdf/26.pdf",
+     "yoy": 113.0,
+     "metric": "월매출/영업수입 전년비"
+    },
+    "2025-09": {
+     "doc": "https://www.westjr.co.jp/company/ir/finance/monthly/pdf/26.pdf",
+     "yoy": 106.3,
+     "metric": "월매출/영업수입 전년비"
+    },
+    "2025-10": {
+     "doc": "https://www.westjr.co.jp/company/ir/finance/monthly/pdf/26.pdf",
+     "yoy": 107.4,
+     "metric": "월매출/영업수입 전년비"
+    },
+    "2025-11": {
+     "doc": "https://www.westjr.co.jp/company/ir/finance/monthly/pdf/26.pdf",
+     "yoy": 105.8,
+     "metric": "월매출/영업수입 전년비"
+    },
+    "2025-12": {
+     "doc": "https://www.westjr.co.jp/company/ir/finance/monthly/pdf/26.pdf",
+     "yoy": 102.9,
+     "metric": "월매출/영업수입 전년비"
+    },
+    "2025-01": {
+     "doc": "https://www.westjr.co.jp/company/ir/finance/monthly/pdf/25.pdf",
+     "yoy": 107.3,
+     "metric": "월매출/영업수입 전년비"
+    },
+    "2025-03": {
+     "doc": "https://www.westjr.co.jp/company/ir/finance/monthly/pdf/25.pdf",
+     "yoy": 104.6,
+     "metric": "월매출/영업수입 전년비"
+    },
+    "2025-04": {
+     "doc": "https://www.westjr.co.jp/company/ir/finance/monthly/pdf/25.pdf",
+     "yoy": 110.7,
+     "metric": "월매출/영업수입 전년비"
+    },
+    "2024-05": {
+     "doc": "https://www.westjr.co.jp/company/ir/finance/monthly/pdf/25.pdf",
+     "yoy": 106.7,
+     "metric": "월매출/영업수입 전년비"
+    },
+    "2024-06": {
+     "doc": "https://www.westjr.co.jp/company/ir/finance/monthly/pdf/25.pdf",
+     "yoy": 108.2,
+     "metric": "월매출/영업수입 전년비"
+    },
+    "2024-07": {
+     "doc": "https://www.westjr.co.jp/company/ir/finance/monthly/pdf/25.pdf",
+     "yoy": 106.7,
+     "metric": "월매출/영업수입 전년비"
+    },
+    "2024-08": {
+     "doc": "https://www.westjr.co.jp/company/ir/finance/monthly/pdf/25.pdf",
+     "yoy": 101.8,
+     "metric": "월매출/영업수입 전년비"
+    },
+    "2024-09": {
+     "doc": "https://www.westjr.co.jp/company/ir/finance/monthly/pdf/25.pdf",
+     "yoy": 107.1,
+     "metric": "월매출/영업수입 전년비"
+    },
+    "2024-10": {
+     "doc": "https://www.westjr.co.jp/company/ir/finance/monthly/pdf/25.pdf",
+     "yoy": 104.3,
+     "metric": "월매출/영업수입 전년비"
+    },
+    "2024-11": {
+     "doc": "https://www.westjr.co.jp/company/ir/finance/monthly/pdf/25.pdf",
+     "yoy": 105.9,
+     "metric": "월매출/영업수입 전년비"
+    },
+    "2024-12": {
+     "doc": "https://www.westjr.co.jp/company/ir/finance/monthly/pdf/25.pdf",
+     "yoy": 105.9,
+     "metric": "월매출/영업수입 전년비"
+    },
+    "2024-01": {
+     "doc": "https://www.westjr.co.jp/company/ir/finance/monthly/pdf/24.pdf",
+     "yoy": 113.0,
+     "metric": "월매출/영업수입 전년비"
+    },
+    "2024-03": {
+     "doc": "https://www.westjr.co.jp/company/ir/finance/monthly/pdf/24.pdf",
+     "yoy": 106.0,
+     "metric": "월매출/영업수입 전년비"
+    },
+    "2024-04": {
+     "doc": "https://www.westjr.co.jp/company/ir/finance/monthly/pdf/24.pdf",
+     "yoy": 138.0,
+     "metric": "월매출/영업수입 전년비"
+    },
+    "2023-05": {
+     "doc": "https://www.westjr.co.jp/company/ir/finance/monthly/pdf/24.pdf",
+     "yoy": 135.0,
+     "metric": "월매출/영업수입 전년비"
+    },
+    "2023-06": {
+     "doc": "https://www.westjr.co.jp/company/ir/finance/monthly/pdf/24.pdf",
+     "yoy": 126.0,
+     "metric": "월매출/영업수입 전년비"
+    },
+    "2023-07": {
+     "doc": "https://www.westjr.co.jp/company/ir/finance/monthly/pdf/24.pdf",
+     "yoy": 127.0,
+     "metric": "월매출/영업수입 전년비"
+    },
+    "2023-08": {
+     "doc": "https://www.westjr.co.jp/company/ir/finance/monthly/pdf/24.pdf",
+     "yoy": 141.0,
+     "metric": "월매출/영업수입 전년비"
+    },
+    "2023-09": {
+     "doc": "https://www.westjr.co.jp/company/ir/finance/monthly/pdf/24.pdf",
+     "yoy": 132.0,
+     "metric": "월매출/영업수입 전년비"
+    },
+    "2023-10": {
+     "doc": "https://www.westjr.co.jp/company/ir/finance/monthly/pdf/24.pdf",
+     "yoy": 121.0,
+     "metric": "월매출/영업수입 전년비"
+    },
+    "2023-11": {
+     "doc": "https://www.westjr.co.jp/company/ir/finance/monthly/pdf/24.pdf",
+     "yoy": 120.0,
+     "metric": "월매출/영업수입 전년비"
+    },
+    "2023-12": {
+     "doc": "https://www.westjr.co.jp/company/ir/finance/monthly/pdf/24.pdf",
+     "yoy": 110.0,
+     "metric": "월매출/영업수입 전년비"
+    },
+    "2023-01": {
+     "doc": "https://www.westjr.co.jp/company/ir/finance/monthly/pdf/23.pdf",
+     "yoy": 152.0,
+     "metric": "월매출/영업수입 전년비"
+    },
+    "2023-02": {
+     "doc": "https://www.westjr.co.jp/company/ir/finance/monthly/pdf/23.pdf",
+     "yoy": 245.0,
+     "metric": "월매출/영업수입 전년비"
+    },
+    "2023-03": {
+     "doc": "https://www.westjr.co.jp/company/ir/finance/monthly/pdf/23.pdf",
+     "yoy": 177.0,
+     "metric": "월매출/영업수입 전년비"
+    },
+    "2023-04": {
+     "doc": "https://www.westjr.co.jp/company/ir/finance/monthly/pdf/23.pdf",
+     "yoy": 174.0,
+     "metric": "월매출/영업수입 전년비"
+    },
+    "2022-05": {
+     "doc": "https://www.westjr.co.jp/company/ir/finance/monthly/pdf/23.pdf",
+     "yoy": 291.0,
+     "metric": "월매출/영업수입 전년비"
+    },
+    "2022-06": {
+     "doc": "https://www.westjr.co.jp/company/ir/finance/monthly/pdf/23.pdf",
+     "yoy": 218.0,
+     "metric": "월매출/영업수입 전년비"
+    },
+    "2022-07": {
+     "doc": "https://www.westjr.co.jp/company/ir/finance/monthly/pdf/23.pdf",
+     "yoy": 156.0,
+     "metric": "월매출/영업수입 전년비"
+    },
+    "2022-08": {
+     "doc": "https://www.westjr.co.jp/company/ir/finance/monthly/pdf/23.pdf",
+     "yoy": 204.0,
+     "metric": "월매출/영업수입 전년비"
+    },
+    "2022-09": {
+     "doc": "https://www.westjr.co.jp/company/ir/finance/monthly/pdf/23.pdf",
+     "yoy": 228.0,
+     "metric": "월매출/영업수입 전년비"
+    },
+    "2022-10": {
+     "doc": "https://www.westjr.co.jp/company/ir/finance/monthly/pdf/23.pdf",
+     "yoy": 165.0,
+     "metric": "월매출/영업수입 전년비"
+    },
+    "2022-11": {
+     "doc": "https://www.westjr.co.jp/company/ir/finance/monthly/pdf/23.pdf",
+     "yoy": 132.0,
+     "metric": "월매출/영업수입 전년비"
+    },
+    "2022-12": {
+     "doc": "https://www.westjr.co.jp/company/ir/finance/monthly/pdf/23.pdf",
+     "yoy": 115.0,
+     "metric": "월매출/영업수입 전년비"
+    },
+    "2022-02": {
+     "doc": "https://www.westjr.co.jp/company/ir/finance/monthly/pdf/22.pdf",
+     "yoy": 117.0,
+     "metric": "월매출/영업수입 전년비"
+    },
+    "2022-03": {
+     "doc": "https://www.westjr.co.jp/company/ir/finance/monthly/pdf/22.pdf",
+     "yoy": 124.0,
+     "metric": "월매출/영업수입 전년비"
+    },
+    "2022-04": {
+     "doc": "https://www.westjr.co.jp/company/ir/finance/monthly/pdf/22.pdf",
+     "yoy": 290.0,
+     "metric": "월매출/영업수입 전년비"
+    },
+    "2021-05": {
+     "doc": "https://www.westjr.co.jp/company/ir/finance/monthly/pdf/22.pdf",
+     "yoy": 243.0,
+     "metric": "월매출/영업수입 전년비"
+    },
+    "2021-06": {
+     "doc": "https://www.westjr.co.jp/company/ir/finance/monthly/pdf/22.pdf",
+     "yoy": 101.0,
+     "metric": "월매출/영업수입 전년비"
+    },
+    "2021-07": {
+     "doc": "https://www.westjr.co.jp/company/ir/finance/monthly/pdf/22.pdf",
+     "yoy": 121.0,
+     "metric": "월매출/영업수입 전년비"
+    },
+    "2021-08": {
+     "doc": "https://www.westjr.co.jp/company/ir/finance/monthly/pdf/22.pdf",
+     "yoy": 127.0,
+     "metric": "월매출/영업수입 전년비"
+    },
+    "2021-09": {
+     "doc": "https://www.westjr.co.jp/company/ir/finance/monthly/pdf/22.pdf",
+     "yoy": 78.0,
+     "metric": "월매출/영업수입 전년비"
+    },
+    "2021-10": {
+     "doc": "https://www.westjr.co.jp/company/ir/finance/monthly/pdf/22.pdf",
+     "yoy": 103.0,
+     "metric": "월매출/영업수입 전년비"
+    },
+    "2021-11": {
+     "doc": "https://www.westjr.co.jp/company/ir/finance/monthly/pdf/22.pdf",
+     "yoy": 112.0,
+     "metric": "월매출/영업수입 전년비"
+    },
+    "2021-12": {
+     "doc": "https://www.westjr.co.jp/company/ir/finance/monthly/pdf/22.pdf",
+     "yoy": 184.0,
+     "metric": "월매출/영업수입 전년비"
+    },
+    "2021-01": {
+     "doc": "https://www.westjr.co.jp/company/ir/finance/monthly/pdf/21.pdf",
+     "yoy": 127.0,
+     "metric": "월매출/영업수입 전년비"
+    },
+    "2021-02": {
+     "doc": "https://www.westjr.co.jp/company/ir/finance/monthly/pdf/21.pdf",
+     "yoy": 33.0,
+     "metric": "월매출/영업수입 전년비"
+    },
+    "2021-03": {
+     "doc": "https://www.westjr.co.jp/company/ir/finance/monthly/pdf/21.pdf",
+     "yoy": 103.0,
+     "metric": "월매출/영업수입 전년비"
+    },
+    "2021-04": {
+     "doc": "https://www.westjr.co.jp/company/ir/finance/monthly/pdf/21.pdf",
+     "yoy": 121.7,
+     "metric": "월매출/영업수입 전년비"
+    },
+    "2020-05": {
+     "doc": "https://www.westjr.co.jp/company/ir/finance/monthly/pdf/21.pdf",
+     "yoy": 126.1,
+     "metric": "월매출/영업수입 전년비"
+    },
+    "2020-06": {
+     "doc": "https://www.westjr.co.jp/company/ir/finance/monthly/pdf/21.pdf",
+     "yoy": 50.3,
+     "metric": "월매출/영업수입 전년비"
+    },
+    "2020-07": {
+     "doc": "https://www.westjr.co.jp/company/ir/finance/monthly/pdf/21.pdf",
+     "yoy": 45.4,
+     "metric": "월매출/영업수입 전년비"
+    },
+    "2020-08": {
+     "doc": "https://www.westjr.co.jp/company/ir/finance/monthly/pdf/21.pdf",
+     "yoy": 40.8,
+     "metric": "월매출/영업수입 전년비"
+    },
+    "2020-09": {
+     "doc": "https://www.westjr.co.jp/company/ir/finance/monthly/pdf/21.pdf",
+     "yoy": 48.7,
+     "metric": "월매출/영업수입 전년비"
+    },
+    "2020-10": {
+     "doc": "https://www.westjr.co.jp/company/ir/finance/monthly/pdf/21.pdf",
+     "yoy": 68.6,
+     "metric": "월매출/영업수입 전년비"
+    },
+    "2020-11": {
+     "doc": "https://www.westjr.co.jp/company/ir/finance/monthly/pdf/21.pdf",
+     "yoy": 59.9,
+     "metric": "월매출/영업수입 전년비"
+    },
+    "2020-12": {
+     "doc": "https://www.westjr.co.jp/company/ir/finance/monthly/pdf/21.pdf",
+     "yoy": 48.6,
+     "metric": "월매출/영업수입 전년비"
+    }
+   }
+  },
+  "3197": {
+   "name": "すかいらーく",
+   "page": "https://corp.skylark.co.jp/ir/financial/performance/",
+   "months": {
+    "2026-01": {
+     "all": 112.0,
+     "same": 110.3
+    },
+    "2026-02": {
+     "all": 107.4,
+     "same": 105.7
+    },
+    "2026-03": {
+     "all": 103.9,
+     "same": 102.3
+    },
+    "2026-04": {
+     "all": 108.4,
+     "same": 107.3
+    },
+    "2026-05": {
+     "all": 114.9,
+     "same": 111.4
+    },
+    "2026-06": {
+     "all": 105.2,
+     "same": 101.9
+    },
+    "2026-07": {
+     "all": 108.5,
+     "same": 105.8
+    },
+    "2026-08": {
+     "all": 107.2,
+     "same": 104.6
+    }
+   },
+   "ts": "2026-09-29T07:20:25+00:00"
+  },
+  "9142": {
+   "name": "ＪＲ九州",
+   "page": "https://www.jrkyushu.co.jp/company/ir/finance/monthly/",
+   "months": {},
+   "ts": "2026-09-29T07:20:25+00:00",
+   "pdf_ts": "2026-09-29T07:20:25+00:00",
+   "pdf": {
+    "2026-04": {
+     "doc": "https://www.jrkyushu.co.jp/company/ir/finance/monthly/__icsFiles/afieldfile/2026/04/17/9142.monthly.202603p2.ja.pdf",
+     "yoy": 71.9,
+     "metric": "월매출/영업수입 전년비"
+    },
+    "2026-05": {
+     "doc": "https://www.jrkyushu.co.jp/company/ir/finance/monthly/__icsFiles/afieldfile/2026/09/25/9142.monthly.202609p1.ja.pdf",
+     "yoy": 109.2,
+     "metric": "월매출/영업수입 전년비"
+    },
+    "2026-06": {
+     "doc": "https://www.jrkyushu.co.jp/company/ir/finance/monthly/__icsFiles/afieldfile/2026/09/25/9142.monthly.202609p1.ja.pdf",
+     "yoy": 103.9,
+     "metric": "월매출/영업수입 전년비"
+    },
+    "2026-07": {
+     "doc": "https://www.jrkyushu.co.jp/company/ir/finance/monthly/__icsFiles/afieldfile/2026/09/25/9142.monthly.202609p1.ja.pdf",
+     "yoy": 106.3,
+     "metric": "월매출/영업수입 전년비"
+    },
+    "2026-08": {
+     "doc": "https://www.jrkyushu.co.jp/company/ir/finance/monthly/__icsFiles/afieldfile/2026/09/25/9142.monthly.202609p1.ja.pdf",
+     "yoy": 103.0,
+     "metric": "월매출/영업수입 전년비"
+    },
+    "2026-01": {
+     "doc": "https://www.jrkyushu.co.jp/company/ir/finance/monthly/__icsFiles/afieldfile/2026/04/17/9142.monthly.202603p2.ja.pdf",
+     "yoy": 116.8,
+     "metric": "월매출/영업수입 전년비"
+    },
+    "2026-02": {
+     "doc": "https://www.jrkyushu.co.jp/company/ir/finance/monthly/__icsFiles/afieldfile/2026/04/17/9142.monthly.202603p2.ja.pdf",
+     "yoy": 115.6,
+     "metric": "월매출/영업수입 전년비"
+    },
+    "2026-03": {
+     "doc": "https://www.jrkyushu.co.jp/company/ir/finance/monthly/__icsFiles/afieldfile/2026/04/17/9142.monthly.202603p2.ja.pdf",
+     "yoy": 76.9,
+     "metric": "월매출/영업수입 전년비"
+    },
+    "2025-05": {
+     "doc": "https://www.jrkyushu.co.jp/company/ir/finance/monthly/__icsFiles/afieldfile/2026/04/17/9142.monthly.202603p2.ja.pdf",
+     "yoy": 105.4,
+     "metric": "월매출/영업수입 전년비"
+    },
+    "2025-06": {
+     "doc": "https://www.jrkyushu.co.jp/company/ir/finance/monthly/__icsFiles/afieldfile/2026/04/17/9142.monthly.202603p2.ja.pdf",
+     "yoy": 110.6,
+     "metric": "월매출/영업수입 전년비"
+    },
+    "2025-07": {
+     "doc": "https://www.jrkyushu.co.jp/company/ir/finance/monthly/__icsFiles/afieldfile/2026/04/17/9142.monthly.202603p2.ja.pdf",
+     "yoy": 111.2,
+     "metric": "월매출/영업수입 전년비"
+    },
+    "2025-08": {
+     "doc": "https://www.jrkyushu.co.jp/company/ir/finance/monthly/__icsFiles/afieldfile/2026/04/17/9142.monthly.202603p2.ja.pdf",
+     "yoy": 120.5,
+     "metric": "월매출/영업수입 전년비"
+    },
+    "2025-09": {
+     "doc": "https://www.jrkyushu.co.jp/company/ir/finance/monthly/__icsFiles/afieldfile/2026/04/17/9142.monthly.202603p2.ja.pdf",
+     "yoy": 135.6,
+     "metric": "월매출/영업수입 전년비"
+    },
+    "2025-10": {
+     "doc": "https://www.jrkyushu.co.jp/company/ir/finance/monthly/__icsFiles/afieldfile/2026/04/17/9142.monthly.202603p2.ja.pdf",
+     "yoy": 125.7,
+     "metric": "월매출/영업수입 전년비"
+    },
+    "2025-11": {
+     "doc": "https://www.jrkyushu.co.jp/company/ir/finance/monthly/__icsFiles/afieldfile/2026/04/17/9142.monthly.202603p2.ja.pdf",
+     "yoy": 114.0,
+     "metric": "월매출/영업수입 전년비"
+    },
+    "2025-12": {
+     "doc": "https://www.jrkyushu.co.jp/company/ir/finance/monthly/__icsFiles/afieldfile/2026/04/17/9142.monthly.202603p2.ja.pdf",
+     "yoy": 117.6,
+     "metric": "월매출/영업수입 전년비"
+    },
+    "2021-01": {
+     "doc": "https://www.jrkyushu.co.jp/company/ir/finance/monthly/__icsFiles/afieldfile/2021/04/28/9142.monthly.202103.ja.pdf",
+     "yoy": 78.0,
+     "metric": "월매출/영업수입 전년비"
+    },
+    "2021-04": {
+     "doc": "https://www.jrkyushu.co.jp/company/ir/finance/monthly/__icsFiles/afieldfile/2021/04/28/9142.monthly.202103.ja.pdf",
+     "yoy": 48.8,
+     "metric": "월매출/영업수입 전년비"
+    },
+    "2020-05": {
+     "doc": "https://www.jrkyushu.co.jp/company/ir/finance/monthly/__icsFiles/afieldfile/2021/04/28/9142.monthly.202103.ja.pdf",
+     "yoy": 93.3,
+     "metric": "월매출/영업수입 전년비"
+    },
+    "2020-06": {
+     "doc": "https://www.jrkyushu.co.jp/company/ir/finance/monthly/__icsFiles/afieldfile/2021/04/28/9142.monthly.202103.ja.pdf",
+     "yoy": 108.8,
+     "metric": "월매출/영업수입 전년비"
+    },
+    "2020-07": {
+     "doc": "https://www.jrkyushu.co.jp/company/ir/finance/monthly/__icsFiles/afieldfile/2021/04/28/9142.monthly.202103.ja.pdf",
+     "yoy": 74.9,
+     "metric": "월매출/영업수입 전년비"
+    },
+    "2020-08": {
+     "doc": "https://www.jrkyushu.co.jp/company/ir/finance/monthly/__icsFiles/afieldfile/2021/04/28/9142.monthly.202103.ja.pdf",
+     "yoy": 90.7,
+     "metric": "월매출/영업수입 전년비"
+    },
+    "2020-09": {
+     "doc": "https://www.jrkyushu.co.jp/company/ir/finance/monthly/__icsFiles/afieldfile/2021/04/28/9142.monthly.202103.ja.pdf",
+     "yoy": 56.7,
+     "metric": "월매출/영업수입 전년비"
+    },
+    "2020-10": {
+     "doc": "https://www.jrkyushu.co.jp/company/ir/finance/monthly/__icsFiles/afieldfile/2021/04/28/9142.monthly.202103.ja.pdf",
+     "yoy": 124.4,
+     "metric": "월매출/영업수입 전년비"
+    },
+    "2020-11": {
+     "doc": "https://www.jrkyushu.co.jp/company/ir/finance/monthly/__icsFiles/afieldfile/2021/04/28/9142.monthly.202103.ja.pdf",
+     "yoy": 106.5,
+     "metric": "월매출/영업수입 전년비"
+    },
+    "2020-12": {
+     "doc": "https://www.jrkyushu.co.jp/company/ir/finance/monthly/__icsFiles/afieldfile/2021/04/28/9142.monthly.202103.ja.pdf",
+     "yoy": 98.8,
+     "metric": "월매출/영업수입 전년비"
+    },
+    "2020-01": {
+     "doc": "https://www.jrkyushu.co.jp/company/ir/finance/monthly/__icsFiles/afieldfile/2020/04/22/9142.monthly.202003.jp.pdf",
+     "yoy": 97.7,
+     "metric": "월매출/영업수입 전년비"
+    },
+    "2020-02": {
+     "doc": "https://www.jrkyushu.co.jp/company/ir/finance/monthly/__icsFiles/afieldfile/2020/04/22/9142.monthly.202003.jp.pdf",
+     "yoy": 101.2,
+     "metric": "월매출/영업수입 전년비"
+    },
+    "2020-03": {
+     "doc": "https://www.jrkyushu.co.jp/company/ir/finance/monthly/__icsFiles/afieldfile/2020/04/22/9142.monthly.202003.jp.pdf",
+     "yoy": 103.3,
+     "metric": "월매출/영업수입 전년비"
+    },
+    "2020-04": {
+     "doc": "https://www.jrkyushu.co.jp/company/ir/finance/monthly/__icsFiles/afieldfile/2020/04/22/9142.monthly.202003.jp.pdf",
+     "yoy": 93.7,
+     "metric": "월매출/영업수입 전년비"
+    },
+    "2019-05": {
+     "doc": "https://www.jrkyushu.co.jp/company/ir/finance/monthly/__icsFiles/afieldfile/2020/04/22/9142.monthly.202003.jp.pdf",
+     "yoy": 103.8,
+     "metric": "월매출/영업수입 전년비"
+    },
+    "2019-06": {
+     "doc": "https://www.jrkyushu.co.jp/company/ir/finance/monthly/__icsFiles/afieldfile/2020/04/22/9142.monthly.202003.jp.pdf",
+     "yoy": 102.8,
+     "metric": "월매출/영업수입 전년비"
+    },
+    "2019-07": {
+     "doc": "https://www.jrkyushu.co.jp/company/ir/finance/monthly/__icsFiles/afieldfile/2020/04/22/9142.monthly.202003.jp.pdf",
+     "yoy": 97.5,
+     "metric": "월매출/영업수입 전년비"
+    },
+    "2019-08": {
+     "doc": "https://www.jrkyushu.co.jp/company/ir/finance/monthly/__icsFiles/afieldfile/2020/04/22/9142.monthly.202003.jp.pdf",
+     "yoy": 102.5,
+     "metric": "월매출/영업수입 전년비"
+    },
+    "2019-09": {
+     "doc": "https://www.jrkyushu.co.jp/company/ir/finance/monthly/__icsFiles/afieldfile/2020/04/22/9142.monthly.202003.jp.pdf",
+     "yoy": 172.8,
+     "metric": "월매출/영업수입 전년비"
+    },
+    "2019-10": {
+     "doc": "https://www.jrkyushu.co.jp/company/ir/finance/monthly/__icsFiles/afieldfile/2020/04/22/9142.monthly.202003.jp.pdf",
+     "yoy": 50.7,
+     "metric": "월매출/영업수입 전년비"
+    },
+    "2019-11": {
+     "doc": "https://www.jrkyushu.co.jp/company/ir/finance/monthly/__icsFiles/afieldfile/2020/04/22/9142.monthly.202003.jp.pdf",
+     "yoy": 99.7,
+     "metric": "월매출/영업수입 전년비"
+    },
+    "2019-12": {
+     "doc": "https://www.jrkyushu.co.jp/company/ir/finance/monthly/__icsFiles/afieldfile/2020/04/22/9142.monthly.202003.jp.pdf",
+     "yoy": 99.6,
+     "metric": "월매출/영업수입 전년비"
+    },
+    "2019-01": {
+     "doc": "https://www.jrkyushu.co.jp/company/ir/finance/monthly/__icsFiles/afieldfile/2019/04/19/2019_4.getuji.pdf",
+     "yoy": 100.8,
+     "metric": "월매출/영업수입 전년비"
+    },
+    "2019-02": {
+     "doc": "https://www.jrkyushu.co.jp/company/ir/finance/monthly/__icsFiles/afieldfile/2019/04/19/2019_4.getuji.pdf",
+     "yoy": 98.6,
+     "metric": "월매출/영업수입 전년비"
+    },
+    "2019-03": {
+     "doc": "https://www.jrkyushu.co.jp/company/ir/finance/monthly/__icsFiles/afieldfile/2019/04/19/2019_4.getuji.pdf",
+     "yoy": 107.2,
+     "metric": "월매출/영업수입 전년비"
+    },
+    "2019-04": {
+     "doc": "https://www.jrkyushu.co.jp/company/ir/finance/monthly/__icsFiles/afieldfile/2019/04/19/2019_4.getuji.pdf",
+     "yoy": 98.5,
+     "metric": "월매출/영업수입 전년비"
+    },
+    "2018-05": {
+     "doc": "https://www.jrkyushu.co.jp/company/ir/finance/monthly/__icsFiles/afieldfile/2019/04/19/2019_4.getuji.pdf",
+     "yoy": 100.2,
+     "metric": "월매출/영업수입 전년비"
+    },
+    "2018-06": {
+     "doc": "https://www.jrkyushu.co.jp/company/ir/finance/monthly/__icsFiles/afieldfile/2019/04/19/2019_4.getuji.pdf",
+     "yoy": 102.5,
+     "metric": "월매출/영업수입 전년비"
+    },
+    "2018-07": {
+     "doc": "https://www.jrkyushu.co.jp/company/ir/finance/monthly/__icsFiles/afieldfile/2019/04/19/2019_4.getuji.pdf",
+     "yoy": 100.8,
+     "metric": "월매출/영업수입 전년비"
+    },
+    "2018-08": {
+     "doc": "https://www.jrkyushu.co.jp/company/ir/finance/monthly/__icsFiles/afieldfile/2019/04/19/2019_4.getuji.pdf",
+     "yoy": 98.6,
+     "metric": "월매출/영업수입 전년비"
+    },
+    "2018-09": {
+     "doc": "https://www.jrkyushu.co.jp/company/ir/finance/monthly/__icsFiles/afieldfile/2019/04/19/2019_4.getuji.pdf",
+     "yoy": 103.3,
+     "metric": "월매출/영업수입 전년비"
+    },
+    "2018-10": {
+     "doc": "https://www.jrkyushu.co.jp/company/ir/finance/monthly/__icsFiles/afieldfile/2019/04/19/2019_4.getuji.pdf",
+     "yoy": 99.1,
+     "metric": "월매출/영업수입 전년비"
+    },
+    "2018-11": {
+     "doc": "https://www.jrkyushu.co.jp/company/ir/finance/monthly/__icsFiles/afieldfile/2019/04/19/2019_4.getuji.pdf",
+     "yoy": 98.6,
+     "metric": "월매출/영업수입 전년비"
+    },
+    "2018-12": {
+     "doc": "https://www.jrkyushu.co.jp/company/ir/finance/monthly/__icsFiles/afieldfile/2019/04/19/2019_4.getuji.pdf",
+     "yoy": 98.8,
+     "metric": "월매출/영업수입 전년비"
+    },
+    "2018-01": {
+     "doc": "https://www.jrkyushu.co.jp/company/ir/finance/monthly/__icsFiles/afieldfile/2018/04/20/2018.4.getsuji.pdf",
+     "yoy": 99.8,
+     "metric": "월매출/영업수입 전년비"
+    },
+    "2018-02": {
+     "doc": "https://www.jrkyushu.co.jp/company/ir/finance/monthly/__icsFiles/afieldfile/2018/04/20/2018.4.getsuji.pdf",
+     "yoy": 98.6,
+     "metric": "월매출/영업수입 전년비"
+    },
+    "2018-03": {
+     "doc": "https://www.jrkyushu.co.jp/company/ir/finance/monthly/__icsFiles/afieldfile/2018/04/20/2018.4.getsuji.pdf",
+     "yoy": 103.0,
+     "metric": "월매출/영업수입 전년비"
+    },
+    "2018-04": {
+     "doc": "https://www.jrkyushu.co.jp/company/ir/finance/monthly/__icsFiles/afieldfile/2018/04/20/2018.4.getsuji.pdf",
+     "yoy": 108.0,
+     "metric": "월매출/영업수입 전년비"
+    },
+    "2017-05": {
+     "doc": "https://www.jrkyushu.co.jp/company/ir/finance/monthly/__icsFiles/afieldfile/2018/04/20/2018.4.getsuji.pdf",
+     "yoy": 99.7,
+     "metric": "월매출/영업수입 전년비"
+    },
+    "2017-06": {
+     "doc": "https://www.jrkyushu.co.jp/company/ir/finance/monthly/__icsFiles/afieldfile/2018/04/20/2018.4.getsuji.pdf",
+     "yoy": 98.7,
+     "metric": "월매출/영업수입 전년비"
+    },
+    "2017-07": {
+     "doc": "https://www.jrkyushu.co.jp/company/ir/finance/monthly/__icsFiles/afieldfile/2018/04/20/2018.4.getsuji.pdf",
+     "yoy": 100.1,
+     "metric": "월매출/영업수입 전년비"
+    },
+    "2017-08": {
+     "doc": "https://www.jrkyushu.co.jp/company/ir/finance/monthly/__icsFiles/afieldfile/2018/04/20/2018.4.getsuji.pdf",
+     "yoy": 98.6,
+     "metric": "월매출/영업수입 전년비"
+    },
+    "2017-09": {
+     "doc": "https://www.jrkyushu.co.jp/company/ir/finance/monthly/__icsFiles/afieldfile/2018/04/20/2018.4.getsuji.pdf",
+     "yoy": 99.7,
+     "metric": "월매출/영업수입 전년비"
+    },
+    "2017-10": {
+     "doc": "https://www.jrkyushu.co.jp/company/ir/finance/monthly/__icsFiles/afieldfile/2018/04/20/2018.4.getsuji.pdf",
+     "yoy": 102.6,
+     "metric": "월매출/영업수입 전년비"
+    },
+    "2017-11": {
+     "doc": "https://www.jrkyushu.co.jp/company/ir/finance/monthly/__icsFiles/afieldfile/2018/04/20/2018.4.getsuji.pdf",
+     "yoy": 98.3,
+     "metric": "월매출/영업수입 전년비"
+    },
+    "2017-12": {
+     "doc": "https://www.jrkyushu.co.jp/company/ir/finance/monthly/__icsFiles/afieldfile/2018/04/20/2018.4.getsuji.pdf",
+     "yoy": 99.7,
+     "metric": "월매출/영업수입 전년비"
+    },
+    "2017-01": {
+     "doc": "https://www.jrkyushu.co.jp/company/ir/finance/monthly/__icsFiles/afieldfile/2017/04/20/2017.4.getuji.pdf",
+     "yoy": 99.7,
+     "metric": "월매출/영업수입 전년비"
+    },
+    "2017-02": {
+     "doc": "https://www.jrkyushu.co.jp/company/ir/finance/monthly/__icsFiles/afieldfile/2017/04/20/2017.4.getuji.pdf",
+     "yoy": 99.5,
+     "metric": "월매출/영업수입 전년비"
+    },
+    "2017-03": {
+     "doc": "https://www.jrkyushu.co.jp/company/ir/finance/monthly/__icsFiles/afieldfile/2017/04/20/2017.4.getuji.pdf",
+     "yoy": 90.7,
+     "metric": "월매출/영업수입 전년비"
+    },
+    "2017-04": {
+     "doc": "https://www.jrkyushu.co.jp/company/ir/finance/monthly/__icsFiles/afieldfile/2017/04/20/2017.4.getuji.pdf",
+     "yoy": 99.8,
+     "metric": "월매출/영업수입 전년비"
+    },
+    "2016-05": {
+     "doc": "https://www.jrkyushu.co.jp/company/ir/finance/monthly/__icsFiles/afieldfile/2017/04/20/2017.4.getuji.pdf",
+     "yoy": 102.7,
+     "metric": "월매출/영업수입 전년비"
+    },
+    "2016-06": {
+     "doc": "https://www.jrkyushu.co.jp/company/ir/finance/monthly/__icsFiles/afieldfile/2017/04/20/2017.4.getuji.pdf",
+     "yoy": 96.5,
+     "metric": "월매출/영업수입 전년비"
+    },
+    "2016-07": {
+     "doc": "https://www.jrkyushu.co.jp/company/ir/finance/monthly/__icsFiles/afieldfile/2017/04/20/2017.4.getuji.pdf",
+     "yoy": 100.9,
+     "metric": "월매출/영업수입 전년비"
+    },
+    "2016-08": {
+     "doc": "https://www.jrkyushu.co.jp/company/ir/finance/monthly/__icsFiles/afieldfile/2017/04/20/2017.4.getuji.pdf",
+     "yoy": 103.4,
+     "metric": "월매출/영업수입 전년비"
+    },
+    "2016-09": {
+     "doc": "https://www.jrkyushu.co.jp/company/ir/finance/monthly/__icsFiles/afieldfile/2017/04/20/2017.4.getuji.pdf",
+     "yoy": 90.4,
+     "metric": "월매출/영업수입 전년비"
+    },
+    "2016-10": {
+     "doc": "https://www.jrkyushu.co.jp/company/ir/finance/monthly/__icsFiles/afieldfile/2017/04/20/2017.4.getuji.pdf",
+     "yoy": 107.1,
+     "metric": "월매출/영업수입 전년비"
+    },
+    "2016-11": {
+     "doc": "https://www.jrkyushu.co.jp/company/ir/finance/monthly/__icsFiles/afieldfile/2017/04/20/2017.4.getuji.pdf",
+     "yoy": 103.3,
+     "metric": "월매출/영업수입 전년비"
+    },
+    "2016-12": {
+     "doc": "https://www.jrkyushu.co.jp/company/ir/finance/monthly/__icsFiles/afieldfile/2017/04/20/2017.4.getuji.pdf",
+     "yoy": 101.4,
+     "metric": "월매출/영업수입 전년비"
+    }
+   }
+  },
+  "9759": {
+   "name": "ＮＳＤ",
+   "page": "https://www.nsd.co.jp/ir/irmaterial/sokuhou.html",
+   "months": {
+    "2026-04": {
+     "yoy": 108.7
+    },
+    "2026-05": {
+     "yoy": 109.2
+    },
+    "2026-06": {
+     "yoy": 109.6
+    },
+    "2026-07": {
+     "yoy": 110.1
+    },
+    "2026-08": {
+     "yoy": 109.7
+    },
+    "2025-04": {
+     "yoy": 108.1
+    },
+    "2025-05": {
+     "yoy": 107.6
+    },
+    "2025-06": {
+     "yoy": 108.0
+    },
+    "2025-07": {
+     "yoy": 108.2
+    },
+    "2025-08": {
+     "yoy": 108.5
+    },
+    "2025-09": {
+     "yoy": 108.8
+    },
+    "2025-10": {
+     "yoy": 108.6
+    },
+    "2025-11": {
+     "yoy": 108.8
+    },
+    "2025-12": {
+     "yoy": 109.2
+    },
+    "2026-01": {
+     "yoy": 109.1
+    },
+    "2026-02": {
+     "yoy": 109.1
+    },
+    "2026-03": {
+     "yoy": 109.3
+    },
+    "2024-04": {
+     "yoy": 108.6
+    },
+    "2024-05": {
+     "yoy": 109.1
+    },
+    "2024-06": {
+     "yoy": 105.3
+    },
+    "2024-07": {
+     "yoy": 104.4
+    },
+    "2024-08": {
+     "yoy": 103.5
+    },
+    "2024-09": {
+     "yoy": 103.4
+    },
+    "2024-10": {
+     "yoy": 104.2
+    },
+    "2024-11": {
+     "yoy": 104.9
+    },
+    "2024-12": {
+     "yoy": 105.7
+    },
+    "2025-01": {
+     "yoy": 105.8
+    },
+    "2025-02": {
+     "yoy": 106.0
+    },
+    "2025-03": {
+     "yoy": 106.4
+    },
+    "2023-04": {
+     "yoy": 123.3
+    },
+    "2023-05": {
+     "yoy": 125.4
+    },
+    "2023-06": {
+     "yoy": 129.1
+    },
+    "2023-07": {
+     "yoy": 130.1
+    },
+    "2023-08": {
+     "yoy": 132.0
+    },
+    "2023-09": {
+     "yoy": 133.3
+    },
+    "2023-10": {
+     "yoy": 132.8
+    },
+    "2023-11": {
+     "yoy": 132.3
+    },
+    "2023-12": {
+     "yoy": 131.4
+    },
+    "2024-01": {
+     "yoy": 131.0
+    },
+    "2024-02": {
+     "yoy": 130.4
+    },
+    "2024-03": {
+     "yoy": 129.9
+    },
+    "2022-04": {
+     "yoy": 109.0
+    },
+    "2022-05": {
+     "yoy": 108.9
+    },
+    "2022-06": {
+     "yoy": 110.2
+    },
+    "2022-07": {
+     "yoy": 110.9
+    },
+    "2022-08": {
+     "yoy": 110.6
+    },
+    "2022-09": {
+     "yoy": 110.0
+    },
+    "2022-10": {
+     "yoy": 110.0
+    },
+    "2022-11": {
+     "yoy": 109.8
+    },
+    "2022-12": {
+     "yoy": 109.6
+    },
+    "2023-01": {
+     "yoy": 109.3
+    },
+    "2023-02": {
+     "yoy": 109.5
+    },
+    "2023-03": {
+     "yoy": 109.5
+    }
+   },
+   "ts": "2026-09-29T07:20:25+00:00"
+  },
+  "8173": {
+   "name": "Ｊｏｓｈｉｎ",
+   "page": "https://www.joshin.co.jp",
+   "months": {},
+   "ts": "2026-09-29T07:20:25+00:00",
+   "pdf_ts": "2026-09-29T07:20:25+00:00",
+   "pdf": {
+    "2026-04": {
+     "doc": "https://www.joshin.co.jp/ja/ir/news/news-6065434174700526662/main/0/link/20260804%20Joshin%20Monthly%20sale%20report.pdf",
+     "yoy": 118.1,
+     "metric": "グループ計前年比"
+    },
+    "2026-05": {
+     "doc": "https://www.joshin.co.jp/ja/ir/news/news-6065434174700526662/main/0/link/20260804%20Joshin%20Monthly%20sale%20report.pdf",
+     "yoy": 145.0,
+     "metric": "グループ計前年比"
+    },
+    "2026-06": {
+     "doc": "https://www.joshin.co.jp/ja/ir/news/news-6065434174700526662/main/0/link/20260804%20Joshin%20Monthly%20sale%20report.pdf",
+     "yoy": 88.1,
+     "metric": "グループ計前年比"
+    },
+    "2026-07": {
+     "doc": "https://www.joshin.co.jp/ja/ir/news/news-6065434174700526662/main/0/link/20260804%20Joshin%20Monthly%20sale%20report.pdf",
+     "yoy": 114.9,
+     "metric": "グループ計前年比"
+    },
+    "2026-08": {
+     "doc": "https://www.joshin.co.jp/ja/ir/news/news-616055216863800935/main/0/link/20260904%20Joshin%20Monthly%20sale%20report.pdf",
+     "yoy": 103.6,
+     "metric": "グループ計前年比"
+    }
+   }
   }
  },
  "source": "회사 IR 페이지 (月次 표)",
  "note": "회사가 제 사이트에 올린 월차 표에서 읽는다. 값은 전년동월비(%)뿐이고 금액은 없다. 회계연도가 적힌 표는 그 해로 읽으므로 옛 회계연도 표를 함께 싣는 회사는 이력이 길다.",
- "companies": 23,
- "months": 368,
- "ts": "2026-09-29T05:57:48+00:00",
+ "companies": 28,
+ "months": 429,
+ "ts": "2026-09-29T07:29:25+00:00",
  "done": [
-  "https://contents.xj-storage.jp/xcontents/60730/733672fb/0d0d/46a4/abde/98bfbb3674d6/140120260718596243.pdf",
-  "https://contents.xj-storage.jp/xcontents/60730/767a9f1e/779c/4f6d/ae05/3219480e3281/140120260718596245.pdf",
-  "https://contents.xj-storage.jp/xcontents/60730/f4ebf668/4386/48c5/9a09/8de228297fc1/140120260907532662.pdf",
-  "https://data.swcms.net/file/h2o-retailing/ja/news/auto_20260701586265/pdfFile.pdf",
-  "https://data.swcms.net/file/h2o-retailing/ja/news/auto_20260715594542/pdfFile.pdf",
-  "https://data.swcms.net/file/h2o-retailing/ja/news/auto_20260803506898/pdfFile.pdf",
-  "https://data.swcms.net/file/h2o-retailing/ja/news/auto_20260817521737/pdfFile.pdf",
-  "https://data.swcms.net/file/h2o-retailing/ja/news/auto_20260915536596/pdfFile.pdf",
-  "https://food-and-life.co.jp/wp-content/uploads/2024/11/fy2021_sales.pdf",
-  "https://food-and-life.co.jp/wp-content/uploads/2024/11/fy2022_sales.pdf",
-  "https://food-and-life.co.jp/wp-content/uploads/2024/11/fy2023_sales.pdf",
-  "https://food-and-life.co.jp/wp-content/uploads/2024/11/fy2024_sales.pdf",
-  "https://ir.hamayuu.co.jp/ja/ir/news/news-6758199196572069705/main/0/link/pdffile.pdf",
-  "https://ssl4.eir-parts.net/doc/3927/tdnet/2877654/00.pdf",
-  "https://static.saint-marc-hd.com/upload/irnews/383/20260914.pdf",
-  "https://www.ai-kei.co.jp/files/c7bc1b5762fe92501ebb61cc28cb15e2.pdf",
-  "https://www.asahigroup-holdings.com/pdf/en/ir/financial_data/monthly_data/2020/200213.pdf",
-  "https://www.asahigroup-holdings.com/pdf/en/ir/financial_data/monthly_data/2025/08.pdf",
-  "https://www.asahigroup-holdings.com/pdf/en/ir/financial_data/monthly_data/2025/10.pdf",
-  "https://www.asahigroup-holdings.com/pdf/en/ir/financial_data/monthly_data/2025/11.pdf",
-  "https://www.asahigroup-holdings.com/pdf/en/ir/financial_data/monthly_data/2025/12.pdf",
-  "https://www.asahigroup-holdings.com/pdf/en/ir/financial_data/monthly_data/2026/01.pdf",
-  "https://www.asahigroup-holdings.com/pdf/en/ir/financial_data/monthly_data/2026/02.pdf",
-  "https://www.asahigroup-holdings.com/pdf/en/ir/financial_data/monthly_data/2026/03.pdf",
-  "https://www.asahigroup-holdings.com/pdf/en/ir/financial_data/monthly_data/2026/04.pdf",
-  "https://www.asahigroup-holdings.com/pdf/en/ir/financial_data/monthly_data/2026/05.pdf",
-  "https://www.asahigroup-holdings.com/pdf/en/ir/financial_data/monthly_data/2026/06.pdf",
-  "https://www.asahigroup-holdings.com/pdf/en/ir/financial_data/monthly_data/2026/07.pdf",
-  "https://www.asahigroup-holdings.com/pdf/en/ir/financial_data/monthly_data/2026/08.pdf",
-  "https://www.chimney.co.jp/pdf/ir/sales/tenpo/month_202403.pdf",
-  "https://www.chimney.co.jp/pdf/ir/sales/tenpo/month_202503.pdf",
-  "https://www.chimney.co.jp/pdf/ir/sales/tenpo/month_202603.pdf",
-  "https://www.chimney.co.jp/prd/wordpress/wp-content/uploads/2026/09/uriage202608.pdf",
-  "https://www.edion.co.jp/system/files/ir-library/pdf/ja/2026-08/%E2%98%85202607_monthly_sales_report.pdf",
-  "https://www.edion.co.jp/system/files/ir-library/pdf/ja/2026-09/%E2%98%85202608_monthly_sales_report.pdf",
   "https://www.fastretailing.com/jp/ir/monthly/pdf/MonthlySales_2023.pdf",
   "https://www.fastretailing.com/jp/ir/monthly/pdf/MonthlySales_2024.pdf",
   "https://www.fastretailing.com/jp/ir/monthly/pdf/MonthlySales_2025.pdf",
   "https://www.fastretailing.com/jp/ir/monthly/pdf/MonthlySales_2026.pdf",
-  "https://www.fgarden.co.jp/common/sysfile/irs/ID00000157binary1.pdf",
-  "https://www.fgarden.co.jp/common/sysfile/irs/ID00000161binary1.pdf",
-  "https://www.fgarden.co.jp/common/sysfile/irs/ID00000166binary1.pdf",
-  "https://www.h2o-retailing.co.jp/ja/news/news5763524793934801674/main/0/link/20260801.pdf",
-  "https://www.handsman.co.jp/wp-content/uploads/2025/11/uriage-202510-2.pdf",
-  "https://www.handsman.co.jp/wp-content/uploads/2025/12/uriage-202511-1.pdf",
-  "https://www.handsman.co.jp/wp-content/uploads/2026/01/uriage-202512.pdf",
-  "https://www.handsman.co.jp/wp-content/uploads/2026/02/uriage-202601-6.pdf",
-  "https://www.handsman.co.jp/wp-content/uploads/2026/03/uriage-202602-1.pdf",
-  "https://www.handsman.co.jp/wp-content/uploads/2026/04/uriage-202603-1.pdf",
-  "https://www.handsman.co.jp/wp-content/uploads/2026/05/uriage-202604-1.pdf",
-  "https://www.handsman.co.jp/wp-content/uploads/2026/06/uriage-202605.pdf",
-  "https://www.handsman.co.jp/wp-content/uploads/2026/07/uriage-202606.pdf",
-  "https://www.handsman.co.jp/wp-content/uploads/2026/08/uriage-202607.pdf",
-  "https://www.handsman.co.jp/wp-content/uploads/ir/i_sales_report/62th/uriage-202509.pdf",
-  "https://www.handsman.co.jp/wp-content/uploads/ir/i_sales_report/63th/uriage-202608.pdf",
-  "https://www.j-front-retailing.com/_data/ir_monthly/1102_renketsu110315.pdf",
-  "https://www.j-front-retailing.com/ir/pdf/monthly/daimaru/h18_2006/mon0603.pdf",
-  "https://www.j-front-retailing.com/ir/pdf/monthly/daimaru/h18_2006/mon0604.pdf",
-  "https://www.j-front-retailing.com/ir/pdf/monthly/daimaru/h18_2006/mon0605.pdf",
-  "https://www.j-front-retailing.com/ir/pdf/monthly/daimaru/h18_2006/mon0606.pdf",
-  "https://www.j-front-retailing.com/ir/pdf/monthly/daimaru/h18_2006/mon0607.pdf",
-  "https://www.j-front-retailing.com/ir/pdf/monthly/daimaru/h18_2006/mon0608.pdf",
-  "https://www.j-front-retailing.com/ir/pdf/monthly/daimaru/h18_2006/mon0609.pdf",
-  "https://www.j-front-retailing.com/ir/pdf/monthly/daimaru/h18_2006/mon0610.pdf",
-  "https://www.j-front-retailing.com/ir/pdf/monthly/daimaru/h18_2006/mon0611.pdf",
-  "https://www.j-front-retailing.com/ir/pdf/monthly/daimaru/h18_2006/mon0612.pdf",
-  "https://www.j-front-retailing.com/ir/pdf/monthly/daimaru/h18_2006/mon0701.pdf",
-  "https://www.j-front-retailing.com/ir/pdf/monthly/daimaru/h18_2006/mon0702.pdf",
-  "https://www.j-front-retailing.com/ir/pdf/monthly/daimaru/h19_2007/mon0703.pdf",
-  "https://www.j-front-retailing.com/ir/pdf/monthly/daimaru/h19_2007/mon0704.pdf",
-  "https://www.j-front-retailing.com/ir/pdf/monthly/daimaru/h19_2007/mon0705.pdf",
-  "https://www.j-front-retailing.com/ir/pdf/monthly/daimaru/h19_2007/mon0706.pdf",
-  "https://www.j-front-retailing.com/ir/pdf/monthly/daimaru/h19_2007/mon0707.pdf",
-  "https://www.j-front-retailing.com/ir/pdf/monthly/matsuzakaya/h18_2006/getsuji_0701.pdf",
-  "https://www.j-front-retailing.com/ir/pdf/monthly/matsuzakaya/h18_2006/getsuji_0702.pdf",
-  "https://www.j-front-retailing.com/ir/pdf/monthly/matsuzakaya/h19_2007/getsuji_0703.pdf",
-  "https://www.j-front-retailing.com/ir/pdf/monthly/matsuzakaya/h19_2007/getsuji_0704.pdf",
-  "https://www.j-front-retailing.com/ir/pdf/monthly/matsuzakaya/h19_2007/getsuji_0705.pdf",
-  "https://www.j-front-retailing.com/ir/pdf/monthly/matsuzakaya/h19_2007/getsuji_0706.pdf",
-  "https://www.j-front-retailing.com/ir/pdf/monthly/matsuzakaya/h19_2007/getsuji_0707.pdf",
-  "https://www.j-front-retailing.com/ir/pdf/monthly/matsuzakaya/h19_2007/getsuji_0708.pdf",
-  "https://www.jhrth.co.jp/file/news-ca206863f5662b8982dd9bd6d381e53bfc617709.pdf",
+  "https://www.joshin.co.jp/ja/ir/news/news-6065434174700526662/main/0/link/20260804%20Joshin%20Monthly%20sale%20report.pdf",
+  "https://www.joshin.co.jp/ja/ir/news/news-616055216863800935/main/0/link/20260904%20Joshin%20Monthly%20sale%20report.pdf",
   "https://www.jrkyushu.co.jp/company/ir/finance/monthly/__icsFiles/afieldfile/2017/04/20/2017.4.getuji.pdf",
   "https://www.jrkyushu.co.jp/company/ir/finance/monthly/__icsFiles/afieldfile/2018/04/20/2018.4.getsuji.pdf",
   "https://www.jrkyushu.co.jp/company/ir/finance/monthly/__icsFiles/afieldfile/2019/04/19/2019_4.getuji.pdf",
   "https://www.jrkyushu.co.jp/company/ir/finance/monthly/__icsFiles/afieldfile/2020/04/22/9142.monthly.202003.jp.pdf",
   "https://www.jrkyushu.co.jp/company/ir/finance/monthly/__icsFiles/afieldfile/2021/04/28/9142.monthly.202103.ja.pdf",
-  "https://www.jrkyushu.co.jp/company/ir/finance/monthly/__icsFiles/afieldfile/2022/04/26/9142.monthly.202203.ja.pdf",
-  "https://www.jrkyushu.co.jp/company/ir/finance/monthly/__icsFiles/afieldfile/2023/04/25/9142.monthly.202303.ja.pdf",
-  "https://www.jrkyushu.co.jp/company/ir/finance/monthly/__icsFiles/afieldfile/2024/04/25/9142.monthly.202403.ja.pdf",
-  "https://www.jrkyushu.co.jp/company/ir/finance/monthly/__icsFiles/afieldfile/2025/04/25/9142.monthly.202503p3.ja.pdf",
   "https://www.jrkyushu.co.jp/company/ir/finance/monthly/__icsFiles/afieldfile/2026/04/17/9142.monthly.202603p2.ja.pdf",
   "https://www.jrkyushu.co.jp/company/ir/finance/monthly/__icsFiles/afieldfile/2026/09/25/9142.monthly.202609p1.ja.pdf",
   "https://www.kichiri.co.jp/wp-content/uploads/2026/09/2609031111.pdf",
-  "https://www.kobayashiyoko.com/upfile/1905121083_0804.pdf",
-  "https://www.kobayashiyoko.com/upfile/1905121089_0902.pdf",
-  "https://www.kurasushi.co.jp/company/ir/upload_file/m005-m005_05/1121month.pdf",
-  "https://www.kurasushi.co.jp/company/ir/upload_file/m005-m005_05/2110month.pdf",
-  "https://www.kurasushi.co.jp/company/ir/upload_file/m005-m005_05/2210month.pdf",
-  "https://www.kyoritsugroup.co.jp/Portals/0/pdf/ir/library/2026_6_monthly-report_jp.pdf",
-  "https://www.kyoritsugroup.co.jp/Portals/0/pdf/ir/library/2026_7_monthly-report_jp.pdf",
-  "https://www.matsui.co.jp/en/press/pdf/pr260901_en.pdf",
   "https://www.odakyu.jp/ir/news/ho5toc000000cu52-att/2026.06.pdf",
-  "https://www.odakyu.jp/ir/news/makhce00000007bi-att/2026.7.pdf",
-  "https://www.odakyu.jp/ir/news/makhce00000016q6-att/2026.8.pdf",
-  "https://www.pepper-fs.co.jp/_img/ir/monthly_report/2026/PFS20260216.pdf",
-  "https://www.pepper-fs.co.jp/_img/ir/monthly_report/2026/PFS20260313.pdf",
-  "https://www.pepper-fs.co.jp/_img/ir/monthly_report/2026/PFS20260414.pdf",
-  "https://www.pepper-fs.co.jp/_img/ir/monthly_report/2026/PFS20260519.pdf",
-  "https://www.pepper-fs.co.jp/_img/ir/monthly_report/2026/PFS20260612.pdf",
-  "https://www.pepper-fs.co.jp/_img/ir/monthly_report/2026/PFS20260715.pdf",
-  "https://www.pepper-fs.co.jp/_img/ir/monthly_report/2026/PFS20260817.pdf",
-  "https://www.pepper-fs.co.jp/_img/ir/monthly_report/2026/PFS20260914.pdf",
-  "https://www.pietro.co.jp/assets/upload/news/getsuji_202609.pdf",
-  "https://www.takashimaya.co.jp/base/corp/topics/260817a.pdf",
-  "https://www.takashimaya.co.jp/base/corp/topics/260901a.pdf",
-  "https://www.takashimaya.co.jp/base/corp/topics/260901b.pdf",
-  "https://www.takashimaya.co.jp/base/corp/topics/260915a.pdf",
-  "https://www.takashimaya.co.jp/base/corp/topics/260915b.pdf",
-  "https://www.teng.co.jp/ir/9a9cb695349e25a0bca084815ff23ef62d5903de.pdf",
-  "https://www.tokyo-infra.com/file/news-55024e6cd9dc6c22feb4b898f11f12e140328c38.pdf",
-  "https://www.village-v.co.jp/company/docs/7aa569fc45582d5abf9e20ba3bcffb48ef572cd1.pdf",
-  "https://www.village-v.co.jp/company/docs/bafb618903156fd1e304ff852e92b34b996a088d.pdf",
-  "https://www.wacoalholdings.jp/ir/files/monthlydataxlsx_2023_2024.pdf",
-  "https://www.wacoalholdings.jp/ir/files/monthlydataxlsx_2024_2025.pdf",
-  "https://www.wacoalholdings.jp/ir/files/monthlydataxlsx_2025_33.pdf",
-  "https://www.wacoalholdings.jp/ir/files/monthlydataxlsx_2027_08.pdf",
-  "https://www.westjr.co.jp/company/ir/finance/monthly/pdf/20.pdf",
   "https://www.westjr.co.jp/company/ir/finance/monthly/pdf/21.pdf",
   "https://www.westjr.co.jp/company/ir/finance/monthly/pdf/22.pdf",
   "https://www.westjr.co.jp/company/ir/finance/monthly/pdf/23.pdf",
@@ -3147,164 +3814,154 @@
   "https://www.westjr.co.jp/company/ir/finance/monthly/pdf/25.pdf",
   "https://www.westjr.co.jp/company/ir/finance/monthly/pdf/26.pdf",
   "https://www.westjr.co.jp/company/ir/finance/monthly/pdf/27.pdf",
-  "https://www.workman.co.jp/ir_info/pdf/2027/26_09.pdf",
-  "https://www.yamada-holdings.jp/ir/monthly/2025/251006.pdf",
-  "https://www.yamada-holdings.jp/ir/monthly/2025/251104.pdf",
-  "https://www.yamada-holdings.jp/ir/monthly/2025/251205.pdf",
-  "https://www.yamada-holdings.jp/ir/monthly/2026/260107.pdf",
-  "https://www.yamada-holdings.jp/ir/monthly/2026/260205.pdf",
-  "https://www.yamada-holdings.jp/ir/monthly/2026/260305.pdf",
-  "https://www.yamada-holdings.jp/ir/monthly/2026/260406.pdf",
-  "https://www.yamada-holdings.jp/ir/monthly/2026/260508.pdf",
-  "https://www.yamada-holdings.jp/ir/monthly/2026/260605.pdf",
-  "https://www.yamada-holdings.jp/ir/monthly/2026/260706.pdf",
-  "https://www.yamada-holdings.jp/ir/monthly/2026/260806.pdf",
-  "https://www.yamada-holdings.jp/ir/monthly/2026/260907.pdf"
+  "https://www.workman.co.jp/ir_info/pdf/2027/26_09.pdf"
  ],
  "skip": {
+  "https://www.asahigroup-holdings.com/pdf/ir/financial_data/monthly_data/2026/08.pdf": "표없음",
+  "https://www.asahigroup-holdings.com/pdf/ir/financial_data/monthly_data/2026/07.pdf": "표없음",
+  "https://www.asahigroup-holdings.com/pdf/ir/financial_data/monthly_data/2026/06.pdf": "표없음",
+  "https://www.asahigroup-holdings.com/pdf/ir/financial_data/monthly_data/2026/05.pdf": "표없음",
+  "https://www.asahigroup-holdings.com/pdf/ir/financial_data/monthly_data/2026/04.pdf": "표없음",
+  "https://www.asahigroup-holdings.com/pdf/ir/financial_data/monthly_data/2026/03.pdf": "표없음",
+  "https://www.asahigroup-holdings.com/pdf/ir/financial_data/monthly_data/2026/02.pdf": "표없음",
+  "https://www.asahigroup-holdings.com/pdf/ir/financial_data/monthly_data/2026/01.pdf": "표없음",
+  "https://www.asahigroup-holdings.com/pdf/ir/financial_data/monthly_data/2025/12.pdf": "표없음",
+  "https://www.asahigroup-holdings.com/pdf/ir/financial_data/monthly_data/2025/11.pdf": "표없음",
+  "https://www.asahigroup-holdings.com/pdf/ir/financial_data/monthly_data/2025/10.pdf": "표없음",
+  "https://www.asahigroup-holdings.com/pdf/ir/financial_data/monthly_data/2025/08.pdf": "표없음",
+  "https://www.asahigroup-holdings.com/pdf/ir/financial_data/monthly_data/2025/07.pdf": "표없음",
+  "https://www.asahigroup-holdings.com/pdf/ir/financial_data/monthly_data/2025/06.pdf": "표없음",
+  "https://www.asahigroup-holdings.com/pdf/ir/financial_data/monthly_data/2025/05.pdf": "표없음",
+  "https://www.asahigroup-holdings.com/pdf/ir/financial_data/monthly_data/2025/04.pdf": "표없음",
+  "https://www.asahigroup-holdings.com/pdf/ir/financial_data/monthly_data/2025/03.pdf": "표없음",
+  "https://www.asahigroup-holdings.com/pdf/ir/financial_data/monthly_data/2025/02.pdf": "표없음",
+  "https://www.asahigroup-holdings.com/pdf/ir/financial_data/monthly_data/2025/01.pdf": "표없음",
+  "https://www.asahigroup-holdings.com/pdf/ir/financial_data/monthly_data/2024/12.pdf": "표없음",
+  "https://www.asahigroup-holdings.com/pdf/ir/financial_data/monthly_data/2024/11.pdf": "표없음",
+  "https://www.asahigroup-holdings.com/pdf/ir/financial_data/monthly_data/2024/10.pdf": "표없음",
+  "https://www.asahigroup-holdings.com/pdf/ir/financial_data/monthly_data/2024/09.pdf": "표없음",
+  "https://www.asahigroup-holdings.com/pdf/ir/financial_data/monthly_data/2024/08.pdf": "표없음",
+  "https://www.westjr.co.jp/company/ir/finance/monthly/pdf/20.pdf": "표없음",
   "https://www.j-front-retailing.com/_data/ir_monthly/1102_renketsu110315.pdf": "표없음",
   "https://www.j-front-retailing.com/ir/pdf/monthly/daimaru/h19_2007/mon0707.pdf": "표없음",
   "https://www.j-front-retailing.com/ir/pdf/monthly/daimaru/h19_2007/mon0706.pdf": "표없음",
   "https://www.j-front-retailing.com/ir/pdf/monthly/daimaru/h19_2007/mon0705.pdf": "표없음",
-  "https://www.yamada-holdings.jp/ir/monthly/2026/260907.pdf": "표없음",
-  "https://www.yamada-holdings.jp/ir/monthly/2026/260806.pdf": "표없음",
-  "https://www.yamada-holdings.jp/ir/monthly/2026/260706.pdf": "표없음",
-  "https://www.yamada-holdings.jp/ir/monthly/2026/260605.pdf": "표없음",
-  "https://food-and-life.co.jp/wp-content/uploads/2024/11/fy2024_sales.pdf": "표없음",
-  "https://food-and-life.co.jp/wp-content/uploads/2024/11/fy2023_sales.pdf": "표없음",
-  "https://food-and-life.co.jp/wp-content/uploads/2024/11/fy2022_sales.pdf": "표없음",
-  "https://food-and-life.co.jp/wp-content/uploads/2024/11/fy2021_sales.pdf": "표없음",
-  "https://www.kurasushi.co.jp/company/ir/upload_file/m005-m005_05/1121month.pdf": "표없음",
-  "https://www.kurasushi.co.jp/company/ir/upload_file/m005-m005_05/2210month.pdf": "표없음",
-  "https://www.kurasushi.co.jp/company/ir/upload_file/m005-m005_05/2110month.pdf": "표없음",
-  "https://www.chimney.co.jp/prd/wordpress/wp-content/uploads/2026/09/uriage202608.pdf": "표없음",
-  "https://www.chimney.co.jp/pdf/ir/sales/tenpo/month_202603.pdf": "표없음",
-  "https://www.chimney.co.jp/pdf/ir/sales/tenpo/month_202503.pdf": "표없음",
-  "https://www.chimney.co.jp/pdf/ir/sales/tenpo/month_202403.pdf": "표없음",
-  "https://www.fgarden.co.jp/common/sysfile/irs/ID00000166binary1.pdf": "표없음",
-  "https://www.fgarden.co.jp/common/sysfile/irs/ID00000161binary1.pdf": "표없음",
-  "https://www.fgarden.co.jp/common/sysfile/irs/ID00000157binary1.pdf": "표없음",
-  "https://static.saint-marc-hd.com/upload/irnews/383/20260914.pdf": "표없음",
-  "https://www.wacoalholdings.jp/ir/files/monthlydataxlsx_2027_08.pdf": "표없음",
-  "https://www.wacoalholdings.jp/ir/files/monthlydataxlsx_2025_33.pdf": "표없음",
-  "https://www.wacoalholdings.jp/ir/files/monthlydataxlsx_2024_2025.pdf": "표없음",
-  "https://www.wacoalholdings.jp/ir/files/monthlydataxlsx_2023_2024.pdf": "표없음",
   "https://www.j-front-retailing.com/ir/pdf/monthly/daimaru/h19_2007/mon0704.pdf": "표없음",
   "https://www.j-front-retailing.com/ir/pdf/monthly/daimaru/h19_2007/mon0703.pdf": "표없음",
-  "https://www.asahigroup-holdings.com/pdf/en/ir/financial_data/monthly_data/2020/200213.pdf": "표없음",
-  "https://www.westjr.co.jp/company/ir/finance/monthly/pdf/27.pdf": "표없음",
-  "https://www.westjr.co.jp/company/ir/finance/monthly/pdf/26.pdf": "표없음",
-  "https://www.westjr.co.jp/company/ir/finance/monthly/pdf/25.pdf": "표없음",
-  "https://www.westjr.co.jp/company/ir/finance/monthly/pdf/24.pdf": "표없음",
   "https://www.j-front-retailing.com/ir/pdf/monthly/matsuzakaya/h19_2007/getsuji_0708.pdf": "표없음",
   "https://www.j-front-retailing.com/ir/pdf/monthly/matsuzakaya/h19_2007/getsuji_0707.pdf": "표없음",
   "https://www.j-front-retailing.com/ir/pdf/monthly/matsuzakaya/h19_2007/getsuji_0706.pdf": "표없음",
   "https://www.j-front-retailing.com/ir/pdf/monthly/matsuzakaya/h19_2007/getsuji_0705.pdf": "표없음",
-  "https://www.takashimaya.co.jp/base/corp/topics/260915a.pdf": "표없음",
-  "https://www.takashimaya.co.jp/base/corp/topics/260915b.pdf": "표없음",
-  "https://www.takashimaya.co.jp/base/corp/topics/260901a.pdf": "표없음",
-  "https://www.takashimaya.co.jp/base/corp/topics/260901b.pdf": "표없음",
-  "https://www.odakyu.jp/ir/news/makhce00000016q6-att/2026.8.pdf": "표없음",
-  "https://www.odakyu.jp/ir/news/makhce00000007bi-att/2026.7.pdf": "표없음",
-  "https://www.jrkyushu.co.jp/company/ir/finance/monthly/__icsFiles/afieldfile/2026/09/25/9142.monthly.202609p1.ja.pdf": "표없음",
-  "https://www.jrkyushu.co.jp/company/ir/finance/monthly/__icsFiles/afieldfile/2026/04/17/9142.monthly.202603p2.ja.pdf": "표없음",
-  "https://www.jrkyushu.co.jp/company/ir/finance/monthly/__icsFiles/afieldfile/2025/04/25/9142.monthly.202503p3.ja.pdf": "표없음",
-  "https://www.jrkyushu.co.jp/company/ir/finance/monthly/__icsFiles/afieldfile/2024/04/25/9142.monthly.202403.ja.pdf": "표없음",
-  "https://www.westjr.co.jp/company/ir/finance/monthly/pdf/23.pdf": "표없음",
-  "https://www.westjr.co.jp/company/ir/finance/monthly/pdf/22.pdf": "표없음",
-  "https://www.westjr.co.jp/company/ir/finance/monthly/pdf/21.pdf": "표없음",
-  "https://www.westjr.co.jp/company/ir/finance/monthly/pdf/20.pdf": "표없음",
   "https://www.j-front-retailing.com/ir/pdf/monthly/matsuzakaya/h19_2007/getsuji_0704.pdf": "표없음",
   "https://www.j-front-retailing.com/ir/pdf/monthly/matsuzakaya/h19_2007/getsuji_0703.pdf": "표없음",
   "https://www.j-front-retailing.com/ir/pdf/monthly/daimaru/h18_2006/mon0702.pdf": "표없음",
   "https://www.j-front-retailing.com/ir/pdf/monthly/daimaru/h18_2006/mon0701.pdf": "표없음",
-  "https://www.takashimaya.co.jp/base/corp/topics/260817a.pdf": "표없음",
-  "https://www.jrkyushu.co.jp/company/ir/finance/monthly/__icsFiles/afieldfile/2023/04/25/9142.monthly.202303.ja.pdf": "표없음",
-  "https://www.jrkyushu.co.jp/company/ir/finance/monthly/__icsFiles/afieldfile/2022/04/26/9142.monthly.202203.ja.pdf": "표없음",
-  "https://www.jrkyushu.co.jp/company/ir/finance/monthly/__icsFiles/afieldfile/2021/04/28/9142.monthly.202103.ja.pdf": "표없음",
-  "https://www.jrkyushu.co.jp/company/ir/finance/monthly/__icsFiles/afieldfile/2020/04/22/9142.monthly.202003.jp.pdf": "표없음",
-  "https://www.jhrth.co.jp/file/news-ca206863f5662b8982dd9bd6d381e53bfc617709.pdf": "표없음",
-  "https://www.yamada-holdings.jp/ir/monthly/2026/260508.pdf": "표없음",
-  "https://www.yamada-holdings.jp/ir/monthly/2026/260406.pdf": "표없음",
-  "https://www.yamada-holdings.jp/ir/monthly/2026/260305.pdf": "표없음",
-  "https://www.yamada-holdings.jp/ir/monthly/2026/260205.pdf": "표없음",
-  "https://data.swcms.net/file/h2o-retailing/ja/news/auto_20260915536596/pdfFile.pdf": "표없음",
-  "https://www.h2o-retailing.co.jp/ja/news/news5763524793934801674/main/0/link/20260801.pdf": "표없음",
   "https://www.j-front-retailing.com/ir/pdf/monthly/daimaru/h18_2006/mon0612.pdf": "표없음",
   "https://www.j-front-retailing.com/ir/pdf/monthly/daimaru/h18_2006/mon0611.pdf": "표없음",
   "https://www.j-front-retailing.com/ir/pdf/monthly/daimaru/h18_2006/mon0610.pdf": "표없음",
   "https://www.j-front-retailing.com/ir/pdf/monthly/daimaru/h18_2006/mon0609.pdf": "표없음",
-  "https://www.jrkyushu.co.jp/company/ir/finance/monthly/__icsFiles/afieldfile/2019/04/19/2019_4.getuji.pdf": "표없음",
-  "https://www.jrkyushu.co.jp/company/ir/finance/monthly/__icsFiles/afieldfile/2018/04/20/2018.4.getsuji.pdf": "표없음",
-  "https://www.jrkyushu.co.jp/company/ir/finance/monthly/__icsFiles/afieldfile/2017/04/20/2017.4.getuji.pdf": "표없음",
-  "https://www.yamada-holdings.jp/ir/monthly/2026/260107.pdf": "표없음",
-  "https://www.yamada-holdings.jp/ir/monthly/2025/251205.pdf": "표없음",
-  "https://www.yamada-holdings.jp/ir/monthly/2025/251104.pdf": "표없음",
-  "https://www.yamada-holdings.jp/ir/monthly/2025/251006.pdf": "표없음",
-  "https://data.swcms.net/file/h2o-retailing/ja/news/auto_20260817521737/pdfFile.pdf": "표없음",
-  "https://data.swcms.net/file/h2o-retailing/ja/news/auto_20260803506898/pdfFile.pdf": "표없음",
-  "https://data.swcms.net/file/h2o-retailing/ja/news/auto_20260715594542/pdfFile.pdf": "표없음",
-  "https://data.swcms.net/file/h2o-retailing/ja/news/auto_20260701586265/pdfFile.pdf": "표없음",
-  "https://www.kyoritsugroup.co.jp/Portals/0/pdf/ir/library/2026_7_monthly-report_jp.pdf": "표없음",
-  "https://www.kyoritsugroup.co.jp/Portals/0/pdf/ir/library/2026_6_monthly-report_jp.pdf": "표없음",
-  "https://www.matsui.co.jp/en/press/pdf/pr260901_en.pdf": "표없음",
-  "https://www.edion.co.jp/system/files/ir-library/pdf/ja/2026-09/%E2%98%85202608_monthly_sales_report.pdf": "표없음",
-  "https://www.edion.co.jp/system/files/ir-library/pdf/ja/2026-08/%E2%98%85202607_monthly_sales_report.pdf": "표없음",
-  "https://www.asahigroup-holdings.com/pdf/en/ir/financial_data/monthly_data/2026/08.pdf": "표없음",
-  "https://www.asahigroup-holdings.com/pdf/en/ir/financial_data/monthly_data/2026/07.pdf": "표없음",
-  "https://www.asahigroup-holdings.com/pdf/en/ir/financial_data/monthly_data/2026/06.pdf": "표없음",
-  "https://www.asahigroup-holdings.com/pdf/en/ir/financial_data/monthly_data/2026/05.pdf": "표없음",
-  "https://www.asahigroup-holdings.com/pdf/en/ir/financial_data/monthly_data/2026/04.pdf": "표없음",
-  "https://www.asahigroup-holdings.com/pdf/en/ir/financial_data/monthly_data/2026/03.pdf": "표없음",
-  "https://www.asahigroup-holdings.com/pdf/en/ir/financial_data/monthly_data/2026/02.pdf": "표없음",
-  "https://www.asahigroup-holdings.com/pdf/en/ir/financial_data/monthly_data/2026/01.pdf": "표없음",
-  "https://www.asahigroup-holdings.com/pdf/en/ir/financial_data/monthly_data/2025/12.pdf": "표없음",
-  "https://www.asahigroup-holdings.com/pdf/en/ir/financial_data/monthly_data/2025/11.pdf": "표없음",
-  "https://www.asahigroup-holdings.com/pdf/en/ir/financial_data/monthly_data/2025/10.pdf": "표없음",
-  "https://www.asahigroup-holdings.com/pdf/en/ir/financial_data/monthly_data/2025/08.pdf": "표없음",
   "https://www.j-front-retailing.com/ir/pdf/monthly/daimaru/h18_2006/mon0608.pdf": "표없음",
   "https://www.j-front-retailing.com/ir/pdf/monthly/daimaru/h18_2006/mon0607.pdf": "표없음",
   "https://www.j-front-retailing.com/ir/pdf/monthly/daimaru/h18_2006/mon0606.pdf": "표없음",
   "https://www.j-front-retailing.com/ir/pdf/monthly/daimaru/h18_2006/mon0605.pdf": "표없음",
   "https://www.j-front-retailing.com/ir/pdf/monthly/daimaru/h18_2006/mon0604.pdf": "표없음",
   "https://www.j-front-retailing.com/ir/pdf/monthly/daimaru/h18_2006/mon0603.pdf": "표없음",
-  "https://www.j-front-retailing.com/ir/pdf/monthly/matsuzakaya/h18_2006/getsuji_0702.pdf": "표없음",
-  "https://www.j-front-retailing.com/ir/pdf/monthly/matsuzakaya/h18_2006/getsuji_0701.pdf": "표없음",
-  "https://contents.xj-storage.jp/xcontents/60730/f4ebf668/4386/48c5/9a09/8de228297fc1/140120260907532662.pdf": "표없음",
-  "https://contents.xj-storage.jp/xcontents/60730/733672fb/0d0d/46a4/abde/98bfbb3674d6/140120260718596243.pdf": "표없음",
-  "https://contents.xj-storage.jp/xcontents/60730/767a9f1e/779c/4f6d/ae05/3219480e3281/140120260718596245.pdf": "표없음",
-  "https://www.pepper-fs.co.jp/_img/ir/monthly_report/2026/PFS20260914.pdf": "표없음",
-  "https://www.pepper-fs.co.jp/_img/ir/monthly_report/2026/PFS20260817.pdf": "표없음",
-  "https://www.pepper-fs.co.jp/_img/ir/monthly_report/2026/PFS20260715.pdf": "표없음",
-  "https://www.pepper-fs.co.jp/_img/ir/monthly_report/2026/PFS20260612.pdf": "표없음",
-  "https://www.pepper-fs.co.jp/_img/ir/monthly_report/2026/PFS20260519.pdf": "표없음",
-  "https://www.pepper-fs.co.jp/_img/ir/monthly_report/2026/PFS20260414.pdf": "표없음",
-  "https://www.pepper-fs.co.jp/_img/ir/monthly_report/2026/PFS20260313.pdf": "표없음",
-  "https://www.pepper-fs.co.jp/_img/ir/monthly_report/2026/PFS20260216.pdf": "표없음",
-  "https://www.pietro.co.jp/assets/upload/news/getsuji_202609.pdf": "표없음",
-  "https://www.teng.co.jp/ir/9a9cb695349e25a0bca084815ff23ef62d5903de.pdf": "표없음",
-  "https://www.handsman.co.jp/wp-content/uploads/ir/i_sales_report/63th/uriage-202608.pdf": "표없음",
-  "https://www.handsman.co.jp/wp-content/uploads/2026/08/uriage-202607.pdf": "표없음",
-  "https://www.handsman.co.jp/wp-content/uploads/2026/07/uriage-202606.pdf": "표없음",
-  "https://www.handsman.co.jp/wp-content/uploads/2026/06/uriage-202605.pdf": "표없음",
-  "https://www.handsman.co.jp/wp-content/uploads/2026/05/uriage-202604-1.pdf": "표없음",
-  "https://www.handsman.co.jp/wp-content/uploads/2026/04/uriage-202603-1.pdf": "표없음",
-  "https://www.handsman.co.jp/wp-content/uploads/2026/03/uriage-202602-1.pdf": "표없음",
-  "https://www.handsman.co.jp/wp-content/uploads/2026/02/uriage-202601-6.pdf": "표없음",
-  "https://www.handsman.co.jp/wp-content/uploads/2026/01/uriage-202512.pdf": "표없음",
-  "https://www.handsman.co.jp/wp-content/uploads/2025/12/uriage-202511-1.pdf": "표없음",
-  "https://www.handsman.co.jp/wp-content/uploads/2025/11/uriage-202510-2.pdf": "표없음",
-  "https://www.handsman.co.jp/wp-content/uploads/ir/i_sales_report/62th/uriage-202509.pdf": "표없음",
-  "https://ir.hamayuu.co.jp/ja/ir/news/news-6758199196572069705/main/0/link/pdffile.pdf": "표없음",
-  "https://www.village-v.co.jp/company/docs/bafb618903156fd1e304ff852e92b34b996a088d.pdf": "표없음",
-  "https://www.village-v.co.jp/company/docs/7aa569fc45582d5abf9e20ba3bcffb48ef572cd1.pdf": "표없음",
-  "https://www.tokyo-infra.com/file/news-55024e6cd9dc6c22feb4b898f11f12e140328c38.pdf": "표없음",
-  "https://www.kobayashiyoko.com/upfile/1905121089_0902.pdf": "표없음",
-  "https://www.kobayashiyoko.com/upfile/1905121083_0804.pdf": "표없음",
-  "https://ssl4.eir-parts.net/doc/3927/tdnet/2877654/00.pdf": "표없음",
-  "https://www.ai-kei.co.jp/files/c7bc1b5762fe92501ebb61cc28cb15e2.pdf": "표없음"
+  "https://www.takashimaya.co.jp/base/corp/topics/260915a.pdf": "표없음",
+  "https://www.takashimaya.co.jp/base/corp/topics/260915b.pdf": "표없음",
+  "https://www.takashimaya.co.jp/base/corp/topics/260901a.pdf": "표없음",
+  "https://www.takashimaya.co.jp/base/corp/topics/260901b.pdf": "표없음",
+  "https://www.takashimaya.co.jp/base/corp/topics/260817a.pdf": "표없음",
+  "https://www.jrkyushu.co.jp/company/ir/finance/monthly/__icsFiles/afieldfile/2025/04/25/9142.monthly.202503p3.ja.pdf": "표없음",
+  "https://www.jrkyushu.co.jp/company/ir/finance/monthly/__icsFiles/afieldfile/2024/04/25/9142.monthly.202403.ja.pdf": "표없음",
+  "https://www.jrkyushu.co.jp/company/ir/finance/monthly/__icsFiles/afieldfile/2023/04/25/9142.monthly.202303.ja.pdf": "표없음",
+  "https://www.jrkyushu.co.jp/company/ir/finance/monthly/__icsFiles/afieldfile/2022/04/26/9142.monthly.202203.ja.pdf": "표없음",
+  "https://www.jhrth.co.jp/file/news-ca206863f5662b8982dd9bd6d381e53bfc617709.pdf": "표없음",
+  "https://www.yamada-holdings.jp/ir/monthly/2026/260907.pdf": "표없음",
+  "https://www.yamada-holdings.jp/ir/monthly/2026/260806.pdf": "표없음",
+  "https://www.yamada-holdings.jp/ir/monthly/2026/260706.pdf": "표없음",
+  "https://www.yamada-holdings.jp/ir/monthly/2026/260605.pdf": "표없음",
+  "https://www.yamada-holdings.jp/ir/monthly/2026/260508.pdf": "표없음",
+  "https://www.yamada-holdings.jp/ir/monthly/2026/260406.pdf": "표없음",
+  "https://www.yamada-holdings.jp/ir/monthly/2026/260305.pdf": "표없음",
+  "https://www.yamada-holdings.jp/ir/monthly/2026/260205.pdf": "표없음",
+  "https://www.yamada-holdings.jp/ir/monthly/2026/260107.pdf": "표없음",
+  "https://www.yamada-holdings.jp/ir/monthly/2025/251205.pdf": "표없음",
+  "https://www.yamada-holdings.jp/ir/monthly/2025/251104.pdf": "표없음",
+  "https://www.yamada-holdings.jp/ir/monthly/2025/251006.pdf": "표없음",
+  "https://www.yamada-holdings.jp/ir/monthly/2025/250905.pdf": "표없음",
+  "https://www.yamada-holdings.jp/ir/monthly/2025/250807.pdf": "표없음",
+  "https://www.yamada-holdings.jp/ir/monthly/2025/250707.pdf": "표없음",
+  "https://www.yamada-holdings.jp/ir/monthly/2025/250605.pdf": "표없음",
+  "https://www.yamada-holdings.jp/ir/monthly/2025/250508.pdf": "표없음",
+  "https://www.yamada-holdings.jp/ir/monthly/2025/250407.pdf": "표없음",
+  "https://www.yamada-holdings.jp/ir/monthly/2025/250305.pdf": "표없음",
+  "https://www.yamada-holdings.jp/ir/monthly/2025/250206.pdf": "표없음",
+  "https://www.yamada-holdings.jp/ir/monthly/2025/250108.pdf": "표없음",
+  "https://www.yamada-holdings.jp/ir/monthly/2024/241205.pdf": "표없음",
+  "https://www.yamada-holdings.jp/ir/monthly/2024/241108.pdf": "표없음",
+  "https://www.yamada-holdings.jp/ir/monthly/2024/241007.pdf": "표없음",
+  "https://www.invincible-inv.co.jp/ir/upd/AssetManagementReport_202606.pdf": "표없음",
+  "https://www.invincible-inv.co.jp/news/upd/20260826_QA_JP.pdf": "표없음",
+  "https://www.invincible-inv.co.jp/news/upd/20260227_QA_JP.pdf": "표없음",
+  "https://www.invincible-inv.co.jp/news/upd/20250826_QA_JP.pdf": "표없음",
+  "https://www.invincible-inv.co.jp/news/upd/20250227_QA_JPN.pdf": "표없음",
+  "https://www.invincible-inv.co.jp/ir/upd/AssetManagementReport_202512_F.pdf": "표없음",
+  "https://www.invincible-inv.co.jp/news/upd/140120251217521065.pdf": "표없음",
+  "https://data.swcms.net/file/h2o-retailing/ja/news/auto_20260915536596/pdfFile.pdf": "표없음",
+  "https://www.h2o-retailing.co.jp/ja/news/news5763524793934801674/main/0/link/20260801.pdf": "표없음",
+  "https://data.swcms.net/file/h2o-retailing/ja/news/auto_20260817521737/pdfFile.pdf": "표없음",
+  "https://www.h2o-retailing.co.jp/ja/news/news-203648932801169596/main/0/link/QA.pdf": "표없음",
+  "https://data.swcms.net/file/h2o-retailing/ja/news/auto_20260728500808/pdfFile.pdf": "표없음",
+  "https://data.swcms.net/file/h2o-retailing/ja/news/auto_20260803506898/pdfFile.pdf": "표없음",
+  "https://data.swcms.net/file/h2o-retailing/ja/news/auto_20260715594542/pdfFile.pdf": "표없음",
+  "https://data.swcms.net/file/h2o-retailing/ja/news/auto_20260701586265/pdfFile.pdf": "표없음",
+  "https://data.swcms.net/file/h2o-retailing/ja/news/auto_20260615570637/pdfFile.pdf": "표없음",
+  "https://www.h2o-retailing.co.jp/ja/news/news-1364411568039801169/main/0/link/202605_JA.pdf": "표없음",
+  "https://www.h2o-retailing.co.jp/ja/news/news5346025301863894914/main/0/link/20260513_H2O_QA.pdf": "표없음",
+  "https://data.swcms.net/file/h2o-retailing/ja/news/auto_20260515538147/pdfFile.pdf": "표없음",
+  "https://data.swcms.net/file/h2o-retailing/ja/news/auto_20260507517576/pdfFile.pdf": "표없음",
+  "https://www.h2o-retailing.co.jp/ja/news/auto_20260501516759/main/0/link/202604_sokuhou.pdf": "표없음",
+  "https://data.swcms.net/file/h2o-retailing/ja/news/auto_20260415504817/pdfFile.pdf": "표없음",
+  "https://data.swcms.net/file/h2o-retailing/ja/news/auto_20260401596853/pdfFile.pdf": "표없음",
+  "https://data.swcms.net/file/h2o-retailing/ja/news/auto_20260316582281/pdfFile.pdf": "표없음",
+  "https://www.h2o-retailing.co.jp/ja/news/auto_20260227572142/main/0/link/monthly_feb_2026.pdf": "표없음",
+  "https://data.swcms.net/file/h2o-retailing/ja/news/auto_20260216562752/pdfFile.pdf": "표없음",
+  "https://www.h2o-retailing.co.jp/ja/news/news7828840266229052535/main/00/link/QA.pdf": "표없음",
+  "https://data.swcms.net/file/h2o-retailing/ja/news/auto_20260130543492/pdfFile.pdf": "표없음",
+  "https://data.swcms.net/file/h2o-retailing/ja/news/auto_20260202544164/pdfFile.pdf": "표없음",
+  "https://data.swcms.net/file/h2o-retailing/ja/news/auto_20260115534341/pdfFile.pdf": "표없음",
+  "https://data.swcms.net/file/h2o-retailing/ja/news/auto_20260103528125/pdfFile.pdf": "표없음",
+  "https://www.kyoritsugroup.co.jp/Portals/0/pdf/ir/library/2026_7_monthly-report_jp.pdf": "표없음",
+  "https://www.kyoritsugroup.co.jp/Portals/0/pdf/ir/library/2026_6_monthly-report_jp.pdf": "표없음",
+  "https://www.matsui.co.jp/en/press/pdf/pr260901_en.pdf": "표없음",
+  "https://www.matsui.co.jp/company/ir/pdf/2027_1_abs.pdf": "표없음",
+  "https://www.matsui.co.jp/company/press/pdf/pr260227_1.pdf": "표없음",
+  "https://www.edion.co.jp/system/files/ir-library/pdf/ja/2026-09/%E2%98%85202608_monthly_sales_report.pdf": "표없음",
+  "https://www.edion.co.jp/system/files/ir-library/pdf/ja/2026-08/%E2%98%85202607_monthly_sales_report.pdf": "표없음",
+  "https://www.edion.co.jp/system/files/ir-library/pdf/ja/2026-07/%E2%98%85202606_monthly_sales_report_correct.pdf": "표없음",
+  "https://www.palgroup.holdings/wp/wp-content/uploads/2026/09/5ea4dd9ff5fc37943d6939ab1879d4f5.pdf": "표없음",
+  "https://www.palgroup.holdings/wp/wp-content/uploads/2026/08/ffd854054a6ec3406581f81ea8d7f518.pdf": "표없음",
+  "https://www.ainj.co.jp/corporate/assets/upload/news/monthly_report_202608_English_Consolidated.pdf": "표없음",
+  "https://www.ainj.co.jp/corporate/assets/upload/news/presentation_english_260914.pdf": "표없음",
+  "https://www.ainj.co.jp/corporate/assets/upload/news/ir_2027_1q.pdf": "표없음",
+  "https://www.ainj.co.jp/upload/supplement2027_1q.pdf": "표없음",
+  "https://www.ainj.co.jp/upload/ir_2027_1q.pdf": "표없음",
+  "https://www.wacoalholdings.jp/ir/files/monthlydataxlsx_2027_08.pdf": "표없음",
+  "https://www.wacoalholdings.jp/ir/files/monthlydataxlsx_2025_33.pdf": "표없음",
+  "https://www.wacoalholdings.jp/ir/files/monthlydataxlsx_2024_2025.pdf": "표없음",
+  "https://www.wacoalholdings.jp/ir/files/monthlydataxlsx_2023_2024.pdf": "표없음",
+  "https://www.wacoalholdings.jp/ir/files/monthlydataxlsx_2022_36.pdf": "표없음",
+  "https://www.wacoalholdings.jp/ir/files/monthlydataxlsx_2021_47.pdf": "표없음",
+  "https://www.wacoalholdings.jp/ir/files/monthlydataxlsx_2020_34.pdf": "표없음",
+  "https://www.wacoalholdings.jp/ir/files/monthlydataxlsx_2019_1.pdf": "표없음",
+  "https://www.wacoalholdings.jp/ir/files/monthlydataxlsx_2018_1.pdf": "표없음",
+  "https://www.wacoalholdings.jp/ir/files/monthlydataxlsx_2017_1.pdf": "표없음",
+  "https://ssl4.eir-parts.net/doc/7476/tdnet/2883022/00.pdf": "표없음",
+  "https://ssl4.eir-parts.net/doc/2154/ir_material18/284042/00.pdf": "표없음",
+  "https://www.ichigo.gr.jp/ir/news/p_news_file/file/Ichigo_20260903_Production_Data_JPN.pdf": "표없음",
+  "https://www.hikkoshi-sakai.co.jp/ir/news/2026/ou63ua00000013s1-att/20260903_202608_sokuhou.pdf": "표없음"
  },
- "pdf_months": 70,
+ "pdf_months": 222,
  "homes": {
   "1379": "https://www.hokto-kinoko.co.jp",
   "138A": "https://www.hikari-food-service.jp",
@@ -3528,10 +4185,33 @@
   "3796": "https://www.e-seikatsu.info",
   "7544": "https://www.three-f.co.jp",
   "9835": "https://www.juntendo.co.jp",
-  "3461": "https://www.palma.jp"
+  "3461": "https://www.palma.jp",
+  "7640": "https://www.topculture.co.jp",
+  "8166": "https://online.taka-q.jp",
+  "9282": "https://www.ichigo-green.co.jp",
+  "9327": "https://www.e-logit.com",
+  "7359": "https://tokyo-tsushin.com",
+  "7524": "https://www.marche.co.jp",
+  "5580": "https://prodelight.co.jp",
+  "2997": "https://www.storageoh.jp",
+  "6548": "https://www.tabikobo.com",
+  "7603": "https://www.mac-house.co.jp",
+  "9399": "https://www.beatholdings.com",
+  "6537": "https://www.wash-house.jp",
+  "7138": "https://www.torico-corp.com",
+  "7422": "https://www.toho-lamac.co.jp",
+  "7615": "https://www.kyotokimonoyuzenholdings.co.jp",
+  "4679": "https://www.taya.co.jp",
+  "7601": "https://www.poplar-cvs.co.jp",
+  "7062": "https://fureasu.jp",
+  "3910": "https://www.mks.jp",
+  "7585": "https://www.kannanmaru.co.jp",
+  "7865": "https://www.people-kk.co.jp",
+  "3174": "https://www.happiness-d.co.jp"
  },
  "profile_miss": {
-  "509A": "2026-09-29"
+  "509A": "2026-09-29",
+  "2686": "2026-09-29"
  },
  "cursor": 56
 }
