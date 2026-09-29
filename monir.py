@@ -1027,6 +1027,25 @@ def _selftest():                                          # pragma: no cover
     # v6: 행 이름이 前年比뿐이어도 표 제목이 매출이면 읽는다.
     eq("(어) 문맥형 前年比", _label_ok("前年比", "月次売上高"), "yoy")
     eq("(어) 비매출 문맥 차단", _label_ok("前年比", "粗利益"), None)
+    # v7: 달 이름표에 연도가 붙는 HTML 표 (무인양품/Create SD 꼴).
+    ym = """<h3>2026年8月期 国内売上</h3><table>
+      <tr><th></th><th>既存店 売上</th><th>全店 売上</th></tr>
+      <tr><td>25年9月</td><td>98.9</td><td>108.2</td></tr>
+      <tr><td>25年10月</td><td>115.8</td><td>126.2</td></tr>
+      <tr><td>26年1月</td><td>102.6</td><td>110.2</td></tr>
+      </table>"""
+    eq("(저) 연도 붙은 월칸", read(ym, T), {
+        "2025-09": {"same": 98.9, "all": 108.2},
+        "2025-10": {"same": 115.8, "all": 126.2},
+        "2026-01": {"same": 102.6, "all": 110.2}})
+
+    # v7: 과거 회계연도 HTML 링크를 같은 도메인에서만 따라간다.
+    arc = ('<a href="/ir/monthly/2025/domestic">2025年8月期</a>'
+           '<a href="/ir/monthly/2024/domestic">2024年8月期</a>'
+           '<a href="https://other.example/2023">2023年度</a>')
+    eq("(처) 과거 월차 링크", archive_links("".join(arc), "https://x.jp/ir/monthly/"),
+       ["https://x.jp/ir/monthly/2025/domestic",
+        "https://x.jp/ir/monthly/2024/domestic"])
     if bad:
         print("monir 스스로 시험 실패:")
         for b in bad:
