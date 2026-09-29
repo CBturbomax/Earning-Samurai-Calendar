@@ -30,7 +30,7 @@ from datetime import date
 import monweb
 
 __all__ = ["IR_SITES", "read", "find_monthly", "find_ir",
-           "pdf_links", "pdf_when"]
+           "archive_links", "pdf_links", "pdf_when"]
 
 ZEN = monweb.ZEN
 TAG = re.compile(r"<[^>]+>")
@@ -529,6 +529,41 @@ def find_monthly(page: str, base: str):
             cand.append((score, -len(u), u))
     return max(cand)[2] if cand else ""
 
+
+ARCHIVE_LINK_HINT = re.compile(
+    r"(20\d{2}年(?:\d{1,2}月期|度)|過去|バックナンバー|Back\s*Number|Archive)", re.I)
+ARCHIVE_PATH_HINT = re.compile(r"(?:backnumber|archive|/monthly/20\d{2}(?:/|$))", re.I)
+
+
+def archive_links(page: str, base: str, limit: int = 4):
+    """월차 페이지에서 과거 회계연도 HTML 페이지를 찾는다.
+
+    PDF는 별도 수집기가 처리한다. 같은 도메인의 연도/백넘버 링크만 따라가며
+    현재 페이지 자체는 제외한다.
+    """
+    import urllib.parse
+    base_host = urllib.parse.urlparse(base).netloc
+    cur = base.split("?")[0].rstrip("/")
+    out, seen = [], set()
+    for href, lab in A.findall(page):
+        if href.lower().startswith(("javascript:", "mailto:", "tel:")):
+            continue
+        t = _txt(lab)
+        if not (ARCHIVE_LINK_HINT.search(t) or ARCHIVE_PATH_HINT.search(href)):
+            continue
+        u = urllib.parse.urljoin(base, href).split("#")[0]
+        if u.split("?")[0].lower().endswith(".pdf"):
+            continue
+        if urllib.parse.urlparse(u).netloc != base_host:
+            continue
+        key = u.split("?")[0].rstrip("/")
+        if key == cur or key in seen:
+            continue
+        seen.add(key)
+        out.append(u)
+        if len(out) >= limit:
+            break
+    return out
 
 def has_monthly_pdf(page: str, base: str) -> bool:
     """이 페이지에 **월매출 PDF 가 걸려 있는가.** 있으면 여기가 목록이다."""
