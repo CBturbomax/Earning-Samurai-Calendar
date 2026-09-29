@@ -48,6 +48,9 @@ YEAR_ONLY = re.compile(r"(20\d{2})\s*年(?!\s*\d{1,2}\s*月期)")
 # 값. **부호가 붙은 칸은 안 담는다** — 「△2.0」 이 전년비 증감률인지 비율인지
 # 표마다 달라서, 비율로 읽으면 98 을 2 로 적는다. 놓치는 편이 낫다.
 RATIO = re.compile(r"^(\d{1,3}(?:,\d{3})*(?:\.\d+)?)\s*[%]?$")
+DELTA = re.compile(r"^([+\-△▲]?)\s*(\d{1,3}(?:\.\d+)?)\s*[%％]?$")
+YOY_CONTEXT = re.compile(r"前年(?:同月|同期)?比|前年比|前年対比|前年同期比|伸び率|増減率")
+GENERIC_SALES = re.compile(r"売上|営業収益|営業収入|取扱高|販売高|月商")
 
 
 def _txt(s: str) -> str:
@@ -70,6 +73,40 @@ def _ratio(cell: str):
         return None
     v = float(m.group(1).replace(",", ""))
     return v if 20.0 <= v <= 500.0 else None
+
+
+def _delta_ratio(cell: str):
+    """「3.3」「▲1.1」「-0.6%」 같은 **증감률** -> 103.3 / 98.9 / 99.4.
+
+    月次ページ 중 상당수가 103.3 이 아니라 +3.3 식으로 쓴다. 표 문맥이
+    '前年対比/伸び率'임이 확인된 경우에만 이 변환을 쓴다.
+    """
+    m = DELTA.match(_cell(cell))
+    if not m:
+        return None
+    v = float(m.group(2))
+    if m.group(1) in ("-", "△", "▲"):
+        v = -v
+    # 월매출 증감률로 보기 어려운 값은 버린다.
+    return 100.0 + v if -80.0 <= v <= 200.0 else None
+
+
+def _row_ratios(cells, delta_hint=False):
+    """한 줄의 비율 칸들. 100대 지수인지 +3.3식 증감률인지 자동 판별."""
+    if delta_hint:
+        raw = [_cell(x) for x in cells]
+        nums = []
+        signed = False
+        for x in raw:
+            m = DELTA.match(x)
+            if m:
+                nums.append(float(m.group(2)))
+                signed = signed or bool(m.group(1))
+        # 부호가 있거나, 대부분 값이 작은 수면 '증감률' 표다.
+        small = nums and sum(v <= 60 for v in nums) >= max(2, len(nums) // 2)
+        if signed or small:
+            return [_delta_ratio(x) for x in cells]
+    return [_ratio(x) for x in cells]
 
 
 def _signed(cell: str) -> bool:
@@ -147,16 +184,20 @@ def _all_text(rows):
 
 
 def _label_ok(lab: str):
-    """이름표 -> 'same' · 'all' · None. `monweb` 과 **같은 사전**을 쓴다."""
+    """이름표 -> 'same' · 'all' · 'yoy' · None.
+
+    전에는 既存店/全店 두 줄만 받아서 Rakus·Asahi·MISUMI처럼 그냥
+    '売上高 前年比' 한 줄만 내는 회사가 전부 빠졌다. 매출 낱말이 명확하면
+    일반 월매출 YoY도 받는다. 객수·객단가·점포수는 여전히 먼저 버린다.
+    """
     if monweb.NOT_SALES.search(lab):
         return None
     same, allst = monweb.SAME.search(lab), monweb.ALL.search(lab)
-    if not (same or allst):
-        return None
-    # 「既存店」·「全店」 만 적고 무엇의 값인지는 표 바깥이 말하는 표가 있다
-    # (이온 기사가 그랬다). 매출 낱말이 없어도 받되, 객수·점포수는 위에서
-    # 이미 쳐냈다.
-    return "same" if same else "all"
+    if same:
+        return "same"
+    if allst:
+        return "all"
+    return "yoy" if GENERIC_SALES.search(lab) else None
 
 
 # 한 표에서 **이름표가 같은 계열이 둘 이상**이면 그 표를 안 읽는다.
@@ -236,17 +277,15 @@ def _horizontal(rows, width, hr, cols, today, near, lead=""):
     months = [_month(rows[hr][c]) for c in cols]
     first = min(cols)
     pairs = []
+    ctx = lead + " " + _all_text(rows)
+    delta_hint = bool(YOY_CONTEXT.search(ctx))
     for i in range(hr + 1, len(rows)):
         r = rows[i]
         if _section_row(r):
-            # 첫 절을 다 읽었으면 여기서 멈춘다. 아직 아무것도 못 읽었으면
-            # 이 줄이 첫 절의 머리다.
             if pairs:
                 break
             continue
-        if any(_signed(r[c]) for c in cols):
-            continue
-        vals = [_ratio(r[c]) for c in cols]
+        vals = _row_ratios([r[c] for c in cols], delta_hint)
         if sum(v is not None for v in vals) < 2:
             continue
         kind = _label_ok("".join(r[c] for c in range(first)))
@@ -265,10 +304,10 @@ def _vertical(rows, width, c0, mrows, today, near, lead=""):
     months = [_month(rows[i][c0]) for i in mrows]
     labs = ["".join(rows[r][c] for r in range(n_hdr)) for c in range(width)]
     pairs = []
+    ctx = lead + " " + _all_text(rows)
+    delta_hint = bool(YOY_CONTEXT.search(ctx))
     for c in range(c0 + 1, width):
-        if any(_signed(rows[i][c]) for i in mrows):
-            continue
-        vals = [_ratio(rows[i][c]) for i in mrows]
+        vals = _row_ratios([rows[i][c] for i in mrows], delta_hint)
         if sum(v is not None for v in vals) < 2:
             continue
         kind = _label_ok(labs[c])
@@ -325,9 +364,12 @@ def read(page: str, today=None, near: int = 3):
 # 여기서 하는 일은 둘뿐이다. **월매출 PDF 만 고르고**, 그 PDF 가 **언제 것인지**
 # 말해 주는 것. `montable` 은 발표일에서 해를 정하므로 이 값이 어긋나면
 # 엉뚱한 달에 숫자가 붙는다 — 그래서 **못 알아보면 안 읽는다.**
-PDF_A = re.compile(r'(?is)<a[^>]+href="([^"]+?\.pdf[^"]*)"[^>]*>(.*?)</a>')
+PDF_A = re.compile(r"""(?is)<a[^>]+href=["']([^"']+?\.pdf(?:\?[^"']*)?)["'][^>]*>(.*?)</a>""")
 # 월매출 PDF 를 가리키는 말. 결산단신·유가증권보고서·회사안내는 여기 없다.
-PDF_WANT = re.compile(r"(月次|月度|月別|売上|sokuho|monthly|getuji|month)", re.I)
+PDF_WANT = re.compile(r"(月次|月度|月別|売上|sokuho|monthly|getuji|month|"
+                      r"(?:20\d{2}年\s*)?\d{1,2}月(?:度|分)?|"
+                      r"20\d{2}\s*[-–—]?\s*(?:Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec))",
+                      re.I)
 PDF_SKIP = re.compile(r"(決算短信|有価証券報告書|説明資料|会社案内|中期経営計画"
                       r"|統合報告書|コーポレート・?ガバナンス|招集通知|アニュアル)")
 
@@ -338,6 +380,12 @@ LAB_YM = re.compile(r"(20\d{2})\s*年\s*(\d{1,2})\s*月\s*(?:度|次|分)")
 # 피한다 — montable·monweb 과 같은 자리다.
 LAB_MON = re.compile(r"月次|月度|月別|月間")
 LAB_ANY_YM = re.compile(r"(20\d{2})\s*年\s*(\d{1,2})\s*月(?!\s*期)")
+EN_MONTH = {m.lower(): i + 1 for i, m in enumerate(
+    ("Jan", "Feb", "Mar", "Apr", "May", "Jun",
+     "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"))}
+LAB_EN_YM = re.compile(
+    r"(20\d{2})\s*[-–—]?\s*(Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)[a-z.]*",
+    re.I)
 URL_YMD = re.compile(r"(?<!\d)(\d{2})(\d{2})(\d{2})(?!\d)")
 URL_YM = re.compile(r"(?<!\d)(20\d{2})(\d{2})(?!\d)")
 
@@ -376,6 +424,11 @@ def pdf_when(url: str, label: str):
     m = LAB_YM.search(lab)                       # 「2026年8月度」
     if m and 1 <= int(m.group(2)) <= 12:
         return _next_month(int(m.group(1)), int(m.group(2))).isoformat()
+    m = LAB_EN_YM.search(lab)                    # 「2026 -Jun.-」
+    if m:
+        mo = EN_MONTH.get(m.group(2).lower())
+        if mo:
+            return _next_month(int(m.group(1)), mo).isoformat()
     if LAB_MON.search(lab):                      # 「2026年8月 月次の売上状況」
         m = LAB_ANY_YM.search(lab)
         if m and 1 <= int(m.group(2)) <= 12:
