@@ -2616,6 +2616,8 @@ __FLAGCSS__
 .mnmodalchart { overflow:hidden; width:100%; padding:4px 0 0; }
 .mnmodalchart .mchart { width:100%; min-width:0; max-width:100%; height:auto; }
 .mnstale { color:#d8b877; font-size:13px; margin-left:8px; }
+.mnquality { font-size:12px; color:#7f96a8; margin-left:8px; }
+.mnquality.warn { color:#d8b877; font-weight:700; }
 @media (max-width: 900px) {
   .mnrow, .mnhead { grid-template-columns:88px 64px minmax(180px,1fr) 82px 95px; }
   .mnrow .mcap, .mnrow .mpdf, .mnhead span:nth-child(6), .mnhead span:nth-child(7) { display:none; }
@@ -3955,6 +3957,13 @@ function mnLatestSnapshot(num, target) {
       ' · ' + esc(num.src || '') + '</div></div>';
 }
 
+function mnQuality(num) {
+  if (!num || !num.m || !num.m.length) return {have:0, total:24, gaps:24};
+  const d = mnRecentDense(num.m, 24).m;
+  const have = d.filter(Boolean).length;
+  return {have:have, total:24, gaps:24-have};
+}
+
 function monthlyBlock(code) {
   const all = MN.filter(r => r[2] === code).sort((a,b) => a[0].localeCompare(b[0]));
   const num = MNUM[code];
@@ -3967,6 +3976,10 @@ function monthlyBlock(code) {
   const stale = lr ? (MN_B - MN_KEY(lr[0]) >= 3) : false;
   let head = '<div class="finhead">월매출 <span class="dim">(月次)</span>';
   if (target) head += '<span class="now">대상 ' + esc(target.replace('-', '.')) + '</span>';
+  const q = mnQuality(num);
+  if (num) head += '<span class="mnquality' + (q.gaps ? ' warn' : '') + '">' +
+                   '수집 ' + q.have + '/24개월' +
+                   (q.gaps ? ' · ⚠ ' + q.gaps + '개월 미수집' : '') + '</span>';
   if (stale) head += '<span class="mnstale">⚠ 수치 이력이 오래됨</span>';
   head += '</div>';
 
