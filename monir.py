@@ -1046,6 +1046,19 @@ def _selftest():                                          # pragma: no cover
     eq("(처) 과거 월차 링크", archive_links("".join(arc), "https://x.jp/ir/monthly/"),
        ["https://x.jp/ir/monthly/2025/domestic",
         "https://x.jp/ir/monthly/2024/domestic"])
+    # v7: 단월/누계가 나란히 있는 표에서는 누계 열을 버린다.
+    cum = """<h3>2027年5月期 月次業績</h3><table>
+      <tr><th></th><th colspan="2">既存店</th><th colspan="2">全店</th></tr>
+      <tr><th></th><th>単月 売上</th><th>累計 売上</th>
+          <th>単月 売上</th><th>累計 売上</th></tr>
+      <tr><td>26年6月</td><td>100.0</td><td>100.0</td><td>103.6</td><td>103.6</td></tr>
+      <tr><td>26年7月</td><td>103.4</td><td>101.7</td><td>107.1</td><td>105.3</td></tr>
+      <tr><td>26年8月</td><td>101.8</td><td>101.7</td><td>105.5</td><td>105.4</td></tr>
+      </table>"""
+    eq("(커) 단월/누계 열", read(cum, T), {
+        "2026-06": {"same": 100.0, "all": 103.6},
+        "2026-07": {"same": 103.4, "all": 107.1},
+        "2026-08": {"same": 101.8, "all": 105.5}})
     if bad:
         print("monir 스스로 시험 실패:")
         for b in bad:
