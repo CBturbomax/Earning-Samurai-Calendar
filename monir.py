@@ -38,7 +38,7 @@ SCRIPT = re.compile(r"(?is)<(script|style|noscript)[^>]*>.*?</\1>")
 TABLE_AT = re.compile(r"(?is)<table[^>]*>(.*?)</table>")
 A = re.compile(r'(?is)<a[^>]+href="([^"#]+)"[^>]*>(.*?)</a>')
 
-MONTH_CELL = re.compile(r"^\(?(\d{1,2})\s*月(度|分|次)?\)?$")
+MONTH_CELL = re.compile(r"^\(?(?:(?:\d{2}|\d{4})年)?(\d{1,2})\s*月(度|分|次)?\)?$")
 # 「2026年2月期」 처럼 **결산기말이 적힌** 표. 이게 있으면 해를 정확히 안다.
 FY_END = re.compile(r"(20\d{2})\s*年\s*(\d{1,2})\s*月期")
 # 「2025年度」 — 4월 시작이 일본의 관례다.
@@ -314,6 +314,10 @@ def _vertical(rows, width, c0, mrows, today, near, lead=""):
     for c in range(c0 + 1, width):
         vals = _row_ratios([rows[i][c] for i in mrows], delta_hint)
         if sum(v is not None for v in vals) < 2:
+            continue
+        # 累計 열은 그 달의 단월 값이 아니다. 단월/누계가 나란히 서는
+        # Create SD 같은 표에서 같은 kind가 둘로 잡혀 전부 버려지는 것을 막는다.
+        if "累計" in labs[c] or "累積" in labs[c]:
             continue
         kind = _label_ok(labs[c], lead)
         if kind:
