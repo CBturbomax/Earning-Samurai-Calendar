@@ -1786,11 +1786,34 @@ def _ratio_rows(months):
     return [], ""
 
 
-def _ir_pick(rec):
-    """회사 IR의 HTML 표와 PDF 중 **더 최신 대상월**을 가진 쪽을 고른다.
+def _series_overlap_agrees(a, b, tol=0.6):
+    """두 YoY 시계열이 같은 기준인지 겹치는 달로 확인한다."""
+    aa = {r[0]: r[2] for r in a if len(r) > 2 and r[2] is not None}
+    bb = {r[0]: r[2] for r in b if len(r) > 2 and r[2] is not None}
+    ov = sorted(set(aa) & set(bb))
+    if not ov:
+        return False
+    return all(abs(aa[p] - bb[p]) <= tol for p in ov[-3:])
 
-    과거 PDF가 10년치라 길다는 이유로 올해 HTML 표보다 이기면 안 된다.
-    같은 최신월이면 금액까지 주는 PDF를 우선하고, 그 외에는 HTML 표를 쓴다.
+
+def _merge_series(a, b):
+    """a(백필) 위에 b(최신/우선)를 덮어 월별 [period, rev, yoy]를 합친다."""
+    got = {r[0]: list(r[:3]) for r in a}
+    for r in b:
+        cur = got.setdefault(r[0], [r[0], None, None])
+        if r[1] is not None:
+            cur[1] = r[1]
+        if r[2] is not None:
+            cur[2] = r[2]
+    return [got[p] for p in sorted(got)]
+
+
+def _ir_pick(rec):
+    """회사 IR의 HTML 최신표와 PDF 백넘버를 **안전할 때 합쳐** 쓴다.
+
+    전에는 둘 중 하나만 골라서 HTML이 최신 6개월, PDF가 과거 24개월인 회사도
+    차트에는 6개월만 나왔다. 기준명이 같거나, 겹치는 달 YoY가 실제로 일치할 때만
+    PDF로 과거를 채우고 HTML을 최신값으로 덮는다.
     """
     tbl = rec.get("months") or {}
     pdf = rec.get("pdf") or {}
@@ -1803,6 +1826,14 @@ def _ir_pick(rec):
 
     tlast = trows[-1][0] if trows else ""
     plast = prows[-1][0] if prows else ""
+
+    if trows and prows:
+        same_basis = bool(tbase and pbase and tbase == pbase)
+        agrees = _series_overlap_agrees(trows, prows)
+        if same_basis or agrees:
+            picked = dict(pdf)
+            picked.update(tbl)  # 겹치는 달 meta는 HTML 쪽을 우선
+            return _merge_series(prows, trows), (tbase or pbase), picked
 
     if prows and (plast > tlast or
                   (plast == tlast and any(r[1] is not None for r in prows))):
