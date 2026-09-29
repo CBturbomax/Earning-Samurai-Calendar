@@ -437,6 +437,12 @@ def pdf_when(url: str, label: str):
     m = LAB_YM.search(lab)                       # 「2026年8月度」
     if m and 1 <= int(m.group(2)) <= 12:
         return _next_month(int(m.group(1)), int(m.group(2))).isoformat()
+    # 월차 목록 자체에서 골라진 PDF라면 「2026年8月」처럼 '月度/分/次'가
+    # 생략된 이름표도 흔하다(아사히 등). LAB_ANY_YM은 「8月期」를 명시적으로
+    # 제외하므로 결산기말과 헷갈리지 않는다.
+    m = LAB_ANY_YM.search(lab)
+    if m and 1 <= int(m.group(2)) <= 12:
+        return _next_month(int(m.group(1)), int(m.group(2))).isoformat()
     m = LAB_EN_YM.search(lab)                    # 「2026 -Jun.-」
     if m:
         mo = EN_MONTH.get(m.group(2).lower())
@@ -937,6 +943,9 @@ def _selftest():                                          # pragma: no cover
         # Asahi 영문 archive 이름표
         ("https://x.jp/ir/monthly/202606.pdf",
          "2026 -Jun.-", "2026-07-01"),
+        # 月次 목록 안의 이름표가 bare YYYY年M月 인 회사(아사히 등)
+        ("https://x.jp/ir/monthly/report.pdf",
+         "2026年8月", "2026-09-01"),
         ("https://x.jp/_data/ir_monthly/1102_renketsu110315.pdf",
          "2月度連結営業報告", "2011-03-15"),
         # 패스트리: 한 장에 회계연도 열두 달. 결산기말 다음 달.
