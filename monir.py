@@ -51,6 +51,7 @@ RATIO = re.compile(r"^(\d{1,3}(?:,\d{3})*(?:\.\d+)?)\s*[%]?$")
 DELTA = re.compile(r"^([+\-△▲]?)\s*(\d{1,3}(?:\.\d+)?)\s*[%％]?$")
 YOY_CONTEXT = re.compile(r"前年(?:同月|同期)?比|前年比|前年対比|前年同期比|伸び率|増減率")
 GENERIC_SALES = re.compile(r"売上|営業収益|営業収入|取扱高|販売高|月商")
+GENERIC_NOT_SALES = re.compile(r"利益|粗利|原価|客数|客単価|店舗数|在庫|面積|坪|人員")
 
 
 def _txt(s: str) -> str:
@@ -388,6 +389,7 @@ LAB_EN_YM = re.compile(
     re.I)
 URL_YMD = re.compile(r"(?<!\d)(\d{2})(\d{2})(\d{2})(?!\d)")
 URL_YM = re.compile(r"(?<!\d)(20\d{2})(\d{2})(?!\d)")
+URL_PATH_YM = re.compile(r"/(20\d{2})/(0?[1-9]|1[0-2])(?:[^/]*?)\.pdf(?:$|\?)", re.I)
 
 
 def _next_month(y, m):
@@ -444,6 +446,9 @@ def pdf_when(url: str, label: str):
             return got.isoformat()
     m = URL_YM.search(name)                      # 「sokuho202608.pdf」 = 대상 달
     if m and 1 <= int(m.group(2)) <= 12:
+        return _next_month(int(m.group(1)), int(m.group(2))).isoformat()
+    m = URL_PATH_YM.search(url)                  # 「/2026/08.pdf」 = 대상 달
+    if m:
         return _next_month(int(m.group(1)), int(m.group(2))).isoformat()
     m = FY_END.search(lab)                       # 「2026年8月期」 = 결산기말
     if m and 1 <= int(m.group(2)) <= 12:
