@@ -2536,10 +2536,13 @@ __FLAGCSS__
 .mchart .bar.back { fill:#3b7fc4; opacity:.45; }
 .mchart .ln { fill:none; stroke:#e08a4a; stroke-width:1.6; }
 .mchart .ma { fill:none; stroke:#5fbf92; stroke-width:1.2; opacity:.75; }
-.mchart .xl { fill:var(--mute); font-size:13px;
+.mchart .xl { fill:var(--mute); font-size:11.5px;
               font-variant-numeric:tabular-nums; }
-/* 해가 바뀌는 1월만 「24.01」로 적고 밝게 둔다 — 몇 년 몇 월인지 세지 않게. */
+/* 24개월을 한 화면에 넣으므로 날짜는 두 줄(26년 / 1월)로 읽기 쉽게 적는다. */
 .mchart .xl.yr { fill:#9fb0bf; font-weight:700; }
+.mchart .xl.latest { fill:#e7eef5; font-weight:900; }
+.mchart .yv.latest, .mchart .vl.latest { font-weight:900; }
+.mchart .bar.latest { stroke:#d7e3ed; stroke-width:1.2; }
 .mchart .ysep { stroke:#233240; stroke-width:1; }
 .mchart .zero { stroke:#33465a; stroke-width:1; }
 /* 막대 위 금액(단위는 왼쪽 위에 한 번만) · 축 아래 전년비 */
@@ -3624,7 +3627,7 @@ const MN_B = (() => {
   return b;
 })();
 
-function mnRecentDense(src, count=12) {
+function mnRecentDense(src, count=24) {
   const rows = (src || []).filter(r => r && /^20\d{2}-\d{2}$/.test(r[0]))
                           .sort((a,b) => a[0].localeCompare(b[0]));
   if (!rows.length) return {m:[], a:MN_A};
@@ -3640,21 +3643,21 @@ function mnRecentDense(src, count=12) {
 
 function mnChart(src) {
   if (!src || !src.length) return '';
-  // 상세창은 과거 전부가 아니라 **최근 12개월**을 크게 본다.
-  // 24~30개월을 억지로 넣어 가로 스크롤하는 것보다 월별 숫자가 읽히는 게 우선.
-  const dense = mnRecentDense(src, 12);
+  // 상세창은 **최근 24개월**을 한 화면에 촘촘하게 본다.
+  // 가로 스크롤은 만들지 않고 막대/라벨 간격을 줄여 2년 추세를 한 번에 본다.
+  const dense = mnRecentDense(src, 24);
   const m = dense.m, A = dense.a, n = m.length;
   if (!n) return '';
   const hasRev = m.some(r => r && r[1] != null);
 
-  const W = 960, L = 30, R = 16;
+  const W = 1000, L = 30, R = 12;
   const CW = (W - L - R) / n;
-  const B = hasRev ? 52 : 36;
+  const B = hasRev ? 72 : 62;
   const T = hasRev ? 38 : 34;
-  const H = hasRev ? 286 : 250;
+  const H = hasRev ? 310 : 286;
   const base = H - B;
   const cx = i => L + CW * i + CW / 2;
-  const bw = Math.min(48, CW * .62);
+  const bw = Math.min(30, CW * .68);
   const at = i => m[i];
 
   const tip = i => m[i][0].slice(2).replace('-', '/') + ' ' +
@@ -3667,7 +3670,7 @@ function mnChart(src) {
     const v = at(i) && m[i][2];
     if (v == null) return null;
     const d = v - 100;
-    return [(d >= 0 ? '+' : '') + d.toFixed(1), d >= 0 ? 'up' : 'dn'];
+    return [(d >= 0 ? '+' : '') + d.toFixed(1) + '%', d >= 0 ? 'up' : 'dn'];
   };
 
   let body = '';
@@ -3676,19 +3679,21 @@ function mnChart(src) {
     const u = mx >= 1e12 ? ['조엔', 1e12] : mx >= 1e8 ? ['억엔', 1e8]
             : mx >= 1e6 ? ['백만엔', 1e6] : ['엔', 1];
     body += '<text class="unit" x="' + L + '" y="16">월매출 ' + u[0] +
-            ' · 막대 위 숫자 / 아래 YoY</text>';
+            ' · 최근 24개월 · 막대 위 금액 / 아래 YoY</text>';
 
     for (let i = 0; i < n; i++) {
       const v = at(i) && m[i][1];
       if (v == null) continue;
       const h = Math.max(2, (base - T) * (v / mx));
       body += '<rect class="bar' + (m[i][3] ? ' back' : '') +
+              (i === n - 1 ? ' latest' : '') +
               '" x="' + (cx(i) - bw / 2).toFixed(1) + '" y="' +
               (base - h).toFixed(1) + '" width="' + bw.toFixed(1) +
               '" height="' + h.toFixed(1) + '" rx="3"><title>' + tip(i) +
               '</title></rect>';
       const s = v / u[1];
-      body += '<text class="vl" x="' + cx(i).toFixed(1) + '" y="' +
+      body += '<text class="vl' + (i === n - 1 ? ' latest' : '') +
+              '" x="' + cx(i).toFixed(1) + '" y="' +
               Math.max(T - 2, base - h - 7).toFixed(1) + '" text-anchor="middle">' +
               (s >= 100 ? Math.round(s).toLocaleString() : s.toFixed(1)) +
               '</text>';
@@ -3711,7 +3716,8 @@ function mnChart(src) {
     for (let i = 0; i < n; i++) {
       const p = pct(i);
       if (!p) continue;
-      body += '<text class="yv ' + p[1] + '" x="' + cx(i).toFixed(1) +
+      body += '<text class="yv ' + p[1] + (i === n - 1 ? ' latest' : '') +
+              '" x="' + cx(i).toFixed(1) +
               '" y="' + (base + 18) + '" text-anchor="middle">' + p[0] + '</text>';
     }
   } else {
@@ -3719,7 +3725,7 @@ function mnChart(src) {
     const vals = dev.filter(v => v != null);
     const mx = Math.max(6, ...(vals.length ? vals.map(Math.abs) : [6]));
     const half = (base - T) / 2, mid = T + half;
-    body += '<text class="unit" x="' + L + '" y="16">월매출 YoY % · 최근 12개월</text>';
+    body += '<text class="unit" x="' + L + '" y="16">월매출 YoY · 최근 24개월</text>';
     body += '<line class="zero" x1="' + L + '" y1="' + mid.toFixed(1) +
             '" x2="' + (W - R) + '" y2="' + mid.toFixed(1) + '"/>';
 
@@ -3727,13 +3733,15 @@ function mnChart(src) {
       const d = dev[i];
       if (d == null) continue;
       const h = Math.max(3, half * .80 * (Math.abs(d) / mx));
-      body += '<rect class="bar ' + (d >= 0 ? 'y' : 'yn') + '" x="' +
+      body += '<rect class="bar ' + (d >= 0 ? 'y' : 'yn') +
+              (i === n - 1 ? ' latest' : '') + '" x="' +
               (cx(i) - bw / 2).toFixed(1) + '" y="' +
               (d >= 0 ? mid - h : mid).toFixed(1) + '" width="' + bw.toFixed(1) +
               '" height="' + h.toFixed(1) + '" rx="3"><title>' + tip(i) +
               '</title></rect>';
       const p = pct(i);
-      body += '<text class="yv ' + p[1] + '" x="' + cx(i).toFixed(1) + '" y="' +
+      body += '<text class="yv ' + p[1] + (i === n - 1 ? ' latest' : '') +
+              '" x="' + cx(i).toFixed(1) + '" y="' +
               (d >= 0 ? mid - h - 8 : mid + h + 17).toFixed(1) +
               '" text-anchor="middle">' + p[0] + '</text>';
     }
@@ -3741,15 +3749,19 @@ function mnChart(src) {
 
   for (let i = 0; i < n; i++) {
     const k = A + i, mo = k % 12 + 1, jan = mo === 1;
+    const yy = String(Math.floor(k / 12)).slice(2);
     if (jan && i) {
       const x = (L + CW * i).toFixed(1);
       body += '<line class="ysep" x1="' + x + '" y1="' + (T - 10) +
               '" x2="' + x + '" y2="' + base + '"/>';
     }
-    body += '<text class="xl' + (jan ? ' yr' : '') + '" x="' + cx(i).toFixed(1) +
-            '" y="' + (base + (hasRev ? 38 : 26)) + '" text-anchor="middle">' +
-            (jan ? String(Math.floor(k / 12)).slice(2) + '.01'
-                 : String(mo).padStart(2, '0')) + '</text>';
+    const y0 = base + (hasRev ? 42 : 34);
+    const cls = 'xl' + (jan ? ' yr' : '') + (i === n - 1 ? ' latest' : '');
+    body += '<text class="' + cls + '" x="' + cx(i).toFixed(1) +
+            '" y="' + y0 + '" text-anchor="middle">' +
+            '<tspan x="' + cx(i).toFixed(1) + '">' + yy + '년</tspan>' +
+            '<tspan x="' + cx(i).toFixed(1) + '" dy="13">' + mo + '월</tspan>' +
+            '</text>';
   }
 
   return '<svg class="mchart" viewBox="0 0 ' + W + ' ' + H +
