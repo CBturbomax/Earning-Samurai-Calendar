@@ -145,15 +145,18 @@ def load():
     got.setdefault("skip", {})
     got.setdefault("homes", {})
     got.setdefault("profile_miss", {})
-    # **'못 찾았다'고 적어 둔 것도 규칙 판이 바뀌면 비운다.** 안 그러면 넓힌
-    # 규칙이 옛 miss 에 영영 안 닿는다 — 월매출 목록에서 겪은 것과 같은 병이다
-    # ('훑은 날'과 '모은 줄'은 다른 것이다).
+    # 규칙 판이 바뀌어도 **이미 검증해 쌓은 이력/주소는 보존**한다.
+    # 이번 규칙은 '읽을 수 있는 형식'을 넓히는 것이므로 기존 데이터를 통째로
+    # 비우면 배포 직후 화면이 더 비어 보인다. 실패 캐시만 풀어 새 규칙이 다시
+    # 시도하게 한다.
     if got.get("rv") != RULE_VER:
-        # 회사 IR 페이지는 늘 거기 있으므로 통째로 다시 받는다(위 주석).
         print(f"  규칙 판이 바뀌었다({got.get('rv')} -> {RULE_VER})"
-              f" — 모아 둔 것을 비우고 다시 받는다")
-        got["sites"], got["codes"] = {}, {}
-        got["done"], got["skip"] = [], {}
+              f" — 기존 이력은 보존하고 실패 캐시만 재검사한다")
+        for site in got["sites"].values():
+            site.pop("miss", None)
+            site.pop("parse_miss", None)
+            site.pop("discontinued", None)
+        got["profile_miss"] = {}
         got["rv"] = RULE_VER
     return got
 
