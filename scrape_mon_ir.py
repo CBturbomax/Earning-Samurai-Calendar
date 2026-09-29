@@ -46,7 +46,7 @@ VER = 1
 # 그대로 두었다. 회사 IR 페이지는 **늘 거기 있다.** 다시 받는 값이 싸므로,
 # 규칙이 아직 어린 지금은 **틀린 값을 안고 가느니 다시 받는 편**이 낫다
 # (오검출 하나가 놓침 하나보다 나쁘다). 규칙이 굳으면 그때 바꾼다.
-RULE_VER = 4
+RULE_VER = 5
 
 UA = {"User-Agent": ("Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
                      "AppleWebKit/537.36 (KHTML, like Gecko) "
@@ -68,8 +68,8 @@ GIVE_UP_AFTER = int(os.environ.get("IR_GIVE_UP", "10"))
 # PDF 한 장을 거는 회사가 많다. 그 PDF 는 TDnet 첨부와 같은 꼴이라 이미 있는
 # 연장(`pdftext`+`montable`)이 읽는다. 첨부는 무거우므로(수백 KB) 한 번 본
 # 주소는 건너뛰고 한 바퀴에 조금씩만 본다.
-PDF_PER_COMPANY = int(os.environ.get("IR_PDF_PER_COMPANY", "4"))
-PDF_PER_RUN = int(os.environ.get("IR_PDF_PER_RUN", "20"))
+PDF_PER_COMPANY = int(os.environ.get("IR_PDF_PER_COMPANY", "12"))
+PDF_PER_RUN = int(os.environ.get("IR_PDF_PER_RUN", "60"))
 # **표가 새것이어도 PDF 는 아직 안 본 것일 수 있다.** 달이 이미 쌓인 회사를
 # 신선하다고 건너뛰면 그 회사의 PDF 를 영영 안 연다 — 실제로 첫 실행에서
 # 그랬다. 옛 PDF 는 안 바뀌므로 하루에 한 번이면 넉넉하다.
@@ -87,6 +87,10 @@ PAGE_UPDATED = re.compile(
     r"(?:最終更新日|最終更新|更新日|Last\s+Updated)\s*[:：]?\s*"
     r"(20\d{2})\s*[./年]\s*(\d{1,2})\s*[./月]\s*(\d{1,2})\s*日?",
     re.I)
+STOPPED = re.compile(
+    r"(月(?:次|別).{0,24}(?:開示|公表).{0,16}(?:取りやめ|終了|中止)|"
+    r"(?:開示|公表).{0,16}(?:取りやめ|終了|中止).{0,24}月(?:次|別))",
+    re.I | re.S)
 
 
 def page_updated_day(page):
@@ -353,7 +357,9 @@ def save_coverage(rec):
         ms = dict(cr.get("months") or {})
         ms.update(cr.get("pdf") or {})
         site = sites.get(code) or {}
-        if code in ir and ms:
+        if site.get("discontinued"):
+            status = "discontinued"
+        elif code in ir and ms:
             status = "ok"
         elif site.get("page"):
             status = "parser_failed"
@@ -495,11 +501,16 @@ def main():
                 age = (now - datetime.fromisoformat(cur["ts"])).total_seconds()
                 p_age = (now - datetime.fromisoformat(
                     cur["pdf_ts"])).total_seconds()
-                if age < FRESH_HOURS * 3600 and p_age < PDF_FRESH_HOURS * 3600:
+                have_hist = len(set(cur.get("months") or {}) | set(cur.get("pdf") or {}))
+                # 24개월이 덜 찬 회사는 PDF backfill을 계속 진행한다.
+                if (have_hist >= 24 and age < FRESH_HOURS * 3600
+                        and p_age < PDF_FRESH_HOURS * 3600):
                     continue
             except ValueError:
                 pass
         site = sites.get(code) or {}
+        if site.get("discontinued"):
+            continue
         # 월차 페이지는 찾았지만 표를 못 읽은 회사는 매 10분마다 같은 실패를
         # 반복하지 않는다. 6시간 쉬게 하면 그 사이 다음 대형주를 계속 채울 수 있다.
         if not (cur.get("months") or cur.get("pdf")) and site.get("parse_miss"):
@@ -533,6 +544,10 @@ def main():
             miss += 1
             continue
         miss = 0
+        if STOPPED.search(page):
+            sites.setdefault(code, {})["discontinued"] = today.isoformat()
+            print(f"  {code} {name}: 월차 공시 중단 문구 확인")
+            continue
         updated = page_updated_day(page)
         if updated:
             sites.setdefault(code, {})["updated"] = updated
@@ -560,7 +575,7 @@ def main():
         for p, v in got.items():
             # 회사 표의 달별 수치에는 발표일을 억지로 달지 않는다.
             # "처음 본 날"도 발표일이 아니므로 저장하지 않는다.
-            row = {k: val for k, val in v.items() if k in ("same", "all")}
+            row = {k: val for k, val in v.items() if k in ("same", "all", "yoy")}
             if p not in months:
                 new_months += 1
             months[p] = row
