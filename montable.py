@@ -292,6 +292,67 @@ def _title_target_month(title: str, aday: date):
     return f"{yr:04d}-{mo:02d}"
 
 
+VERT_MONTH = re.compile(r"^(?:(\d{2}|\d{4})年)?(\d{1,2})月(?:[（(~～].*)?$")
+
+
+def _vertical_yoy(table, aday: date, title: str = ""):
+    """달이 세로로 선 월차 PDF에서 첫 매출성 전년비 열을 읽는다.
+
+    JR서일본처럼 왼쪽에 4月,5月…이 서고 오른쪽 첫 숫자열이
+    운송수입 전년비인 연간 PDF가 대표적이다. 매출성 낱말과 전년비 문맥이
+    둘 다 있을 때만 작동해 이용객수/가동률 표 오검출을 막는다.
+    """
+    ctx = "".join(_norm(t) for row in table for _x, t in row)
+    if not re.search(r"売上|営業収益|営業収入|取扱収入|取扱高|販売高|月商", ctx):
+        return None
+    if not re.search(r"前年|対前年|昨対|YoY", ctx, re.I):
+        return None
+
+    hits = {}
+    for cells in table:
+        months = []
+        for x, t in cells:
+            m = VERT_MONTH.match(_norm(t))
+            if m and 1 <= int(m.group(2)) <= 12:
+                gy = int(m.group(1)) if m.group(1) else None
+                if gy is not None and gy < 100:
+                    gy += 2000
+                months.append((x, int(m.group(2)), gy))
+        if not months:
+            continue
+        mx, mo, gy = min(months, key=lambda z: z[0])
+        nums = []
+        for x, t in cells:
+            v = _num(t)
+            if x > mx + 1 and v is not None:
+                nums.append((x, v))
+        if not nums:
+            continue
+        nums.sort()
+        hits.setdefault(mo, (gy, nums[0][1]))
+
+    if len(hits) < 3:
+        return None
+    seq = sorted(hits.items(), key=lambda kv: kv[0])
+    months = [mo for mo, _ in seq]
+    given = [val[0] for _mo, val in seq]
+    # 달 숫자만 정렬하면 4월~3월 회계연도의 해가 끊기므로, 해가 없을 때는
+    # 발표월보다 큰 달을 전년으로 두고 달 순서만 만든다.
+    if all(y is not None for y in given):
+        years = given
+    else:
+        years = [aday.year if mo <= aday.month else aday.year - 1 for mo in months]
+
+    rows = []
+    for i, (mo, (_gy, v)) in enumerate(seq):
+        yoy = 100.0 + v if abs(v) < 30 else v
+        if not 20 <= yoy <= 500:
+            continue
+        rows.append({"period": f"{years[i]:04d}-{mo:02d}",
+                     "yoy": yoy, "metric": "월매출/영업수입 전년비"})
+    return ({"rows": rows, "amount_label": "", "yoy_label": "対前年比"}
+            if rows else None)
+
 def read(data: bytes, ann: str, max_pages: int = 12, title: str = ""):
     """PDF -> {'rows': [...], 'basis': ...} 또는 None.
 
@@ -428,7 +489,8 @@ def read(data: bytes, ann: str, max_pages: int = 12, title: str = ""):
         cands.append((newest, len(have), i, hdr, amounts, yoys))
 
     if not cands:
-        return _sentence(table, aday)
+        vertical = _vertical_yoy(table, aday, title)
+        return vertical or _sentence(table, aday)
 
     groups = {}
     for c in cands:
