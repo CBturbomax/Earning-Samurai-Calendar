@@ -1,17 +1,17 @@
 {
  "v": 1,
- "rv": 4,
+ "rv": 5,
  "sites": {
   "8267": {
    "page": "https://www.aeon.info/ir/library/monthly/",
    "found": "2026-09-28",
-   "parse_miss": "2026-09-29T00:25:52+00:00"
+   "parse_miss": "2026-09-29T05:35:37+00:00"
   },
   "3086": {
    "page": "https://www.j-front-retailing.com/ir/finance/monthly.html",
    "found": "2026-09-28",
    "updated": "2025-11-12",
-   "parse_miss": "2026-09-29T00:25:52+00:00"
+   "parse_miss": "2026-09-29T05:35:37+00:00"
   },
   "9843": {
    "page": "https://www.nitorihd.co.jp/ir/performance/sales.html",
@@ -24,8 +24,7 @@
   },
   "7550": {
    "page": "https://www.zensho.co.jp/jp/ir/finance/monthly/",
-   "found": "2026-09-28",
-   "parse_miss": "2026-09-29T00:25:52+00:00"
+   "found": "2026-09-28"
   },
   "3382": {
    "page": "https://www.7andi.com/ir/financial/monthly_highlight.html",
@@ -35,7 +34,7 @@
   "9831": {
    "page": "https://www.yamada-holdings.jp/ir/monthly.html",
    "found": "2026-09-28",
-   "parse_miss": "2026-09-29T00:25:52+00:00"
+   "parse_miss": "2026-09-29T05:35:37+00:00"
   },
   "3563": {
    "page": "https://food-and-life.co.jp/investor/monthly-information",
@@ -47,8 +46,7 @@
   },
   "2695": {
    "page": "https://www.kurasushi.co.jp/company/ir/library/monthly_reports.html",
-   "found": "2026-09-28",
-   "parse_miss": "2026-09-29T00:25:52+00:00"
+   "found": "2026-09-28"
   },
   "7606": {
    "page": "https://www.united-arrows.co.jp/ir/monthly/",
@@ -57,17 +55,17 @@
   "3097": {
    "page": "https://www.monogatari.co.jp/ir/date/",
    "found": "2026-09-28",
-   "parse_miss": "2026-09-29T00:25:52+00:00"
+   "parse_miss": "2026-09-29T05:35:37+00:00"
   },
   "3197": {
    "page": "https://corp.skylark.co.jp/ir/strategy/growth/existing_store/",
    "found": "2026-09-28",
-   "parse_miss": "2026-09-29T00:25:52+00:00"
+   "parse_miss": "2026-09-29T05:35:37+00:00"
   },
   "4666": {
    "page": "https://www.park24.co.jp/ir/financial/monthly.html",
    "found": "2026-09-28",
-   "parse_miss": "2026-09-29T00:25:52+00:00"
+   "parse_miss": "2026-09-29T05:35:37+00:00"
   },
   "8016": {
    "page": "https://www.onward-hd.co.jp/ir/finance/monthly.html",
@@ -76,72 +74,66 @@
   "7476": {
    "page": "https://www.as-1.co.jp/",
    "found": "2026-09-28",
-   "parse_miss": "2026-09-29T00:25:52+00:00"
+   "parse_miss": "2026-09-29T05:35:37+00:00"
   },
-  "2702": {
-   "miss": "2026-09-28"
-  },
+  "2702": {},
   "3092": {
-   "miss": "2026-09-28"
+   "miss": "2026-09-29"
   },
   "8237": {
-   "miss": "2026-09-28"
+   "miss": "2026-09-29"
   },
   "3399": {
-   "miss": "2026-09-28"
+   "miss": "2026-09-29"
   },
   "3608": {
    "page": "https://www.tsi-holdings.com/tsuki.html",
    "found": "2026-09-28",
-   "parse_miss": "2026-09-29T00:25:52+00:00"
+   "parse_miss": "2026-09-29T05:35:37+00:00"
   },
   "2698": {
    "page": "https://www.cando-web.co.jp/ir/monthly_report/",
    "found": "2026-09-28",
-   "parse_miss": "2026-09-29T00:25:52+00:00"
+   "parse_miss": "2026-09-29T05:35:37+00:00"
   },
   "9823": {
-   "miss": "2026-09-28"
+   "miss": "2026-09-29"
   },
   "2780": {
-   "miss": "2026-09-28"
+   "miss": "2026-09-29"
   },
   "9278": {
    "page": "https://www.bookoffgroup.co.jp/",
    "found": "2026-09-28",
-   "parse_miss": "2026-09-29T00:25:52+00:00"
+   "parse_miss": "2026-09-29T05:35:37+00:00"
   },
   "8142": {
    "page": "https://www.to-ho.co.jp/toho_news/news002058.html",
    "found": "2026-09-28",
-   "parse_miss": "2026-09-29T00:25:52+00:00"
+   "parse_miss": "2026-09-29T05:35:37+00:00"
   },
   "3093": {
    "page": "https://www.treasurefactory.co.jp/ir/monthly.html",
    "found": "2026-09-28",
-   "parse_miss": "2026-09-29T00:25:52+00:00"
+   "parse_miss": "2026-09-29T05:35:37+00:00"
   },
   "9861": {
    "page": "https://www.yoshinoya-holdings.com/ir/report/yoshinoya/",
-   "found": "2026-09-28",
-   "parse_miss": "2026-09-29T00:25:52+00:00"
+   "found": "2026-09-28"
   },
   "3387": {
-   "miss": "2026-09-28"
+   "miss": "2026-09-29"
   },
-  "7581": {
-   "miss": "2026-09-28"
-  },
+  "7581": {},
   "3050": {
    "page": "https://www.dcm-hldgs.co.jp/grp/ir/performance/monthly-report.html",
    "found": "2026-09-28",
-   "updated": "2026-09-08",
-   "parse_miss": "2026-09-29T00:25:52+00:00"
+   "updated": "2026-09-08"
   },
   "8273": {
    "page": "https://www.izumi.co.jp/ir/finance/monthly/",
    "found": "2026-09-28",
-   "parse_miss": "2026-09-29T00:25:52+00:00"
+   "parse_miss": "2026-09-29T05:35:37+00:00"
   },
   "9948": {
    "page": "https://www.arcs-g.co.jp/ir/monthly-performance/index.html",
@@ -149,21 +141,19 @@
   },
   "3549": {
    "page": "https://kusuri-aoki-hd.co.jp/ir/finance/monthry/",
-   "found": "2026-09-28",
-   "parse_miss": "2026-09-29T00:25:52+00:00"
+   "found": "2026-09-28"
   },
   "9832": {
    "page": "https://www.autobacs.co.jp/ja/ir/news/auto_20260907532362.html",
-   "found": "2026-09-28",
-   "parse_miss": "2026-09-29T00:25:52+00:00"
+   "found": "2026-09-28"
   },
   "2664": {
-   "miss": "2026-09-28"
+   "miss": "2026-09-29"
   },
   "3222": {
    "page": "https://www.usmh.co.jp/ir/monthly_reports",
    "found": "2026-09-28",
-   "parse_miss": "2026-09-29T00:25:52+00:00"
+   "parse_miss": "2026-09-29T05:35:37+00:00"
   },
   "7532": {
    "page": "https://ppih.co.jp/ir/highlight/monthly/",
@@ -171,567 +161,491 @@
   },
   "8279": {
    "page": "https://www.bluezonesholdings.co.jp/ir/finance/monthly.html",
-   "found": "2026-09-28",
-   "parse_miss": "2026-09-28T13:41:47+00:00"
+   "found": "2026-09-28"
   },
   "7616": {
-   "miss": "2026-09-28"
+   "miss": "2026-09-29"
   },
   "3099": {
    "page": "https://www.imhds.co.jp/content/imhds/corporate/ir/finance/monthly-report.html",
    "found": "2026-09-28",
-   "parse_miss": "2026-09-29T00:25:52+00:00"
+   "parse_miss": "2026-09-29T05:35:37+00:00"
   },
   "9021": {
    "page": "https://www.westjr.co.jp/company/ir/finance/monthly/",
    "found": "2026-09-28",
-   "parse_miss": "2026-09-29T00:25:52+00:00"
+   "parse_miss": "2026-09-29T05:35:37+00:00"
   },
   "9022": {
-   "miss": "2026-09-28"
+   "miss": "2026-09-29"
   },
   "9023": {
-   "miss": "2026-09-28"
+   "miss": "2026-09-29"
   },
   "1379": {
    "page": "https://www.hokto-kinoko.co.jp/oubo/oubo_monthlypresent09.php",
    "found": "2026-09-28",
-   "parse_miss": "2026-09-29T00:25:52+00:00"
+   "parse_miss": "2026-09-29T05:35:37+00:00"
   },
-  "138A": {
-   "miss": "2026-09-28"
-  },
+  "138A": {},
   "1417": {
    "page": "https://www.mirait-one.com/info/001973.html",
    "found": "2026-09-28",
-   "parse_miss": "2026-09-29T00:25:52+00:00"
+   "parse_miss": "2026-09-29T05:35:37+00:00"
   },
   "1419": {
-   "miss": "2026-09-28"
+   "miss": "2026-09-29"
   },
   "141A": {
    "page": "https://www.trial-holdings.inc/ir/financial/monthly-sales/",
-   "found": "2026-09-28",
-   "parse_miss": "2026-09-29T00:25:52+00:00"
+   "found": "2026-09-28"
   },
   "1878": {
-   "miss": "2026-09-28"
+   "miss": "2026-09-29"
   },
   "1911": {
    "page": "https://sfc.jp/information/ir/zaimu/",
    "found": "2026-09-28",
-   "parse_miss": "2026-09-29T00:25:52+00:00"
+   "parse_miss": "2026-09-29T05:35:37+00:00"
   },
   "1925": {
-   "miss": "2026-09-28"
+   "miss": "2026-09-29"
   },
   "1928": {
-   "miss": "2026-09-28"
+   "miss": "2026-09-29"
   },
   "205A": {
    "page": "https://logos-holdings.jp/ir/order/",
-   "found": "2026-09-28",
-   "parse_miss": "2026-09-29T00:25:52+00:00"
+   "found": "2026-09-28"
   },
   "2294": {
    "page": "https://www.kakiyasuhonten.co.jp/news/detail.php?id=2021",
    "found": "2026-09-28",
-   "parse_miss": "2026-09-29T00:25:52+00:00"
+   "parse_miss": "2026-09-29T05:35:37+00:00"
   },
   "2305": {
    "page": "https://ir.studio-alice.co.jp/ja/Finance/MonthlyReport.html",
    "found": "2026-09-28",
-   "parse_miss": "2026-09-29T00:25:52+00:00"
+   "parse_miss": "2026-09-29T05:35:37+00:00"
   },
   "2311": {
    "page": "https://www.epco.co.jp",
-   "found": "2026-09-28",
-   "parse_miss": "2026-09-29T00:25:52+00:00"
+   "found": "2026-09-28"
   },
   "2317": {
-   "miss": "2026-09-28"
+   "miss": "2026-09-29"
   },
-  "245A": {
-   "miss": "2026-09-28"
-  },
+  "245A": {},
   "2461": {
    "page": "https://www.fancs.com/news/376546549/",
    "found": "2026-09-28",
-   "parse_miss": "2026-09-29T00:25:52+00:00"
+   "parse_miss": "2026-09-29T05:35:37+00:00"
   },
   "2502": {
    "page": "https://www.asahigroup-holdings.com/en/ir/financial_data/monthly_data/",
    "found": "2026-09-28",
-   "parse_miss": "2026-09-29T00:25:52+00:00"
+   "parse_miss": "2026-09-29T05:35:37+00:00"
   },
   "2590": {
    "page": "https://www.dydo-ghd.co.jp/ir/data/monthly_report/",
    "found": "2026-09-28",
-   "parse_miss": "2026-09-29T00:25:52+00:00"
+   "parse_miss": "2026-09-29T05:35:37+00:00"
   },
   "2593": {
    "page": "https://www.itoen.co.jp/ir/library/monthly_sales_backnumber/",
    "found": "2026-09-28",
-   "parse_miss": "2026-09-29T00:25:52+00:00"
+   "parse_miss": "2026-09-29T05:35:37+00:00"
   },
   "262A": {
    "page": "https://www.zoff.com/ir/monthly/",
-   "found": "2026-09-28",
-   "parse_miss": "2026-09-29T00:25:52+00:00"
+   "found": "2026-09-28"
   },
-  "2652": {
-   "miss": "2026-09-28"
-  },
-  "2653": {
-   "miss": "2026-09-28"
-  },
+  "2652": {},
+  "2653": {},
   "2654": {
    "page": "https://www.asmo1.co.jp",
-   "found": "2026-09-28",
-   "parse_miss": "2026-09-29T00:25:52+00:00"
+   "found": "2026-09-28"
   },
   "2659": {
-   "miss": "2026-09-28"
+   "miss": "2026-09-29"
   },
-  "2668": {
-   "miss": "2026-09-28"
-  },
+  "2668": {},
   "2669": {
    "page": "https://www.kanemi-foods.co.jp/ir/monthly.html",
    "found": "2026-09-28",
-   "parse_miss": "2026-09-29T00:25:52+00:00"
+   "parse_miss": "2026-09-29T05:35:37+00:00"
   },
   "2670": {
    "page": "https://www.abc-mart.co.jp/ir/getsujijoho.html",
-   "found": "2026-09-28",
-   "parse_miss": "2026-09-29T00:25:52+00:00"
+   "found": "2026-09-28"
   },
   "2674": {
    "page": "https://www.hardoff.co.jp/ir/library/sales/",
-   "found": "2026-09-28",
-   "parse_miss": "2026-09-29T00:25:52+00:00"
+   "found": "2026-09-28"
   },
   "2678": {
-   "miss": "2026-09-28"
+   "miss": "2026-09-29"
   },
   "2681": {
-   "miss": "2026-09-28"
+   "miss": "2026-09-29"
   },
   "2685": {
    "page": "https://www.andst-hd.co.jp/news/ir/entry-17218/",
-   "found": "2026-09-28",
-   "parse_miss": "2026-09-29T00:25:52+00:00"
+   "found": "2026-09-28"
   },
   "2705": {
    "page": "https://www.ootoya.jp/ir/financial/",
-   "found": "2026-09-28",
-   "parse_miss": "2026-09-29T00:25:52+00:00"
+   "found": "2026-09-28"
   },
   "2722": {
    "page": "https://www.ai-kei.co.jp",
-   "found": "2026-09-28",
-   "parse_miss": "2026-09-29T00:25:52+00:00"
+   "found": "2026-09-28"
   },
   "2726": {
    "page": "https://www.palgroup.holdings",
    "found": "2026-09-28",
-   "parse_miss": "2026-09-29T00:25:52+00:00"
+   "parse_miss": "2026-09-29T05:35:37+00:00"
   },
   "2730": {
    "page": "https://www.edion.co.jp",
    "found": "2026-09-28",
-   "parse_miss": "2026-09-29T00:25:52+00:00"
+   "parse_miss": "2026-09-29T05:35:37+00:00"
   },
-  "2736": {
-   "miss": "2026-09-28"
-  },
+  "2736": {},
   "2742": {
    "page": "https://www.halows.com/ir/finance_monthly/",
    "found": "2026-09-28",
-   "parse_miss": "2026-09-29T00:25:52+00:00"
+   "parse_miss": "2026-09-29T05:35:37+00:00"
   },
   "274A": {
    "page": "https://gardengroup.co.jp/",
-   "found": "2026-09-28",
-   "parse_miss": "2026-09-29T00:25:52+00:00"
+   "found": "2026-09-28"
   },
-  "2750": {
-   "miss": "2026-09-28"
-  },
+  "2750": {},
   "2753": {
    "page": "https://prtimes.jp/main/html/rd/p/000000345.000130952.html",
    "found": "2026-09-28",
-   "parse_miss": "2026-09-29T00:25:52+00:00"
+   "parse_miss": "2026-09-29T05:35:37+00:00"
   },
-  "2764": {
-   "miss": "2026-09-28"
-  },
-  "2769": {
-   "miss": "2026-09-28"
-  },
+  "2764": {},
+  "2769": {},
   "2778": {
    "page": "https://palemo.co.jp/news/finance",
-   "found": "2026-09-28",
-   "parse_miss": "2026-09-29T00:25:52+00:00"
+   "found": "2026-09-28"
   },
-  "2782": {
-   "miss": "2026-09-28"
-  },
-  "2789": {
-   "miss": "2026-09-28"
-  },
+  "2782": {},
+  "2789": {},
   "2790": {
    "page": "https://www.nafco.tv/ir/financial/monthly.html",
    "found": "2026-09-28"
   },
   "2791": {
-   "miss": "2026-09-28"
+   "page": "https://www.e-dkt.co.jp/ir/",
+   "found": "2026-09-29",
+   "parse_miss": "2026-09-29T05:35:37+00:00"
   },
   "2792": {
    "page": "https://www.honeys.co.jp/ir/data",
-   "found": "2026-09-28",
-   "parse_miss": "2026-09-29T00:25:52+00:00"
+   "found": "2026-09-28"
   },
   "2818": {
    "page": "https://www.pietro.co.jp",
-   "found": "2026-09-28",
-   "parse_miss": "2026-09-29T00:25:52+00:00"
+   "found": "2026-09-28"
   },
   "2910": {
    "page": "https://www.rockfield.co.jp/ir/library/monthly/",
    "found": "2026-09-28",
-   "parse_miss": "2026-09-29T00:25:52+00:00"
+   "parse_miss": "2026-09-29T05:35:37+00:00"
   },
-  "2926": {
-   "miss": "2026-09-28"
-  },
-  "2991": {
-   "miss": "2026-09-28"
-  },
+  "2926": {},
+  "2991": {},
   "3028": {
-   "miss": "2026-09-28"
+   "miss": "2026-09-29"
   },
   "3030": {
    "page": "https://www.pub-hub.co.jp/ir/month.html",
-   "found": "2026-09-28",
-   "parse_miss": "2026-09-29T00:25:52+00:00"
+   "found": "2026-09-28"
   },
   "3034": {
-   "miss": "2026-09-28"
+   "miss": "2026-09-29"
   },
   "3038": {
    "page": "https://www.kobebussan.co.jp/ir/monthly.php",
-   "found": "2026-09-28",
-   "parse_miss": "2026-09-29T00:25:52+00:00"
+   "found": "2026-09-28"
   },
-  "3046": {
-   "miss": "2026-09-28"
-  },
+  "3046": {},
   "3048": {
-   "miss": "2026-09-28"
+   "miss": "2026-09-29"
   },
   "3053": {
    "page": "https://www.pepper-fs.co.jp/ir/monthly_report/library.php",
-   "found": "2026-09-28",
-   "parse_miss": "2026-09-29T00:25:52+00:00"
+   "found": "2026-09-28"
   },
   "3058": {
    "page": "https://ir.sanyodo.co.jp/ir/eigyou.html",
-   "found": "2026-09-28",
-   "parse_miss": "2026-09-29T00:25:52+00:00"
+   "found": "2026-09-28"
   },
-  "3064": {
-   "miss": "2026-09-28"
-  },
+  "3064": {},
   "3068": {
    "page": "https://www.wdi.co.jp/ir/monthly.html",
    "found": "2026-09-28",
-   "parse_miss": "2026-09-29T00:25:52+00:00"
+   "parse_miss": "2026-09-29T05:35:37+00:00"
   },
   "3069": {
    "page": "https://j-fla.com/ir/monthly/",
-   "found": "2026-09-28",
-   "parse_miss": "2026-09-29T00:25:52+00:00"
+   "found": "2026-09-28"
   },
   "3077": {
    "page": "https://pay.rakuten.co.jp/",
-   "found": "2026-09-28",
-   "parse_miss": "2026-09-29T00:25:52+00:00"
+   "found": "2026-09-28"
   },
   "3080": {
    "page": "https://jason.co.jp/ir/monthly_information_2027_2",
-   "found": "2026-09-28",
-   "parse_miss": "2026-09-29T00:25:52+00:00"
+   "found": "2026-09-28"
   },
   "3082": {
    "page": "https://www.kichiri.co.jp/news/2026/ir/4173/",
    "found": "2026-09-28"
   },
-  "3083": {
-   "miss": "2026-09-28"
-  },
+  "3083": {},
   "3087": {
    "page": "https://www.dnh.co.jp/ir/monthly/",
    "found": "2026-09-28",
-   "parse_miss": "2026-09-29T00:25:52+00:00"
+   "parse_miss": "2026-09-29T05:35:37+00:00"
   },
-  "3088": {
-   "miss": "2026-09-28"
-  },
-  "3135": {
-   "miss": "2026-09-28"
-  },
+  "3088": {},
+  "3135": {},
   "3148": {
-   "miss": "2026-09-28"
+   "miss": "2026-09-29"
   },
-  "3160": {
-   "miss": "2026-09-28"
-  },
-  "3175": {
-   "miss": "2026-09-28"
-  },
+  "3160": {},
+  "3175": {},
   "3178": {
    "page": "https://www.chimney.co.jp/ir/sales/",
    "found": "2026-09-28",
-   "parse_miss": "2026-09-29T00:25:52+00:00"
+   "parse_miss": "2026-09-29T05:35:37+00:00"
   },
   "3179": {
-   "miss": "2026-09-28"
+   "miss": "2026-09-29"
   },
-  "3181": {
-   "miss": "2026-09-28"
-  },
+  "3181": {},
   "3191": {
-   "miss": "2026-09-28"
+   "miss": "2026-09-29"
   },
-  "3193": {
-   "miss": "2026-09-28"
-  },
-  "3195": {
-   "miss": "2026-09-28"
-  },
+  "3193": {},
+  "3195": {},
   "3196": {
    "page": "https://ir.hotland.co.jp/policy/monthlyinfo/",
    "found": "2026-09-28",
-   "parse_miss": "2026-09-29T00:25:52+00:00"
+   "parse_miss": "2026-09-29T05:35:37+00:00"
   },
   "3199": {
    "page": "https://watahan.co.jp/ir/trends.html",
-   "found": "2026-09-28",
-   "parse_miss": "2026-09-29T00:25:52+00:00"
+   "found": "2026-09-28"
   },
   "3221": {
-   "miss": "2026-09-28"
+   "miss": "2026-09-29"
   },
-  "3224": {
-   "miss": "2026-09-28"
-  },
+  "3224": {},
   "3317": {
    "page": "https://www.fgarden.co.jp/ir/index.php",
-   "found": "2026-09-28",
-   "parse_miss": "2026-09-29T00:25:52+00:00"
+   "found": "2026-09-28"
   },
   "3329": {
    "page": "https://www.towafood-net.co.jp/investor/monthly/",
    "found": "2026-09-28",
-   "parse_miss": "2026-09-29T00:25:52+00:00"
+   "parse_miss": "2026-09-29T05:35:37+00:00"
   },
   "3333": {
-   "miss": "2026-09-28"
+   "miss": "2026-09-29"
   },
-  "3349": {
-   "miss": "2026-09-28"
-  },
+  "3349": {},
   "3358": {
    "page": "https://thg-hd.com",
-   "found": "2026-09-28",
-   "parse_miss": "2026-09-29T00:25:52+00:00"
+   "found": "2026-09-28"
   },
   "3391": {
    "page": "https://www.tsuruha-hd.co.jp/ir/report/",
-   "found": "2026-09-28",
-   "parse_miss": "2026-09-29T00:25:52+00:00"
+   "found": "2026-09-28"
   },
   "3395": {
    "page": "https://www.saint-marc-hd.com",
    "found": "2026-09-28",
-   "parse_miss": "2026-09-29T00:25:52+00:00"
+   "parse_miss": "2026-09-29T05:35:37+00:00"
   },
   "3397": {
    "page": "https://www.toridoll.com/ir/finance/report/",
    "found": "2026-09-28"
   },
-  "3415": {
-   "miss": "2026-09-28"
-  },
+  "3415": {},
   "3542": {
    "page": "https://www.vega-c.com/ir/library/monthly-report/",
    "found": "2026-09-28",
-   "parse_miss": "2026-09-29T00:25:52+00:00"
+   "parse_miss": "2026-09-29T05:35:37+00:00"
   },
   "3543": {
    "page": "https://komeda-holdings.co.jp/monthly/",
    "found": "2026-09-28",
-   "parse_miss": "2026-09-29T00:25:52+00:00"
+   "parse_miss": "2026-09-29T05:35:37+00:00"
   },
   "3544": {
-   "miss": "2026-09-28"
+   "miss": "2026-09-29"
   },
   "3547": {
-   "miss": "2026-09-28"
+   "miss": "2026-09-29"
   },
   "3548": {
    "page": "https://www.baroque-global.com/jp/ir/monthly/",
    "found": "2026-09-28",
-   "parse_miss": "2026-09-29T00:25:52+00:00"
+   "parse_miss": "2026-09-29T05:35:37+00:00"
   },
-  "3557": {
-   "miss": "2026-09-28"
-  },
+  "3557": {},
   "3561": {
-   "miss": "2026-09-28"
+   "miss": "2026-09-29"
   },
-  "3566": {
-   "miss": "2026-09-28"
-  },
+  "3566": {},
   "3591": {
    "page": "https://www.wacoalholdings.jp/ir/monthlydata/",
    "found": "2026-09-28",
-   "parse_miss": "2026-09-29T00:25:52+00:00"
+   "parse_miss": "2026-09-29T05:35:37+00:00"
   },
   "9962": {
    "page": "https://www.misumi.co.jp/ir/library/monthly_sales",
    "found": "2026-09-28",
-   "parse_miss": "2026-09-29T00:25:52+00:00"
+   "discontinued": "2026-09-29"
   },
   "8233": {
-   "parse_miss": "2026-09-29T00:25:52+00:00"
+   "parse_miss": "2026-09-29T05:35:37+00:00"
   },
   "9007": {
    "page": "https://www.odakyu.jp/company_information/",
    "found": "2026-09-28"
   },
   "9142": {
-   "parse_miss": "2026-09-29T00:25:52+00:00"
+   "parse_miss": "2026-09-29T05:35:37+00:00"
   },
   "8985": {
    "page": "https://www.jhrth.co.jp",
    "found": "2026-09-28",
-   "parse_miss": "2026-09-29T00:25:52+00:00"
+   "parse_miss": "2026-09-29T05:35:37+00:00"
   },
   "8963": {
-   "miss": "2026-09-28"
+   "page": "https://www.invincible-inv.co.jp",
+   "found": "2026-09-29",
+   "parse_miss": "2026-09-29T05:35:37+00:00"
   },
   "9989": {
-   "parse_miss": "2026-09-29T00:25:52+00:00"
+   "parse_miss": "2026-09-29T05:35:37+00:00"
   },
   "8410": {
    "page": "https://www.sevenbank.co.jp/ir/finance/monthly_trend/",
    "found": "2026-09-28",
-   "parse_miss": "2026-09-29T00:25:52+00:00"
+   "parse_miss": "2026-09-29T05:35:37+00:00"
   },
   "3923": {
    "page": "https://www.rakus.co.jp/ir/monthly-sales/",
    "found": "2026-09-28",
-   "parse_miss": "2026-09-29T00:25:52+00:00"
+   "parse_miss": "2026-09-29T05:35:37+00:00"
   },
   "8242": {
-   "parse_miss": "2026-09-29T00:25:52+00:00"
+   "parse_miss": "2026-09-29T05:35:37+00:00"
   },
   "4680": {
    "page": "https://www.round1.co.jp/service/amuse/momotetsu_world/index.html",
    "found": "2026-09-28",
-   "parse_miss": "2026-09-29T00:25:52+00:00"
+   "parse_miss": "2026-09-29T05:35:37+00:00"
   },
   "8628": {
    "page": "https://www.matsui.co.jp/company/?mnu=hd",
    "found": "2026-09-28",
-   "parse_miss": "2026-09-29T00:25:52+00:00"
+   "parse_miss": "2026-09-29T05:35:37+00:00"
   },
   "9616": {
    "page": "https://www.kyoritsugroup.co.jp",
    "found": "2026-09-28",
-   "parse_miss": "2026-09-29T00:25:52+00:00"
+   "parse_miss": "2026-09-29T05:35:37+00:00"
   },
   "8282": {
-   "miss": "2026-09-28"
+   "miss": "2026-09-29"
   },
   "9759": {
    "page": "https://www.nsd.co.jp/ir/irmaterial/sokuhou.html",
    "found": "2026-09-28",
-   "parse_miss": "2026-09-29T00:25:52+00:00"
+   "parse_miss": "2026-09-29T05:35:37+00:00"
   },
   "9627": {
    "page": "https://www.ainj.co.jp/corporate/ir/",
    "found": "2026-09-28",
-   "parse_miss": "2026-09-29T00:25:52+00:00"
+   "parse_miss": "2026-09-29T05:35:37+00:00"
   },
   "7630": {
-   "miss": "2026-09-28"
+   "page": "https://www.ichibanya.jp/ir/finance/monthly/",
+   "found": "2026-09-29",
+   "parse_miss": "2026-09-29T05:35:37+00:00"
   },
   "2154": {
-   "miss": "2026-09-28"
+   "page": "https://www.openupgroup.co.jp",
+   "found": "2026-09-29",
+   "parse_miss": "2026-09-29T05:35:37+00:00"
   },
   "9279": {
    "page": "https://www.gift-group.co.jp/ir/library/04",
    "found": "2026-09-28",
-   "parse_miss": "2026-09-29T00:25:52+00:00"
+   "parse_miss": "2026-09-29T05:35:37+00:00"
   },
   "2337": {
    "page": "https://www.ichigo.gr.jp",
    "found": "2026-09-28",
-   "parse_miss": "2026-09-29T00:25:52+00:00"
+   "parse_miss": "2026-09-29T05:35:37+00:00"
   },
   "8214": {
    "page": "https://ir.aoki-hd.co.jp/ja/ir/finance/monthlyreport.html",
    "found": "2026-09-28",
-   "parse_miss": "2026-09-29T00:25:52+00:00"
+   "parse_miss": "2026-09-29T05:35:37+00:00"
   },
   "9974": {
    "page": "https://www.belc.jp/topics/20260920_nestle",
    "found": "2026-09-28",
-   "parse_miss": "2026-09-29T00:25:52+00:00"
+   "parse_miss": "2026-09-29T05:35:37+00:00"
   },
   "8276": {
    "page": "https://www.heiwado.jp/assets/file/news/attachment/92077e239129015e573bc4036e98a9d0",
    "found": "2026-09-28",
-   "parse_miss": "2026-09-29T00:25:52+00:00"
+   "parse_miss": "2026-09-29T05:35:37+00:00"
   },
   "8179": {
    "page": "https://www.royal-holdings.co.jp/ir/finance/sales/",
-   "found": "2026-09-28",
-   "parse_miss": "2026-09-29T00:25:52+00:00"
+   "found": "2026-09-28"
   },
   "9039": {
    "page": "https://www.hikkoshi-sakai.co.jp",
    "found": "2026-09-28",
-   "parse_miss": "2026-09-29T00:25:52+00:00"
+   "parse_miss": "2026-09-29T05:35:37+00:00"
   },
   "9166": {
    "page": "https://genda.jp/2026/09/16/monthly-report-2609/",
    "found": "2026-09-28",
-   "parse_miss": "2026-09-29T00:25:52+00:00"
+   "parse_miss": "2026-09-29T05:35:37+00:00"
   },
   "3612": {
    "page": "https://corp.world.co.jp/ir/library/monthly/",
    "found": "2026-09-28",
-   "parse_miss": "2026-09-29T00:25:52+00:00"
+   "parse_miss": "2026-09-29T05:35:37+00:00"
   },
   "8153": {
-   "miss": "2026-09-28"
+   "miss": "2026-09-29"
   },
   "7545": {
    "page": "https://www.24028-net.jp/category/MONTHLY/?utm_source=monthly&utm_medium=banner&utm_campaign=ownedsite&utm_term=ver1",
-   "found": "2026-09-28",
-   "parse_miss": "2026-09-29T00:25:52+00:00"
+   "found": "2026-09-28"
   },
   "7157": {
-   "miss": "2026-09-28"
+   "miss": "2026-09-29"
   },
   "7513": {
    "page": "https://www.kojima.net/corporation/ir/bulletin.html",
    "found": "2026-09-28",
-   "parse_miss": "2026-09-29T00:25:52+00:00"
+   "parse_miss": "2026-09-29T05:35:37+00:00"
   },
   "8255": {
    "page": "https://www.axial-r.com/ir/monthlysalestrends/",
@@ -740,51 +654,51 @@
   "8173": {
    "page": "https://www.joshin.co.jp",
    "found": "2026-09-28",
-   "parse_miss": "2026-09-29T00:25:52+00:00"
+   "parse_miss": "2026-09-29T05:35:37+00:00"
   },
   "8219": {
-   "miss": "2026-09-28"
+   "miss": "2026-09-29"
   },
   "8739": {
-   "miss": "2026-09-28"
+   "miss": "2026-09-29"
   },
   "9267": {
-   "miss": "2026-09-28"
+   "miss": "2026-09-29"
   },
   "6036": {
    "page": "https://keepergiken.co.jp/ir/irdata/monthly",
    "found": "2026-09-28",
-   "parse_miss": "2026-09-29T00:25:52+00:00"
+   "parse_miss": "2026-09-29T05:35:37+00:00"
   },
   "9603": {
    "page": "https://www.his.co.jp/ir/monthly-report/",
    "found": "2026-09-28",
-   "parse_miss": "2026-09-29T00:25:52+00:00"
+   "parse_miss": "2026-09-29T05:35:37+00:00"
   },
   "7421": {
    "page": "https://www.kappa-create.co.jp/monthly2026/",
    "found": "2026-09-28",
-   "parse_miss": "2026-09-29T00:25:52+00:00"
+   "parse_miss": "2026-09-29T05:35:37+00:00"
   },
   "8244": {
    "page": "https://www.d-kintetsu.co.jp/corporate/ir/finance/recent_results.html",
    "found": "2026-09-28",
-   "parse_miss": "2026-09-29T00:25:52+00:00"
+   "parse_miss": "2026-09-29T05:35:37+00:00"
   },
   "8715": {
    "page": "https://www.anicom.co.jp/ir/financial/business/",
    "found": "2026-09-28",
-   "parse_miss": "2026-09-29T00:25:52+00:00"
+   "parse_miss": "2026-09-29T05:35:37+00:00"
   },
   "7412": {
    "page": "https://www.atom-corp.co.jp/fair/fair.php?fair_no=3834",
    "found": "2026-09-28",
-   "parse_miss": "2026-09-29T00:25:52+00:00"
+   "parse_miss": "2026-09-29T05:35:37+00:00"
   },
   "8160": {
    "page": "https://www.kisoji.co.jp/ir/monthly.html",
    "found": "2026-09-28",
-   "parse_miss": "2026-09-29T00:25:52+00:00"
+   "parse_miss": "2026-09-29T05:35:37+00:00"
   },
   "9900": {
    "page": "https://www.sagami-holdings.co.jp/ir/month/",
@@ -794,34 +708,34 @@
   "3817": {
    "page": "https://www.sra-hd.co.jp/ir/ir-news/index_2026.html",
    "found": "2026-09-28",
-   "parse_miss": "2026-09-29T00:25:52+00:00"
+   "parse_miss": "2026-09-29T05:35:37+00:00"
   },
   "9828": {
-   "miss": "2026-09-28"
+   "miss": "2026-09-29"
   },
   "3663": {
    "page": "https://www.celsys.com/irinfo_news/contents_type=47",
    "found": "2026-09-28",
-   "parse_miss": "2026-09-29T00:25:52+00:00"
+   "parse_miss": "2026-09-29T05:35:37+00:00"
   },
   "212A": {
-   "miss": "2026-09-28"
+   "miss": "2026-09-29"
   },
   "8281": {
    "page": "https://www.xebio.co.jp/ja/ir/monthly.html",
    "found": "2026-09-28",
-   "parse_miss": "2026-09-29T00:25:52+00:00"
+   "parse_miss": "2026-09-29T05:35:37+00:00"
   },
   "8008": {
    "page": "https://yondoshi.co.jp",
    "found": "2026-09-28",
-   "parse_miss": "2026-09-29T00:25:52+00:00"
+   "parse_miss": "2026-09-29T05:35:37+00:00"
   },
   "8914": {
    "page": "https://www.arealink.co.jp/news/ir/p17078/",
    "found": "2026-09-28",
    "updated": "2026-09-03",
-   "parse_miss": "2026-09-29T00:25:52+00:00"
+   "parse_miss": "2026-09-29T05:35:37+00:00"
   },
   "8011": {
    "page": "https://www.sanyo-shokai.co.jp/ir/library/monthly/",
@@ -836,13 +750,13 @@
   "7522": {
    "page": "https://www.watami.co.jp/ir/library/recent/",
    "found": "2026-09-29",
-   "parse_miss": "2026-09-29T00:25:52+00:00"
+   "parse_miss": "2026-09-29T05:35:37+00:00"
   },
   "8185": {
    "page": "https://www.chiyodagrp.co.jp/ir/",
    "found": "2026-09-29",
    "updated": "2026-07-10",
-   "parse_miss": "2026-09-29T00:25:52+00:00"
+   "parse_miss": "2026-09-29T05:35:37+00:00"
   },
   "6071": {
    "miss": "2026-09-29"
@@ -853,7 +767,7 @@
   "7596": {
    "page": "https://uoriki.co.jp/ir/library/monthly.html",
    "found": "2026-09-29",
-   "parse_miss": "2026-09-29T00:25:52+00:00"
+   "parse_miss": "2026-09-29T05:35:37+00:00"
   },
   "7475": {
    "page": "https://www.albis.co.jp/ir/monthly.html",
@@ -868,7 +782,7 @@
   "7823": {
    "page": "https://corp.artnature.co.jp/ja/ir/finance/monthly_info.html",
    "found": "2026-09-29",
-   "parse_miss": "2026-09-29T00:25:52+00:00"
+   "parse_miss": "2026-09-29T05:35:37+00:00"
   },
   "8203": {
    "page": "https://www.mrmaxhd.co.jp/ir/ir-library/monthly/",
@@ -877,7 +791,7 @@
   "9990": {
    "page": "https://www.sacs-bar.co.jp/ir/",
    "found": "2026-09-29",
-   "parse_miss": "2026-09-29T00:25:52+00:00"
+   "parse_miss": "2026-09-29T05:35:37+00:00"
   },
   "9850": {
    "miss": "2026-09-29"
@@ -891,7 +805,7 @@
   "9979": {
    "page": "https://www.daisyo.co.jp/company/ir/getsuji.html",
    "found": "2026-09-29",
-   "parse_miss": "2026-09-29T00:25:52+00:00"
+   "discontinued": "2026-09-29"
   },
   "6040": {
    "miss": "2026-09-29"
@@ -899,7 +813,7 @@
   "9163": {
    "page": "https://www.nareru-group.co.jp",
    "found": "2026-09-29",
-   "parse_miss": "2026-09-29T00:25:52+00:00"
+   "parse_miss": "2026-09-29T05:35:37+00:00"
   },
   "7621": {
    "miss": "2026-09-29"
@@ -910,15 +824,19 @@
   "7643": {
    "page": "https://www.daiichi-d.co.jp/post_event/post_event-21894",
    "found": "2026-09-29",
-   "parse_miss": "2026-09-29T00:25:52+00:00"
+   "parse_miss": "2026-09-29T05:35:37+00:00"
   },
   "2998": {
    "miss": "2026-09-29"
   },
   "3370": {
    "page": "https://www.fujitacorp.co.jp/main/info/%e2%98%85%e6%9c%88%e6%ac%a1%e5%a3%b2%e4%b8%8a%e9%80%9f%e5%a0%b1%e6%9b%b4%e6%96%b0%e3%81%84%e3%81%9f%e3%81%97%e3%81%be%e3%81%97%e3%81%9f-80/",
+   "found": "2026-09-29"
+  },
+  "7562": {
+   "page": "https://www.anrakutei.co.jp/jigyo.html",
    "found": "2026-09-29",
-   "parse_miss": "2026-09-29T00:25:52+00:00"
+   "parse_miss": "2026-09-29T05:35:37+00:00"
   }
  },
  "codes": {
@@ -2549,13 +2467,44 @@
     }
    },
    "ts": "2026-09-29T00:25:52+00:00"
+  },
+  "8179": {
+   "name": "ロイヤルホールディングス",
+   "page": "https://www.royal-holdings.co.jp/ir/finance/sales/",
+   "months": {
+    "2026-01": {
+     "yoy": 106.5
+    },
+    "2026-02": {
+     "yoy": 104.3
+    },
+    "2026-03": {
+     "yoy": 104.4
+    },
+    "2026-04": {
+     "yoy": 106.1
+    },
+    "2026-05": {
+     "yoy": 112.2
+    },
+    "2026-06": {
+     "yoy": 99.8
+    },
+    "2026-07": {
+     "yoy": 106.8
+    },
+    "2026-08": {
+     "yoy": 108.1
+    }
+   },
+   "ts": "2026-09-29T05:35:37+00:00"
   }
  },
  "source": "회사 IR 페이지 (月次 표)",
  "note": "회사가 제 사이트에 올린 월차 표에서 읽는다. 값은 전년동월비(%)뿐이고 금액은 없다. 회계연도가 적힌 표는 그 해로 읽으므로 옛 회계연도 표를 함께 싣는 회사는 이력이 길다.",
- "companies": 18,
- "months": 291,
- "ts": "2026-09-29T00:33:54+00:00",
+ "companies": 19,
+ "months": 299,
+ "ts": "2026-09-29T05:43:38+00:00",
  "done": [
   "https://data.swcms.net/file/h2o-retailing/ja/news/auto_20260701586265/pdfFile.pdf",
   "https://data.swcms.net/file/h2o-retailing/ja/news/auto_20260715594542/pdfFile.pdf",
@@ -2568,6 +2517,18 @@
   "https://food-and-life.co.jp/wp-content/uploads/2024/11/fy2024_sales.pdf",
   "https://static.saint-marc-hd.com/upload/irnews/383/20260914.pdf",
   "https://www.asahigroup-holdings.com/pdf/en/ir/financial_data/monthly_data/2020/200213.pdf",
+  "https://www.asahigroup-holdings.com/pdf/en/ir/financial_data/monthly_data/2025/08.pdf",
+  "https://www.asahigroup-holdings.com/pdf/en/ir/financial_data/monthly_data/2025/10.pdf",
+  "https://www.asahigroup-holdings.com/pdf/en/ir/financial_data/monthly_data/2025/11.pdf",
+  "https://www.asahigroup-holdings.com/pdf/en/ir/financial_data/monthly_data/2025/12.pdf",
+  "https://www.asahigroup-holdings.com/pdf/en/ir/financial_data/monthly_data/2026/01.pdf",
+  "https://www.asahigroup-holdings.com/pdf/en/ir/financial_data/monthly_data/2026/02.pdf",
+  "https://www.asahigroup-holdings.com/pdf/en/ir/financial_data/monthly_data/2026/03.pdf",
+  "https://www.asahigroup-holdings.com/pdf/en/ir/financial_data/monthly_data/2026/04.pdf",
+  "https://www.asahigroup-holdings.com/pdf/en/ir/financial_data/monthly_data/2026/05.pdf",
+  "https://www.asahigroup-holdings.com/pdf/en/ir/financial_data/monthly_data/2026/06.pdf",
+  "https://www.asahigroup-holdings.com/pdf/en/ir/financial_data/monthly_data/2026/07.pdf",
+  "https://www.asahigroup-holdings.com/pdf/en/ir/financial_data/monthly_data/2026/08.pdf",
   "https://www.chimney.co.jp/pdf/ir/sales/tenpo/month_202403.pdf",
   "https://www.chimney.co.jp/pdf/ir/sales/tenpo/month_202503.pdf",
   "https://www.chimney.co.jp/pdf/ir/sales/tenpo/month_202603.pdf",
@@ -2583,6 +2544,12 @@
   "https://www.fgarden.co.jp/common/sysfile/irs/ID00000166binary1.pdf",
   "https://www.h2o-retailing.co.jp/ja/news/news5763524793934801674/main/0/link/20260801.pdf",
   "https://www.j-front-retailing.com/_data/ir_monthly/1102_renketsu110315.pdf",
+  "https://www.j-front-retailing.com/ir/pdf/monthly/daimaru/h18_2006/mon0603.pdf",
+  "https://www.j-front-retailing.com/ir/pdf/monthly/daimaru/h18_2006/mon0604.pdf",
+  "https://www.j-front-retailing.com/ir/pdf/monthly/daimaru/h18_2006/mon0605.pdf",
+  "https://www.j-front-retailing.com/ir/pdf/monthly/daimaru/h18_2006/mon0606.pdf",
+  "https://www.j-front-retailing.com/ir/pdf/monthly/daimaru/h18_2006/mon0607.pdf",
+  "https://www.j-front-retailing.com/ir/pdf/monthly/daimaru/h18_2006/mon0608.pdf",
   "https://www.j-front-retailing.com/ir/pdf/monthly/daimaru/h18_2006/mon0609.pdf",
   "https://www.j-front-retailing.com/ir/pdf/monthly/daimaru/h18_2006/mon0610.pdf",
   "https://www.j-front-retailing.com/ir/pdf/monthly/daimaru/h18_2006/mon0611.pdf",
@@ -2594,6 +2561,8 @@
   "https://www.j-front-retailing.com/ir/pdf/monthly/daimaru/h19_2007/mon0705.pdf",
   "https://www.j-front-retailing.com/ir/pdf/monthly/daimaru/h19_2007/mon0706.pdf",
   "https://www.j-front-retailing.com/ir/pdf/monthly/daimaru/h19_2007/mon0707.pdf",
+  "https://www.j-front-retailing.com/ir/pdf/monthly/matsuzakaya/h18_2006/getsuji_0701.pdf",
+  "https://www.j-front-retailing.com/ir/pdf/monthly/matsuzakaya/h18_2006/getsuji_0702.pdf",
   "https://www.j-front-retailing.com/ir/pdf/monthly/matsuzakaya/h19_2007/getsuji_0703.pdf",
   "https://www.j-front-retailing.com/ir/pdf/monthly/matsuzakaya/h19_2007/getsuji_0704.pdf",
   "https://www.j-front-retailing.com/ir/pdf/monthly/matsuzakaya/h19_2007/getsuji_0705.pdf",
@@ -2741,7 +2710,27 @@
   "https://www.kyoritsugroup.co.jp/Portals/0/pdf/ir/library/2026_6_monthly-report_jp.pdf": "표없음",
   "https://www.matsui.co.jp/en/press/pdf/pr260901_en.pdf": "표없음",
   "https://www.edion.co.jp/system/files/ir-library/pdf/ja/2026-09/%E2%98%85202608_monthly_sales_report.pdf": "표없음",
-  "https://www.edion.co.jp/system/files/ir-library/pdf/ja/2026-08/%E2%98%85202607_monthly_sales_report.pdf": "표없음"
+  "https://www.edion.co.jp/system/files/ir-library/pdf/ja/2026-08/%E2%98%85202607_monthly_sales_report.pdf": "표없음",
+  "https://www.asahigroup-holdings.com/pdf/en/ir/financial_data/monthly_data/2026/08.pdf": "표없음",
+  "https://www.asahigroup-holdings.com/pdf/en/ir/financial_data/monthly_data/2026/07.pdf": "표없음",
+  "https://www.asahigroup-holdings.com/pdf/en/ir/financial_data/monthly_data/2026/06.pdf": "표없음",
+  "https://www.asahigroup-holdings.com/pdf/en/ir/financial_data/monthly_data/2026/05.pdf": "표없음",
+  "https://www.asahigroup-holdings.com/pdf/en/ir/financial_data/monthly_data/2026/04.pdf": "표없음",
+  "https://www.asahigroup-holdings.com/pdf/en/ir/financial_data/monthly_data/2026/03.pdf": "표없음",
+  "https://www.asahigroup-holdings.com/pdf/en/ir/financial_data/monthly_data/2026/02.pdf": "표없음",
+  "https://www.asahigroup-holdings.com/pdf/en/ir/financial_data/monthly_data/2026/01.pdf": "표없음",
+  "https://www.asahigroup-holdings.com/pdf/en/ir/financial_data/monthly_data/2025/12.pdf": "표없음",
+  "https://www.asahigroup-holdings.com/pdf/en/ir/financial_data/monthly_data/2025/11.pdf": "표없음",
+  "https://www.asahigroup-holdings.com/pdf/en/ir/financial_data/monthly_data/2025/10.pdf": "표없음",
+  "https://www.asahigroup-holdings.com/pdf/en/ir/financial_data/monthly_data/2025/08.pdf": "표없음",
+  "https://www.j-front-retailing.com/ir/pdf/monthly/daimaru/h18_2006/mon0608.pdf": "표없음",
+  "https://www.j-front-retailing.com/ir/pdf/monthly/daimaru/h18_2006/mon0607.pdf": "표없음",
+  "https://www.j-front-retailing.com/ir/pdf/monthly/daimaru/h18_2006/mon0606.pdf": "표없음",
+  "https://www.j-front-retailing.com/ir/pdf/monthly/daimaru/h18_2006/mon0605.pdf": "표없음",
+  "https://www.j-front-retailing.com/ir/pdf/monthly/daimaru/h18_2006/mon0604.pdf": "표없음",
+  "https://www.j-front-retailing.com/ir/pdf/monthly/daimaru/h18_2006/mon0603.pdf": "표없음",
+  "https://www.j-front-retailing.com/ir/pdf/monthly/matsuzakaya/h18_2006/getsuji_0702.pdf": "표없음",
+  "https://www.j-front-retailing.com/ir/pdf/monthly/matsuzakaya/h18_2006/getsuji_0701.pdf": "표없음"
  },
  "pdf_months": 70,
  "homes": {
@@ -2920,13 +2909,32 @@
   "7621": "https://www.ukai.co.jp",
   "2970": "https://www.goodlife-c.co.jp",
   "7643": "https://www.daiichi-d.co.jp",
-  "2998": "https://corp.creal.jp"
+  "2998": "https://corp.creal.jp",
+  "7562": "https://www.anrakutei.co.jp",
+  "5892": "https://yutori.tokyo",
+  "6045": "https://www.rentracks.co.jp",
+  "1435": "https://corp.robothome.jp",
+  "8927": "https://www.meiho-est.com",
+  "6073": "https://asante.co.jp",
+  "7561": "https://www.hurxley.co.jp",
+  "3979": "https://www.uluru.biz",
+  "7646": "https://www.plant-co.jp",
+  "7686": "https://www.hitomile.co.jp",
+  "9993": "https://www.yamazawa.co.jp",
+  "8207": "https://www.teng.co.jp",
+  "369A": "https://a-tie.co.jp",
+  "7636": "https://www.handsman.co.jp",
+  "4193": "https://www.fabrica-hd.co.jp",
+  "9252": "https://www.lomgrp.co.jp",
+  "7416": "https://www.haruyama.co.jp",
+  "7514": "https://www.hmry.jp",
+  "4374": "https://www.robotpayment.co.jp",
+  "7610": "https://www.tay2.co.jp",
+  "7604": "https://www.umenohana.co.jp",
+  "7494": "https://www.konaka.co.jp",
+  "7682": "https://www.hamayuu.co.jp",
+  "4015": "https://www.arara.com"
  },
- "profile_miss": {
-  "2686": "2026-09-28",
-  "3032": "2026-09-28",
-  "3066": "2026-09-28",
-  "3546": "2026-09-28"
- },
+ "profile_miss": {},
  "cursor": 56
 }
