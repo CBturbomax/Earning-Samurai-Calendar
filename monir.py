@@ -293,7 +293,10 @@ def _horizontal(rows, width, hr, cols, today, near, lead=""):
         vals = _row_ratios([r[c] for c in cols], delta_hint)
         if sum(v is not None for v in vals) < 2:
             continue
-        kind = _label_ok("".join(r[c] for c in range(first)), lead)
+        lab = "".join(r[c] for c in range(first))
+        if "累計" in lab or "累積" in lab:
+            continue
+        kind = _label_ok(lab, lead)
         if kind:
             pairs.append((kind, vals))
     if not pairs:
@@ -1059,6 +1062,18 @@ def _selftest():                                          # pragma: no cover
         "2026-06": {"same": 100.0, "all": 103.6},
         "2026-07": {"same": 103.4, "all": 107.1},
         "2026-08": {"same": 101.8, "all": 105.5}})
+    # v7: 가로형 표도 단월/누계를 섞지 않는다(산드럭 꼴).
+    hc = """<h3>2026年度 売上高前年同月比較表</h3><table>
+      <tr><th></th><th></th><th>4月</th><th>5月</th><th>6月</th></tr>
+      <tr><th rowspan="2">既存店</th><th>単月</th><td>2.9</td><td>4.6</td><td>-4.4</td></tr>
+      <tr><th>累計</th><td>2.9</td><td>3.7</td><td>0.9</td></tr>
+      <tr><th rowspan="2">全店</th><th>単月</th><td>5.9</td><td>7.3</td><td>-1.9</td></tr>
+      <tr><th>累計</th><td>5.9</td><td>6.6</td><td>3.6</td></tr>
+      </table>"""
+    eq("(터) 가로 단월/누계", read(hc, T), {
+        "2026-04": {"same": 102.9, "all": 105.9},
+        "2026-05": {"same": 104.6, "all": 107.3},
+        "2026-06": {"same": 95.6, "all": 98.1}})
     if bad:
         print("monir 스스로 시험 실패:")
         for b in bad:
