@@ -99,18 +99,22 @@
   "9823": {
    "miss": "2026-09-29"
   },
-  "2780": {},
+  "2780": {
+   "miss": "2026-09-29"
+  },
   "9278": {
    "page": "https://www.bookoffgroup.co.jp/",
    "found": "2026-09-28"
   },
   "8142": {
    "page": "https://www.to-ho.co.jp/toho_news/news002058.html",
-   "found": "2026-09-28"
+   "found": "2026-09-28",
+   "parse_miss": "2026-09-29T08:11:18+00:00"
   },
   "3093": {
    "page": "https://www.treasurefactory.co.jp/ir/monthly.html",
-   "found": "2026-09-28"
+   "found": "2026-09-28",
+   "parse_miss": "2026-09-29T08:11:18+00:00"
   },
   "9861": {
    "page": "https://www.yoshinoya-holdings.com/ir/report/yoshinoya/",
@@ -216,7 +220,8 @@
   },
   "2294": {
    "page": "https://www.kakiyasuhonten.co.jp/news/detail.php?id=2021",
-   "found": "2026-09-28"
+   "found": "2026-09-28",
+   "parse_miss": "2026-09-29T08:11:18+00:00"
   },
   "2305": {
    "page": "https://ir.studio-alice.co.jp/ja/Finance/MonthlyReport.html",
@@ -232,7 +237,8 @@
   "245A": {},
   "2461": {
    "page": "https://www.fancs.com/news/376546549/",
-   "found": "2026-09-28"
+   "found": "2026-09-28",
+   "parse_miss": "2026-09-29T08:11:18+00:00"
   },
   "2502": {
    "page": "https://www.asahigroup-holdings.com/en/ir/financial_data/monthly_data/",
@@ -253,7 +259,9 @@
    "page": "https://www.zoff.com/ir/monthly/",
    "found": "2026-09-28"
   },
-  "2652": {},
+  "2652": {
+   "miss": "2026-09-29"
+  },
   "2653": {},
   "2654": {
    "page": "https://www.asmo1.co.jp",
@@ -265,7 +273,8 @@
   "2668": {},
   "2669": {
    "page": "https://www.kanemi-foods.co.jp/ir/monthly.html",
-   "found": "2026-09-28"
+   "found": "2026-09-28",
+   "parse_miss": "2026-09-29T08:11:18+00:00"
   },
   "2670": {
    "page": "https://www.abc-mart.co.jp/ir/getsujijoho.html",
@@ -318,7 +327,8 @@
   "2750": {},
   "2753": {
    "page": "https://prtimes.jp/main/html/rd/p/000000345.000130952.html",
-   "found": "2026-09-28"
+   "found": "2026-09-28",
+   "parse_miss": "2026-09-29T08:11:18+00:00"
   },
   "2764": {},
   "2769": {
@@ -349,10 +359,13 @@
   },
   "2910": {
    "page": "https://www.rockfield.co.jp/ir/library/monthly/",
-   "found": "2026-09-28"
+   "found": "2026-09-28",
+   "parse_miss": "2026-09-29T08:11:18+00:00"
   },
   "2926": {},
-  "2991": {},
+  "2991": {
+   "miss": "2026-09-29"
+  },
   "3028": {
    "miss": "2026-09-29"
   },
@@ -371,10 +384,6 @@
   "3048": {
    "miss": "2026-09-29"
   },
-  "3053": {
-   "page": "https://www.pepper-fs.co.jp/ir/monthly_report/library.php",
-   "found": "2026-09-28"
-  },
   "3058": {
    "page": "https://ir.sanyodo.co.jp/ir/eigyou.html",
    "found": "2026-09-28"
@@ -382,7 +391,8 @@
   "3064": {},
   "3068": {
    "page": "https://www.wdi.co.jp/ir/monthly.html",
-   "found": "2026-09-28"
+   "found": "2026-09-28",
+   "parse_miss": "2026-09-29T08:11:18+00:00"
   },
   "3069": {
    "page": "https://j-fla.com/ir/monthly/",
@@ -418,7 +428,9 @@
    "page": "https://www.chimney.co.jp/ir/sales/",
    "found": "2026-09-28"
   },
-  "3179": {},
+  "3179": {
+   "miss": "2026-09-29"
+  },
   "3181": {},
   "3191": {
    "miss": "2026-09-29"
@@ -427,19 +439,20 @@
   "3195": {},
   "3196": {
    "page": "https://ir.hotland.co.jp/policy/monthlyinfo/",
-   "found": "2026-09-28"
+   "found": "2026-09-28",
+   "parse_miss": "2026-09-29T08:11:18+00:00"
   },
   "3199": {
    "page": "https://watahan.co.jp/ir/trends.html",
    "found": "2026-09-28"
   },
-  "3221": {},
-  "3224": {},
-  "3329": {
-   "page": "https://www.towafood-net.co.jp/investor/monthly/",
-   "found": "2026-09-28"
+  "3221": {
+   "miss": "2026-09-29"
   },
-  "3333": {},
+  "3224": {},
+  "3333": {
+   "miss": "2026-09-29"
+  },
   "3349": {},
   "3358": {
    "page": "https://thg-hd.com",
@@ -458,7 +471,9 @@
    "page": "https://www.toridoll.com/ir/finance/report/",
    "found": "2026-09-28"
   },
-  "3415": {},
+  "3415": {
+   "miss": "2026-09-29"
+  },
   "3542": {
    "page": "https://www.vega-c.com/ir/library/monthly-report/",
    "found": "2026-09-28"
@@ -468,14 +483,23 @@
    "found": "2026-09-28",
    "parse_miss": "2026-09-29T07:20:25+00:00"
   },
-  "3544": {},
-  "3547": {},
+  "3544": {
+   "page": "https://satudora-hd.co.jp/esg/materiality/",
+   "found": "2026-09-29",
+   "parse_miss": "2026-09-29T08:11:18+00:00"
+  },
+  "3547": {
+   "miss": "2026-09-29"
+  },
   "3548": {
    "page": "https://www.baroque-global.com/jp/ir/monthly/",
-   "found": "2026-09-28"
+   "found": "2026-09-28",
+   "parse_miss": "2026-09-29T08:11:18+00:00"
   },
   "3557": {},
-  "3561": {},
+  "3561": {
+   "miss": "2026-09-29"
+  },
   "3566": {},
   "3591": {
    "page": "https://www.wacoalholdings.jp/ir/monthlydata/",
@@ -687,47 +711,61 @@
    "found": "2026-09-28",
    "parse_miss": "2026-09-29T07:54:17+00:00"
   },
-  "212A": {},
-  "8281": {
-   "page": "https://www.xebio.co.jp/ja/ir/monthly.html",
-   "found": "2026-09-28"
+  "212A": {
+   "miss": "2026-09-29"
   },
   "8008": {
    "page": "https://yondoshi.co.jp",
-   "found": "2026-09-28"
+   "found": "2026-09-28",
+   "parse_miss": "2026-09-29T08:11:18+00:00"
   },
   "8914": {
    "page": "https://www.arealink.co.jp/news/ir/p17078/",
    "found": "2026-09-28",
-   "updated": "2026-09-03"
+   "updated": "2026-09-03",
+   "parse_miss": "2026-09-29T08:11:18+00:00"
   },
   "8011": {
    "page": "https://www.sanyo-shokai.co.jp/ir/library/monthly/",
    "found": "2026-09-28"
   },
-  "3276": {},
-  "7059": {},
+  "3276": {
+   "miss": "2026-09-29"
+  },
+  "7059": {
+   "miss": "2026-09-29"
+  },
   "7522": {
    "page": "https://www.watami.co.jp/ir/library/recent/",
-   "found": "2026-09-29"
+   "found": "2026-09-29",
+   "parse_miss": "2026-09-29T08:11:18+00:00"
   },
   "8185": {
    "page": "https://www.chiyodagrp.co.jp/ir/",
    "found": "2026-09-29",
    "updated": "2026-07-10"
   },
-  "6071": {},
-  "9284": {},
+  "6071": {
+   "miss": "2026-09-29"
+  },
+  "9284": {
+   "miss": "2026-09-29"
+  },
   "7596": {
    "page": "https://uoriki.co.jp/ir/library/monthly.html",
-   "found": "2026-09-29"
+   "found": "2026-09-29",
+   "parse_miss": "2026-09-29T08:11:18+00:00"
   },
   "7475": {
    "page": "https://www.albis.co.jp/ir/monthly.html",
    "found": "2026-09-29"
   },
-  "3983": {},
-  "401A": {},
+  "3983": {
+   "miss": "2026-09-29"
+  },
+  "401A": {
+   "miss": "2026-09-29"
+  },
   "7823": {
    "page": "https://corp.artnature.co.jp/ja/ir/finance/monthly_info.html",
    "found": "2026-09-29"
@@ -740,57 +778,69 @@
    "page": "https://www.sacs-bar.co.jp/ir/",
    "found": "2026-09-29"
   },
-  "9850": {},
-  "9994": {},
-  "5589": {},
+  "9850": {
+   "miss": "2026-09-29"
+  },
+  "9994": {
+   "miss": "2026-09-29"
+  },
+  "5589": {
+   "miss": "2026-09-29"
+  },
   "9979": {
    "page": "https://www.daisyo.co.jp/company/ir/getsuji.html",
-   "found": "2026-09-29"
+   "found": "2026-09-29",
+   "discontinued": "2026-09-29"
   },
-  "6040": {},
-  "9163": {
-   "page": "https://www.nareru-group.co.jp",
-   "found": "2026-09-29"
+  "6040": {
+   "miss": "2026-09-29"
   },
-  "7621": {},
-  "2970": {},
-  "7643": {
-   "page": "https://www.daiichi-d.co.jp/post_event/post_event-21894",
-   "found": "2026-09-29"
+  "7621": {
+   "miss": "2026-09-29"
   },
-  "2998": {},
+  "2970": {
+   "miss": "2026-09-29"
+  },
+  "2998": {
+   "miss": "2026-09-29"
+  },
   "3370": {
    "page": "https://www.fujitacorp.co.jp/main/info/%e2%98%85%e6%9c%88%e6%ac%a1%e5%a3%b2%e4%b8%8a%e9%80%9f%e5%a0%b1%e6%9b%b4%e6%96%b0%e3%81%84%e3%81%9f%e3%81%97%e3%81%be%e3%81%97%e3%81%9f-80/",
    "found": "2026-09-29"
   },
   "7562": {
    "page": "https://www.anrakutei.co.jp/jigyo.html",
-   "found": "2026-09-29"
+   "found": "2026-09-29",
+   "parse_miss": "2026-09-29T08:11:18+00:00"
   },
-  "5892": {
-   "page": "https://yutori.tokyo/ir/monthly/",
-   "found": "2026-09-29"
+  "1435": {
+   "miss": "2026-09-29"
   },
-  "6045": {
-   "page": "https://www.rentracks.co.jp/ir/finance/others.html",
-   "found": "2026-09-29"
+  "8927": {
+   "miss": "2026-09-29"
   },
-  "1435": {},
-  "8927": {},
   "6073": {
    "page": "https://asante.co.jp",
-   "found": "2026-09-29"
+   "found": "2026-09-29",
+   "parse_miss": "2026-09-29T08:11:18+00:00"
   },
   "7561": {
    "page": "https://www.hurxley.co.jp/ir_information/month/",
    "found": "2026-09-29"
   },
-  "3979": {},
+  "3979": {
+   "miss": "2026-09-29"
+  },
   "7646": {
    "page": "https://www.plant-co.jp/news/detail/177.html",
-   "found": "2026-09-29"
+   "found": "2026-09-29",
+   "parse_miss": "2026-09-29T08:11:18+00:00"
   },
-  "7686": {},
+  "7686": {
+   "page": "https://www.hitomile.co.jp/ir/monthly_report.html",
+   "found": "2026-09-29",
+   "parse_miss": "2026-09-29T08:11:18+00:00"
+  },
   "9993": {
    "page": "https://yamazawa.co.jp/ir/term-month.html",
    "found": "2026-09-29"
@@ -875,6 +925,9 @@
   "8163": {
    "page": "https://srsholdings.com/pages/ir-library-monthly",
    "found": "2026-09-29"
+  },
+  "2752": {
+   "miss": "2026-09-29"
   }
  },
  "codes": {
@@ -4369,14 +4422,2119 @@
      "metric": "월매출 전년비"
     }
    }
+  },
+  "8185": {
+   "name": "チヨダ",
+   "page": "https://www.chiyodagrp.co.jp/ir/",
+   "months": {},
+   "ts": "2026-09-29T08:11:18+00:00",
+   "updated": "2026-07-10",
+   "pdf_ts": "2026-09-29T08:11:18+00:00",
+   "pdf": {
+    "2026-03": {
+     "doc": "https://www.chiyodagrp.co.jp/ir/data/202604_getsuji_soku.pdf",
+     "yoy": 99.4,
+     "metric": "売上"
+    },
+    "2026-04": {
+     "doc": "https://www.chiyodagrp.co.jp/ir/data/202604_getsuji_soku.pdf",
+     "yoy": 96.3,
+     "metric": "売上"
+    },
+    "2026-05": {
+     "doc": "https://www.chiyodagrp.co.jp/ir/data/202605_getsuji_soku.pdf",
+     "yoy": 100.8,
+     "metric": "売上"
+    },
+    "2026-06": {
+     "doc": "https://www.chiyodagrp.co.jp/ir/data/202606_getsuji_soku.pdf",
+     "yoy": 92.4,
+     "metric": "売上"
+    },
+    "2026-07": {
+     "doc": "https://www.chiyodagrp.co.jp/ir/data/2027_1Q_kaku.pdf",
+     "yoy": 98.4,
+     "metric": "既存店売上"
+    },
+    "2026-08": {
+     "doc": "https://www.chiyodagrp.co.jp/ir/data/2027_1Q_kaku.pdf",
+     "yoy": 99.6,
+     "metric": "既存店売上"
+    },
+    "2026-02": {
+     "doc": "https://www.chiyodagrp.co.jp/ir/annual_report/79.pdf",
+     "rev": 81377000000.0,
+     "yoy": 88.6,
+     "metric": "売上高"
+    },
+    "2024-03": {
+     "doc": "https://www.chiyodagrp.co.jp/ir/data/2026_kaku.pdf",
+     "yoy": 98.1,
+     "metric": "売上"
+    },
+    "2024-04": {
+     "doc": "https://www.chiyodagrp.co.jp/ir/data/2026_kaku.pdf",
+     "yoy": 96.1,
+     "metric": "売上"
+    },
+    "2024-05": {
+     "doc": "https://www.chiyodagrp.co.jp/ir/data/2026_kaku.pdf",
+     "yoy": 99.8,
+     "metric": "売上"
+    },
+    "2024-06": {
+     "doc": "https://www.chiyodagrp.co.jp/ir/data/2026_kaku.pdf",
+     "yoy": 94.6,
+     "metric": "売上"
+    },
+    "2024-07": {
+     "doc": "https://www.chiyodagrp.co.jp/ir/data/2026_kaku.pdf",
+     "yoy": 98.4,
+     "metric": "売上"
+    },
+    "2024-08": {
+     "doc": "https://www.chiyodagrp.co.jp/ir/data/2026_kaku.pdf",
+     "yoy": 99.6,
+     "metric": "売上"
+    },
+    "2025-03": {
+     "doc": "https://www.chiyodagrp.co.jp/ir/data/202512_getsuji_soku.pdf",
+     "yoy": 98.1,
+     "metric": "売上"
+    },
+    "2025-04": {
+     "doc": "https://www.chiyodagrp.co.jp/ir/data/202512_getsuji_soku.pdf",
+     "yoy": 96.1,
+     "metric": "売上"
+    },
+    "2025-05": {
+     "doc": "https://www.chiyodagrp.co.jp/ir/data/202512_getsuji_soku.pdf",
+     "yoy": 99.8,
+     "metric": "売上"
+    },
+    "2025-06": {
+     "doc": "https://www.chiyodagrp.co.jp/ir/data/202512_getsuji_soku.pdf",
+     "yoy": 94.6,
+     "metric": "売上"
+    },
+    "2025-07": {
+     "doc": "https://www.chiyodagrp.co.jp/ir/data/202512_getsuji_soku.pdf",
+     "yoy": 98.4,
+     "metric": "売上"
+    },
+    "2025-08": {
+     "doc": "https://www.chiyodagrp.co.jp/ir/data/202512_getsuji_soku.pdf",
+     "yoy": 99.6,
+     "metric": "売上"
+    }
+   }
+  },
+  "2305": {
+   "name": "スタジオアリス",
+   "page": "https://ir.studio-alice.co.jp/ja/Finance/MonthlyReport.html",
+   "months": {
+    "2026-03": {
+     "yoy": 95.9
+    },
+    "2026-04": {
+     "yoy": 98.3
+    },
+    "2026-05": {
+     "yoy": 103.1
+    },
+    "2026-06": {
+     "yoy": 119.6
+    },
+    "2026-07": {
+     "yoy": 103.5
+    },
+    "2026-08": {
+     "yoy": 91.3
+    }
+   },
+   "ts": "2026-09-29T08:11:18+00:00",
+   "pdf_ts": "2026-09-29T08:11:18+00:00"
+  },
+  "7823": {
+   "name": "アートネイチャー",
+   "page": "https://corp.artnature.co.jp/ja/ir/finance/monthly_info.html",
+   "months": {},
+   "ts": "2026-09-29T08:11:18+00:00",
+   "pdf_ts": "2026-09-29T08:11:18+00:00",
+   "pdf": {
+    "2026-04": {
+     "doc": "https://corp.artnature.co.jp/ja/ir/finance/monthly_info/main/018/teaserItems1/00/linkList/0/link/getsuji20260915.pdf",
+     "yoy": 99.6,
+     "metric": "合計"
+    },
+    "2026-05": {
+     "doc": "https://corp.artnature.co.jp/ja/ir/finance/monthly_info/main/018/teaserItems1/00/linkList/0/link/getsuji20260915.pdf",
+     "yoy": 99.6,
+     "metric": "合計"
+    },
+    "2026-06": {
+     "doc": "https://corp.artnature.co.jp/ja/ir/finance/monthly_info/main/018/teaserItems1/00/linkList/0/link/getsuji20260915.pdf",
+     "yoy": 95.9,
+     "metric": "合計"
+    },
+    "2026-07": {
+     "doc": "https://corp.artnature.co.jp/ja/ir/finance/monthly_info/main/018/teaserItems1/00/linkList/0/link/getsuji20260915.pdf",
+     "yoy": 100.8,
+     "metric": "合計"
+    },
+    "2026-08": {
+     "doc": "https://corp.artnature.co.jp/ja/ir/finance/monthly_info/main/018/teaserItems1/00/linkList/0/link/getsuji20260915.pdf",
+     "yoy": 99.0,
+     "metric": "合計"
+    },
+    "2025-04": {
+     "doc": "https://corp.artnature.co.jp/ja/ir/finance/monthly_info/main/017/teaserItems1/00/linkList/0/link/20260416getuji.pdf",
+     "yoy": 96.8,
+     "metric": "合計"
+    },
+    "2025-05": {
+     "doc": "https://corp.artnature.co.jp/ja/ir/finance/monthly_info/main/017/teaserItems1/00/linkList/0/link/20260416getuji.pdf",
+     "yoy": 99.4,
+     "metric": "合計"
+    },
+    "2025-06": {
+     "doc": "https://corp.artnature.co.jp/ja/ir/finance/monthly_info/main/017/teaserItems1/00/linkList/0/link/20260416getuji.pdf",
+     "yoy": 95.5,
+     "metric": "合計"
+    },
+    "2025-07": {
+     "doc": "https://corp.artnature.co.jp/ja/ir/finance/monthly_info/main/017/teaserItems1/00/linkList/0/link/20260416getuji.pdf",
+     "yoy": 99.1,
+     "metric": "合計"
+    },
+    "2025-08": {
+     "doc": "https://corp.artnature.co.jp/ja/ir/finance/monthly_info/main/017/teaserItems1/00/linkList/0/link/20260416getuji.pdf",
+     "yoy": 101.2,
+     "metric": "合計"
+    },
+    "2025-09": {
+     "doc": "https://corp.artnature.co.jp/ja/ir/finance/monthly_info/main/017/teaserItems1/00/linkList/0/link/20260416getuji.pdf",
+     "yoy": 95.7,
+     "metric": "合計"
+    },
+    "2025-10": {
+     "doc": "https://corp.artnature.co.jp/ja/ir/finance/monthly_info/main/017/teaserItems1/00/linkList/0/link/20260416getuji.pdf",
+     "yoy": 100.3,
+     "metric": "合計"
+    },
+    "2025-11": {
+     "doc": "https://corp.artnature.co.jp/ja/ir/finance/monthly_info/main/017/teaserItems1/00/linkList/0/link/20260416getuji.pdf",
+     "yoy": 97.8,
+     "metric": "合計"
+    },
+    "2025-12": {
+     "doc": "https://corp.artnature.co.jp/ja/ir/finance/monthly_info/main/017/teaserItems1/00/linkList/0/link/20260416getuji.pdf",
+     "yoy": 97.8,
+     "metric": "合計"
+    },
+    "2026-01": {
+     "doc": "https://corp.artnature.co.jp/ja/ir/finance/monthly_info/main/017/teaserItems1/00/linkList/0/link/20260416getuji.pdf",
+     "yoy": 98.4,
+     "metric": "合計"
+    },
+    "2026-02": {
+     "doc": "https://corp.artnature.co.jp/ja/ir/finance/monthly_info/main/017/teaserItems1/00/linkList/0/link/20260416getuji.pdf",
+     "yoy": 98.3,
+     "metric": "合計"
+    },
+    "2026-03": {
+     "doc": "https://corp.artnature.co.jp/ja/ir/finance/monthly_info/main/017/teaserItems1/00/linkList/0/link/20260416getuji.pdf",
+     "yoy": 96.2,
+     "metric": "合計"
+    },
+    "2024-04": {
+     "doc": "https://corp.artnature.co.jp/ja/ir/finance/monthly_info/main/016/teaserItems1/00/linkList/0/link/20250415getsuji.pdf",
+     "yoy": 95.3,
+     "metric": "合計"
+    },
+    "2024-05": {
+     "doc": "https://corp.artnature.co.jp/ja/ir/finance/monthly_info/main/016/teaserItems1/00/linkList/0/link/20250415getsuji.pdf",
+     "yoy": 100.9,
+     "metric": "合計"
+    },
+    "2024-06": {
+     "doc": "https://corp.artnature.co.jp/ja/ir/finance/monthly_info/main/016/teaserItems1/00/linkList/0/link/20250415getsuji.pdf",
+     "yoy": 101.7,
+     "metric": "合計"
+    },
+    "2024-07": {
+     "doc": "https://corp.artnature.co.jp/ja/ir/finance/monthly_info/main/016/teaserItems1/00/linkList/0/link/20250415getsuji.pdf",
+     "yoy": 95.3,
+     "metric": "合計"
+    },
+    "2024-08": {
+     "doc": "https://corp.artnature.co.jp/ja/ir/finance/monthly_info/main/016/teaserItems1/00/linkList/0/link/20250415getsuji.pdf",
+     "yoy": 100.7,
+     "metric": "合計"
+    },
+    "2024-09": {
+     "doc": "https://corp.artnature.co.jp/ja/ir/finance/monthly_info/main/016/teaserItems1/00/linkList/0/link/20250415getsuji.pdf",
+     "yoy": 99.0,
+     "metric": "合計"
+    },
+    "2024-10": {
+     "doc": "https://corp.artnature.co.jp/ja/ir/finance/monthly_info/main/016/teaserItems1/00/linkList/0/link/20250415getsuji.pdf",
+     "yoy": 98.2,
+     "metric": "合計"
+    },
+    "2024-11": {
+     "doc": "https://corp.artnature.co.jp/ja/ir/finance/monthly_info/main/016/teaserItems1/00/linkList/0/link/20250415getsuji.pdf",
+     "yoy": 102.3,
+     "metric": "合計"
+    },
+    "2024-12": {
+     "doc": "https://corp.artnature.co.jp/ja/ir/finance/monthly_info/main/016/teaserItems1/00/linkList/0/link/20250415getsuji.pdf",
+     "yoy": 98.3,
+     "metric": "合計"
+    },
+    "2025-01": {
+     "doc": "https://corp.artnature.co.jp/ja/ir/finance/monthly_info/main/016/teaserItems1/00/linkList/0/link/20250415getsuji.pdf",
+     "yoy": 99.1,
+     "metric": "合計"
+    },
+    "2025-02": {
+     "doc": "https://corp.artnature.co.jp/ja/ir/finance/monthly_info/main/016/teaserItems1/00/linkList/0/link/20250415getsuji.pdf",
+     "yoy": 96.1,
+     "metric": "合計"
+    },
+    "2025-03": {
+     "doc": "https://corp.artnature.co.jp/ja/ir/finance/monthly_info/main/016/teaserItems1/00/linkList/0/link/20250415getsuji.pdf",
+     "yoy": 97.2,
+     "metric": "合計"
+    },
+    "2023-04": {
+     "doc": "https://corp.artnature.co.jp/ja/ir/finance/monthly_info/main/0/teaserItems1/00/linkList/0/link/20240415getsuji.pdf",
+     "yoy": 101.3,
+     "metric": "合計"
+    },
+    "2023-05": {
+     "doc": "https://corp.artnature.co.jp/ja/ir/finance/monthly_info/main/0/teaserItems1/00/linkList/0/link/20240415getsuji.pdf",
+     "yoy": 99.1,
+     "metric": "合計"
+    },
+    "2023-06": {
+     "doc": "https://corp.artnature.co.jp/ja/ir/finance/monthly_info/main/0/teaserItems1/00/linkList/0/link/20240415getsuji.pdf",
+     "yoy": 100.6,
+     "metric": "合計"
+    },
+    "2023-07": {
+     "doc": "https://corp.artnature.co.jp/ja/ir/finance/monthly_info/main/0/teaserItems1/00/linkList/0/link/20240415getsuji.pdf",
+     "yoy": 99.6,
+     "metric": "合計"
+    },
+    "2023-08": {
+     "doc": "https://corp.artnature.co.jp/ja/ir/finance/monthly_info/main/0/teaserItems1/00/linkList/0/link/20240415getsuji.pdf",
+     "yoy": 101.9,
+     "metric": "合計"
+    },
+    "2023-09": {
+     "doc": "https://corp.artnature.co.jp/ja/ir/finance/monthly_info/main/0/teaserItems1/00/linkList/0/link/20240415getsuji.pdf",
+     "yoy": 100.4,
+     "metric": "合計"
+    },
+    "2023-10": {
+     "doc": "https://corp.artnature.co.jp/ja/ir/finance/monthly_info/main/0/teaserItems1/00/linkList/0/link/20240415getsuji.pdf",
+     "yoy": 96.3,
+     "metric": "合計"
+    },
+    "2023-11": {
+     "doc": "https://corp.artnature.co.jp/ja/ir/finance/monthly_info/main/0/teaserItems1/00/linkList/0/link/20240415getsuji.pdf",
+     "yoy": 100.3,
+     "metric": "合計"
+    },
+    "2023-12": {
+     "doc": "https://corp.artnature.co.jp/ja/ir/finance/monthly_info/main/0/teaserItems1/00/linkList/0/link/20240415getsuji.pdf",
+     "yoy": 98.8,
+     "metric": "合計"
+    },
+    "2024-01": {
+     "doc": "https://corp.artnature.co.jp/ja/ir/finance/monthly_info/main/0/teaserItems1/00/linkList/0/link/20240415getsuji.pdf",
+     "yoy": 98.2,
+     "metric": "合計"
+    },
+    "2024-02": {
+     "doc": "https://corp.artnature.co.jp/ja/ir/finance/monthly_info/main/0/teaserItems1/00/linkList/0/link/20240415getsuji.pdf",
+     "yoy": 99.4,
+     "metric": "合計"
+    },
+    "2024-03": {
+     "doc": "https://corp.artnature.co.jp/ja/ir/finance/monthly_info/main/0/teaserItems1/00/linkList/0/link/20240415getsuji.pdf",
+     "yoy": 100.7,
+     "metric": "合計"
+    },
+    "2022-04": {
+     "doc": "https://corp.artnature.co.jp/ja/ir/finance/monthly_info/main/00/teaserItems1/00/linkList/0/link/00.pdf",
+     "yoy": 103.0,
+     "metric": "合計"
+    },
+    "2022-05": {
+     "doc": "https://corp.artnature.co.jp/ja/ir/finance/monthly_info/main/00/teaserItems1/00/linkList/0/link/00.pdf",
+     "yoy": 100.8,
+     "metric": "合計"
+    },
+    "2022-06": {
+     "doc": "https://corp.artnature.co.jp/ja/ir/finance/monthly_info/main/00/teaserItems1/00/linkList/0/link/00.pdf",
+     "yoy": 102.6,
+     "metric": "合計"
+    },
+    "2022-07": {
+     "doc": "https://corp.artnature.co.jp/ja/ir/finance/monthly_info/main/00/teaserItems1/00/linkList/0/link/00.pdf",
+     "yoy": 100.8,
+     "metric": "合計"
+    },
+    "2022-08": {
+     "doc": "https://corp.artnature.co.jp/ja/ir/finance/monthly_info/main/00/teaserItems1/00/linkList/0/link/00.pdf",
+     "yoy": 99.4,
+     "metric": "合計"
+    },
+    "2022-09": {
+     "doc": "https://corp.artnature.co.jp/ja/ir/finance/monthly_info/main/00/teaserItems1/00/linkList/0/link/00.pdf",
+     "yoy": 103.6,
+     "metric": "合計"
+    },
+    "2022-10": {
+     "doc": "https://corp.artnature.co.jp/ja/ir/finance/monthly_info/main/00/teaserItems1/00/linkList/0/link/00.pdf",
+     "yoy": 99.1,
+     "metric": "合計"
+    },
+    "2022-11": {
+     "doc": "https://corp.artnature.co.jp/ja/ir/finance/monthly_info/main/00/teaserItems1/00/linkList/0/link/00.pdf",
+     "yoy": 98.8,
+     "metric": "合計"
+    },
+    "2022-12": {
+     "doc": "https://corp.artnature.co.jp/ja/ir/finance/monthly_info/main/00/teaserItems1/00/linkList/0/link/00.pdf",
+     "yoy": 99.2,
+     "metric": "合計"
+    },
+    "2023-01": {
+     "doc": "https://corp.artnature.co.jp/ja/ir/finance/monthly_info/main/00/teaserItems1/00/linkList/0/link/00.pdf",
+     "yoy": 101.8,
+     "metric": "合計"
+    },
+    "2023-02": {
+     "doc": "https://corp.artnature.co.jp/ja/ir/finance/monthly_info/main/00/teaserItems1/00/linkList/0/link/00.pdf",
+     "yoy": 105.6,
+     "metric": "合計"
+    },
+    "2023-03": {
+     "doc": "https://corp.artnature.co.jp/ja/ir/finance/monthly_info/main/00/teaserItems1/00/linkList/0/link/00.pdf",
+     "yoy": 102.5,
+     "metric": "合計"
+    },
+    "2021-04": {
+     "doc": "https://corp.artnature.co.jp/ja/ir/finance/monthly_info/main/01/teaserItems1/00/linkList/0/link/00.pdf",
+     "yoy": 120.1,
+     "metric": "合計"
+    },
+    "2021-05": {
+     "doc": "https://corp.artnature.co.jp/ja/ir/finance/monthly_info/main/01/teaserItems1/00/linkList/0/link/00.pdf",
+     "yoy": 104.2,
+     "metric": "合計"
+    },
+    "2021-06": {
+     "doc": "https://corp.artnature.co.jp/ja/ir/finance/monthly_info/main/01/teaserItems1/00/linkList/0/link/00.pdf",
+     "yoy": 95.7,
+     "metric": "合計"
+    },
+    "2021-07": {
+     "doc": "https://corp.artnature.co.jp/ja/ir/finance/monthly_info/main/01/teaserItems1/00/linkList/0/link/00.pdf",
+     "yoy": 98.8,
+     "metric": "合計"
+    },
+    "2021-08": {
+     "doc": "https://corp.artnature.co.jp/ja/ir/finance/monthly_info/main/01/teaserItems1/00/linkList/0/link/00.pdf",
+     "yoy": 91.3,
+     "metric": "合計"
+    },
+    "2021-09": {
+     "doc": "https://corp.artnature.co.jp/ja/ir/finance/monthly_info/main/01/teaserItems1/00/linkList/0/link/00.pdf",
+     "yoy": 96.2,
+     "metric": "合計"
+    },
+    "2021-10": {
+     "doc": "https://corp.artnature.co.jp/ja/ir/finance/monthly_info/main/01/teaserItems1/00/linkList/0/link/00.pdf",
+     "yoy": 98.8,
+     "metric": "合計"
+    },
+    "2021-11": {
+     "doc": "https://corp.artnature.co.jp/ja/ir/finance/monthly_info/main/01/teaserItems1/00/linkList/0/link/00.pdf",
+     "yoy": 96.4,
+     "metric": "合計"
+    },
+    "2021-12": {
+     "doc": "https://corp.artnature.co.jp/ja/ir/finance/monthly_info/main/01/teaserItems1/00/linkList/0/link/00.pdf",
+     "yoy": 101.0,
+     "metric": "合計"
+    },
+    "2022-01": {
+     "doc": "https://corp.artnature.co.jp/ja/ir/finance/monthly_info/main/01/teaserItems1/00/linkList/0/link/00.pdf",
+     "yoy": 99.8,
+     "metric": "合計"
+    },
+    "2022-02": {
+     "doc": "https://corp.artnature.co.jp/ja/ir/finance/monthly_info/main/01/teaserItems1/00/linkList/0/link/00.pdf",
+     "yoy": 96.0,
+     "metric": "合計"
+    },
+    "2022-03": {
+     "doc": "https://corp.artnature.co.jp/ja/ir/finance/monthly_info/main/01/teaserItems1/00/linkList/0/link/00.pdf",
+     "yoy": 99.1,
+     "metric": "合計"
+    },
+    "2020-04": {
+     "doc": "https://corp.artnature.co.jp/ja/ir/finance/monthly_info/main/02/teaserItems1/00/linkList/0/link/00.pdf",
+     "yoy": 79.3,
+     "metric": "合計"
+    },
+    "2020-05": {
+     "doc": "https://corp.artnature.co.jp/ja/ir/finance/monthly_info/main/02/teaserItems1/00/linkList/0/link/00.pdf",
+     "yoy": 90.2,
+     "metric": "合計"
+    },
+    "2020-06": {
+     "doc": "https://corp.artnature.co.jp/ja/ir/finance/monthly_info/main/02/teaserItems1/00/linkList/0/link/00.pdf",
+     "yoy": 93.9,
+     "metric": "合計"
+    },
+    "2020-07": {
+     "doc": "https://corp.artnature.co.jp/ja/ir/finance/monthly_info/main/02/teaserItems1/00/linkList/0/link/00.pdf",
+     "yoy": 98.2,
+     "metric": "合計"
+    },
+    "2020-08": {
+     "doc": "https://corp.artnature.co.jp/ja/ir/finance/monthly_info/main/02/teaserItems1/00/linkList/0/link/00.pdf",
+     "yoy": 97.2,
+     "metric": "合計"
+    },
+    "2020-09": {
+     "doc": "https://corp.artnature.co.jp/ja/ir/finance/monthly_info/main/02/teaserItems1/00/linkList/0/link/00.pdf",
+     "yoy": 93.8,
+     "metric": "合計"
+    },
+    "2020-10": {
+     "doc": "https://corp.artnature.co.jp/ja/ir/finance/monthly_info/main/02/teaserItems1/00/linkList/0/link/00.pdf",
+     "yoy": 102.0,
+     "metric": "合計"
+    },
+    "2020-11": {
+     "doc": "https://corp.artnature.co.jp/ja/ir/finance/monthly_info/main/02/teaserItems1/00/linkList/0/link/00.pdf",
+     "yoy": 95.7,
+     "metric": "合計"
+    },
+    "2020-12": {
+     "doc": "https://corp.artnature.co.jp/ja/ir/finance/monthly_info/main/02/teaserItems1/00/linkList/0/link/00.pdf",
+     "yoy": 94.6,
+     "metric": "合計"
+    },
+    "2021-01": {
+     "doc": "https://corp.artnature.co.jp/ja/ir/finance/monthly_info/main/02/teaserItems1/00/linkList/0/link/00.pdf",
+     "yoy": 94.9,
+     "metric": "合計"
+    },
+    "2021-02": {
+     "doc": "https://corp.artnature.co.jp/ja/ir/finance/monthly_info/main/02/teaserItems1/00/linkList/0/link/00.pdf",
+     "yoy": 94.1,
+     "metric": "合計"
+    },
+    "2021-03": {
+     "doc": "https://corp.artnature.co.jp/ja/ir/finance/monthly_info/main/02/teaserItems1/00/linkList/0/link/00.pdf",
+     "yoy": 101.2,
+     "metric": "合計"
+    },
+    "2019-04": {
+     "doc": "https://corp.artnature.co.jp/ja/ir/finance/monthly_info/main/03/teaserItems1/00/linkList/0/link/00.pdf",
+     "yoy": 99.9,
+     "metric": "合計"
+    },
+    "2019-05": {
+     "doc": "https://corp.artnature.co.jp/ja/ir/finance/monthly_info/main/03/teaserItems1/00/linkList/0/link/00.pdf",
+     "yoy": 101.6,
+     "metric": "合計"
+    },
+    "2019-06": {
+     "doc": "https://corp.artnature.co.jp/ja/ir/finance/monthly_info/main/03/teaserItems1/00/linkList/0/link/00.pdf",
+     "yoy": 101.8,
+     "metric": "合計"
+    },
+    "2019-07": {
+     "doc": "https://corp.artnature.co.jp/ja/ir/finance/monthly_info/main/03/teaserItems1/00/linkList/0/link/00.pdf",
+     "yoy": 99.5,
+     "metric": "合計"
+    },
+    "2019-08": {
+     "doc": "https://corp.artnature.co.jp/ja/ir/finance/monthly_info/main/03/teaserItems1/00/linkList/0/link/00.pdf",
+     "yoy": 102.8,
+     "metric": "合計"
+    },
+    "2019-09": {
+     "doc": "https://corp.artnature.co.jp/ja/ir/finance/monthly_info/main/03/teaserItems1/00/linkList/0/link/00.pdf",
+     "yoy": 100.7,
+     "metric": "合計"
+    },
+    "2019-10": {
+     "doc": "https://corp.artnature.co.jp/ja/ir/finance/monthly_info/main/03/teaserItems1/00/linkList/0/link/00.pdf",
+     "yoy": 99.9,
+     "metric": "合計"
+    },
+    "2019-11": {
+     "doc": "https://corp.artnature.co.jp/ja/ir/finance/monthly_info/main/03/teaserItems1/00/linkList/0/link/00.pdf",
+     "yoy": 100.9,
+     "metric": "合計"
+    },
+    "2019-12": {
+     "doc": "https://corp.artnature.co.jp/ja/ir/finance/monthly_info/main/03/teaserItems1/00/linkList/0/link/00.pdf",
+     "yoy": 100.3,
+     "metric": "合計"
+    },
+    "2020-01": {
+     "doc": "https://corp.artnature.co.jp/ja/ir/finance/monthly_info/main/03/teaserItems1/00/linkList/0/link/00.pdf",
+     "yoy": 101.5,
+     "metric": "合計"
+    },
+    "2020-02": {
+     "doc": "https://corp.artnature.co.jp/ja/ir/finance/monthly_info/main/03/teaserItems1/00/linkList/0/link/00.pdf",
+     "yoy": 102.5,
+     "metric": "合計"
+    },
+    "2020-03": {
+     "doc": "https://corp.artnature.co.jp/ja/ir/finance/monthly_info/main/03/teaserItems1/00/linkList/0/link/00.pdf",
+     "yoy": 91.8,
+     "metric": "合計"
+    },
+    "2018-04": {
+     "doc": "https://corp.artnature.co.jp/ja/ir/finance/monthly_info/main/04/teaserItems1/00/linkList/0/link/00.pdf",
+     "yoy": 97.0,
+     "metric": "合計"
+    },
+    "2018-05": {
+     "doc": "https://corp.artnature.co.jp/ja/ir/finance/monthly_info/main/04/teaserItems1/00/linkList/0/link/00.pdf",
+     "yoy": 100.9,
+     "metric": "合計"
+    },
+    "2018-06": {
+     "doc": "https://corp.artnature.co.jp/ja/ir/finance/monthly_info/main/04/teaserItems1/00/linkList/0/link/00.pdf",
+     "yoy": 101.5,
+     "metric": "合計"
+    },
+    "2018-07": {
+     "doc": "https://corp.artnature.co.jp/ja/ir/finance/monthly_info/main/04/teaserItems1/00/linkList/0/link/00.pdf",
+     "yoy": 96.4,
+     "metric": "合計"
+    },
+    "2018-08": {
+     "doc": "https://corp.artnature.co.jp/ja/ir/finance/monthly_info/main/04/teaserItems1/00/linkList/0/link/00.pdf",
+     "yoy": 101.7,
+     "metric": "合計"
+    },
+    "2018-09": {
+     "doc": "https://corp.artnature.co.jp/ja/ir/finance/monthly_info/main/04/teaserItems1/00/linkList/0/link/00.pdf",
+     "yoy": 99.5,
+     "metric": "合計"
+    },
+    "2018-10": {
+     "doc": "https://corp.artnature.co.jp/ja/ir/finance/monthly_info/main/04/teaserItems1/00/linkList/0/link/00.pdf",
+     "yoy": 98.9,
+     "metric": "合計"
+    },
+    "2018-11": {
+     "doc": "https://corp.artnature.co.jp/ja/ir/finance/monthly_info/main/04/teaserItems1/00/linkList/0/link/00.pdf",
+     "yoy": 101.7,
+     "metric": "合計"
+    },
+    "2018-12": {
+     "doc": "https://corp.artnature.co.jp/ja/ir/finance/monthly_info/main/04/teaserItems1/00/linkList/0/link/00.pdf",
+     "yoy": 100.1,
+     "metric": "合計"
+    },
+    "2019-01": {
+     "doc": "https://corp.artnature.co.jp/ja/ir/finance/monthly_info/main/04/teaserItems1/00/linkList/0/link/00.pdf",
+     "yoy": 100.4,
+     "metric": "合計"
+    },
+    "2019-02": {
+     "doc": "https://corp.artnature.co.jp/ja/ir/finance/monthly_info/main/04/teaserItems1/00/linkList/0/link/00.pdf",
+     "yoy": 101.0,
+     "metric": "合計"
+    },
+    "2019-03": {
+     "doc": "https://corp.artnature.co.jp/ja/ir/finance/monthly_info/main/04/teaserItems1/00/linkList/0/link/00.pdf",
+     "yoy": 101.3,
+     "metric": "合計"
+    },
+    "2017-04": {
+     "doc": "https://corp.artnature.co.jp/ja/ir/finance/monthly_info/main/05/teaserItems1/00/linkList/0/link/00.pdf",
+     "yoy": 101.3,
+     "metric": "合計"
+    },
+    "2017-05": {
+     "doc": "https://corp.artnature.co.jp/ja/ir/finance/monthly_info/main/05/teaserItems1/00/linkList/0/link/00.pdf",
+     "yoy": 97.3,
+     "metric": "合計"
+    },
+    "2017-06": {
+     "doc": "https://corp.artnature.co.jp/ja/ir/finance/monthly_info/main/05/teaserItems1/00/linkList/0/link/00.pdf",
+     "yoy": 100.8,
+     "metric": "合計"
+    },
+    "2017-07": {
+     "doc": "https://corp.artnature.co.jp/ja/ir/finance/monthly_info/main/05/teaserItems1/00/linkList/0/link/00.pdf",
+     "yoy": 99.8,
+     "metric": "合計"
+    },
+    "2017-08": {
+     "doc": "https://corp.artnature.co.jp/ja/ir/finance/monthly_info/main/05/teaserItems1/00/linkList/0/link/00.pdf",
+     "yoy": 101.8,
+     "metric": "合計"
+    },
+    "2017-09": {
+     "doc": "https://corp.artnature.co.jp/ja/ir/finance/monthly_info/main/05/teaserItems1/00/linkList/0/link/00.pdf",
+     "yoy": 100.9,
+     "metric": "合計"
+    },
+    "2017-10": {
+     "doc": "https://corp.artnature.co.jp/ja/ir/finance/monthly_info/main/05/teaserItems1/00/linkList/0/link/00.pdf",
+     "yoy": 97.0,
+     "metric": "合計"
+    },
+    "2017-11": {
+     "doc": "https://corp.artnature.co.jp/ja/ir/finance/monthly_info/main/05/teaserItems1/00/linkList/0/link/00.pdf",
+     "yoy": 101.1,
+     "metric": "合計"
+    },
+    "2017-12": {
+     "doc": "https://corp.artnature.co.jp/ja/ir/finance/monthly_info/main/05/teaserItems1/00/linkList/0/link/00.pdf",
+     "yoy": 100.1,
+     "metric": "合計"
+    },
+    "2018-01": {
+     "doc": "https://corp.artnature.co.jp/ja/ir/finance/monthly_info/main/05/teaserItems1/00/linkList/0/link/00.pdf",
+     "yoy": 97.5,
+     "metric": "合計"
+    },
+    "2018-02": {
+     "doc": "https://corp.artnature.co.jp/ja/ir/finance/monthly_info/main/05/teaserItems1/00/linkList/0/link/00.pdf",
+     "yoy": 99.5,
+     "metric": "合計"
+    },
+    "2018-03": {
+     "doc": "https://corp.artnature.co.jp/ja/ir/finance/monthly_info/main/05/teaserItems1/00/linkList/0/link/00.pdf",
+     "yoy": 100.9,
+     "metric": "合計"
+    },
+    "2016-04": {
+     "doc": "https://corp.artnature.co.jp/ja/ir/finance/monthly_info/main/06/teaserItems1/00/linkList/0/link/00.pdf",
+     "yoy": 102.6,
+     "metric": "合計"
+    },
+    "2016-05": {
+     "doc": "https://corp.artnature.co.jp/ja/ir/finance/monthly_info/main/06/teaserItems1/00/linkList/0/link/00.pdf",
+     "yoy": 98.0,
+     "metric": "合計"
+    },
+    "2016-06": {
+     "doc": "https://corp.artnature.co.jp/ja/ir/finance/monthly_info/main/06/teaserItems1/00/linkList/0/link/00.pdf",
+     "yoy": 102.3,
+     "metric": "合計"
+    },
+    "2016-07": {
+     "doc": "https://corp.artnature.co.jp/ja/ir/finance/monthly_info/main/06/teaserItems1/00/linkList/0/link/00.pdf",
+     "yoy": 103.7,
+     "metric": "合計"
+    },
+    "2016-08": {
+     "doc": "https://corp.artnature.co.jp/ja/ir/finance/monthly_info/main/06/teaserItems1/00/linkList/0/link/00.pdf",
+     "yoy": 94.5,
+     "metric": "合計"
+    },
+    "2016-09": {
+     "doc": "https://corp.artnature.co.jp/ja/ir/finance/monthly_info/main/06/teaserItems1/00/linkList/0/link/00.pdf",
+     "yoy": 102.8,
+     "metric": "合計"
+    },
+    "2016-10": {
+     "doc": "https://corp.artnature.co.jp/ja/ir/finance/monthly_info/main/06/teaserItems1/00/linkList/0/link/00.pdf",
+     "yoy": 100.7,
+     "metric": "合計"
+    },
+    "2016-11": {
+     "doc": "https://corp.artnature.co.jp/ja/ir/finance/monthly_info/main/06/teaserItems1/00/linkList/0/link/00.pdf",
+     "yoy": 98.4,
+     "metric": "合計"
+    },
+    "2016-12": {
+     "doc": "https://corp.artnature.co.jp/ja/ir/finance/monthly_info/main/06/teaserItems1/00/linkList/0/link/00.pdf",
+     "yoy": 100.7,
+     "metric": "合計"
+    },
+    "2017-01": {
+     "doc": "https://corp.artnature.co.jp/ja/ir/finance/monthly_info/main/06/teaserItems1/00/linkList/0/link/00.pdf",
+     "yoy": 99.0,
+     "metric": "合計"
+    },
+    "2017-02": {
+     "doc": "https://corp.artnature.co.jp/ja/ir/finance/monthly_info/main/06/teaserItems1/00/linkList/0/link/00.pdf",
+     "yoy": 96.4,
+     "metric": "合計"
+    },
+    "2017-03": {
+     "doc": "https://corp.artnature.co.jp/ja/ir/finance/monthly_info/main/06/teaserItems1/00/linkList/0/link/00.pdf",
+     "yoy": 103.1,
+     "metric": "合計"
+    },
+    "2015-04": {
+     "doc": "https://corp.artnature.co.jp/ja/ir/finance/monthly_info/main/07/teaserItems1/00/linkList/0/link/00.pdf",
+     "yoy": 108.4,
+     "metric": "合計"
+    },
+    "2015-05": {
+     "doc": "https://corp.artnature.co.jp/ja/ir/finance/monthly_info/main/07/teaserItems1/00/linkList/0/link/00.pdf",
+     "yoy": 105.9,
+     "metric": "合計"
+    },
+    "2015-06": {
+     "doc": "https://corp.artnature.co.jp/ja/ir/finance/monthly_info/main/07/teaserItems1/00/linkList/0/link/00.pdf",
+     "yoy": 101.9,
+     "metric": "合計"
+    },
+    "2015-07": {
+     "doc": "https://corp.artnature.co.jp/ja/ir/finance/monthly_info/main/07/teaserItems1/00/linkList/0/link/00.pdf",
+     "yoy": 105.3,
+     "metric": "合計"
+    },
+    "2015-08": {
+     "doc": "https://corp.artnature.co.jp/ja/ir/finance/monthly_info/main/07/teaserItems1/00/linkList/0/link/00.pdf",
+     "yoy": 102.0,
+     "metric": "合計"
+    },
+    "2015-09": {
+     "doc": "https://corp.artnature.co.jp/ja/ir/finance/monthly_info/main/07/teaserItems1/00/linkList/0/link/00.pdf",
+     "yoy": 104.6,
+     "metric": "合計"
+    },
+    "2015-10": {
+     "doc": "https://corp.artnature.co.jp/ja/ir/finance/monthly_info/main/07/teaserItems1/00/linkList/0/link/00.pdf",
+     "yoy": 105.7,
+     "metric": "合計"
+    },
+    "2015-11": {
+     "doc": "https://corp.artnature.co.jp/ja/ir/finance/monthly_info/main/07/teaserItems1/00/linkList/0/link/00.pdf",
+     "yoy": 99.8,
+     "metric": "合計"
+    },
+    "2015-12": {
+     "doc": "https://corp.artnature.co.jp/ja/ir/finance/monthly_info/main/07/teaserItems1/00/linkList/0/link/00.pdf",
+     "yoy": 105.1,
+     "metric": "合計"
+    },
+    "2016-01": {
+     "doc": "https://corp.artnature.co.jp/ja/ir/finance/monthly_info/main/07/teaserItems1/00/linkList/0/link/00.pdf",
+     "yoy": 104.2,
+     "metric": "合計"
+    },
+    "2016-02": {
+     "doc": "https://corp.artnature.co.jp/ja/ir/finance/monthly_info/main/07/teaserItems1/00/linkList/0/link/00.pdf",
+     "yoy": 105.4,
+     "metric": "合計"
+    },
+    "2016-03": {
+     "doc": "https://corp.artnature.co.jp/ja/ir/finance/monthly_info/main/07/teaserItems1/00/linkList/0/link/00.pdf",
+     "yoy": 97.9,
+     "metric": "合計"
+    },
+    "2014-04": {
+     "doc": "https://corp.artnature.co.jp/ja/ir/finance/monthly_info/main/08/teaserItems1/00/linkList/0/link/00.pdf",
+     "yoy": 103.8,
+     "metric": "合計"
+    },
+    "2014-05": {
+     "doc": "https://corp.artnature.co.jp/ja/ir/finance/monthly_info/main/08/teaserItems1/00/linkList/0/link/00.pdf",
+     "yoy": 106.6,
+     "metric": "合計"
+    },
+    "2014-06": {
+     "doc": "https://corp.artnature.co.jp/ja/ir/finance/monthly_info/main/08/teaserItems1/00/linkList/0/link/00.pdf",
+     "yoy": 101.6,
+     "metric": "合計"
+    },
+    "2014-07": {
+     "doc": "https://corp.artnature.co.jp/ja/ir/finance/monthly_info/main/08/teaserItems1/00/linkList/0/link/00.pdf",
+     "yoy": 105.7,
+     "metric": "合計"
+    },
+    "2014-08": {
+     "doc": "https://corp.artnature.co.jp/ja/ir/finance/monthly_info/main/08/teaserItems1/00/linkList/0/link/00.pdf",
+     "yoy": 107.4,
+     "metric": "合計"
+    },
+    "2014-09": {
+     "doc": "https://corp.artnature.co.jp/ja/ir/finance/monthly_info/main/08/teaserItems1/00/linkList/0/link/00.pdf",
+     "yoy": 100.8,
+     "metric": "合計"
+    },
+    "2014-10": {
+     "doc": "https://corp.artnature.co.jp/ja/ir/finance/monthly_info/main/08/teaserItems1/00/linkList/0/link/00.pdf",
+     "yoy": 105.6,
+     "metric": "合計"
+    },
+    "2014-11": {
+     "doc": "https://corp.artnature.co.jp/ja/ir/finance/monthly_info/main/08/teaserItems1/00/linkList/0/link/00.pdf",
+     "yoy": 105.7,
+     "metric": "合計"
+    },
+    "2014-12": {
+     "doc": "https://corp.artnature.co.jp/ja/ir/finance/monthly_info/main/08/teaserItems1/00/linkList/0/link/00.pdf",
+     "yoy": 100.5,
+     "metric": "合計"
+    },
+    "2015-01": {
+     "doc": "https://corp.artnature.co.jp/ja/ir/finance/monthly_info/main/08/teaserItems1/00/linkList/0/link/00.pdf",
+     "yoy": 104.9,
+     "metric": "合計"
+    },
+    "2015-02": {
+     "doc": "https://corp.artnature.co.jp/ja/ir/finance/monthly_info/main/08/teaserItems1/00/linkList/0/link/00.pdf",
+     "yoy": 106.6,
+     "metric": "合計"
+    },
+    "2015-03": {
+     "doc": "https://corp.artnature.co.jp/ja/ir/finance/monthly_info/main/08/teaserItems1/00/linkList/0/link/00.pdf",
+     "yoy": 103.2,
+     "metric": "合計"
+    },
+    "2013-04": {
+     "doc": "https://corp.artnature.co.jp/ja/ir/finance/monthly_info/main/09/teaserItems1/00/linkList/0/link/00.pdf",
+     "yoy": 104.0,
+     "metric": "合計"
+    },
+    "2013-05": {
+     "doc": "https://corp.artnature.co.jp/ja/ir/finance/monthly_info/main/09/teaserItems1/00/linkList/0/link/00.pdf",
+     "yoy": 110.2,
+     "metric": "合計"
+    },
+    "2013-06": {
+     "doc": "https://corp.artnature.co.jp/ja/ir/finance/monthly_info/main/09/teaserItems1/00/linkList/0/link/00.pdf",
+     "yoy": 107.8,
+     "metric": "合計"
+    },
+    "2013-07": {
+     "doc": "https://corp.artnature.co.jp/ja/ir/finance/monthly_info/main/09/teaserItems1/00/linkList/0/link/00.pdf",
+     "yoy": 104.2,
+     "metric": "合計"
+    },
+    "2013-08": {
+     "doc": "https://corp.artnature.co.jp/ja/ir/finance/monthly_info/main/09/teaserItems1/00/linkList/0/link/00.pdf",
+     "yoy": 108.2,
+     "metric": "合計"
+    },
+    "2013-09": {
+     "doc": "https://corp.artnature.co.jp/ja/ir/finance/monthly_info/main/09/teaserItems1/00/linkList/0/link/00.pdf",
+     "yoy": 104.6,
+     "metric": "合計"
+    },
+    "2013-10": {
+     "doc": "https://corp.artnature.co.jp/ja/ir/finance/monthly_info/main/09/teaserItems1/00/linkList/0/link/00.pdf",
+     "yoy": 106.5,
+     "metric": "合計"
+    },
+    "2013-11": {
+     "doc": "https://corp.artnature.co.jp/ja/ir/finance/monthly_info/main/09/teaserItems1/00/linkList/0/link/00.pdf",
+     "yoy": 108.9,
+     "metric": "合計"
+    },
+    "2013-12": {
+     "doc": "https://corp.artnature.co.jp/ja/ir/finance/monthly_info/main/09/teaserItems1/00/linkList/0/link/00.pdf",
+     "yoy": 105.0,
+     "metric": "合計"
+    },
+    "2014-01": {
+     "doc": "https://corp.artnature.co.jp/ja/ir/finance/monthly_info/main/09/teaserItems1/00/linkList/0/link/00.pdf",
+     "yoy": 107.4,
+     "metric": "合計"
+    },
+    "2014-02": {
+     "doc": "https://corp.artnature.co.jp/ja/ir/finance/monthly_info/main/09/teaserItems1/00/linkList/0/link/00.pdf",
+     "yoy": 104.9,
+     "metric": "合計"
+    },
+    "2014-03": {
+     "doc": "https://corp.artnature.co.jp/ja/ir/finance/monthly_info/main/09/teaserItems1/00/linkList/0/link/00.pdf",
+     "yoy": 104.8,
+     "metric": "合計"
+    },
+    "2012-04": {
+     "doc": "https://corp.artnature.co.jp/ja/ir/finance/monthly_info/main/010/teaserItems1/00/linkList/0/link/00.pdf",
+     "yoy": 106.1,
+     "metric": "合計"
+    },
+    "2012-05": {
+     "doc": "https://corp.artnature.co.jp/ja/ir/finance/monthly_info/main/010/teaserItems1/00/linkList/0/link/00.pdf",
+     "yoy": 104.7,
+     "metric": "合計"
+    },
+    "2012-06": {
+     "doc": "https://corp.artnature.co.jp/ja/ir/finance/monthly_info/main/010/teaserItems1/00/linkList/0/link/00.pdf",
+     "yoy": 109.2,
+     "metric": "合計"
+    },
+    "2012-07": {
+     "doc": "https://corp.artnature.co.jp/ja/ir/finance/monthly_info/main/010/teaserItems1/00/linkList/0/link/00.pdf",
+     "yoy": 100.7,
+     "metric": "合計"
+    },
+    "2012-08": {
+     "doc": "https://corp.artnature.co.jp/ja/ir/finance/monthly_info/main/010/teaserItems1/00/linkList/0/link/00.pdf",
+     "yoy": 108.7,
+     "metric": "合計"
+    },
+    "2012-09": {
+     "doc": "https://corp.artnature.co.jp/ja/ir/finance/monthly_info/main/010/teaserItems1/00/linkList/0/link/00.pdf",
+     "yoy": 108.5,
+     "metric": "合計"
+    },
+    "2012-10": {
+     "doc": "https://corp.artnature.co.jp/ja/ir/finance/monthly_info/main/010/teaserItems1/00/linkList/0/link/00.pdf",
+     "yoy": 102.3,
+     "metric": "合計"
+    },
+    "2012-11": {
+     "doc": "https://corp.artnature.co.jp/ja/ir/finance/monthly_info/main/010/teaserItems1/00/linkList/0/link/00.pdf",
+     "yoy": 109.4,
+     "metric": "合計"
+    },
+    "2012-12": {
+     "doc": "https://corp.artnature.co.jp/ja/ir/finance/monthly_info/main/010/teaserItems1/00/linkList/0/link/00.pdf",
+     "yoy": 104.6,
+     "metric": "合計"
+    },
+    "2013-01": {
+     "doc": "https://corp.artnature.co.jp/ja/ir/finance/monthly_info/main/010/teaserItems1/00/linkList/0/link/00.pdf",
+     "yoy": 104.3,
+     "metric": "合計"
+    },
+    "2013-02": {
+     "doc": "https://corp.artnature.co.jp/ja/ir/finance/monthly_info/main/010/teaserItems1/00/linkList/0/link/00.pdf",
+     "yoy": 105.3,
+     "metric": "合計"
+    },
+    "2013-03": {
+     "doc": "https://corp.artnature.co.jp/ja/ir/finance/monthly_info/main/010/teaserItems1/00/linkList/0/link/00.pdf",
+     "yoy": 108.3,
+     "metric": "合計"
+    },
+    "2011-04": {
+     "doc": "https://corp.artnature.co.jp/ja/ir/finance/monthly_info/main/011/teaserItems1/00/linkList/0/link/00.pdf",
+     "yoy": 100.5,
+     "metric": "合計"
+    },
+    "2011-05": {
+     "doc": "https://corp.artnature.co.jp/ja/ir/finance/monthly_info/main/011/teaserItems1/00/linkList/0/link/00.pdf",
+     "yoy": 98.3,
+     "metric": "合計"
+    },
+    "2011-06": {
+     "doc": "https://corp.artnature.co.jp/ja/ir/finance/monthly_info/main/011/teaserItems1/00/linkList/0/link/00.pdf",
+     "yoy": 104.7,
+     "metric": "合計"
+    },
+    "2011-07": {
+     "doc": "https://corp.artnature.co.jp/ja/ir/finance/monthly_info/main/011/teaserItems1/00/linkList/0/link/00.pdf",
+     "yoy": 104.4,
+     "metric": "合計"
+    },
+    "2011-08": {
+     "doc": "https://corp.artnature.co.jp/ja/ir/finance/monthly_info/main/011/teaserItems1/00/linkList/0/link/00.pdf",
+     "yoy": 100.4,
+     "metric": "合計"
+    },
+    "2011-09": {
+     "doc": "https://corp.artnature.co.jp/ja/ir/finance/monthly_info/main/011/teaserItems1/00/linkList/0/link/00.pdf",
+     "yoy": 106.6,
+     "metric": "合計"
+    },
+    "2011-10": {
+     "doc": "https://corp.artnature.co.jp/ja/ir/finance/monthly_info/main/011/teaserItems1/00/linkList/0/link/00.pdf",
+     "yoy": 104.2,
+     "metric": "合計"
+    },
+    "2011-11": {
+     "doc": "https://corp.artnature.co.jp/ja/ir/finance/monthly_info/main/011/teaserItems1/00/linkList/0/link/00.pdf",
+     "yoy": 104.9,
+     "metric": "合計"
+    },
+    "2011-12": {
+     "doc": "https://corp.artnature.co.jp/ja/ir/finance/monthly_info/main/011/teaserItems1/00/linkList/0/link/00.pdf",
+     "yoy": 107.3,
+     "metric": "合計"
+    },
+    "2012-01": {
+     "doc": "https://corp.artnature.co.jp/ja/ir/finance/monthly_info/main/011/teaserItems1/00/linkList/0/link/00.pdf",
+     "yoy": 106.0,
+     "metric": "合計"
+    },
+    "2012-02": {
+     "doc": "https://corp.artnature.co.jp/ja/ir/finance/monthly_info/main/011/teaserItems1/00/linkList/0/link/00.pdf",
+     "yoy": 106.9,
+     "metric": "合計"
+    },
+    "2012-03": {
+     "doc": "https://corp.artnature.co.jp/ja/ir/finance/monthly_info/main/011/teaserItems1/00/linkList/0/link/00.pdf",
+     "yoy": 116.0,
+     "metric": "合計"
+    },
+    "2010-04": {
+     "doc": "https://corp.artnature.co.jp/ja/ir/finance/monthly_info/main/012/teaserItems1/00/linkList/0/link/00.pdf",
+     "yoy": 102.9,
+     "metric": "合計"
+    },
+    "2010-05": {
+     "doc": "https://corp.artnature.co.jp/ja/ir/finance/monthly_info/main/012/teaserItems1/00/linkList/0/link/00.pdf",
+     "yoy": 99.3,
+     "metric": "合計"
+    },
+    "2010-06": {
+     "doc": "https://corp.artnature.co.jp/ja/ir/finance/monthly_info/main/012/teaserItems1/00/linkList/0/link/00.pdf",
+     "yoy": 99.3,
+     "metric": "合計"
+    },
+    "2010-07": {
+     "doc": "https://corp.artnature.co.jp/ja/ir/finance/monthly_info/main/012/teaserItems1/00/linkList/0/link/00.pdf",
+     "yoy": 103.3,
+     "metric": "合計"
+    },
+    "2010-08": {
+     "doc": "https://corp.artnature.co.jp/ja/ir/finance/monthly_info/main/012/teaserItems1/00/linkList/0/link/00.pdf",
+     "yoy": 97.0,
+     "metric": "合計"
+    },
+    "2010-09": {
+     "doc": "https://corp.artnature.co.jp/ja/ir/finance/monthly_info/main/012/teaserItems1/00/linkList/0/link/00.pdf",
+     "yoy": 101.2,
+     "metric": "合計"
+    },
+    "2010-10": {
+     "doc": "https://corp.artnature.co.jp/ja/ir/finance/monthly_info/main/012/teaserItems1/00/linkList/0/link/00.pdf",
+     "yoy": 101.5,
+     "metric": "合計"
+    },
+    "2010-11": {
+     "doc": "https://corp.artnature.co.jp/ja/ir/finance/monthly_info/main/012/teaserItems1/00/linkList/0/link/00.pdf",
+     "yoy": 98.3,
+     "metric": "合計"
+    },
+    "2010-12": {
+     "doc": "https://corp.artnature.co.jp/ja/ir/finance/monthly_info/main/012/teaserItems1/00/linkList/0/link/00.pdf",
+     "yoy": 102.4,
+     "metric": "合計"
+    },
+    "2011-01": {
+     "doc": "https://corp.artnature.co.jp/ja/ir/finance/monthly_info/main/012/teaserItems1/00/linkList/0/link/00.pdf",
+     "yoy": 99.7,
+     "metric": "合計"
+    },
+    "2011-02": {
+     "doc": "https://corp.artnature.co.jp/ja/ir/finance/monthly_info/main/012/teaserItems1/00/linkList/0/link/00.pdf",
+     "yoy": 100.6,
+     "metric": "合計"
+    },
+    "2011-03": {
+     "doc": "https://corp.artnature.co.jp/ja/ir/finance/monthly_info/main/012/teaserItems1/00/linkList/0/link/00.pdf",
+     "yoy": 97.6,
+     "metric": "合計"
+    },
+    "2009-04": {
+     "doc": "https://corp.artnature.co.jp/ja/ir/finance/monthly_info/main/013/teaserItems1/00/linkList/0/link/00.pdf",
+     "yoy": 105.8,
+     "metric": "合計"
+    },
+    "2009-05": {
+     "doc": "https://corp.artnature.co.jp/ja/ir/finance/monthly_info/main/013/teaserItems1/00/linkList/0/link/00.pdf",
+     "yoy": 105.0,
+     "metric": "合計"
+    },
+    "2009-06": {
+     "doc": "https://corp.artnature.co.jp/ja/ir/finance/monthly_info/main/013/teaserItems1/00/linkList/0/link/00.pdf",
+     "yoy": 99.7,
+     "metric": "合計"
+    },
+    "2009-07": {
+     "doc": "https://corp.artnature.co.jp/ja/ir/finance/monthly_info/main/013/teaserItems1/00/linkList/0/link/00.pdf",
+     "yoy": 103.9,
+     "metric": "合計"
+    },
+    "2009-08": {
+     "doc": "https://corp.artnature.co.jp/ja/ir/finance/monthly_info/main/013/teaserItems1/00/linkList/0/link/00.pdf",
+     "yoy": 101.3,
+     "metric": "合計"
+    },
+    "2009-09": {
+     "doc": "https://corp.artnature.co.jp/ja/ir/finance/monthly_info/main/013/teaserItems1/00/linkList/0/link/00.pdf",
+     "yoy": 102.0,
+     "metric": "合計"
+    },
+    "2009-10": {
+     "doc": "https://corp.artnature.co.jp/ja/ir/finance/monthly_info/main/013/teaserItems1/00/linkList/0/link/00.pdf",
+     "yoy": 104.0,
+     "metric": "合計"
+    },
+    "2009-11": {
+     "doc": "https://corp.artnature.co.jp/ja/ir/finance/monthly_info/main/013/teaserItems1/00/linkList/0/link/00.pdf",
+     "yoy": 98.6,
+     "metric": "合計"
+    },
+    "2009-12": {
+     "doc": "https://corp.artnature.co.jp/ja/ir/finance/monthly_info/main/013/teaserItems1/00/linkList/0/link/00.pdf",
+     "yoy": 100.1,
+     "metric": "合計"
+    },
+    "2010-01": {
+     "doc": "https://corp.artnature.co.jp/ja/ir/finance/monthly_info/main/013/teaserItems1/00/linkList/0/link/00.pdf",
+     "yoy": 102.6,
+     "metric": "合計"
+    },
+    "2010-02": {
+     "doc": "https://corp.artnature.co.jp/ja/ir/finance/monthly_info/main/013/teaserItems1/00/linkList/0/link/00.pdf",
+     "yoy": 99.8,
+     "metric": "合計"
+    },
+    "2010-03": {
+     "doc": "https://corp.artnature.co.jp/ja/ir/finance/monthly_info/main/013/teaserItems1/00/linkList/0/link/00.pdf",
+     "yoy": 97.0,
+     "metric": "合計"
+    },
+    "2008-04": {
+     "doc": "https://corp.artnature.co.jp/ja/ir/finance/monthly_info/main/014/teaserItems1/00/linkList/0/link/00.pdf",
+     "yoy": 95.4,
+     "metric": "合計"
+    },
+    "2008-05": {
+     "doc": "https://corp.artnature.co.jp/ja/ir/finance/monthly_info/main/014/teaserItems1/00/linkList/0/link/00.pdf",
+     "yoy": 105.0,
+     "metric": "合計"
+    },
+    "2008-06": {
+     "doc": "https://corp.artnature.co.jp/ja/ir/finance/monthly_info/main/014/teaserItems1/00/linkList/0/link/00.pdf",
+     "yoy": 99.6,
+     "metric": "合計"
+    },
+    "2008-07": {
+     "doc": "https://corp.artnature.co.jp/ja/ir/finance/monthly_info/main/014/teaserItems1/00/linkList/0/link/00.pdf",
+     "yoy": 100.8,
+     "metric": "合計"
+    },
+    "2008-08": {
+     "doc": "https://corp.artnature.co.jp/ja/ir/finance/monthly_info/main/014/teaserItems1/00/linkList/0/link/00.pdf",
+     "yoy": 106.8,
+     "metric": "合計"
+    },
+    "2008-09": {
+     "doc": "https://corp.artnature.co.jp/ja/ir/finance/monthly_info/main/014/teaserItems1/00/linkList/0/link/00.pdf",
+     "yoy": 96.6,
+     "metric": "合計"
+    },
+    "2008-10": {
+     "doc": "https://corp.artnature.co.jp/ja/ir/finance/monthly_info/main/014/teaserItems1/00/linkList/0/link/00.pdf",
+     "yoy": 106.9,
+     "metric": "合計"
+    },
+    "2008-11": {
+     "doc": "https://corp.artnature.co.jp/ja/ir/finance/monthly_info/main/014/teaserItems1/00/linkList/0/link/00.pdf",
+     "yoy": 106.2,
+     "metric": "合計"
+    },
+    "2008-12": {
+     "doc": "https://corp.artnature.co.jp/ja/ir/finance/monthly_info/main/014/teaserItems1/00/linkList/0/link/00.pdf",
+     "yoy": 100.5,
+     "metric": "合計"
+    },
+    "2009-01": {
+     "doc": "https://corp.artnature.co.jp/ja/ir/finance/monthly_info/main/014/teaserItems1/00/linkList/0/link/00.pdf",
+     "yoy": 106.2,
+     "metric": "合計"
+    },
+    "2009-02": {
+     "doc": "https://corp.artnature.co.jp/ja/ir/finance/monthly_info/main/014/teaserItems1/00/linkList/0/link/00.pdf",
+     "yoy": 101.7,
+     "metric": "合計"
+    },
+    "2009-03": {
+     "doc": "https://corp.artnature.co.jp/ja/ir/finance/monthly_info/main/014/teaserItems1/00/linkList/0/link/00.pdf",
+     "yoy": 100.5,
+     "metric": "合計"
+    },
+    "2007-04": {
+     "doc": "https://corp.artnature.co.jp/ja/ir/finance/monthly_info/main/015/teaserItems1/00/linkList/0/link/00.pdf",
+     "yoy": 104.7,
+     "metric": "合計"
+    },
+    "2007-05": {
+     "doc": "https://corp.artnature.co.jp/ja/ir/finance/monthly_info/main/015/teaserItems1/00/linkList/0/link/00.pdf",
+     "yoy": 105.9,
+     "metric": "合計"
+    },
+    "2007-06": {
+     "doc": "https://corp.artnature.co.jp/ja/ir/finance/monthly_info/main/015/teaserItems1/00/linkList/0/link/00.pdf",
+     "yoy": 107.5,
+     "metric": "合計"
+    },
+    "2007-07": {
+     "doc": "https://corp.artnature.co.jp/ja/ir/finance/monthly_info/main/015/teaserItems1/00/linkList/0/link/00.pdf",
+     "yoy": 99.4,
+     "metric": "合計"
+    },
+    "2007-08": {
+     "doc": "https://corp.artnature.co.jp/ja/ir/finance/monthly_info/main/015/teaserItems1/00/linkList/0/link/00.pdf",
+     "yoy": 106.0,
+     "metric": "合計"
+    },
+    "2007-09": {
+     "doc": "https://corp.artnature.co.jp/ja/ir/finance/monthly_info/main/015/teaserItems1/00/linkList/0/link/00.pdf",
+     "yoy": 104.6,
+     "metric": "合計"
+    },
+    "2007-10": {
+     "doc": "https://corp.artnature.co.jp/ja/ir/finance/monthly_info/main/015/teaserItems1/00/linkList/0/link/00.pdf",
+     "yoy": 97.5,
+     "metric": "合計"
+    },
+    "2007-11": {
+     "doc": "https://corp.artnature.co.jp/ja/ir/finance/monthly_info/main/015/teaserItems1/00/linkList/0/link/00.pdf",
+     "yoy": 102.9,
+     "metric": "合計"
+    },
+    "2007-12": {
+     "doc": "https://corp.artnature.co.jp/ja/ir/finance/monthly_info/main/015/teaserItems1/00/linkList/0/link/00.pdf",
+     "yoy": 101.2,
+     "metric": "合計"
+    },
+    "2008-01": {
+     "doc": "https://corp.artnature.co.jp/ja/ir/finance/monthly_info/main/015/teaserItems1/00/linkList/0/link/00.pdf",
+     "yoy": 100.5,
+     "metric": "合計"
+    },
+    "2008-02": {
+     "doc": "https://corp.artnature.co.jp/ja/ir/finance/monthly_info/main/015/teaserItems1/00/linkList/0/link/00.pdf",
+     "yoy": 104.6,
+     "metric": "合計"
+    },
+    "2008-03": {
+     "doc": "https://corp.artnature.co.jp/ja/ir/finance/monthly_info/main/015/teaserItems1/00/linkList/0/link/00.pdf",
+     "yoy": 103.0,
+     "metric": "合計"
+    }
+   }
+  },
+  "3178": {
+   "name": "チムニー",
+   "page": "https://www.chimney.co.jp/ir/sales/",
+   "months": {},
+   "ts": "2026-09-29T08:11:18+00:00",
+   "pdf_ts": "2026-09-29T08:11:18+00:00",
+   "pdf": {
+    "2026-04": {
+     "doc": "https://www.chimney.co.jp/pdf/ir/sales/tenpo/month_202603.pdf",
+     "yoy": 98.6,
+     "metric": "월매출/영업수입 전년비"
+    },
+    "2026-05": {
+     "doc": "https://www.chimney.co.jp/prd/wordpress/wp-content/uploads/2026/09/uriage202608.pdf",
+     "yoy": 104.4,
+     "metric": "월매출/영업수입 전년비"
+    },
+    "2026-06": {
+     "doc": "https://www.chimney.co.jp/prd/wordpress/wp-content/uploads/2026/09/uriage202608.pdf",
+     "yoy": 94.6,
+     "metric": "월매출/영업수입 전년비"
+    },
+    "2026-07": {
+     "doc": "https://www.chimney.co.jp/prd/wordpress/wp-content/uploads/2026/09/uriage202608.pdf",
+     "yoy": 101.8,
+     "metric": "월매출/영업수입 전년비"
+    },
+    "2026-08": {
+     "doc": "https://www.chimney.co.jp/prd/wordpress/wp-content/uploads/2026/09/uriage202608.pdf",
+     "yoy": 96.1,
+     "metric": "월매출/영업수입 전년비"
+    },
+    "2026-01": {
+     "doc": "https://www.chimney.co.jp/pdf/ir/sales/tenpo/month_202603.pdf",
+     "yoy": 100.4,
+     "metric": "월매출/영업수입 전년비"
+    },
+    "2026-02": {
+     "doc": "https://www.chimney.co.jp/pdf/ir/sales/tenpo/month_202603.pdf",
+     "yoy": 95.0,
+     "metric": "월매출/영업수입 전년비"
+    },
+    "2026-03": {
+     "doc": "https://www.chimney.co.jp/pdf/ir/sales/tenpo/month_202603.pdf",
+     "yoy": 97.6,
+     "metric": "월매출/영업수입 전년비"
+    },
+    "2025-05": {
+     "doc": "https://www.chimney.co.jp/pdf/ir/sales/tenpo/month_202603.pdf",
+     "yoy": 101.6,
+     "metric": "월매출/영업수입 전년비"
+    },
+    "2025-06": {
+     "doc": "https://www.chimney.co.jp/pdf/ir/sales/tenpo/month_202603.pdf",
+     "yoy": 95.6,
+     "metric": "월매출/영업수입 전년비"
+    },
+    "2025-07": {
+     "doc": "https://www.chimney.co.jp/pdf/ir/sales/tenpo/month_202603.pdf",
+     "yoy": 100.8,
+     "metric": "월매출/영업수입 전년비"
+    },
+    "2025-08": {
+     "doc": "https://www.chimney.co.jp/pdf/ir/sales/tenpo/month_202603.pdf",
+     "yoy": 106.7,
+     "metric": "월매출/영업수입 전년비"
+    },
+    "2025-09": {
+     "doc": "https://www.chimney.co.jp/pdf/ir/sales/tenpo/month_202603.pdf",
+     "yoy": 95.5,
+     "metric": "월매출/영업수입 전년비"
+    },
+    "2025-10": {
+     "doc": "https://www.chimney.co.jp/pdf/ir/sales/tenpo/month_202603.pdf",
+     "yoy": 99.6,
+     "metric": "월매출/영업수입 전년비"
+    },
+    "2025-11": {
+     "doc": "https://www.chimney.co.jp/pdf/ir/sales/tenpo/month_202603.pdf",
+     "yoy": 99.4,
+     "metric": "월매출/영업수입 전년비"
+    },
+    "2025-12": {
+     "doc": "https://www.chimney.co.jp/pdf/ir/sales/tenpo/month_202603.pdf",
+     "yoy": 101.7,
+     "metric": "월매출/영업수입 전년비"
+    },
+    "2021-01": {
+     "doc": "https://www.chimney.co.jp/pdf/ir/sales/tenpo/month_202103.pdf",
+     "yoy": 37.5,
+     "metric": "월매출/영업수입 전년비"
+    },
+    "2021-02": {
+     "doc": "https://www.chimney.co.jp/pdf/ir/sales/tenpo/month_202103.pdf",
+     "yoy": 47.9,
+     "metric": "월매출/영업수입 전년비"
+    },
+    "2021-03": {
+     "doc": "https://www.chimney.co.jp/pdf/ir/sales/tenpo/month_202103.pdf",
+     "yoy": 74.1,
+     "metric": "월매출/영업수입 전년비"
+    },
+    "2021-04": {
+     "doc": "https://www.chimney.co.jp/pdf/ir/sales/tenpo/month_202103.pdf",
+     "yoy": 85.7,
+     "metric": "월매출/영업수입 전년비"
+    },
+    "2020-05": {
+     "doc": "https://www.chimney.co.jp/pdf/ir/sales/tenpo/month_202103.pdf",
+     "yoy": 63.8,
+     "metric": "월매출/영업수입 전년비"
+    },
+    "2020-06": {
+     "doc": "https://www.chimney.co.jp/pdf/ir/sales/tenpo/month_202103.pdf",
+     "yoy": 41.6,
+     "metric": "월매출/영업수입 전년비"
+    },
+    "2020-07": {
+     "doc": "https://www.chimney.co.jp/pdf/ir/sales/tenpo/month_202103.pdf",
+     "yoy": 39.0,
+     "metric": "월매출/영업수입 전년비"
+    },
+    "2020-08": {
+     "doc": "https://www.chimney.co.jp/pdf/ir/sales/tenpo/month_202103.pdf",
+     "yoy": 33.1,
+     "metric": "월매출/영업수입 전년비"
+    },
+    "2020-09": {
+     "doc": "https://www.chimney.co.jp/pdf/ir/sales/tenpo/month_202103.pdf",
+     "yoy": 45.4,
+     "metric": "월매출/영업수입 전년비"
+    },
+    "2020-10": {
+     "doc": "https://www.chimney.co.jp/pdf/ir/sales/tenpo/month_202103.pdf",
+     "yoy": 60.7,
+     "metric": "월매출/영업수입 전년비"
+    },
+    "2020-11": {
+     "doc": "https://www.chimney.co.jp/pdf/ir/sales/tenpo/month_202103.pdf",
+     "yoy": 52.0,
+     "metric": "월매출/영업수입 전년비"
+    },
+    "2020-12": {
+     "doc": "https://www.chimney.co.jp/pdf/ir/sales/tenpo/month_202103.pdf",
+     "yoy": 32.0,
+     "metric": "월매출/영업수입 전년비"
+    },
+    "2020-01": {
+     "doc": "https://www.chimney.co.jp/pdf/ir/sales/tenpo/month_202003.pdf",
+     "yoy": 98.2,
+     "metric": "월매출/영업수입 전년비"
+    },
+    "2020-02": {
+     "doc": "https://www.chimney.co.jp/pdf/ir/sales/tenpo/month_202003.pdf",
+     "yoy": 91.1,
+     "metric": "월매출/영업수입 전년비"
+    },
+    "2020-03": {
+     "doc": "https://www.chimney.co.jp/pdf/ir/sales/tenpo/month_202003.pdf",
+     "yoy": 50.1,
+     "metric": "월매출/영업수입 전년비"
+    },
+    "2020-04": {
+     "doc": "https://www.chimney.co.jp/pdf/ir/sales/tenpo/month_202003.pdf",
+     "yoy": 96.9,
+     "metric": "월매출/영업수입 전년비"
+    },
+    "2019-05": {
+     "doc": "https://www.chimney.co.jp/pdf/ir/sales/tenpo/month_202003.pdf",
+     "yoy": 97.0,
+     "metric": "월매출/영업수입 전년비"
+    },
+    "2019-06": {
+     "doc": "https://www.chimney.co.jp/pdf/ir/sales/tenpo/month_202003.pdf",
+     "yoy": 93.7,
+     "metric": "월매출/영업수입 전년비"
+    },
+    "2019-07": {
+     "doc": "https://www.chimney.co.jp/pdf/ir/sales/tenpo/month_202003.pdf",
+     "yoy": 96.6,
+     "metric": "월매출/영업수입 전년비"
+    },
+    "2019-08": {
+     "doc": "https://www.chimney.co.jp/pdf/ir/sales/tenpo/month_202003.pdf",
+     "yoy": 96.0,
+     "metric": "월매출/영업수입 전년비"
+    },
+    "2019-09": {
+     "doc": "https://www.chimney.co.jp/pdf/ir/sales/tenpo/month_202003.pdf",
+     "yoy": 93.9,
+     "metric": "월매출/영업수입 전년비"
+    },
+    "2019-10": {
+     "doc": "https://www.chimney.co.jp/pdf/ir/sales/tenpo/month_202003.pdf",
+     "yoy": 88.1,
+     "metric": "월매출/영업수입 전년비"
+    },
+    "2019-11": {
+     "doc": "https://www.chimney.co.jp/pdf/ir/sales/tenpo/month_202003.pdf",
+     "yoy": 94.6,
+     "metric": "월매출/영업수입 전년비"
+    },
+    "2019-12": {
+     "doc": "https://www.chimney.co.jp/pdf/ir/sales/tenpo/month_202003.pdf",
+     "yoy": 92.1,
+     "metric": "월매출/영업수입 전년비"
+    },
+    "2019-01": {
+     "doc": "https://www.chimney.co.jp/pdf/ir/sales/tenpo/month_201903.pdf",
+     "yoy": 95.6,
+     "metric": "월매출/영업수입 전년비"
+    },
+    "2019-02": {
+     "doc": "https://www.chimney.co.jp/pdf/ir/sales/tenpo/month_201903.pdf",
+     "yoy": 97.6,
+     "metric": "월매출/영업수입 전년비"
+    },
+    "2019-03": {
+     "doc": "https://www.chimney.co.jp/pdf/ir/sales/tenpo/month_201903.pdf",
+     "yoy": 95.3,
+     "metric": "월매출/영업수입 전년비"
+    },
+    "2019-04": {
+     "doc": "https://www.chimney.co.jp/pdf/ir/sales/tenpo/month_201903.pdf",
+     "yoy": 96.2,
+     "metric": "월매출/영업수입 전년비"
+    },
+    "2018-05": {
+     "doc": "https://www.chimney.co.jp/pdf/ir/sales/tenpo/month_201903.pdf",
+     "yoy": 94.7,
+     "metric": "월매출/영업수입 전년비"
+    },
+    "2018-06": {
+     "doc": "https://www.chimney.co.jp/pdf/ir/sales/tenpo/month_201903.pdf",
+     "yoy": 97.7,
+     "metric": "월매출/영업수입 전년비"
+    },
+    "2018-07": {
+     "doc": "https://www.chimney.co.jp/pdf/ir/sales/tenpo/month_201903.pdf",
+     "yoy": 89.9,
+     "metric": "월매출/영업수입 전년비"
+    },
+    "2018-08": {
+     "doc": "https://www.chimney.co.jp/pdf/ir/sales/tenpo/month_201903.pdf",
+     "yoy": 97.8,
+     "metric": "월매출/영업수입 전년비"
+    },
+    "2018-09": {
+     "doc": "https://www.chimney.co.jp/pdf/ir/sales/tenpo/month_201903.pdf",
+     "yoy": 92.1,
+     "metric": "월매출/영업수입 전년비"
+    },
+    "2018-10": {
+     "doc": "https://www.chimney.co.jp/pdf/ir/sales/tenpo/month_201903.pdf",
+     "yoy": 99.1,
+     "metric": "월매출/영업수입 전년비"
+    },
+    "2018-11": {
+     "doc": "https://www.chimney.co.jp/pdf/ir/sales/tenpo/month_201903.pdf",
+     "yoy": 99.0,
+     "metric": "월매출/영업수입 전년비"
+    },
+    "2018-12": {
+     "doc": "https://www.chimney.co.jp/pdf/ir/sales/tenpo/month_201903.pdf",
+     "yoy": 92.9,
+     "metric": "월매출/영업수입 전년비"
+    },
+    "2018-01": {
+     "doc": "https://www.chimney.co.jp/pdf/ir/sales/tenpo/month_201803.pdf",
+     "yoy": 94.3,
+     "metric": "월매출/영업수입 전년비"
+    },
+    "2018-02": {
+     "doc": "https://www.chimney.co.jp/pdf/ir/sales/tenpo/month_201803.pdf",
+     "yoy": 92.7,
+     "metric": "월매출/영업수입 전년비"
+    },
+    "2018-03": {
+     "doc": "https://www.chimney.co.jp/pdf/ir/sales/tenpo/month_201803.pdf",
+     "yoy": 96.6,
+     "metric": "월매출/영업수입 전년비"
+    },
+    "2018-04": {
+     "doc": "https://www.chimney.co.jp/pdf/ir/sales/tenpo/month_201803.pdf",
+     "yoy": 96.0,
+     "metric": "월매출/영업수입 전년비"
+    },
+    "2017-05": {
+     "doc": "https://www.chimney.co.jp/pdf/ir/sales/tenpo/month_201803.pdf",
+     "yoy": 98.5,
+     "metric": "월매출/영업수입 전년비"
+    },
+    "2017-06": {
+     "doc": "https://www.chimney.co.jp/pdf/ir/sales/tenpo/month_201803.pdf",
+     "yoy": 98.5,
+     "metric": "월매출/영업수입 전년비"
+    },
+    "2017-07": {
+     "doc": "https://www.chimney.co.jp/pdf/ir/sales/tenpo/month_201803.pdf",
+     "yoy": 94.9,
+     "metric": "월매출/영업수입 전년비"
+    },
+    "2017-08": {
+     "doc": "https://www.chimney.co.jp/pdf/ir/sales/tenpo/month_201803.pdf",
+     "yoy": 98.1,
+     "metric": "월매출/영업수입 전년비"
+    },
+    "2017-09": {
+     "doc": "https://www.chimney.co.jp/pdf/ir/sales/tenpo/month_201803.pdf",
+     "yoy": 97.3,
+     "metric": "월매출/영업수입 전년비"
+    },
+    "2017-10": {
+     "doc": "https://www.chimney.co.jp/pdf/ir/sales/tenpo/month_201803.pdf",
+     "yoy": 93.0,
+     "metric": "월매출/영업수입 전년비"
+    },
+    "2017-11": {
+     "doc": "https://www.chimney.co.jp/pdf/ir/sales/tenpo/month_201803.pdf",
+     "yoy": 97.8,
+     "metric": "월매출/영업수입 전년비"
+    },
+    "2017-12": {
+     "doc": "https://www.chimney.co.jp/pdf/ir/sales/tenpo/month_201803.pdf",
+     "yoy": 100.1,
+     "metric": "월매출/영업수입 전년비"
+    },
+    "2017-01": {
+     "doc": "https://www.chimney.co.jp/pdf/ir/sales/tenpo/month_201703.pdf",
+     "yoy": 97.8,
+     "metric": "월매출/영업수입 전년비"
+    },
+    "2017-02": {
+     "doc": "https://www.chimney.co.jp/pdf/ir/sales/tenpo/month_201703.pdf",
+     "yoy": 97.3,
+     "metric": "월매출/영업수입 전년비"
+    },
+    "2017-03": {
+     "doc": "https://www.chimney.co.jp/pdf/ir/sales/tenpo/month_201703.pdf",
+     "yoy": 96.3,
+     "metric": "월매출/영업수입 전년비"
+    },
+    "2017-04": {
+     "doc": "https://www.chimney.co.jp/pdf/ir/sales/tenpo/month_201703.pdf",
+     "yoy": 97.0,
+     "metric": "월매출/영업수입 전년비"
+    },
+    "2016-05": {
+     "doc": "https://www.chimney.co.jp/pdf/ir/sales/tenpo/month_201703.pdf",
+     "yoy": 90.6,
+     "metric": "월매출/영업수입 전년비"
+    },
+    "2016-06": {
+     "doc": "https://www.chimney.co.jp/pdf/ir/sales/tenpo/month_201703.pdf",
+     "yoy": 95.5,
+     "metric": "월매출/영업수입 전년비"
+    },
+    "2016-07": {
+     "doc": "https://www.chimney.co.jp/pdf/ir/sales/tenpo/month_201703.pdf",
+     "yoy": 96.1,
+     "metric": "월매출/영업수입 전년비"
+    },
+    "2016-08": {
+     "doc": "https://www.chimney.co.jp/pdf/ir/sales/tenpo/month_201703.pdf",
+     "yoy": 92.2,
+     "metric": "월매출/영업수입 전년비"
+    },
+    "2016-09": {
+     "doc": "https://www.chimney.co.jp/pdf/ir/sales/tenpo/month_201703.pdf",
+     "yoy": 95.7,
+     "metric": "월매출/영업수입 전년비"
+    },
+    "2016-10": {
+     "doc": "https://www.chimney.co.jp/pdf/ir/sales/tenpo/month_201703.pdf",
+     "yoy": 92.2,
+     "metric": "월매출/영업수입 전년비"
+    },
+    "2016-11": {
+     "doc": "https://www.chimney.co.jp/pdf/ir/sales/tenpo/month_201703.pdf",
+     "yoy": 93.9,
+     "metric": "월매출/영업수입 전년비"
+    },
+    "2016-12": {
+     "doc": "https://www.chimney.co.jp/pdf/ir/sales/tenpo/month_201703.pdf",
+     "yoy": 95.2,
+     "metric": "월매출/영업수입 전년비"
+    },
+    "2016-01": {
+     "doc": "https://www.chimney.co.jp/pdf/ir/sales/tenpo/month_201512.pdf",
+     "yoy": 98.6,
+     "metric": "월매출/영업수입 전년비"
+    },
+    "2015-02": {
+     "doc": "https://www.chimney.co.jp/pdf/ir/sales/tenpo/month_201512.pdf",
+     "yoy": 105.7,
+     "metric": "월매출/영업수입 전년비"
+    },
+    "2015-03": {
+     "doc": "https://www.chimney.co.jp/pdf/ir/sales/tenpo/month_201512.pdf",
+     "yoy": 97.5,
+     "metric": "월매출/영업수입 전년비"
+    },
+    "2015-04": {
+     "doc": "https://www.chimney.co.jp/pdf/ir/sales/tenpo/month_201512.pdf",
+     "yoy": 98.4,
+     "metric": "월매출/영업수입 전년비"
+    },
+    "2015-05": {
+     "doc": "https://www.chimney.co.jp/pdf/ir/sales/tenpo/month_201512.pdf",
+     "yoy": 97.5,
+     "metric": "월매출/영업수입 전년비"
+    },
+    "2015-06": {
+     "doc": "https://www.chimney.co.jp/pdf/ir/sales/tenpo/month_201512.pdf",
+     "yoy": 98.8,
+     "metric": "월매출/영업수입 전년비"
+    },
+    "2015-07": {
+     "doc": "https://www.chimney.co.jp/pdf/ir/sales/tenpo/month_201512.pdf",
+     "yoy": 102.8,
+     "metric": "월매출/영업수입 전년비"
+    },
+    "2015-08": {
+     "doc": "https://www.chimney.co.jp/pdf/ir/sales/tenpo/month_201512.pdf",
+     "yoy": 97.2,
+     "metric": "월매출/영업수입 전년비"
+    },
+    "2015-09": {
+     "doc": "https://www.chimney.co.jp/pdf/ir/sales/tenpo/month_201512.pdf",
+     "yoy": 99.1,
+     "metric": "월매출/영업수입 전년비"
+    },
+    "2015-10": {
+     "doc": "https://www.chimney.co.jp/pdf/ir/sales/tenpo/month_201512.pdf",
+     "yoy": 101.9,
+     "metric": "월매출/영업수입 전년비"
+    },
+    "2015-11": {
+     "doc": "https://www.chimney.co.jp/pdf/ir/sales/tenpo/month_201512.pdf",
+     "yoy": 96.3,
+     "metric": "월매출/영업수입 전년비"
+    },
+    "2015-12": {
+     "doc": "https://www.chimney.co.jp/pdf/ir/sales/tenpo/month_201512.pdf",
+     "yoy": 101.5,
+     "metric": "월매출/영업수입 전년비"
+    },
+    "2015-01": {
+     "doc": "https://www.chimney.co.jp/pdf/ir/sales/tenpo/month_201412.pdf",
+     "yoy": 102.4,
+     "metric": "월매출/영업수입 전년비"
+    },
+    "2014-02": {
+     "doc": "https://www.chimney.co.jp/pdf/ir/sales/tenpo/month_201412.pdf",
+     "yoy": 93.2,
+     "metric": "월매출/영업수입 전년비"
+    },
+    "2014-03": {
+     "doc": "https://www.chimney.co.jp/pdf/ir/sales/tenpo/month_201412.pdf",
+     "yoy": 98.6,
+     "metric": "월매출/영업수입 전년비"
+    },
+    "2014-04": {
+     "doc": "https://www.chimney.co.jp/pdf/ir/sales/tenpo/month_201412.pdf",
+     "yoy": 102.3,
+     "metric": "월매출/영업수입 전년비"
+    },
+    "2014-05": {
+     "doc": "https://www.chimney.co.jp/pdf/ir/sales/tenpo/month_201412.pdf",
+     "yoy": 99.7,
+     "metric": "월매출/영업수입 전년비"
+    },
+    "2014-06": {
+     "doc": "https://www.chimney.co.jp/pdf/ir/sales/tenpo/month_201412.pdf",
+     "yoy": 96.4,
+     "metric": "월매출/영업수입 전년비"
+    },
+    "2014-07": {
+     "doc": "https://www.chimney.co.jp/pdf/ir/sales/tenpo/month_201412.pdf",
+     "yoy": 98.5,
+     "metric": "월매출/영업수입 전년비"
+    },
+    "2014-08": {
+     "doc": "https://www.chimney.co.jp/pdf/ir/sales/tenpo/month_201412.pdf",
+     "yoy": 98.7,
+     "metric": "월매출/영업수입 전년비"
+    },
+    "2014-09": {
+     "doc": "https://www.chimney.co.jp/pdf/ir/sales/tenpo/month_201412.pdf",
+     "yoy": 100.3,
+     "metric": "월매출/영업수입 전년비"
+    },
+    "2014-10": {
+     "doc": "https://www.chimney.co.jp/pdf/ir/sales/tenpo/month_201412.pdf",
+     "yoy": 102.2,
+     "metric": "월매출/영업수입 전년비"
+    },
+    "2014-11": {
+     "doc": "https://www.chimney.co.jp/pdf/ir/sales/tenpo/month_201412.pdf",
+     "yoy": 98.3,
+     "metric": "월매출/영업수입 전년비"
+    },
+    "2014-12": {
+     "doc": "https://www.chimney.co.jp/pdf/ir/sales/tenpo/month_201412.pdf",
+     "yoy": 101.3,
+     "metric": "월매출/영업수입 전년비"
+    }
+   }
+  },
+  "9990": {
+   "name": "サックスバーホールディングス",
+   "page": "https://www.sacs-bar.co.jp/ir/",
+   "months": {},
+   "ts": "2026-09-29T08:11:18+00:00",
+   "pdf_ts": "2026-09-29T08:11:18+00:00",
+   "pdf": {
+    "2025-06": {
+     "doc": "https://www.sacs-bar.co.jp/pdf/20251126.pdf",
+     "yoy": 98.9,
+     "metric": "월매출/영업수입 전년비"
+    },
+    "2025-09": {
+     "doc": "https://www.sacs-bar.co.jp/pdf/20251126.pdf",
+     "yoy": 94.1,
+     "metric": "월매출/영업수입 전년비"
+    },
+    "2025-10": {
+     "doc": "https://www.sacs-bar.co.jp/pdf/20251126.pdf",
+     "yoy": 101.0,
+     "metric": "월매출/영업수입 전년비"
+    },
+    "2025-11": {
+     "doc": "https://www.sacs-bar.co.jp/pdf/20251126.pdf",
+     "yoy": 104.1,
+     "metric": "월매출/영업수입 전년비"
+    },
+    "2025-12": {
+     "doc": "https://www.sacs-bar.co.jp/pdf/20251126.pdf",
+     "yoy": 101.9,
+     "metric": "월매출/영업수입 전년비"
+    }
+   }
+  },
+  "3542": {
+   "name": "ベガコーポレーション",
+   "page": "https://www.vega-c.com/ir/library/monthly-report/",
+   "months": {
+    "2026-04": {
+     "yoy": 112.8
+    },
+    "2026-05": {
+     "yoy": 113.7
+    },
+    "2026-06": {
+     "yoy": 120.4
+    },
+    "2026-07": {
+     "yoy": 124.7
+    },
+    "2026-08": {
+     "yoy": 127.4
+    },
+    "2025-04": {
+     "yoy": 116.4
+    },
+    "2025-05": {
+     "yoy": 128.9
+    },
+    "2025-06": {
+     "yoy": 120.7
+    },
+    "2025-07": {
+     "yoy": 117.3
+    },
+    "2025-08": {
+     "yoy": 110.2
+    },
+    "2025-09": {
+     "yoy": 107.7
+    },
+    "2025-10": {
+     "yoy": 104.4
+    },
+    "2025-11": {
+     "yoy": 105.9
+    },
+    "2025-12": {
+     "yoy": 114.5
+    },
+    "2026-01": {
+     "yoy": 118.0
+    },
+    "2026-02": {
+     "yoy": 118.1
+    },
+    "2026-03": {
+     "yoy": 110.6
+    },
+    "2024-04": {
+     "yoy": 95.6
+    },
+    "2024-05": {
+     "yoy": 82.3
+    },
+    "2024-06": {
+     "yoy": 81.3
+    },
+    "2024-07": {
+     "yoy": 92.9
+    },
+    "2024-08": {
+     "yoy": 91.8
+    },
+    "2024-09": {
+     "yoy": 98.3
+    },
+    "2024-10": {
+     "yoy": 104.1
+    },
+    "2024-11": {
+     "yoy": 100.8
+    },
+    "2024-12": {
+     "yoy": 112.3
+    },
+    "2025-01": {
+     "yoy": 115.0
+    },
+    "2025-02": {
+     "yoy": 103.4
+    },
+    "2025-03": {
+     "yoy": 114.2
+    },
+    "2023-04": {
+     "yoy": 99.5
+    },
+    "2023-05": {
+     "yoy": 105.9
+    },
+    "2023-06": {
+     "yoy": 98.4
+    },
+    "2023-07": {
+     "yoy": 95.6
+    },
+    "2023-08": {
+     "yoy": 93.3
+    },
+    "2023-09": {
+     "yoy": 90.5
+    },
+    "2023-10": {
+     "yoy": 100.4
+    },
+    "2023-11": {
+     "yoy": 93.6
+    },
+    "2023-12": {
+     "yoy": 90.9
+    },
+    "2024-01": {
+     "yoy": 91.4
+    },
+    "2024-02": {
+     "yoy": 99.1
+    },
+    "2024-03": {
+     "yoy": 94.1
+    },
+    "2022-04": {
+     "yoy": 98.5
+    },
+    "2022-05": {
+     "yoy": 88.6
+    },
+    "2022-06": {
+     "yoy": 84.3
+    },
+    "2022-07": {
+     "yoy": 104.3
+    },
+    "2022-08": {
+     "yoy": 98.3
+    },
+    "2022-09": {
+     "yoy": 93.3
+    },
+    "2022-10": {
+     "yoy": 102.6
+    },
+    "2022-11": {
+     "yoy": 106.3
+    },
+    "2022-12": {
+     "yoy": 113.0
+    },
+    "2023-01": {
+     "yoy": 104.2
+    },
+    "2023-02": {
+     "yoy": 105.7
+    },
+    "2023-03": {
+     "yoy": 100.8
+    },
+    "2021-04": {
+     "yoy": 79.4
+    },
+    "2021-05": {
+     "yoy": 84.0
+    },
+    "2021-06": {
+     "yoy": 96.0
+    },
+    "2021-07": {
+     "yoy": 77.8
+    },
+    "2021-08": {
+     "yoy": 95.0
+    },
+    "2021-09": {
+     "yoy": 106.8
+    },
+    "2021-10": {
+     "yoy": 92.3
+    },
+    "2021-11": {
+     "yoy": 101.1
+    },
+    "2021-12": {
+     "yoy": 87.1
+    },
+    "2022-01": {
+     "yoy": 85.1
+    },
+    "2022-02": {
+     "yoy": 89.2
+    },
+    "2022-03": {
+     "yoy": 97.5
+    }
+   },
+   "ts": "2026-09-29T08:11:18+00:00"
+  },
+  "2818": {
+   "name": "ピエトロ",
+   "page": "https://www.pietro.co.jp",
+   "months": {},
+   "ts": "2026-09-29T08:11:18+00:00",
+   "pdf_ts": "2026-09-29T08:11:18+00:00",
+   "pdf": {
+    "2026-04": {
+     "doc": "https://www.pietro.co.jp/assets/upload/news/getsuji_202609.pdf",
+     "yoy": 44.0,
+     "metric": "월매출/영업수입 전년비"
+    },
+    "2026-05": {
+     "doc": "https://www.pietro.co.jp/assets/upload/news/getsuji_202609.pdf",
+     "yoy": 44.0,
+     "metric": "월매출/영업수입 전년비"
+    },
+    "2026-06": {
+     "doc": "https://www.pietro.co.jp/assets/upload/news/getsuji_202609.pdf",
+     "yoy": 44.0,
+     "metric": "월매출/영업수입 전년비"
+    },
+    "2026-07": {
+     "doc": "https://www.pietro.co.jp/assets/upload/news/getsuji_202609.pdf",
+     "yoy": 44.0,
+     "metric": "월매출/영업수입 전년비"
+    },
+    "2026-08": {
+     "doc": "https://www.pietro.co.jp/assets/upload/news/getsuji_202609.pdf",
+     "yoy": 42.0,
+     "metric": "월매출/영업수입 전년비"
+    }
+   }
   }
  },
  "source": "회사 IR 페이지 (月次 표)",
  "note": "회사가 제 사이트에 올린 월차 표에서 읽는다. 값은 전년동월비(%)뿐이고 금액은 없다. 회계연도가 적힌 표는 그 해로 읽으므로 옛 회계연도 표를 함께 싣는 회사는 이력이 길다.",
- "companies": 32,
- "months": 544,
- "ts": "2026-09-29T08:03:20+00:00",
+ "companies": 39,
+ "months": 615,
+ "ts": "2026-09-29T08:20:33+00:00",
  "done": [
+  "https://corp.artnature.co.jp/ja/ir/finance/monthly_info/main/0/teaserItems1/00/linkList/0/link/20240415getsuji.pdf",
+  "https://corp.artnature.co.jp/ja/ir/finance/monthly_info/main/00/teaserItems1/00/linkList/0/link/00.pdf",
+  "https://corp.artnature.co.jp/ja/ir/finance/monthly_info/main/01/teaserItems1/00/linkList/0/link/00.pdf",
+  "https://corp.artnature.co.jp/ja/ir/finance/monthly_info/main/010/teaserItems1/00/linkList/0/link/00.pdf",
+  "https://corp.artnature.co.jp/ja/ir/finance/monthly_info/main/011/teaserItems1/00/linkList/0/link/00.pdf",
+  "https://corp.artnature.co.jp/ja/ir/finance/monthly_info/main/012/teaserItems1/00/linkList/0/link/00.pdf",
+  "https://corp.artnature.co.jp/ja/ir/finance/monthly_info/main/013/teaserItems1/00/linkList/0/link/00.pdf",
+  "https://corp.artnature.co.jp/ja/ir/finance/monthly_info/main/014/teaserItems1/00/linkList/0/link/00.pdf",
+  "https://corp.artnature.co.jp/ja/ir/finance/monthly_info/main/015/teaserItems1/00/linkList/0/link/00.pdf",
+  "https://corp.artnature.co.jp/ja/ir/finance/monthly_info/main/016/teaserItems1/00/linkList/0/link/20250415getsuji.pdf",
+  "https://corp.artnature.co.jp/ja/ir/finance/monthly_info/main/017/teaserItems1/00/linkList/0/link/20260416getuji.pdf",
+  "https://corp.artnature.co.jp/ja/ir/finance/monthly_info/main/018/teaserItems1/00/linkList/0/link/getsuji20260915.pdf",
+  "https://corp.artnature.co.jp/ja/ir/finance/monthly_info/main/02/teaserItems1/00/linkList/0/link/00.pdf",
+  "https://corp.artnature.co.jp/ja/ir/finance/monthly_info/main/03/teaserItems1/00/linkList/0/link/00.pdf",
+  "https://corp.artnature.co.jp/ja/ir/finance/monthly_info/main/04/teaserItems1/00/linkList/0/link/00.pdf",
+  "https://corp.artnature.co.jp/ja/ir/finance/monthly_info/main/05/teaserItems1/00/linkList/0/link/00.pdf",
+  "https://corp.artnature.co.jp/ja/ir/finance/monthly_info/main/06/teaserItems1/00/linkList/0/link/00.pdf",
+  "https://corp.artnature.co.jp/ja/ir/finance/monthly_info/main/07/teaserItems1/00/linkList/0/link/00.pdf",
+  "https://corp.artnature.co.jp/ja/ir/finance/monthly_info/main/08/teaserItems1/00/linkList/0/link/00.pdf",
+  "https://corp.artnature.co.jp/ja/ir/finance/monthly_info/main/09/teaserItems1/00/linkList/0/link/00.pdf",
   "https://ssl4.eir-parts.net/doc/9278/tdnet/2537288/00.pdf",
   "https://ssl4.eir-parts.net/doc/9278/tdnet/2545616/00.pdf",
   "https://ssl4.eir-parts.net/doc/9278/tdnet/2556563/00.pdf",
@@ -4399,6 +6557,28 @@
   "https://ssl4.eir-parts.net/doc/9278/tdnet/2848213/00.pdf",
   "https://ssl4.eir-parts.net/doc/9278/tdnet/2865156/00.pdf",
   "https://ssl4.eir-parts.net/doc/9278/tdnet/2881878/00.pdf",
+  "https://www.chimney.co.jp/pdf/ir/sales/tenpo/month_201412.pdf",
+  "https://www.chimney.co.jp/pdf/ir/sales/tenpo/month_201512.pdf",
+  "https://www.chimney.co.jp/pdf/ir/sales/tenpo/month_201703.pdf",
+  "https://www.chimney.co.jp/pdf/ir/sales/tenpo/month_201803.pdf",
+  "https://www.chimney.co.jp/pdf/ir/sales/tenpo/month_201903.pdf",
+  "https://www.chimney.co.jp/pdf/ir/sales/tenpo/month_202003.pdf",
+  "https://www.chimney.co.jp/pdf/ir/sales/tenpo/month_202103.pdf",
+  "https://www.chimney.co.jp/pdf/ir/sales/tenpo/month_202603.pdf",
+  "https://www.chimney.co.jp/prd/wordpress/wp-content/uploads/2026/09/uriage202608.pdf",
+  "https://www.chiyodagrp.co.jp/ir/annual_report/79.pdf",
+  "https://www.chiyodagrp.co.jp/ir/data/202512_getsuji_soku.pdf",
+  "https://www.chiyodagrp.co.jp/ir/data/202601_getsuji_soku.pdf",
+  "https://www.chiyodagrp.co.jp/ir/data/202602_getsuji_soku.pdf",
+  "https://www.chiyodagrp.co.jp/ir/data/202603_getsuji_soku.pdf",
+  "https://www.chiyodagrp.co.jp/ir/data/202604_getsuji_soku.pdf",
+  "https://www.chiyodagrp.co.jp/ir/data/202605_getsuji_soku.pdf",
+  "https://www.chiyodagrp.co.jp/ir/data/202606_getsuji_soku.pdf",
+  "https://www.chiyodagrp.co.jp/ir/data/202607_getsuji_soku.pdf",
+  "https://www.chiyodagrp.co.jp/ir/data/202608_getsuji_soku.pdf",
+  "https://www.chiyodagrp.co.jp/ir/data/2026_3Q_kaku.pdf",
+  "https://www.chiyodagrp.co.jp/ir/data/2026_kaku.pdf",
+  "https://www.chiyodagrp.co.jp/ir/data/2027_1Q_kaku.pdf",
   "https://www.fastretailing.com/jp/ir/monthly/pdf/MonthlySales_2023.pdf",
   "https://www.fastretailing.com/jp/ir/monthly/pdf/MonthlySales_2024.pdf",
   "https://www.fastretailing.com/jp/ir/monthly/pdf/MonthlySales_2025.pdf",
@@ -4414,6 +6594,8 @@
   "https://www.jrkyushu.co.jp/company/ir/finance/monthly/__icsFiles/afieldfile/2026/09/25/9142.monthly.202609p1.ja.pdf",
   "https://www.kichiri.co.jp/wp-content/uploads/2026/09/2609031111.pdf",
   "https://www.odakyu.jp/ir/news/ho5toc000000cu52-att/2026.06.pdf",
+  "https://www.pietro.co.jp/assets/upload/news/getsuji_202609.pdf",
+  "https://www.sacs-bar.co.jp/pdf/20251126.pdf",
   "https://www.westjr.co.jp/company/ir/finance/monthly/pdf/21.pdf",
   "https://www.westjr.co.jp/company/ir/finance/monthly/pdf/22.pdf",
   "https://www.westjr.co.jp/company/ir/finance/monthly/pdf/23.pdf",
@@ -4714,9 +6896,81 @@
   "https://ssl4.eir-parts.net/doc/9278/tdnet/2592651/00.pdf": "표없음",
   "https://ssl4.eir-parts.net/doc/9278/tdnet/2549387/00.pdf": "표없음",
   "https://ssl4.eir-parts.net/doc/9278/yuho_pdf/S100V2GO/00.pdf": "표없음",
-  "https://ssl4.eir-parts.net/doc/9278/tdnet/2547372/00.pdf": "표없음"
+  "https://ssl4.eir-parts.net/doc/9278/tdnet/2547372/00.pdf": "표없음",
+  "https://cdn.clipkit.co/tenants/2641/item_files/assets/000/006/107/original/2608GS.pdf": "표없음",
+  "https://cdn.clipkit.co/tenants/2641/item_files/assets/000/005/875/original/2607GS.pdf": "표없음",
+  "https://cdn.clipkit.co/tenants/2641/item_files/assets/000/005/612/original/2606GS.pdf": "표없음",
+  "https://cdn.clipkit.co/tenants/2641/item_files/assets/000/005/315/original/2605GS.pdf": "표없음",
+  "https://www.chiyodagrp.co.jp/ir/2026/0821.pdf": "표없음",
+  "https://www.chiyodagrp.co.jp/ir/2026/0820.pdf": "표없음",
+  "https://www.chiyodagrp.co.jp/ir/2026/0701.pdf": "표없음",
+  "https://www.chiyodagrp.co.jp/ir/2026/0618.pdf": "표없음",
+  "https://www.chiyodagrp.co.jp/ir/2026/0601.pdf": "표없음",
+  "https://www.chiyodagrp.co.jp/ir/2026/0429_02.pdf": "표없음",
+  "https://www.chiyodagrp.co.jp/ir/2026/0429_01.pdf": "표없음",
+  "https://www.chiyodagrp.co.jp/ir/presentation/2026_factbook.pdf": "표없음",
+  "https://www.chiyodagrp.co.jp/ir/2026/0410.pdf": "표없음",
+  "https://www.chiyodagrp.co.jp/ir/2026/0312_02.pdf": "표없음",
+  "https://www.chiyodagrp.co.jp/ir/2026/0312_01.pdf": "표없음",
+  "https://www.chiyodagrp.co.jp/ir/2026/0219_02.pdf": "표없음",
+  "https://www.chiyodagrp.co.jp/ir/2026/0219_01.pdf": "표없음",
+  "https://ir.studio-alice.co.jp/ja/Finance/MonthlyReport/main/0/teaserItems1/03/linkList/0/link/Getuji2608.pdf": "표없음",
+  "https://ir.studio-alice.co.jp/ja/Finance/MonthlyReport/main/0/teaserItems1/00/linkList/03/link/Getuji2607.pdf": "표없음",
+  "https://ir.studio-alice.co.jp/ja/Finance/MonthlyReport/main/0/teaserItems1/00/linkList/01/link/Getuji2606.pdf": "표없음",
+  "https://ir.studio-alice.co.jp/ja/Finance/MonthlyReport/main/0/teaserItems1/00/linkList/02/link/Getuji2605.pdf": "표없음",
+  "https://ir.studio-alice.co.jp/ja/Finance/MonthlyReport/main/0/teaserItems1/00/linkList/00/link/Getuji2604.pdf": "표없음",
+  "https://ir.studio-alice.co.jp/ja/Finance/MonthlyReport/main/0/teaserItems1/00/linkList/0/link/Getuji2603.pdf": "표없음",
+  "https://ir.studio-alice.co.jp/ja/Finance/MonthlyReport/main/00/teaserItems1/07/linkList/0/link/Getuji_2026_ALL.pdf": "표없음",
+  "https://files.microcms-assets.io/assets/d45caef7ee5f48168c423fe98204dea1/a7289ab7761147819cac18a24d2e9fcd/260915_JP_Monthly%20Business%20Perfomance%20Report.pdf": "표없음",
+  "https://www.chimney.co.jp/pdf/ir/sales/tenpo/month_202503.pdf": "표없음",
+  "https://www.chimney.co.jp/pdf/ir/sales/tenpo/month_202403.pdf": "표없음",
+  "https://www.chimney.co.jp/pdf/ir/sales/tenpo/month_202303.pdf": "표없음",
+  "https://www.chimney.co.jp/pdf/ir/sales/tenpo/month_202203.pdf": "표없음",
+  "https://www.chimney.co.jp/prd/wordpress/wp-content/uploads/2023/10/doukou_202304.pdf": "표없음",
+  "https://www.chimney.co.jp/prd/wordpress/wp-content/uploads/2023/10/doukou_202305.pdf": "표없음",
+  "https://www.chimney.co.jp/prd/wordpress/wp-content/uploads/2023/10/doukou_202306.pdf": "표없음",
+  "https://www.chimney.co.jp/prd/wordpress/wp-content/uploads/2023/10/doukou_202307.pdf": "표없음",
+  "https://www.chimney.co.jp/prd/wordpress/wp-content/uploads/2023/10/doukou_202308.pdf": "표없음",
+  "https://www.chimney.co.jp/prd/wordpress/wp-content/uploads/2023/11/doukou_202310.pdf": "표없음",
+  "https://www.chimney.co.jp/prd/wordpress/wp-content/uploads/2023/12/doukou_202311.pdf": "표없음",
+  "https://www.chimney.co.jp/prd/wordpress/wp-content/uploads/2024/01/doukou_202312.pdf": "표없음",
+  "https://www.chimney.co.jp/prd/wordpress/wp-content/uploads/2024/02/doukou_202401.pdf": "표없음",
+  "https://www.chimney.co.jp/prd/wordpress/wp-content/uploads/2024/03/doukou_202402.pdf": "표없음",
+  "https://www.chimney.co.jp/prd/wordpress/wp-content/uploads/2024/04/doukou_202403.pdf": "표없음",
+  "https://www.chimney.co.jp/pdf/ir/sales/doukou_202204.pdf": "표없음",
+  "https://www.chimney.co.jp/pdf/ir/sales/doukou_202205.pdf": "표없음",
+  "https://www.chimney.co.jp/pdf/ir/sales/doukou_202206.pdf": "표없음",
+  "https://www.chimney.co.jp/pdf/ir/sales/doukou_202207.pdf": "표없음",
+  "https://www.chimney.co.jp/pdf/ir/sales/doukou_202208.pdf": "표없음",
+  "https://www.chimney.co.jp/pdf/ir/sales/doukou_202209.pdf": "표없음",
+  "https://www.chimney.co.jp/pdf/ir/sales/doukou_202210.pdf": "표없음",
+  "https://www.chimney.co.jp/pdf/ir/sales/doukou_202211.pdf": "표없음",
+  "https://www.chimney.co.jp/pdf/ir/sales/doukou_202212.pdf": "표없음",
+  "https://www.chimney.co.jp/pdf/ir/sales/doukou_202301.pdf": "표없음",
+  "https://www.chimney.co.jp/pdf/ir/sales/doukou_202302.pdf": "표없음",
+  "https://www.chimney.co.jp/pdf/ir/sales/doukou_202303.pdf": "표없음",
+  "https://www.sacs-bar.co.jp/pdf/20260520.pdf": "표없음",
+  "https://www.sacs-bar.co.jp/pdf/monthly_202604.pdf": "표없음",
+  "https://www.sacs-bar.co.jp/pdf/20251105_01.pdf": "표없음",
+  "https://www.sacs-bar.co.jp/pdf/20250521.pdf": "표없음",
+  "https://www.sacs-bar.co.jp/pdf/monthly_202504.pdf": "표없음",
+  "https://www.sacs-bar.co.jp/pdf/20241120.pdf": "표없음",
+  "https://www.sacs-bar.co.jp/pdf/monthly_202404.pdf": "표없음",
+  "https://www.sacs-bar.co.jp/pdf/20231122.pdf": "표없음",
+  "https://www.sacs-bar.co.jp/pdf/20231102.pdf": "표없음",
+  "https://www.sacs-bar.co.jp/pdf/20230523.pdf": "표없음",
+  "https://www.sacs-bar.co.jp/pdf/monthly_202304.pdf": "표없음",
+  "https://www.sacs-bar.co.jp/pdf/20220524.pdf": "표없음",
+  "https://contents.xj-storage.jp/xcontents/60730/f4ebf668/4386/48c5/9a09/8de228297fc1/140120260907532662.pdf": "표없음",
+  "https://contents.xj-storage.jp/xcontents/60730/733672fb/0d0d/46a4/abde/98bfbb3674d6/140120260718596243.pdf": "표없음",
+  "https://contents.xj-storage.jp/xcontents/60730/767a9f1e/779c/4f6d/ae05/3219480e3281/140120260718596245.pdf": "표없음",
+  "https://www.pietro.co.jp/assets/upload/newsrelease/newsrelease_20260917.pdf": "표없음",
+  "https://www.pietro.co.jp/assets/upload/newsrelease/newsrelease_20260805_5.pdf": "표없음",
+  "https://www.pietro.co.jp/assets/upload/newsrelease/newsrelease_20260805_4.pdf": "표없음",
+  "https://www.pietro.co.jp/assets/upload/newsrelease/newsrelease_20260805_3.pdf": "표없음",
+  "https://www.pietro.co.jp/assets/upload/newsrelease/newsrelease_20260805_2.pdf": "표없음"
  },
- "pdf_months": 244,
+ "pdf_months": 606,
  "homes": {
   "1379": "https://www.hokto-kinoko.co.jp",
   "138A": "https://www.hikari-food-service.jp",
@@ -5004,7 +7258,21 @@
   "9245": "https://www.livero.co.jp",
   "8705": "https://www.nissansec-g.co.jp",
   "6561": "https://hanatourjapan.jp",
-  "9890": "https://www.makiya-group.co.jp"
+  "9890": "https://www.makiya-group.co.jp",
+  "556A": "https://corp.inuneko-seikatsu.co.jp",
+  "5888": "https://www.daiwa-cycle.co.jp",
+  "7049": "https://corp.shikigaku.jp",
+  "7506": "https://www.houseofrose.co.jp",
+  "9876": "https://www.cox-online.co.jp",
+  "7127": "https://ikka-holdings.co.jp",
+  "7370": "https://www.y-enjin.co.jp",
+  "7918": "https://www.via-hd.co.jp",
+  "150A": "https://www.jsh-japan.jp",
+  "7112": "https://www.cube-co.com",
+  "3690": "https://yrglm.co.jp",
+  "9941": "https://www.taiyo-bussan.co.jp",
+  "2687": "https://www.cvs-bayarea.co.jp",
+  "7043": "https://www.alue.co.jp"
  },
  "profile_miss": {
   "509A": "2026-09-29",
@@ -5014,7 +7282,8 @@
   "4659": "2026-09-29",
   "8209": "2026-09-29",
   "9927": "2026-09-29",
-  "9942": "2026-09-29"
+  "9942": "2026-09-29",
+  "3066": "2026-09-29"
  },
  "cursor": 56
 }
