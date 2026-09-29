@@ -1808,6 +1808,15 @@ def _merge_series(a, b):
     return [got[p] for p in sorted(got)]
 
 
+def _recent_month_coverage(rows, end_period, n=24):
+    """end_period까지 최근 n개월 중 실제 숫자가 몇 달 있는지."""
+    if not rows:
+        return 0
+    end = _mon_key(end_period or rows[-1][0])
+    return len({r[0] for r in rows
+                if end - n + 1 <= _mon_key(r[0]) <= end})
+
+
 def _ir_pick(rec):
     """회사 IR의 HTML 최신표와 PDF 백넘버를 **안전할 때 합쳐** 쓴다.
 
@@ -1967,7 +1976,11 @@ def load_monthly_nums(monthly):
         if not norm:
             continue
 
-        # 최신 대상월을 실제로 가진 소스가 먼저, 그다음 신뢰도.
+        # 최신 스냅샷은 **공식성 우선**: IR > 기사 > TDnet parser.
+        # 반면 24개월 차트는 **같은 최신월까지 도달한 신뢰 소스 중 가장 촘촘한
+        # 시계열**을 고른다. 예: PPIH는 공식 IR 표가 1개월뿐이어도 기사 쪽에는
+        # 20개월+가 이미 쌓여 있다. 최신 숫자는 공식 IR을 쓰되 차트 과거를
+        # 1개월로 잘라 버리면 '데이터 없음'처럼 보이는 문제가 생긴다.
         exact = [x for x in norm if want and any(r[0] == want for r in x[2])]
         pool = exact or norm
         pool.sort(key=lambda x: x[0])
@@ -1976,6 +1989,32 @@ def load_monthly_nums(monthly):
         latest = next((r for r in reversed(rows) if not want or r[0] == want),
                       rows[-1])
         latest_doc = latest[4] if len(latest) > 4 else ""
+
+        # 차트용 history는 최신월 도달 여부 → 최근 24개월 커버리지 → 소스 품질 순.
+        # 그리고 기준(기존점/전점)이 같거나 겹치는 달 숫자가 실제로 일치할 때만
+        # 다른 소스의 과거를 이어 붙인다. 기준이 다른 계열을 억지로 한 선으로
+        # 연결하지 않는다.
+        hist_choices = [x for x in (exact or norm) if x[4]] or (exact or norm)
+        hist_choices.sort(
+            key=lambda x: (-_recent_month_coverage(x[2], want), x[0]))
+        hrank, hsrc, hrows, hbase, htrusted, hrawrec = hist_choices[0]
+        history_rows = list(hrows)
+        history_base = hbase
+        history_srcs = [hsrc]
+        for orank, osrc, orows, obase, otrusted, _oraw in sorted(
+                norm,
+                key=lambda x: (-_recent_month_coverage(x[2], want), x[0])):
+            if osrc == hsrc or not otrusted:
+                continue
+            same_basis = bool(history_base and obase and history_base == obase)
+            agrees = _series_overlap_agrees(history_rows, orows)
+            if not (same_basis or agrees):
+                continue
+            # history_rows(주계열)가 겹치는 달에서는 우선한다.
+            history_rows = _merge_series(orows, history_rows)
+            if not history_base:
+                history_base = obase
+            history_srcs.append(osrc)
 
         # TDnet 은 리스트 원문과 같은 PDF일 때만 최신값을 검증 처리.
         if src == "TDnet PDF" and code in meta:
@@ -2014,11 +2053,13 @@ def load_monthly_nums(monthly):
                 snap["all"] = mv["all"]
 
         out[code] = {
-            "m": [r[:4] for r in rows],
+            "m": [r[:4] for r in history_rows],
             "src": src,
             "base": base,
+            "historySrc": " + ".join(history_srcs),
+            "historyBase": history_base,
             "verified": bool(trusted and (not want or latest[0] == want)),
-            "historyVerified": bool(trusted),
+            "historyVerified": bool(htrusted),
             "doc": latest_doc,
             "latest": snap,
         }
@@ -3637,13 +3678,12 @@ for (const r of D.rows) {
 }
 
 function mnFmtJPY(v) {
-  /* 엔 표기. 억 단위가 넘으면 억엔, 아니면 백만엔 — 일본 공시가 쓰는 단위다.
+  /* 소수점은 쓰지 않는다. 큰 금액도 억엔 단위 정수로 반올림해 한눈에 읽는다.
      **원화로 환산하지 않는다.** 몇 달치를 오늘 환율로 바꾸면 매출 흐름이
      아니라 환율 흐름이 된다(실적 차트와 같은 규칙). */
   if (v == null) return '';
   const a = Math.abs(v);
-  if (a >= 1e12) return (v / 1e12).toFixed(2) + '조엔';
-  if (a >= 1e8) return (v / 1e8).toFixed(a >= 1e10 ? 0 : 1) + '억엔';
+  if (a >= 1e8) return Math.round(v / 1e8).toLocaleString() + '억엔';
   if (a >= 1e6) return Math.round(v / 1e6).toLocaleString() + '백만엔';
   return Math.round(v).toLocaleString() + '엔';
 }
@@ -3718,7 +3758,7 @@ function mnChart(src) {
   let body = '';
   if (hasRev) {
     const mx = Math.max(...m.map(r => (r && r[1]) || 0), 1);
-    const u = mx >= 1e12 ? ['조엔', 1e12] : mx >= 1e8 ? ['억엔', 1e8]
+    const u = mx >= 1e8 ? ['억엔', 1e8]
             : mx >= 1e6 ? ['백만엔', 1e6] : ['엔', 1];
     body += '<text class="unit" x="' + L + '" y="16">월매출 ' + u[0] +
             ' · 최근 24개월 · 막대 위 금액 / 아래 YoY</text>';
@@ -3737,7 +3777,7 @@ function mnChart(src) {
       body += '<text class="vl' + (i === n - 1 ? ' latest' : '') +
               '" x="' + cx(i).toFixed(1) + '" y="' +
               Math.max(T - 2, base - h - 7).toFixed(1) + '" text-anchor="middle">' +
-              (s >= 100 ? Math.round(s).toLocaleString() : s.toFixed(1)) +
+              Math.round(s).toLocaleString() +
               '</text>';
     }
 
@@ -3985,7 +4025,10 @@ function mnLatestSnapshot(num, target) {
     cells.map(x => '<div class="cell"><div class="lab">' + esc(x[0]) +
       '</div><div class="val ' + x[2] + '">' + esc(x[1]) + '</div></div>').join('') +
     '<div class="src">최신 ' + esc((s.period || target || '').replace('-', '.')) +
-      ' · ' + esc(num.src || '') + '</div></div>';
+      ' · ' + esc(num.src || '') +
+      (num.historySrc && num.historySrc !== num.src
+        ? ' · 24개월 차트 ' + esc(num.historySrc)
+        : '') + '</div></div>';
 }
 
 function mnQuality(num) {
@@ -4036,7 +4079,7 @@ function monthlyBlock(code) {
 
   // 검증 실패한 자동 PDF 수치를 차트로 그리면 '검증중'이라고 해놓고 다시
   // 틀린 숫자를 보여주는 셈이다. 검증된 series 만 그린다.
-  const chart = num && num.verified && num.m && num.m.length
+  const chart = num && num.historyVerified && num.m && num.m.length
     ? '<div class="mnmodalchart">' + mnChart(num.m) + '</div>' : '';
   const src = last && last[8]
     ? '<div class="finlegend"><span class="src">' +
