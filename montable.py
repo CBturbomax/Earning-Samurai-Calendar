@@ -292,6 +292,67 @@ def _title_target_month(title: str, aday: date):
     return f"{yr:04d}-{mo:02d}"
 
 
+VERT_MONTH = re.compile(r"^(?:(\d{2}|\d{4})年)?(\d{1,2})月(?:[（(~～].*)?$")
+
+
+def _vertical_yoy(table, aday: date, title: str = ""):
+    """달이 세로로 선 월차 PDF에서 첫 매출성 전년비 열을 읽는다.
+
+    JR서일본처럼 왼쪽에 4月,5月…이 서고 오른쪽 첫 숫자열이
+    운송수입 전년비인 연간 PDF가 대표적이다. 매출성 낱말과 전년비 문맥이
+    둘 다 있을 때만 작동해 이용객수/가동률 표 오검출을 막는다.
+    """
+    ctx = "".join(_norm(t) for row in table for _x, t in row)
+    if not re.search(r"売上|営業収益|営業収入|取扱収入|取扱高|販売高|月商", ctx):
+        return None
+    if not re.search(r"前年|対前年|昨対|YoY", ctx, re.I):
+        return None
+
+    hits = {}
+    for cells in table:
+        months = []
+        for x, t in cells:
+            m = VERT_MONTH.match(_norm(t))
+            if m and 1 <= int(m.group(2)) <= 12:
+                gy = int(m.group(1)) if m.group(1) else None
+                if gy is not None and gy < 100:
+                    gy += 2000
+                months.append((x, int(m.group(2)), gy))
+        if not months:
+            continue
+        mx, mo, gy = min(months, key=lambda z: z[0])
+        nums = []
+        for x, t in cells:
+            v = _num(t)
+            if x > mx + 1 and v is not None:
+                nums.append((x, v))
+        if not nums:
+            continue
+        nums.sort()
+        hits.setdefault(mo, (gy, nums[0][1]))
+
+    if len(hits) < 3:
+        return None
+    seq = sorted(hits.items(), key=lambda kv: kv[0])
+    months = [mo for mo, _ in seq]
+    given = [val[0] for _mo, val in seq]
+    # 달 숫자만 정렬하면 4월~3월 회계연도의 해가 끊기므로, 해가 없을 때는
+    # 발표월보다 큰 달을 전년으로 두고 달 순서만 만든다.
+    if all(y is not None for y in given):
+        years = given
+    else:
+        years = [aday.year if mo <= aday.month else aday.year - 1 for mo in months]
+
+    rows = []
+    for i, (mo, (_gy, v)) in enumerate(seq):
+        yoy = 100.0 + v if abs(v) < 30 else v
+        if not 20 <= yoy <= 500:
+            continue
+        rows.append({"period": f"{years[i]:04d}-{mo:02d}",
+                     "yoy": yoy, "metric": "월매출/영업수입 전년비"})
+    return ({"rows": rows, "amount_label": "", "yoy_label": "対前年比"}
+            if rows else None)
+
 def read(data: bytes, ann: str, max_pages: int = 12, title: str = ""):
     """PDF -> {'rows': [...], 'basis': ...} 또는 None.
 
@@ -334,6 +395,7 @@ def read(data: bytes, ann: str, max_pages: int = 12, title: str = ""):
         # 테라프로브(6627)·바이셀(7685)·업개러지(7134)의 백만엔 금액이
         # 전년비 칸에 실려 4,124% 같은 값이 나왔다.
         cap_yoy = bool(CAP_YOY.search(cap_txt)) and not cap_mul
+        pct_decl = bool(decl and re.search(r"[%％]", decl.group(1)))
         amounts, yoys, cap_yoys = [], [], []
         # **이름과 숫자가 다른 줄에 찍히는 공시가 많다.** 실측: '표없음'으로
         # 버린 209건 중 **92건**이 이것 하나였다. 히로세통상(7185)이 그 꼴이다.
@@ -396,14 +458,13 @@ def read(data: bytes, ann: str, max_pages: int = 12, title: str = ""):
                 # 이름표가 결산기뿐일 만큼 약할 때는 **공시 제목에도 '매출'이
                 # 적혀 있을 때만** 담는다(스기HD 의 「26年3月…」 표).
                 amounts.append((lab or title_metric, cap_unit, cap_mul, vals))
-            elif cap_yoy and not mul and AMOUNT_LABEL.search(lab or "") \
-                    and not lab_has_other(lab):
-                # 표 제목이 「前年比の推移」인데 값 줄에는 '전년'이 없는 표.
-                # 매출 낱말 이름표에만 건다 — 같은 표의 객수·가동률 줄이
-                # 딸려 들어오면 그게 더 나쁜 거짓말이다.
-                if DELTA_LABEL.search(lab) or _looks_delta(vals):
+            elif (cap_yoy or pct_decl) and not mul \
+                    and AMOUNT_LABEL.search(lab or "") and not lab_has_other(lab):
+                # 단위가 %이고 행 이름이 売上高/既存店売上高인 표도 전년비다.
+                # +8.5/-0.4식이면 108.5/99.6으로 정규화한다.
+                if DELTA_LABEL.search(lab or "") or _looks_delta(vals):
                     vals = {k2: v + 100.0 for k2, v in vals.items()}
-                cap_yoys.append((lab, vals))
+                cap_yoys.append((lab or title_metric, vals))
         # 제목만 보고 읽은 줄은 **마지막 수단**이다. 같은 표에서 금액 줄이나
         # 제대로 된 전년비 줄을 찾았으면 그쪽이 옳다.
         if not amounts and not yoys:
@@ -428,7 +489,8 @@ def read(data: bytes, ann: str, max_pages: int = 12, title: str = ""):
         cands.append((newest, len(have), i, hdr, amounts, yoys))
 
     if not cands:
-        return _sentence(table, aday)
+        vertical = _vertical_yoy(table, aday, title)
+        return vertical or _sentence(table, aday)
 
     groups = {}
     for c in cands:
@@ -710,6 +772,28 @@ def _selftest():                                          # pragma: no cover
         print("!! 카) ％ 단위 전년비 표", got)
         ok = False
 
+    # (타) ABC-MART 꼴: 단위 % + 매출행의 작은 수는 증감폭이다.
+    t = _pdf([(720, [(60, "2027年2月期 月次売上"), (440, "(単位：％)")]),
+              (700, hdr),
+              (680, [(40, "既存店売上高"), (100, "8.5"), (140, "-0.4"),
+                     (180, "3.2"), (220, "10.1")])])
+    g = read(t, "2026-05-10", title="月次売上速報")
+    got = {r["period"]: r.get("yoy") for r in (g or {}).get("rows") or []}
+    if got.get("2026-01") != 108.5 or got.get("2026-02") != 99.6:
+        print("!! 타) 증감폭 퍼센트 표", got)
+        ok = False
+
+    # (파) JR서일본 꼴: 달이 세로로 서는 전년비 표.
+    p = _pdf([(720, [(40, "運輸取扱収入 対前年比")]),
+              (700, [(40, "4月"), (120, "103.3")]),
+              (680, [(40, "5月"), (120, "104.3")]),
+              (660, [(40, "6月"), (120, "99.8")]),
+              (640, [(40, "7月"), (120, "103.9")])])
+    g = read(p, "2026-09-01", title="月次運輸取扱収入")
+    got = {r["period"]: r.get("yoy") for r in (g or {}).get("rows") or []}
+    if len(got) != 4 or got.get("2026-04") != 103.3 or got.get("2026-07") != 103.9:
+        print("!! 파) 세로형 전년비 표", got)
+        ok = False
     print("montable 스스로 시험:", "통과" if ok else "떨어짐")
     return 0 if ok else 1
 

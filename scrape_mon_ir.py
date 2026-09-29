@@ -46,7 +46,7 @@ VER = 1
 # 그대로 두었다. 회사 IR 페이지는 **늘 거기 있다.** 다시 받는 값이 싸므로,
 # 규칙이 아직 어린 지금은 **틀린 값을 안고 가느니 다시 받는 편**이 낫다
 # (오검출 하나가 놓침 하나보다 나쁘다). 규칙이 굳으면 그때 바꾼다.
-RULE_VER = 5
+RULE_VER = 6
 
 UA = {"User-Agent": ("Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
                      "AppleWebKit/537.36 (KHTML, like Gecko) "
@@ -156,6 +156,11 @@ def load():
             site.pop("miss", None)
             site.pop("parse_miss", None)
             site.pop("discontinued", None)
+        # parser가 예전에 못 읽은 PDF는 새 규칙에서 반드시 다시 시도한다.
+        # 과거에는 표없음 파일도 done에 먼저 들어가 영구적으로 봉인됐다.
+        failed = set((got.get("skip") or {}).keys())
+        got["done"] = [u for u in (got.get("done") or []) if u not in failed]
+        got["skip"] = {}
         got["profile_miss"] = {}
         got["rv"] = RULE_VER
     return got
@@ -417,7 +422,6 @@ def read_pdfs(page, url, pdf, rec, today, budget):
         n += 1
         if not data:
             continue
-        rec.setdefault("done", []).append(u)
         try:
             got = montable.read(data, when, title=lab)
         except Exception as e:
@@ -427,6 +431,10 @@ def read_pdfs(page, url, pdf, rec, today, budget):
         if not rows:
             skip[u] = "표없음"
             continue
+        # 실제 숫자를 얻은 파일만 완료 처리한다. 실패 파일은 parser 판이
+        # 바뀌면 재시도할 수 있어야 한다.
+        rec.setdefault("done", []).append(u)
+        skip.pop(u, None)
         for r in rows:
             per = r.get("period") or ""
             if not per or per >= cur:

@@ -51,6 +51,7 @@ RATIO = re.compile(r"^(\d{1,3}(?:,\d{3})*(?:\.\d+)?)\s*[%]?$")
 DELTA = re.compile(r"^([+\-△▲]?)\s*(\d{1,3}(?:\.\d+)?)\s*[%％]?$")
 YOY_CONTEXT = re.compile(r"前年(?:同月|同期)?比|前年比|前年対比|前年同期比|伸び率|増減率")
 GENERIC_SALES = re.compile(r"売上|営業収益|営業収入|取扱高|販売高|月商")
+GENERIC_NOT_SALES = re.compile(r"利益|粗利|原価|客数|客単価|店舗数|在庫|面積|坪|人員")
 
 
 def _txt(s: str) -> str:
@@ -183,21 +184,25 @@ def _all_text(rows):
     return " ".join(x for r in rows for x in r)
 
 
-def _label_ok(lab: str):
-    """이름표 -> 'same' · 'all' · 'yoy' · None.
+def _label_ok(lab: str, context: str = ""):
+    """이름표 -> same · all · yoy · None.
 
-    전에는 既存店/全店 두 줄만 받아서 Rakus·Asahi·MISUMI처럼 그냥
-    '売上高 前年比' 한 줄만 내는 회사가 전부 빠졌다. 매출 낱말이 명확하면
-    일반 월매출 YoY도 받는다. 객수·객단가·점포수는 여전히 먼저 버린다.
+    행 이름이 그냥 「前年比」여도 표 제목이 매출임을 명시하면 월매출로 읽는다.
+    반대로 利益/粗利/客数 같은 비매출 표는 문맥까지 함께 막는다.
     """
-    if monweb.NOT_SALES.search(lab):
+    if monweb.NOT_SALES.search(lab) or GENERIC_NOT_SALES.search(lab):
         return None
     same, allst = monweb.SAME.search(lab), monweb.ALL.search(lab)
     if same:
         return "same"
     if allst:
         return "all"
-    return "yoy" if GENERIC_SALES.search(lab) else None
+    if GENERIC_SALES.search(lab):
+        return "yoy"
+    if (YOY_CONTEXT.search(lab) and GENERIC_SALES.search(context)
+            and not GENERIC_NOT_SALES.search(context)):
+        return "yoy"
+    return None
 
 
 # 한 표에서 **이름표가 같은 계열이 둘 이상**이면 그 표를 안 읽는다.
@@ -288,7 +293,7 @@ def _horizontal(rows, width, hr, cols, today, near, lead=""):
         vals = _row_ratios([r[c] for c in cols], delta_hint)
         if sum(v is not None for v in vals) < 2:
             continue
-        kind = _label_ok("".join(r[c] for c in range(first)))
+        kind = _label_ok("".join(r[c] for c in range(first)), lead)
         if kind:
             pairs.append((kind, vals))
     if not pairs:
@@ -310,7 +315,7 @@ def _vertical(rows, width, c0, mrows, today, near, lead=""):
         vals = _row_ratios([rows[i][c] for i in mrows], delta_hint)
         if sum(v is not None for v in vals) < 2:
             continue
-        kind = _label_ok(labs[c])
+        kind = _label_ok(labs[c], lead)
         if kind:
             pairs.append((kind, vals))
     if not pairs:
@@ -388,6 +393,7 @@ LAB_EN_YM = re.compile(
     re.I)
 URL_YMD = re.compile(r"(?<!\d)(\d{2})(\d{2})(\d{2})(?!\d)")
 URL_YM = re.compile(r"(?<!\d)(20\d{2})(\d{2})(?!\d)")
+URL_PATH_YM = re.compile(r"/(20\d{2})/(0?[1-9]|1[0-2])(?:[^/]*?)\.pdf(?:$|\?)", re.I)
 
 
 def _next_month(y, m):
@@ -445,6 +451,9 @@ def pdf_when(url: str, label: str):
     m = URL_YM.search(name)                      # 「sokuho202608.pdf」 = 대상 달
     if m and 1 <= int(m.group(2)) <= 12:
         return _next_month(int(m.group(1)), int(m.group(2))).isoformat()
+    m = URL_PATH_YM.search(url)                  # 「/2026/08.pdf」 = 대상 달
+    if m:
+        return _next_month(int(m.group(1)), int(m.group(2))).isoformat()
     m = FY_END.search(lab)                       # 「2026年8月期」 = 결산기말
     if m and 1 <= int(m.group(2)) <= 12:
         return _next_month(int(m.group(1)), int(m.group(2))).isoformat()
@@ -486,24 +495,35 @@ MONTHLY_PATH_HINT = re.compile(
 
 
 def find_monthly(page: str, base: str):
-    """페이지에서 **月次 페이지로 가는 링크**를 찾는다 -> 주소 또는 ''.
+    """페이지에서 가장 그럴듯한 月次 페이지를 점수로 고른다.
 
-    **PDF 는 안 고른다.** 달마다 PDF 한 장을 거는 회사(브ックオフ 9278)에서
-    첫 PDF 를 月次 '페이지'로 잡으면 그 한 장만 보고 목록을 통째로 놓친다.
-    그럴 때는 **그 PDF 들이 걸린 페이지 자체**가 목록이다(`has_monthly_pdf`).
+    첫 매치를 바로 택하면 「既存店」이라는 말만 있는 전략 페이지를 월차로
+    오인할 수 있다. 月次/Monthly와 URL 경로를 강하게 우선하고 약한 힌트는
+    보조점수로만 쓴다.
     """
     import urllib.parse
+    cand = []
     for href, lab in A.findall(page):
         if href.lower().startswith(("javascript:", "mailto:", "tel:")):
             continue
         t = _txt(lab)
-        if (MONTHLY_LINK_HINT.search(t) or MONTHLY_LINK_HINT.search(href) or
-                MONTHLY_PATH_HINT.search(href)):
-            u = urllib.parse.urljoin(base, href)
-            if u.split("?")[0].lower().endswith(".pdf"):
-                continue
-            return u
-    return ""
+        u = urllib.parse.urljoin(base, href)
+        if u.split("?")[0].lower().endswith(".pdf"):
+            continue
+        score = 0
+        if re.search(r"月次|月度|月別|Monthly", t, re.I):
+            score += 100
+        if MONTHLY_PATH_HINT.search(href):
+            score += 80
+        if re.search(r"売上|営業概況|営業報告|KPI|取扱高|輸送実績", t, re.I):
+            score += 35
+        if re.search(r"既存店|全店", t):
+            score += 8
+        if MONTHLY_LINK_HINT.search(href):
+            score += 30
+        if score:
+            cand.append((score, -len(u), u))
+    return max(cand)[2] if cand else ""
 
 
 def has_monthly_pdf(page: str, base: str) -> bool:
@@ -530,20 +550,26 @@ def find_ir(page: str, base: str):
 # 비쿠카메라 3048 은 timeout 이다.
 IR_SITES = {
     # ── 84·85·86·88차로 열리는 것을 확인한 곳 ─────────────────────────────
-    "8267": ("イオン", "https://www.aeon.info/", ""),
-    "3086": ("Ｊフロント", "https://www.j-front-retailing.com/", ""),
+    "8267": ("イオン", "https://www.aeon.info/",
+             "https://www.aeon.info/ir/library/monthly/"),
+    "3086": ("Ｊフロント", "https://www.j-front-retailing.com/",
+             "https://www.j-front-retailing.com/ir/finance/monthly.html"),
     "9843": ("ニトリ", "https://www.nitorihd.co.jp/", ""),
     "9983": ("ファストリ", "https://www.fastretailing.com/jp/", ""),
-    "7550": ("ゼンショー", "https://www.zensho.co.jp/jp/", ""),
+    "7550": ("ゼンショー", "https://www.zensho.co.jp/jp/",
+             "https://www.zensho.co.jp/jp/ir/finance/monthly/"),
     "3382": ("セブン＆アイ", "https://www.7andi.com/", ""),
-    "9831": ("ヤマダ", "https://www.yamada-holdings.jp/", ""),
+    "9831": ("ヤマダ", "https://www.yamada-holdings.jp/",
+             "https://www.yamada-holdings.jp/ir/monthly.html"),
     "3563": ("スシロー", "https://food-and-life.co.jp/", ""),
     "7564": ("ワークマン", "https://www.workman.co.jp/", ""),
     "2695": ("くら寿司", "https://www.kurasushi.co.jp/", ""),
     "7606": ("ユナイテッドアローズ", "https://www.united-arrows.co.jp/", ""),
     "3097": ("物語コーポ", "https://www.monogatari.co.jp/", ""),
-    "3197": ("すかいらーく", "https://corp.skylark.co.jp/", ""),
-    "4666": ("パーク２４", "https://www.park24.co.jp/", ""),
+    "3197": ("すかいらーく", "https://corp.skylark.co.jp/",
+             "https://corp.skylark.co.jp/ir/financial/performance/"),
+    "4666": ("パーク２４", "https://www.park24.co.jp/",
+             "https://www.park24.co.jp/ir/financial/monthly.html"),
     "8016": ("オンワードＨＤ", "https://www.onward-hd.co.jp/", ""),
     "7476": ("アズワン", "https://www.as-1.co.jp/", ""),
     # ── 90차에 더한 곳 ─────────────────────────────────────────────────
@@ -568,7 +594,8 @@ IR_SITES = {
     "8273": ("イズミ", "https://www.izumi.co.jp/", ""),
     "9948": ("アークス", "https://www.arcs-g.co.jp/", ""),
     "7545": ("西松屋チェーン", "https://www.24028.jp/", ""),
-    "3549": ("クスリのアオキＨＤ", "https://www.kusuri-aoki.co.jp/", ""),
+    "3549": ("クスリのアオキＨＤ", "https://www.kusuri-aoki.co.jp/",
+             "https://kusuri-aoki-hd.co.jp/ir/finance/monthry/"),
     "9832": ("オートバックス", "https://www.autobacs.co.jp/", ""),
     "2664": ("カワチ薬品", "https://www.kawachi.co.jp/", ""),
     "3222": ("ＵＳＭＨ", "https://www.usmh.co.jp/", ""),
@@ -591,10 +618,20 @@ IR_SITES = {
              "https://www.takashimaya.co.jp/corp/shareholder/"),
     "8242": ("Ｈ２Ｏリテイリング", "https://www.h2o-retailing.co.jp/",
              "https://www.h2o-retailing.co.jp/ja/news.html"),
-    "3099": ("三越伊勢丹ＨＤ", "https://www.imhds.co.jp/", ""),
-    "9021": ("ＪＲ西日本", "https://www.westjr.co.jp/", ""),
+    "3099": ("三越伊勢丹ＨＤ", "https://www.imhds.co.jp/",
+             "https://www.imhds.co.jp/corporate/ir/finance/monthly-report.html"),
+    "9021": ("ＪＲ西日本", "https://www.westjr.co.jp/",
+             "https://www.westjr.co.jp/company/ir/finance/monthly/"),
     "9022": ("ＪＲ東海", "https://company.jr-central.co.jp/", ""),
     "9023": ("東京メトロ", "https://www.tokyometro.jp/corporate/", ""),
+    "2502": ("アサヒグループ", "https://www.asahigroup-holdings.com/",
+             "https://www.asahigroup-holdings.com/ir/financial_data/monthly_data/"),
+    "2670": ("ＡＢＣマート", "https://www.abc-mart.co.jp/",
+             "https://www.abc-mart.co.jp/ir/getsujijoho.html"),
+    "3038": ("神戸物産", "https://www.kobebussan.co.jp/",
+             "https://www.kobebussan.co.jp/ir/monthly.php"),
+    "2593": ("伊藤園", "https://www.itoen.co.jp/",
+             "https://www.itoen.co.jp/ir/library/monthly_sales_backnumber/"),
 }
 
 
@@ -935,6 +972,20 @@ def _selftest():                                          # pragma: no cover
                      '<a href="/p/MonthlySales_2026.pdf">2026年8月期 (80KB)</a>',
                      "https://x.jp/")), 1)
 
+    # v6: URL 경로 자체가 대상월인 PDF (아사히 꼴).
+    eq("(버) /YYYY/MM.pdf 대상월",
+       pdf_when("https://x.jp/monthly/2026/08.pdf", "Monthly Sales"),
+       "2026-09-01")
+
+    # v6: 약한 既存店 링크가 먼저 있어도 진짜 月次 링크를 골라야 한다.
+    scored = ('<a href="/ir/strategy/existing_store/">既存店の成長</a>'
+              '<a href="/ir/financial/monthly/">月次売上高</a>')
+    eq("(서) 월차 링크 점수", find_monthly("".join(scored), "https://x.jp/"),
+       "https://x.jp/ir/financial/monthly/")
+
+    # v6: 행 이름이 前年比뿐이어도 표 제목이 매출이면 읽는다.
+    eq("(어) 문맥형 前年比", _label_ok("前年比", "月次売上高"), "yoy")
+    eq("(어) 비매출 문맥 차단", _label_ok("前年比", "粗利益"), None)
     if bad:
         print("monir 스스로 시험 실패:")
         for b in bad:
