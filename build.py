@@ -2066,6 +2066,58 @@ def load_monthly_nums(monthly):
 
     return out
 
+def apply_reviewed_monthly(monthly, nums):
+    """Source-linked, same-metric backfill; collectors never overwrite this archive."""
+    path = HERE / 'data' / 'monthly_reviewed_jp.json'
+    if not path.exists():
+        return monthly, nums
+    board = json.loads(path.read_text(encoding='utf-8'))
+    excluded = set(board.get('excludedCodes', []))
+    rows = {r[2]: r for r in monthly if r[2] not in excluded}
+    for code in excluded:
+        nums.pop(code, None)
+    labels = {'all': '전점', 'same': '기존점', 'yoy': '매출'}
+    for company in board['companies']:
+        code, metric = company['code'], company['defaultMetric']
+        evidence = {}
+        history = []
+        for period, values in sorted(company['months'].items()):
+            item = values.get(metric, {})
+            ratio = item.get('ratio')
+            if not isinstance(ratio, (int, float)) or not item.get('source'):
+                continue
+            history.append([period, None, ratio, 0])
+            evidence[period] = item
+        if not history:
+            continue
+        base = labels[metric]
+        # Only append later automatic observations when both scope and metric
+        # match an explicitly reviewed series. Never replace reviewed history.
+        old = nums.get(code, {})
+        reviewed = {r[0]: r[2] for r in history}
+        overlap = [r for r in old.get('m', []) if r[0] in reviewed and r[2] is not None]
+        same_history = (len(overlap) >= 3 and
+                        all(abs(r[2] - reviewed[r[0]]) < 0.15 for r in overlap))
+        if (old.get('historyVerified') and old.get('historyBase') == base
+                and (old.get('scope') == company['scope'] or same_history)):
+            history.extend(r for r in old.get('m', []) if r[0] > board['endMonth'])
+        latest = history[-1]
+        item = evidence.get(latest[0], {})
+        doc = item.get('source') or old.get('doc', '')
+        prior = rows.get(code)
+        official_date = prior[0] if prior and prior[5] == latest[0] and prior[11] == 'official' else ''
+        rows[code] = [official_date, '', code, company['name'], company['originalName'],
+                      latest[0], '', '월별 원자료', doc,
+                      company.get('capKrw', 0) / USD_KRW / 1e9,
+                      company.get('sector', '기타'), 'official' if official_date else 'unknown', '']
+        nums[code] = {'m': history, 'src': '원자료 대조', 'base': base,
+                      'scope': company['scope'], 'note': company.get('note', ''),
+                      'historySrc': '월별 출처 보존 · 원자료 대조', 'historyBase': base,
+                      'verified': True, 'historyVerified': True, 'doc': doc,
+                      'evidence': evidence,
+                      'latest': {'period': latest[0], 'yoy': latest[2], 'base': base}}
+    return list(rows.values()), nums
+
 def pack_jp(r):
     """일본만 기계 변환을 거친다. 원본이 일본어라 그대로는 훑어보기가 안 된다."""
     ko, lvl = to_korean(r["name"], companies.NOTABLE.get(r["code"], ("",))[0])
@@ -2198,6 +2250,7 @@ def build():
 
     monthly = load_monthly(packed)
     monthly_nums = load_monthly_nums(monthly)
+    monthly, monthly_nums = apply_reviewed_monthly(monthly, monthly_nums)
     per_day = Counter(p[0] for p in packed)
     notable_hits = sum(1 for p in packed if p[9] + ":" + p[1] in notable)
     all_ok = sorted({d for m in ok_days for d in ok_days[m]})
@@ -2563,7 +2616,7 @@ __FLAGCSS__
 
 /* 월매출 비교: 기업 × 공통 24개월. 다른 섹션의 스타일과 독립적이다. */
 .mnboard { border:1px solid #293747; border-radius:6px; overflow:auto; max-height:760px; background:#0c1521; scrollbar-color:#43556e #1a273a; }
-.mnmatrix { width:100%; min-width:1480px; table-layout:fixed; border-spacing:0; font-size:13px; font-variant-numeric:tabular-nums; }
+.mnmatrix { width:100%; min-width:1360px; table-layout:fixed; border-spacing:0; font-size:13px; font-variant-numeric:tabular-nums; }
 .mnmatrix th,.mnmatrix td { padding:0; border-right:1px solid #293343; border-bottom:1px solid #293343; text-align:center; height:56px; font-size:13px; }
 .mnmatrix thead th { position:sticky; top:0; z-index:3; background:#1d2a3b; color:#b9cee7; font-weight:500; height:56px; }
 .mnmatrix th:first-child { position:sticky; left:0; z-index:2; background:#152232; text-align:left; }
@@ -2572,11 +2625,11 @@ __FLAGCSS__
 .mncompany small { display:block; margin-top:5px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; color:#819ebf; font-size:12px; font-weight:500; }
 .mnmatrix .mncapcell,.mnmatrix .mncoverage { color:#acbfd7; background:#132030; }
 .mnmatrix .mncoverage { font-size:12px; }
-.mnmatrix .mnlatest { font-weight:900; box-shadow:inset 0 0 0 1px #43516a; }
-.mnmatrix thead .mnlatest { background:#293b54; color:#fff; }
+.mnmatrix .mnlatestcol { position:sticky; right:0; z-index:2; font-weight:900; border-left:2px solid #91b8ff; box-shadow:inset 0 0 0 1px #43516a; background:#1b2b43 !important; }
+.mnmatrix thead .mnlatestcol { z-index:4; background:#355279 !important; color:#fff; }
 .mnmatrix .mnyear { border-left:1px solid #566a86; }
 .mnmatrix .mncell { width:100%; height:100%; min-height:56px; padding:0 2px; background:transparent; border:0; color:inherit; font:inherit; font-weight:650; cursor:pointer; white-space:nowrap; }
-.mnmatrix .mnlatest .mncell { font-weight:900; }
+.mnmatrix .mnlatestcol .mncell { font-weight:900; }
 .mnmatrix button:hover { background:#ffffff0c; }
 .mnmatrix button:focus-visible { outline:2px solid #96baff; outline-offset:-3px; }
 .mnsummary { display:flex; justify-content:space-between; gap:12px; flex-wrap:wrap; color:#91a6bf; font-size:13px; margin:0 0 12px; }
@@ -3737,12 +3790,8 @@ function mnFmtJPY(v) {
 const MN_KEY = p => (+p.slice(0, 4)) * 12 + (+p.slice(5, 7)) - 1;
 const MN_A = MN_KEY('2024-01');
 const MN_B = (() => {
-  let b = MN_A + 11;
-  for (const k in MNUM) {
-    const mm = MNUM[k].m;
-    if (mm && mm.length) b = Math.max(b, MN_KEY(mm[mm.length - 1][0]));
-  }
-  return b;
+  const today = D.today || new Date().toLocaleDateString('sv-SE');
+  return Math.max(MN_KEY('2026-08'), MN_KEY(today.slice(0,7)) - 1);
 })();
 
 function mnRecentDense(src, count=24) {
@@ -4008,21 +4057,21 @@ function renderMonthly() {
     html += list.map(x => {
       const n = MNUM[x.code] || {}, url = n.doc || x.last[8];
       const missing = months.filter(p => mnHeatValue(x.series.get(p)) === null).map(p => p.slice(2).replace('-', '.')).join(', ');
-      return '<tr><td><button data-mcode="' + esc(x.code) + '">' + esc(x.ko) + '</button></td><td>' + x.coverage + '/24</td><td>' + esc(n.historyBase || n.base || '월매출') + '</td><td>' + esc(n.historySrc || n.src || '수치 미수집') + '</td><td>' + (missing || '없음') + '</td><td>' + (url ? '<a class="mpdf" target="_blank" rel="noopener" href="' + esc(url) + '">원문 ↗</a>' : '미확인') + '</td></tr>';
+      return '<tr><td><button data-mcode="' + esc(x.code) + '">' + esc(x.ko) + '</button></td><td>' + x.coverage + '/24</td><td>' + esc((n.historyBase || n.base || '월매출') + (n.scope ? ' · ' + n.scope : '')) + '</td><td>' + esc(n.historySrc || n.src || '수치 미수집') + '</td><td>' + (missing || '없음') + '</td><td>' + (url ? '<a class="mpdf" target="_blank" rel="noopener" href="' + esc(url) + '">원문 ↗</a>' : '미확인') + '</td></tr>';
     }).join('') + '</tbody></table></div>';
   } else {
-    html += '<div class="mnboard" tabindex="0" aria-label="기업별 최근 24개월 월매출 비교표"><table class="mnmatrix"><colgroup><col style="width:200px"><col style="width:80px"><col style="width:68px">' + '<col>'.repeat(24) + '</colgroup><thead><tr><th scope="col">기업</th><th scope="col">시총<br>조원</th><th scope="col">수집<br>개월</th>' +
-      months.map((p,i) => '<th scope="col" class="' + (i === 23 ? 'mnlatest ' : '') + (p.endsWith('-01') ? 'mnyear' : '') + '">' + p.slice(2,4) + '년<br>' + (+p.slice(5)) + '월</th>').join('') + '</tr></thead><tbody>';
+    html += '<div class="mnboard" tabindex="0" aria-label="기업별 최근 24개월 월매출 비교표"><table class="mnmatrix"><colgroup><col style="width:190px"><col style="width:72px"><col style="width:60px">' + '<col>'.repeat(23) + '<col style="width:58px">' + '</colgroup><thead><tr><th scope="col">기업</th><th scope="col">시총<br>조원</th><th scope="col">수집<br>개월</th>' +
+      months.map((p,i) => '<th scope="col" class="' + (i === 23 ? 'mnlatestcol ' : '') + (p.endsWith('-01') ? 'mnyear' : '') + '">' + p.slice(2,4) + '년<br>' + (+p.slice(5)) + '월' + (i === 23 ? '<small style="display:block;font-size:10px">최신</small>' : '') + '</th>').join('') + '</tr></thead><tbody>';
     html += list.map(x => {
       const n = MNUM[x.code] || {}, basis = n.historyBase || n.base || '월매출';
-      return '<tr><th scope="row"><button class="mncompany" data-mcode="' + esc(x.code) + '" title="' + esc(x.orig) + '">' + esc(x.ko) + '<small>' + esc(x.code + ' ' + basis + ' · ' + x.sect) + '</small></button></th><td class="mncapcell">' + (x.cap ? capJo(x.cap).toFixed(1) : '—') + '</td><td class="mncoverage">' + x.coverage + '/24</td>' + months.map((p,i) => {
+      return '<tr><th scope="row"><button class="mncompany" data-mcode="' + esc(x.code) + '" title="' + esc(x.orig + ' · ' + (n.scope || basis)) + '">' + esc(x.ko) + '<small>' + esc(x.code + ' ' + basis + ' · ' + x.sect) + '</small></button></th><td class="mncapcell">' + (x.cap ? capJo(x.cap).toFixed(1) : '—') + '</td><td class="mncoverage">' + x.coverage + '/24</td>' + months.map((p,i) => {
         const value = mnHeatValue(x.series.get(p));
         const rounded = value === null ? null : Math.round(value);
         const label = rounded === null ? '—' : (rounded > 0 ? '+' : '') + rounded + '%';
         const color = value === null ? '#526980' : rounded === 0 ? '#9aaabd' : value > 0 ? '#ffaaa5' : '#72d8bd';
         const bg = value === null ? 'transparent' : 'rgba(' + (value >= 0 ? '191,92,91,' : '32,150,120,') + (.06 + Math.min(Math.abs(value),40) / 40 * .46).toFixed(3) + ')';
-        const tip = x.ko + ' · ' + p + ' · ' + basis + ' · ' + (value === null ? mnHeatReason(x.code,p) : '전년동월비 ' + (Math.round(value*10)/10) + '%');
-        return '<td class="' + (i === 23 ? 'mnlatest ' : '') + (p.endsWith('-01') ? 'mnyear' : '') + '" style="color:' + color + ';background:' + bg + '"><button class="mncell" data-mcode="' + esc(x.code) + '" data-mperiod="' + p + '" title="' + esc(tip) + '" aria-label="' + esc(tip) + '">' + label + '</button></td>';
+        const tip = x.ko + ' · ' + p + ' · ' + basis + ' · ' + (n.scope || '') + ' · ' + (value === null ? mnHeatReason(x.code,p) : '전년동월비 ' + (Math.round(value*10)/10) + '%');
+        return '<td class="' + (i === 23 ? 'mnlatestcol ' : '') + (p.endsWith('-01') ? 'mnyear' : '') + '" style="color:' + color + ';background:' + bg + '"><button class="mncell" data-mcode="' + esc(x.code) + '" data-mperiod="' + p + '" title="' + esc(tip) + '" aria-label="' + esc(tip) + '">' + label + '</button></td>';
       }).join('') + '</tr>';
     }).join('') + '</tbody></table></div>';
   }
@@ -4124,7 +4173,7 @@ function monthlyBlock(code) {
       '</span><a class="mpdf" href="' + esc(last[8]) +
       '" target="_blank" rel="noopener">' + esc(last[7] || '원문') +
       ' ↗</a></div>' : '';
-  return '<div class="mndetail">' + head + stat + chart + src + '</div>';
+  return '<div class="mndetail">' + head + (num && num.scope ? '<p class="finnote">비교 범위: ' + esc(num.scope) + ' · ' + esc(num.historyBase || num.base) + (num.note ? '<br>' + esc(num.note) : '') + '</p>' : '') + stat + chart + src + '</div>';
 }
 
 function openMonthly(code) {
@@ -4801,6 +4850,14 @@ document.addEventListener('click', e => {
       const note = document.createElement('div');
       note.className = 'note';
       note.textContent = period + ' · ' + (value === null ? mnHeatReason(mrow.dataset.mcode, period) + ' — 미공시 여부는 확인되지 않았습니다.' : '전년동월비 ' + (Math.round(value * 10) / 10) + '% (표에는 정수 반올림)');
+      const n = MNUM[mrow.dataset.mcode];
+      const evidence = n && n.evidence && n.evidence[period];
+      if (evidence && /^https?:\/\//.test(evidence.source)) {
+        const link = document.createElement('a');
+        link.href = evidence.source; link.target = '_blank'; link.rel = 'noopener';
+        link.className = 'mpdf'; link.textContent = ' · 이 달 원자료 ↗';
+        note.append(link);
+      }
       document.getElementById('mdFin').prepend(note);
     }
     return;
@@ -5099,4 +5156,3 @@ reslice(); fillFilters(); fillWeeks(); renderFoot(); renderAll();
 
 if __name__ == "__main__":
     build()
-
