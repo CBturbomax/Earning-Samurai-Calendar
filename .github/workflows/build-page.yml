@@ -5,6 +5,7 @@ on:
     branches: [main]
     paths:
       - 'build.py'
+      - 'data/monthly_reviewed_jp.json'
       - '.github/workflows/build-page.yml'
   workflow_dispatch:
 
