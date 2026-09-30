@@ -1,18 +1,18 @@
 {
  "v": 1,
- "ts": "2026-09-30T06:16:41+00:00",
+ "ts": "2026-09-30T12:37:20+00:00",
  "seed": 361,
  "homes": 352,
- "official_ir_data": 41,
- "covered_any": 256,
+ "official_ir_data": 42,
+ "covered_any": 257,
  "status": {
-  "covered_elsewhere": 119,
+  "covered_elsewhere": 118,
   "discontinued": 2,
   "home_pending": 6,
   "no_monthly_found": 54,
-  "ok": 41,
-  "parser_failed": 116,
-  "pending_discovery": 23
+  "ok": 42,
+  "parser_failed": 117,
+  "pending_discovery": 22
  },
  "codes": {
   "8267": {
@@ -2706,14 +2706,14 @@
    "ir": false
   },
   "8281": {
-   "status": "pending_discovery",
+   "status": "ok",
    "home": "https://www.xebio.co.jp",
-   "source_url": "",
-   "latest_month": "",
-   "months": 0,
+   "source_url": "https://www.xebio.co.jp/ja/ir/monthly.html",
+   "latest_month": "2026-08",
+   "months": 41,
    "tdnet": false,
    "web": false,
-   "ir": false
+   "ir": true
   },
   "8282": {
    "status": "no_monthly_found",
@@ -3206,9 +3206,9 @@
    "ir": false
   },
   "9163": {
-   "status": "covered_elsewhere",
+   "status": "parser_failed",
    "home": "https://www.nareru-group.co.jp",
-   "source_url": "",
+   "source_url": "https://www.nareru-group.co.jp",
    "latest_month": "",
    "months": 0,
    "tdnet": true,
