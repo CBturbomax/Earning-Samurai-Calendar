@@ -1,0 +1,43 @@
+name: 화면 변경 즉시 빌드
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'build.py'
+      - '.github/workflows/build-page.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: build-page
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: 최신 자료로 화면 재생성
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          # 데이터 수집 실행과 겹치면 최신 main에서 다시 빌드한다.
+          for attempt in 1 2 3 4 5; do
+            git fetch origin main
+            git reset --hard origin/main
+            python build.py
+            git add index.html version.txt
+            git diff --cached --quiet && exit 0
+            git commit -m "화면 다시 만들기 [skip ci]"
+            if git push origin HEAD:main; then exit 0; fi
+          done
+          exit 1
