@@ -1,18 +1,18 @@
 {
  "v": 1,
- "ts": "2026-09-29T08:20:33+00:00",
+ "ts": "2026-09-30T06:16:41+00:00",
  "seed": 361,
  "homes": 352,
- "official_ir_data": 39,
- "covered_any": 254,
+ "official_ir_data": 41,
+ "covered_any": 256,
  "status": {
   "covered_elsewhere": 119,
   "discontinued": 2,
   "home_pending": 6,
   "no_monthly_found": 54,
-  "ok": 39,
+  "ok": 41,
   "parser_failed": 116,
-  "pending_discovery": 25
+  "pending_discovery": 23
  },
  "codes": {
   "8267": {
@@ -476,24 +476,24 @@
    "ir": false
   },
   "8233": {
-   "status": "pending_discovery",
+   "status": "ok",
    "home": "https://www.takashimaya.co.jp/",
-   "source_url": "",
-   "latest_month": "",
-   "months": 0,
+   "source_url": "https://www.takashimaya.co.jp/corp/topics/",
+   "latest_month": "2026-07",
+   "months": 7,
    "tdnet": false,
    "web": false,
-   "ir": false
+   "ir": true
   },
   "8242": {
-   "status": "pending_discovery",
+   "status": "ok",
    "home": "https://www.h2o-retailing.co.jp/",
-   "source_url": "",
-   "latest_month": "",
-   "months": 0,
+   "source_url": "https://www.h2o-retailing.co.jp/ja/ir/library/monthly.html",
+   "latest_month": "2021-03",
+   "months": 12,
    "tdnet": false,
    "web": false,
-   "ir": false
+   "ir": true
   },
   "3099": {
    "status": "parser_failed",
