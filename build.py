@@ -2560,6 +2560,38 @@ __FLAGCSS__
   border-radius:8px; padding:14px 20px; margin:14px 0; color:#c9d6e0; font-size:19px;
 }
 
+
+/* 월매출 비교: 기업 × 공통 24개월. 다른 섹션의 스타일과 독립적이다. */
+.mnboard { border:1px solid #293747; border-radius:6px; overflow:auto; max-height:760px; background:#0c1521; scrollbar-color:#43556e #1a273a; }
+.mnmatrix { width:100%; min-width:1480px; table-layout:fixed; border-spacing:0; font-size:13px; font-variant-numeric:tabular-nums; }
+.mnmatrix th,.mnmatrix td { padding:0; border-right:1px solid #293343; border-bottom:1px solid #293343; text-align:center; height:56px; font-size:13px; }
+.mnmatrix thead th { position:sticky; top:0; z-index:3; background:#1d2a3b; color:#b9cee7; font-weight:500; height:56px; }
+.mnmatrix th:first-child { position:sticky; left:0; z-index:2; background:#152232; text-align:left; }
+.mnmatrix thead th:first-child { z-index:4; background:#1d2a3b; padding:0 10px; }
+.mnmatrix .mncompany { display:block; width:100%; padding:9px 10px; text-align:left; background:transparent; border:0; color:#dbe9fb; cursor:pointer; font:inherit; font-weight:750; }
+.mncompany small { display:block; margin-top:5px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; color:#819ebf; font-size:12px; font-weight:500; }
+.mnmatrix .mncapcell,.mnmatrix .mncoverage { color:#acbfd7; background:#132030; }
+.mnmatrix .mncoverage { font-size:12px; }
+.mnmatrix .mnlatest { font-weight:900; box-shadow:inset 0 0 0 1px #43516a; }
+.mnmatrix thead .mnlatest { background:#293b54; color:#fff; }
+.mnmatrix .mnyear { border-left:1px solid #566a86; }
+.mnmatrix .mncell { width:100%; height:100%; min-height:56px; padding:0 2px; background:transparent; border:0; color:inherit; font:inherit; font-weight:650; cursor:pointer; white-space:nowrap; }
+.mnmatrix .mnlatest .mncell { font-weight:900; }
+.mnmatrix button:hover { background:#ffffff0c; }
+.mnmatrix button:focus-visible { outline:2px solid #96baff; outline-offset:-3px; }
+.mnsummary { display:flex; justify-content:space-between; gap:12px; flex-wrap:wrap; color:#91a6bf; font-size:13px; margin:0 0 12px; }
+.mnsummary b { color:#dfebfc; }
+.mnsummary .mnup { color:#ffaaa5; }.mnsummary .mndown { color:#72d8bd; }
+.mnfoot { color:#8196ae; font-size:12px; margin-top:10px; }
+.mnbar { display:flex; align-items:center; gap:20px; border-bottom:1px solid #293747; margin-bottom:14px; }
+.mnbar button { padding:12px 0; border:0; border-bottom:2px solid transparent; background:none; color:#899fb9; font:inherit; cursor:pointer; }
+.mnbar button[aria-selected="true"] { color:#dce9ff; border-bottom-color:#93b6ff; font-weight:700; }
+.mnbar select { margin-left:auto; background:#111d2b; color:#d3deec; padding:6px; border:1px solid #34445b; border-radius:4px; }
+.mnaudit { width:100%; border-collapse:collapse; font-size:14px; }
+.mnaudit th,.mnaudit td { padding:12px; border-bottom:1px solid #293747; text-align:left; }
+.mnaudit th { color:#adc7e5; }.mnaudit td { color:#9eafc2; }
+.mnaudit button { background:none; border:0; color:#dce9fb; font:inherit; cursor:pointer; }
+
 /* ── 월매출(月次) ────────────────────────────────────────────── */
 /* **여러 종목을 한눈에 두루 본다.** 처음엔 한 종목이 한 줄을 다 쓰는 큰 카드로
    냈는데, 회원님이 "하나하나 차트랑 글씨가 너무 크다, 여러 종목 다 두루 보고
@@ -3129,7 +3161,12 @@ svg.bars rect.b:hover { fill:var(--a3); }
   <label class="chk"><input type="checkbox" id="mnNum" checked>수치 있는 종목만</label>
   <span class="count" id="mnCnt"></span>
 </div>
-<div class="mn" id="mnList"></div>
+<div class="mnbar" role="tablist" aria-label="월매출 보기">
+  <button type="button" role="tab" data-mnview="compare" aria-selected="true">월매출 비교</button>
+  <button type="button" role="tab" data-mnview="audit" aria-selected="false">수집 점검</button>
+  <select id="mnSort" aria-label="월매출 정렬"><option value="cap">시총 큰 순</option><option value="name">기업명 순</option><option value="coverage">수집 개월 순</option></select>
+</div>
+<div id="mnList"></div>
 
 <h2><span class="n">3</span>테마별 주요 종목 실적발표일 <span class="meta" id="gMeta"></span></h2>
 <div id="groups"></div>
@@ -3920,78 +3957,76 @@ function mnYoyHtml(code, targetPeriod) {
   return '<span class="myoy none">' + (n ? '검증중' : '수치 없음') + '</span>';
 }
 
+let mnView = 'compare';
+function mnPeriod(k) { return Math.floor(k / 12) + '-' + String(k % 12 + 1).padStart(2, '0'); }
+function mnHeatRows(code) {
+  const num = MNUM[code];
+  // 기존 파이프라인이 검증한 동일 기준의 history만 비교한다.
+  return new Map(num && num.historyVerified ? (num.m || []).map(r => [r[0], r]) : []);
+}
+function mnHeatValue(row) { return row && Number.isFinite(row[2]) ? row[2] - 100 : null; }
+function mnHeatReason(code, period) {
+  const n = MNUM[code];
+  if (!n) return '수치 미수집';
+  if (!n.historyVerified) return '자동 추출 수치 검증 대기';
+  const row = (n.m || []).find(r => r[0] === period);
+  return row && row[1] != null ? '매출액은 있으나 전년동월비 미수집' : '이 달의 전년동월비 미수집';
+}
 function renderMonthly() {
   const host = document.getElementById('mnList');
   if (!host) return;
-  const meta = document.getElementById('mnMeta');
   const byCode = mnCompanyRows();
-  if (!byCode.size) {
-    host.innerHTML = '<div class="note">아직 수집하지 않았습니다.</div>';
-    if (meta) meta.textContent = '';
-    return;
-  }
-
-  const nMon = Object.keys(MNUM).length;
-  if (meta) meta.textContent = byCode.size.toLocaleString() +
-    '개사 · 수치 ' + nMon.toLocaleString() + '개사 · 시총순';
-
-  const q = (document.getElementById('mnQ').value || '').trim().toLowerCase();
-  const capMinJo = +document.getElementById('mnCap').value;
-  const capJo = b => b ? b * 1e9 * D.usdKrw / 1e12 : 0;
-  const numBox = document.getElementById('mnNum');
-  if (!nMon) { numBox.checked = false; numBox.disabled = true; }
-  const numOnly = numBox.checked;
-
+  const months = Array.from({length:24}, (_,i) => mnPeriod(MN_B - 23 + i));
+  const capJo = b => b ? b * D.usdKrw / 1000 : 0;
+  const q = document.getElementById('mnQ').value.trim().toLowerCase();
+  const capMin = +document.getElementById('mnCap').value;
+  const numOnly = document.getElementById('mnNum').checked;
   const list = [];
   for (const x of byCode.values()) {
     x.last = x.rows[x.rows.length - 1];
-    if (capMinJo && capJo(x.cap) < capMinJo) continue;
-    const dv = mnDisplayValue(x.code, x.last[5]);
-    // 기본 '수치 있는 종목만'은 **최근 3개월 안에 실제 월차가 있는 회사**만.
-    // 공시 중단 회사를 2024년 숫자로 현재 월차주처럼 보여주지 않는다.
-    const recent = x.last[5] && (MN_B - MN_KEY(x.last[5]) <= 2);
-    if (numOnly && (!dv || !recent)) continue;
+    x.series = mnHeatRows(x.code);
+    x.coverage = months.filter(p => mnHeatValue(x.series.get(p)) !== null).length;
+    if (capMin && capJo(x.cap) < capMin) continue;
+    if (numOnly && !x.coverage) continue;
     if (q && !(x.code + ' ' + x.ko + ' ' + x.orig).toLowerCase().includes(q)) continue;
     list.push(x);
   }
-  // 월차 기본 화면은 **시총 큰 순**. 발표일은 정보 열로만 보여준다.
-  list.sort((a,b) => (b.cap || 0) - (a.cap || 0) ||
-                     b.last[0].localeCompare(a.last[0]) ||
-                     a.code.localeCompare(b.code));
-
-  document.getElementById('mnCnt').innerHTML =
-    '<b>' + list.length.toLocaleString() + '</b>개사';
-
-  if (!list.length) {
-    host.innerHTML = '<div class="mnempty">조건에 맞는 월차 종목이 없습니다.</div>';
-    return;
+  const sort = document.getElementById('mnSort').value;
+  list.sort((a,b) => (sort === 'name' ? a.ko.localeCompare(b.ko, 'ko') :
+    sort === 'coverage' ? b.coverage - a.coverage : b.cap - a.cap) || b.cap - a.cap || a.code.localeCompare(b.code));
+  document.getElementById('mnMeta').textContent = '전년동월비 · 최근 24개월';
+  document.getElementById('mnCnt').textContent = list.length + '개사';
+  const total = list.reduce((n,x) => n + x.coverage, 0);
+  const full = list.filter(x => x.coverage === 24).length;
+  let html = '<div class="mnsummary"><span><b>' + list.length + '</b>개 기업 · ' +
+    (capMin ? '시총 ' + capMin + '조원 이상 · ' : '') + '24개월 · <b>' + total.toLocaleString() +
+    '개 수치</b> · 기간 완전 수집 <b>' + full + '사</b></span>' +
+    '<span><span class="mnup">■ 매출 증가</span>　<span class="mndown">■ 매출 감소</span>　빈칸 클릭: 수집 상태</span></div>';
+  if (!list.length) { host.innerHTML = html + '<div class="mnempty">조건에 맞는 월매출 종목이 없습니다.</div>'; return; }
+  if (mnView === 'audit') {
+    html += '<div class="mnboard"><table class="mnaudit"><thead><tr><th>기업</th><th>수집 개월</th><th>비교 기준</th><th>수치 출처</th><th>미수집 월</th><th>최근 원자료</th></tr></thead><tbody>';
+    html += list.map(x => {
+      const n = MNUM[x.code] || {}, url = n.doc || x.last[8];
+      const missing = months.filter(p => mnHeatValue(x.series.get(p)) === null).map(p => p.slice(2).replace('-', '.')).join(', ');
+      return '<tr><td><button data-mcode="' + esc(x.code) + '">' + esc(x.ko) + '</button></td><td>' + x.coverage + '/24</td><td>' + esc(n.historyBase || n.base || '월매출') + '</td><td>' + esc(n.historySrc || n.src || '수치 미수집') + '</td><td>' + (missing || '없음') + '</td><td>' + (url ? '<a class="mpdf" target="_blank" rel="noopener" href="' + esc(url) + '">원문 ↗</a>' : '미확인') + '</td></tr>';
+    }).join('') + '</tbody></table></div>';
+  } else {
+    html += '<div class="mnboard" tabindex="0" aria-label="기업별 최근 24개월 월매출 비교표"><table class="mnmatrix"><colgroup><col style="width:200px"><col style="width:80px"><col style="width:68px">' + '<col>'.repeat(24) + '</colgroup><thead><tr><th scope="col">기업</th><th scope="col">시총<br>조원</th><th scope="col">수집<br>개월</th>' +
+      months.map((p,i) => '<th scope="col" class="' + (i === 23 ? 'mnlatest ' : '') + (p.endsWith('-01') ? 'mnyear' : '') + '">' + p.slice(2,4) + '년<br>' + (+p.slice(5)) + '월</th>').join('') + '</tr></thead><tbody>';
+    html += list.map(x => {
+      const n = MNUM[x.code] || {}, basis = n.historyBase || n.base || '월매출';
+      return '<tr><th scope="row"><button class="mncompany" data-mcode="' + esc(x.code) + '" title="' + esc(x.orig) + '">' + esc(x.ko) + '<small>' + esc(x.code + ' ' + basis + ' · ' + x.sect) + '</small></button></th><td class="mncapcell">' + (x.cap ? capJo(x.cap).toFixed(1) : '—') + '</td><td class="mncoverage">' + x.coverage + '/24</td>' + months.map((p,i) => {
+        const value = mnHeatValue(x.series.get(p));
+        const rounded = value === null ? null : Math.round(value);
+        const label = rounded === null ? '—' : (rounded > 0 ? '+' : '') + rounded + '%';
+        const color = value === null ? '#526980' : rounded === 0 ? '#9aaabd' : value > 0 ? '#ffaaa5' : '#72d8bd';
+        const bg = value === null ? 'transparent' : 'rgba(' + (value >= 0 ? '191,92,91,' : '32,150,120,') + (.06 + Math.min(Math.abs(value),40) / 40 * .46).toFixed(3) + ')';
+        const tip = x.ko + ' · ' + p + ' · ' + basis + ' · ' + (value === null ? mnHeatReason(x.code,p) : '전년동월비 ' + (Math.round(value*10)/10) + '%');
+        return '<td class="' + (i === 23 ? 'mnlatest ' : '') + (p.endsWith('-01') ? 'mnyear' : '') + '" style="color:' + color + ';background:' + bg + '"><button class="mncell" data-mcode="' + esc(x.code) + '" data-mperiod="' + p + '" title="' + esc(tip) + '" aria-label="' + esc(tip) + '">' + label + '</button></td>';
+      }).join('') + '</tr>';
+    }).join('') + '</tbody></table></div>';
   }
-
-  host.innerHTML =
-    '<div class="mnrows"><div class="mnhead">' +
-      '<span>발표일</span><span>코드</span><span>회사</span><span>대상월</span>' +
-      '<span>최신 월차</span><span>시가총액</span><span>출처</span></div>' +
-    list.map(x => {
-      const r = x.last, per = r[5] || (mnLatestNumber(x.code) || ['—'])[0] || '—';
-      const srcLabel = r[7] === '기사' ? '기사' : (r[7] || '원문');
-      const src = r[8] ? '<a class="mpdf" href="' + esc(r[8]) +
-                  '" target="_blank" rel="noopener">' +
-                  esc(srcLabel) + ' ↗</a>' : '';
-      const dateTxt = r[11] === 'official'
-        ? esc(r[0])
-        : ('<span class="dim">미확인</span>' +
-           (r[12] ? '<small class="dim"> · 기사 ' + esc(r[12].slice(5)) + '</small>' : ''));
-      return '<div class="mnrow" data-mcode="' + esc(x.code) + '">' +
-        '<span class="mdate">' + dateTxt + '</span>' +
-        '<span class="mcode">' + esc(x.code) + '</span>' +
-        '<span class="mname">' + esc(x.ko) +
-          (x.orig && x.orig !== x.ko ? '<small>' + esc(x.orig) + '</small>' : '') +
-        '</span>' +
-        '<span class="mper">' + esc((per || '—').replace('-', '.')) + '</span>' +
-        mnYoyHtml(x.code, per) +
-        '<span class="mcap">' + esc(mnCapShort(x.cap)) + '</span>' +
-        src + '</div>';
-    }).join('') + '</div>';
+  host.innerHTML = html + '<div class="mnfoot">전년동월비 증감률 · 정수 반올림 · 수집된 시총·설정 환율 기준 · 기존점/전점 등 비교 기준은 기업명 아래 표시. 기업명이나 숫자를 누르면 상세 내용을 확인할 수 있습니다.</div>';
 }
 
 function mnPctText(v) {
@@ -4751,9 +4786,23 @@ document.addEventListener('click', e => {
   if (grow) { openModal(grow.dataset.key, grow.dataset.date); return; }
 
   // 월차 한 줄 — 차트는 여기서 펼치지 않고 회사 상세창에서만 본다.
-  const mrow = e.target.closest('.mnrow[data-mcode]');
+  const viewButton = e.target.closest('[data-mnview]');
+  if (viewButton) {
+    mnView = viewButton.dataset.mnview;
+    document.querySelectorAll('[data-mnview]').forEach(b => b.setAttribute('aria-selected', String(b === viewButton)));
+    renderMonthly(); return;
+  }
+  const mrow = e.target.closest('#mnList [data-mcode]');
   if (mrow && !e.target.closest('.mpdf')) {
     openMonthly(mrow.dataset.mcode);
+    const period = mrow.dataset.mperiod;
+    if (period) {
+      const value = mnHeatValue(mnHeatRows(mrow.dataset.mcode).get(period));
+      const note = document.createElement('div');
+      note.className = 'note';
+      note.textContent = period + ' · ' + (value === null ? mnHeatReason(mrow.dataset.mcode, period) + ' — 미공시 여부는 확인되지 않았습니다.' : '전년동월비 ' + (Math.round(value * 10) / 10) + '% (표에는 정수 반올림)');
+      document.getElementById('mdFin').prepend(note);
+    }
     return;
   }
 
@@ -4823,7 +4872,7 @@ document.getElementById('kstToggle').onchange = e => {
   useKst = e.target.checked; expanded.clear(); reslice(); fillWeeks(); renderAll();
 };
 document.getElementById('jpToggle').onchange = e => { showJp = e.target.checked; renderCal(); };
-for (const id of ['mnQ', 'mnCap', 'mnNum']) {
+for (const id of ['mnQ', 'mnCap', 'mnNum', 'mnSort']) {
   const el = document.getElementById(id);
   if (el) el.addEventListener(id === 'mnQ' ? 'input' : 'change', renderMonthly);
 }
@@ -5050,3 +5099,4 @@ reslice(); fillFilters(); fillWeeks(); renderFoot(); renderAll();
 
 if __name__ == "__main__":
     build()
+
