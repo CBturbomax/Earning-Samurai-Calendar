@@ -2569,7 +2569,7 @@ h2 .n { color:var(--a3); margin-right:10px; }
 .cards { display:flex; flex-wrap:wrap; gap:16px; margin:18px 0 8px; }
 .card {
   background:var(--panel); border:1px solid var(--line); border-radius:10px;
-  padding:16px 22px; min-width:190px;
+  padding:16px 22px; min-width:270px;
 }
 .card .k { color:var(--mute); font-size:18px; }
 .card .v { font-size:30px; font-weight:800; color:var(--a1); }
@@ -2615,32 +2615,38 @@ __FLAGCSS__
 
 
 /* 월매출 비교: 기업 × 공통 24개월. 다른 섹션의 스타일과 독립적이다. */
-.mnboard { border:1px solid #293747; border-radius:6px; overflow:auto; max-height:760px; background:#0c1521; scrollbar-color:#43556e #1a273a; }
-.mnmatrix { width:100%; min-width:1360px; table-layout:fixed; border-spacing:0; font-size:13px; font-variant-numeric:tabular-nums; }
-.mnmatrix th,.mnmatrix td { padding:0; border-right:1px solid #293343; border-bottom:1px solid #293343; text-align:center; height:56px; font-size:13px; }
-.mnmatrix thead th { position:sticky; top:0; z-index:3; background:#1d2a3b; color:#b9cee7; font-weight:500; height:56px; }
-.mnmatrix th:first-child { position:sticky; left:0; z-index:2; background:#152232; text-align:left; }
-.mnmatrix thead th:first-child { z-index:4; background:#1d2a3b; padding:0 10px; }
-.mnmatrix .mncompany { display:block; width:100%; padding:9px 10px; text-align:left; background:transparent; border:0; color:#dbe9fb; cursor:pointer; font:inherit; font-weight:750; }
-.mncompany small { display:block; margin-top:5px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; color:#819ebf; font-size:12px; font-weight:500; }
-.mnmatrix .mncapcell,.mnmatrix .mncoverage { color:#acbfd7; background:#132030; }
-.mnmatrix .mncoverage { font-size:12px; }
-.mnmatrix .mnlatestcol { position:sticky; right:0; z-index:2; font-weight:900; border-left:2px solid #91b8ff; box-shadow:inset 0 0 0 1px #43516a; background:#1b2b43 !important; }
-.mnmatrix thead .mnlatestcol { z-index:4; background:#355279 !important; color:#fff; }
-.mnmatrix .mnyear { border-left:1px solid #566a86; }
-.mnmatrix .mncell { width:100%; height:100%; min-height:56px; padding:0 2px; background:transparent; border:0; color:inherit; font:inherit; font-weight:650; cursor:pointer; white-space:nowrap; }
-.mnmatrix .mnlatestcol .mncell { font-weight:900; }
+.mnboard { border:1px solid #455873; border-radius:12px; overflow:auto; max-height:820px; background:#0c1521; scrollbar-color:#708caf #1a273a; }
+.mnmatrix { width:100%; min-width:2250px; table-layout:fixed; border-spacing:0; font-size:16px; font-variant-numeric:tabular-nums; }
+.mnmatrix th,.mnmatrix td { padding:0; border-right:1px solid #314156; border-bottom:1px solid #3b4b60; text-align:center; height:82px; font-size:16px; }
+.mnmatrix thead th { position:sticky; top:0; z-index:3; background:#263d58; color:#f1f6ff; font-weight:750; height:78px; font-size:16px; line-height:1.65; border-bottom:3px solid #789bc6; }
+.mnmatrix th:first-child { position:sticky; left:0; z-index:2; background:#182a3e; text-align:left; border-right:2px solid #6a829f; }
+.mnmatrix thead th:first-child { z-index:4; background:#263d58; padding:0 18px; }
+.mnmatrix .mncompany { display:block; width:100%; padding:15px 18px; text-align:left; background:transparent; border:0; color:#f4f8ff; cursor:pointer; font:inherit; font-size:18px; line-height:1.4; font-weight:800; }
+.mncompany small { display:flex; align-items:center; gap:9px; margin-top:9px; color:#abc0d8; font-size:13px; font-weight:500; }
+.mncompany .mnticker { display:inline-block; padding:3px 7px; background:#314b68; border:1px solid #6482a5; border-radius:5px; color:#fff; font-size:14px; font-weight:800; letter-spacing:.5px; }
+.mncompany .mnmeta { overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.mnmatrix .mncapcell { color:#e4edfc; background:#18283c; font-size:17px; font-weight:750; white-space:nowrap; border-right:2px solid #536984; }
+.mnmatrix .mncoverage { color:#b9cde5; background:#152336; font-size:15px; border-right:3px solid #8298b4; }
+.mncoverage strong { color:#edf5ff; font-size:17px; }.mncoverage small { display:block; font-size:12px; color:#9eb4cf; margin-top:5px; }
+.mnmatrix thead .mncaphead { background:#21344e; border-right:2px solid #536984; }
+.mnmatrix thead .mncoverhead { background:#1c2e46; border-right:3px solid #8298b4; }
+.mnmatrix .mnlatestcol { position:sticky; right:0; z-index:2; font-weight:900; border-left:3px solid #a8caff; box-shadow:-4px 0 10px #0003; background:#203c60 !important; }
+.mnmatrix thead .mnlatestcol { z-index:4; background:#426b9f !important; color:#fff; }
+.mnmatrix .mnyear { border-left:2px solid #718aaa; }
+.mnmatrix .mncell { width:100%; height:100%; min-height:82px; padding:0 5px; background:transparent; border:0; color:inherit; font:inherit; font-weight:700; cursor:pointer; white-space:nowrap; }
+.mnmatrix .mnlatestcol .mncell { font-weight:900; font-size:18px; }
 .mnmatrix button:hover { background:#ffffff0c; }
 .mnmatrix button:focus-visible { outline:2px solid #96baff; outline-offset:-3px; }
-.mnsummary { display:flex; justify-content:space-between; gap:12px; flex-wrap:wrap; color:#91a6bf; font-size:13px; margin:0 0 12px; }
-.mnsummary b { color:#dfebfc; }
+.mnsummary { display:flex; justify-content:space-between; gap:14px; flex-wrap:wrap; color:#b1c3d9; font-size:15px; line-height:1.7; margin:0 0 16px; }
+.mnsummary b { color:#f2f7ff; }
 .mnsummary .mnup { color:#ffaaa5; }.mnsummary .mndown { color:#72d8bd; }
-.mnfoot { color:#8196ae; font-size:12px; margin-top:10px; }
+.mnscrollhint { color:#b4c9e5; font-size:14px; margin:0 0 12px; }
+.mnfoot { color:#a7bad1; font-size:14px; margin-top:10px; }
 .mnbar { display:flex; align-items:center; gap:20px; border-bottom:1px solid #293747; margin-bottom:14px; }
 .mnbar button { padding:12px 0; border:0; border-bottom:2px solid transparent; background:none; color:#899fb9; font:inherit; cursor:pointer; }
 .mnbar button[aria-selected="true"] { color:#dce9ff; border-bottom-color:#93b6ff; font-weight:700; }
 .mnbar select { margin-left:auto; background:#111d2b; color:#d3deec; padding:6px; border:1px solid #34445b; border-radius:4px; }
-.mnaudit { width:100%; border-collapse:collapse; font-size:14px; }
+.mnaudit { width:100%; border-collapse:collapse; font-size:16px; }
 .mnaudit th,.mnaudit td { padding:12px; border-bottom:1px solid #293747; text-align:left; }
 .mnaudit th { color:#adc7e5; }.mnaudit td { color:#9eafc2; }
 .mnaudit button { background:none; border:0; color:#dce9fb; font:inherit; cursor:pointer; }
@@ -4060,11 +4066,11 @@ function renderMonthly() {
       return '<tr><td><button data-mcode="' + esc(x.code) + '">' + esc(x.ko) + '</button></td><td>' + x.coverage + '/24</td><td>' + esc((n.historyBase || n.base || '월매출') + (n.scope ? ' · ' + n.scope : '')) + '</td><td>' + esc(n.historySrc || n.src || '수치 미수집') + '</td><td>' + (missing || '없음') + '</td><td>' + (url ? '<a class="mpdf" target="_blank" rel="noopener" href="' + esc(url) + '">원문 ↗</a>' : '미확인') + '</td></tr>';
     }).join('') + '</tbody></table></div>';
   } else {
-    html += '<div class="mnboard" tabindex="0" aria-label="기업별 최근 24개월 월매출 비교표"><table class="mnmatrix"><colgroup><col style="width:190px"><col style="width:72px"><col style="width:60px">' + '<col>'.repeat(23) + '<col style="width:58px">' + '</colgroup><thead><tr><th scope="col">기업</th><th scope="col">시총<br>조원</th><th scope="col">수집<br>개월</th>' +
-      months.map((p,i) => '<th scope="col" class="' + (i === 23 ? 'mnlatestcol ' : '') + (p.endsWith('-01') ? 'mnyear' : '') + '">' + p.slice(2,4) + '년<br>' + (+p.slice(5)) + '월' + (i === 23 ? '<small style="display:block;font-size:10px">최신</small>' : '') + '</th>').join('') + '</tr></thead><tbody>';
+    html += '<div class="mnscrollhint">월별 매출 증감률 · 좌우로 스크롤해 24개월 비교 · 기업명과 최신월은 고정됩니다</div><div class="mnboard" tabindex="0" aria-label="기업별 최근 24개월 월매출 비교표"><table class="mnmatrix"><colgroup><col style="width:270px"><col style="width:125px"><col style="width:110px">' + '<col>'.repeat(23) + '<col style="width:85px">' + '</colgroup><thead><tr><th scope="col">기업명 · 티커</th><th scope="col" class="mncaphead">시가총액</th><th scope="col" class="mncoverhead">수집 개월</th>' +
+      months.map((p,i) => '<th scope="col" class="' + (i === 23 ? 'mnlatestcol ' : '') + (p.endsWith('-01') ? 'mnyear' : '') + '">' + p.slice(2,4) + '년<br>' + (+p.slice(5)) + '월' + (i === 23 ? '<small style="display:block;font-size:12px">최신</small>' : '') + '</th>').join('') + '</tr></thead><tbody>';
     html += list.map(x => {
       const n = MNUM[x.code] || {}, basis = n.historyBase || n.base || '월매출';
-      return '<tr><th scope="row"><button class="mncompany" data-mcode="' + esc(x.code) + '" title="' + esc(x.orig + ' · ' + (n.scope || basis)) + '">' + esc(x.ko) + '<small>' + esc(x.code + ' ' + basis + ' · ' + x.sect) + '</small></button></th><td class="mncapcell">' + (x.cap ? capJo(x.cap).toFixed(1) : '—') + '</td><td class="mncoverage">' + x.coverage + '/24</td>' + months.map((p,i) => {
+      return '<tr><th scope="row"><button class="mncompany" data-mcode="' + esc(x.code) + '" title="' + esc(x.orig + ' · ' + (n.scope || basis)) + '">' + esc(x.ko) + '<small><span class="mnticker">' + esc(x.code) + '</span><span class="mnmeta">' + esc(basis + ' · ' + x.sect) + '</span></small></button></th><td class="mncapcell">' + (x.cap ? capJo(x.cap).toFixed(1) + '조 원' : '—') + '</td><td class="mncoverage">' + '<strong>' + x.coverage + '</strong> / 24<small>개월 수집</small></td>' + months.map((p,i) => {
         const value = mnHeatValue(x.series.get(p));
         const rounded = value === null ? null : Math.round(value);
         const label = rounded === null ? '—' : (rounded > 0 ? '+' : '') + rounded + '%';
