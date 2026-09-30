@@ -1,18 +1,18 @@
 {
  "v": 1,
- "ts": "2026-09-30T18:13:14+00:00",
+ "ts": "2026-09-30T22:20:02+00:00",
  "seed": 361,
  "homes": 352,
- "official_ir_data": 42,
- "covered_any": 257,
+ "official_ir_data": 43,
+ "covered_any": 258,
  "status": {
-  "covered_elsewhere": 117,
+  "covered_elsewhere": 107,
   "discontinued": 2,
   "home_pending": 6,
-  "no_monthly_found": 56,
-  "ok": 42,
-  "parser_failed": 116,
-  "pending_discovery": 22
+  "no_monthly_found": 64,
+  "ok": 43,
+  "parser_failed": 121,
+  "pending_discovery": 18
  },
  "codes": {
   "8267": {
@@ -806,7 +806,7 @@
    "ir": false
   },
   "2668": {
-   "status": "pending_discovery",
+   "status": "no_monthly_found",
    "home": "https://tabio.com/jp/",
    "source_url": "",
    "latest_month": "",
@@ -956,7 +956,7 @@
    "ir": false
   },
   "2750": {
-   "status": "covered_elsewhere",
+   "status": "no_monthly_found",
    "home": "https://www.ishimitsu.co.jp",
    "source_url": "",
    "latest_month": "",
@@ -986,7 +986,7 @@
    "ir": false
   },
   "2764": {
-   "status": "covered_elsewhere",
+   "status": "no_monthly_found",
    "home": "https://www.hiramatsu.co.jp",
    "source_url": "",
    "latest_month": "",
@@ -1166,14 +1166,14 @@
    "ir": false
   },
   "3053": {
-   "status": "pending_discovery",
+   "status": "ok",
    "home": "https://www.pepper-fs.co.jp",
-   "source_url": "",
-   "latest_month": "",
-   "months": 0,
+   "source_url": "https://www.pepper-fs.co.jp/ir/monthly_report/library.php",
+   "latest_month": "2026-08",
+   "months": 8,
    "tdnet": false,
    "web": false,
-   "ir": false
+   "ir": true
   },
   "3058": {
    "status": "parser_failed",
@@ -1256,7 +1256,7 @@
    "ir": true
   },
   "3083": {
-   "status": "pending_discovery",
+   "status": "no_monthly_found",
    "home": "https://starseeds.co.jp",
    "source_url": "",
    "latest_month": "",
@@ -1296,9 +1296,9 @@
    "ir": false
   },
   "3160": {
-   "status": "covered_elsewhere",
+   "status": "parser_failed",
    "home": "https://www.oomitsu.com",
-   "source_url": "",
+   "source_url": "https://www.oomitsu.com",
    "latest_month": "",
    "months": 0,
    "tdnet": true,
@@ -1426,9 +1426,9 @@
    "ir": false
   },
   "3329": {
-   "status": "covered_elsewhere",
+   "status": "parser_failed",
    "home": "https://www.towafood-net.co.jp",
-   "source_url": "",
+   "source_url": "https://www.towafood-net.co.jp/investor/monthly/",
    "latest_month": "",
    "months": 0,
    "tdnet": true,
@@ -1736,7 +1736,7 @@
    "ir": false
   },
   "4193": {
-   "status": "covered_elsewhere",
+   "status": "no_monthly_found",
    "home": "https://www.fabrica-hd.co.jp",
    "source_url": "",
    "latest_month": "",
@@ -1766,7 +1766,7 @@
    "ir": false
   },
   "4374": {
-   "status": "covered_elsewhere",
+   "status": "no_monthly_found",
    "home": "https://www.robotpayment.co.jp",
    "source_url": "",
    "latest_month": "",
@@ -1836,9 +1836,9 @@
    "ir": false
   },
   "5892": {
-   "status": "pending_discovery",
+   "status": "parser_failed",
    "home": "https://yutori.tokyo",
-   "source_url": "",
+   "source_url": "https://yutori.tokyo/ir/monthly/",
    "latest_month": "",
    "months": 0,
    "tdnet": false,
@@ -2256,9 +2256,9 @@
    "ir": false
   },
   "7610": {
-   "status": "covered_elsewhere",
+   "status": "parser_failed",
    "home": "https://www.tay2.co.jp",
-   "source_url": "",
+   "source_url": "https://www.tay2.co.jp/ir/irlibrary/01.html",
    "latest_month": "",
    "months": 0,
    "tdnet": true,
@@ -3176,7 +3176,7 @@
    "ir": true
   },
   "9252": {
-   "status": "covered_elsewhere",
+   "status": "no_monthly_found",
    "home": "https://www.lomgrp.co.jp",
    "source_url": "",
    "latest_month": "",
@@ -3206,9 +3206,9 @@
    "ir": false
   },
   "9163": {
-   "status": "covered_elsewhere",
+   "status": "parser_failed",
    "home": "https://www.nareru-group.co.jp",
-   "source_url": "",
+   "source_url": "https://www.nareru-group.co.jp",
    "latest_month": "",
    "months": 0,
    "tdnet": true,
@@ -3526,7 +3526,7 @@
    "ir": false
   },
   "369A": {
-   "status": "covered_elsewhere",
+   "status": "no_monthly_found",
    "home": "https://a-tie.co.jp",
    "source_url": "",
    "latest_month": "",
