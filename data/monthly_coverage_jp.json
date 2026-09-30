@@ -1,17 +1,17 @@
 {
  "v": 1,
- "ts": "2026-09-30T12:37:20+00:00",
+ "ts": "2026-09-30T18:13:14+00:00",
  "seed": 361,
  "homes": 352,
  "official_ir_data": 42,
  "covered_any": 257,
  "status": {
-  "covered_elsewhere": 118,
+  "covered_elsewhere": 117,
   "discontinued": 2,
   "home_pending": 6,
-  "no_monthly_found": 54,
+  "no_monthly_found": 56,
   "ok": 42,
-  "parser_failed": 117,
+  "parser_failed": 116,
   "pending_discovery": 22
  },
  "codes": {
@@ -1856,7 +1856,7 @@
    "ir": false
   },
   "6045": {
-   "status": "covered_elsewhere",
+   "status": "no_monthly_found",
    "home": "https://www.rentracks.co.jp",
    "source_url": "",
    "latest_month": "",
@@ -2336,7 +2336,7 @@
    "ir": false
   },
   "7643": {
-   "status": "covered_elsewhere",
+   "status": "no_monthly_found",
    "home": "https://www.daiichi-d.co.jp",
    "source_url": "",
    "latest_month": "",
@@ -3206,9 +3206,9 @@
    "ir": false
   },
   "9163": {
-   "status": "parser_failed",
+   "status": "covered_elsewhere",
    "home": "https://www.nareru-group.co.jp",
-   "source_url": "https://www.nareru-group.co.jp",
+   "source_url": "",
    "latest_month": "",
    "months": 0,
    "tdnet": true,
