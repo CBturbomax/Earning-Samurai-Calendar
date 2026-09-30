@@ -2569,7 +2569,7 @@ h2 .n { color:var(--a3); margin-right:10px; }
 .cards { display:flex; flex-wrap:wrap; gap:16px; margin:18px 0 8px; }
 .card {
   background:var(--panel); border:1px solid var(--line); border-radius:10px;
-  padding:16px 22px; min-width:270px;
+  padding:16px 22px; min-width:190px;
 }
 .card .k { color:var(--mute); font-size:18px; }
 .card .v { font-size:30px; font-weight:800; color:var(--a1); }
