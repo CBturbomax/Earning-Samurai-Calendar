@@ -1,18 +1,18 @@
 {
  "v": 1,
- "ts": "2026-10-01T07:05:25+00:00",
+ "ts": "2026-10-01T07:39:04+00:00",
  "seed": 361,
  "homes": 352,
- "official_ir_data": 50,
- "covered_any": 261,
+ "official_ir_data": 56,
+ "covered_any": 265,
  "status": {
-  "covered_elsewhere": 68,
-  "discontinued": 2,
+  "covered_elsewhere": 135,
+  "discontinued": 1,
   "home_pending": 6,
-  "no_monthly_found": 104,
-  "ok": 50,
-  "parser_failed": 127,
-  "pending_discovery": 4
+  "no_monthly_found": 11,
+  "ok": 56,
+  "parser_failed": 124,
+  "pending_discovery": 28
  },
  "codes": {
   "8267": {
@@ -26,14 +26,14 @@
    "ir": false
   },
   "3086": {
-   "status": "parser_failed",
+   "status": "ok",
    "home": "https://www.j-front-retailing.com/",
    "source_url": "https://www.j-front-retailing.com/ir/finance/monthly.html",
-   "latest_month": "",
-   "months": 0,
+   "latest_month": "2011-02",
+   "months": 2,
    "tdnet": true,
    "web": false,
-   "ir": false
+   "ir": true
   },
   "9843": {
    "status": "ok",
@@ -166,17 +166,17 @@
    "ir": true
   },
   "7476": {
-   "status": "parser_failed",
+   "status": "ok",
    "home": "https://www.as-1.co.jp/",
    "source_url": "https://www.as-1.co.jp/",
-   "latest_month": "",
-   "months": 0,
+   "latest_month": "2026-08",
+   "months": 1,
    "tdnet": true,
    "web": false,
-   "ir": false
+   "ir": true
   },
   "2702": {
-   "status": "no_monthly_found",
+   "status": "covered_elsewhere",
    "home": "https://www.mcd-holdings.co.jp/",
    "source_url": "",
    "latest_month": "",
@@ -196,7 +196,7 @@
    "ir": false
   },
   "8237": {
-   "status": "no_monthly_found",
+   "status": "covered_elsewhere",
    "home": "https://www.matsuya.com/",
    "source_url": "",
    "latest_month": "",
@@ -206,7 +206,7 @@
    "ir": false
   },
   "8153": {
-   "status": "no_monthly_found",
+   "status": "pending_discovery",
    "home": "https://www.mos.co.jp",
    "source_url": "",
    "latest_month": "",
@@ -216,7 +216,7 @@
    "ir": false
   },
   "3399": {
-   "status": "no_monthly_found",
+   "status": "covered_elsewhere",
    "home": "https://www.yamaokaya.com/",
    "source_url": "",
    "latest_month": "",
@@ -246,7 +246,7 @@
    "ir": false
   },
   "9823": {
-   "status": "no_monthly_found",
+   "status": "covered_elsewhere",
    "home": "https://www.mammymart.co.jp/",
    "source_url": "",
    "latest_month": "",
@@ -256,7 +256,7 @@
    "ir": false
   },
   "2780": {
-   "status": "no_monthly_found",
+   "status": "covered_elsewhere",
    "home": "https://www.komehyo.co.jp/",
    "source_url": "",
    "latest_month": "",
@@ -336,14 +336,14 @@
    "ir": false
   },
   "8273": {
-   "status": "parser_failed",
+   "status": "ok",
    "home": "https://www.izumi.co.jp/",
    "source_url": "https://www.izumi.co.jp/ir/finance/monthly/",
-   "latest_month": "",
-   "months": 0,
+   "latest_month": "2026-08",
+   "months": 6,
    "tdnet": false,
    "web": false,
-   "ir": false
+   "ir": true
   },
   "9948": {
    "status": "ok",
@@ -406,7 +406,7 @@
    "ir": false
   },
   "2664": {
-   "status": "no_monthly_found",
+   "status": "pending_discovery",
    "home": "https://www.kawachi.co.jp/",
    "source_url": "",
    "latest_month": "",
@@ -446,12 +446,52 @@
    "ir": false
   },
   "7616": {
-   "status": "parser_failed",
+   "status": "ok",
    "home": "https://www.colowide.co.jp/",
    "source_url": "https://www.colowide.co.jp/ir/sale/",
+   "latest_month": "2026-08",
+   "months": 173,
+   "tdnet": false,
+   "web": false,
+   "ir": true
+  },
+  "7630": {
+   "status": "parser_failed",
+   "home": "https://www.ichibanya.co.jp",
+   "source_url": "https://www.ichibanya.jp/ir/finance/monthly/",
    "latest_month": "",
    "months": 0,
    "tdnet": false,
+   "web": false,
+   "ir": false
+  },
+  "3543": {
+   "status": "parser_failed",
+   "home": "https://www.komeda-holdings.co.jp",
+   "source_url": "https://komeda-holdings.co.jp/monthly/",
+   "latest_month": "",
+   "months": 0,
+   "tdnet": false,
+   "web": false,
+   "ir": false
+  },
+  "3087": {
+   "status": "parser_failed",
+   "home": "https://www.dnh.co.jp",
+   "source_url": "https://www.dnh.co.jp/ir/monthly/",
+   "latest_month": "",
+   "months": 0,
+   "tdnet": false,
+   "web": false,
+   "ir": false
+  },
+  "3612": {
+   "status": "parser_failed",
+   "home": "https://corp.world.co.jp",
+   "source_url": "https://corp.world.co.jp/ir/library/monthly/",
+   "latest_month": "",
+   "months": 0,
+   "tdnet": true,
    "web": false,
    "ir": false
   },
@@ -466,14 +506,14 @@
    "ir": false
   },
   "9989": {
-   "status": "pending_discovery",
+   "status": "ok",
    "home": "https://www.sundrug.co.jp/",
-   "source_url": "",
-   "latest_month": "",
-   "months": 0,
+   "source_url": "https://www.sundrug.co.jp/ir/irdata/monthly",
+   "latest_month": "2026-08",
+   "months": 77,
    "tdnet": false,
    "web": false,
-   "ir": false
+   "ir": true
   },
   "9142": {
    "status": "ok",
@@ -556,14 +596,14 @@
    "ir": false
   },
   "3148": {
-   "status": "no_monthly_found",
+   "status": "ok",
    "home": "https://www.createsdhd.co.jp",
-   "source_url": "",
-   "latest_month": "",
-   "months": 0,
+   "source_url": "https://www.createsdhd.co.jp/ir/monthly/",
+   "latest_month": "2026-08",
+   "months": 3,
    "tdnet": false,
    "web": false,
-   "ir": false
+   "ir": true
   },
   "2502": {
    "status": "parser_failed",
@@ -636,7 +676,7 @@
    "ir": false
   },
   "1419": {
-   "status": "no_monthly_found",
+   "status": "covered_elsewhere",
    "home": "https://www.tamahome.jp",
    "source_url": "",
    "latest_month": "",
@@ -746,7 +786,7 @@
    "ir": false
   },
   "245A": {
-   "status": "no_monthly_found",
+   "status": "covered_elsewhere",
    "home": "https://ingsinc.co.jp",
    "source_url": "",
    "latest_month": "",
@@ -786,7 +826,7 @@
    "ir": false
   },
   "2652": {
-   "status": "no_monthly_found",
+   "status": "pending_discovery",
    "home": "https://www.mandarake.co.jp",
    "source_url": "",
    "latest_month": "",
@@ -826,7 +866,7 @@
    "ir": false
   },
   "2668": {
-   "status": "no_monthly_found",
+   "status": "pending_discovery",
    "home": "https://tabio.com/jp/",
    "source_url": "",
    "latest_month": "",
@@ -866,7 +906,7 @@
    "ir": false
   },
   "2681": {
-   "status": "no_monthly_found",
+   "status": "pending_discovery",
    "home": "https://www.geonet.co.jp",
    "source_url": "",
    "latest_month": "",
@@ -946,7 +986,7 @@
    "ir": false
   },
   "2736": {
-   "status": "no_monthly_found",
+   "status": "covered_elsewhere",
    "home": "https://www.festaria.co.jp",
    "source_url": "",
    "latest_month": "",
@@ -976,7 +1016,7 @@
    "ir": false
   },
   "2750": {
-   "status": "no_monthly_found",
+   "status": "covered_elsewhere",
    "home": "https://www.ishimitsu.co.jp",
    "source_url": "",
    "latest_month": "",
@@ -986,7 +1026,7 @@
    "ir": false
   },
   "2752": {
-   "status": "no_monthly_found",
+   "status": "pending_discovery",
    "home": "https://www.fujiofood.com",
    "source_url": "",
    "latest_month": "",
@@ -1006,7 +1046,7 @@
    "ir": false
   },
   "2764": {
-   "status": "no_monthly_found",
+   "status": "covered_elsewhere",
    "home": "https://www.hiramatsu.co.jp",
    "source_url": "",
    "latest_month": "",
@@ -1046,7 +1086,7 @@
    "ir": false
   },
   "2789": {
-   "status": "no_monthly_found",
+   "status": "covered_elsewhere",
    "home": "https://www.re-marumatu.co.jp",
    "source_url": "",
    "latest_month": "",
@@ -1106,7 +1146,7 @@
    "ir": false
   },
   "2926": {
-   "status": "no_monthly_found",
+   "status": "covered_elsewhere",
    "home": "https://shinozakiya.com",
    "source_url": "",
    "latest_month": "",
@@ -1116,7 +1156,7 @@
    "ir": false
   },
   "2991": {
-   "status": "no_monthly_found",
+   "status": "covered_elsewhere",
    "home": "https://www.landnet.co.jp",
    "source_url": "",
    "latest_month": "",
@@ -1126,7 +1166,7 @@
    "ir": false
   },
   "3028": {
-   "status": "no_monthly_found",
+   "status": "pending_discovery",
    "home": "https://www.alpen-group.jp",
    "source_url": "",
    "latest_month": "",
@@ -1156,7 +1196,7 @@
    "ir": false
   },
   "3034": {
-   "status": "no_monthly_found",
+   "status": "pending_discovery",
    "home": "https://www.qolhd.co.jp",
    "source_url": "",
    "latest_month": "",
@@ -1206,7 +1246,7 @@
    "ir": false
   },
   "3064": {
-   "status": "no_monthly_found",
+   "status": "covered_elsewhere",
    "home": "https://corp.monotaro.com",
    "source_url": "",
    "latest_month": "",
@@ -1276,19 +1316,9 @@
    "ir": true
   },
   "3083": {
-   "status": "no_monthly_found",
+   "status": "pending_discovery",
    "home": "https://starseeds.co.jp",
    "source_url": "",
-   "latest_month": "",
-   "months": 0,
-   "tdnet": false,
-   "web": false,
-   "ir": false
-  },
-  "3087": {
-   "status": "parser_failed",
-   "home": "https://www.dnh.co.jp",
-   "source_url": "https://www.dnh.co.jp/ir/monthly/",
    "latest_month": "",
    "months": 0,
    "tdnet": false,
@@ -1306,7 +1336,7 @@
    "ir": false
   },
   "3135": {
-   "status": "no_monthly_found",
+   "status": "covered_elsewhere",
    "home": "https://www.marketenterprise.co.jp",
    "source_url": "",
    "latest_month": "",
@@ -1346,7 +1376,7 @@
    "ir": true
   },
   "3179": {
-   "status": "no_monthly_found",
+   "status": "covered_elsewhere",
    "home": "https://www.syuppin.co.jp",
    "source_url": "",
    "latest_month": "",
@@ -1356,7 +1386,7 @@
    "ir": false
   },
   "3181": {
-   "status": "no_monthly_found",
+   "status": "covered_elsewhere",
    "home": "https://www.okoku.jp",
    "source_url": "",
    "latest_month": "",
@@ -1366,7 +1396,7 @@
    "ir": false
   },
   "3191": {
-   "status": "no_monthly_found",
+   "status": "pending_discovery",
    "home": "https://www.joyfulhonda.com",
    "source_url": "",
    "latest_month": "",
@@ -1416,7 +1446,7 @@
    "ir": false
   },
   "3221": {
-   "status": "no_monthly_found",
+   "status": "covered_elsewhere",
    "home": "https://yossix.co.jp",
    "source_url": "",
    "latest_month": "",
@@ -1426,7 +1456,7 @@
    "ir": false
   },
   "3224": {
-   "status": "no_monthly_found",
+   "status": "pending_discovery",
    "home": "https://www.oysterbar.co.jp",
    "source_url": "",
    "latest_month": "",
@@ -1456,7 +1486,7 @@
    "ir": false
   },
   "3333": {
-   "status": "no_monthly_found",
+   "status": "covered_elsewhere",
    "home": "https://www.cb-asahi.co.jp",
    "source_url": "",
    "latest_month": "",
@@ -1526,7 +1556,7 @@
    "ir": true
   },
   "3415": {
-   "status": "no_monthly_found",
+   "status": "covered_elsewhere",
    "home": "https://tokyobase.co.jp",
    "source_url": "",
    "latest_month": "",
@@ -1544,16 +1574,6 @@
    "tdnet": true,
    "web": false,
    "ir": true
-  },
-  "3543": {
-   "status": "parser_failed",
-   "home": "https://www.komeda-holdings.co.jp",
-   "source_url": "https://komeda-holdings.co.jp/monthly/",
-   "latest_month": "",
-   "months": 0,
-   "tdnet": false,
-   "web": false,
-   "ir": false
   },
   "3544": {
    "status": "parser_failed",
@@ -1576,7 +1596,7 @@
    "ir": false
   },
   "3547": {
-   "status": "no_monthly_found",
+   "status": "covered_elsewhere",
    "home": "https://unisia.co.jp",
    "source_url": "",
    "latest_month": "",
@@ -1606,7 +1626,7 @@
    "ir": false
   },
   "3561": {
-   "status": "no_monthly_found",
+   "status": "pending_discovery",
    "home": "https://www.chikaranomoto.com",
    "source_url": "",
    "latest_month": "",
@@ -1619,16 +1639,6 @@
    "status": "covered_elsewhere",
    "home": "https://www.uniformnext.com",
    "source_url": "",
-   "latest_month": "",
-   "months": 0,
-   "tdnet": true,
-   "web": false,
-   "ir": false
-  },
-  "3612": {
-   "status": "parser_failed",
-   "home": "https://corp.world.co.jp",
-   "source_url": "https://corp.world.co.jp/ir/library/monthly/",
    "latest_month": "",
    "months": 0,
    "tdnet": true,
@@ -1656,7 +1666,7 @@
    "ir": false
   },
   "3796": {
-   "status": "no_monthly_found",
+   "status": "covered_elsewhere",
    "home": "https://www.e-seikatsu.info",
    "source_url": "",
    "latest_month": "",
@@ -1676,7 +1686,7 @@
    "ir": false
   },
   "386A": {
-   "status": "no_monthly_found",
+   "status": "covered_elsewhere",
    "home": "https://www.machioka.co.jp",
    "source_url": "",
    "latest_month": "",
@@ -1686,7 +1696,7 @@
    "ir": false
   },
   "3910": {
-   "status": "no_monthly_found",
+   "status": "pending_discovery",
    "home": "https://www.mks.jp",
    "source_url": "",
    "latest_month": "",
@@ -1716,7 +1726,7 @@
    "ir": false
   },
   "4015": {
-   "status": "no_monthly_found",
+   "status": "covered_elsewhere",
    "home": "https://www.arara.com",
    "source_url": "",
    "latest_month": "",
@@ -1726,7 +1736,7 @@
    "ir": false
   },
   "4019": {
-   "status": "no_monthly_found",
+   "status": "pending_discovery",
    "home": "https://stmn.co.jp",
    "source_url": "",
    "latest_month": "",
@@ -1746,7 +1756,7 @@
    "ir": false
   },
   "4193": {
-   "status": "no_monthly_found",
+   "status": "covered_elsewhere",
    "home": "https://www.fabrica-hd.co.jp",
    "source_url": "",
    "latest_month": "",
@@ -1776,7 +1786,7 @@
    "ir": false
   },
   "4374": {
-   "status": "no_monthly_found",
+   "status": "covered_elsewhere",
    "home": "https://www.robotpayment.co.jp",
    "source_url": "",
    "latest_month": "",
@@ -1866,7 +1876,7 @@
    "ir": false
   },
   "6045": {
-   "status": "no_monthly_found",
+   "status": "covered_elsewhere",
    "home": "https://www.rentracks.co.jp",
    "source_url": "",
    "latest_month": "",
@@ -1876,7 +1886,7 @@
    "ir": false
   },
   "6059": {
-   "status": "no_monthly_found",
+   "status": "covered_elsewhere",
    "home": "https://www.uchiyama-gr.jp",
    "source_url": "",
    "latest_month": "",
@@ -1906,7 +1916,7 @@
    "ir": false
   },
   "6537": {
-   "status": "no_monthly_found",
+   "status": "pending_discovery",
    "home": "https://www.wash-house.jp",
    "source_url": "",
    "latest_month": "",
@@ -1916,7 +1926,7 @@
    "ir": false
   },
   "6548": {
-   "status": "no_monthly_found",
+   "status": "pending_discovery",
    "home": "https://www.tabikobo.com",
    "source_url": "",
    "latest_month": "",
@@ -1966,7 +1976,7 @@
    "ir": false
   },
   "7062": {
-   "status": "no_monthly_found",
+   "status": "covered_elsewhere",
    "home": "https://fureasu.jp",
    "source_url": "",
    "latest_month": "",
@@ -2006,7 +2016,7 @@
    "ir": false
   },
   "7157": {
-   "status": "no_monthly_found",
+   "status": "covered_elsewhere",
    "home": "https://www.lifenet-seimei.co.jp",
    "source_url": "",
    "latest_month": "",
@@ -2076,7 +2086,7 @@
    "ir": true
   },
   "7422": {
-   "status": "no_monthly_found",
+   "status": "covered_elsewhere",
    "home": "https://www.toho-lamac.co.jp",
    "source_url": "",
    "latest_month": "",
@@ -2176,7 +2186,7 @@
    "ir": false
   },
   "7524": {
-   "status": "no_monthly_found",
+   "status": "covered_elsewhere",
    "home": "https://www.marche.co.jp",
    "source_url": "",
    "latest_month": "",
@@ -2186,7 +2196,7 @@
    "ir": false
   },
   "7544": {
-   "status": "no_monthly_found",
+   "status": "pending_discovery",
    "home": "https://www.three-f.co.jp",
    "source_url": "",
    "latest_month": "",
@@ -2286,7 +2296,7 @@
    "ir": false
   },
   "7615": {
-   "status": "no_monthly_found",
+   "status": "pending_discovery",
    "home": "https://www.kyotokimonoyuzenholdings.co.jp",
    "source_url": "",
    "latest_month": "",
@@ -2296,7 +2306,7 @@
    "ir": false
   },
   "7621": {
-   "status": "no_monthly_found",
+   "status": "pending_discovery",
    "home": "https://www.ukai.co.jp",
    "source_url": "",
    "latest_month": "",
@@ -2306,22 +2316,12 @@
    "ir": false
   },
   "7625": {
-   "status": "no_monthly_found",
+   "status": "covered_elsewhere",
    "home": "https://www.global-dining.com",
    "source_url": "",
    "latest_month": "",
    "months": 0,
    "tdnet": true,
-   "web": false,
-   "ir": false
-  },
-  "7630": {
-   "status": "parser_failed",
-   "home": "https://www.ichibanya.co.jp",
-   "source_url": "https://www.ichibanya.jp/ir/finance/monthly/",
-   "latest_month": "",
-   "months": 0,
-   "tdnet": false,
    "web": false,
    "ir": false
   },
@@ -2336,7 +2336,7 @@
    "ir": true
   },
   "7640": {
-   "status": "no_monthly_found",
+   "status": "covered_elsewhere",
    "home": "https://www.topculture.co.jp",
    "source_url": "",
    "latest_month": "",
@@ -2346,7 +2346,7 @@
    "ir": false
   },
   "7643": {
-   "status": "no_monthly_found",
+   "status": "covered_elsewhere",
    "home": "https://www.daiichi-d.co.jp",
    "source_url": "",
    "latest_month": "",
@@ -2526,7 +2526,7 @@
    "ir": false
   },
   "8166": {
-   "status": "no_monthly_found",
+   "status": "covered_elsewhere",
    "home": "https://online.taka-q.jp",
    "source_url": "",
    "latest_month": "",
@@ -2656,7 +2656,7 @@
    "ir": false
   },
   "8219": {
-   "status": "no_monthly_found",
+   "status": "covered_elsewhere",
    "home": "https://www.aoyama-syouji.co.jp",
    "source_url": "",
    "latest_month": "",
@@ -2666,7 +2666,7 @@
    "ir": false
   },
   "8227": {
-   "status": "no_monthly_found",
+   "status": "covered_elsewhere",
    "home": "https://www.shimamura.gr.jp",
    "source_url": "",
    "latest_month": "",
@@ -2746,7 +2746,7 @@
    "ir": false
   },
   "9223": {
-   "status": "no_monthly_found",
+   "status": "pending_discovery",
    "home": "https://www.asnova.co.jp",
    "source_url": "",
    "latest_month": "",
@@ -2776,7 +2776,7 @@
    "ir": false
   },
   "9267": {
-   "status": "no_monthly_found",
+   "status": "covered_elsewhere",
    "home": "https://www.genkydrugstores.co.jp",
    "source_url": "",
    "latest_month": "",
@@ -2796,7 +2796,7 @@
    "ir": false
   },
   "9327": {
-   "status": "no_monthly_found",
+   "status": "pending_discovery",
    "home": "https://www.e-logit.com",
    "source_url": "",
    "latest_month": "",
@@ -2846,7 +2846,7 @@
    "ir": true
   },
   "9828": {
-   "status": "no_monthly_found",
+   "status": "pending_discovery",
    "home": "https://www.genkisushi.co.jp",
    "source_url": "",
    "latest_month": "",
@@ -2876,7 +2876,7 @@
    "ir": false
   },
   "9850": {
-   "status": "no_monthly_found",
+   "status": "pending_discovery",
    "home": "https://www.gourmet-kineya.co.jp",
    "source_url": "",
    "latest_month": "",
@@ -2886,7 +2886,7 @@
    "ir": false
   },
   "9854": {
-   "status": "no_monthly_found",
+   "status": "pending_discovery",
    "home": "https://www.aigan.co.jp",
    "source_url": "",
    "latest_month": "",
@@ -2936,7 +2936,7 @@
    "ir": true
   },
   "9904": {
-   "status": "no_monthly_found",
+   "status": "covered_elsewhere",
    "home": "https://www.verite.jp",
    "source_url": "",
    "latest_month": "",
@@ -3036,7 +3036,7 @@
    "ir": false
   },
   "9979": {
-   "status": "discontinued",
+   "status": "parser_failed",
    "home": "https://www.daisyo.co.jp",
    "source_url": "https://www.daisyo.co.jp/company/ir/getsuji.html",
    "latest_month": "",
@@ -3066,7 +3066,7 @@
    "ir": false
   },
   "9994": {
-   "status": "no_monthly_found",
+   "status": "pending_discovery",
    "home": "https://www.yamaya.jp",
    "source_url": "",
    "latest_month": "",
@@ -3106,7 +3106,7 @@
    "ir": false
   },
   "3979": {
-   "status": "no_monthly_found",
+   "status": "covered_elsewhere",
    "home": "https://www.uluru.biz",
    "source_url": "",
    "latest_month": "",
@@ -3116,7 +3116,7 @@
    "ir": false
   },
   "3983": {
-   "status": "no_monthly_found",
+   "status": "covered_elsewhere",
    "home": "https://www.oro.com",
    "source_url": "",
    "latest_month": "",
@@ -3136,7 +3136,7 @@
    "ir": false
   },
   "7059": {
-   "status": "no_monthly_found",
+   "status": "covered_elsewhere",
    "home": "https://www.copro-h.co.jp",
    "source_url": "",
    "latest_month": "",
@@ -3176,7 +3176,7 @@
    "ir": true
   },
   "9252": {
-   "status": "no_monthly_found",
+   "status": "covered_elsewhere",
    "home": "https://www.lomgrp.co.jp",
    "source_url": "",
    "latest_month": "",
@@ -3186,7 +3186,7 @@
    "ir": false
   },
   "3461": {
-   "status": "no_monthly_found",
+   "status": "covered_elsewhere",
    "home": "https://www.palma.jp",
    "source_url": "",
    "latest_month": "",
@@ -3316,7 +3316,7 @@
    "ir": false
   },
   "5589": {
-   "status": "no_monthly_found",
+   "status": "covered_elsewhere",
    "home": "https://www.autoserver.co.jp",
    "source_url": "",
    "latest_month": "",
@@ -3326,7 +3326,7 @@
    "ir": false
   },
   "8927": {
-   "status": "no_monthly_found",
+   "status": "covered_elsewhere",
    "home": "https://www.meiho-est.com",
    "source_url": "",
    "latest_month": "",
@@ -3336,7 +3336,7 @@
    "ir": false
   },
   "212A": {
-   "status": "no_monthly_found",
+   "status": "covered_elsewhere",
    "home": "https://fiteasy.co.jp",
    "source_url": "",
    "latest_month": "",
@@ -3346,7 +3346,7 @@
    "ir": false
   },
   "6071": {
-   "status": "no_monthly_found",
+   "status": "covered_elsewhere",
    "home": "https://www.ibjapan.jp",
    "source_url": "",
    "latest_month": "",
@@ -3356,7 +3356,7 @@
    "ir": false
   },
   "9399": {
-   "status": "no_monthly_found",
+   "status": "covered_elsewhere",
    "home": "https://www.beatholdings.com",
    "source_url": "",
    "latest_month": "",
@@ -3376,7 +3376,7 @@
    "ir": false
   },
   "7138": {
-   "status": "no_monthly_found",
+   "status": "covered_elsewhere",
    "home": "https://www.torico-corp.com",
    "source_url": "",
    "latest_month": "",
@@ -3406,7 +3406,7 @@
    "ir": false
   },
   "2970": {
-   "status": "no_monthly_found",
+   "status": "covered_elsewhere",
    "home": "https://www.goodlife-c.co.jp",
    "source_url": "",
    "latest_month": "",
@@ -3416,7 +3416,7 @@
    "ir": false
   },
   "4177": {
-   "status": "no_monthly_found",
+   "status": "covered_elsewhere",
    "home": "https://i-plug.co.jp",
    "source_url": "",
    "latest_month": "",
@@ -3436,7 +3436,7 @@
    "ir": false
   },
   "352A": {
-   "status": "no_monthly_found",
+   "status": "covered_elsewhere",
    "home": "https://loive.co.jp",
    "source_url": "",
    "latest_month": "",
@@ -3456,7 +3456,7 @@
    "ir": false
   },
   "2997": {
-   "status": "no_monthly_found",
+   "status": "covered_elsewhere",
    "home": "https://www.storageoh.jp",
    "source_url": "",
    "latest_month": "",
@@ -3476,7 +3476,7 @@
    "ir": false
   },
   "8739": {
-   "status": "no_monthly_found",
+   "status": "covered_elsewhere",
    "home": "https://www.sparxgroup.com",
    "source_url": "",
    "latest_month": "",
@@ -3486,7 +3486,7 @@
    "ir": false
   },
   "3174": {
-   "status": "no_monthly_found",
+   "status": "covered_elsewhere",
    "home": "https://www.happiness-d.co.jp",
    "source_url": "",
    "latest_month": "",
@@ -3506,7 +3506,7 @@
    "ir": false
   },
   "3287": {
-   "status": "no_monthly_found",
+   "status": "covered_elsewhere",
    "home": "https://www.hoshinoresorts-reit.com",
    "source_url": "",
    "latest_month": "",
@@ -3526,7 +3526,7 @@
    "ir": false
   },
   "369A": {
-   "status": "no_monthly_found",
+   "status": "covered_elsewhere",
    "home": "https://a-tie.co.jp",
    "source_url": "",
    "latest_month": "",
@@ -3536,7 +3536,7 @@
    "ir": false
   },
   "2998": {
-   "status": "no_monthly_found",
+   "status": "covered_elsewhere",
    "home": "https://corp.creal.jp",
    "source_url": "",
    "latest_month": "",
@@ -3546,7 +3546,7 @@
    "ir": false
   },
   "401A": {
-   "status": "no_monthly_found",
+   "status": "covered_elsewhere",
    "home": "https://www.kasumigaseki-hotel-reit.co.jp/en/",
    "source_url": "",
    "latest_month": "",
@@ -3556,7 +3556,7 @@
    "ir": false
   },
   "4880": {
-   "status": "no_monthly_found",
+   "status": "covered_elsewhere",
    "home": "https://www.cellsource.co.jp",
    "source_url": "",
    "latest_month": "",
@@ -3566,7 +3566,7 @@
    "ir": false
   },
   "9284": {
-   "status": "no_monthly_found",
+   "status": "covered_elsewhere",
    "home": "https://www.canadiansolarinfra.com",
    "source_url": "",
    "latest_month": "",
@@ -3586,7 +3586,7 @@
    "ir": false
   },
   "3189": {
-   "status": "no_monthly_found",
+   "status": "covered_elsewhere",
    "home": "https://www.anap.co.jp",
    "source_url": "",
    "latest_month": "",
@@ -3596,7 +3596,7 @@
    "ir": false
   },
   "6040": {
-   "status": "no_monthly_found",
+   "status": "covered_elsewhere",
    "home": "https://www.nippon-ski.jp",
    "source_url": "",
    "latest_month": "",
@@ -3606,7 +3606,7 @@
    "ir": false
   },
   "1435": {
-   "status": "no_monthly_found",
+   "status": "covered_elsewhere",
    "home": "https://corp.robothome.jp",
    "source_url": "",
    "latest_month": "",
@@ -3616,7 +3616,7 @@
    "ir": false
   },
   "3276": {
-   "status": "no_monthly_found",
+   "status": "covered_elsewhere",
    "home": "https://www.jpmc.jp",
    "source_url": "",
    "latest_month": "",
