@@ -3198,6 +3198,10 @@ svg.bars rect.b:hover { fill:var(--a3); }
 .foot { color:var(--mute); font-size:17px; margin-top:56px; line-height:1.7;
         border-top:1px solid var(--line); padding-top:18px; }
 .foot a { color:var(--a2); }
+.samurai-nav { display:flex; flex-wrap:wrap; gap:8px; margin:24px 0; border-bottom:1px solid var(--line); }
+.samurai-nav a { display:block; padding:14px 20px; color:var(--mute); font-size:20px; font-weight:700; text-decoration:none; border-bottom:3px solid transparent; }
+.samurai-nav a:hover, .samurai-nav a:focus-visible { color:var(--fg); background:var(--panel); }
+.samurai-nav a[aria-current="page"] { color:#FFCB05; border-bottom-color:#FFCB05; }
 </style>
 </head>
 <body>
@@ -3207,6 +3211,12 @@ svg.bars rect.b:hover { fill:var(--a3); }
 <h1><span class="mark" aria-hidden="true"></span>Earning <span class="jp">Samurai</span>
     <span class="byline">by CB</span></h1>
 <p class="sub">미국 · 일본 · 홍콩 주간 실적발표 일정 — 누가 언제 무엇을 발표했는지</p>
+
+<nav class="samurai-nav" aria-label="어닝사무라이 메뉴">
+  <a href="./" aria-current="page">실적 캘린더</a>
+  <a href="#mnMeta">일본 월매출</a>
+  <a href="japan-exports/">일본 수출</a>
+</nav>
 
 <div class="find">
   <span class="mag" aria-hidden="true">🔎</span>
