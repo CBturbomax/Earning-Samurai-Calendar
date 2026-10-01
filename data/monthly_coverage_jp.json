@@ -1,18 +1,18 @@
 {
  "v": 1,
- "ts": "2026-10-01T01:28:29+00:00",
+ "ts": "2026-10-01T06:48:52+00:00",
  "seed": 361,
  "homes": 352,
- "official_ir_data": 46,
- "covered_any": 259,
+ "official_ir_data": 47,
+ "covered_any": 260,
  "status": {
-  "covered_elsewhere": 99,
+  "covered_elsewhere": 82,
   "discontinued": 2,
   "home_pending": 6,
-  "no_monthly_found": 71,
-  "ok": 46,
-  "parser_failed": 119,
-  "pending_discovery": 18
+  "no_monthly_found": 90,
+  "ok": 47,
+  "parser_failed": 123,
+  "pending_discovery": 11
  },
  "codes": {
   "8267": {
@@ -1026,7 +1026,7 @@
    "ir": false
   },
   "2789": {
-   "status": "covered_elsewhere",
+   "status": "no_monthly_found",
    "home": "https://www.re-marumatu.co.jp",
    "source_url": "",
    "latest_month": "",
@@ -1336,7 +1336,7 @@
    "ir": false
   },
   "3181": {
-   "status": "covered_elsewhere",
+   "status": "no_monthly_found",
    "home": "https://www.okoku.jp",
    "source_url": "",
    "latest_month": "",
@@ -1366,9 +1366,9 @@
    "ir": false
   },
   "3195": {
-   "status": "covered_elsewhere",
+   "status": "parser_failed",
    "home": "https://www.genepa.com",
-   "source_url": "",
+   "source_url": "https://www.genepa.com",
    "latest_month": "",
    "months": 0,
    "tdnet": true,
@@ -1406,7 +1406,7 @@
    "ir": false
   },
   "3224": {
-   "status": "pending_discovery",
+   "status": "no_monthly_found",
    "home": "https://www.oysterbar.co.jp",
    "source_url": "",
    "latest_month": "",
@@ -1416,9 +1416,9 @@
    "ir": false
   },
   "3317": {
-   "status": "covered_elsewhere",
+   "status": "parser_failed",
    "home": "https://www.fgarden.co.jp",
-   "source_url": "",
+   "source_url": "https://www.fgarden.co.jp/ir/index.php",
    "latest_month": "",
    "months": 0,
    "tdnet": true,
@@ -1646,7 +1646,7 @@
    "ir": false
   },
   "3796": {
-   "status": "covered_elsewhere",
+   "status": "no_monthly_found",
    "home": "https://www.e-seikatsu.info",
    "source_url": "",
    "latest_month": "",
@@ -1666,7 +1666,7 @@
    "ir": false
   },
   "386A": {
-   "status": "covered_elsewhere",
+   "status": "no_monthly_found",
    "home": "https://www.machioka.co.jp",
    "source_url": "",
    "latest_month": "",
@@ -1716,7 +1716,7 @@
    "ir": false
   },
   "4019": {
-   "status": "pending_discovery",
+   "status": "no_monthly_found",
    "home": "https://stmn.co.jp",
    "source_url": "",
    "latest_month": "",
@@ -2026,14 +2026,14 @@
    "ir": false
   },
   "7359": {
-   "status": "pending_discovery",
+   "status": "ok",
    "home": "https://tokyo-tsushin.com",
-   "source_url": "",
-   "latest_month": "",
-   "months": 0,
+   "source_url": "https://tokyo-tsushin.com",
+   "latest_month": "2026-03",
+   "months": 1,
    "tdnet": false,
    "web": false,
-   "ir": false
+   "ir": true
   },
   "7412": {
    "status": "parser_failed",
@@ -2066,7 +2066,7 @@
    "ir": true
   },
   "7422": {
-   "status": "covered_elsewhere",
+   "status": "no_monthly_found",
    "home": "https://www.toho-lamac.co.jp",
    "source_url": "",
    "latest_month": "",
@@ -2166,7 +2166,7 @@
    "ir": false
   },
   "7524": {
-   "status": "covered_elsewhere",
+   "status": "no_monthly_found",
    "home": "https://www.marche.co.jp",
    "source_url": "",
    "latest_month": "",
@@ -2176,7 +2176,7 @@
    "ir": false
   },
   "7544": {
-   "status": "pending_discovery",
+   "status": "no_monthly_found",
    "home": "https://www.three-f.co.jp",
    "source_url": "",
    "latest_month": "",
@@ -2296,7 +2296,7 @@
    "ir": false
   },
   "7625": {
-   "status": "covered_elsewhere",
+   "status": "no_monthly_found",
    "home": "https://www.global-dining.com",
    "source_url": "",
    "latest_month": "",
@@ -2326,7 +2326,7 @@
    "ir": true
   },
   "7640": {
-   "status": "covered_elsewhere",
+   "status": "no_monthly_found",
    "home": "https://www.topculture.co.jp",
    "source_url": "",
    "latest_month": "",
@@ -2516,7 +2516,7 @@
    "ir": false
   },
   "8166": {
-   "status": "covered_elsewhere",
+   "status": "no_monthly_found",
    "home": "https://online.taka-q.jp",
    "source_url": "",
    "latest_month": "",
@@ -2746,7 +2746,7 @@
    "ir": false
   },
   "9223": {
-   "status": "pending_discovery",
+   "status": "no_monthly_found",
    "home": "https://www.asnova.co.jp",
    "source_url": "",
    "latest_month": "",
@@ -2796,7 +2796,7 @@
    "ir": false
   },
   "9327": {
-   "status": "pending_discovery",
+   "status": "no_monthly_found",
    "home": "https://www.e-logit.com",
    "source_url": "",
    "latest_month": "",
@@ -2886,7 +2886,7 @@
    "ir": false
   },
   "9854": {
-   "status": "pending_discovery",
+   "status": "no_monthly_found",
    "home": "https://www.aigan.co.jp",
    "source_url": "",
    "latest_month": "",
@@ -3186,7 +3186,7 @@
    "ir": false
   },
   "3461": {
-   "status": "covered_elsewhere",
+   "status": "no_monthly_found",
    "home": "https://www.palma.jp",
    "source_url": "",
    "latest_month": "",
@@ -3196,9 +3196,9 @@
    "ir": false
   },
   "5580": {
-   "status": "covered_elsewhere",
+   "status": "parser_failed",
    "home": "https://prodelight.co.jp",
-   "source_url": "",
+   "source_url": "https://prodelight.co.jp/casestudy/unitedarrows/",
    "latest_month": "",
    "months": 0,
    "tdnet": true,
@@ -3396,9 +3396,9 @@
    "ir": false
   },
   "9282": {
-   "status": "covered_elsewhere",
+   "status": "parser_failed",
    "home": "https://www.ichigo-green.co.jp",
-   "source_url": "",
+   "source_url": "https://www.ichigo-green.co.jp",
    "latest_month": "",
    "months": 0,
    "tdnet": true,
@@ -3416,7 +3416,7 @@
    "ir": false
   },
   "4177": {
-   "status": "covered_elsewhere",
+   "status": "no_monthly_found",
    "home": "https://i-plug.co.jp",
    "source_url": "",
    "latest_month": "",
@@ -3456,7 +3456,7 @@
    "ir": false
   },
   "2997": {
-   "status": "covered_elsewhere",
+   "status": "no_monthly_found",
    "home": "https://www.storageoh.jp",
    "source_url": "",
    "latest_month": "",
@@ -3586,7 +3586,7 @@
    "ir": false
   },
   "3189": {
-   "status": "covered_elsewhere",
+   "status": "no_monthly_found",
    "home": "https://www.anap.co.jp",
    "source_url": "",
    "latest_month": "",
