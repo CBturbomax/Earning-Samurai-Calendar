@@ -6,6 +6,24 @@ import json
 from pathlib import Path
 from unittest.mock import patch
 import build
+import scrape_mon_ir
+import http.client
+
+
+class RequestUrlTests(unittest.TestCase):
+    def test_official_pdf_and_html_urls_encode_spaces_and_japanese_once(self):
+        original = 'https://example.jp/月次/Sugi Holdings%20News.pdf?q=売上&year=2026'
+        expected = 'https://example.jp/%E6%9C%88%E6%AC%A1/Sugi%20Holdings%20News.pdf?q=%E5%A3%B2%E4%B8%8A&year=2026'
+        for fetch in (scrape_mon_ir.get, scrape_mon_ir.get_bytes):
+            with self.subTest(fetch=fetch.__name__), patch('urllib.request.urlopen') as opener:
+                opener.return_value.__enter__.return_value.read.return_value = b'ok'
+                fetch(original)
+                self.assertEqual(opener.call_args.args[0].full_url, expected)
+
+    def test_bad_redirect_url_does_not_abort_collection(self):
+        with patch('urllib.request.urlopen', side_effect=http.client.InvalidURL('bad redirect')):
+            self.assertEqual(scrape_mon_ir.get_bytes('https://example.jp/report.pdf'), b'')
+            self.assertEqual(scrape_mon_ir.get('https://example.jp/monthly'), '')
 
 
 class ReviewedSeriesTests(unittest.TestCase):
