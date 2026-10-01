@@ -5,6 +5,7 @@ on:
     paths:
       - '*.py'
       - 'data/monthly_universe_jp.json'
+      - 'data/monthly_reviewed_jp.json'
       - '.github/workflows/*.yml'
   workflow_dispatch:
 
@@ -23,7 +24,11 @@ jobs:
         run: |
           python -m py_compile monir.py scrape_mon_ir.py scrape_caps.py build.py
       - name: 월차 parser self-test
-        run: python monir.py
+        run: |
+          python monir.py
+          python montable.py
+          python monweb.py
+          python -m unittest discover -v
       - name: 월차 coverage 구조 검사
         run: python scrape_mon_ir.py --coverage
       - name: 월차 seed JSON 검사

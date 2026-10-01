@@ -24,6 +24,8 @@ TDnet 첨부(`scrape_mon_jp.py`)도 流通ニュース(`scrape_mon_web.py`)도 �
 예외를 두기 시작하면 백 개의 파서가 되고, 사이트를 고칠 때마다 깨진다.
 """
 import re
+import json
+import html
 from collections import Counter
 from datetime import date
 
@@ -115,7 +117,9 @@ def _signed(cell: str) -> bool:
 
 
 def _month(cell: str):
-    m = MONTH_CELL.match(_cell(cell))
+    text = re.sub(r'(January|February|March|April|May|June|July|August|September|October|November|December)$',
+                  '', _cell(cell), flags=re.I)
+    m = MONTH_CELL.match(text)
     if not m:
         return None
     v = int(m.group(1))
@@ -138,6 +142,9 @@ def _fy(text: str):
     if got:
         y, m = max((int(a), int(b)) for a, b in got)
         return ("end", y, m)
+    span = re.search(r'(20\d{2})\s*[-–—〜～]\s*(20\d{2})年度', text)
+    if span and int(span[2]) == int(span[1]) + 1:
+        return ('start', int(span[1]), 0)
     got = FY_JP.findall(text)
     if got:
         return ("start", max(int(y) for y in got), 0)
@@ -282,6 +289,7 @@ def _horizontal(rows, width, hr, cols, today, near, lead=""):
     months = [_month(rows[hr][c]) for c in cols]
     first = min(cols)
     pairs = []
+    totals = []
     ctx = lead + " " + _all_text(rows)
     delta_hint = bool(YOY_CONTEXT.search(ctx))
     for i in range(hr + 1, len(rows)):
@@ -299,6 +307,13 @@ def _horizontal(rows, width, hr, cols, today, near, lead=""):
         kind = _label_ok(lab, lead)
         if kind:
             pairs.append((kind, vals))
+            if re.match(r'^(?:合計|全社|連結合計)(?:全店|全店舗|既存店|売上|$)', lab):
+                totals.append((kind, vals))
+    # An explicitly labelled company total wins over a directly-operated
+    # subtotal. Business-specific totals (e.g. 百貨店事業合計) do not qualify.
+    total_kinds = {kind for kind, _ in totals}
+    if totals:
+        pairs = [p for p in pairs if p[0] not in total_kinds] + totals
     if not pairs:
         return {}
     filled = [any(v[i] is not None for _k, v in pairs) for i in range(len(months))]
@@ -343,6 +358,30 @@ def read(page: str, today=None, near: int = 3):
     못 읽으면 빈 사전이다. **지어내지 않는다.**
     """
     today = today or date.today()
+    # Public eir-parts feeds contain JSON-wrapped HTML tables. Parse the data,
+    # never execute JavaScript; only monthly entries with an explicit year
+    # group are eligible. Other IR documents are deliberately ignored.
+    feed = re.fullmatch(r'\s*\ufeff?\s*eolparts_announcement_\d+\s*\((.*)\)\s*;?\s*',
+                        page, re.S)
+    if feed:
+        try:
+            payload = json.loads(feed[1])
+        except (ValueError, TypeError):
+            return {}
+        result = {}
+        if not isinstance(payload, dict):
+            return result
+        for item in payload.get('item', []):
+            if not isinstance(item, dict):
+                continue
+            title, group = str(item.get('title', '')), str(item.get('group_name', ''))
+            fragment = item.get('text', '')
+            if (not re.search(r'月次|月別', title) or not re.search(r'20\d{2}', group)
+                    or not isinstance(fragment, str) or '<table' not in fragment.lower()):
+                continue
+            for period, values in read('<h2>'+html.escape(group)+'</h2>'+fragment, today, near).items():
+                result.setdefault(period, values)
+        return result
     body = SCRIPT.sub(" ", page)
     out, at = {}, 0
     for m in TABLE_AT.finditer(body):
@@ -552,9 +591,15 @@ def archive_links(page: str, base: str, limit: int = 4):
     """
     import urllib.parse
     base_host = urllib.parse.urlparse(base).netloc
-    cur = base.split("?")[0].rstrip("/")
+    cur = base.split("#")[0].rstrip("/")
     out, seen = [], set()
-    for href, lab in A.findall(page):
+    options = re.findall(r'<option\b[^>]*\bvalue=["\x27]([^"\x27]+)["\x27][^>]*>(.*?)</option>',
+                         page, re.I | re.S)
+    # URL-valued year selectors (e.g. Nitori) are real archive links.
+    # Numeric widget indices require JavaScript and must never become URLs.
+    options = [(u, lab) for u, lab in options
+               if re.search(r'[/?.]', u) and not u.startswith('#')]
+    for href, lab in A.findall(page) + options:
         if href.lower().startswith(("javascript:", "mailto:", "tel:")):
             continue
         t = _txt(lab)
@@ -565,7 +610,7 @@ def archive_links(page: str, base: str, limit: int = 4):
             continue
         if urllib.parse.urlparse(u).netloc != base_host:
             continue
-        key = u.split("?")[0].rstrip("/")
+        key = u.rstrip("/")
         if key == cur or key in seen:
             continue
         seen.add(key)
@@ -596,6 +641,13 @@ def find_ir(page: str, base: str):
 # 수집기 파일에 적어 두고, 못 찾을 때만 여기 둘째 칸에 직접 적는다.
 # **못 여는 곳은 넣지 않는다**(84차): 시마무라 8227·ABC마트 2670 은 403,
 # 비쿠카메라 3048 은 timeout 이다.
+# Public data feeds observed on the corresponding official monthly pages.
+# The common HTML parser is reused for all years and both companies.
+IR_FEEDS = {
+    '7616': 'https://ssl4.eir-parts.net/V4Public/eir/7616/ja/announcement/announcement_0.js',
+    '8153': 'https://ssl4.eir-parts.net/V4Public/eir/8153/ja/announcement/announcement_24.js',
+}
+
 IR_SITES = {
     # ── 84·85·86·88차로 열리는 것을 확인한 곳 ─────────────────────────────
     "8267": ("イオン", "https://www.aeon.info/",
@@ -642,7 +694,8 @@ IR_SITES = {
     "3387": ("クリエイトＲ", "https://www.createrestaurants.com/", ""),
     "7581": ("サイゼリヤ", "https://www.saizeriya.co.jp/", ""),
     "3050": ("ＤＣＭ", "https://www.dcm-hldgs.co.jp/", ""),
-    "8273": ("イズミ", "https://www.izumi.co.jp/", ""),
+    "8273": ("イズミ", "https://www.izumi.co.jp/",
+             "https://www.izumi.co.jp/ir/finance/monthly/"),
     "9948": ("アークス", "https://www.arcs-g.co.jp/", ""),
     "7545": ("西松屋チェーン", "https://www.24028.jp/", ""),
     "3549": ("クスリのアオキＨＤ", "https://www.kusuri-aoki.co.jp/",
@@ -654,12 +707,22 @@ IR_SITES = {
     "3591": ("ワコールＨＤ", "https://www.wacoalholdings.jp/",
              "https://www.wacoalholdings.jp/ir/monthlydata/"),
     "2664": ("カワチ薬品", "https://www.kawachi.co.jp/", ""),
-    "3222": ("ＵＳＭＨ", "https://www.usmh.co.jp/", ""),
+    "3222": ("ＵＳＭＨ", "https://www.usmh.co.jp/",
+             "https://www.usmh.co.jp/ir/monthly_reports"),
     "7532": ("ＰＰＩＨ", "https://ppih.co.jp/", ""),
     # **막힌 곳은 넣지 않는다**(92차): 게오HD 2681 · 아오야마상사 8219 는 403,
     # 겐키드러그 9267 은 주소가 안 닿는다. 다시 두드리지 말 것.
     "8279": ("ヤオコー", "https://www.yaoko-net.com/", ""),
-    "7616": ("コロワイド", "https://www.colowide.co.jp/", ""),
+    "7616": ("コロワイド", "https://www.colowide.co.jp/",
+             "https://www.colowide.co.jp/ir/sale/"),
+    "7630": ("壱番屋", "https://www.ichibanya.jp/",
+             "https://www.ichibanya.jp/ir/finance/monthly/"),
+    "3543": ("コメダＨＤ", "https://komeda-holdings.co.jp/",
+             "https://komeda-holdings.co.jp/monthly/"),
+    "3087": ("ドトール・日レスＨＤ", "https://www.dnh.co.jp/",
+             "https://www.doutor.co.jp/ir/library/monthly/"),
+    "3612": ("ワールド", "https://corp.world.co.jp/",
+             "https://corp.world.co.jp/ir/library/monthly/"),
 
     # ── 대형 월차 회사: 자동 discovery 를 기다리지 않고 공식 URL을 우선 연결 ──
     "7453": ("良品計画", "https://www.ryohin-keikaku.jp/",

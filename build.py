@@ -2077,11 +2077,41 @@ def apply_reviewed_monthly(monthly, nums):
     for code in excluded:
         nums.pop(code, None)
     labels = {'all': '전점', 'same': '기존점', 'yoy': '매출'}
+    ir_records = load_monthly_ir()
     for company in board['companies']:
         code, metric = company['code'], company['defaultMetric']
         evidence = {}
         history = []
-        for period, values in sorted(company['months'].items()):
+        observations = dict(company['months'])
+        # Match the reviewed metric directly, before the automatic chart picks
+        # its default (often same-store). A default choice must not freeze an
+        # all-store reviewed series. Require three agreeing overlap months and
+        # reject every conflict; reviewed observations always win.
+        ir = ir_records.get(code, {})
+        candidates = ir.get('months') or {}
+        overlap = [(v[metric], observations[p][metric]['ratio'])
+                   for p, v in candidates.items()
+                   if isinstance(v.get(metric), (int, float))
+                   and p in observations and metric in observations[p]]
+        if len(overlap) >= 3 and all(abs(a - b) < 0.15 for a, b in overlap):
+            last_reviewed = max(observations, default='')
+            for period, values in candidates.items():
+                ratio = values.get(metric)
+                source = values.get('doc') or ir.get('page', '')
+                if (period >= date.today().strftime('%Y-%m')
+                        or metric in observations.get(period, {})
+                        or not isinstance(ratio, (int, float)) or not source):
+                    continue
+                # Historical fills need the URL recorded when that month was
+                # parsed, not a current-page fallback for old cached values.
+                if period <= last_reviewed and not values.get('doc'):
+                    continue
+                observations[period] = dict(observations.get(period, {}))
+                observations[period][metric] = {
+                    'ratio': ratio, 'source': source, 'scope': company['scope'],
+                    'kind': '공식 IR 자동 보충 · 기존 검증값 대조',
+                    'checkedAt': ir.get('ts', '')}
+        for period, values in sorted(observations.items()):
             item = values.get(metric, {})
             ratio = item.get('ratio')
             if not isinstance(ratio, (int, float)) or not item.get('source'):
@@ -2100,7 +2130,9 @@ def apply_reviewed_monthly(monthly, nums):
                         all(abs(r[2] - reviewed[r[0]]) < 0.15 for r in overlap))
         if (old.get('historyVerified') and old.get('historyBase') == base
                 and (old.get('scope') == company['scope'] or same_history)):
-            history.extend(r for r in old.get('m', []) if r[0] > board['endMonth'])
+            history.extend(r for r in old.get('m', [])
+                           if r[0] > board['endMonth'] and r[0] not in evidence)
+            history.sort(key=lambda r: r[0])
         latest = history[-1]
         item = evidence.get(latest[0], {})
         doc = item.get('source') or old.get('doc', '')
