@@ -322,6 +322,69 @@ def _single_month_yoy(table, aday: date, title: str = ""):
                     "amount_label": "", "yoy_label": "売上高前年比"}
     return None
 
+
+# 한 달짜리 공시인데 표는 「8月度 / 上期累計」 두 칸이고, 회사 전체 줄은
+# 「連結合計 ▲5.3 ▲2.8」처럼 **증감률만** 적는 꼴이 있다(J.フロント 3086).
+# 기존 파서는 달 머리글이 3개 이상인 표만 읽으므로 이런 정상 자료를 놓쳤다.
+#
+# 여기서는 매우 좁게 읽는다.
+#   * 제목에서 대상월을 확정할 수 있고
+#   * 같은 표 근처에 매출 + 전년비 문맥이 있고
+#   * 회사 전체를 뜻하는 「連結合計/連結計/グループ合計」 줄이 있을 때만
+# 첫 숫자를 그 달 수치로 쓴다. 「百貨店事業合計」 같은 사업부 합계는 받지 않는다.
+GROUP_TOTAL = re.compile(r"(?:連結(?:合計|計)|グループ(?:合計|計))")
+GROUP_SALES_CTX = re.compile(r"売上高|売上収益|営業収益|営業収入|取扱高|販売高|月商")
+GROUP_YOY_CTX = re.compile(r"前年|対前年|昨対|YoY", re.I)
+GROUP_DELTA_CTX = re.compile(r"増減率|増減|伸び率|成長率")
+
+
+def _single_month_group_yoy(table, aday: date, title: str = ""):
+    """단월 공시의 회사 전체(연결) 매출 전년비 한 칸을 읽는다.
+
+    J.フロント처럼 표가 「当月 / 累計」 두 칸뿐이면 일반 월차 파서의
+    '달 머리글 3개 이상' 조건을 못 넘는다. 제목의 대상월과 연결합계라는
+    회사 전체 표식이 둘 다 확인된 경우에만 현재월 첫 숫자를 취한다.
+    """
+    target = _title_target_month(title, aday)
+    if not target:
+        return None
+    mo = int(target[5:])
+    month_pat = re.compile(rf"{mo}月(?:度|分|次)?")
+
+    for i, cells in enumerate(table):
+        row = "".join(_norm(t) for _x, t in cells)
+        if not GROUP_TOTAL.search(row):
+            continue
+
+        local_rows = table[max(0, i - 8):i + 1]
+        local = "".join(_norm(t) for rr in local_rows for _x, t in rr)
+        if not month_pat.search(local):
+            continue
+        if not GROUP_SALES_CTX.search(local) or not GROUP_YOY_CTX.search(local):
+            continue
+
+        vals = []
+        for x, t in cells:
+            v = _num(t)
+            if v is not None:
+                vals.append((x, v))
+        if not vals:
+            continue
+        vals.sort()
+        v = vals[0][1]  # 첫 숫자는 당월, 뒤 숫자는 누계
+
+        if GROUP_DELTA_CTX.search(local) or abs(v) < 30:
+            yoy = 100.0 + v
+        else:
+            yoy = v
+        if not 20.0 <= yoy <= 500.0:
+            continue
+        return {"rows": [{"period": target, "yoy": round(yoy, 6),
+                          "metric": "連結売上高前年比"}],
+                "amount_label": "", "yoy_label": "連結売上高前年比"}
+    return None
+
+
 VERT_MONTH = re.compile(r"^(?:(\d{2}|\d{4})年)?(\d{1,2})月(?:[（(~～].*)?$")
 
 
@@ -520,8 +583,9 @@ def read(data: bytes, ann: str, max_pages: int = 12, title: str = ""):
 
     if not cands:
         vertical = _vertical_yoy(table, aday, title)
+        group = _single_month_group_yoy(table, aday, title)
         single = _single_month_yoy(table, aday, title)
-        return vertical or single or _sentence(table, aday)
+        return vertical or group or single or _sentence(table, aday)
 
     groups = {}
     for c in cands:
@@ -832,6 +896,36 @@ def _selftest():                                          # pragma: no cover
     if len(got) != 1 or got[0].get("period") != "2026-07" or got[0].get("yoy") != 108.3:
         print("!! 하) 한 달 설명문 YoY", got)
         ok = False
+
+    # (거) J.フロント 꼴: 한 달 공시에 당월/누계 두 칸, 회사 전체는
+    #      「連結合計」 한 줄이다. 누계가 아니라 **당월 첫 칸**만 가져온다.
+    jf = _pdf([
+        (740, [(40, "2026年8月度 連結売上収益報告")]),
+        (720, [(40, "セグメント別売上収益（売上高）（対前年増減率：％）")]),
+        (700, [(260, "8月度"), (360, "上期累計")]),
+        (680, [(40, "百貨店事業"), (260, "▲0.3"), (360, "▲0.9")]),
+        (660, [(40, "SC事業"), (260, "11.8"), (360, "7.2")]),
+        (640, [(40, "連結合計"), (260, "▲5.3"), (360, "▲2.8")])])
+    g = read(jf, "2026-09-15", title="2026年8月度 連結売上収益報告")
+    got = (g or {}).get("rows") or []
+    if len(got) != 1 or got[0].get("period") != "2026-08" \
+            or abs(got[0].get("yoy", 0) - 94.7) > .001:
+        print("!! 거) 연결합계 단월 전년비", got)
+        ok = False
+
+    # (너) 사업부 「합계」는 회사 전체가 아니다. 연결/그룹 합계가 없으면
+    #      이 fallback은 작동하면 안 된다.
+    seg = _pdf([
+        (740, [(40, "2026年8月度 売上高報告")]),
+        (720, [(40, "事業別売上高（対前年増減率：％）")]),
+        (700, [(260, "8月度"), (360, "上期累計")]),
+        (680, [(40, "百貨店事業合計"), (260, "▲0.8"), (360, "1.8")])])
+    g = read(seg, "2026-09-15", title="2026年8月度 売上高報告")
+    if g:
+        print("!! 너) 사업부 합계를 연결합계로 오인", g)
+        ok = False
+
+
     print("montable 스스로 시험:", "통과" if ok else "떨어짐")
     return 0 if ok else 1
 
