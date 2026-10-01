@@ -1,18 +1,18 @@
 {
  "v": 1,
- "ts": "2026-10-01T19:53:50+00:00",
+ "ts": "2026-10-01T23:36:58+00:00",
  "seed": 361,
  "homes": 352,
  "official_ir_data": 60,
  "covered_any": 267,
  "status": {
-  "covered_elsewhere": 112,
+  "covered_elsewhere": 100,
   "discontinued": 2,
   "home_pending": 6,
-  "no_monthly_found": 42,
+  "no_monthly_found": 56,
   "ok": 60,
-  "parser_failed": 122,
-  "pending_discovery": 17
+  "parser_failed": 123,
+  "pending_discovery": 14
  },
  "codes": {
   "8267": {
@@ -826,7 +826,7 @@
    "ir": false
   },
   "2652": {
-   "status": "pending_discovery",
+   "status": "no_monthly_found",
    "home": "https://www.mandarake.co.jp",
    "source_url": "",
    "latest_month": "",
@@ -866,7 +866,7 @@
    "ir": false
   },
   "2668": {
-   "status": "pending_discovery",
+   "status": "no_monthly_found",
    "home": "https://tabio.com/jp/",
    "source_url": "",
    "latest_month": "",
@@ -1016,7 +1016,7 @@
    "ir": false
   },
   "2750": {
-   "status": "covered_elsewhere",
+   "status": "no_monthly_found",
    "home": "https://www.ishimitsu.co.jp",
    "source_url": "",
    "latest_month": "",
@@ -1046,7 +1046,7 @@
    "ir": false
   },
   "2764": {
-   "status": "covered_elsewhere",
+   "status": "no_monthly_found",
    "home": "https://www.hiramatsu.co.jp",
    "source_url": "",
    "latest_month": "",
@@ -1156,7 +1156,7 @@
    "ir": false
   },
   "2991": {
-   "status": "covered_elsewhere",
+   "status": "no_monthly_found",
    "home": "https://www.landnet.co.jp",
    "source_url": "",
    "latest_month": "",
@@ -1316,7 +1316,7 @@
    "ir": true
   },
   "3083": {
-   "status": "pending_discovery",
+   "status": "no_monthly_found",
    "home": "https://starseeds.co.jp",
    "source_url": "",
    "latest_month": "",
@@ -1556,7 +1556,7 @@
    "ir": true
   },
   "3415": {
-   "status": "covered_elsewhere",
+   "status": "no_monthly_found",
    "home": "https://tokyobase.co.jp",
    "source_url": "",
    "latest_month": "",
@@ -1756,7 +1756,7 @@
    "ir": false
   },
   "4193": {
-   "status": "covered_elsewhere",
+   "status": "no_monthly_found",
    "home": "https://www.fabrica-hd.co.jp",
    "source_url": "",
    "latest_month": "",
@@ -1786,7 +1786,7 @@
    "ir": false
   },
   "4374": {
-   "status": "covered_elsewhere",
+   "status": "no_monthly_found",
    "home": "https://www.robotpayment.co.jp",
    "source_url": "",
    "latest_month": "",
@@ -1876,9 +1876,9 @@
    "ir": false
   },
   "6045": {
-   "status": "covered_elsewhere",
+   "status": "parser_failed",
    "home": "https://www.rentracks.co.jp",
-   "source_url": "",
+   "source_url": "https://www.rentracks.co.jp/ir/finance/others.html",
    "latest_month": "",
    "months": 0,
    "tdnet": true,
@@ -3106,7 +3106,7 @@
    "ir": false
   },
   "3979": {
-   "status": "covered_elsewhere",
+   "status": "no_monthly_found",
    "home": "https://www.uluru.biz",
    "source_url": "",
    "latest_month": "",
@@ -3176,7 +3176,7 @@
    "ir": true
   },
   "9252": {
-   "status": "covered_elsewhere",
+   "status": "no_monthly_found",
    "home": "https://www.lomgrp.co.jp",
    "source_url": "",
    "latest_month": "",
@@ -3326,7 +3326,7 @@
    "ir": false
   },
   "8927": {
-   "status": "covered_elsewhere",
+   "status": "no_monthly_found",
    "home": "https://www.meiho-est.com",
    "source_url": "",
    "latest_month": "",
@@ -3526,7 +3526,7 @@
    "ir": false
   },
   "369A": {
-   "status": "covered_elsewhere",
+   "status": "no_monthly_found",
    "home": "https://a-tie.co.jp",
    "source_url": "",
    "latest_month": "",
@@ -3606,7 +3606,7 @@
    "ir": false
   },
   "1435": {
-   "status": "covered_elsewhere",
+   "status": "no_monthly_found",
    "home": "https://corp.robothome.jp",
    "source_url": "",
    "latest_month": "",
