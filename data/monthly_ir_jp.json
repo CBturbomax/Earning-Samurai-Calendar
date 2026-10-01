@@ -77,29 +77,41 @@
   "3092": {
    "miss": "2026-10-01"
   },
-  "8237": {},
-  "3399": {},
+  "8237": {
+   "parse_miss": "2026-10-01T08:40:41+00:00"
+  },
+  "3399": {
+   "miss": "2026-10-01"
+  },
   "3608": {
    "page": "https://www.tsi-holdings.com/tsuki.html",
-   "found": "2026-09-28"
+   "found": "2026-09-28",
+   "parse_miss": "2026-10-01T08:40:41+00:00"
   },
   "2698": {
    "page": "https://www.cando-web.co.jp/ir/monthly_report/",
-   "found": "2026-09-28"
+   "found": "2026-09-28",
+   "parse_miss": "2026-10-01T08:40:41+00:00"
   },
-  "9823": {},
-  "2780": {},
+  "9823": {
+   "miss": "2026-10-01"
+  },
+  "2780": {
+   "miss": "2026-10-01"
+  },
   "9278": {
    "page": "https://www.bookoffgroup.co.jp/",
    "found": "2026-09-28"
   },
   "8142": {
    "page": "https://www.to-ho.co.jp/toho_news/news002058.html",
-   "found": "2026-09-28"
+   "found": "2026-09-28",
+   "parse_miss": "2026-10-01T08:40:41+00:00"
   },
   "3093": {
    "page": "https://www.treasurefactory.co.jp/ir/monthly.html",
-   "found": "2026-09-28"
+   "found": "2026-09-28",
+   "parse_miss": "2026-10-01T08:40:41+00:00"
   },
   "9861": {
    "page": "https://www.yoshinoya-holdings.com/ir/report/yoshinoya/",
@@ -130,7 +142,9 @@
    "page": "https://www.autobacs.co.jp/ja/ir/news/auto_20260907532362.html",
    "found": "2026-09-28"
   },
-  "2664": {},
+  "2664": {
+   "miss": "2026-10-01"
+  },
   "3222": {
    "page": "https://www.usmh.co.jp/ir/monthly_reports",
    "found": "2026-09-28",
@@ -165,7 +179,8 @@
   },
   "1379": {
    "page": "https://www.hokto-kinoko.co.jp/oubo/oubo_monthlypresent09.php",
-   "found": "2026-09-28"
+   "found": "2026-09-28",
+   "parse_miss": "2026-10-01T08:40:41+00:00"
   },
   "138A": {},
   "1417": {
@@ -173,7 +188,9 @@
    "found": "2026-09-28",
    "parse_miss": "2026-10-01T07:30:01+00:00"
   },
-  "1419": {},
+  "1419": {
+   "miss": "2026-10-01"
+  },
   "141A": {
    "page": "https://www.trial-holdings.inc/ir/financial/monthly-sales/",
    "found": "2026-09-28"
@@ -198,7 +215,8 @@
   },
   "2294": {
    "page": "https://www.kakiyasuhonten.co.jp/news/detail.php?id=2021",
-   "found": "2026-09-28"
+   "found": "2026-09-28",
+   "parse_miss": "2026-10-01T08:40:41+00:00"
   },
   "2305": {
    "page": "https://ir.studio-alice.co.jp/ja/Finance/MonthlyReport.html",
@@ -214,7 +232,8 @@
   "245A": {},
   "2461": {
    "page": "https://www.fancs.com/news/376546549/",
-   "found": "2026-09-28"
+   "found": "2026-09-28",
+   "parse_miss": "2026-10-01T08:40:41+00:00"
   },
   "2502": {
    "page": "https://www.asahigroup-holdings.com/en/ir/financial_data/monthly_data/",
@@ -223,7 +242,8 @@
   },
   "2590": {
    "page": "https://www.dydo-ghd.co.jp/ir/data/monthly_report/",
-   "found": "2026-09-28"
+   "found": "2026-09-28",
+   "parse_miss": "2026-10-01T08:40:41+00:00"
   },
   "2593": {
    "page": "https://www.itoen.co.jp/ir/library/monthly_sales_backnumber/",
@@ -246,7 +266,8 @@
   "2668": {},
   "2669": {
    "page": "https://www.kanemi-foods.co.jp/ir/monthly.html",
-   "found": "2026-09-28"
+   "found": "2026-09-28",
+   "parse_miss": "2026-10-01T08:40:41+00:00"
   },
   "2670": {
    "page": "https://www.abc-mart.co.jp/ir/getsujijoho.html",
@@ -258,9 +279,12 @@
   },
   "2678": {
    "page": "https://www.askul.co.jp/snw/newsDispView/?newsId=19904",
-   "found": "2026-09-29"
+   "found": "2026-09-29",
+   "parse_miss": "2026-10-01T08:40:41+00:00"
   },
-  "2681": {},
+  "2681": {
+   "miss": "2026-10-01"
+  },
   "2685": {
    "page": "https://www.andst-hd.co.jp/news/ir/entry-17218/",
    "found": "2026-09-28"
@@ -286,7 +310,8 @@
   "2736": {},
   "2742": {
    "page": "https://www.halows.com/ir/finance_monthly/",
-   "found": "2026-09-28"
+   "found": "2026-09-28",
+   "parse_miss": "2026-10-01T08:40:41+00:00"
   },
   "274A": {
    "page": "https://gardengroup.co.jp/",
@@ -295,7 +320,8 @@
   "2750": {},
   "2753": {
    "page": "https://prtimes.jp/main/html/rd/p/000000345.000130952.html",
-   "found": "2026-09-28"
+   "found": "2026-09-28",
+   "parse_miss": "2026-10-01T08:40:41+00:00"
   },
   "2764": {},
   "2769": {
@@ -326,16 +352,21 @@
   },
   "2910": {
    "page": "https://www.rockfield.co.jp/ir/library/monthly/",
-   "found": "2026-09-28"
+   "found": "2026-09-28",
+   "parse_miss": "2026-10-01T08:40:41+00:00"
   },
   "2926": {},
   "2991": {},
-  "3028": {},
+  "3028": {
+   "miss": "2026-10-01"
+  },
   "3030": {
    "page": "https://www.pub-hub.co.jp/ir/month.html",
    "found": "2026-09-28"
   },
-  "3034": {},
+  "3034": {
+   "miss": "2026-10-01"
+  },
   "3038": {
    "page": "https://www.kobebussan.co.jp/ir/monthly.php",
    "found": "2026-09-28"
@@ -351,7 +382,8 @@
   "3064": {},
   "3068": {
    "page": "https://www.wdi.co.jp/ir/monthly.html",
-   "found": "2026-09-28"
+   "found": "2026-09-28",
+   "parse_miss": "2026-10-01T08:40:41+00:00"
   },
   "3069": {
    "page": "https://j-fla.com/ir/monthly/",
@@ -372,7 +404,8 @@
   "3083": {},
   "3087": {
    "page": "https://www.dnh.co.jp/ir/monthly/",
-   "found": "2026-09-28"
+   "found": "2026-09-28",
+   "parse_miss": "2026-10-01T08:40:41+00:00"
   },
   "3088": {
    "page": "https://www.matsukiyococokara.com",
@@ -389,9 +422,13 @@
    "page": "https://www.chimney.co.jp/ir/sales/",
    "found": "2026-09-28"
   },
-  "3179": {},
+  "3179": {
+   "miss": "2026-10-01"
+  },
   "3181": {},
-  "3191": {},
+  "3191": {
+   "miss": "2026-10-01"
+  },
   "3193": {},
   "3195": {
    "page": "https://www.genepa.com",
@@ -399,15 +436,20 @@
   },
   "3196": {
    "page": "https://ir.hotland.co.jp/policy/monthlyinfo/",
-   "found": "2026-09-28"
+   "found": "2026-09-28",
+   "parse_miss": "2026-10-01T08:40:41+00:00"
   },
   "3199": {
    "page": "https://watahan.co.jp/ir/trends.html",
    "found": "2026-09-28"
   },
-  "3221": {},
+  "3221": {
+   "miss": "2026-10-01"
+  },
   "3224": {},
-  "3333": {},
+  "3333": {
+   "miss": "2026-10-01"
+  },
   "3349": {},
   "3358": {
    "page": "https://thg-hd.com",
@@ -419,7 +461,8 @@
   },
   "3395": {
    "page": "https://www.saint-marc-hd.com",
-   "found": "2026-09-28"
+   "found": "2026-09-28",
+   "parse_miss": "2026-10-01T08:40:41+00:00"
   },
   "3397": {
    "page": "https://www.toridoll.com/ir/finance/report/",
@@ -432,19 +475,25 @@
   },
   "3543": {
    "page": "https://komeda-holdings.co.jp/monthly/",
-   "found": "2026-09-28"
+   "found": "2026-09-28",
+   "parse_miss": "2026-10-01T08:40:41+00:00"
   },
   "3544": {
    "page": "https://satudora-hd.co.jp/esg/materiality/",
    "found": "2026-09-29"
   },
-  "3547": {},
+  "3547": {
+   "miss": "2026-10-01"
+  },
   "3548": {
    "page": "https://www.baroque-global.com/jp/ir/monthly/",
-   "found": "2026-09-28"
+   "found": "2026-09-28",
+   "parse_miss": "2026-10-01T08:40:41+00:00"
   },
   "3557": {},
-  "3561": {},
+  "3561": {
+   "miss": "2026-10-01"
+  },
   "3566": {},
   "3591": {
    "page": "https://www.wacoalholdings.jp/ir/monthlydata/",
@@ -533,11 +582,13 @@
   },
   "8214": {
    "page": "https://ir.aoki-hd.co.jp/ja/ir/finance/monthlyreport.html",
-   "found": "2026-09-28"
+   "found": "2026-09-28",
+   "parse_miss": "2026-10-01T08:40:41+00:00"
   },
   "9974": {
    "page": "https://www.belc.jp/topics/20260920_nestle",
-   "found": "2026-09-28"
+   "found": "2026-09-28",
+   "parse_miss": "2026-10-01T08:40:41+00:00"
   },
   "8276": {
    "page": "https://www.heiwado.jp/assets/file/news/attachment/92077e239129015e573bc4036e98a9d0",
@@ -549,25 +600,33 @@
   },
   "9039": {
    "page": "https://www.hikkoshi-sakai.co.jp",
-   "found": "2026-09-28"
+   "found": "2026-09-28",
+   "parse_miss": "2026-10-01T08:40:41+00:00"
   },
   "9166": {
    "page": "https://genda.jp/2026/09/16/monthly-report-2609/",
-   "found": "2026-09-28"
+   "found": "2026-09-28",
+   "parse_miss": "2026-10-01T08:40:41+00:00"
   },
   "3612": {
    "page": "https://corp.world.co.jp/ir/library/monthly/",
-   "found": "2026-09-28"
+   "found": "2026-09-28",
+   "parse_miss": "2026-10-01T08:40:41+00:00"
   },
   "8153": {},
   "7545": {
    "page": "https://www.24028-net.jp/category/MONTHLY/?utm_source=monthly&utm_medium=banner&utm_campaign=ownedsite&utm_term=ver1",
    "found": "2026-09-28"
   },
-  "7157": {},
+  "7157": {
+   "page": "https://www.lifenet-seimei.co.jp",
+   "found": "2026-10-01",
+   "parse_miss": "2026-10-01T08:40:41+00:00"
+  },
   "7513": {
    "page": "https://www.kojima.net/corporation/ir/bulletin.html",
-   "found": "2026-09-28"
+   "found": "2026-09-28",
+   "parse_miss": "2026-10-01T08:40:41+00:00"
   },
   "8255": {
    "page": "https://www.axial-r.com/ir/monthlysalestrends/",
@@ -577,16 +636,24 @@
    "page": "https://www.joshin.co.jp",
    "found": "2026-09-28"
   },
-  "8219": {},
-  "8739": {},
-  "9267": {},
+  "8219": {
+   "miss": "2026-10-01"
+  },
+  "8739": {
+   "miss": "2026-10-01"
+  },
+  "9267": {
+   "miss": "2026-10-01"
+  },
   "6036": {
    "page": "https://keepergiken.co.jp/ir/irdata/monthly",
-   "found": "2026-09-28"
+   "found": "2026-09-28",
+   "parse_miss": "2026-10-01T08:40:41+00:00"
   },
   "9603": {
    "page": "https://www.his.co.jp/ir/monthly-report/",
-   "found": "2026-09-28"
+   "found": "2026-09-28",
+   "parse_miss": "2026-10-01T08:40:41+00:00"
   },
   "7421": {
    "page": "https://www.kappa-create.co.jp/monthly2026/",
@@ -594,19 +661,23 @@
   },
   "8244": {
    "page": "https://www.d-kintetsu.co.jp/corporate/ir/finance/recent_results.html",
-   "found": "2026-09-28"
+   "found": "2026-09-28",
+   "parse_miss": "2026-10-01T08:40:41+00:00"
   },
   "8715": {
    "page": "https://www.anicom.co.jp/ir/financial/business/",
-   "found": "2026-09-28"
+   "found": "2026-09-28",
+   "parse_miss": "2026-10-01T08:40:41+00:00"
   },
   "7412": {
    "page": "https://www.atom-corp.co.jp/fair/fair.php?fair_no=3834",
-   "found": "2026-09-28"
+   "found": "2026-09-28",
+   "parse_miss": "2026-10-01T08:40:41+00:00"
   },
   "8160": {
    "page": "https://www.kisoji.co.jp/ir/monthly.html",
-   "found": "2026-09-28"
+   "found": "2026-09-28",
+   "parse_miss": "2026-10-01T08:40:41+00:00"
   },
   "9900": {
    "page": "https://www.sagami-holdings.co.jp/ir/month/",
@@ -615,50 +686,70 @@
   },
   "3817": {
    "page": "https://www.sra-hd.co.jp/ir/ir-news/index_2026.html",
-   "found": "2026-09-28"
+   "found": "2026-09-28",
+   "parse_miss": "2026-10-01T08:40:41+00:00"
   },
-  "9828": {},
+  "9828": {
+   "miss": "2026-10-01"
+  },
   "3663": {
    "page": "https://www.celsys.com/irinfo_news/contents_type=47",
-   "found": "2026-09-28"
+   "found": "2026-09-28",
+   "parse_miss": "2026-10-01T08:40:41+00:00"
   },
   "212A": {},
   "8008": {
    "page": "https://yondoshi.co.jp",
-   "found": "2026-09-28"
+   "found": "2026-09-28",
+   "parse_miss": "2026-10-01T08:40:41+00:00"
   },
   "8914": {
    "page": "https://www.arealink.co.jp/news/ir/p17078/",
    "found": "2026-09-28",
-   "updated": "2026-09-03"
+   "updated": "2026-09-03",
+   "parse_miss": "2026-10-01T08:40:41+00:00"
   },
   "8011": {
    "page": "https://www.sanyo-shokai.co.jp/ir/library/monthly/",
    "found": "2026-09-28"
   },
-  "3276": {},
-  "7059": {},
+  "3276": {
+   "miss": "2026-10-01"
+  },
+  "7059": {
+   "miss": "2026-10-01"
+  },
   "7522": {
    "page": "https://www.watami.co.jp/ir/library/recent/",
-   "found": "2026-09-29"
+   "found": "2026-09-29",
+   "parse_miss": "2026-10-01T08:40:41+00:00"
   },
   "8185": {
    "page": "https://www.chiyodagrp.co.jp/ir/",
    "found": "2026-09-29",
    "updated": "2026-07-10"
   },
-  "6071": {},
-  "9284": {},
+  "6071": {
+   "miss": "2026-10-01"
+  },
+  "9284": {
+   "miss": "2026-10-01"
+  },
   "7596": {
    "page": "https://uoriki.co.jp/ir/library/monthly.html",
-   "found": "2026-09-29"
+   "found": "2026-09-29",
+   "parse_miss": "2026-10-01T08:40:41+00:00"
   },
   "7475": {
    "page": "https://www.albis.co.jp/ir/monthly.html",
    "found": "2026-09-29"
   },
-  "3983": {},
-  "401A": {},
+  "3983": {
+   "miss": "2026-10-01"
+  },
+  "401A": {
+   "miss": "2026-10-01"
+  },
   "7823": {
    "page": "https://corp.artnature.co.jp/ja/ir/finance/monthly_info.html",
    "found": "2026-09-29"
@@ -671,17 +762,32 @@
    "page": "https://www.sacs-bar.co.jp/ir/",
    "found": "2026-09-29"
   },
-  "9850": {},
-  "9994": {},
-  "5589": {},
+  "9850": {
+   "miss": "2026-10-01"
+  },
+  "9994": {
+   "miss": "2026-10-01"
+  },
+  "5589": {
+   "miss": "2026-10-01"
+  },
   "9979": {
    "page": "https://www.daisyo.co.jp/company/ir/getsuji.html",
-   "found": "2026-09-29"
+   "found": "2026-09-29",
+   "discontinued": "2026-10-01"
   },
-  "6040": {},
-  "7621": {},
-  "2970": {},
-  "2998": {},
+  "6040": {
+   "miss": "2026-10-01"
+  },
+  "7621": {
+   "miss": "2026-10-01"
+  },
+  "2970": {
+   "miss": "2026-10-01"
+  },
+  "2998": {
+   "miss": "2026-10-01"
+  },
   "3370": {
    "page": "https://www.fujitacorp.co.jp/main/info/%e2%98%85%e6%9c%88%e6%ac%a1%e5%a3%b2%e4%b8%8a%e9%80%9f%e5%a0%b1%e6%9b%b4%e6%96%b0%e3%81%84%e3%81%9f%e3%81%97%e3%81%be%e3%81%97%e3%81%9f-80/",
    "found": "2026-09-29"
@@ -800,20 +906,25 @@
    "page": "https://srsholdings.com/pages/ir-library-monthly",
    "found": "2026-09-29"
   },
-  "2752": {},
   "8281": {
    "page": "https://www.xebio.co.jp/ja/ir/monthly.html",
    "found": "2026-09-30"
   },
   "6045": {},
-  "7643": {},
+  "7643": {
+   "page": "https://www.daiichi-d.co.jp/ir/monthly-report",
+   "found": "2026-10-01",
+   "updated": "2026-09-01"
+  },
   "9163": {
    "page": "https://www.nareru-group.co.jp",
-   "found": "2026-09-30"
+   "found": "2026-09-30",
+   "parse_miss": "2026-10-01T08:40:41+00:00"
   },
   "3329": {
    "page": "https://www.towafood-net.co.jp/investor/monthly/",
-   "found": "2026-09-30"
+   "found": "2026-09-30",
+   "parse_miss": "2026-10-01T08:40:41+00:00"
   },
   "5892": {
    "page": "https://yutori.tokyo/ir/monthly/",
@@ -11317,13 +11428,1112 @@
      "metric": "월매출 전년비"
     }
    }
+  },
+  "8276": {
+   "name": "平和堂",
+   "page": "https://www.heiwado.jp/ir/sales/monthly",
+   "months": {
+    "2025-09": {
+     "same": 104.0,
+     "all": 104.1,
+     "doc": "https://www.heiwado.jp/ir/sales/monthly"
+    },
+    "2025-10": {
+     "same": 101.4,
+     "all": 101.6,
+     "doc": "https://www.heiwado.jp/ir/sales/monthly"
+    },
+    "2025-11": {
+     "same": 103.6,
+     "all": 103.5,
+     "doc": "https://www.heiwado.jp/ir/sales/monthly"
+    },
+    "2025-12": {
+     "same": 103.3,
+     "all": 104.3,
+     "doc": "https://www.heiwado.jp/ir/sales/monthly"
+    },
+    "2026-01": {
+     "same": 101.2,
+     "all": 102.2,
+     "doc": "https://www.heiwado.jp/ir/sales/monthly"
+    },
+    "2026-02": {
+     "same": 101.3,
+     "all": 102.7,
+     "doc": "https://www.heiwado.jp/ir/sales/monthly"
+    },
+    "2026-03": {
+     "same": 102.3,
+     "all": 104.0,
+     "doc": "https://www.heiwado.jp/ir/sales/monthly"
+    },
+    "2026-04": {
+     "same": 101.5,
+     "all": 103.1,
+     "doc": "https://www.heiwado.jp/ir/sales/monthly"
+    },
+    "2026-05": {
+     "same": 103.7,
+     "all": 105.2,
+     "doc": "https://www.heiwado.jp/ir/sales/monthly"
+    },
+    "2026-06": {
+     "same": 103.0,
+     "all": 104.4,
+     "doc": "https://www.heiwado.jp/ir/sales/monthly"
+    },
+    "2026-07": {
+     "same": 100.4,
+     "all": 102.0,
+     "doc": "https://www.heiwado.jp/ir/sales/monthly"
+    },
+    "2026-08": {
+     "same": 101.6,
+     "all": 103.2,
+     "doc": "https://www.heiwado.jp/ir/sales/monthly"
+    },
+    "2026-09": {
+     "same": 105.0,
+     "all": 107.1,
+     "doc": "https://www.heiwado.jp/ir/sales/monthly"
+    }
+   },
+   "ts": "2026-10-01T08:40:41+00:00"
+  },
+  "8153": {
+   "name": "モスフードサービス",
+   "page": "https://www.mos.co.jp/company/ir/library/monthly_info/",
+   "months": {
+    "2026-04": {
+     "same": 102.6,
+     "all": 102.0,
+     "doc": "https://ssl4.eir-parts.net/V4Public/eir/8153/ja/announcement/announcement_24.js"
+    },
+    "2026-05": {
+     "same": 107.1,
+     "all": 106.3,
+     "doc": "https://ssl4.eir-parts.net/V4Public/eir/8153/ja/announcement/announcement_24.js"
+    },
+    "2026-06": {
+     "same": 101.4,
+     "all": 100.8,
+     "doc": "https://ssl4.eir-parts.net/V4Public/eir/8153/ja/announcement/announcement_24.js"
+    },
+    "2026-07": {
+     "same": 103.6,
+     "all": 103.0,
+     "doc": "https://ssl4.eir-parts.net/V4Public/eir/8153/ja/announcement/announcement_24.js"
+    },
+    "2026-08": {
+     "same": 103.9,
+     "all": 103.5,
+     "doc": "https://ssl4.eir-parts.net/V4Public/eir/8153/ja/announcement/announcement_24.js"
+    },
+    "2025-04": {
+     "same": 104.2,
+     "all": 104.9,
+     "doc": "https://ssl4.eir-parts.net/V4Public/eir/8153/ja/announcement/announcement_24.js"
+    },
+    "2025-05": {
+     "same": 112.1,
+     "all": 112.6,
+     "doc": "https://ssl4.eir-parts.net/V4Public/eir/8153/ja/announcement/announcement_24.js"
+    },
+    "2025-06": {
+     "same": 108.9,
+     "all": 109.4,
+     "doc": "https://ssl4.eir-parts.net/V4Public/eir/8153/ja/announcement/announcement_24.js"
+    },
+    "2025-07": {
+     "same": 111.9,
+     "all": 112.4,
+     "doc": "https://ssl4.eir-parts.net/V4Public/eir/8153/ja/announcement/announcement_24.js"
+    },
+    "2025-08": {
+     "same": 111.6,
+     "all": 112.0,
+     "doc": "https://ssl4.eir-parts.net/V4Public/eir/8153/ja/announcement/announcement_24.js"
+    },
+    "2025-09": {
+     "same": 107.7,
+     "all": 108.0,
+     "doc": "https://ssl4.eir-parts.net/V4Public/eir/8153/ja/announcement/announcement_24.js"
+    },
+    "2025-10": {
+     "same": 112.9,
+     "all": 113.0,
+     "doc": "https://ssl4.eir-parts.net/V4Public/eir/8153/ja/announcement/announcement_24.js"
+    },
+    "2025-11": {
+     "same": 118.5,
+     "all": 118.5,
+     "doc": "https://ssl4.eir-parts.net/V4Public/eir/8153/ja/announcement/announcement_24.js"
+    },
+    "2025-12": {
+     "same": 106.4,
+     "all": 106.5,
+     "doc": "https://ssl4.eir-parts.net/V4Public/eir/8153/ja/announcement/announcement_24.js"
+    },
+    "2026-01": {
+     "same": 106.4,
+     "all": 106.3,
+     "doc": "https://ssl4.eir-parts.net/V4Public/eir/8153/ja/announcement/announcement_24.js"
+    },
+    "2026-02": {
+     "same": 105.2,
+     "all": 105.3,
+     "doc": "https://ssl4.eir-parts.net/V4Public/eir/8153/ja/announcement/announcement_24.js"
+    },
+    "2026-03": {
+     "same": 102.5,
+     "all": 102.4,
+     "doc": "https://ssl4.eir-parts.net/V4Public/eir/8153/ja/announcement/announcement_24.js"
+    },
+    "2024-04": {
+     "same": 100.8,
+     "all": 102.6,
+     "doc": "https://ssl4.eir-parts.net/V4Public/eir/8153/ja/announcement/announcement_24.js"
+    },
+    "2024-05": {
+     "same": 93.7,
+     "all": 95.2,
+     "doc": "https://ssl4.eir-parts.net/V4Public/eir/8153/ja/announcement/announcement_24.js"
+    },
+    "2024-06": {
+     "same": 103.6,
+     "all": 105.0,
+     "doc": "https://ssl4.eir-parts.net/V4Public/eir/8153/ja/announcement/announcement_24.js"
+    },
+    "2024-07": {
+     "same": 98.4,
+     "all": 99.8,
+     "doc": "https://ssl4.eir-parts.net/V4Public/eir/8153/ja/announcement/announcement_24.js"
+    },
+    "2024-08": {
+     "same": 107.1,
+     "all": 108.7,
+     "doc": "https://ssl4.eir-parts.net/V4Public/eir/8153/ja/announcement/announcement_24.js"
+    },
+    "2024-09": {
+     "same": 106.1,
+     "all": 107.4,
+     "doc": "https://ssl4.eir-parts.net/V4Public/eir/8153/ja/announcement/announcement_24.js"
+    },
+    "2024-10": {
+     "same": 100.6,
+     "all": 101.6,
+     "doc": "https://ssl4.eir-parts.net/V4Public/eir/8153/ja/announcement/announcement_24.js"
+    },
+    "2024-11": {
+     "same": 112.8,
+     "all": 113.8,
+     "doc": "https://ssl4.eir-parts.net/V4Public/eir/8153/ja/announcement/announcement_24.js"
+    },
+    "2024-12": {
+     "same": 107.3,
+     "all": 107.7,
+     "doc": "https://ssl4.eir-parts.net/V4Public/eir/8153/ja/announcement/announcement_24.js"
+    },
+    "2025-01": {
+     "same": 101.9,
+     "all": 102.4,
+     "doc": "https://ssl4.eir-parts.net/V4Public/eir/8153/ja/announcement/announcement_24.js"
+    },
+    "2025-02": {
+     "same": 109.5,
+     "all": 109.9,
+     "doc": "https://ssl4.eir-parts.net/V4Public/eir/8153/ja/announcement/announcement_24.js"
+    },
+    "2025-03": {
+     "same": 110.5,
+     "all": 111.7,
+     "doc": "https://ssl4.eir-parts.net/V4Public/eir/8153/ja/announcement/announcement_24.js"
+    },
+    "2023-04": {
+     "same": 106.3,
+     "all": 109.4,
+     "doc": "https://ssl4.eir-parts.net/V4Public/eir/8153/ja/announcement/announcement_24.js"
+    },
+    "2023-05": {
+     "same": 114.1,
+     "all": 116.9,
+     "doc": "https://ssl4.eir-parts.net/V4Public/eir/8153/ja/announcement/announcement_24.js"
+    },
+    "2023-06": {
+     "same": 108.1,
+     "all": 110.8,
+     "doc": "https://ssl4.eir-parts.net/V4Public/eir/8153/ja/announcement/announcement_24.js"
+    },
+    "2023-07": {
+     "same": 102.4,
+     "all": 105.0,
+     "doc": "https://ssl4.eir-parts.net/V4Public/eir/8153/ja/announcement/announcement_24.js"
+    },
+    "2023-08": {
+     "same": 102.7,
+     "all": 104.8,
+     "doc": "https://ssl4.eir-parts.net/V4Public/eir/8153/ja/announcement/announcement_24.js"
+    },
+    "2023-09": {
+     "same": 108.3,
+     "all": 110.6,
+     "doc": "https://ssl4.eir-parts.net/V4Public/eir/8153/ja/announcement/announcement_24.js"
+    },
+    "2023-10": {
+     "same": 100.7,
+     "all": 102.9,
+     "doc": "https://ssl4.eir-parts.net/V4Public/eir/8153/ja/announcement/announcement_24.js"
+    },
+    "2023-11": {
+     "same": 104.5,
+     "all": 106.8,
+     "doc": "https://ssl4.eir-parts.net/V4Public/eir/8153/ja/announcement/announcement_24.js"
+    },
+    "2023-12": {
+     "same": 103.5,
+     "all": 105.7,
+     "doc": "https://ssl4.eir-parts.net/V4Public/eir/8153/ja/announcement/announcement_24.js"
+    },
+    "2024-01": {
+     "same": 102.9,
+     "all": 105.0,
+     "doc": "https://ssl4.eir-parts.net/V4Public/eir/8153/ja/announcement/announcement_24.js"
+    },
+    "2024-02": {
+     "same": 111.4,
+     "all": 113.4,
+     "doc": "https://ssl4.eir-parts.net/V4Public/eir/8153/ja/announcement/announcement_24.js"
+    },
+    "2024-03": {
+     "same": 104.9,
+     "all": 106.9,
+     "doc": "https://ssl4.eir-parts.net/V4Public/eir/8153/ja/announcement/announcement_24.js"
+    },
+    "2022-04": {
+     "same": 107.4,
+     "all": 108.1,
+     "doc": "https://ssl4.eir-parts.net/V4Public/eir/8153/ja/announcement/announcement_24.js"
+    },
+    "2022-05": {
+     "same": 94.0,
+     "all": 94.4,
+     "doc": "https://ssl4.eir-parts.net/V4Public/eir/8153/ja/announcement/announcement_24.js"
+    },
+    "2022-06": {
+     "same": 101.8,
+     "all": 102.4,
+     "doc": "https://ssl4.eir-parts.net/V4Public/eir/8153/ja/announcement/announcement_24.js"
+    },
+    "2022-07": {
+     "same": 111.5,
+     "all": 111.9,
+     "doc": "https://ssl4.eir-parts.net/V4Public/eir/8153/ja/announcement/announcement_24.js"
+    },
+    "2022-08": {
+     "same": 105.8,
+     "all": 106.5,
+     "doc": "https://ssl4.eir-parts.net/V4Public/eir/8153/ja/announcement/announcement_24.js"
+    },
+    "2022-09": {
+     "same": 102.5,
+     "all": 103.4,
+     "doc": "https://ssl4.eir-parts.net/V4Public/eir/8153/ja/announcement/announcement_24.js"
+    },
+    "2022-10": {
+     "same": 105.9,
+     "all": 107.1,
+     "doc": "https://ssl4.eir-parts.net/V4Public/eir/8153/ja/announcement/announcement_24.js"
+    },
+    "2022-11": {
+     "same": 103.5,
+     "all": 104.7,
+     "doc": "https://ssl4.eir-parts.net/V4Public/eir/8153/ja/announcement/announcement_24.js"
+    },
+    "2022-12": {
+     "same": 107.7,
+     "all": 109.1,
+     "doc": "https://ssl4.eir-parts.net/V4Public/eir/8153/ja/announcement/announcement_24.js"
+    },
+    "2023-01": {
+     "same": 97.8,
+     "all": 99.1,
+     "doc": "https://ssl4.eir-parts.net/V4Public/eir/8153/ja/announcement/announcement_24.js"
+    },
+    "2023-02": {
+     "same": 102.5,
+     "all": 104.3,
+     "doc": "https://ssl4.eir-parts.net/V4Public/eir/8153/ja/announcement/announcement_24.js"
+    },
+    "2023-03": {
+     "same": 108.9,
+     "all": 111.2,
+     "doc": "https://ssl4.eir-parts.net/V4Public/eir/8153/ja/announcement/announcement_24.js"
+    },
+    "2021-04": {
+     "same": 112.6,
+     "all": 111.7,
+     "doc": "https://ssl4.eir-parts.net/V4Public/eir/8153/ja/announcement/announcement_24.js"
+    },
+    "2021-05": {
+     "same": 120.5,
+     "all": 119.5,
+     "doc": "https://ssl4.eir-parts.net/V4Public/eir/8153/ja/announcement/announcement_24.js"
+    },
+    "2021-06": {
+     "same": 111.0,
+     "all": 109.8,
+     "doc": "https://ssl4.eir-parts.net/V4Public/eir/8153/ja/announcement/announcement_24.js"
+    },
+    "2021-07": {
+     "same": 113.4,
+     "all": 112.4,
+     "doc": "https://ssl4.eir-parts.net/V4Public/eir/8153/ja/announcement/announcement_24.js"
+    },
+    "2021-08": {
+     "same": 111.5,
+     "all": 110.6,
+     "doc": "https://ssl4.eir-parts.net/V4Public/eir/8153/ja/announcement/announcement_24.js"
+    },
+    "2021-09": {
+     "same": 117.3,
+     "all": 116.2,
+     "doc": "https://ssl4.eir-parts.net/V4Public/eir/8153/ja/announcement/announcement_24.js"
+    },
+    "2021-10": {
+     "same": 115.1,
+     "all": 114.0,
+     "doc": "https://ssl4.eir-parts.net/V4Public/eir/8153/ja/announcement/announcement_24.js"
+    },
+    "2021-11": {
+     "same": 97.5,
+     "all": 96.9,
+     "doc": "https://ssl4.eir-parts.net/V4Public/eir/8153/ja/announcement/announcement_24.js"
+    },
+    "2021-12": {
+     "same": 98.5,
+     "all": 98.2,
+     "doc": "https://ssl4.eir-parts.net/V4Public/eir/8153/ja/announcement/announcement_24.js"
+    },
+    "2022-01": {
+     "same": 113.7,
+     "all": 113.5,
+     "doc": "https://ssl4.eir-parts.net/V4Public/eir/8153/ja/announcement/announcement_24.js"
+    },
+    "2022-02": {
+     "same": 97.6,
+     "all": 97.3,
+     "doc": "https://ssl4.eir-parts.net/V4Public/eir/8153/ja/announcement/announcement_24.js"
+    },
+    "2022-03": {
+     "same": 101.5,
+     "all": 101.4,
+     "doc": "https://ssl4.eir-parts.net/V4Public/eir/8153/ja/announcement/announcement_24.js"
+    },
+    "2020-04": {
+     "same": 103.7,
+     "all": 102.0,
+     "doc": "https://ssl4.eir-parts.net/V4Public/eir/8153/ja/announcement/announcement_24.js"
+    },
+    "2020-05": {
+     "same": 112.2,
+     "all": 110.5,
+     "doc": "https://ssl4.eir-parts.net/V4Public/eir/8153/ja/announcement/announcement_24.js"
+    },
+    "2020-06": {
+     "same": 106.2,
+     "all": 104.7,
+     "doc": "https://ssl4.eir-parts.net/V4Public/eir/8153/ja/announcement/announcement_24.js"
+    },
+    "2020-07": {
+     "same": 106.6,
+     "all": 104.8,
+     "doc": "https://ssl4.eir-parts.net/V4Public/eir/8153/ja/announcement/announcement_24.js"
+    },
+    "2020-08": {
+     "same": 102.9,
+     "all": 101.0,
+     "doc": "https://ssl4.eir-parts.net/V4Public/eir/8153/ja/announcement/announcement_24.js"
+    },
+    "2020-09": {
+     "same": 100.3,
+     "all": 98.7,
+     "doc": "https://ssl4.eir-parts.net/V4Public/eir/8153/ja/announcement/announcement_24.js"
+    },
+    "2020-10": {
+     "same": 107.7,
+     "all": 106.1,
+     "doc": "https://ssl4.eir-parts.net/V4Public/eir/8153/ja/announcement/announcement_24.js"
+    },
+    "2020-11": {
+     "same": 123.5,
+     "all": 122.0,
+     "doc": "https://ssl4.eir-parts.net/V4Public/eir/8153/ja/announcement/announcement_24.js"
+    },
+    "2020-12": {
+     "same": 114.2,
+     "all": 112.8,
+     "doc": "https://ssl4.eir-parts.net/V4Public/eir/8153/ja/announcement/announcement_24.js"
+    },
+    "2021-01": {
+     "same": 108.9,
+     "all": 107.5,
+     "doc": "https://ssl4.eir-parts.net/V4Public/eir/8153/ja/announcement/announcement_24.js"
+    },
+    "2021-02": {
+     "same": 110.0,
+     "all": 108.7,
+     "doc": "https://ssl4.eir-parts.net/V4Public/eir/8153/ja/announcement/announcement_24.js"
+    },
+    "2021-03": {
+     "same": 109.3,
+     "all": 108.1,
+     "doc": "https://ssl4.eir-parts.net/V4Public/eir/8153/ja/announcement/announcement_24.js"
+    },
+    "2019-04": {
+     "same": 94.2,
+     "all": 93.0,
+     "doc": "https://ssl4.eir-parts.net/V4Public/eir/8153/ja/announcement/announcement_24.js"
+    },
+    "2019-05": {
+     "same": 98.5,
+     "all": 97.2,
+     "doc": "https://ssl4.eir-parts.net/V4Public/eir/8153/ja/announcement/announcement_24.js"
+    },
+    "2019-06": {
+     "same": 100.0,
+     "all": 98.7,
+     "doc": "https://ssl4.eir-parts.net/V4Public/eir/8153/ja/announcement/announcement_24.js"
+    },
+    "2019-07": {
+     "same": 93.4,
+     "all": 92.3,
+     "doc": "https://ssl4.eir-parts.net/V4Public/eir/8153/ja/announcement/announcement_24.js"
+    },
+    "2019-08": {
+     "same": 103.0,
+     "all": 101.4,
+     "doc": "https://ssl4.eir-parts.net/V4Public/eir/8153/ja/announcement/announcement_24.js"
+    },
+    "2019-09": {
+     "same": 116.6,
+     "all": 114.4,
+     "doc": "https://ssl4.eir-parts.net/V4Public/eir/8153/ja/announcement/announcement_24.js"
+    },
+    "2019-10": {
+     "same": 114.0,
+     "all": 111.6,
+     "doc": "https://ssl4.eir-parts.net/V4Public/eir/8153/ja/announcement/announcement_24.js"
+    },
+    "2019-11": {
+     "same": 112.6,
+     "all": 110.1,
+     "doc": "https://ssl4.eir-parts.net/V4Public/eir/8153/ja/announcement/announcement_24.js"
+    },
+    "2019-12": {
+     "same": 108.1,
+     "all": 105.6,
+     "doc": "https://ssl4.eir-parts.net/V4Public/eir/8153/ja/announcement/announcement_24.js"
+    },
+    "2020-01": {
+     "same": 108.7,
+     "all": 106.4,
+     "doc": "https://ssl4.eir-parts.net/V4Public/eir/8153/ja/announcement/announcement_24.js"
+    },
+    "2020-02": {
+     "same": 115.9,
+     "all": 113.7,
+     "doc": "https://ssl4.eir-parts.net/V4Public/eir/8153/ja/announcement/announcement_24.js"
+    },
+    "2020-03": {
+     "same": 100.9,
+     "all": 99.2,
+     "doc": "https://ssl4.eir-parts.net/V4Public/eir/8153/ja/announcement/announcement_24.js"
+    },
+    "2018-04": {
+     "same": 96.0,
+     "all": 94.8,
+     "doc": "https://ssl4.eir-parts.net/V4Public/eir/8153/ja/announcement/announcement_24.js"
+    },
+    "2018-05": {
+     "same": 92.6,
+     "all": 91.3,
+     "doc": "https://ssl4.eir-parts.net/V4Public/eir/8153/ja/announcement/announcement_24.js"
+    },
+    "2018-06": {
+     "same": 93.3,
+     "all": 92.5,
+     "doc": "https://ssl4.eir-parts.net/V4Public/eir/8153/ja/announcement/announcement_24.js"
+    },
+    "2018-07": {
+     "same": 93.8,
+     "all": 93.1,
+     "doc": "https://ssl4.eir-parts.net/V4Public/eir/8153/ja/announcement/announcement_24.js"
+    },
+    "2018-08": {
+     "same": 97.7,
+     "all": 97.2,
+     "doc": "https://ssl4.eir-parts.net/V4Public/eir/8153/ja/announcement/announcement_24.js"
+    },
+    "2018-09": {
+     "same": 84.9,
+     "all": 84.7,
+     "doc": "https://ssl4.eir-parts.net/V4Public/eir/8153/ja/announcement/announcement_24.js"
+    },
+    "2018-10": {
+     "same": 85.1,
+     "all": 84.7,
+     "doc": "https://ssl4.eir-parts.net/V4Public/eir/8153/ja/announcement/announcement_24.js"
+    },
+    "2018-11": {
+     "same": 87.1,
+     "all": 86.9,
+     "doc": "https://ssl4.eir-parts.net/V4Public/eir/8153/ja/announcement/announcement_24.js"
+    },
+    "2018-12": {
+     "same": 91.6,
+     "all": 91.2,
+     "doc": "https://ssl4.eir-parts.net/V4Public/eir/8153/ja/announcement/announcement_24.js"
+    },
+    "2019-01": {
+     "same": 89.2,
+     "all": 88.6,
+     "doc": "https://ssl4.eir-parts.net/V4Public/eir/8153/ja/announcement/announcement_24.js"
+    },
+    "2019-02": {
+     "same": 96.0,
+     "all": 95.0,
+     "doc": "https://ssl4.eir-parts.net/V4Public/eir/8153/ja/announcement/announcement_24.js"
+    },
+    "2019-03": {
+     "same": 102.3,
+     "all": 101.1,
+     "doc": "https://ssl4.eir-parts.net/V4Public/eir/8153/ja/announcement/announcement_24.js"
+    },
+    "2017-04": {
+     "same": 102.3,
+     "all": 102.4,
+     "doc": "https://ssl4.eir-parts.net/V4Public/eir/8153/ja/announcement/announcement_24.js"
+    },
+    "2017-05": {
+     "same": 96.5,
+     "all": 96.2,
+     "doc": "https://ssl4.eir-parts.net/V4Public/eir/8153/ja/announcement/announcement_24.js"
+    },
+    "2017-06": {
+     "same": 103.4,
+     "all": 102.6,
+     "doc": "https://ssl4.eir-parts.net/V4Public/eir/8153/ja/announcement/announcement_24.js"
+    },
+    "2017-07": {
+     "same": 100.3,
+     "all": 99.6,
+     "doc": "https://ssl4.eir-parts.net/V4Public/eir/8153/ja/announcement/announcement_24.js"
+    },
+    "2017-08": {
+     "same": 99.4,
+     "all": 98.8,
+     "doc": "https://ssl4.eir-parts.net/V4Public/eir/8153/ja/announcement/announcement_24.js"
+    },
+    "2017-09": {
+     "same": 103.8,
+     "all": 103.3,
+     "doc": "https://ssl4.eir-parts.net/V4Public/eir/8153/ja/announcement/announcement_24.js"
+    },
+    "2017-10": {
+     "same": 99.3,
+     "all": 99.1,
+     "doc": "https://ssl4.eir-parts.net/V4Public/eir/8153/ja/announcement/announcement_24.js"
+    },
+    "2017-11": {
+     "same": 101.4,
+     "all": 100.8,
+     "doc": "https://ssl4.eir-parts.net/V4Public/eir/8153/ja/announcement/announcement_24.js"
+    },
+    "2017-12": {
+     "same": 101.5,
+     "all": 100.9,
+     "doc": "https://ssl4.eir-parts.net/V4Public/eir/8153/ja/announcement/announcement_24.js"
+    },
+    "2018-01": {
+     "same": 101.0,
+     "all": 100.4,
+     "doc": "https://ssl4.eir-parts.net/V4Public/eir/8153/ja/announcement/announcement_24.js"
+    },
+    "2018-02": {
+     "same": 99.3,
+     "all": 98.6,
+     "doc": "https://ssl4.eir-parts.net/V4Public/eir/8153/ja/announcement/announcement_24.js"
+    },
+    "2018-03": {
+     "same": 96.1,
+     "all": 94.9,
+     "doc": "https://ssl4.eir-parts.net/V4Public/eir/8153/ja/announcement/announcement_24.js"
+    },
+    "2016-04": {
+     "same": 109.0,
+     "all": 108.0,
+     "doc": "https://ssl4.eir-parts.net/V4Public/eir/8153/ja/announcement/announcement_24.js"
+    },
+    "2016-05": {
+     "same": 105.2,
+     "all": 104.4,
+     "doc": "https://ssl4.eir-parts.net/V4Public/eir/8153/ja/announcement/announcement_24.js"
+    },
+    "2016-06": {
+     "same": 104.3,
+     "all": 103.4,
+     "doc": "https://ssl4.eir-parts.net/V4Public/eir/8153/ja/announcement/announcement_24.js"
+    },
+    "2016-07": {
+     "same": 105.2,
+     "all": 104.2,
+     "doc": "https://ssl4.eir-parts.net/V4Public/eir/8153/ja/announcement/announcement_24.js"
+    },
+    "2016-08": {
+     "same": 95.5,
+     "all": 94.7,
+     "doc": "https://ssl4.eir-parts.net/V4Public/eir/8153/ja/announcement/announcement_24.js"
+    },
+    "2016-09": {
+     "same": 103.5,
+     "all": 102.5,
+     "doc": "https://ssl4.eir-parts.net/V4Public/eir/8153/ja/announcement/announcement_24.js"
+    },
+    "2016-10": {
+     "same": 100.5,
+     "all": 99.2,
+     "doc": "https://ssl4.eir-parts.net/V4Public/eir/8153/ja/announcement/announcement_24.js"
+    },
+    "2016-11": {
+     "same": 94.3,
+     "all": 93.5,
+     "doc": "https://ssl4.eir-parts.net/V4Public/eir/8153/ja/announcement/announcement_24.js"
+    },
+    "2016-12": {
+     "same": 98.8,
+     "all": 97.8,
+     "doc": "https://ssl4.eir-parts.net/V4Public/eir/8153/ja/announcement/announcement_24.js"
+    },
+    "2017-01": {
+     "same": 97.3,
+     "all": 96.5,
+     "doc": "https://ssl4.eir-parts.net/V4Public/eir/8153/ja/announcement/announcement_24.js"
+    },
+    "2017-02": {
+     "same": 89.1,
+     "all": 88.6,
+     "doc": "https://ssl4.eir-parts.net/V4Public/eir/8153/ja/announcement/announcement_24.js"
+    },
+    "2017-03": {
+     "same": 98.7,
+     "all": 98.2,
+     "doc": "https://ssl4.eir-parts.net/V4Public/eir/8153/ja/announcement/announcement_24.js"
+    },
+    "2015-04": {
+     "same": 98.1,
+     "all": 97.9,
+     "doc": "https://ssl4.eir-parts.net/V4Public/eir/8153/ja/announcement/announcement_24.js"
+    },
+    "2015-05": {
+     "same": 104.4,
+     "all": 104.1,
+     "doc": "https://ssl4.eir-parts.net/V4Public/eir/8153/ja/announcement/announcement_24.js"
+    },
+    "2015-06": {
+     "same": 105.9,
+     "all": 105.4,
+     "doc": "https://ssl4.eir-parts.net/V4Public/eir/8153/ja/announcement/announcement_24.js"
+    },
+    "2015-07": {
+     "same": 112.7,
+     "all": 112.3,
+     "doc": "https://ssl4.eir-parts.net/V4Public/eir/8153/ja/announcement/announcement_24.js"
+    },
+    "2015-08": {
+     "same": 109.3,
+     "all": 108.7,
+     "doc": "https://ssl4.eir-parts.net/V4Public/eir/8153/ja/announcement/announcement_24.js"
+    },
+    "2015-09": {
+     "same": 108.3,
+     "all": 107.2,
+     "doc": "https://ssl4.eir-parts.net/V4Public/eir/8153/ja/announcement/announcement_24.js"
+    },
+    "2015-10": {
+     "same": 109.8,
+     "all": 108.7,
+     "doc": "https://ssl4.eir-parts.net/V4Public/eir/8153/ja/announcement/announcement_24.js"
+    },
+    "2015-11": {
+     "same": 108.6,
+     "all": 107.3,
+     "doc": "https://ssl4.eir-parts.net/V4Public/eir/8153/ja/announcement/announcement_24.js"
+    },
+    "2015-12": {
+     "same": 111.2,
+     "all": 109.9,
+     "doc": "https://ssl4.eir-parts.net/V4Public/eir/8153/ja/announcement/announcement_24.js"
+    },
+    "2016-01": {
+     "same": 101.2,
+     "all": 100.0,
+     "doc": "https://ssl4.eir-parts.net/V4Public/eir/8153/ja/announcement/announcement_24.js"
+    },
+    "2016-02": {
+     "same": 111.0,
+     "all": 109.4,
+     "doc": "https://ssl4.eir-parts.net/V4Public/eir/8153/ja/announcement/announcement_24.js"
+    },
+    "2016-03": {
+     "same": 107.0,
+     "all": 105.8,
+     "doc": "https://ssl4.eir-parts.net/V4Public/eir/8153/ja/announcement/announcement_24.js"
+    },
+    "2014-04": {
+     "same": 102.5,
+     "all": 105.2,
+     "doc": "https://ssl4.eir-parts.net/V4Public/eir/8153/ja/announcement/announcement_24.js"
+    },
+    "2014-05": {
+     "same": 101.2,
+     "all": 103.2,
+     "doc": "https://ssl4.eir-parts.net/V4Public/eir/8153/ja/announcement/announcement_24.js"
+    },
+    "2014-06": {
+     "same": 97.9,
+     "all": 99.4,
+     "doc": "https://ssl4.eir-parts.net/V4Public/eir/8153/ja/announcement/announcement_24.js"
+    },
+    "2014-07": {
+     "same": 95.7,
+     "all": 96.8,
+     "doc": "https://ssl4.eir-parts.net/V4Public/eir/8153/ja/announcement/announcement_24.js"
+    },
+    "2014-08": {
+     "same": 100.0,
+     "all": 101.5,
+     "doc": "https://ssl4.eir-parts.net/V4Public/eir/8153/ja/announcement/announcement_24.js"
+    },
+    "2014-09": {
+     "same": 89.0,
+     "all": 90.2,
+     "doc": "https://ssl4.eir-parts.net/V4Public/eir/8153/ja/announcement/announcement_24.js"
+    },
+    "2014-10": {
+     "same": 98.2,
+     "all": 99.2,
+     "doc": "https://ssl4.eir-parts.net/V4Public/eir/8153/ja/announcement/announcement_24.js"
+    },
+    "2014-11": {
+     "same": 101.5,
+     "all": 102.2,
+     "doc": "https://ssl4.eir-parts.net/V4Public/eir/8153/ja/announcement/announcement_24.js"
+    },
+    "2014-12": {
+     "same": 101.5,
+     "all": 101.8,
+     "doc": "https://ssl4.eir-parts.net/V4Public/eir/8153/ja/announcement/announcement_24.js"
+    },
+    "2015-01": {
+     "same": 108.8,
+     "all": 109.0,
+     "doc": "https://ssl4.eir-parts.net/V4Public/eir/8153/ja/announcement/announcement_24.js"
+    },
+    "2015-02": {
+     "same": 112.1,
+     "all": 112.6,
+     "doc": "https://ssl4.eir-parts.net/V4Public/eir/8153/ja/announcement/announcement_24.js"
+    },
+    "2015-03": {
+     "same": 100.8,
+     "all": 100.8,
+     "doc": "https://ssl4.eir-parts.net/V4Public/eir/8153/ja/announcement/announcement_24.js"
+    },
+    "2013-04": {
+     "same": 96.4,
+     "all": 98.6,
+     "doc": "https://ssl4.eir-parts.net/V4Public/eir/8153/ja/announcement/announcement_24.js"
+    },
+    "2013-05": {
+     "same": 107.2,
+     "all": 109.4,
+     "doc": "https://ssl4.eir-parts.net/V4Public/eir/8153/ja/announcement/announcement_24.js"
+    },
+    "2013-06": {
+     "same": 100.5,
+     "all": 102.6,
+     "doc": "https://ssl4.eir-parts.net/V4Public/eir/8153/ja/announcement/announcement_24.js"
+    },
+    "2013-07": {
+     "same": 97.9,
+     "all": 99.8,
+     "doc": "https://ssl4.eir-parts.net/V4Public/eir/8153/ja/announcement/announcement_24.js"
+    },
+    "2013-08": {
+     "same": 99.4,
+     "all": 101.3,
+     "doc": "https://ssl4.eir-parts.net/V4Public/eir/8153/ja/announcement/announcement_24.js"
+    },
+    "2013-09": {
+     "same": 106.9,
+     "all": 108.9,
+     "doc": "https://ssl4.eir-parts.net/V4Public/eir/8153/ja/announcement/announcement_24.js"
+    },
+    "2013-10": {
+     "same": 88.0,
+     "all": 89.7,
+     "doc": "https://ssl4.eir-parts.net/V4Public/eir/8153/ja/announcement/announcement_24.js"
+    },
+    "2013-11": {
+     "same": 101.1,
+     "all": 103.1,
+     "doc": "https://ssl4.eir-parts.net/V4Public/eir/8153/ja/announcement/announcement_24.js"
+    },
+    "2013-12": {
+     "same": 98.4,
+     "all": 100.4,
+     "doc": "https://ssl4.eir-parts.net/V4Public/eir/8153/ja/announcement/announcement_24.js"
+    },
+    "2014-01": {
+     "same": 96.2,
+     "all": 98.5,
+     "doc": "https://ssl4.eir-parts.net/V4Public/eir/8153/ja/announcement/announcement_24.js"
+    },
+    "2014-02": {
+     "same": 96.8,
+     "all": 99.0,
+     "doc": "https://ssl4.eir-parts.net/V4Public/eir/8153/ja/announcement/announcement_24.js"
+    },
+    "2014-03": {
+     "same": 101.8,
+     "all": 103.9,
+     "doc": "https://ssl4.eir-parts.net/V4Public/eir/8153/ja/announcement/announcement_24.js"
+    },
+    "2012-04": {
+     "same": 94.4,
+     "all": 96.0,
+     "doc": "https://ssl4.eir-parts.net/V4Public/eir/8153/ja/announcement/announcement_24.js"
+    },
+    "2012-05": {
+     "same": 88.2,
+     "all": 89.6,
+     "doc": "https://ssl4.eir-parts.net/V4Public/eir/8153/ja/announcement/announcement_24.js"
+    },
+    "2012-06": {
+     "same": 99.8,
+     "all": 101.2,
+     "doc": "https://ssl4.eir-parts.net/V4Public/eir/8153/ja/announcement/announcement_24.js"
+    },
+    "2012-07": {
+     "same": 96.5,
+     "all": 98.1,
+     "doc": "https://ssl4.eir-parts.net/V4Public/eir/8153/ja/announcement/announcement_24.js"
+    },
+    "2012-08": {
+     "same": 99.3,
+     "all": 100.9,
+     "doc": "https://ssl4.eir-parts.net/V4Public/eir/8153/ja/announcement/announcement_24.js"
+    },
+    "2012-09": {
+     "same": 96.9,
+     "all": 98.3,
+     "doc": "https://ssl4.eir-parts.net/V4Public/eir/8153/ja/announcement/announcement_24.js"
+    },
+    "2012-10": {
+     "same": 104.7,
+     "all": 105.6,
+     "doc": "https://ssl4.eir-parts.net/V4Public/eir/8153/ja/announcement/announcement_24.js"
+    },
+    "2012-11": {
+     "same": 104.0,
+     "all": 105.5,
+     "doc": "https://ssl4.eir-parts.net/V4Public/eir/8153/ja/announcement/announcement_24.js"
+    },
+    "2012-12": {
+     "same": 99.8,
+     "all": 101.1,
+     "doc": "https://ssl4.eir-parts.net/V4Public/eir/8153/ja/announcement/announcement_24.js"
+    },
+    "2013-01": {
+     "same": 101.9,
+     "all": 103.1,
+     "doc": "https://ssl4.eir-parts.net/V4Public/eir/8153/ja/announcement/announcement_24.js"
+    },
+    "2013-02": {
+     "same": 101.1,
+     "all": 102.2,
+     "doc": "https://ssl4.eir-parts.net/V4Public/eir/8153/ja/announcement/announcement_24.js"
+    },
+    "2013-03": {
+     "same": 98.1,
+     "all": 99.6,
+     "doc": "https://ssl4.eir-parts.net/V4Public/eir/8153/ja/announcement/announcement_24.js"
+    },
+    "2011-04": {
+     "same": 100.9,
+     "all": 101.3,
+     "doc": "https://ssl4.eir-parts.net/V4Public/eir/8153/ja/announcement/announcement_24.js"
+    },
+    "2011-05": {
+     "same": 102.9,
+     "all": 103.6,
+     "doc": "https://ssl4.eir-parts.net/V4Public/eir/8153/ja/announcement/announcement_24.js"
+    },
+    "2011-06": {
+     "same": 87.6,
+     "all": 88.0,
+     "doc": "https://ssl4.eir-parts.net/V4Public/eir/8153/ja/announcement/announcement_24.js"
+    },
+    "2011-07": {
+     "same": 92.0,
+     "all": 92.7,
+     "doc": "https://ssl4.eir-parts.net/V4Public/eir/8153/ja/announcement/announcement_24.js"
+    },
+    "2011-08": {
+     "same": 93.0,
+     "all": 93.7,
+     "doc": "https://ssl4.eir-parts.net/V4Public/eir/8153/ja/announcement/announcement_24.js"
+    },
+    "2011-09": {
+     "same": 100.4,
+     "all": 101.0,
+     "doc": "https://ssl4.eir-parts.net/V4Public/eir/8153/ja/announcement/announcement_24.js"
+    },
+    "2011-10": {
+     "same": 104.7,
+     "all": 105.7,
+     "doc": "https://ssl4.eir-parts.net/V4Public/eir/8153/ja/announcement/announcement_24.js"
+    },
+    "2011-11": {
+     "same": 95.4,
+     "all": 96.5,
+     "doc": "https://ssl4.eir-parts.net/V4Public/eir/8153/ja/announcement/announcement_24.js"
+    },
+    "2011-12": {
+     "same": 97.0,
+     "all": 98.0,
+     "doc": "https://ssl4.eir-parts.net/V4Public/eir/8153/ja/announcement/announcement_24.js"
+    },
+    "2012-01": {
+     "same": 85.1,
+     "all": 86.0,
+     "doc": "https://ssl4.eir-parts.net/V4Public/eir/8153/ja/announcement/announcement_24.js"
+    },
+    "2012-02": {
+     "same": 91.0,
+     "all": 91.6,
+     "doc": "https://ssl4.eir-parts.net/V4Public/eir/8153/ja/announcement/announcement_24.js"
+    },
+    "2012-03": {
+     "same": 97.4,
+     "all": 101.5,
+     "doc": "https://ssl4.eir-parts.net/V4Public/eir/8153/ja/announcement/announcement_24.js"
+    },
+    "2010-04": {
+     "same": 96.1,
+     "all": 98.2,
+     "doc": "https://ssl4.eir-parts.net/V4Public/eir/8153/ja/announcement/announcement_24.js"
+    },
+    "2010-05": {
+     "same": 87.0,
+     "all": 89.0,
+     "doc": "https://ssl4.eir-parts.net/V4Public/eir/8153/ja/announcement/announcement_24.js"
+    },
+    "2010-06": {
+     "same": 116.8,
+     "all": 119.5,
+     "doc": "https://ssl4.eir-parts.net/V4Public/eir/8153/ja/announcement/announcement_24.js"
+    },
+    "2010-07": {
+     "same": 115.1,
+     "all": 117.5,
+     "doc": "https://ssl4.eir-parts.net/V4Public/eir/8153/ja/announcement/announcement_24.js"
+    },
+    "2010-08": {
+     "same": 112.8,
+     "all": 115.1,
+     "doc": "https://ssl4.eir-parts.net/V4Public/eir/8153/ja/announcement/announcement_24.js"
+    },
+    "2010-09": {
+     "same": 96.4,
+     "all": 98.8,
+     "doc": "https://ssl4.eir-parts.net/V4Public/eir/8153/ja/announcement/announcement_24.js"
+    },
+    "2010-10": {
+     "same": 98.5,
+     "all": 101.0,
+     "doc": "https://ssl4.eir-parts.net/V4Public/eir/8153/ja/announcement/announcement_24.js"
+    },
+    "2010-11": {
+     "same": 95.3,
+     "all": 97.4,
+     "doc": "https://ssl4.eir-parts.net/V4Public/eir/8153/ja/announcement/announcement_24.js"
+    },
+    "2010-12": {
+     "same": 102.4,
+     "all": 104.8,
+     "doc": "https://ssl4.eir-parts.net/V4Public/eir/8153/ja/announcement/announcement_24.js"
+    },
+    "2011-01": {
+     "same": 114.1,
+     "all": 116.4,
+     "doc": "https://ssl4.eir-parts.net/V4Public/eir/8153/ja/announcement/announcement_24.js"
+    },
+    "2011-02": {
+     "same": 109.7,
+     "all": 112.2,
+     "doc": "https://ssl4.eir-parts.net/V4Public/eir/8153/ja/announcement/announcement_24.js"
+    },
+    "2011-03": {
+     "same": 97.3,
+     "all": 96.3,
+     "doc": "https://ssl4.eir-parts.net/V4Public/eir/8153/ja/announcement/announcement_24.js"
+    }
+   },
+   "ts": "2026-10-01T08:40:41+00:00"
+  },
+  "7643": {
+   "name": "ダイイチ",
+   "page": "https://www.daiichi-d.co.jp/ir/monthly-report",
+   "months": {},
+   "ts": "2026-10-01T08:40:41+00:00",
+   "updated": "2026-09-01",
+   "pdf_ts": "2026-10-01T08:40:41+00:00",
+   "pdf": {
+    "2024-09": {
+     "doc": "https://www.daiichi-d.co.jp/sys/wp-content/uploads/a74ec3ea54e7a828d6ded24fb2f5de31.pdf",
+     "rev": 3600000.0,
+     "metric": "売上高合計"
+    },
+    "2025-09": {
+     "doc": "https://www.daiichi-d.co.jp/sys/wp-content/uploads/fa9b2074952f0e68276e5796c0162675.pdf",
+     "rev": 8000000.0,
+     "metric": "売上高合計"
+    },
+    "2026-09": {
+     "doc": "https://www.daiichi-d.co.jp/sys/wp-content/uploads/1a6b3a323228ddb53605304ab24d3c86.pdf",
+     "rev": 9800000.0,
+     "metric": "売上高合計"
+    },
+    "2023-09": {
+     "doc": "https://www.daiichi-d.co.jp/sys/wp-content/uploads/a74ec3ea54e7a828d6ded24fb2f5de31.pdf",
+     "rev": 5900000.0,
+     "metric": "売上高合計"
+    },
+    "2022-09": {
+     "doc": "https://www.daiichi-d.co.jp/sys/wp-content/uploads/a74ec3ea54e7a828d6ded24fb2f5de31.pdf",
+     "rev": 23256000000.0,
+     "metric": "売上高合計"
+    }
+   }
   }
  },
  "source": "회사 IR 페이지 (月次 표)",
  "note": "회사가 제 사이트에 올린 월차 표에서 읽는다. 값은 전년동월비(%)뿐이고 금액은 없다. 회계연도가 적힌 표는 그 해로 읽으므로 옛 회계연도 표를 함께 싣는 회사는 이력이 길다.",
- "companies": 56,
- "months": 1224,
- "ts": "2026-10-01T07:39:04+00:00",
+ "companies": 59,
+ "months": 1434,
+ "ts": "2026-10-01T08:49:49+00:00",
  "done": [
   "https://corp.artnature.co.jp/ja/ir/finance/monthly_info/main/0/teaserItems1/00/linkList/0/link/20240415getsuji.pdf",
   "https://corp.artnature.co.jp/ja/ir/finance/monthly_info/main/00/teaserItems1/00/linkList/0/link/00.pdf",
@@ -11419,6 +12629,11 @@
   "https://www.chiyodagrp.co.jp/ir/data/2026_3Q_kaku.pdf",
   "https://www.chiyodagrp.co.jp/ir/data/2026_kaku.pdf",
   "https://www.chiyodagrp.co.jp/ir/data/2027_1Q_kaku.pdf",
+  "https://www.daiichi-d.co.jp/sys/wp-content/uploads/1a6b3a323228ddb53605304ab24d3c86.pdf",
+  "https://www.daiichi-d.co.jp/sys/wp-content/uploads/995a48a834f2b7e0568222e40aefe6ac.pdf",
+  "https://www.daiichi-d.co.jp/sys/wp-content/uploads/a74ec3ea54e7a828d6ded24fb2f5de31.pdf",
+  "https://www.daiichi-d.co.jp/sys/wp-content/uploads/fa9b2074952f0e68276e5796c0162675.pdf",
+  "https://www.daiichi-d.co.jp/sys/wp-content/uploads/fda81b8b505f3e2b91b36ff33f2c19b9.pdf",
   "https://www.fastretailing.com/jp/ir/monthly/pdf/MonthlySales_2013.pdf",
   "https://www.fastretailing.com/jp/ir/monthly/pdf/MonthlySales_2014.pdf",
   "https://www.fastretailing.com/jp/ir/monthly/pdf/MonthlySales_2015.pdf",
@@ -11693,9 +12908,159 @@
   "https://ssl4.eir-parts.net/doc/7476/tdnet/2882627/00.pdf": "표없음",
   "https://ssl4.eir-parts.net/doc/7476/announcement/124221/00.pdf": "표없음",
   "https://ssl4.eir-parts.net/doc/2154/ir_material18/284042/00.pdf": "표없음",
-  "https://www.ichigo.gr.jp/ir/news/p_news_file/file/Ichigo_20260903_Production_Data_JPN.pdf": "표없음"
+  "https://www.ichigo.gr.jp/ir/news/p_news_file/file/Ichigo_20260903_Production_Data_JPN.pdf": "표없음",
+  "https://genda.jp/wp-content/uploads/2026/09/【適時開示】GENDA-売上進捗レポート発行に関するお知らせ【2026-年９月】.pdf": "표없음",
+  "https://ir.lifenet-seimei.co.jp/ja/news/index/auto_20260909533452/pdfFile.pdf": "표없음",
+  "https://www.hikkoshi-sakai.co.jp/ir/news/2026/ou63ua00000013s1-att/20260903_202608_sokuhou.pdf": "표없음",
+  "https://www.d-kintetsu.co.jp/corporate/ir/upload_file/m005-m005_01/20261001.pdf": "표없음",
+  "https://www.d-kintetsu.co.jp/corporate/ir/upload_file/m005-m005_01/20260915.pdf": "표없음",
+  "https://www.d-kintetsu.co.jp/corporate/ir/upload_file/m005-m005_01/202607uriage.pdf": "표없음",
+  "https://www.d-kintetsu.co.jp/corporate/ir/upload_file/m005-m005_01/202606kakuhou.pdf": "표없음",
+  "https://www.d-kintetsu.co.jp/corporate/ir/upload_file/m005-m005_01/615.pdf": "표없음",
+  "https://www.d-kintetsu.co.jp/corporate/ir/upload_file/m005-m005_01/20260515-1.pdf": "표없음",
+  "https://www.d-kintetsu.co.jp/corporate/ir/upload_file/m005-m005_01/20260415-1.pdf": "표없음",
+  "https://www.d-kintetsu.co.jp/corporate/ir/upload_file/m005-m005_01/316.pdf": "표없음",
+  "https://www.d-kintetsu.co.jp/corporate/ir/upload_file/m005-m005_01/20260216.pdf": "표없음",
+  "https://www.d-kintetsu.co.jp/corporate/ir/upload_file/m005-m005_01/2025_12_0115.pdf": "표없음",
+  "https://www.d-kintetsu.co.jp/corporate/ir/upload_file/m005-m005_01/1115.pdf": "표없음",
+  "https://www.d-kintetsu.co.jp/corporate/ir/upload_file/m005-m005_01/1017uriage.pdf": "표없음",
+  "https://www.d-kintetsu.co.jp/corporate/ir/upload_file/m005-m005_01/1015.pdf": "표없음",
+  "https://www.d-kintetsu.co.jp/corporate/ir/upload_file/m005-m005_01/915.pdf": "표없음",
+  "https://www.d-kintetsu.co.jp/corporate/ir/upload_file/m005-m005_01/815.pdf": "표없음",
+  "https://www.d-kintetsu.co.jp/corporate/ir/upload_file/m005-m005_01/715.pdf": "표없음",
+  "https://www.d-kintetsu.co.jp/corporate/ir/upload_file/m005-m005_01/616.pdf": "표없음",
+  "https://www.d-kintetsu.co.jp/corporate/ir/upload_file/m005-m005_01/515.pdf": "표없음",
+  "https://www.d-kintetsu.co.jp/corporate/ir/upload_file/m005-m005_01/415.pdf": "표없음",
+  "https://www.d-kintetsu.co.jp/corporate/ir/upload_file/m005-m005_01/00317.pdf": "표없음",
+  "https://www.d-kintetsu.co.jp/corporate/ir/upload_file/m005-m005_01/20250217000820.pdf": "표없음",
+  "https://www.d-kintetsu.co.jp/corporate/ir/upload_file/m005-m005_01/20250115000816.pdf": "표없음",
+  "https://www.d-kintetsu.co.jp/corporate/ir/upload_file/m005-m005_01/20241216000810.pdf": "표없음",
+  "https://www.d-kintetsu.co.jp/corporate/ir/upload_file/m005-m005_01/20241115000806.pdf": "표없음",
+  "https://www.d-kintetsu.co.jp/corporate/ir/upload_file/m005-m005_01/20241015000799.pdf": "표없음",
+  "https://www.d-kintetsu.co.jp/corporate/ir/upload_file/m005-m005_01/20240917000785.pdf": "표없음",
+  "https://www.d-kintetsu.co.jp/corporate/ir/upload_file/m005-m005_01/20240815000782.pdf": "표없음",
+  "https://www.d-kintetsu.co.jp/corporate/ir/upload_file/m005-m005_01/20240716000777.pdf": "표없음",
+  "https://www.d-kintetsu.co.jp/corporate/ir/upload_file/m005-m005_01/20240614000769.pdf": "표없음",
+  "https://www.d-kintetsu.co.jp/corporate/ir/upload_file/m005-m005_01/20240515000760.pdf": "표없음",
+  "https://www.d-kintetsu.co.jp/corporate/ir/upload_file/m005-m005_01/20240415000753.pdf": "표없음",
+  "https://www.d-kintetsu.co.jp/corporate/ir/upload_file/m005-m005_01/20240315000745.pdf": "표없음",
+  "https://www.d-kintetsu.co.jp/corporate/ir/upload_file/m005-m005_01/20240215000739.pdf": "표없음",
+  "https://www.d-kintetsu.co.jp/corporate/ir/upload_file/m005-m005_01/20240115000735.pdf": "표없음",
+  "https://www.d-kintetsu.co.jp/corporate/ir/upload_file/m005-m005_01/20231215000727.pdf": "표없음",
+  "https://www.d-kintetsu.co.jp/corporate/ir/upload_file/m005-m005_01/20231115000721.pdf": "표없음",
+  "https://www.sra-hd.co.jp/Portals/0/ir/ir-news/news/ir-news202608.pdf": "표없음",
+  "https://www.sra-hd.co.jp/Portals/0/ir/ir-news/news/ir-news202607.pdf": "표없음",
+  "https://www.sra-hd.co.jp/Portals/0/ir/ir-news/news/ir-news202606.pdf": "표없음",
+  "https://www.sra-hd.co.jp/Portals/0/ir/ir-news/news/ir-news202605.pdf": "표없음",
+  "https://www.sra-hd.co.jp/Portals/0/ir/ir-news/news/ir-news202604.pdf": "표없음",
+  "https://www.sra-hd.co.jp/Portals/0/ir/settlement/fuzoku/fuzoku202608.pdf": "표없음",
+  "https://www.sra-hd.co.jp/Portals/0/ir/bizqrt_report/tsushin202606.pdf": "표없음",
+  "https://www.sra-hd.co.jp/Portals/0/ir/corporate_exp/setsumei260520.pdf": "표없음",
+  "https://www.sra-hd.co.jp/Portals/0/ir/settlement/fuzoku/fuzoku202605.pdf": "표없음",
+  "https://www.sra-hd.co.jp/Portals/0/ir/ir-news/news/ir-news202603.pdf": "표없음",
+  "https://www.sra-hd.co.jp/Portals/0/ir/ir-news/news/ir-news202602.pdf": "표없음",
+  "https://www.sra-hd.co.jp/Portals/0/ir/bizqrt_report/tsushin202603.pdf": "표없음",
+  "https://www.sra-hd.co.jp/Portals/0/ir/settlement/fuzoku/fuzoku202602.pdf": "표없음",
+  "https://www.sra-hd.co.jp/Portals/0/ir/ir-news/news/ir-news202601.pdf": "표없음",
+  "https://www.sra-hd.co.jp/Portals/0/ir/ir-news/news/ir-news202512.pdf": "표없음",
+  "https://www.sra-hd.co.jp/Portals/0/ir/ir-news/news/ir-news202511.pdf": "표없음",
+  "https://www.sra-hd.co.jp/Portals/0/ir/bizqrt_report/tsushin202511.pdf": "표없음",
+  "https://www.sra-hd.co.jp/Portals/0/ir/corporate_exp/setsumei251119.pdf": "표없음",
+  "https://www.sra-hd.co.jp/Portals/0/ir/negotiable/houkoku202511.pdf": "표없음",
+  "https://www.sra-hd.co.jp/Portals/0/ir/settlement/fuzoku/fuzoku202511.pdf": "표없음",
+  "https://www.sra-hd.co.jp/Portals/0/ir/ir-news/news/ir-news202510.pdf": "표없음",
+  "https://www.sra-hd.co.jp/Portals/0/ir/ir-news/news/ir-news202509.pdf": "표없음",
+  "https://www.sra-hd.co.jp/Portals/0/ir/ir-news/news/ir-news202508.pdf": "표없음",
+  "https://www.sra-hd.co.jp/Portals/0/ir/bizqrt_report/tsushin202508.pdf": "표없음",
+  "https://www.sra-hd.co.jp/Portals/0/ir/ir-news/news/ir-news202507.pdf": "표없음",
+  "https://www.sra-hd.co.jp/Portals/0/ir/settlement/fuzoku/fuzoku202508.pdf": "표없음",
+  "https://www.sra-hd.co.jp/Portals/0/ir/ir-news/news/ir-news202506.pdf": "표없음",
+  "https://www.sra-hd.co.jp/Portals/0/ir/bizqrt_report/tsushin202506.pdf": "표없음",
+  "https://www.sra-hd.co.jp/Portals/0/ir/ir-news/news/ir-news202505.pdf": "표없음",
+  "https://www.sra-hd.co.jp/Portals/0/ir/corporate_exp/setsumei250521.pdf": "표없음",
+  "https://www.sra-hd.co.jp/Portals/0/ir/settlement/fuzoku/fuzoku202505.pdf": "표없음",
+  "https://www.sra-hd.co.jp/Portals/0/ir/ir-news/news/ir-news202504.pdf": "표없음",
+  "https://www.sra-hd.co.jp/Portals/0/ir/others/20250514.pdf": "표없음",
+  "https://www.sra-hd.co.jp/Portals/0/ir/ir-news/news/ir-news202503.pdf": "표없음",
+  "https://www.sra-hd.co.jp/Portals/0/ir/ir-news/news/ir-news202502.pdf": "표없음",
+  "https://www.sra-hd.co.jp/Portals/0/ir/bizqrt_report/tsushin202502.pdf": "표없음",
+  "https://www.sra-hd.co.jp/Portals/0/ir/settlement/fuzoku/fuzoku202502.pdf": "표없음",
+  "https://www.sra-hd.co.jp/Portals/0/ir/ir-news/news/ir-news202501.pdf": "표없음",
+  "https://www.sra-hd.co.jp/Portals/0/ir/ir-news/news/ir-news202412.pdf": "표없음",
+  "https://www.sra-hd.co.jp/Portals/0/ir/ir-news/news/ir-news202411.pdf": "표없음",
+  "https://www.sra-hd.co.jp/Portals/0/ir/bizqrt_report/tsushin202411.pdf": "표없음",
+  "https://www.sra-hd.co.jp/Portals/0/ir/ir-news/news/ir-news202410.pdf": "표없음",
+  "https://www.sra-hd.co.jp/Portals/0/ir/ir-news/news/ir-news202409.pdf": "표없음",
+  "https://www.sra-hd.co.jp/Portals/0/ir/ir-news/news/ir-news202408.pdf": "표없음",
+  "https://www.sra-hd.co.jp/Portals/0/ir/ir-news/news/ir-news202407.pdf": "표없음",
+  "https://www.sra-hd.co.jp/Portals/0/ir/ir-news/news/ir-news202406.pdf": "표없음",
+  "https://www.sra-hd.co.jp/Portals/0/ir/ir-news/news/ir-news202405.pdf": "표없음",
+  "https://www.sra-hd.co.jp/Portals/0/ir/ir-news/news/ir-news202404.pdf": "표없음",
+  "https://www.sra-hd.co.jp/Portals/0/ir/ir-news/news/ir-news202403.pdf": "표없음",
+  "https://www.sra-hd.co.jp/Portals/0/ir/ir-news/news/ir-news202402.pdf": "표없음",
+  "https://www.sra-hd.co.jp/Portals/0/ir/ir-news/news/ir-news202401.pdf": "표없음",
+  "https://www.sra-hd.co.jp/Portals/0/ir/ir-news/news/ir-news202312.pdf": "표없음",
+  "https://www.sra-hd.co.jp/Portals/0/ir/ir-news/news/ir-news202311.pdf": "표없음",
+  "https://www.sra-hd.co.jp/Portals/0/ir/ir-news/news/ir-news202310.pdf": "표없음",
+  "https://www.sra-hd.co.jp/Portals/0/ir/ir-news/news/ir-news202309.pdf": "표없음",
+  "https://www.sra-hd.co.jp/Portals/0/ir/ir-news/news/ir-news202308.pdf": "표없음",
+  "https://www.sra-hd.co.jp/Portals/0/ir/ir-news/news/ir-news202307.pdf": "표없음",
+  "https://www.sra-hd.co.jp/Portals/0/ir/ir-news/news/ir-news202306.pdf": "표없음",
+  "https://www.sra-hd.co.jp/Portals/0/ir/ir-news/news/ir-news202305.pdf": "표없음",
+  "https://www.sra-hd.co.jp/Portals/0/ir/ir-news/news/ir-news202304.pdf": "표없음",
+  "https://www.sra-hd.co.jp/Portals/0/ir/ir-news/news/ir-news202303.pdf": "표없음",
+  "https://www.sra-hd.co.jp/Portals/0/ir/ir-news/news/ir-news202302.pdf": "표없음",
+  "https://www.sra-hd.co.jp/Portals/0/ir/ir-news/news/ir-news202301.pdf": "표없음",
+  "https://www.sra-hd.co.jp/Portals/0/ir/ir-news/news/ir-news202212.pdf": "표없음",
+  "https://www.sra-hd.co.jp/Portals/0/ir/ir-news/news/ir-news202211.pdf": "표없음",
+  "https://www.sra-hd.co.jp/Portals/0/ir/ir-news/news/ir-news202210.pdf": "표없음",
+  "https://www.sra-hd.co.jp/Portals/0/ir/ir-news/news/ir-news202209.pdf": "표없음",
+  "https://www.sra-hd.co.jp/Portals/0/ir/ir-news/news/ir-news202208.pdf": "표없음",
+  "https://www.sra-hd.co.jp/Portals/0/ir/ir-news/news/ir-news202207.pdf": "표없음",
+  "https://www.sra-hd.co.jp/Portals/0/ir/ir-news/news/ir-news202206.pdf": "표없음",
+  "https://www.sra-hd.co.jp/Portals/0/ir/ir-news/news/ir-news202205.pdf": "표없음",
+  "https://www.sra-hd.co.jp/Portals/0/ir/ir-news/news/ir-news202204.pdf": "표없음",
+  "https://www.sra-hd.co.jp/Portals/0/ir/ir-news/news/ir-news202203.pdf": "표없음",
+  "https://www.sra-hd.co.jp/Portals/0/ir/ir-news/news/ir-news202202.pdf": "표없음",
+  "https://www.sra-hd.co.jp/Portals/0/ir/ir-news/news/ir-news202201.pdf": "표없음",
+  "https://www.sra-hd.co.jp/Portals/0/ir/ir-news/news/ir-news202112.pdf": "표없음",
+  "https://www.sra-hd.co.jp/Portals/0/ir/ir-news/news/ir-news202111.pdf": "표없음",
+  "https://www.sra-hd.co.jp/Portals/0/ir/ir-news/news/ir-news202110.pdf": "표없음",
+  "https://www.sra-hd.co.jp/Portals/0/ir/ir-news/news/ir-news202109.pdf": "표없음",
+  "https://www.sra-hd.co.jp/Portals/0/ir/ir-news/news/ir-news202108.pdf": "표없음",
+  "https://www.sra-hd.co.jp/Portals/0/ir/ir-news/news/ir-news202107.pdf": "표없음",
+  "https://www.sra-hd.co.jp/Portals/0/ir/ir-news/news/ir-news202106.pdf": "표없음",
+  "https://www.sra-hd.co.jp/Portals/0/ir/ir-news/news/ir-news202105.pdf": "표없음",
+  "https://www.sra-hd.co.jp/Portals/0/ir/ir-news/news/ir-news202104.pdf": "표없음",
+  "https://www.celsys.com/files/user/pdf/ir/monthly-report/2026/mr_2026-0907.pdf": "표없음",
+  "https://www.celsys.com/files/user/pdf/ir/monthly-report/2026/mr_2026-0807.pdf": "표없음",
+  "https://www.celsys.com/files/user/pdf/ir/monthly-report/2026/mr_2026-0707.pdf": "표없음",
+  "https://www.celsys.com/files/user/pdf/ir/monthly-report/2026/mr_2026-0605.pdf": "표없음",
+  "https://www.celsys.com/files/user/pdf/ir/monthly-report/2026/mr_2026-0512.pdf": "표없음",
+  "https://www.celsys.com/files/user/pdf/ir/monthly-report/2026/mr_2026-0407.pdf": "표없음",
+  "https://www.celsys.com/files/user/pdf/ir/monthly-report/2026/mr_2026-0306.pdf": "표없음",
+  "https://www.celsys.com/files/user/pdf/ir/monthly-report/2026/mr_2026-0206.pdf": "표없음",
+  "https://www.celsys.com/files/user/pdf/ir/monthly-report/2026/mr_2026-0113.pdf": "표없음",
+  "https://www.celsys.com/files/user/pdf/ir/monthly-report/2025/mr_2025-1205.pdf": "표없음",
+  "https://static.saint-marc-hd.com/upload/irnews/383/20260914.pdf": "표없음",
+  "https://cdn.clipkit.co/tenants/2641/item_files/assets/000/006/107/original/2608GS.pdf": "표없음",
+  "https://cdn.clipkit.co/tenants/2641/item_files/assets/000/005/875/original/2607GS.pdf": "표없음",
+  "https://cdn.clipkit.co/tenants/2641/item_files/assets/000/005/612/original/2606GS.pdf": "표없음",
+  "https://cdn.clipkit.co/tenants/2641/item_files/assets/000/005/315/original/2605GS.pdf": "표없음",
+  "https://files.microcms-assets.io/assets/d45caef7ee5f48168c423fe98204dea1/a7289ab7761147819cac18a24d2e9fcd/260915_JP_Monthly%20Business%20Perfomance%20Report.pdf": "표없음",
+  "https://contents.xj-storage.jp/xcontents/AS05692/635a3ffd/9690/496b/92e0/4807ab47e0f2/140120260917537624.pdf": "표없음",
+  "https://contents.xj-storage.jp/xcontents/AS05692/ff17fe04/ca41/432e/9aee/f0cfe6681451/140120260917537874.pdf": "표없음",
+  "https://contents.xj-storage.jp/xcontents/AS05692/03cb527f/470f/456c/8f34/43733c1011e6/140120260916536989.pdf": "표없음",
+  "https://www.daiichi-d.co.jp/sys/wp-content/uploads/0a4fd391660f79a7e0ea9a79bddae8f4.pdf": "표없음",
+  "https://www.daiichi-d.co.jp/sys/wp-content/uploads/c7d309f4d021b3337e71046f39372715.pdf": "표없음",
+  "https://www.daiichi-d.co.jp/sys/wp-content/uploads/8df03f064c203cdd829b17c12c738fd3.pdf": "표없음",
+  "https://www.towafood-net.co.jp/wp-content/uploads/2026/10/2026年9月度売上高速報（前期対比）.pdf": "표없음",
+  "https://www.towafood-net.co.jp/wp-content/uploads/2026/09/2026年8月度売上高速報（前期対比）.pdf": "표없음",
+  "https://www.towafood-net.co.jp/wp-content/uploads/2026/08/2026年7月度売上高速報（前期対比）.pdf": "표없음",
+  "https://www.towafood-net.co.jp/wp-content/uploads/2026/07/2026年6月度売上高速報（前期対比）.pdf": "표없음",
+  "https://www.towafood-net.co.jp/wp-content/uploads/2026/06/2026年5月度売上高速報（前期対比）.pdf": "표없음"
  },
- "pdf_months": 1010,
+ "pdf_months": 1015,
  "homes": {
   "1379": "https://www.hokto-kinoko.co.jp",
   "138A": "https://www.hikari-food-service.jp",
