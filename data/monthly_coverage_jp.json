@@ -1,17 +1,17 @@
 {
  "v": 1,
- "ts": "2026-10-01T14:39:18+00:00",
+ "ts": "2026-10-01T19:53:50+00:00",
  "seed": 361,
  "homes": 352,
- "official_ir_data": 59,
+ "official_ir_data": 60,
  "covered_any": 267,
  "status": {
   "covered_elsewhere": 112,
   "discontinued": 2,
   "home_pending": 6,
   "no_monthly_found": 42,
-  "ok": 59,
-  "parser_failed": 123,
+  "ok": 60,
+  "parser_failed": 122,
   "pending_discovery": 17
  },
  "codes": {
@@ -1476,14 +1476,14 @@
    "ir": false
   },
   "3329": {
-   "status": "parser_failed",
+   "status": "ok",
    "home": "https://www.towafood-net.co.jp",
    "source_url": "https://www.towafood-net.co.jp/investor/monthly/",
-   "latest_month": "",
-   "months": 0,
+   "latest_month": "2025-10",
+   "months": 25,
    "tdnet": true,
    "web": false,
-   "ir": false
+   "ir": true
   },
   "3333": {
    "status": "no_monthly_found",
