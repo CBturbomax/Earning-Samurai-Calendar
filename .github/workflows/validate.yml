@@ -4,6 +4,7 @@ on:
   pull_request:
     paths:
       - '*.py'
+      - 'tests/daily_chart.cjs'
       - 'data/monthly_universe_jp.json'
       - 'data/monthly_reviewed_jp.json'
       - '.github/workflows/*.yml'
@@ -20,6 +21,11 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: '3.12'
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: 일자별 차트 회귀 검사
+        run: node tests/daily_chart.cjs
       - name: Python 문법 검사
         run: |
           python -m py_compile monir.py scrape_mon_ir.py scrape_caps.py build.py

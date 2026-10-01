@@ -3173,7 +3173,10 @@ td.dim { color:var(--mute); font-size:18px; }
 /* ── 발표 건수 차트 ────────────────────────────────────────── */
 .chartbox { background:var(--panel); border:1px solid var(--line); border-radius:10px;
             padding:14px 12px 8px; margin-top:14px; overflow-x:auto; }
-svg.bars { display:block; width:100%; height:auto; min-width:900px; }
+svg.bars { display:block; height:280px; max-width:none; }
+#dailyChartScroll { scrollbar-width:auto; scrollbar-color:var(--mute) var(--panel); }
+#dailyChartScroll:focus-visible { outline:2px solid var(--a1); outline-offset:3px; }
+svg.bars .date { fill:var(--fg); font-size:13px; font-weight:600; }
 svg.bars text { font-family:inherit; fill:var(--mute); font-size:11px; }
 svg.bars .vl { fill:var(--fg); font-size:11px; font-weight:700; }
 svg.bars rect.b { fill:var(--a2); }
@@ -3272,9 +3275,9 @@ svg.bars rect.b:hover { fill:var(--a3); }
 <h2><span class="n">3</span>테마별 주요 종목 실적발표일 <span class="meta" id="gMeta"></span></h2>
 <div id="groups"></div>
 
-<h2><span class="n">4</span>일자별 발표 건수 <span class="meta">막대를 누르면 그 주로 이동</span></h2>
-<div class="chartbox"><svg class="bars" id="bars" viewBox="0 0 1400 260"
-     preserveAspectRatio="xMinYMid meet"></svg></div>
+<h2><span class="n">4</span>일자별 발표 건수 <span class="meta">좌우로 스크롤 · 막대를 누르면 그 주로 이동</span></h2>
+<div class="chartbox" id="dailyChartScroll" tabindex="0" role="region" aria-label="일자별 발표 건수, 좌우로 스크롤"><svg class="bars" id="bars" viewBox="0 0 360 280"
+     preserveAspectRatio="xMinYMid meet" role="img" aria-label="날짜별 발표 건수 막대 차트"></svg></div>
 
 <h2><span class="n">5</span>전체 종목 표</h2>
 <div class="tools">
@@ -4309,10 +4312,18 @@ function renderGroups() {
 function renderBars() {
   const src = [...new Set(onMkts().flatMap(m => D.okDays[m] || []))].sort();
   const days = src.filter(d => (byDate.get(d) || []).length);
-  if (!days.length) { document.getElementById('bars').innerHTML = ''; return; }
-  const W = 1400, H = 260, PAD_L = 8, PAD_B = 46, PAD_T = 24;
-  const n = days.length || 1;
-  const bw = (W - PAD_L * 2) / n;
+  const svg = document.getElementById('bars');
+  const viewport = document.getElementById('dailyChartScroll');
+  const H = 280, PAD_L = 12, PAD_B = 52, PAD_T = 24, bw = 56;
+  const W = Math.max(viewport.clientWidth - 24, days.length * bw + PAD_L * 2, 1);
+  svg.setAttribute('viewBox', '0 0 ' + W + ' ' + H);
+  svg.style.width = W + 'px';
+  if (!days.length) {
+    svg.innerHTML = '';
+    viewport.scrollLeft = 0;
+    delete viewport.dataset.focusKey;
+    return;
+  }
   const max = Math.max(...days.map(d => byDate.get(d).length), 1);
   const wk = new Set(weekDays(week));
   const parts = days.map((d, i) => {
@@ -4322,15 +4333,24 @@ function renderBars() {
     const label = d.slice(5).replace('-', '/');
     return '<g><rect class="b' + (wk.has(d) ? ' wk' : '') + '" x="' + (x + bw * .12).toFixed(1) +
       '" y="' + y.toFixed(1) + '" width="' + (bw * .76).toFixed(1) + '" height="' +
-      Math.max(h, 1).toFixed(1) + '" data-date="' + d + '"><title>' + label + ' · ' +
+      Math.max(h, 1).toFixed(1) + '" data-date="' + d + '"><title>' + d + ' · ' +
       v + '건</title></rect>' +
       (v >= max * .45 ? '<text class="vl" x="' + (x + bw / 2).toFixed(1) + '" y="' +
         (y - 5).toFixed(1) + '" text-anchor="middle">' + v + '</text>' : '') +
-      '<text x="' + (x + bw / 2).toFixed(1) + '" y="' + (H - PAD_B + 16) +
-      '" text-anchor="end" transform="rotate(-60 ' + (x + bw / 2).toFixed(1) + ' ' +
-      (H - PAD_B + 16) + ')">' + label + '</text></g>';
+      '<text class="date" x="' + (x + bw / 2).toFixed(1) + '" y="' + (H - PAD_B + 21) +
+      '" text-anchor="middle">' + label + '</text>' +
+      '<text x="' + (x + bw / 2).toFixed(1) + '" y="' + (H - PAD_B + 39) +
+      '" text-anchor="middle">' + d.slice(0, 4) + '</text></g>';
   }).join('');
-  document.getElementById('bars').innerHTML = parts;
+  svg.innerHTML = parts;
+  // Refocus only when the selected week or available dates change.
+  const focusKey = week + '|' + onMkts().join(',') + '|' + days.join(',');
+  if (viewport.dataset.focusKey !== focusKey) {
+    let i = days.findIndex(d => d >= week);
+    if (i < 0) i = days.length - 1;
+    viewport.scrollLeft = Math.max(0, PAD_L + (i + .5) * bw - viewport.clientWidth / 2);
+    viewport.dataset.focusKey = focusKey;
+  }
 }
 
 /* ── 전체 표 ──────────────────────────────────────────────── */
