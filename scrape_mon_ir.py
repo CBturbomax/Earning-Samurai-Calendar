@@ -46,7 +46,7 @@ VER = 1
 # 그대로 두었다. 회사 IR 페이지는 **늘 거기 있다.** 다시 받는 값이 싸므로,
 # 규칙이 아직 어린 지금은 **틀린 값을 안고 가느니 다시 받는 편**이 낫다
 # (오검출 하나가 놓침 하나보다 나쁘다). 규칙이 굳으면 그때 바꾼다.
-RULE_VER = 6
+RULE_VER = 7
 
 UA = {"User-Agent": ("Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
                      "AppleWebKit/537.36 (KHTML, like Gecko) "
@@ -564,6 +564,13 @@ def main():
         if updated:
             sites.setdefault(code, {})["updated"] = updated
         got = monir.read(page, today)
+        got = {p: dict(v, doc=url) for p, v in got.items()}
+        feed_url = monir.IR_FEEDS.get(code)
+        if feed_url:
+            feed = get(feed_url)
+            time.sleep(PAUSE)
+            for p, v in monir.read(feed, today).items():
+                got.setdefault(p, dict(v, doc=feed_url))
         fresh += 1
 
         # **PDF 목록 꼴도 같이 본다.** 표를 안 싣고 달마다 PDF 한 장을 거는
@@ -588,7 +595,7 @@ def main():
                 continue
             ago = monir.read(apage, today)
             for p, v in ago.items():
-                got.setdefault(p, v)
+                got.setdefault(p, dict(v, doc=au))
             if pdf_left > 0:
                 pdf, n_new, pdf_left, arch_looked = read_pdfs(
                     apage, au, pdf, rec, today, pdf_left)
@@ -607,7 +614,7 @@ def main():
         for p, v in got.items():
             # 회사 표의 달별 수치에는 발표일을 억지로 달지 않는다.
             # "처음 본 날"도 발표일이 아니므로 저장하지 않는다.
-            row = {k: val for k, val in v.items() if k in ("same", "all", "yoy")}
+            row = {k: val for k, val in v.items() if k in ("same", "all", "yoy", "doc")}
             if p not in months:
                 new_months += 1
             months[p] = row
