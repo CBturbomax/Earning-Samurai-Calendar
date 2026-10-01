@@ -23,7 +23,7 @@ try {
 <script>
 /* GitHub Pages/CDN 이 예전 index.html 을 잡고 있어도, 한 번 최신판을 받은 뒤부터는
    version.txt 를 no-store 로 확인해 새 빌드가 있으면 query string 을 바꿔 강제 갱신한다. */
-const ES_BUILD = "20261001074100";
+const ES_BUILD = "20261001074200";
 setTimeout(() => {
   fetch('./version.txt?t=' + Date.now(), {cache:'no-store'})
     .then(r => r.ok ? r.text() : '')
@@ -689,15 +689,25 @@ svg.bars rect.b:hover { fill:var(--a3); }
 .foot { color:var(--mute); font-size:17px; margin-top:56px; line-height:1.7;
         border-top:1px solid var(--line); padding-top:18px; }
 .foot a { color:var(--a2); }
+.samurai-nav { display:flex; flex-wrap:wrap; gap:8px; margin:24px 0; border-bottom:1px solid var(--line); }
+.samurai-nav a { display:block; padding:14px 20px; color:var(--mute); font-size:20px; font-weight:700; text-decoration:none; border-bottom:3px solid transparent; }
+.samurai-nav a:hover, .samurai-nav a:focus-visible { color:var(--fg); background:var(--panel); }
+.samurai-nav a[aria-current="page"] { color:#FFCB05; border-bottom-color:#FFCB05; }
 </style>
 </head>
 <body>
 <div class="wrap">
 
-<div class="topline"><span class="fl fl-us" role="img" aria-label="미국"></span> 미국 <b>12,649</b> · <span class="fl fl-jp" role="img" aria-label="일본"></span> 일본 <b>4,684</b> · <span class="fl fl-hk" role="img" aria-label="홍콩"></span> 홍콩 <b>8,999</b> · 합계 <b>26,332건</b> · 수집 <b>2025-07-09 ~ 2026-11-30</b> · 갱신 2026-10-01 16:41 KST</div>
+<div class="topline"><span class="fl fl-us" role="img" aria-label="미국"></span> 미국 <b>12,649</b> · <span class="fl fl-jp" role="img" aria-label="일본"></span> 일본 <b>4,684</b> · <span class="fl fl-hk" role="img" aria-label="홍콩"></span> 홍콩 <b>8,999</b> · 합계 <b>26,332건</b> · 수집 <b>2025-07-09 ~ 2026-11-30</b> · 갱신 2026-10-01 16:42 KST</div>
 <h1><span class="mark" aria-hidden="true"></span>Earning <span class="jp">Samurai</span>
     <span class="byline">by CB</span></h1>
 <p class="sub">미국 · 일본 · 홍콩 주간 실적발표 일정 — 누가 언제 무엇을 발표했는지</p>
+
+<nav class="samurai-nav" aria-label="어닝사무라이 메뉴">
+  <a href="./" aria-current="page">실적 캘린더</a>
+  <a href="#mnMeta">일본 월매출</a>
+  <a href="japan-exports/">일본 수출</a>
+</nav>
 
 <div class="find">
   <span class="mag" aria-hidden="true">🔎</span>
