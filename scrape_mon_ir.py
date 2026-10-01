@@ -20,6 +20,7 @@
 돌수록 이력이 길어지므로 이미 받아 둔 달을 빈 결과로 덮지 않는다.
 """
 import json
+import http.client
 import os
 import re
 import sys
@@ -107,17 +108,19 @@ def page_updated_day(page):
 
 def get_bytes(url, timeout=25):
     try:
+        url = urllib.parse.quote(url, safe=":/?#[]@!$&'()*+,;=%")
         with urllib.request.urlopen(
                 urllib.request.Request(url, headers=UA), timeout=timeout) as r:
             return r.read(6_000_000)
     except (urllib.error.HTTPError, urllib.error.URLError,
-            TimeoutError, OSError, ValueError) as e:
+            TimeoutError, OSError, ValueError, http.client.InvalidURL) as e:
         print(f"  ! {url} {type(e).__name__} {str(e)[:40]}")
         return b""
 
 
 def get(url, timeout=15):
     try:
+        url = urllib.parse.quote(url, safe=":/?#[]@!$&'()*+,;=%")
         with urllib.request.urlopen(
                 urllib.request.Request(url, headers=UA), timeout=timeout) as r:
             raw = r.read(1_500_000)
@@ -126,7 +129,7 @@ def get(url, timeout=15):
                    else "euc-jp" if "euc-jp" in head else "utf-8")
             return raw.decode(enc, "ignore")
     except (urllib.error.HTTPError, urllib.error.URLError,
-            TimeoutError, OSError, ValueError) as e:
+            TimeoutError, OSError, ValueError, http.client.InvalidURL) as e:
         print(f"  ! {url} {type(e).__name__} {str(e)[:40]}")
         return ""
 
