@@ -21,9 +21,36 @@ ITEMS=[
  ('auto','승용차','산업재',['8703'],'주로 사람 수송용 승용차 등. 엔진·전기차를 포함합니다.'),
  ('auto_parts','자동차 부품','산업재',['8708'],'자동차용 부분품·부속품.'),
  ('sake','사케','소비재',['220600200'],'청주(Sake), 일본 수출통계 9자리 코드 기준.'),
+ ('chocolate', '초콜릿·코코아 조제품', '소비재', ['1806'], '초콜릿 및 코코아를 함유한 식품 조제품.'),
+ ('bakery', '비스킷·베이커리', '소비재', ['1905'], '빵·비스킷·케이크 등 베이커리 제품.'),
+ ('sauces', '소스·조미료', '소비재', ['2103'], '소스·혼합 조미료·겨자 등의 제품.'),
+ ('whisky', '위스키', '소비재', ['220830'], '위스키 수출 전체. 특정 브랜드 매출과 다릅니다.'),
+ ('beer', '맥주', '소비재', ['2203'], '맥아로 만든 맥주.'),
+ ('haircare', '샴푸·헤어케어', '소비재', ['3305'], '샴푸·헤어스프레이 등 모발용 제품.'),
+ ('oralcare', '치약·구강관리', '소비재', ['3306'], '치약·치실 등 구강·치과 위생용 제품.'),
+ ('soap', '비누·피부세정제', '소비재', ['3401'], '비누와 이 분류에 해당하는 피부세정 제품.'),
+ ('pens', '펜·필기구', '소비재', ['9608'], '볼펜·사인펜·만년필 등과 해당 부품.'),
+ ('toys', '완구·모형', '소비재', ['9503'], '인형·조립모형·퍼즐 등 완구. 카드·게임기와 별도 분류.'),
+ ('fishing', '낚시용품', '소비재', ['9507'], '낚싯대·낚싯바늘·릴 등과 기타 해당 수렵용구.'),
+ ('instruments', '전자악기', '소비재', ['9207'], '전자 키보드·기타 등 전기적으로 소리를 내거나 증폭하는 악기.'),
+ ('diesel', '디젤 엔진', '산업재', ['8408'], '압축점화식 피스톤 내연기관. 차량·선박·산업용 포함.'),
+ ('pumps', '액체 펌프', '산업재', ['8413'], '액체 펌프·액체 엘리베이터 및 해당 부품.'),
+ ('compressors', '압축기·팬·진공펌프', '산업재', ['8414'], '기체 압축기·진공펌프·팬 등과 해당 부품.'),
+ ('aircon', '에어컨', '산업재', ['8415'], '공기조절기와 해당 부품. 가정·상업·차량용 포함.'),
+ ('excavators', '굴착기', '산업재', ['842952'], '상부 구조가 360도 회전하는 자주식 굴착기 등.'),
+ ('machine_tools', '금속 가공 공작기계', '산업재', ['8456', '8457', '8458', '8459', '8460', '8461'], '절삭·연삭·방전 등 공작기계. 프레스·단조기와 부품은 제외.'),
+ ('batteries', '축전지', '산업재', ['8507'], '리튬이온·납축전지 등과 해당 부품. 단위가 혼합되면 단가 미표시.'),
+ ('motors', '전동기·발전기', '산업재', ['8501'], '전동기와 발전기. 발전세트는 제외.'),
+ ('transformers', '변압기·전력변환기', '산업재', ['8504'], '변압기·정지형 변환기·인덕터 및 해당 부품.'),
+ ('switchgear', '스위치·커넥터', '산업재', ['8536'], '1,000V 이하 회로의 개폐·보호·접속용 전기기기.'),
+ ('trucks', '화물차', '산업재', ['8704'], '화물 수송용 자동차.'),
+ ('motorcycles', '모터사이클', '산업재', ['8711'], '모터사이클·모페드 등과 보조모터 부착 사이클.'),
+ ('medical', '의료기기', '산업재', ['9018'], '의료·외과·치과·수의용 기기. 영상진단장비 등 다른 HS는 제외.'),
+ ('measurement', '측정·검사기기', '산업재', ['9031'], '다른 호에 분류되지 않은 측정·검사기기 및 해당 부품.'),
 ]
 MONTHS=list(calendar.month_abbr)[1:]
 PREFIXES=tuple(p for item in ITEMS for p in item[3])
+CATALOG_SIGNATURE=hashlib.sha256(json.dumps([(i[0],i[3]) for i in ITEMS]).encode()).hexdigest()
 SECTIONS=('28-38','84-85','86-89','90-92','94-96','16-24')
 COUNTRIES={'103':'한국','105':'중국','106':'대만','108':'홍콩','110':'베트남','111':'태국','112':'싱가포르','113':'말레이시아','117':'필리핀','118':'인도네시아','123':'인도','147':'아랍에미리트','205':'영국','207':'네덜란드','210':'프랑스','213':'독일','215':'스위스','218':'스페인','220':'이탈리아','304':'미국','302':'캐나다','305':'멕시코','410':'브라질','601':'호주','606':'뉴질랜드'}
 def fetch(url):
@@ -113,7 +140,7 @@ def collect_year(args):
    total=sum(v.get(ym,{}).get('value',0) for c,v in a.items() if c!='WORLD')
    if total!=n['value']:raise ValueError(f'National/country mismatch {year} {item_id} {ym}: {n["value"]}!={total}')
   result[item_id]=a
- snapshot=dict(year=year,throughMonth=month,sources=source,series=result)
+ snapshot=dict(catalogSignature=CATALOG_SIGNATURE,year=year,throughMonth=month,sources=source,series=result)
  print(f'Validated {year}: {len(national)} national + {len(countries)} country observations',flush=True)
  return snapshot
 
@@ -139,7 +166,7 @@ def main():
    p=data/f'year-{y}.json.gz'
    # Re-read current/prior year on every run, older revisions weekly.
    cached=json.loads(gzip.decompress(p.read_bytes())) if p.exists() else None
-   if cached and y<year-1 and now.weekday()!=0: snapshots.append(cached)
+   if cached and cached.get('catalogSignature')==CATALOG_SIGNATURE and y<year-1 and now.weekday()!=0: snapshots.append(cached)
    else:jobs.append((y,month if y==year else 12))
   for snap in ThreadPoolExecutor(max_workers=2).map(collect_year,jobs):snapshots.append(snap)
   snapshots.sort(key=lambda x:x['year'])
