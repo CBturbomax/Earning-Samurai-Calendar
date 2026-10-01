@@ -4,7 +4,7 @@ on:
   pull_request:
     paths:
       - '*.py'
-      - 'tests/daily_chart.cjs'
+      - 'tests/*.cjs'
       - 'data/monthly_universe_jp.json'
       - 'data/monthly_reviewed_jp.json'
       - '.github/workflows/*.yml'
@@ -26,6 +26,8 @@ jobs:
           node-version: 22
       - name: 일자별 차트 회귀 검사
         run: node tests/daily_chart.cjs
+      - name: 월매출 표 정렬 회귀 검사
+        run: node tests/monthly_table.cjs
       - name: Python 문법 검사
         run: |
           python -m py_compile monir.py scrape_mon_ir.py scrape_caps.py build.py
