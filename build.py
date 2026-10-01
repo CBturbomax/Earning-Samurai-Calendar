@@ -2647,7 +2647,7 @@ __FLAGCSS__
 
 
 /* 월매출 비교: 기업 × 공통 24개월. 다른 섹션의 스타일과 독립적이다. */
-.mnboard { border:1px solid #455873; border-radius:12px; overflow:auto; max-height:820px; background:#0c1521; scrollbar-color:#708caf #1a273a; }
+.mnboard { --mn-company:270px; --mn-cap:125px; --mn-cover:110px; border:1px solid #455873; border-radius:12px; overflow:auto; max-height:820px; background:#0c1521; scrollbar-color:#708caf #1a273a; }
 .mnmatrix { width:100%; min-width:2250px; table-layout:fixed; border-spacing:0; font-size:16px; font-variant-numeric:tabular-nums; }
 .mnmatrix th,.mnmatrix td { padding:0; border-right:1px solid #314156; border-bottom:1px solid #3b4b60; text-align:center; height:82px; font-size:16px; }
 .mnmatrix thead th { position:sticky; top:0; z-index:3; background:#263d58; color:#f1f6ff; font-weight:750; height:78px; font-size:16px; line-height:1.65; border-bottom:3px solid #789bc6; }
@@ -2657,6 +2657,10 @@ __FLAGCSS__
 .mncompany small { display:flex; align-items:center; gap:9px; margin-top:9px; color:#abc0d8; font-size:13px; font-weight:500; }
 .mncompany .mnticker { display:inline-block; padding:3px 7px; background:#314b68; border:1px solid #6482a5; border-radius:5px; color:#fff; font-size:14px; font-weight:800; letter-spacing:.5px; }
 .mncompany .mnmeta { overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.mnmatrix .mncapcell,.mnmatrix .mncaphead { position:sticky; left:var(--mn-company); z-index:2; }
+.mnmatrix .mncoverage,.mnmatrix .mncoverhead { position:sticky; left:calc(var(--mn-company) + var(--mn-cap)); z-index:2; }
+.mnmatrix thead .mncaphead,.mnmatrix thead .mncoverhead { z-index:5; }
+.mnmatrix .mnsort { display:block; width:100%; min-height:78px; padding:5px 2px; border:0; background:transparent; color:inherit; font:inherit; font-weight:inherit; cursor:pointer; }
 .mnmatrix .mncapcell { color:#e4edfc; background:#18283c; font-size:17px; font-weight:750; white-space:nowrap; border-right:2px solid #536984; }
 .mnmatrix .mncoverage { color:#b9cde5; background:#152336; font-size:15px; border-right:3px solid #8298b4; }
 .mncoverage strong { color:#edf5ff; font-size:17px; }.mncoverage small { display:block; font-size:12px; color:#9eb4cf; margin-top:5px; }
@@ -2682,6 +2686,18 @@ __FLAGCSS__
 .mnaudit th,.mnaudit td { padding:12px; border-bottom:1px solid #293747; text-align:left; }
 .mnaudit th { color:#adc7e5; }.mnaudit td { color:#9eafc2; }
 .mnaudit button { background:none; border:0; color:#dce9fb; font:inherit; cursor:pointer; }
+
+@media(max-width:700px) {
+  .mnboard { --mn-company:112px; --mn-cap:76px; --mn-cover:62px; }
+  .mnmatrix .mncompany { font-size:13px; padding:8px 5px; }
+  .mncompany small { flex-wrap:wrap; gap:3px; font-size:10px; }
+  .mncompany .mnticker { font-size:11px; padding:2px 4px; }
+  .mnmatrix .mncapcell,.mnmatrix .mncoverage,.mncoverage strong { font-size:12px; }
+  .mnmatrix thead .mncaphead,.mnmatrix thead .mncoverhead { font-size:12px; }
+  .mnmatrix thead th:first-child { padding:0 5px; font-size:13px; }
+  .mnmatrix .mnlatestcol { position:static; }
+  .mnmatrix thead .mnlatestcol { position:sticky; right:auto; z-index:3; }
+}
 
 /* ── 월매출(月次) ────────────────────────────────────────────── */
 /* **여러 종목을 한눈에 두루 본다.** 처음엔 한 종목이 한 줄을 다 쓰는 큰 카드로
@@ -3268,7 +3284,7 @@ svg.bars rect.b:hover { fill:var(--a3); }
 <div class="mnbar" role="tablist" aria-label="월매출 보기">
   <button type="button" role="tab" data-mnview="compare" aria-selected="true">월매출 비교</button>
   <button type="button" role="tab" data-mnview="audit" aria-selected="false">수집 점검</button>
-  <select id="mnSort" aria-label="월매출 정렬"><option value="cap">시총 큰 순</option><option value="name">기업명 순</option><option value="coverage">수집 개월 순</option></select>
+  <select id="mnSort" aria-label="월매출 정렬"><option value="cap">시총 큰 순</option><option value="cap-asc">시총 작은 순</option><option value="month" disabled>월 제목을 눌러 정렬</option><option value="name">기업명 순</option><option value="coverage">수집 개월 순</option></select>
 </div>
 <div id="mnList"></div>
 
@@ -4058,6 +4074,40 @@ function mnYoyHtml(code, targetPeriod) {
 }
 
 let mnView = 'compare';
+let mnMonthSort = null;
+let mnCompareScroll = null;
+function mnSortCompanies(list, sort) {
+  const value = x => sort === 'month' && mnMonthSort ? mnHeatValue(x.series.get(mnMonthSort.period)) : x.cap || null;
+  return list.sort((a,b) => {
+    let order = 0;
+    if (sort === 'name') order = a.ko.localeCompare(b.ko, 'ko');
+    else if (sort === 'coverage') order = b.coverage - a.coverage;
+    else {
+      const av = value(a), bv = value(b);
+      if (av === null || bv === null) order = av === bv ? 0 : av === null ? 1 : -1;
+      else order = (av - bv) * (sort === 'cap-asc' || (sort === 'month' && mnMonthSort.direction === 'asc') ? 1 : -1);
+    }
+    return order || b.cap - a.cap || a.code.localeCompare(b.code);
+  });
+}
+function mnHeaderSort(key) {
+  const select = document.getElementById('mnSort');
+  if (key === 'cap') { select.value = select.value === 'cap' ? 'cap-asc' : 'cap'; }
+  else {
+    mnMonthSort = {period:key, direction:select.value === 'month' && mnMonthSort && mnMonthSort.period === key && mnMonthSort.direction === 'desc' ? 'asc' : 'desc'};
+    const option = select.querySelector('option[value="month"]');
+    option.disabled = false;
+    option.textContent = key + (mnMonthSort.direction === 'desc' ? ' 큰 순' : ' 작은 순');
+    select.value = 'month';
+  }
+  renderMonthly();
+}
+function mnSortAria(key, sort) {
+  if (key === 'cap') return sort === 'cap' ? 'descending' : sort === 'cap-asc' ? 'ascending' : 'none';
+  return sort === 'month' && mnMonthSort && mnMonthSort.period === key ? (mnMonthSort.direction === 'asc' ? 'ascending' : 'descending') : 'none';
+}
+function mnSortArrow(key, sort) { const a = mnSortAria(key, sort); return a === 'none' ? ' ↕' : a === 'ascending' ? ' ▲' : ' ▼'; }
+
 function mnPeriod(k) { return Math.floor(k / 12) + '-' + String(k % 12 + 1).padStart(2, '0'); }
 function mnHeatRows(code) {
   const num = MNUM[code];
@@ -4075,6 +4125,8 @@ function mnHeatReason(code, period) {
 function renderMonthly() {
   const host = document.getElementById('mnList');
   if (!host) return;
+  const previousBoard = host.querySelector('.mnboard:has(.mnmatrix)');
+  if (previousBoard) mnCompareScroll = {left:previousBoard.scrollLeft, top:previousBoard.scrollTop};
   const byCode = mnCompanyRows();
   const months = Array.from({length:24}, (_,i) => mnPeriod(MN_B - 23 + i));
   const capJo = b => b ? b * D.usdKrw / 1000 : 0;
@@ -4092,8 +4144,7 @@ function renderMonthly() {
     list.push(x);
   }
   const sort = document.getElementById('mnSort').value;
-  list.sort((a,b) => (sort === 'name' ? a.ko.localeCompare(b.ko, 'ko') :
-    sort === 'coverage' ? b.coverage - a.coverage : b.cap - a.cap) || b.cap - a.cap || a.code.localeCompare(b.code));
+  mnSortCompanies(list, sort);
   document.getElementById('mnMeta').textContent = '전년동월비 · 최근 24개월';
   document.getElementById('mnCnt').textContent = list.length + '개사';
   const total = list.reduce((n,x) => n + x.coverage, 0);
@@ -4111,8 +4162,8 @@ function renderMonthly() {
       return '<tr><td><button data-mcode="' + esc(x.code) + '">' + esc(x.ko) + '</button></td><td>' + x.coverage + '/24</td><td>' + esc((n.historyBase || n.base || '월매출') + (n.scope ? ' · ' + n.scope : '')) + '</td><td>' + esc(n.historySrc || n.src || '수치 미수집') + '</td><td>' + (missing || '없음') + '</td><td>' + (url ? '<a class="mpdf" target="_blank" rel="noopener" href="' + esc(url) + '">원문 ↗</a>' : '미확인') + '</td></tr>';
     }).join('') + '</tbody></table></div>';
   } else {
-    html += '<div class="mnscrollhint">월별 매출 증감률 · 좌우로 스크롤해 24개월 비교 · 기업명과 최신월은 고정됩니다</div><div class="mnboard" tabindex="0" aria-label="기업별 최근 24개월 월매출 비교표"><table class="mnmatrix"><colgroup><col style="width:270px"><col style="width:125px"><col style="width:110px">' + '<col>'.repeat(23) + '<col style="width:85px">' + '</colgroup><thead><tr><th scope="col">기업명 · 티커</th><th scope="col" class="mncaphead">시가총액</th><th scope="col" class="mncoverhead">수집 개월</th>' +
-      months.map((p,i) => '<th scope="col" class="' + (i === 23 ? 'mnlatestcol ' : '') + (p.endsWith('-01') ? 'mnyear' : '') + '">' + p.slice(2,4) + '년<br>' + (+p.slice(5)) + '월' + (i === 23 ? '<small style="display:block;font-size:12px">최신</small>' : '') + '</th>').join('') + '</tr></thead><tbody>';
+    html += '<div class="mnscrollhint">월별 매출 증감률 · 좌우로 스크롤해 24개월 비교 · 기업명·시총·수집 개월 고정 · 월/시총 제목 클릭: 큰 순 ↔ 작은 순</div><div class="mnboard" tabindex="0" aria-label="기업별 최근 24개월 월매출 비교표"><table class="mnmatrix"><colgroup><col style="width:var(--mn-company)"><col style="width:var(--mn-cap)"><col style="width:var(--mn-cover)">' + '<col>'.repeat(23) + '<col style="width:85px">' + '</colgroup><thead><tr><th scope="col">기업명 · 티커</th><th scope="col" class="mncaphead" aria-sort="' + mnSortAria('cap', sort) + '"><button class="mnsort" data-mnsort="cap">시가총액' + mnSortArrow('cap', sort) + '</button></th><th scope="col" class="mncoverhead">수집 개월</th>' +
+      months.map((p,i) => '<th scope="col" aria-sort="' + mnSortAria(p, sort) + '" class="' + (i === 23 ? 'mnlatestcol ' : '') + (p.endsWith('-01') ? 'mnyear' : '') + '"><button class="mnsort" data-mnsort="' + p + '" aria-label="' + p + ' 월매출 정렬">' + p.slice(2,4) + '년<br>' + (+p.slice(5)) + '월' + mnSortArrow(p, sort) + (i === 23 ? '<small style="display:block;font-size:12px">최신</small>' : '') + '</button></th>').join('') + '</tr></thead><tbody>';
     html += list.map(x => {
       const n = MNUM[x.code] || {}, basis = n.historyBase || n.base || '월매출';
       return '<tr><th scope="row"><button class="mncompany" data-mcode="' + esc(x.code) + '" title="' + esc(x.orig + ' · ' + (n.scope || basis)) + '">' + esc(x.ko) + '<small><span class="mnticker">' + esc(x.code) + '</span><span class="mnmeta">' + esc(basis + ' · ' + x.sect) + '</span></small></button></th><td class="mncapcell">' + (x.cap ? capJo(x.cap).toFixed(1) + '조 원' : '—') + '</td><td class="mncoverage">' + '<strong>' + x.coverage + '</strong> / 24<small>개월 수집</small></td>' + months.map((p,i) => {
@@ -4127,6 +4178,12 @@ function renderMonthly() {
     }).join('') + '</tbody></table></div>';
   }
   host.innerHTML = html + '<div class="mnfoot">전년동월비 증감률 · 정수 반올림 · 수집된 시총·설정 환율 기준 · 기존점/전점 등 비교 기준은 기업명 아래 표시. 기업명이나 숫자를 누르면 상세 내용을 확인할 수 있습니다.</div>';
+  const board = host.querySelector('.mnboard:has(.mnmatrix)');
+  if (board) {
+    board.scrollLeft = mnCompareScroll ? mnCompareScroll.left : board.scrollWidth;
+    board.scrollTop = mnCompareScroll ? mnCompareScroll.top : 0;
+    board.addEventListener('scroll', () => { mnCompareScroll = {left:board.scrollLeft, top:board.scrollTop}; }, {passive:true});
+  }
 }
 
 function mnPctText(v) {
@@ -4909,6 +4966,8 @@ document.addEventListener('click', e => {
     document.querySelectorAll('[data-mnview]').forEach(b => b.setAttribute('aria-selected', String(b === viewButton)));
     renderMonthly(); return;
   }
+  const monthlySort = e.target.closest('#mnList [data-mnsort]');
+  if (monthlySort) { mnHeaderSort(monthlySort.dataset.mnsort); return; }
   const mrow = e.target.closest('#mnList [data-mcode]');
   if (mrow && !e.target.closest('.mpdf')) {
     openMonthly(mrow.dataset.mcode);
