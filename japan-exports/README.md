@@ -1,0 +1,28 @@
+# 일본 수출 트래커
+
+일본 재무성 e-Stat 공식 CSV 기반, 최근 60개월 기본. 계산에는 72개월 이상 사용.
+16개 투자 관련 품목의 월별 금액·YoY·수량·단가, 국가별 추이, 연도 비교, 즐겨찾기, CSV.
+
+## 실행
+Python 표준 라이브러리만 필요합니다.
+
+```
+python scripts/collect.py
+python -m unittest discover -s tests -v
+node --test tests/test_metrics.mjs
+python -m http.server 8765
+```
+
+## 데이터
+`data/exports.json.gz`은 대시보드 데이터, `data/year-YYYY.json.gz`은 연도별 집계와 원본 URL·SHA256,
+`data/status.json`은 마지막 수집 성공/실패입니다. 실패 시 기존 exports.json.gz를 보존합니다.
+국가별 합계와 별도 전국 자료를 정확히 대조합니다. 미래월 0을 발표값으로 쓰지 않습니다.
+각 품목의 HS 9자리 원자료를 지정 접두어로 합산합니다. 비공개 장별 합계는 개별 HS에 배분하지 않습니다.
+단위 혼합 시 수량·단가를 계산하지 않습니다. 단가는 품질/제품 믹스에 영향을 받으므로 가격지수로 해석하지 않습니다.
+
+## 배포
+기존 Earning-Samurai-Calendar 저장소의 `japan-exports/`에 독립 페이지로 배치합니다.
+루트 페이지는 수정하지 않습니다. `.github/workflows/japan-exports.yml`은 저장소 루트에서 실행하며
+매일 10:17 KST 공식 자료를 확인한 뒤 Pages 빌드를 요청합니다.
+신규/직전 연도 매일, 과거 연도는 월요일마다 재확인합니다.
+GitHub 예약 실행은 지연될 수 있으며 비활동 공개 저장소는 예약이 일시 중지될 수 있습니다.
