@@ -24,7 +24,8 @@
   },
   "7550": {
    "page": "https://www.zensho.co.jp/jp/ir/finance/monthly/",
-   "found": "2026-09-28"
+   "found": "2026-09-28",
+   "parse_miss": "2026-10-01T06:55:32+00:00"
   },
   "3382": {
    "page": "https://www.7andi.com/ir/financial/monthly_highlight.html",
@@ -75,7 +76,9 @@
    "found": "2026-09-28",
    "parse_miss": "2026-10-01T06:39:51+00:00"
   },
-  "2702": {},
+  "2702": {
+   "miss": "2026-10-01"
+  },
   "3092": {
    "miss": "2026-09-29"
   },
@@ -321,7 +324,9 @@
    "found": "2026-09-28",
    "parse_miss": "2026-10-01T06:39:51+00:00"
   },
-  "2736": {},
+  "2736": {
+   "miss": "2026-10-01"
+  },
   "2742": {
    "page": "https://www.halows.com/ir/finance_monthly/",
    "found": "2026-09-28",
@@ -348,7 +353,8 @@
   },
   "2778": {
    "page": "https://palemo.co.jp/news/finance",
-   "found": "2026-09-28"
+   "found": "2026-09-28",
+   "parse_miss": "2026-10-01T06:55:32+00:00"
   },
   "2782": {},
   "2789": {
@@ -375,7 +381,9 @@
    "found": "2026-09-28",
    "parse_miss": "2026-10-01T06:39:51+00:00"
   },
-  "2926": {},
+  "2926": {
+   "miss": "2026-10-01"
+  },
   "2991": {
    "miss": "2026-09-29"
   },
@@ -392,7 +400,8 @@
   },
   "3038": {
    "page": "https://www.kobebussan.co.jp/ir/monthly.php",
-   "found": "2026-09-28"
+   "found": "2026-09-28",
+   "parse_miss": "2026-10-01T06:55:32+00:00"
   },
   "3046": {},
   "3048": {
@@ -402,7 +411,9 @@
    "page": "https://ir.sanyodo.co.jp/ir/eigyou.html",
    "found": "2026-09-28"
   },
-  "3064": {},
+  "3064": {
+   "miss": "2026-10-01"
+  },
   "3068": {
    "page": "https://www.wdi.co.jp/ir/monthly.html",
    "found": "2026-09-28",
@@ -434,7 +445,11 @@
    "found": "2026-09-28",
    "parse_miss": "2026-10-01T06:39:51+00:00"
   },
-  "3088": {},
+  "3088": {
+   "page": "https://www.matsukiyococokara.com",
+   "found": "2026-10-01",
+   "parse_miss": "2026-10-01T06:55:32+00:00"
+  },
   "3135": {
    "miss": "2026-10-01"
   },
@@ -834,7 +849,8 @@
   },
   "3370": {
    "page": "https://www.fujitacorp.co.jp/main/info/%e2%98%85%e6%9c%88%e6%ac%a1%e5%a3%b2%e4%b8%8a%e9%80%9f%e5%a0%b1%e6%9b%b4%e6%96%b0%e3%81%84%e3%81%9f%e3%81%97%e3%81%be%e3%81%97%e3%81%9f-80/",
-   "found": "2026-09-29"
+   "found": "2026-09-29",
+   "parse_miss": "2026-10-01T06:55:32+00:00"
   },
   "7562": {
    "page": "https://www.anrakutei.co.jp/jigyo.html",
@@ -1078,6 +1094,65 @@
   },
   "2997": {
    "miss": "2026-10-01"
+  },
+  "7603": {
+   "page": "https://biz-mac-house.jp/",
+   "found": "2026-10-01",
+   "parse_miss": "2026-10-01T06:55:32+00:00"
+  },
+  "6548": {
+   "miss": "2026-10-01"
+  },
+  "7138": {
+   "miss": "2026-10-01"
+  },
+  "9399": {
+   "miss": "2026-10-01"
+  },
+  "6537": {
+   "miss": "2026-10-01"
+  },
+  "4679": {
+   "page": "https://www.taya.co.jp/ir/library/monthly.html",
+   "found": "2026-10-01",
+   "parse_miss": "2026-10-01T06:55:32+00:00"
+  },
+  "7601": {
+   "page": "https://www.poplar-cvs.co.jp",
+   "found": "2026-10-01"
+  },
+  "7615": {
+   "miss": "2026-10-01"
+  },
+  "7062": {
+   "miss": "2026-10-01"
+  },
+  "3910": {
+   "miss": "2026-10-01"
+  },
+  "7585": {
+   "page": "https://www.kannanmaru.co.jp",
+   "found": "2026-10-01",
+   "parse_miss": "2026-10-01T06:55:32+00:00"
+  },
+  "7865": {
+   "page": "https://www.people-kk.co.jp/investorrelations/monthly/",
+   "found": "2026-10-01",
+   "parse_miss": "2026-10-01T06:55:32+00:00"
+  },
+  "3174": {
+   "miss": "2026-10-01"
+  },
+  "3287": {
+   "miss": "2026-10-01"
+  },
+  "8975": {
+   "page": "https://www.ichigo-office.co.jp",
+   "found": "2026-10-01",
+   "parse_miss": "2026-10-01T06:55:32+00:00"
+  },
+  "8227": {
+   "miss": "2026-10-01"
   }
  },
  "codes": {
@@ -1106,20 +1181,20 @@
      "all": 107.1
     }
    },
-   "ts": "2026-09-29T00:25:52+00:00"
+   "ts": "2026-10-01T06:55:32+00:00"
   },
   "9983": {
    "name": "ファストリ",
    "page": "https://www.fastretailing.com/jp/ir/monthly/",
    "months": {},
-   "ts": "2026-09-29T00:25:52+00:00",
+   "ts": "2026-10-01T06:55:32+00:00",
    "updated": "2026-09-02",
-   "pdf_ts": "2026-09-28T05:04:54+00:00",
+   "pdf_ts": "2026-10-01T06:55:32+00:00",
    "pdf": {
     "2025-09": {
-     "doc": "https://www.fastretailing.com/jp/ir/monthly/pdf/MonthlySales_2026.pdf",
-     "yoy": 99.0,
-     "metric": "既存店売上高"
+     "doc": "https://www.fastretailing.com/jp/ir/monthly/pdf/comment2025_08.pdf",
+     "yoy": 124.7,
+     "metric": "월매출/영업수입 전년비"
     },
     "2025-10": {
      "doc": "https://www.fastretailing.com/jp/ir/monthly/pdf/MonthlySales_2026.pdf",
@@ -1182,34 +1257,34 @@
      "metric": "既存店売上高"
     },
     "2024-10": {
-     "doc": "https://www.fastretailing.com/jp/ir/monthly/pdf/MonthlySales_2025.pdf",
-     "yoy": 92.5,
-     "metric": "既存店売上高"
+     "doc": "https://www.fastretailing.com/jp/ir/monthly/pdf/comment2025_08.pdf",
+     "yoy": 94.1,
+     "metric": "월매출/영업수입 전년비"
     },
     "2024-11": {
-     "doc": "https://www.fastretailing.com/jp/ir/monthly/pdf/MonthlySales_2025.pdf",
-     "yoy": 112.2,
-     "metric": "既存店売上高"
+     "doc": "https://www.fastretailing.com/jp/ir/monthly/pdf/comment2025_08.pdf",
+     "yoy": 113.8,
+     "metric": "월매출/영업수입 전년비"
     },
     "2024-12": {
-     "doc": "https://www.fastretailing.com/jp/ir/monthly/pdf/MonthlySales_2025.pdf",
-     "yoy": 115.3,
-     "metric": "既存店売上高"
+     "doc": "https://www.fastretailing.com/jp/ir/monthly/pdf/comment2025_08.pdf",
+     "yoy": 116.7,
+     "metric": "월매출/영업수입 전년비"
     },
     "2025-01": {
-     "doc": "https://www.fastretailing.com/jp/ir/monthly/pdf/MonthlySales_2025.pdf",
-     "yoy": 108.6,
-     "metric": "既存店売上高"
+     "doc": "https://www.fastretailing.com/jp/ir/monthly/pdf/comment2025_08.pdf",
+     "yoy": 110.1,
+     "metric": "월매출/영업수입 전년비"
     },
     "2025-02": {
-     "doc": "https://www.fastretailing.com/jp/ir/monthly/pdf/MonthlySales_2025.pdf",
-     "yoy": 112.2,
-     "metric": "既存店売上高"
+     "doc": "https://www.fastretailing.com/jp/ir/monthly/pdf/comment2025_08.pdf",
+     "yoy": 114.6,
+     "metric": "월매출/영업수입 전년비"
     },
     "2025-03": {
-     "doc": "https://www.fastretailing.com/jp/ir/monthly/pdf/MonthlySales_2025.pdf",
-     "yoy": 111.5,
-     "metric": "既存店売上高"
+     "doc": "https://www.fastretailing.com/jp/ir/monthly/pdf/comment2025_08.pdf",
+     "yoy": 113.0,
+     "metric": "월매출/영업수입 전년비"
     },
     "2025-04": {
      "doc": "https://www.fastretailing.com/jp/ir/monthly/pdf/MonthlySales_2025.pdf",
@@ -1217,24 +1292,24 @@
      "metric": "既存店売上高"
     },
     "2025-05": {
-     "doc": "https://www.fastretailing.com/jp/ir/monthly/pdf/MonthlySales_2025.pdf",
-     "yoy": 113.1,
-     "metric": "既存店売上高"
+     "doc": "https://www.fastretailing.com/jp/ir/monthly/pdf/comment2025_08.pdf",
+     "yoy": 115.5,
+     "metric": "월매출/영업수입 전년비"
     },
     "2025-06": {
-     "doc": "https://www.fastretailing.com/jp/ir/monthly/pdf/MonthlySales_2025.pdf",
-     "yoy": 106.4,
-     "metric": "既存店売上高"
+     "doc": "https://www.fastretailing.com/jp/ir/monthly/pdf/comment2025_08.pdf",
+     "yoy": 108.9,
+     "metric": "월매출/영업수입 전년비"
     },
     "2025-07": {
-     "doc": "https://www.fastretailing.com/jp/ir/monthly/pdf/MonthlySales_2025.pdf",
-     "yoy": 102.4,
-     "metric": "既存店売上高"
+     "doc": "https://www.fastretailing.com/jp/ir/monthly/pdf/comment2025_08.pdf",
+     "yoy": 104.4,
+     "metric": "월매출/영업수입 전년비"
     },
     "2025-08": {
-     "doc": "https://www.fastretailing.com/jp/ir/monthly/pdf/MonthlySales_2025.pdf",
-     "yoy": 105.3,
-     "metric": "既存店売上高"
+     "doc": "https://www.fastretailing.com/jp/ir/monthly/pdf/comment2025_08.pdf",
+     "yoy": 107.2,
+     "metric": "월매출/영업수입 전년비"
     },
     "2023-09": {
      "doc": "https://www.fastretailing.com/jp/ir/monthly/pdf/MonthlySales_2024.pdf",
@@ -1355,6 +1430,606 @@
      "doc": "https://www.fastretailing.com/jp/ir/monthly/pdf/MonthlySales_2023.pdf",
      "yoy": 107.1,
      "metric": "既存店売上高"
+    },
+    "2021-09": {
+     "doc": "https://www.fastretailing.com/jp/ir/monthly/pdf/MonthlySales_2022.pdf",
+     "yoy": 80.9,
+     "metric": "既存店売上高"
+    },
+    "2021-10": {
+     "doc": "https://www.fastretailing.com/jp/ir/monthly/pdf/MonthlySales_2022.pdf",
+     "yoy": 95.2,
+     "metric": "既存店売上高"
+    },
+    "2021-11": {
+     "doc": "https://www.fastretailing.com/jp/ir/monthly/pdf/MonthlySales_2022.pdf",
+     "yoy": 95.4,
+     "metric": "既存店売上高"
+    },
+    "2021-12": {
+     "doc": "https://www.fastretailing.com/jp/ir/monthly/pdf/MonthlySales_2022.pdf",
+     "yoy": 88.9,
+     "metric": "既存店売上高"
+    },
+    "2022-01": {
+     "doc": "https://www.fastretailing.com/jp/ir/monthly/pdf/MonthlySales_2022.pdf",
+     "yoy": 92.9,
+     "metric": "既存店売上高"
+    },
+    "2022-02": {
+     "doc": "https://www.fastretailing.com/jp/ir/monthly/pdf/MonthlySales_2022.pdf",
+     "yoy": 86.0,
+     "metric": "既存店売上高"
+    },
+    "2022-03": {
+     "doc": "https://www.fastretailing.com/jp/ir/monthly/pdf/MonthlySales_2022.pdf",
+     "yoy": 89.3,
+     "metric": "既存店売上高"
+    },
+    "2022-04": {
+     "doc": "https://www.fastretailing.com/jp/ir/monthly/pdf/MonthlySales_2022.pdf",
+     "yoy": 115.8,
+     "metric": "既存店売上高"
+    },
+    "2022-05": {
+     "doc": "https://www.fastretailing.com/jp/ir/monthly/pdf/MonthlySales_2022.pdf",
+     "yoy": 117.5,
+     "metric": "既存店売上高"
+    },
+    "2022-06": {
+     "doc": "https://www.fastretailing.com/jp/ir/monthly/pdf/MonthlySales_2022.pdf",
+     "yoy": 89.8,
+     "metric": "既存店売上高"
+    },
+    "2022-07": {
+     "doc": "https://www.fastretailing.com/jp/ir/monthly/pdf/MonthlySales_2022.pdf",
+     "yoy": 106.4,
+     "metric": "既存店売上高"
+    },
+    "2022-08": {
+     "doc": "https://www.fastretailing.com/jp/ir/monthly/pdf/MonthlySales_2022.pdf",
+     "yoy": 114.9,
+     "metric": "既存店売上高"
+    },
+    "2020-09": {
+     "doc": "https://www.fastretailing.com/jp/ir/monthly/pdf/MonthlySales_2021.pdf",
+     "yoy": 110.0,
+     "metric": "既存店売上高"
+    },
+    "2020-10": {
+     "doc": "https://www.fastretailing.com/jp/ir/monthly/pdf/MonthlySales_2021.pdf",
+     "yoy": 116.2,
+     "metric": "既存店売上高"
+    },
+    "2020-11": {
+     "doc": "https://www.fastretailing.com/jp/ir/monthly/pdf/MonthlySales_2021.pdf",
+     "yoy": 100.5,
+     "metric": "既存店売上高"
+    },
+    "2020-12": {
+     "doc": "https://www.fastretailing.com/jp/ir/monthly/pdf/MonthlySales_2021.pdf",
+     "yoy": 106.2,
+     "metric": "既存店売上高"
+    },
+    "2021-01": {
+     "doc": "https://www.fastretailing.com/jp/ir/monthly/pdf/MonthlySales_2021.pdf",
+     "yoy": 102.0,
+     "metric": "既存店売上高"
+    },
+    "2021-02": {
+     "doc": "https://www.fastretailing.com/jp/ir/monthly/pdf/MonthlySales_2021.pdf",
+     "yoy": 100.4,
+     "metric": "既存店売上高"
+    },
+    "2021-03": {
+     "doc": "https://www.fastretailing.com/jp/ir/monthly/pdf/MonthlySales_2021.pdf",
+     "yoy": 140.2,
+     "metric": "既存店売上高"
+    },
+    "2021-04": {
+     "doc": "https://www.fastretailing.com/jp/ir/monthly/pdf/MonthlySales_2021.pdf",
+     "yoy": 184.5,
+     "metric": "既存店売上高"
+    },
+    "2021-05": {
+     "doc": "https://www.fastretailing.com/jp/ir/monthly/pdf/MonthlySales_2021.pdf",
+     "yoy": 99.4,
+     "metric": "既存店売上高"
+    },
+    "2021-06": {
+     "doc": "https://www.fastretailing.com/jp/ir/monthly/pdf/MonthlySales_2021.pdf",
+     "yoy": 80.8,
+     "metric": "既存店売上高"
+    },
+    "2021-07": {
+     "doc": "https://www.fastretailing.com/jp/ir/monthly/pdf/MonthlySales_2021.pdf",
+     "yoy": 100.1,
+     "metric": "既存店売上高"
+    },
+    "2021-08": {
+     "doc": "https://www.fastretailing.com/jp/ir/monthly/pdf/MonthlySales_2021.pdf",
+     "yoy": 61.1,
+     "metric": "既存店売上高"
+    },
+    "2019-09": {
+     "doc": "https://www.fastretailing.com/jp/ir/monthly/pdf/MonthlySales_2020.pdf",
+     "yoy": 95.8,
+     "metric": "既存店売上高"
+    },
+    "2019-10": {
+     "doc": "https://www.fastretailing.com/jp/ir/monthly/pdf/MonthlySales_2020.pdf",
+     "yoy": 98.1,
+     "metric": "既存店売上高"
+    },
+    "2019-11": {
+     "doc": "https://www.fastretailing.com/jp/ir/monthly/pdf/MonthlySales_2020.pdf",
+     "yoy": 94.5,
+     "metric": "既存店売上高"
+    },
+    "2019-12": {
+     "doc": "https://www.fastretailing.com/jp/ir/monthly/pdf/MonthlySales_2020.pdf",
+     "yoy": 94.7,
+     "metric": "既存店売上高"
+    },
+    "2020-01": {
+     "doc": "https://www.fastretailing.com/jp/ir/monthly/pdf/MonthlySales_2020.pdf",
+     "yoy": 92.1,
+     "metric": "既存店売上高"
+    },
+    "2020-02": {
+     "doc": "https://www.fastretailing.com/jp/ir/monthly/pdf/MonthlySales_2020.pdf",
+     "yoy": 100.8,
+     "metric": "既存店売上高"
+    },
+    "2020-03": {
+     "doc": "https://www.fastretailing.com/jp/ir/monthly/pdf/MonthlySales_2020.pdf",
+     "yoy": 72.2,
+     "metric": "既存店売上高"
+    },
+    "2020-04": {
+     "doc": "https://www.fastretailing.com/jp/ir/monthly/pdf/MonthlySales_2020.pdf",
+     "yoy": 43.5,
+     "metric": "既存店売上高"
+    },
+    "2020-05": {
+     "doc": "https://www.fastretailing.com/jp/ir/monthly/pdf/MonthlySales_2020.pdf",
+     "yoy": 81.9,
+     "metric": "既存店売上高"
+    },
+    "2020-06": {
+     "doc": "https://www.fastretailing.com/jp/ir/monthly/pdf/MonthlySales_2020.pdf",
+     "yoy": 126.2,
+     "metric": "既存店売上高"
+    },
+    "2020-07": {
+     "doc": "https://www.fastretailing.com/jp/ir/monthly/pdf/MonthlySales_2020.pdf",
+     "yoy": 104.4,
+     "metric": "既存店売上高"
+    },
+    "2020-08": {
+     "doc": "https://www.fastretailing.com/jp/ir/monthly/pdf/MonthlySales_2020.pdf",
+     "yoy": 129.8,
+     "metric": "既存店売上高"
+    },
+    "2018-09": {
+     "doc": "https://www.fastretailing.com/jp/ir/monthly/pdf/MonthlySales_2019.pdf",
+     "yoy": 106.0,
+     "metric": "既存店売上高"
+    },
+    "2018-10": {
+     "doc": "https://www.fastretailing.com/jp/ir/monthly/pdf/MonthlySales_2019.pdf",
+     "yoy": 90.0,
+     "metric": "既存店売上高"
+    },
+    "2018-11": {
+     "doc": "https://www.fastretailing.com/jp/ir/monthly/pdf/MonthlySales_2019.pdf",
+     "yoy": 95.7,
+     "metric": "既存店売上高"
+    },
+    "2018-12": {
+     "doc": "https://www.fastretailing.com/jp/ir/monthly/pdf/MonthlySales_2019.pdf",
+     "yoy": 105.2,
+     "metric": "既存店売上高"
+    },
+    "2019-01": {
+     "doc": "https://www.fastretailing.com/jp/ir/monthly/pdf/MonthlySales_2019.pdf",
+     "yoy": 99.0,
+     "metric": "既存店売上高"
+    },
+    "2019-02": {
+     "doc": "https://www.fastretailing.com/jp/ir/monthly/pdf/MonthlySales_2019.pdf",
+     "yoy": 103.0,
+     "metric": "既存店売上高"
+    },
+    "2019-03": {
+     "doc": "https://www.fastretailing.com/jp/ir/monthly/pdf/MonthlySales_2019.pdf",
+     "yoy": 104.5,
+     "metric": "既存店売上高"
+    },
+    "2019-04": {
+     "doc": "https://www.fastretailing.com/jp/ir/monthly/pdf/MonthlySales_2019.pdf",
+     "yoy": 98.3,
+     "metric": "既存店売上高"
+    },
+    "2019-05": {
+     "doc": "https://www.fastretailing.com/jp/ir/monthly/pdf/MonthlySales_2019.pdf",
+     "yoy": 98.2,
+     "metric": "既存店売上高"
+    },
+    "2019-06": {
+     "doc": "https://www.fastretailing.com/jp/ir/monthly/pdf/MonthlySales_2019.pdf",
+     "yoy": 127.3,
+     "metric": "既存店売上高"
+    },
+    "2019-07": {
+     "doc": "https://www.fastretailing.com/jp/ir/monthly/pdf/MonthlySales_2019.pdf",
+     "yoy": 90.0,
+     "metric": "既存店売上高"
+    },
+    "2019-08": {
+     "doc": "https://www.fastretailing.com/jp/ir/monthly/pdf/MonthlySales_2019.pdf",
+     "yoy": 109.9,
+     "metric": "既存店売上高"
+    },
+    "2017-09": {
+     "doc": "https://www.fastretailing.com/jp/ir/monthly/pdf/MonthlySales_2018.pdf",
+     "yoy": 106.3,
+     "metric": "既存店売上高"
+    },
+    "2017-10": {
+     "doc": "https://www.fastretailing.com/jp/ir/monthly/pdf/MonthlySales_2018.pdf",
+     "yoy": 108.9,
+     "metric": "既存店売上高"
+    },
+    "2017-11": {
+     "doc": "https://www.fastretailing.com/jp/ir/monthly/pdf/MonthlySales_2018.pdf",
+     "yoy": 108.9,
+     "metric": "既存店売上高"
+    },
+    "2017-12": {
+     "doc": "https://www.fastretailing.com/jp/ir/monthly/pdf/MonthlySales_2018.pdf",
+     "yoy": 118.1,
+     "metric": "既存店売上高"
+    },
+    "2018-01": {
+     "doc": "https://www.fastretailing.com/jp/ir/monthly/pdf/MonthlySales_2018.pdf",
+     "yoy": 97.6,
+     "metric": "既存店売上高"
+    },
+    "2018-02": {
+     "doc": "https://www.fastretailing.com/jp/ir/monthly/pdf/MonthlySales_2018.pdf",
+     "yoy": 105.1,
+     "metric": "既存店売上高"
+    },
+    "2018-03": {
+     "doc": "https://www.fastretailing.com/jp/ir/monthly/pdf/MonthlySales_2018.pdf",
+     "yoy": 113.0,
+     "metric": "既存店売上高"
+    },
+    "2018-04": {
+     "doc": "https://www.fastretailing.com/jp/ir/monthly/pdf/MonthlySales_2018.pdf",
+     "yoy": 110.0,
+     "metric": "既存店売上高"
+    },
+    "2018-05": {
+     "doc": "https://www.fastretailing.com/jp/ir/monthly/pdf/MonthlySales_2018.pdf",
+     "yoy": 97.3,
+     "metric": "既存店売上高"
+    },
+    "2018-06": {
+     "doc": "https://www.fastretailing.com/jp/ir/monthly/pdf/MonthlySales_2018.pdf",
+     "yoy": 96.0,
+     "metric": "既存店売上高"
+    },
+    "2018-07": {
+     "doc": "https://www.fastretailing.com/jp/ir/monthly/pdf/MonthlySales_2018.pdf",
+     "yoy": 99.7,
+     "metric": "既存店売上高"
+    },
+    "2018-08": {
+     "doc": "https://www.fastretailing.com/jp/ir/monthly/pdf/MonthlySales_2018.pdf",
+     "yoy": 108.8,
+     "metric": "既存店売上高"
+    },
+    "2016-09": {
+     "doc": "https://www.fastretailing.com/jp/ir/monthly/pdf/MonthlySales_2017.pdf",
+     "yoy": 96.6,
+     "metric": "売上高"
+    },
+    "2016-10": {
+     "doc": "https://www.fastretailing.com/jp/ir/monthly/pdf/MonthlySales_2017.pdf",
+     "yoy": 99.4,
+     "metric": "売上高"
+    },
+    "2016-11": {
+     "doc": "https://www.fastretailing.com/jp/ir/monthly/pdf/MonthlySales_2017.pdf",
+     "yoy": 107.3,
+     "metric": "売上高"
+    },
+    "2016-12": {
+     "doc": "https://www.fastretailing.com/jp/ir/monthly/pdf/MonthlySales_2017.pdf",
+     "yoy": 95.0,
+     "metric": "売上高"
+    },
+    "2017-01": {
+     "doc": "https://www.fastretailing.com/jp/ir/monthly/pdf/MonthlySales_2017.pdf",
+     "yoy": 97.5,
+     "metric": "売上高"
+    },
+    "2017-02": {
+     "doc": "https://www.fastretailing.com/jp/ir/monthly/pdf/MonthlySales_2017.pdf",
+     "yoy": 105.2,
+     "metric": "売上高"
+    },
+    "2017-03": {
+     "doc": "https://www.fastretailing.com/jp/ir/monthly/pdf/MonthlySales_2017.pdf",
+     "yoy": 98.9,
+     "metric": "売上高"
+    },
+    "2017-04": {
+     "doc": "https://www.fastretailing.com/jp/ir/monthly/pdf/MonthlySales_2017.pdf",
+     "yoy": 106.2,
+     "metric": "売上高"
+    },
+    "2017-05": {
+     "doc": "https://www.fastretailing.com/jp/ir/monthly/pdf/MonthlySales_2017.pdf",
+     "yoy": 102.4,
+     "metric": "売上高"
+    },
+    "2017-06": {
+     "doc": "https://www.fastretailing.com/jp/ir/monthly/pdf/MonthlySales_2017.pdf",
+     "yoy": 104.1,
+     "metric": "売上高"
+    },
+    "2017-07": {
+     "doc": "https://www.fastretailing.com/jp/ir/monthly/pdf/MonthlySales_2017.pdf",
+     "yoy": 103.7,
+     "metric": "売上高"
+    },
+    "2017-08": {
+     "doc": "https://www.fastretailing.com/jp/ir/monthly/pdf/MonthlySales_2017.pdf",
+     "yoy": 96.6,
+     "metric": "売上高"
+    },
+    "2015-09": {
+     "doc": "https://www.fastretailing.com/jp/ir/monthly/pdf/MonthlySales_2016.pdf",
+     "yoy": 102.6,
+     "metric": "売上高"
+    },
+    "2015-10": {
+     "doc": "https://www.fastretailing.com/jp/ir/monthly/pdf/MonthlySales_2016.pdf",
+     "yoy": 105.5,
+     "metric": "売上高"
+    },
+    "2015-11": {
+     "doc": "https://www.fastretailing.com/jp/ir/monthly/pdf/MonthlySales_2016.pdf",
+     "yoy": 91.1,
+     "metric": "売上高"
+    },
+    "2015-12": {
+     "doc": "https://www.fastretailing.com/jp/ir/monthly/pdf/MonthlySales_2016.pdf",
+     "yoy": 88.1,
+     "metric": "売上高"
+    },
+    "2016-01": {
+     "doc": "https://www.fastretailing.com/jp/ir/monthly/pdf/MonthlySales_2016.pdf",
+     "yoy": 114.6,
+     "metric": "売上高"
+    },
+    "2016-02": {
+     "doc": "https://www.fastretailing.com/jp/ir/monthly/pdf/MonthlySales_2016.pdf",
+     "yoy": 101.2,
+     "metric": "売上高"
+    },
+    "2016-03": {
+     "doc": "https://www.fastretailing.com/jp/ir/monthly/pdf/MonthlySales_2016.pdf",
+     "yoy": 99.7,
+     "metric": "売上高"
+    },
+    "2016-04": {
+     "doc": "https://www.fastretailing.com/jp/ir/monthly/pdf/MonthlySales_2016.pdf",
+     "yoy": 101.3,
+     "metric": "売上高"
+    },
+    "2016-05": {
+     "doc": "https://www.fastretailing.com/jp/ir/monthly/pdf/MonthlySales_2016.pdf",
+     "yoy": 105.9,
+     "metric": "売上高"
+    },
+    "2016-06": {
+     "doc": "https://www.fastretailing.com/jp/ir/monthly/pdf/MonthlySales_2016.pdf",
+     "yoy": 104.5,
+     "metric": "売上高"
+    },
+    "2016-07": {
+     "doc": "https://www.fastretailing.com/jp/ir/monthly/pdf/MonthlySales_2016.pdf",
+     "yoy": 118.1,
+     "metric": "売上高"
+    },
+    "2016-08": {
+     "doc": "https://www.fastretailing.com/jp/ir/monthly/pdf/MonthlySales_2016.pdf",
+     "yoy": 99.0,
+     "metric": "売上高"
+    },
+    "2014-09": {
+     "doc": "https://www.fastretailing.com/jp/ir/monthly/pdf/MonthlySales_2015.pdf",
+     "yoy": 119.7,
+     "metric": "売上高"
+    },
+    "2014-10": {
+     "doc": "https://www.fastretailing.com/jp/ir/monthly/pdf/MonthlySales_2015.pdf",
+     "yoy": 110.5,
+     "metric": "売上高"
+    },
+    "2014-11": {
+     "doc": "https://www.fastretailing.com/jp/ir/monthly/pdf/MonthlySales_2015.pdf",
+     "yoy": 101.9,
+     "metric": "売上高"
+    },
+    "2014-12": {
+     "doc": "https://www.fastretailing.com/jp/ir/monthly/pdf/MonthlySales_2015.pdf",
+     "yoy": 110.2,
+     "metric": "売上高"
+    },
+    "2015-01": {
+     "doc": "https://www.fastretailing.com/jp/ir/monthly/pdf/MonthlySales_2015.pdf",
+     "yoy": 108.9,
+     "metric": "売上高"
+    },
+    "2015-02": {
+     "doc": "https://www.fastretailing.com/jp/ir/monthly/pdf/MonthlySales_2015.pdf",
+     "yoy": 107.7,
+     "metric": "売上高"
+    },
+    "2015-03": {
+     "doc": "https://www.fastretailing.com/jp/ir/monthly/pdf/MonthlySales_2015.pdf",
+     "yoy": 97.0,
+     "metric": "売上高"
+    },
+    "2015-04": {
+     "doc": "https://www.fastretailing.com/jp/ir/monthly/pdf/MonthlySales_2015.pdf",
+     "yoy": 119.3,
+     "metric": "売上高"
+    },
+    "2015-05": {
+     "doc": "https://www.fastretailing.com/jp/ir/monthly/pdf/MonthlySales_2015.pdf",
+     "yoy": 112.3,
+     "metric": "売上高"
+    },
+    "2015-06": {
+     "doc": "https://www.fastretailing.com/jp/ir/monthly/pdf/MonthlySales_2015.pdf",
+     "yoy": 88.3,
+     "metric": "売上高"
+    },
+    "2015-07": {
+     "doc": "https://www.fastretailing.com/jp/ir/monthly/pdf/MonthlySales_2015.pdf",
+     "yoy": 98.5,
+     "metric": "売上高"
+    },
+    "2015-08": {
+     "doc": "https://www.fastretailing.com/jp/ir/monthly/pdf/MonthlySales_2015.pdf",
+     "yoy": 102.5,
+     "metric": "売上高"
+    },
+    "2013-09": {
+     "doc": "https://www.fastretailing.com/jp/ir/monthly/pdf/MonthlySales_2014.pdf",
+     "yoy": 104.4,
+     "metric": "売上高"
+    },
+    "2013-10": {
+     "doc": "https://www.fastretailing.com/jp/ir/monthly/pdf/MonthlySales_2014.pdf",
+     "yoy": 86.2,
+     "metric": "売上高"
+    },
+    "2013-11": {
+     "doc": "https://www.fastretailing.com/jp/ir/monthly/pdf/MonthlySales_2014.pdf",
+     "yoy": 107.7,
+     "metric": "売上高"
+    },
+    "2013-12": {
+     "doc": "https://www.fastretailing.com/jp/ir/monthly/pdf/MonthlySales_2014.pdf",
+     "yoy": 101.1,
+     "metric": "売上高"
+    },
+    "2014-01": {
+     "doc": "https://www.fastretailing.com/jp/ir/monthly/pdf/MonthlySales_2014.pdf",
+     "yoy": 115.0,
+     "metric": "売上高"
+    },
+    "2014-02": {
+     "doc": "https://www.fastretailing.com/jp/ir/monthly/pdf/MonthlySales_2014.pdf",
+     "yoy": 100.8,
+     "metric": "売上高"
+    },
+    "2014-03": {
+     "doc": "https://www.fastretailing.com/jp/ir/monthly/pdf/MonthlySales_2014.pdf",
+     "yoy": 100.6,
+     "metric": "売上高"
+    },
+    "2014-04": {
+     "doc": "https://www.fastretailing.com/jp/ir/monthly/pdf/MonthlySales_2014.pdf",
+     "yoy": 103.3,
+     "metric": "売上高"
+    },
+    "2014-05": {
+     "doc": "https://www.fastretailing.com/jp/ir/monthly/pdf/MonthlySales_2014.pdf",
+     "yoy": 104.1,
+     "metric": "売上高"
+    },
+    "2014-06": {
+     "doc": "https://www.fastretailing.com/jp/ir/monthly/pdf/MonthlySales_2014.pdf",
+     "yoy": 102.6,
+     "metric": "売上高"
+    },
+    "2014-07": {
+     "doc": "https://www.fastretailing.com/jp/ir/monthly/pdf/MonthlySales_2014.pdf",
+     "yoy": 95.2,
+     "metric": "売上高"
+    },
+    "2014-08": {
+     "doc": "https://www.fastretailing.com/jp/ir/monthly/pdf/MonthlySales_2014.pdf",
+     "yoy": 103.8,
+     "metric": "売上高"
+    },
+    "2012-09": {
+     "doc": "https://www.fastretailing.com/jp/ir/monthly/pdf/MonthlySales_2013.pdf",
+     "yoy": 97.6,
+     "metric": "売上高"
+    },
+    "2012-10": {
+     "doc": "https://www.fastretailing.com/jp/ir/monthly/pdf/MonthlySales_2013.pdf",
+     "yoy": 97.8,
+     "metric": "売上高"
+    },
+    "2012-11": {
+     "doc": "https://www.fastretailing.com/jp/ir/monthly/pdf/MonthlySales_2013.pdf",
+     "yoy": 113.7,
+     "metric": "売上高"
+    },
+    "2012-12": {
+     "doc": "https://www.fastretailing.com/jp/ir/monthly/pdf/MonthlySales_2013.pdf",
+     "yoy": 104.5,
+     "metric": "売上高"
+    },
+    "2013-01": {
+     "doc": "https://www.fastretailing.com/jp/ir/monthly/pdf/MonthlySales_2013.pdf",
+     "yoy": 94.5,
+     "metric": "売上高"
+    },
+    "2013-02": {
+     "doc": "https://www.fastretailing.com/jp/ir/monthly/pdf/MonthlySales_2013.pdf",
+     "yoy": 109.6,
+     "metric": "売上高"
+    },
+    "2013-03": {
+     "doc": "https://www.fastretailing.com/jp/ir/monthly/pdf/MonthlySales_2013.pdf",
+     "yoy": 123.1,
+     "metric": "売上高"
+    },
+    "2013-04": {
+     "doc": "https://www.fastretailing.com/jp/ir/monthly/pdf/MonthlySales_2013.pdf",
+     "yoy": 97.0,
+     "metric": "売上高"
+    },
+    "2013-05": {
+     "doc": "https://www.fastretailing.com/jp/ir/monthly/pdf/MonthlySales_2013.pdf",
+     "yoy": 110.9,
+     "metric": "売上高"
+    },
+    "2013-06": {
+     "doc": "https://www.fastretailing.com/jp/ir/monthly/pdf/MonthlySales_2013.pdf",
+     "yoy": 120.5,
+     "metric": "売上高"
+    },
+    "2013-07": {
+     "doc": "https://www.fastretailing.com/jp/ir/monthly/pdf/MonthlySales_2013.pdf",
+     "yoy": 105.5,
+     "metric": "売上高"
+    },
+    "2013-08": {
+     "doc": "https://www.fastretailing.com/jp/ir/monthly/pdf/MonthlySales_2013.pdf",
+     "yoy": 128.9,
+     "metric": "売上高"
     }
    }
   },
@@ -1387,7 +2062,7 @@
      "all": 100.7
     }
    },
-   "ts": "2026-09-29T00:25:52+00:00",
+   "ts": "2026-10-01T06:55:32+00:00",
    "updated": "2026-09-15"
   },
   "3563": {
@@ -1487,8 +2162,8 @@
      "same": 104.7
     }
    },
-   "ts": "2026-09-29T00:25:52+00:00",
-   "pdf_ts": "2026-09-28T05:04:54+00:00"
+   "ts": "2026-10-01T06:55:32+00:00",
+   "pdf_ts": "2026-10-01T06:55:32+00:00"
   },
   "7564": {
    "name": "ワークマン",
@@ -2042,7 +2717,775 @@
      "all": 100.3
     }
    },
-   "ts": "2026-09-29T00:25:52+00:00"
+   "ts": "2026-10-01T06:55:32+00:00",
+   "pdf_ts": "2026-10-01T06:55:32+00:00",
+   "pdf": {
+    "2018-01": {
+     "doc": "https://ppih.co.jp/ir/highlight/monthly/pdf/month_2018.pdf",
+     "yoy": 111.8,
+     "metric": "월매출/영업수입 전년비"
+    },
+    "2018-02": {
+     "doc": "https://ppih.co.jp/ir/highlight/monthly/pdf/month_2018.pdf",
+     "yoy": 111.8,
+     "metric": "월매출/영업수입 전년비"
+    },
+    "2018-03": {
+     "doc": "https://ppih.co.jp/ir/highlight/monthly/pdf/month_2018.pdf",
+     "yoy": 113.8,
+     "metric": "월매출/영업수입 전년비"
+    },
+    "2018-04": {
+     "doc": "https://ppih.co.jp/ir/highlight/monthly/pdf/month_2018.pdf",
+     "yoy": 110.3,
+     "metric": "월매출/영업수입 전년비"
+    },
+    "2018-05": {
+     "doc": "https://ppih.co.jp/ir/highlight/monthly/pdf/month_2018.pdf",
+     "yoy": 108.0,
+     "metric": "월매출/영업수입 전년비"
+    },
+    "2018-06": {
+     "doc": "https://ppih.co.jp/ir/highlight/monthly/pdf/month_2018.pdf",
+     "yoy": 110.5,
+     "metric": "월매출/영업수입 전년비"
+    },
+    "2018-07": {
+     "doc": "https://ppih.co.jp/ir/highlight/monthly/pdf/month_2018.pdf",
+     "yoy": 113.3,
+     "metric": "월매출/영업수입 전년비"
+    },
+    "2017-08": {
+     "doc": "https://ppih.co.jp/ir/highlight/monthly/pdf/month_2018.pdf",
+     "yoy": 111.8,
+     "metric": "월매출/영업수입 전년비"
+    },
+    "2017-09": {
+     "doc": "https://ppih.co.jp/ir/highlight/monthly/pdf/month_2018.pdf",
+     "yoy": 112.1,
+     "metric": "월매출/영업수입 전년비"
+    },
+    "2017-10": {
+     "doc": "https://ppih.co.jp/ir/highlight/monthly/pdf/month_2018.pdf",
+     "yoy": 108.4,
+     "metric": "월매출/영업수입 전년비"
+    },
+    "2017-11": {
+     "doc": "https://ppih.co.jp/ir/highlight/monthly/pdf/month_2018.pdf",
+     "yoy": 114.4,
+     "metric": "월매출/영업수입 전년비"
+    },
+    "2017-12": {
+     "doc": "https://ppih.co.jp/ir/highlight/monthly/pdf/month_2018.pdf",
+     "yoy": 112.1,
+     "metric": "월매출/영업수입 전년비"
+    },
+    "2017-01": {
+     "doc": "https://ppih.co.jp/ir/highlight/monthly/pdf/month_2017.pdf",
+     "yoy": 112.2,
+     "metric": "월매출/영업수입 전년비"
+    },
+    "2017-02": {
+     "doc": "https://ppih.co.jp/ir/highlight/monthly/pdf/month_2017.pdf",
+     "yoy": 110.7,
+     "metric": "월매출/영업수입 전년비"
+    },
+    "2017-03": {
+     "doc": "https://ppih.co.jp/ir/highlight/monthly/pdf/month_2017.pdf",
+     "yoy": 112.4,
+     "metric": "월매출/영업수입 전년비"
+    },
+    "2017-04": {
+     "doc": "https://ppih.co.jp/ir/highlight/monthly/pdf/month_2017.pdf",
+     "yoy": 109.5,
+     "metric": "월매출/영업수입 전년비"
+    },
+    "2017-05": {
+     "doc": "https://ppih.co.jp/ir/highlight/monthly/pdf/month_2017.pdf",
+     "yoy": 110.6,
+     "metric": "월매출/영업수입 전년비"
+    },
+    "2017-06": {
+     "doc": "https://ppih.co.jp/ir/highlight/monthly/pdf/month_2017.pdf",
+     "yoy": 113.3,
+     "metric": "월매출/영업수입 전년비"
+    },
+    "2017-07": {
+     "doc": "https://ppih.co.jp/ir/highlight/monthly/pdf/month_2017.pdf",
+     "yoy": 112.8,
+     "metric": "월매출/영업수입 전년비"
+    },
+    "2016-08": {
+     "doc": "https://ppih.co.jp/ir/highlight/monthly/pdf/month_2017.pdf",
+     "yoy": 108.2,
+     "metric": "월매출/영업수입 전년비"
+    },
+    "2016-09": {
+     "doc": "https://ppih.co.jp/ir/highlight/monthly/pdf/month_2017.pdf",
+     "yoy": 113.1,
+     "metric": "월매출/영업수입 전년비"
+    },
+    "2016-10": {
+     "doc": "https://ppih.co.jp/ir/highlight/monthly/pdf/month_2017.pdf",
+     "yoy": 111.6,
+     "metric": "월매출/영업수입 전년비"
+    },
+    "2016-11": {
+     "doc": "https://ppih.co.jp/ir/highlight/monthly/pdf/month_2017.pdf",
+     "yoy": 111.6,
+     "metric": "월매출/영업수입 전년비"
+    },
+    "2016-12": {
+     "doc": "https://ppih.co.jp/ir/highlight/monthly/pdf/month_2017.pdf",
+     "yoy": 112.1,
+     "metric": "월매출/영업수입 전년비"
+    },
+    "2016-01": {
+     "doc": "https://ppih.co.jp/ir/highlight/monthly/pdf/month_2016.pdf",
+     "yoy": 115.5,
+     "metric": "월매출/영업수입 전년비"
+    },
+    "2016-02": {
+     "doc": "https://ppih.co.jp/ir/highlight/monthly/pdf/month_2016.pdf",
+     "yoy": 115.7,
+     "metric": "월매출/영업수입 전년비"
+    },
+    "2016-03": {
+     "doc": "https://ppih.co.jp/ir/highlight/monthly/pdf/month_2016.pdf",
+     "yoy": 109.2,
+     "metric": "월매출/영업수입 전년비"
+    },
+    "2016-04": {
+     "doc": "https://ppih.co.jp/ir/highlight/monthly/pdf/month_2016.pdf",
+     "yoy": 114.8,
+     "metric": "월매출/영업수입 전년비"
+    },
+    "2016-05": {
+     "doc": "https://ppih.co.jp/ir/highlight/monthly/pdf/month_2016.pdf",
+     "yoy": 110.5,
+     "metric": "월매출/영업수입 전년비"
+    },
+    "2016-06": {
+     "doc": "https://ppih.co.jp/ir/highlight/monthly/pdf/month_2016.pdf",
+     "yoy": 110.6,
+     "metric": "월매출/영업수입 전년비"
+    },
+    "2016-07": {
+     "doc": "https://ppih.co.jp/ir/highlight/monthly/pdf/month_2016.pdf",
+     "yoy": 118.5,
+     "metric": "월매출/영업수입 전년비"
+    },
+    "2015-08": {
+     "doc": "https://ppih.co.jp/ir/highlight/monthly/pdf/month_2016.pdf",
+     "yoy": 117.3,
+     "metric": "월매출/영업수입 전년비"
+    },
+    "2015-09": {
+     "doc": "https://ppih.co.jp/ir/highlight/monthly/pdf/month_2016.pdf",
+     "yoy": 114.3,
+     "metric": "월매출/영업수입 전년비"
+    },
+    "2015-10": {
+     "doc": "https://ppih.co.jp/ir/highlight/monthly/pdf/month_2016.pdf",
+     "yoy": 117.8,
+     "metric": "월매출/영업수입 전년비"
+    },
+    "2015-11": {
+     "doc": "https://ppih.co.jp/ir/highlight/monthly/pdf/month_2016.pdf",
+     "yoy": 111.1,
+     "metric": "월매출/영업수입 전년비"
+    },
+    "2015-12": {
+     "doc": "https://ppih.co.jp/ir/highlight/monthly/pdf/month_2016.pdf",
+     "yoy": 110.8,
+     "metric": "월매출/영업수입 전년비"
+    },
+    "2015-01": {
+     "doc": "https://ppih.co.jp/ir/highlight/monthly/pdf/month_2015.pdf",
+     "yoy": 113.6,
+     "metric": "월매출/영업수입 전년비"
+    },
+    "2015-02": {
+     "doc": "https://ppih.co.jp/ir/highlight/monthly/pdf/month_2015.pdf",
+     "yoy": 116.6,
+     "metric": "월매출/영업수입 전년비"
+    },
+    "2015-03": {
+     "doc": "https://ppih.co.jp/ir/highlight/monthly/pdf/month_2015.pdf",
+     "yoy": 96.5,
+     "metric": "월매출/영업수입 전년비"
+    },
+    "2015-04": {
+     "doc": "https://ppih.co.jp/ir/highlight/monthly/pdf/month_2015.pdf",
+     "yoy": 123.0,
+     "metric": "월매출/영업수입 전년비"
+    },
+    "2015-05": {
+     "doc": "https://ppih.co.jp/ir/highlight/monthly/pdf/month_2015.pdf",
+     "yoy": 118.2,
+     "metric": "월매출/영업수입 전년비"
+    },
+    "2015-06": {
+     "doc": "https://ppih.co.jp/ir/highlight/monthly/pdf/month_2015.pdf",
+     "yoy": 114.1,
+     "metric": "월매출/영업수입 전년비"
+    },
+    "2015-07": {
+     "doc": "https://ppih.co.jp/ir/highlight/monthly/pdf/month_2015.pdf",
+     "yoy": 109.1,
+     "metric": "월매출/영업수입 전년비"
+    },
+    "2014-08": {
+     "doc": "https://ppih.co.jp/ir/highlight/monthly/pdf/month_2015.pdf",
+     "yoy": 111.2,
+     "metric": "월매출/영업수입 전년비"
+    },
+    "2014-09": {
+     "doc": "https://ppih.co.jp/ir/highlight/monthly/pdf/month_2015.pdf",
+     "yoy": 112.3,
+     "metric": "월매출/영업수입 전년비"
+    },
+    "2014-10": {
+     "doc": "https://ppih.co.jp/ir/highlight/monthly/pdf/month_2015.pdf",
+     "yoy": 116.2,
+     "metric": "월매출/영업수입 전년비"
+    },
+    "2014-11": {
+     "doc": "https://ppih.co.jp/ir/highlight/monthly/pdf/month_2015.pdf",
+     "yoy": 116.1,
+     "metric": "월매출/영업수입 전년비"
+    },
+    "2014-12": {
+     "doc": "https://ppih.co.jp/ir/highlight/monthly/pdf/month_2015.pdf",
+     "yoy": 110.9,
+     "metric": "월매출/영업수입 전년비"
+    },
+    "2014-01": {
+     "doc": "https://ppih.co.jp/ir/highlight/monthly/pdf/month_2014.pdf",
+     "yoy": 105.2,
+     "metric": "월매출/영업수입 전년비"
+    },
+    "2014-02": {
+     "doc": "https://ppih.co.jp/ir/highlight/monthly/pdf/month_2014.pdf",
+     "yoy": 103.5,
+     "metric": "월매출/영업수입 전년비"
+    },
+    "2014-03": {
+     "doc": "https://ppih.co.jp/ir/highlight/monthly/pdf/month_2014.pdf",
+     "yoy": 123.5,
+     "metric": "월매출/영업수입 전년비"
+    },
+    "2014-04": {
+     "doc": "https://ppih.co.jp/ir/highlight/monthly/pdf/month_2014.pdf",
+     "yoy": 101.8,
+     "metric": "월매출/영업수입 전년비"
+    },
+    "2014-05": {
+     "doc": "https://ppih.co.jp/ir/highlight/monthly/pdf/month_2014.pdf",
+     "yoy": 108.2,
+     "metric": "월매출/영업수입 전년비"
+    },
+    "2014-06": {
+     "doc": "https://ppih.co.jp/ir/highlight/monthly/pdf/month_2014.pdf",
+     "yoy": 106.2,
+     "metric": "월매출/영업수입 전년비"
+    },
+    "2014-07": {
+     "doc": "https://ppih.co.jp/ir/highlight/monthly/pdf/month_2014.pdf",
+     "yoy": 105.2,
+     "metric": "월매출/영업수입 전년비"
+    },
+    "2013-08": {
+     "doc": "https://ppih.co.jp/ir/highlight/monthly/pdf/month_2014.pdf",
+     "yoy": 108.2,
+     "metric": "월매출/영업수입 전년비"
+    },
+    "2013-09": {
+     "doc": "https://ppih.co.jp/ir/highlight/monthly/pdf/month_2014.pdf",
+     "yoy": 104.3,
+     "metric": "월매출/영업수입 전년비"
+    },
+    "2013-10": {
+     "doc": "https://ppih.co.jp/ir/highlight/monthly/pdf/month_2014.pdf",
+     "yoy": 105.1,
+     "metric": "월매출/영업수입 전년비"
+    },
+    "2013-11": {
+     "doc": "https://ppih.co.jp/ir/highlight/monthly/pdf/month_2014.pdf",
+     "yoy": 104.9,
+     "metric": "월매출/영업수입 전년비"
+    },
+    "2013-12": {
+     "doc": "https://ppih.co.jp/ir/highlight/monthly/pdf/month_2014.pdf",
+     "yoy": 105.4,
+     "metric": "월매출/영업수입 전년비"
+    },
+    "2013-01": {
+     "doc": "https://ppih.co.jp/ir/highlight/monthly/pdf/month_2013.pdf",
+     "yoy": 106.8,
+     "metric": "월매출/영업수입 전년비"
+    },
+    "2013-02": {
+     "doc": "https://ppih.co.jp/ir/highlight/monthly/pdf/month_2013.pdf",
+     "yoy": 108.3,
+     "metric": "월매출/영업수입 전년비"
+    },
+    "2013-03": {
+     "doc": "https://ppih.co.jp/ir/highlight/monthly/pdf/month_2013.pdf",
+     "yoy": 110.8,
+     "metric": "월매출/영업수입 전년비"
+    },
+    "2013-04": {
+     "doc": "https://ppih.co.jp/ir/highlight/monthly/pdf/month_2013.pdf",
+     "yoy": 107.4,
+     "metric": "월매출/영업수입 전년비"
+    },
+    "2013-05": {
+     "doc": "https://ppih.co.jp/ir/highlight/monthly/pdf/month_2013.pdf",
+     "yoy": 110.7,
+     "metric": "월매출/영업수입 전년비"
+    },
+    "2013-06": {
+     "doc": "https://ppih.co.jp/ir/highlight/monthly/pdf/month_2013.pdf",
+     "yoy": 110.9,
+     "metric": "월매출/영업수입 전년비"
+    },
+    "2013-07": {
+     "doc": "https://ppih.co.jp/ir/highlight/monthly/pdf/month_2013.pdf",
+     "yoy": 102.2,
+     "metric": "월매출/영업수입 전년비"
+    },
+    "2012-08": {
+     "doc": "https://ppih.co.jp/ir/highlight/monthly/pdf/month_2013.pdf",
+     "yoy": 108.4,
+     "metric": "월매출/영업수입 전년비"
+    },
+    "2012-09": {
+     "doc": "https://ppih.co.jp/ir/highlight/monthly/pdf/month_2013.pdf",
+     "yoy": 109.5,
+     "metric": "월매출/영업수입 전년비"
+    },
+    "2012-10": {
+     "doc": "https://ppih.co.jp/ir/highlight/monthly/pdf/month_2013.pdf",
+     "yoy": 107.0,
+     "metric": "월매출/영업수입 전년비"
+    },
+    "2012-11": {
+     "doc": "https://ppih.co.jp/ir/highlight/monthly/pdf/month_2013.pdf",
+     "yoy": 110.3,
+     "metric": "월매출/영업수입 전년비"
+    },
+    "2012-12": {
+     "doc": "https://ppih.co.jp/ir/highlight/monthly/pdf/month_2013.pdf",
+     "yoy": 107.3,
+     "metric": "월매출/영업수입 전년비"
+    },
+    "2012-01": {
+     "doc": "https://ppih.co.jp/ir/highlight/monthly/pdf/month_2012.pdf",
+     "yoy": 106.2,
+     "metric": "월매출/영업수입 전년비"
+    },
+    "2012-02": {
+     "doc": "https://ppih.co.jp/ir/highlight/monthly/pdf/month_2012.pdf",
+     "yoy": 109.9,
+     "metric": "월매출/영업수입 전년비"
+    },
+    "2012-03": {
+     "doc": "https://ppih.co.jp/ir/highlight/monthly/pdf/month_2012.pdf",
+     "yoy": 107.2,
+     "metric": "월매출/영업수입 전년비"
+    },
+    "2012-04": {
+     "doc": "https://ppih.co.jp/ir/highlight/monthly/pdf/month_2012.pdf",
+     "yoy": 107.6,
+     "metric": "월매출/영업수입 전년비"
+    },
+    "2012-05": {
+     "doc": "https://ppih.co.jp/ir/highlight/monthly/pdf/month_2012.pdf",
+     "yoy": 105.5,
+     "metric": "월매출/영업수입 전년비"
+    },
+    "2012-06": {
+     "doc": "https://ppih.co.jp/ir/highlight/monthly/pdf/month_2012.pdf",
+     "yoy": 104.5,
+     "metric": "월매출/영업수입 전년비"
+    },
+    "2012-07": {
+     "doc": "https://ppih.co.jp/ir/highlight/monthly/pdf/month_2012.pdf",
+     "yoy": 112.1,
+     "metric": "월매출/영업수입 전년비"
+    },
+    "2011-08": {
+     "doc": "https://ppih.co.jp/ir/highlight/monthly/pdf/month_2012.pdf",
+     "yoy": 103.3,
+     "metric": "월매출/영업수입 전년비"
+    },
+    "2011-09": {
+     "doc": "https://ppih.co.jp/ir/highlight/monthly/pdf/month_2012.pdf",
+     "yoy": 106.3,
+     "metric": "월매출/영업수입 전년비"
+    },
+    "2011-10": {
+     "doc": "https://ppih.co.jp/ir/highlight/monthly/pdf/month_2012.pdf",
+     "yoy": 104.7,
+     "metric": "월매출/영업수입 전년비"
+    },
+    "2011-11": {
+     "doc": "https://ppih.co.jp/ir/highlight/monthly/pdf/month_2012.pdf",
+     "yoy": 104.1,
+     "metric": "월매출/영업수입 전년비"
+    },
+    "2011-12": {
+     "doc": "https://ppih.co.jp/ir/highlight/monthly/pdf/month_2012.pdf",
+     "yoy": 109.6,
+     "metric": "월매출/영업수입 전년비"
+    },
+    "2011-01": {
+     "doc": "https://ppih.co.jp/ir/highlight/monthly/pdf/month_2011.pdf",
+     "yoy": 104.5,
+     "metric": "월매출/영업수입 전년비"
+    },
+    "2011-02": {
+     "doc": "https://ppih.co.jp/ir/highlight/monthly/pdf/month_2011.pdf",
+     "yoy": 103.3,
+     "metric": "월매출/영업수입 전년비"
+    },
+    "2011-06": {
+     "doc": "https://ppih.co.jp/ir/highlight/monthly/pdf/month_2011.pdf",
+     "yoy": 112.4,
+     "metric": "월매출/영업수입 전년비"
+    },
+    "2011-07": {
+     "doc": "https://ppih.co.jp/ir/highlight/monthly/pdf/month_2011.pdf",
+     "yoy": 104.1,
+     "metric": "월매출/영업수입 전년비"
+    },
+    "2010-08": {
+     "doc": "https://ppih.co.jp/ir/highlight/monthly/pdf/month_2011.pdf",
+     "yoy": 104.4,
+     "metric": "월매출/영업수입 전년비"
+    },
+    "2010-09": {
+     "doc": "https://ppih.co.jp/ir/highlight/monthly/pdf/month_2011.pdf",
+     "yoy": 103.0,
+     "metric": "월매출/영업수입 전년비"
+    },
+    "2010-10": {
+     "doc": "https://ppih.co.jp/ir/highlight/monthly/pdf/month_2011.pdf",
+     "yoy": 107.0,
+     "metric": "월매출/영업수입 전년비"
+    },
+    "2010-11": {
+     "doc": "https://ppih.co.jp/ir/highlight/monthly/pdf/month_2011.pdf",
+     "yoy": 104.3,
+     "metric": "월매출/영업수입 전년비"
+    },
+    "2010-12": {
+     "doc": "https://ppih.co.jp/ir/highlight/monthly/pdf/month_2011.pdf",
+     "yoy": 102.8,
+     "metric": "월매출/영업수입 전년비"
+    },
+    "2010-01": {
+     "doc": "https://ppih.co.jp/ir/highlight/monthly/pdf/month_2010.pdf",
+     "yoy": 109.6,
+     "metric": "월매출/영업수입 전년비"
+    },
+    "2010-02": {
+     "doc": "https://ppih.co.jp/ir/highlight/monthly/pdf/month_2010.pdf",
+     "yoy": 105.3,
+     "metric": "월매출/영업수입 전년비"
+    },
+    "2010-03": {
+     "doc": "https://ppih.co.jp/ir/highlight/monthly/pdf/month_2010.pdf",
+     "yoy": 105.2,
+     "metric": "월매출/영업수입 전년비"
+    },
+    "2010-04": {
+     "doc": "https://ppih.co.jp/ir/highlight/monthly/pdf/month_2010.pdf",
+     "yoy": 106.4,
+     "metric": "월매출/영업수입 전년비"
+    },
+    "2010-05": {
+     "doc": "https://ppih.co.jp/ir/highlight/monthly/pdf/month_2010.pdf",
+     "yoy": 102.1,
+     "metric": "월매출/영업수입 전년비"
+    },
+    "2010-06": {
+     "doc": "https://ppih.co.jp/ir/highlight/monthly/pdf/month_2010.pdf",
+     "yoy": 103.8,
+     "metric": "월매출/영업수입 전년비"
+    },
+    "2010-07": {
+     "doc": "https://ppih.co.jp/ir/highlight/monthly/pdf/month_2010.pdf",
+     "yoy": 102.3,
+     "metric": "월매출/영업수입 전년비"
+    },
+    "2009-08": {
+     "doc": "https://ppih.co.jp/ir/highlight/monthly/pdf/month_2010.pdf",
+     "yoy": 104.2,
+     "metric": "월매출/영업수입 전년비"
+    },
+    "2009-09": {
+     "doc": "https://ppih.co.jp/ir/highlight/monthly/pdf/month_2010.pdf",
+     "yoy": 106.2,
+     "metric": "월매출/영업수입 전년비"
+    },
+    "2009-10": {
+     "doc": "https://ppih.co.jp/ir/highlight/monthly/pdf/month_2010.pdf",
+     "yoy": 108.3,
+     "metric": "월매출/영업수입 전년비"
+    },
+    "2009-11": {
+     "doc": "https://ppih.co.jp/ir/highlight/monthly/pdf/month_2010.pdf",
+     "yoy": 103.7,
+     "metric": "월매출/영업수입 전년비"
+    },
+    "2009-12": {
+     "doc": "https://ppih.co.jp/ir/highlight/monthly/pdf/month_2010.pdf",
+     "yoy": 106.9,
+     "metric": "월매출/영업수입 전년비"
+    },
+    "2009-01": {
+     "doc": "https://ppih.co.jp/ir/highlight/monthly/pdf/month_2009.pdf",
+     "yoy": 102.1,
+     "metric": "월매출/영업수입 전년비"
+    },
+    "2009-02": {
+     "doc": "https://ppih.co.jp/ir/highlight/monthly/pdf/month_2009.pdf",
+     "yoy": 104.3,
+     "metric": "월매출/영업수입 전년비"
+    },
+    "2009-03": {
+     "doc": "https://ppih.co.jp/ir/highlight/monthly/pdf/month_2009.pdf",
+     "yoy": 102.6,
+     "metric": "월매출/영업수입 전년비"
+    },
+    "2009-04": {
+     "doc": "https://ppih.co.jp/ir/highlight/monthly/pdf/month_2009.pdf",
+     "yoy": 101.2,
+     "metric": "월매출/영업수입 전년비"
+    },
+    "2009-05": {
+     "doc": "https://ppih.co.jp/ir/highlight/monthly/pdf/month_2009.pdf",
+     "yoy": 103.9,
+     "metric": "월매출/영업수입 전년비"
+    },
+    "2009-06": {
+     "doc": "https://ppih.co.jp/ir/highlight/monthly/pdf/month_2009.pdf",
+     "yoy": 100.3,
+     "metric": "월매출/영업수입 전년비"
+    },
+    "2009-07": {
+     "doc": "https://ppih.co.jp/ir/highlight/monthly/pdf/month_2009.pdf",
+     "yoy": 112.6,
+     "metric": "월매출/영업수입 전년비"
+    },
+    "2008-08": {
+     "doc": "https://ppih.co.jp/ir/highlight/monthly/pdf/month_2009.pdf",
+     "yoy": 110.4,
+     "metric": "월매출/영업수입 전년비"
+    },
+    "2008-09": {
+     "doc": "https://ppih.co.jp/ir/highlight/monthly/pdf/month_2009.pdf",
+     "yoy": 106.3,
+     "metric": "월매출/영업수입 전년비"
+    },
+    "2008-10": {
+     "doc": "https://ppih.co.jp/ir/highlight/monthly/pdf/month_2009.pdf",
+     "yoy": 108.8,
+     "metric": "월매출/영업수입 전년비"
+    },
+    "2008-11": {
+     "doc": "https://ppih.co.jp/ir/highlight/monthly/pdf/month_2009.pdf",
+     "yoy": 109.9,
+     "metric": "월매출/영업수입 전년비"
+    },
+    "2008-12": {
+     "doc": "https://ppih.co.jp/ir/highlight/monthly/pdf/month_2009.pdf",
+     "yoy": 101.9,
+     "metric": "월매출/영업수입 전년비"
+    },
+    "2008-01": {
+     "doc": "https://ppih.co.jp/ir/highlight/monthly/pdf/month_2008.pdf",
+     "yoy": 104.9,
+     "metric": "월매출/영업수입 전년비"
+    },
+    "2008-02": {
+     "doc": "https://ppih.co.jp/ir/highlight/monthly/pdf/month_2008.pdf",
+     "yoy": 105.4,
+     "metric": "월매출/영업수입 전년비"
+    },
+    "2008-03": {
+     "doc": "https://ppih.co.jp/ir/highlight/monthly/pdf/month_2008.pdf",
+     "yoy": 106.5,
+     "metric": "월매출/영업수입 전년비"
+    },
+    "2008-04": {
+     "doc": "https://ppih.co.jp/ir/highlight/monthly/pdf/month_2008.pdf",
+     "yoy": 106.6,
+     "metric": "월매출/영업수입 전년비"
+    },
+    "2008-05": {
+     "doc": "https://ppih.co.jp/ir/highlight/monthly/pdf/month_2008.pdf",
+     "yoy": 111.5,
+     "metric": "월매출/영업수입 전년비"
+    },
+    "2008-06": {
+     "doc": "https://ppih.co.jp/ir/highlight/monthly/pdf/month_2008.pdf",
+     "yoy": 108.2,
+     "metric": "월매출/영업수입 전년비"
+    },
+    "2008-07": {
+     "doc": "https://ppih.co.jp/ir/highlight/monthly/pdf/month_2008.pdf",
+     "yoy": 102.8,
+     "metric": "월매출/영업수입 전년비"
+    },
+    "2007-08": {
+     "doc": "https://ppih.co.jp/ir/highlight/monthly/pdf/month_2008.pdf",
+     "yoy": 104.8,
+     "metric": "월매출/영업수입 전년비"
+    },
+    "2007-09": {
+     "doc": "https://ppih.co.jp/ir/highlight/monthly/pdf/month_2008.pdf",
+     "yoy": 105.2,
+     "metric": "월매출/영업수입 전년비"
+    },
+    "2007-10": {
+     "doc": "https://ppih.co.jp/ir/highlight/monthly/pdf/month_2008.pdf",
+     "yoy": 103.5,
+     "metric": "월매출/영업수입 전년비"
+    },
+    "2007-11": {
+     "doc": "https://ppih.co.jp/ir/highlight/monthly/pdf/month_2008.pdf",
+     "yoy": 104.4,
+     "metric": "월매출/영업수입 전년비"
+    },
+    "2007-12": {
+     "doc": "https://ppih.co.jp/ir/highlight/monthly/pdf/month_2008.pdf",
+     "yoy": 105.1,
+     "metric": "월매출/영업수입 전년비"
+    },
+    "2007-01": {
+     "doc": "https://ppih.co.jp/ir/highlight/monthly/pdf/month_2007.pdf",
+     "yoy": 107.0,
+     "metric": "월매출/영업수입 전년비"
+    },
+    "2007-02": {
+     "doc": "https://ppih.co.jp/ir/highlight/monthly/pdf/month_2007.pdf",
+     "yoy": 108.8,
+     "metric": "월매출/영업수입 전년비"
+    },
+    "2007-03": {
+     "doc": "https://ppih.co.jp/ir/highlight/monthly/pdf/month_2007.pdf",
+     "yoy": 109.0,
+     "metric": "월매출/영업수입 전년비"
+    },
+    "2007-04": {
+     "doc": "https://ppih.co.jp/ir/highlight/monthly/pdf/month_2007.pdf",
+     "yoy": 105.3,
+     "metric": "월매출/영업수입 전년비"
+    },
+    "2007-05": {
+     "doc": "https://ppih.co.jp/ir/highlight/monthly/pdf/month_2007.pdf",
+     "yoy": 103.9,
+     "metric": "월매출/영업수입 전년비"
+    },
+    "2007-06": {
+     "doc": "https://ppih.co.jp/ir/highlight/monthly/pdf/month_2007.pdf",
+     "yoy": 105.0,
+     "metric": "월매출/영업수입 전년비"
+    },
+    "2007-07": {
+     "doc": "https://ppih.co.jp/ir/highlight/monthly/pdf/month_2007.pdf",
+     "yoy": 109.1,
+     "metric": "월매출/영업수입 전년비"
+    },
+    "2006-08": {
+     "doc": "https://ppih.co.jp/ir/highlight/monthly/pdf/month_2007.pdf",
+     "yoy": 110.2,
+     "metric": "월매출/영업수입 전년비"
+    },
+    "2006-09": {
+     "doc": "https://ppih.co.jp/ir/highlight/monthly/pdf/month_2007.pdf",
+     "yoy": 107.5,
+     "metric": "월매출/영업수입 전년비"
+    },
+    "2006-10": {
+     "doc": "https://ppih.co.jp/ir/highlight/monthly/pdf/month_2007.pdf",
+     "yoy": 104.8,
+     "metric": "월매출/영업수입 전년비"
+    },
+    "2006-11": {
+     "doc": "https://ppih.co.jp/ir/highlight/monthly/pdf/month_2007.pdf",
+     "yoy": 107.9,
+     "metric": "월매출/영업수입 전년비"
+    },
+    "2006-12": {
+     "doc": "https://ppih.co.jp/ir/highlight/monthly/pdf/month_2007.pdf",
+     "yoy": 107.0,
+     "metric": "월매출/영업수입 전년비"
+    },
+    "2006-01": {
+     "doc": "https://ppih.co.jp/ir/highlight/monthly/pdf/month_2006.pdf",
+     "yoy": 110.6,
+     "metric": "월매출/영업수입 전년비"
+    },
+    "2006-02": {
+     "doc": "https://ppih.co.jp/ir/highlight/monthly/pdf/month_2006.pdf",
+     "yoy": 112.2,
+     "metric": "월매출/영업수입 전년비"
+    },
+    "2006-03": {
+     "doc": "https://ppih.co.jp/ir/highlight/monthly/pdf/month_2006.pdf",
+     "yoy": 114.2,
+     "metric": "월매출/영업수입 전년비"
+    },
+    "2006-04": {
+     "doc": "https://ppih.co.jp/ir/highlight/monthly/pdf/month_2006.pdf",
+     "yoy": 112.4,
+     "metric": "월매출/영업수입 전년비"
+    },
+    "2006-05": {
+     "doc": "https://ppih.co.jp/ir/highlight/monthly/pdf/month_2006.pdf",
+     "yoy": 109.5,
+     "metric": "월매출/영업수입 전년비"
+    },
+    "2006-06": {
+     "doc": "https://ppih.co.jp/ir/highlight/monthly/pdf/month_2006.pdf",
+     "yoy": 110.8,
+     "metric": "월매출/영업수입 전년비"
+    },
+    "2006-07": {
+     "doc": "https://ppih.co.jp/ir/highlight/monthly/pdf/month_2006.pdf",
+     "yoy": 112.2,
+     "metric": "월매출/영업수입 전년비"
+    },
+    "2005-08": {
+     "doc": "https://ppih.co.jp/ir/highlight/monthly/pdf/month_2006.pdf",
+     "yoy": 110.0,
+     "metric": "월매출/영업수입 전년비"
+    },
+    "2005-09": {
+     "doc": "https://ppih.co.jp/ir/highlight/monthly/pdf/month_2006.pdf",
+     "yoy": 112.4,
+     "metric": "월매출/영업수입 전년비"
+    },
+    "2005-10": {
+     "doc": "https://ppih.co.jp/ir/highlight/monthly/pdf/month_2006.pdf",
+     "yoy": 109.3,
+     "metric": "월매출/영업수입 전년비"
+    },
+    "2005-11": {
+     "doc": "https://ppih.co.jp/ir/highlight/monthly/pdf/month_2006.pdf",
+     "yoy": 108.7,
+     "metric": "월매출/영업수입 전년비"
+    },
+    "2005-12": {
+     "doc": "https://ppih.co.jp/ir/highlight/monthly/pdf/month_2006.pdf",
+     "yoy": 114.4,
+     "metric": "월매출/영업수입 전년비"
+    }
+   }
   },
   "2790": {
    "name": "ナフコ",
@@ -3037,7 +4480,7 @@
    "name": "ＪＲ西日本",
    "page": "https://www.westjr.co.jp/company/ir/finance/monthly/",
    "months": {},
-   "ts": "2026-09-29T07:20:25+00:00",
+   "ts": "2026-10-01T06:55:32+00:00",
    "pdf_ts": "2026-09-29T07:20:25+00:00",
    "pdf": {
     "2026-05": {
@@ -3444,7 +4887,7 @@
      "same": 104.6
     }
    },
-   "ts": "2026-09-29T07:20:25+00:00"
+   "ts": "2026-10-01T06:55:32+00:00"
   },
   "9142": {
    "name": "ＪＲ九州",
@@ -6662,8 +8105,8 @@
    "name": "高島屋",
    "page": "https://www.takashimaya.co.jp/corp/topics/",
    "months": {},
-   "ts": "2026-09-30T06:07:41+00:00",
-   "pdf_ts": "2026-09-30T06:07:41+00:00",
+   "ts": "2026-10-01T06:55:32+00:00",
+   "pdf_ts": "2026-10-01T06:55:32+00:00",
    "pdf": {
     "2026-07": {
      "doc": "https://www.takashimaya.co.jp/base/corp/topics/260803a.pdf",
@@ -6698,6 +8141,61 @@
     "2026-01": {
      "doc": "https://www.takashimaya.co.jp/base/corp/topics/260202a.pdf",
      "yoy": 106.7,
+     "metric": "월매출 전년비"
+    },
+    "2026-09": {
+     "doc": "https://www.takashimaya.co.jp/base/corp/topics/261001a.pdf",
+     "yoy": 102.4,
+     "metric": "월매출 전년비"
+    },
+    "2025-12": {
+     "doc": "https://www.takashimaya.co.jp/base/corp/topics/260105a.pdf",
+     "yoy": 104.1,
+     "metric": "월매출 전년비"
+    },
+    "2025-09": {
+     "doc": "https://www.takashimaya.co.jp/base/corp/topics/251001a.pdf",
+     "yoy": 104.4,
+     "metric": "월매출 전년비"
+    },
+    "2025-10": {
+     "doc": "https://www.takashimaya.co.jp/base/corp/topics/251104a.pdf",
+     "yoy": 108.3,
+     "metric": "월매출 전년비"
+    },
+    "2025-11": {
+     "doc": "https://www.takashimaya.co.jp/base/corp/topics/251201a.pdf",
+     "yoy": 103.5,
+     "metric": "월매출 전년비"
+    },
+    "2025-03": {
+     "doc": "https://www.takashimaya.co.jp/base/corp/topics/251014c.pdf",
+     "yoy": 101.0,
+     "metric": "総売上高△△△△"
+    },
+    "2025-04": {
+     "doc": "https://www.takashimaya.co.jp/base/corp/topics/251014c.pdf",
+     "yoy": 105.0,
+     "metric": "総売上高△△△△"
+    },
+    "2025-05": {
+     "doc": "https://www.takashimaya.co.jp/base/corp/topics/251014c.pdf",
+     "yoy": 106.0,
+     "metric": "総売上高△△△△"
+    },
+    "2025-06": {
+     "doc": "https://www.takashimaya.co.jp/base/corp/topics/251014c.pdf",
+     "yoy": 107.0,
+     "metric": "総売上高△△△△"
+    },
+    "2025-07": {
+     "doc": "https://www.takashimaya.co.jp/base/corp/topics/250815a.pdf",
+     "yoy": 106.7,
+     "metric": "월매출 전년비"
+    },
+    "2025-08": {
+     "doc": "https://www.takashimaya.co.jp/base/corp/topics/250901a.pdf",
+     "yoy": 106.6,
      "metric": "월매출 전년비"
     }
    }
@@ -8448,13 +9946,302 @@
      "metric": "売上高"
     }
    }
+  },
+  "7601": {
+   "name": "ポプラ",
+   "page": "https://www.poplar-cvs.co.jp",
+   "months": {},
+   "ts": "2026-10-01T06:55:32+00:00",
+   "pdf_ts": "2026-10-01T06:55:32+00:00",
+   "pdf": {
+    "2026-03": {
+     "doc": "https://www.poplar-cvs.co.jp/ir/pdf/index/2026/tsukiji260810.pdf",
+     "rev": 173000.0,
+     "yoy": 101.8,
+     "metric": "日商（千円）"
+    },
+    "2026-04": {
+     "doc": "https://www.poplar-cvs.co.jp/ir/pdf/index/2026/tsukiji260810.pdf",
+     "rev": 180000.0,
+     "yoy": 99.3,
+     "metric": "日商（千円）"
+    },
+    "2026-05": {
+     "doc": "https://www.poplar-cvs.co.jp/ir/pdf/index/2026/tsukiji260810.pdf",
+     "rev": 180000.0,
+     "yoy": 102.5,
+     "metric": "日商（千円）"
+    },
+    "2026-06": {
+     "doc": "https://www.poplar-cvs.co.jp/ir/pdf/index/2026/tsukiji260810.pdf",
+     "rev": 175000.0,
+     "yoy": 99.9,
+     "metric": "日商（千円）"
+    },
+    "2026-07": {
+     "doc": "https://www.poplar-cvs.co.jp/ir/pdf/index/2026/tsukiji260810.pdf",
+     "rev": 181000.0,
+     "yoy": 101.9,
+     "metric": "日商（千円）"
+    },
+    "2026-08": {
+     "doc": "https://www.poplar-cvs.co.jp/ir/pdf/index/2026/tsukiji260910.pdf",
+     "rev": 186000.0,
+     "yoy": 103.0,
+     "metric": "日商（千円）"
+    }
+   }
+  },
+  "3391": {
+   "name": "ツルハＨＤ",
+   "page": "https://www.tsuruha-hd.co.jp/ir/report/",
+   "months": {
+    "2026-03": {
+     "all": 103.9
+    },
+    "2026-04": {
+     "all": 105.4
+    },
+    "2026-05": {
+     "all": 104.8
+    },
+    "2026-06": {
+     "all": 99.2
+    },
+    "2026-07": {
+     "all": 102.0
+    },
+    "2026-08": {
+     "all": 101.7
+    }
+   },
+   "ts": "2026-10-01T06:55:32+00:00"
+  },
+  "2670": {
+   "name": "ＡＢＣマート",
+   "page": "https://www.abc-mart.co.jp/ir/getsujijoho.html",
+   "months": {},
+   "ts": "2026-10-01T06:55:32+00:00",
+   "pdf_ts": "2026-10-01T06:55:32+00:00",
+   "pdf": {
+    "2020-03": {
+     "doc": "https://www.abc-mart.co.jp/ir/pdf/2021/getsuji.pdf",
+     "yoy": 70.1,
+     "metric": "売上高Sales"
+    },
+    "2020-04": {
+     "doc": "https://www.abc-mart.co.jp/ir/pdf/2021/getsuji.pdf",
+     "yoy": 54.8,
+     "metric": "売上高Sales"
+    },
+    "2020-05": {
+     "doc": "https://www.abc-mart.co.jp/ir/pdf/2021/getsuji.pdf",
+     "yoy": 95.8,
+     "metric": "売上高Sales"
+    },
+    "2020-06": {
+     "doc": "https://www.abc-mart.co.jp/ir/pdf/2021/getsuji.pdf",
+     "yoy": 99.2,
+     "metric": "売上高Sales"
+    },
+    "2020-07": {
+     "doc": "https://www.abc-mart.co.jp/ir/pdf/2021/getsuji.pdf",
+     "yoy": 90.9,
+     "metric": "売上高Sales"
+    },
+    "2020-08": {
+     "doc": "https://www.abc-mart.co.jp/ir/pdf/2021/getsuji.pdf",
+     "yoy": 84.0,
+     "metric": "売上高Sales"
+    },
+    "2013-03": {
+     "doc": "https://www.abc-mart.co.jp/ir/pdf/2014/getsuji.pdf",
+     "yoy": 110.9,
+     "metric": "売上高Sales"
+    },
+    "2013-04": {
+     "doc": "https://www.abc-mart.co.jp/ir/pdf/2014/getsuji.pdf",
+     "yoy": 101.8,
+     "metric": "売上高Sales"
+    },
+    "2013-05": {
+     "doc": "https://www.abc-mart.co.jp/ir/pdf/2014/getsuji.pdf",
+     "yoy": 106.5,
+     "metric": "売上高Sales"
+    },
+    "2013-06": {
+     "doc": "https://www.abc-mart.co.jp/ir/pdf/2014/getsuji.pdf",
+     "yoy": 111.2,
+     "metric": "売上高Sales"
+    },
+    "2013-07": {
+     "doc": "https://www.abc-mart.co.jp/ir/pdf/2014/getsuji.pdf",
+     "yoy": 98.8,
+     "metric": "売上高Sales"
+    },
+    "2013-08": {
+     "doc": "https://www.abc-mart.co.jp/ir/pdf/2014/getsuji.pdf",
+     "yoy": 110.4,
+     "metric": "売上高Sales"
+    },
+    "2012-03": {
+     "doc": "https://www.abc-mart.co.jp/ir/pdf/2013/getsuji.pdf",
+     "yoy": 114.3,
+     "metric": "売上高Sales"
+    },
+    "2012-04": {
+     "doc": "https://www.abc-mart.co.jp/ir/pdf/2013/getsuji.pdf",
+     "yoy": 101.7,
+     "metric": "売上高Sales"
+    },
+    "2012-05": {
+     "doc": "https://www.abc-mart.co.jp/ir/pdf/2013/getsuji.pdf",
+     "yoy": 95.1,
+     "metric": "売上高Sales"
+    },
+    "2012-06": {
+     "doc": "https://www.abc-mart.co.jp/ir/pdf/2013/getsuji.pdf",
+     "yoy": 105.6,
+     "metric": "売上高Sales"
+    },
+    "2012-07": {
+     "doc": "https://www.abc-mart.co.jp/ir/pdf/2013/getsuji.pdf",
+     "yoy": 101.2,
+     "metric": "売上高Sales"
+    },
+    "2012-08": {
+     "doc": "https://www.abc-mart.co.jp/ir/pdf/2013/getsuji.pdf",
+     "yoy": 103.2,
+     "metric": "売上高Sales"
+    },
+    "2011-03": {
+     "doc": "https://www.abc-mart.co.jp/ir/pdf/2012/getsuji.pdf",
+     "yoy": 89.0,
+     "metric": "売上高Sales"
+    },
+    "2011-04": {
+     "doc": "https://www.abc-mart.co.jp/ir/pdf/2012/getsuji.pdf",
+     "yoy": 108.2,
+     "metric": "売上高Sales"
+    },
+    "2011-05": {
+     "doc": "https://www.abc-mart.co.jp/ir/pdf/2012/getsuji.pdf",
+     "yoy": 105.5,
+     "metric": "売上高Sales"
+    },
+    "2011-06": {
+     "doc": "https://www.abc-mart.co.jp/ir/pdf/2012/getsuji.pdf",
+     "yoy": 108.0,
+     "metric": "売上高Sales"
+    },
+    "2011-07": {
+     "doc": "https://www.abc-mart.co.jp/ir/pdf/2012/getsuji.pdf",
+     "yoy": 109.6,
+     "metric": "売上高Sales"
+    },
+    "2011-08": {
+     "doc": "https://www.abc-mart.co.jp/ir/pdf/2012/getsuji.pdf",
+     "yoy": 105.8,
+     "metric": "売上高Sales"
+    },
+    "2010-03": {
+     "doc": "https://www.abc-mart.co.jp/ir/pdf/2011/getsuji.pdf",
+     "yoy": 104.0,
+     "metric": "売上高Sales"
+    },
+    "2010-04": {
+     "doc": "https://www.abc-mart.co.jp/ir/pdf/2011/getsuji.pdf",
+     "yoy": 103.6,
+     "metric": "売上高Sales"
+    },
+    "2010-05": {
+     "doc": "https://www.abc-mart.co.jp/ir/pdf/2011/getsuji.pdf",
+     "yoy": 100.2,
+     "metric": "売上高Sales"
+    },
+    "2010-06": {
+     "doc": "https://www.abc-mart.co.jp/ir/pdf/2011/getsuji.pdf",
+     "yoy": 98.5,
+     "metric": "売上高Sales"
+    },
+    "2010-07": {
+     "doc": "https://www.abc-mart.co.jp/ir/pdf/2011/getsuji.pdf",
+     "yoy": 96.9,
+     "metric": "売上高Sales"
+    },
+    "2010-08": {
+     "doc": "https://www.abc-mart.co.jp/ir/pdf/2011/getsuji.pdf",
+     "yoy": 91.0,
+     "metric": "売上高Sales"
+    },
+    "2009-03": {
+     "doc": "https://www.abc-mart.co.jp/ir/pdf/2010/getsuji.pdf",
+     "yoy": 92.6,
+     "metric": "売上高Sales"
+    },
+    "2009-04": {
+     "doc": "https://www.abc-mart.co.jp/ir/pdf/2010/getsuji.pdf",
+     "yoy": 97.0,
+     "metric": "売上高Sales"
+    },
+    "2009-05": {
+     "doc": "https://www.abc-mart.co.jp/ir/pdf/2010/getsuji.pdf",
+     "yoy": 103.0,
+     "metric": "売上高Sales"
+    },
+    "2009-06": {
+     "doc": "https://www.abc-mart.co.jp/ir/pdf/2010/getsuji.pdf",
+     "yoy": 95.8,
+     "metric": "売上高Sales"
+    },
+    "2009-07": {
+     "doc": "https://www.abc-mart.co.jp/ir/pdf/2010/getsuji.pdf",
+     "yoy": 102.6,
+     "metric": "売上高Sales"
+    },
+    "2009-08": {
+     "doc": "https://www.abc-mart.co.jp/ir/pdf/2010/getsuji.pdf",
+     "yoy": 97.4,
+     "metric": "売上高Sales"
+    },
+    "2008-03": {
+     "doc": "https://www.abc-mart.co.jp/ir/pdf/2009/getsuji.pdf",
+     "yoy": 113.9,
+     "metric": "売上高Sales"
+    },
+    "2008-04": {
+     "doc": "https://www.abc-mart.co.jp/ir/pdf/2009/getsuji.pdf",
+     "yoy": 93.7,
+     "metric": "売上高Sales"
+    },
+    "2008-05": {
+     "doc": "https://www.abc-mart.co.jp/ir/pdf/2009/getsuji.pdf",
+     "yoy": 102.1,
+     "metric": "売上高Sales"
+    },
+    "2008-06": {
+     "doc": "https://www.abc-mart.co.jp/ir/pdf/2009/getsuji.pdf",
+     "yoy": 100.9,
+     "metric": "売上高Sales"
+    },
+    "2008-07": {
+     "doc": "https://www.abc-mart.co.jp/ir/pdf/2009/getsuji.pdf",
+     "yoy": 99.2,
+     "metric": "売上高Sales"
+    },
+    "2008-08": {
+     "doc": "https://www.abc-mart.co.jp/ir/pdf/2009/getsuji.pdf",
+     "yoy": 115.7,
+     "metric": "売上高Sales"
+    }
+   }
   }
  },
  "source": "회사 IR 페이지 (月次 표)",
  "note": "회사가 제 사이트에 올린 월차 표에서 읽는다. 값은 전년동월비(%)뿐이고 금액은 없다. 회계연도가 적힌 표는 그 해로 읽으므로 옛 회계연도 표를 함께 싣는 회사는 이력이 길다.",
- "companies": 47,
- "months": 959,
- "ts": "2026-10-01T06:48:52+00:00",
+ "companies": 50,
+ "months": 965,
+ "ts": "2026-10-01T07:05:25+00:00",
  "done": [
   "https://corp.artnature.co.jp/ja/ir/finance/monthly_info/main/0/teaserItems1/00/linkList/0/link/20240415getsuji.pdf",
   "https://corp.artnature.co.jp/ja/ir/finance/monthly_info/main/00/teaserItems1/00/linkList/0/link/00.pdf",
@@ -8485,6 +10272,19 @@
   "https://kozohd.co.jp/wp-content/uploads/2021/09/7bed0e891a14c911f5e787ac4f15b238.pdf",
   "https://kozohd.co.jp/wp-content/uploads/2021/10/74351da355f25b2488e2dd6ed1475f7c.pdf",
   "https://kozohd.co.jp/wp-content/uploads/2021/12/a50c7e3339c59dc78e520fb7cbfbcec9.pdf",
+  "https://ppih.co.jp/ir/highlight/monthly/pdf/month_2006.pdf",
+  "https://ppih.co.jp/ir/highlight/monthly/pdf/month_2007.pdf",
+  "https://ppih.co.jp/ir/highlight/monthly/pdf/month_2008.pdf",
+  "https://ppih.co.jp/ir/highlight/monthly/pdf/month_2009.pdf",
+  "https://ppih.co.jp/ir/highlight/monthly/pdf/month_2010.pdf",
+  "https://ppih.co.jp/ir/highlight/monthly/pdf/month_2011.pdf",
+  "https://ppih.co.jp/ir/highlight/monthly/pdf/month_2012.pdf",
+  "https://ppih.co.jp/ir/highlight/monthly/pdf/month_2013.pdf",
+  "https://ppih.co.jp/ir/highlight/monthly/pdf/month_2014.pdf",
+  "https://ppih.co.jp/ir/highlight/monthly/pdf/month_2015.pdf",
+  "https://ppih.co.jp/ir/highlight/monthly/pdf/month_2016.pdf",
+  "https://ppih.co.jp/ir/highlight/monthly/pdf/month_2017.pdf",
+  "https://ppih.co.jp/ir/highlight/monthly/pdf/month_2018.pdf",
   "https://ssl4.eir-parts.net/doc/9278/tdnet/2537288/00.pdf",
   "https://ssl4.eir-parts.net/doc/9278/tdnet/2545616/00.pdf",
   "https://ssl4.eir-parts.net/doc/9278/tdnet/2556563/00.pdf",
@@ -8507,6 +10307,13 @@
   "https://ssl4.eir-parts.net/doc/9278/tdnet/2848213/00.pdf",
   "https://ssl4.eir-parts.net/doc/9278/tdnet/2865156/00.pdf",
   "https://ssl4.eir-parts.net/doc/9278/tdnet/2881878/00.pdf",
+  "https://www.abc-mart.co.jp/ir/pdf/2009/getsuji.pdf",
+  "https://www.abc-mart.co.jp/ir/pdf/2010/getsuji.pdf",
+  "https://www.abc-mart.co.jp/ir/pdf/2011/getsuji.pdf",
+  "https://www.abc-mart.co.jp/ir/pdf/2012/getsuji.pdf",
+  "https://www.abc-mart.co.jp/ir/pdf/2013/getsuji.pdf",
+  "https://www.abc-mart.co.jp/ir/pdf/2014/getsuji.pdf",
+  "https://www.abc-mart.co.jp/ir/pdf/2021/getsuji.pdf",
   "https://www.chimney.co.jp/pdf/ir/sales/tenpo/month_201412.pdf",
   "https://www.chimney.co.jp/pdf/ir/sales/tenpo/month_201512.pdf",
   "https://www.chimney.co.jp/pdf/ir/sales/tenpo/month_201703.pdf",
@@ -8529,10 +10336,21 @@
   "https://www.chiyodagrp.co.jp/ir/data/2026_3Q_kaku.pdf",
   "https://www.chiyodagrp.co.jp/ir/data/2026_kaku.pdf",
   "https://www.chiyodagrp.co.jp/ir/data/2027_1Q_kaku.pdf",
+  "https://www.fastretailing.com/jp/ir/monthly/pdf/MonthlySales_2013.pdf",
+  "https://www.fastretailing.com/jp/ir/monthly/pdf/MonthlySales_2014.pdf",
+  "https://www.fastretailing.com/jp/ir/monthly/pdf/MonthlySales_2015.pdf",
+  "https://www.fastretailing.com/jp/ir/monthly/pdf/MonthlySales_2016.pdf",
+  "https://www.fastretailing.com/jp/ir/monthly/pdf/MonthlySales_2017.pdf",
+  "https://www.fastretailing.com/jp/ir/monthly/pdf/MonthlySales_2018.pdf",
+  "https://www.fastretailing.com/jp/ir/monthly/pdf/MonthlySales_2019.pdf",
+  "https://www.fastretailing.com/jp/ir/monthly/pdf/MonthlySales_2020.pdf",
+  "https://www.fastretailing.com/jp/ir/monthly/pdf/MonthlySales_2021.pdf",
+  "https://www.fastretailing.com/jp/ir/monthly/pdf/MonthlySales_2022.pdf",
   "https://www.fastretailing.com/jp/ir/monthly/pdf/MonthlySales_2023.pdf",
   "https://www.fastretailing.com/jp/ir/monthly/pdf/MonthlySales_2024.pdf",
   "https://www.fastretailing.com/jp/ir/monthly/pdf/MonthlySales_2025.pdf",
   "https://www.fastretailing.com/jp/ir/monthly/pdf/MonthlySales_2026.pdf",
+  "https://www.fastretailing.com/jp/ir/monthly/pdf/comment2025_08.pdf",
   "https://www.h2o-retailing.co.jp/ja/ir/library/monthly/main/010/teaserItems2/0/linkList/01/link/202103_suii_jp.pdf",
   "https://www.handsman.co.jp/wp-content/uploads/ir/i_sales_report/uriage-201606.pdf",
   "https://www.handsman.co.jp/wp-content/uploads/ir/i_sales_report/uriage-201706.pdf",
@@ -8556,8 +10374,23 @@
   "https://www.pepper-fs.co.jp/_img/ir/monthly_report/2026/PFS20260817.pdf",
   "https://www.pepper-fs.co.jp/_img/ir/monthly_report/2026/PFS20260914.pdf",
   "https://www.pietro.co.jp/assets/upload/news/getsuji_202609.pdf",
+  "https://www.poplar-cvs.co.jp/ir/pdf/index/2026/tsukiji260810.pdf",
+  "https://www.poplar-cvs.co.jp/ir/pdf/index/2026/tsukiji260910.pdf",
   "https://www.sacs-bar.co.jp/pdf/20251126.pdf",
   "https://www.sessapartners.co.jp/_files/ugd/796b06_c90720f8323e4d1ea3828db70f4adb18.pdf",
+  "https://www.takashimaya.co.jp/base/corp/topics/250815a.pdf",
+  "https://www.takashimaya.co.jp/base/corp/topics/250901a.pdf",
+  "https://www.takashimaya.co.jp/base/corp/topics/250916a.pdf",
+  "https://www.takashimaya.co.jp/base/corp/topics/251001a.pdf",
+  "https://www.takashimaya.co.jp/base/corp/topics/251014c.pdf",
+  "https://www.takashimaya.co.jp/base/corp/topics/251015a.pdf",
+  "https://www.takashimaya.co.jp/base/corp/topics/251104a.pdf",
+  "https://www.takashimaya.co.jp/base/corp/topics/251114a.pdf",
+  "https://www.takashimaya.co.jp/base/corp/topics/251201a.pdf",
+  "https://www.takashimaya.co.jp/base/corp/topics/251215a.pdf",
+  "https://www.takashimaya.co.jp/base/corp/topics/260105a.pdf",
+  "https://www.takashimaya.co.jp/base/corp/topics/260106b.pdf",
+  "https://www.takashimaya.co.jp/base/corp/topics/260115b.pdf",
   "https://www.takashimaya.co.jp/base/corp/topics/260202a.pdf",
   "https://www.takashimaya.co.jp/base/corp/topics/260216a.pdf",
   "https://www.takashimaya.co.jp/base/corp/topics/260302c.pdf",
@@ -8571,6 +10404,7 @@
   "https://www.takashimaya.co.jp/base/corp/topics/260701a.pdf",
   "https://www.takashimaya.co.jp/base/corp/topics/260715a.pdf",
   "https://www.takashimaya.co.jp/base/corp/topics/260803a.pdf",
+  "https://www.takashimaya.co.jp/base/corp/topics/261001a.pdf",
   "https://www.westjr.co.jp/company/ir/finance/monthly/pdf/21.pdf",
   "https://www.westjr.co.jp/company/ir/finance/monthly/pdf/22.pdf",
   "https://www.westjr.co.jp/company/ir/finance/monthly/pdf/23.pdf",
@@ -9653,9 +11487,206 @@
   "https://www.ichigo-green.co.jp/ir/news/p_news_file/file/IchigoGreen_20260903_Production_Data_JPN.pdf": "표없음",
   "https://www.ai-kei.co.jp/files/c7bc1b5762fe92501ebb61cc28cb15e2.pdf": "표없음",
   "https://contents.xj-storage.jp/xcontents/AS04741/d7d2f87f/e862/4666/960c/c4f1f801e133/140120260825525882.pdf": "표없음",
-  "https://contents.xj-storage.jp/xcontents/AS04741/c99e5be2/c177/4e33/8ed7/0010b31613d3/140120260807514790.pdf": "표없음"
+  "https://contents.xj-storage.jp/xcontents/AS04741/c99e5be2/c177/4e33/8ed7/0010b31613d3/140120260807514790.pdf": "표없음",
+  "https://www.poplar-cvs.co.jp/ir/pdf/index/2026/news_260930.pdf": "표없음",
+  "https://kannanmaru.co.jp/wp-content/uploads/2026/09/202608MonthlyFlashReport.pdf": "표없음",
+  "https://www.people-kk.co.jp/global-image/units/upfiles/205321-1-20260917172552_b6aaba410e6540.pdf": "표없음",
+  "https://www.people-kk.co.jp/global-image/units/upfiles/205321-1-20260901120726_b6a96416e0a495.pdf": "표없음",
+  "https://www.people-kk.co.jp/global-image/units/upfiles/205321-1-20260716093945_b6a5828516713b.pdf": "표없음",
+  "https://www.people-kk.co.jp/global-image/units/upfiles/205321-1-20260610165825_b6a29192134143.pdf": "표없음",
+  "https://www.people-kk.co.jp/global-image/units/upfiles/205321-1-20260529130640_b6a1910d05fa7d.pdf": "표없음",
+  "https://www.people-kk.co.jp/global-image/units/upfiles/205321-1-20260410093051_b69d844bbdde3e.pdf": "표없음",
+  "https://www.people-kk.co.jp/global-image/units/upfiles/205321-1-20260316163853_b69b7b38d1df27.pdf": "표없음",
+  "https://www.people-kk.co.jp/global-image/units/upfiles/205321-1-20260302121056_b69a4ffc0356a8.pdf": "표없음",
+  "https://www.people-kk.co.jp/global-image/units/upfiles/201256-1-20260113151449_b6965e2d986868.pdf": "표없음",
+  "https://www.people-kk.co.jp/global-image/units/upfiles/200973-1-20251212112254_b693b7c7ecf0ae.pdf": "표없음",
+  "https://www.people-kk.co.jp/global-image/units/upfiles/200272-1-20251128165654_b692955c684a2f.pdf": "표없음",
+  "https://www.people-kk.co.jp/global-image/units/upfiles/194989-1-20251014134516_b68edd55c8c3a3.pdf": "표없음",
+  "https://www.people-kk.co.jp/global-image/units/upfiles/191277-1-20250912141711_b68c3acd787f80.pdf": "표없음",
+  "https://www.people-kk.co.jp/global-image/units/upfiles/189134-1-20250829141312_b68b136e832523.pdf": "표없음",
+  "https://www.people-kk.co.jp/global-image/units/upfiles/185312-1-20250710172315_b686f7873237d9.pdf": "표없음",
+  "https://www.people-kk.co.jp/global-image/units/upfiles/181898-1-20250613140935_b684bb28f10a33.pdf": "표없음",
+  "https://www.people-kk.co.jp/global-image/units/upfiles/179417-1-20250602143712_b683d388818cbc.pdf": "표없음",
+  "https://www.people-kk.co.jp/global-image/units/upfiles/175591-1-20250411142220_b67f8a70c2c40d.pdf": "표없음",
+  "https://www.people-kk.co.jp/global-image/units/upfiles/171400-1-20250314142221_b67d3bd0d42330.pdf": "표없음",
+  "https://www.people-kk.co.jp/global-image/units/upfiles/168206-1-20250303144813_b67c5429d7c5e6.pdf": "표없음",
+  "https://www.people-kk.co.jp/global-image/units/upfiles/162639-1-20250114181217_b67862a71c982e.pdf": "표없음",
+  "https://www.people-kk.co.jp/global-image/units/upfiles/162353-1-20241213134850_b675bbcb2e60fd.pdf": "표없음",
+  "https://www.people-kk.co.jp/global-image/units/upfiles/161546-1-20241202132552_b674d36d050de8.pdf": "표없음",
+  "https://www.people-kk.co.jp/global-image/units/upfiles/157078-1-20241018124213_b6711d91517e61.pdf": "표없음",
+  "https://www.people-kk.co.jp/global-image/units/upfiles/156935-1-20240913152912_b66e3dbb8eede4.pdf": "표없음",
+  "https://www.people-kk.co.jp/global-image/units/upfiles/154963-1-20240830125125_b66d141bdabed4.pdf": "표없음",
+  "https://www.people-kk.co.jp/global-image/units/upfiles/150494-1-20240712132339_b6690afcbada9a.pdf": "표없음",
+  "https://www.people-kk.co.jp/global-image/units/upfiles/146832-1-20240614164523_b666bf513dce06.pdf": "표없음",
+  "https://www.people-kk.co.jp/global-image/units/upfiles/146400-1-20240603101838_b665d19eeaba36.pdf": "표없음",
+  "https://www.people-kk.co.jp/global-image/units/upfiles/145505-1-20240415171952_b661ce328b162a.pdf": "표없음",
+  "https://www.people-kk.co.jp/global-image/units/upfiles/140576-1-20240314141248_b65f2875014f60.pdf": "표없음",
+  "https://www.people-kk.co.jp/global-image/units/upfiles/134962-1-20240301140332_b65e161a44a373.pdf": "표없음",
+  "https://www.people-kk.co.jp/global-image/units/upfiles/130843-1-20240118113440_b65a88e4043aa3.pdf": "표없음",
+  "https://www.people-kk.co.jp/global-image/units/upfiles/127187-1-20231215124614_b657bcc06c44ec.pdf": "표없음",
+  "https://www.people-kk.co.jp/global-image/units/upfiles/125574-1-20231201112905_b656944f101780.pdf": "표없음",
+  "https://www.people-kk.co.jp/global-image/units/upfiles/113887-1-20231017140227_b652e156355cf1.pdf": "표없음",
+  "https://www.people-kk.co.jp/global-image/units/upfiles/14734-1-20190604143105_b5cf60219c5b90.pdf": "표없음",
+  "https://www.people-kk.co.jp/global-image/units/upfiles/14735-1-20190604143435_b5cf602ebdc6c9.pdf": "표없음",
+  "https://www.people-kk.co.jp/global-image/units/upfiles/14736-1-20190604143540_b5cf6032c88af7.pdf": "표없음",
+  "https://www.people-kk.co.jp/global-image/units/upfiles/14737-1-20190604143643_b5cf6036beebde.pdf": "표없음",
+  "https://www.people-kk.co.jp/global-image/units/upfiles/14738-1-20190604144029_b5cf6044d49b7f.pdf": "표없음",
+  "https://www.people-kk.co.jp/global-image/units/upfiles/14739-1-20190604144237_b5cf604cd57e39.pdf": "표없음",
+  "https://www.people-kk.co.jp/global-image/units/upfiles/14740-1-20190604144328_b5cf6050037c44.pdf": "표없음",
+  "https://www.people-kk.co.jp/global-image/units/upfiles/14741-1-20190604144407_b5cf60527838e9.pdf": "표없음",
+  "https://www.people-kk.co.jp/global-image/units/upfiles/14742-1-20190604144718_b5cf605e641285.pdf": "표없음",
+  "https://www.people-kk.co.jp/global-image/units/upfiles/14743-1-20190604144856_b5cf60648cd0c1.pdf": "표없음",
+  "https://www.people-kk.co.jp/global-image/units/upfiles/14744-1-20190604144958_b5cf60686d51a8.pdf": "표없음",
+  "https://www.people-kk.co.jp/global-image/units/upfiles/14745-1-20190604145053_b5cf606bd1014c.pdf": "표없음",
+  "https://www.people-kk.co.jp/global-image/units/upfiles/14746-1-20190604145148_b5cf606f49f64b.pdf": "표없음",
+  "https://www.people-kk.co.jp/global-image/units/upfiles/14747-1-20190604145251_b5cf6073390036.pdf": "표없음",
+  "https://www.people-kk.co.jp/global-image/units/upfiles/14748-1-20190604145350_b5cf6076e22a2c.pdf": "표없음",
+  "https://www.people-kk.co.jp/global-image/units/upfiles/14749-1-20190604145547_b5cf607e3b982e.pdf": "표없음",
+  "https://www.people-kk.co.jp/global-image/units/upfiles/14750-1-20190604145649_b5cf608215e72e.pdf": "표없음",
+  "https://www.people-kk.co.jp/global-image/units/upfiles/14751-1-20190604145744_b5cf6085830cc0.pdf": "표없음",
+  "https://www.people-kk.co.jp/global-image/units/upfiles/14752-1-20190604145856_b5cf608a027860.pdf": "표없음",
+  "https://www.people-kk.co.jp/global-image/units/upfiles/14753-1-20190604145938_b5cf608ca0c2eb.pdf": "표없음",
+  "https://www.people-kk.co.jp/global-image/units/upfiles/14754-1-20190604150019_b5cf608f34260e.pdf": "표없음",
+  "https://www.people-kk.co.jp/global-image/units/upfiles/14755-1-20190604150048_b5cf60910df5bf.pdf": "표없음",
+  "https://www.people-kk.co.jp/global-image/units/upfiles/14756-1-20190604150146_b5cf6094ab5602.pdf": "표없음",
+  "https://www.people-kk.co.jp/global-image/units/upfiles/14758-1-20190604150216_b5cf609689ee7a.pdf": "표없음",
+  "https://www.people-kk.co.jp/global-image/units/upfiles/14757-1-20190604150248_b5cf609880bee3.pdf": "표없음",
+  "https://www.people-kk.co.jp/global-image/units/upfiles/14759-1-20190604150322_b5cf609aa25901.pdf": "표없음",
+  "https://www.people-kk.co.jp/global-image/units/upfiles/14760-1-20190604150353_b5cf609c96a2bc.pdf": "표없음",
+  "https://www.people-kk.co.jp/global-image/units/upfiles/14762-1-20190604151411_b5cf60c33552bf.pdf": "표없음",
+  "https://www.people-kk.co.jp/global-image/units/upfiles/14763-1-20190604151451_b5cf60c5b0ab64.pdf": "표없음",
+  "https://www.people-kk.co.jp/global-image/units/upfiles/14764-1-20190604151556_b5cf60c9c5b85c.pdf": "표없음",
+  "https://www.people-kk.co.jp/global-image/units/upfiles/14765-1-20190604151648_b5cf60cd00da75.pdf": "표없음",
+  "https://www.people-kk.co.jp/global-image/units/upfiles/14766-1-20190604151725_b5cf60cf5d22d4.pdf": "표없음",
+  "https://www.people-kk.co.jp/global-image/units/upfiles/14769-1-20190604151959_b5cf60d8f487a2.pdf": "표없음",
+  "https://www.people-kk.co.jp/global-image/units/upfiles/14767-1-20190604151909_b5cf60d5da38ba.pdf": "표없음",
+  "https://www.people-kk.co.jp/global-image/units/upfiles/14770-1-20190604152049_b5cf60dc18b20d.pdf": "표없음",
+  "https://www.people-kk.co.jp/global-image/units/upfiles/14771-1-20190604152142_b5cf60df6ea198.pdf": "표없음",
+  "https://www.ichigo-office.co.jp/ir/news/news_file/file/IchigoOffice_20260918_Earnings_Forecast_Revision_JPN.pdf": "표없음",
+  "https://www.ichigo-office.co.jp/ir/news/news_file/file/IchigoOffice_20260904_Occupancy_JPN.pdf": "표없음",
+  "https://www.fastretailing.com/jp/ir/monthly/pdf/MonthlySales_2012.pdf": "표없음",
+  "https://www.fastretailing.com/jp/ir/monthly/pdf/MonthlySales_2011.pdf": "표없음",
+  "https://www.fastretailing.com/jp/ir/monthly/pdf/MonthlySales_2010.pdf": "표없음",
+  "https://www.fastretailing.com/jp/ir/monthly/pdf/MonthlySales_2009.pdf": "표없음",
+  "https://www.fastretailing.com/jp/ir/monthly/pdf/MonthlySales_2008.pdf": "표없음",
+  "https://www.fastretailing.com/jp/ir/monthly/pdf/2007_08_uriage.pdf": "표없음",
+  "https://www.fastretailing.com/jp/ir/monthly/pdf/2006_08_uriage.pdf": "표없음",
+  "https://www.fastretailing.com/jp/ir/monthly/pdf/2005_08_uriage.pdf": "표없음",
+  "https://www.fastretailing.com/jp/ir/monthly/pdf/2004_08_uriage.pdf": "표없음",
+  "https://www.fastretailing.com/jp/ir/monthly/pdf/2003_08_uriage.pdf": "표없음",
+  "https://www.fastretailing.com/jp/ir/monthly/pdf/2002_08_uriage.pdf": "표없음",
+  "https://www.fastretailing.com/jp/ir/monthly/pdf/2001_08_uriage.pdf": "표없음",
+  "https://www.fastretailing.com/jp/ir/monthly/pdf/2000_08_uriage.pdf": "표없음",
+  "https://www.fastretailing.com/jp/ir/monthly/pdf/comment2026_08.pdf": "표없음",
+  "https://www.fastretailing.com/jp/ir/monthly/pdf/comment2024_08.pdf": "표없음",
+  "https://www.fastretailing.com/jp/ir/monthly/pdf/comment2023_08.pdf": "표없음",
+  "https://www.fastretailing.com/jp/ir/monthly/pdf/comment2022_08.pdf": "표없음",
+  "https://www.fastretailing.com/jp/ir/monthly/pdf/comment2021_08.pdf": "표없음",
+  "https://www.fastretailing.com/jp/ir/monthly/pdf/comment2020_08.pdf": "표없음",
+  "https://www.fastretailing.com/jp/ir/monthly/pdf/comment2019_08.pdf": "표없음",
+  "https://www.fastretailing.com/jp/ir/monthly/pdf/comment2018_08.pdf": "표없음",
+  "https://www.fastretailing.com/jp/ir/monthly/pdf/comment2017_08.pdf": "표없음",
+  "https://www.fastretailing.com/jp/ir/monthly/pdf/comment2016_08.pdf": "표없음",
+  "https://www.fastretailing.com/jp/ir/monthly/pdf/comment2015_08.pdf": "표없음",
+  "https://www.fastretailing.com/jp/ir/monthly/pdf/comment2014_08.pdf": "표없음",
+  "https://www.fastretailing.com/jp/ir/monthly/pdf/shop2026.pdf": "표없음",
+  "https://www.fastretailing.com/jp/ir/monthly/pdf/shop2025.pdf": "표없음",
+  "https://www.fastretailing.com/jp/ir/monthly/pdf/shop2024.pdf": "표없음",
+  "https://www.fastretailing.com/jp/ir/monthly/pdf/shop2023.pdf": "표없음",
+  "https://www.fastretailing.com/jp/ir/monthly/pdf/shop2022.pdf": "표없음",
+  "https://www.fastretailing.com/jp/ir/monthly/pdf/shop2021.pdf": "표없음",
+  "https://www.fastretailing.com/jp/ir/monthly/pdf/shop2020.pdf": "표없음",
+  "https://www.fastretailing.com/jp/ir/monthly/pdf/shop2019.pdf": "표없음",
+  "https://www.fastretailing.com/jp/ir/monthly/pdf/shop2018.pdf": "표없음",
+  "https://www.fastretailing.com/jp/ir/monthly/pdf/shop2017.pdf": "표없음",
+  "https://www.fastretailing.com/jp/ir/monthly/pdf/shop2016.pdf": "표없음",
+  "https://www.fastretailing.com/jp/ir/monthly/pdf/shop2015.pdf": "표없음",
+  "https://www.fastretailing.com/jp/ir/monthly/pdf/shop2014.pdf": "표없음",
+  "https://www.fastretailing.com/jp/ir/monthly/pdf/shop2013.pdf": "표없음",
+  "https://www.fastretailing.com/jp/ir/monthly/pdf/shop2012.pdf": "표없음",
+  "https://www.fastretailing.com/jp/ir/monthly/pdf/shop2011.pdf": "표없음",
+  "https://www.fastretailing.com/jp/ir/monthly/pdf/shop2010.pdf": "표없음",
+  "https://www.fastretailing.com/jp/ir/monthly/pdf/shop2009.pdf": "표없음",
+  "https://www.fastretailing.com/jp/ir/monthly/pdf/shop2008.pdf": "표없음",
+  "https://www.fastretailing.com/jp/ir/monthly/pdf/shop2007.pdf": "표없음",
+  "https://www.fastretailing.com/jp/ir/monthly/pdf/shop2006.pdf": "표없음",
+  "https://www.fastretailing.com/jp/ir/monthly/pdf/shop2005.pdf": "표없음",
+  "https://www.fastretailing.com/jp/ir/monthly/pdf/shop2004.pdf": "표없음",
+  "https://www.fastretailing.com/jp/ir/monthly/pdf/shop2003.pdf": "표없음",
+  "https://www.fastretailing.com/jp/ir/monthly/pdf/shop2002.pdf": "표없음",
+  "https://ppih.co.jp/ir/highlight/monthly/pdf/PPIH.MonthlyReport.Aug.2026.J.pdf": "표없음",
+  "https://ppih.co.jp/ir/highlight/monthly/pdf/PPIH.MonthlyReport.Jun.2026.J.pdf": "표없음",
+  "https://ppih.co.jp/ir/highlight/monthly/pdf/PPIH.MonthlyReport.Retroactive.FY2025.J.pdf": "표없음",
+  "https://ppih.co.jp/ir/highlight/monthly/pdf/PPIH.MonthlyReport.June.2025.J.pdf": "표없음",
+  "https://ppih.co.jp/ir/highlight/monthly/pdf/PPIH.MonthlyReport.June.2024.J.pdf": "표없음",
+  "https://ppih.co.jp/ir/highlight/monthly/pdf/PPIH.MonthlyReport.June.2023.J.pdf": "표없음",
+  "https://ppih.co.jp/ir/highlight/monthly/pdf/PPIH.MonthlyReport.June.2022.J.pdf": "표없음",
+  "https://ppih.co.jp/ir/highlight/monthly/pdf/PPIH.MonthlyReport.Retroactive.FY2020.J.pdf": "표없음",
+  "https://ppih.co.jp/ir/highlight/monthly/pdf/PPIH.MonthlyReport.June.2021.J.pdf": "표없음",
+  "https://ppih.co.jp/ir/highlight/monthly/pdf/ppih_month_2020_ja.pdf": "표없음",
+  "https://ppih.co.jp/ir/highlight/monthly/pdf/month_2019.pdf": "표없음",
+  "https://ppih.co.jp/ir/highlight/monthly/pdf/uny_month_2020_1.pdf": "표없음",
+  "https://ppih.co.jp/ir/highlight/monthly/pdf/uny_month_2019.pdf": "표없음",
+  "https://ppih.co.jp/ir/highlight/monthly/pdf/uny_month_2018.pdf": "표없음",
+  "https://ppih.co.jp/ir/highlight/monthly/pdf/uny_month_2017.pdf": "표없음",
+  "https://ppih.co.jp/ir/highlight/monthly/pdf/uny_month_2016.pdf": "표없음",
+  "https://ppih.co.jp/ir/highlight/monthly/pdf/uny_month_2015.pdf": "표없음",
+  "https://ppih.co.jp/ir/highlight/monthly/pdf/uny_month_2014.pdf": "표없음",
+  "https://ppih.co.jp/ir/highlight/monthly/pdf/uny_month_2013.pdf": "표없음",
+  "https://ppih.co.jp/ir/highlight/monthly/pdf/uny_month_2012.pdf": "표없음",
+  "https://ppih.co.jp/ir/highlight/monthly/pdf/uny_month_2011.pdf": "표없음",
+  "https://ppih.co.jp/ir/highlight/monthly/pdf/uny_month_2010.pdf": "표없음",
+  "https://ppih.co.jp/ir/highlight/monthly/pdf/uny_month_2009.pdf": "표없음",
+  "https://food-and-life.co.jp/wp-content/uploads/2024/11/fy2024_sales.pdf": "표없음",
+  "https://food-and-life.co.jp/wp-content/uploads/2024/11/fy2023_sales.pdf": "표없음",
+  "https://food-and-life.co.jp/wp-content/uploads/2024/11/fy2022_sales.pdf": "표없음",
+  "https://food-and-life.co.jp/wp-content/uploads/2024/11/fy2021_sales.pdf": "표없음",
+  "https://food-and-life.co.jp/wp-content/uploads/2024/11/fy2020_sales.pdf": "표없음",
+  "https://www.matsukiyococokara.com/news/pdf-cms/3fd18db0f20019590cc7ca472d49a9d1c979aca8.pdf": "표없음",
+  "https://www.matsukiyococokara.com/news/pdf-cms/98a9d2759f1cfe88667e4c279a2658b53b977985.pdf": "표없음",
+  "https://www.matsukiyococokara.com/news/pdf-cms/67c9a7216f0fe9813e417c7b93291077678f2636.pdf": "표없음",
+  "https://www.matsukiyococokara.com/news/pdf-cms/80d602aecc0c2c76cbfa4f8e782df00530b1fe53.pdf": "표없음",
+  "https://www.matsukiyococokara.com/news/pdf-cms/8f519a6ed25907787b85b87ebdff690ca88011ab.pdf": "표없음",
+  "https://www.abc-mart.co.jp/ir/pdf/2027/getsuji.pdf": "표없음",
+  "https://www.abc-mart.co.jp/ir/pdf/2026/getsuji.pdf": "표없음",
+  "https://www.abc-mart.co.jp/ir/pdf/2025/getsuji.pdf": "표없음",
+  "https://www.abc-mart.co.jp/ir/pdf/2024/getsuji.pdf": "표없음",
+  "https://www.abc-mart.co.jp/ir/pdf/2023/getsuji.pdf": "표없음",
+  "https://www.abc-mart.co.jp/ir/pdf/2022/getsuji.pdf": "표없음",
+  "https://www.abc-mart.co.jp/ir/pdf/2020/getsuji.pdf": "표없음",
+  "https://www.abc-mart.co.jp/ir/pdf/2019/getsuji.pdf": "표없음",
+  "https://www.abc-mart.co.jp/ir/pdf/2018/getsuji.pdf": "표없음",
+  "https://www.abc-mart.co.jp/ir/pdf/2017/getsuji.pdf": "표없음",
+  "https://www.abc-mart.co.jp/ir/pdf/2016/getsuji.pdf": "표없음",
+  "https://www.abc-mart.co.jp/ir/pdf/2015/getsuji.pdf": "표없음",
+  "https://www.abc-mart.co.jp/ir/pdf/2008/getsuji.pdf": "표없음",
+  "https://www.abc-mart.co.jp/ir/pdf/2007/getsuji.pdf": "표없음",
+  "https://www.abc-mart.co.jp/ir/pdf/2006/getsuji.pdf": "표없음",
+  "https://www.abc-mart.co.jp/ir/pdf/2005/getsuji.pdf": "표없음",
+  "https://www.abc-mart.co.jp/ir/pdf/2004/getsuji.pdf": "표없음",
+  "https://www.abc-mart.co.jp/ir/pdf/2003/getsuji.pdf": "표없음",
+  "https://www.abc-mart.co.jp/ir/pdf/2002/getsuji.pdf": "표없음",
+  "https://www.takashimaya.co.jp/base/corp/topics/261001b.pdf": "표없음",
+  "https://www.takashimaya.co.jp/base/corp/topics/260115c.pdf": "표없음",
+  "https://www.takashimaya.co.jp/base/corp/topics/260109a.pdf": "표없음",
+  "https://www.takashimaya.co.jp/base/corp/topics/260106e.pdf": "표없음",
+  "https://www.takashimaya.co.jp/base/corp/topics/260105b.pdf": "표없음",
+  "https://www.takashimaya.co.jp/base/corp/topics/251224a.pdf": "표없음",
+  "https://www.takashimaya.co.jp/base/corp/topics/251215b.pdf": "표없음",
+  "https://www.takashimaya.co.jp/base/corp/topics/251201b.pdf": "표없음",
+  "https://www.takashimaya.co.jp/base/corp/topics/251114b.pdf": "표없음",
+  "https://www.takashimaya.co.jp/base/corp/topics/251104b.pdf": "표없음",
+  "https://www.takashimaya.co.jp/base/corp/topics/251021a.pdf": "표없음",
+  "https://www.takashimaya.co.jp/base/corp/topics/251015b.pdf": "표없음",
+  "https://www.takashimaya.co.jp/base/corp/topics/251014b.pdf": "표없음",
+  "https://www.takashimaya.co.jp/base/corp/topics/251014g.pdf": "표없음",
+  "https://www.takashimaya.co.jp/base/corp/topics/251014h.pdf": "표없음",
+  "https://www.takashimaya.co.jp/base/corp/topics/251014i.pdf": "표없음",
+  "https://www.takashimaya.co.jp/base/corp/topics/251001b.pdf": "표없음",
+  "https://www.takashimaya.co.jp/base/corp/topics/250916b.pdf": "표없음",
+  "https://www.takashimaya.co.jp/base/corp/topics/250901b.pdf": "표없음"
  },
- "pdf_months": 675,
+ "pdf_months": 1007,
  "homes": {
   "1379": "https://www.hokto-kinoko.co.jp",
   "138A": "https://www.hikari-food-service.jp",
