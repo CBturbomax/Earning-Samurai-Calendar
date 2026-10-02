@@ -1,6 +1,6 @@
 {
  "v": 1,
- "ts": "2026-10-02T15:12:22+00:00",
+ "ts": "2026-10-02T20:03:08+00:00",
  "seed": 361,
  "homes": 352,
  "official_ir_data": 63,
@@ -39,8 +39,8 @@
    "status": "ok",
    "home": "https://www.nitorihd.co.jp/",
    "source_url": "https://www.nitorihd.co.jp/ir/performance/sales.html",
-   "latest_month": "2026-08",
-   "months": 5,
+   "latest_month": "2026-09",
+   "months": 6,
    "tdnet": false,
    "web": false,
    "ir": true
@@ -89,8 +89,8 @@
    "status": "ok",
    "home": "https://food-and-life.co.jp/",
    "source_url": "https://food-and-life.co.jp/investor/monthly-information",
-   "latest_month": "2026-08",
-   "months": 23,
+   "latest_month": "2026-09",
+   "months": 24,
    "tdnet": false,
    "web": true,
    "ir": true
