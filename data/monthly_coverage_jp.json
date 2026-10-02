@@ -1,18 +1,18 @@
 {
  "v": 1,
- "ts": "2026-10-01T23:36:58+00:00",
+ "ts": "2026-10-02T02:33:14+00:00",
  "seed": 361,
  "homes": 352,
  "official_ir_data": 60,
  "covered_any": 267,
  "status": {
-  "covered_elsewhere": 100,
+  "covered_elsewhere": 86,
   "discontinued": 2,
   "home_pending": 6,
-  "no_monthly_found": 56,
+  "no_monthly_found": 75,
   "ok": 60,
   "parser_failed": 123,
-  "pending_discovery": 14
+  "pending_discovery": 9
  },
  "codes": {
   "8267": {
@@ -786,7 +786,7 @@
    "ir": false
   },
   "245A": {
-   "status": "covered_elsewhere",
+   "status": "no_monthly_found",
    "home": "https://ingsinc.co.jp",
    "source_url": "",
    "latest_month": "",
@@ -1336,7 +1336,7 @@
    "ir": false
   },
   "3135": {
-   "status": "covered_elsewhere",
+   "status": "no_monthly_found",
    "home": "https://www.marketenterprise.co.jp",
    "source_url": "",
    "latest_month": "",
@@ -1386,7 +1386,7 @@
    "ir": false
   },
   "3181": {
-   "status": "covered_elsewhere",
+   "status": "no_monthly_found",
    "home": "https://www.okoku.jp",
    "source_url": "",
    "latest_month": "",
@@ -1456,7 +1456,7 @@
    "ir": false
   },
   "3224": {
-   "status": "pending_discovery",
+   "status": "no_monthly_found",
    "home": "https://www.oysterbar.co.jp",
    "source_url": "",
    "latest_month": "",
@@ -1666,7 +1666,7 @@
    "ir": false
   },
   "3796": {
-   "status": "covered_elsewhere",
+   "status": "no_monthly_found",
    "home": "https://www.e-seikatsu.info",
    "source_url": "",
    "latest_month": "",
@@ -1686,7 +1686,7 @@
    "ir": false
   },
   "386A": {
-   "status": "covered_elsewhere",
+   "status": "no_monthly_found",
    "home": "https://www.machioka.co.jp",
    "source_url": "",
    "latest_month": "",
@@ -1726,7 +1726,7 @@
    "ir": false
   },
   "4015": {
-   "status": "covered_elsewhere",
+   "status": "no_monthly_found",
    "home": "https://www.arara.com",
    "source_url": "",
    "latest_month": "",
@@ -1736,7 +1736,7 @@
    "ir": false
   },
   "4019": {
-   "status": "pending_discovery",
+   "status": "no_monthly_found",
    "home": "https://stmn.co.jp",
    "source_url": "",
    "latest_month": "",
@@ -1886,7 +1886,7 @@
    "ir": false
   },
   "6059": {
-   "status": "covered_elsewhere",
+   "status": "no_monthly_found",
    "home": "https://www.uchiyama-gr.jp",
    "source_url": "",
    "latest_month": "",
@@ -2196,7 +2196,7 @@
    "ir": false
   },
   "7544": {
-   "status": "pending_discovery",
+   "status": "no_monthly_found",
    "home": "https://www.three-f.co.jp",
    "source_url": "",
    "latest_month": "",
@@ -2316,7 +2316,7 @@
    "ir": false
   },
   "7625": {
-   "status": "covered_elsewhere",
+   "status": "no_monthly_found",
    "home": "https://www.global-dining.com",
    "source_url": "",
    "latest_month": "",
@@ -2746,7 +2746,7 @@
    "ir": false
   },
   "9223": {
-   "status": "pending_discovery",
+   "status": "no_monthly_found",
    "home": "https://www.asnova.co.jp",
    "source_url": "",
    "latest_month": "",
@@ -2886,7 +2886,7 @@
    "ir": false
   },
   "9854": {
-   "status": "pending_discovery",
+   "status": "no_monthly_found",
    "home": "https://www.aigan.co.jp",
    "source_url": "",
    "latest_month": "",
@@ -2936,7 +2936,7 @@
    "ir": true
   },
   "9904": {
-   "status": "covered_elsewhere",
+   "status": "no_monthly_found",
    "home": "https://www.verite.jp",
    "source_url": "",
    "latest_month": "",
@@ -3186,7 +3186,7 @@
    "ir": false
   },
   "3461": {
-   "status": "covered_elsewhere",
+   "status": "no_monthly_found",
    "home": "https://www.palma.jp",
    "source_url": "",
    "latest_month": "",
@@ -3416,7 +3416,7 @@
    "ir": false
   },
   "4177": {
-   "status": "covered_elsewhere",
+   "status": "no_monthly_found",
    "home": "https://i-plug.co.jp",
    "source_url": "",
    "latest_month": "",
@@ -3436,7 +3436,7 @@
    "ir": false
   },
   "352A": {
-   "status": "covered_elsewhere",
+   "status": "no_monthly_found",
    "home": "https://loive.co.jp",
    "source_url": "",
    "latest_month": "",
@@ -3556,7 +3556,7 @@
    "ir": false
   },
   "4880": {
-   "status": "covered_elsewhere",
+   "status": "no_monthly_found",
    "home": "https://www.cellsource.co.jp",
    "source_url": "",
    "latest_month": "",
@@ -3586,7 +3586,7 @@
    "ir": false
   },
   "3189": {
-   "status": "covered_elsewhere",
+   "status": "no_monthly_found",
    "home": "https://www.anap.co.jp",
    "source_url": "",
    "latest_month": "",
