@@ -1,17 +1,17 @@
 {
  "v": 1,
- "ts": "2026-10-02T08:54:01+00:00",
+ "ts": "2026-10-02T15:12:22+00:00",
  "seed": 361,
  "homes": 352,
- "official_ir_data": 62,
+ "official_ir_data": 63,
  "covered_any": 268,
  "status": {
-  "covered_elsewhere": 76,
+  "covered_elsewhere": 74,
   "discontinued": 2,
   "home_pending": 6,
-  "no_monthly_found": 90,
-  "ok": 62,
-  "parser_failed": 121,
+  "no_monthly_found": 92,
+  "ok": 63,
+  "parser_failed": 120,
   "pending_discovery": 4
  },
  "codes": {
@@ -1676,14 +1676,14 @@
    "ir": false
   },
   "3817": {
-   "status": "parser_failed",
+   "status": "ok",
    "home": "https://www.sra-hd.co.jp",
    "source_url": "https://www.sra-hd.co.jp/ir/ir-news/index_2026.html",
-   "latest_month": "",
-   "months": 0,
+   "latest_month": "2026-06",
+   "months": 1,
    "tdnet": true,
    "web": false,
-   "ir": false
+   "ir": true
   },
   "386A": {
    "status": "no_monthly_found",
@@ -3486,7 +3486,7 @@
    "ir": false
   },
   "3174": {
-   "status": "covered_elsewhere",
+   "status": "no_monthly_found",
    "home": "https://www.happiness-d.co.jp",
    "source_url": "",
    "latest_month": "",
@@ -3506,7 +3506,7 @@
    "ir": false
   },
   "3287": {
-   "status": "covered_elsewhere",
+   "status": "no_monthly_found",
    "home": "https://www.hoshinoresorts-reit.com",
    "source_url": "",
    "latest_month": "",
