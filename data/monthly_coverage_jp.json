@@ -1,16 +1,16 @@
 {
  "v": 1,
- "ts": "2026-10-03T23:00:09+00:00",
+ "ts": "2026-10-04T02:10:55+00:00",
  "seed": 361,
  "homes": 352,
- "official_ir_data": 63,
- "covered_any": 268,
+ "official_ir_data": 64,
+ "covered_any": 269,
  "status": {
   "covered_elsewhere": 71,
   "discontinued": 2,
   "home_pending": 6,
-  "no_monthly_found": 95,
-  "ok": 63,
+  "no_monthly_found": 94,
+  "ok": 64,
   "parser_failed": 120,
   "pending_discovery": 4
  },
@@ -1316,14 +1316,14 @@
    "ir": true
   },
   "3083": {
-   "status": "no_monthly_found",
+   "status": "ok",
    "home": "https://starseeds.co.jp",
-   "source_url": "",
-   "latest_month": "",
-   "months": 0,
+   "source_url": "https://starseeds.co.jp",
+   "latest_month": "2026-08",
+   "months": 6,
    "tdnet": false,
    "web": false,
-   "ir": false
+   "ir": true
   },
   "3088": {
    "status": "parser_failed",
