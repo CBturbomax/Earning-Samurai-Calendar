@@ -23,7 +23,7 @@ try {
 <script>
 /* GitHub Pages/CDN 이 예전 index.html 을 잡고 있어도, 한 번 최신판을 받은 뒤부터는
    version.txt 를 no-store 로 확인해 새 빌드가 있으면 query string 을 바꿔 강제 갱신한다. */
-const ES_BUILD = "20261005092508";
+const ES_BUILD = "20261005092546";
 setTimeout(() => {
   fetch('./version.txt?t=' + Date.now(), {cache:'no-store'})
     .then(r => r.ok ? r.text() : '')
