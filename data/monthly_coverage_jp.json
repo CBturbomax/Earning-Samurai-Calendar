@@ -1,18 +1,18 @@
 {
  "v": 1,
- "ts": "2026-10-04T21:39:01+00:00",
+ "ts": "2026-10-05T00:14:22+00:00",
  "seed": 361,
  "homes": 352,
  "official_ir_data": 65,
  "covered_any": 269,
  "status": {
-  "covered_elsewhere": 70,
+  "covered_elsewhere": 72,
   "discontinued": 2,
   "home_pending": 6,
-  "no_monthly_found": 95,
+  "no_monthly_found": 97,
   "ok": 65,
-  "parser_failed": 119,
-  "pending_discovery": 4
+  "parser_failed": 114,
+  "pending_discovery": 5
  },
  "codes": {
   "8267": {
@@ -976,7 +976,7 @@
    "ir": false
   },
   "2735": {
-   "status": "covered_elsewhere",
+   "status": "no_monthly_found",
    "home": "https://www.watts-jp.com",
    "source_url": "",
    "latest_month": "",
@@ -1026,7 +1026,7 @@
    "ir": false
   },
   "2752": {
-   "status": "pending_discovery",
+   "status": "no_monthly_found",
    "home": "https://www.fujiofood.com",
    "source_url": "",
    "latest_month": "",
@@ -1296,9 +1296,9 @@
    "ir": false
   },
   "3080": {
-   "status": "parser_failed",
+   "status": "pending_discovery",
    "home": "https://www.jason.co.jp",
-   "source_url": "https://jason.co.jp/ir/monthly_information_2027_2",
+   "source_url": "",
    "latest_month": "",
    "months": 0,
    "tdnet": false,
@@ -1416,9 +1416,9 @@
    "ir": false
   },
   "3195": {
-   "status": "parser_failed",
+   "status": "covered_elsewhere",
    "home": "https://www.genepa.com",
-   "source_url": "https://www.genepa.com",
+   "source_url": "",
    "latest_month": "",
    "months": 0,
    "tdnet": true,
@@ -1856,9 +1856,9 @@
    "ir": false
   },
   "5892": {
-   "status": "parser_failed",
+   "status": "pending_discovery",
    "home": "https://yutori.tokyo",
-   "source_url": "https://yutori.tokyo/ir/monthly/",
+   "source_url": "",
    "latest_month": "",
    "months": 0,
    "tdnet": false,
@@ -1876,9 +1876,9 @@
    "ir": false
   },
   "6045": {
-   "status": "parser_failed",
+   "status": "covered_elsewhere",
    "home": "https://www.rentracks.co.jp",
-   "source_url": "https://www.rentracks.co.jp/ir/finance/others.html",
+   "source_url": "",
    "latest_month": "",
    "months": 0,
    "tdnet": true,
@@ -3206,9 +3206,9 @@
    "ir": false
   },
   "9163": {
-   "status": "parser_failed",
+   "status": "covered_elsewhere",
    "home": "https://www.nareru-group.co.jp",
-   "source_url": "https://www.nareru-group.co.jp",
+   "source_url": "",
    "latest_month": "",
    "months": 0,
    "tdnet": true,
