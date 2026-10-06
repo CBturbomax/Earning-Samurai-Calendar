@@ -1,17 +1,17 @@
 {
  "v": 1,
- "ts": "2026-10-05T12:37:54+00:00",
+ "ts": "2026-10-06T01:36:09+00:00",
  "seed": 361,
  "homes": 352,
  "official_ir_data": 65,
  "covered_any": 269,
  "status": {
-  "covered_elsewhere": 69,
+  "covered_elsewhere": 70,
   "discontinued": 2,
   "home_pending": 6,
   "no_monthly_found": 97,
   "ok": 65,
-  "parser_failed": 118,
+  "parser_failed": 117,
   "pending_discovery": 4
  },
  "codes": {
@@ -1326,9 +1326,9 @@
    "ir": true
   },
   "3088": {
-   "status": "parser_failed",
+   "status": "covered_elsewhere",
    "home": "https://www.matsukiyococokara.com",
-   "source_url": "https://www.matsukiyococokara.com",
+   "source_url": "",
    "latest_month": "",
    "months": 0,
    "tdnet": false,
@@ -1516,9 +1516,9 @@
    "ir": false
   },
   "3370": {
-   "status": "pending_discovery",
+   "status": "parser_failed",
    "home": "https://www.fujitacorp.co.jp",
-   "source_url": "",
+   "source_url": "https://www.fujitacorp.co.jp/main/info/%e2%98%85%e6%9c%88%e6%ac%a1%e5%a3%b2%e4%b8%8a%e9%80%9f%e5%a0%b1%e6%9b%b4%e6%96%b0%e3%81%84%e3%81%9f%e3%81%97%e3%81%be%e3%81%97%e3%81%9f-80/",
    "latest_month": "",
    "months": 0,
    "tdnet": false,
@@ -2816,9 +2816,9 @@
    "ir": false
   },
   "9616": {
-   "status": "parser_failed",
+   "status": "pending_discovery",
    "home": "https://www.kyoritsugroup.co.jp",
-   "source_url": "https://www.kyoritsugroup.co.jp",
+   "source_url": "",
    "latest_month": "",
    "months": 0,
    "tdnet": false,
