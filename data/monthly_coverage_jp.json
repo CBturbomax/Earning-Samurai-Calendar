@@ -1,16 +1,16 @@
 {
  "v": 1,
- "ts": "2026-10-06T19:54:32+00:00",
+ "ts": "2026-10-06T23:28:04+00:00",
  "seed": 361,
  "homes": 352,
- "official_ir_data": 66,
+ "official_ir_data": 67,
  "covered_any": 270,
  "status": {
-  "covered_elsewhere": 69,
+  "covered_elsewhere": 67,
   "discontinued": 2,
   "home_pending": 6,
-  "no_monthly_found": 98,
-  "ok": 66,
+  "no_monthly_found": 99,
+  "ok": 67,
   "parser_failed": 117,
   "pending_discovery": 3
  },
@@ -99,8 +99,8 @@
    "status": "ok",
    "home": "https://www.workman.co.jp/",
    "source_url": "https://www.workman.co.jp/ir%e6%83%85%e5%a0%b1/%e6%9c%88%e6%ac%a1%e5%a0%b1%e5%91%8a",
-   "latest_month": "2026-08",
-   "months": 64,
+   "latest_month": "2026-09",
+   "months": 65,
    "tdnet": true,
    "web": false,
    "ir": true
@@ -316,7 +316,7 @@
    "ir": false
   },
   "7581": {
-   "status": "covered_elsewhere",
+   "status": "no_monthly_found",
    "home": "https://www.saizeriya.co.jp/",
    "source_url": "",
    "latest_month": "",
@@ -509,8 +509,8 @@
    "status": "ok",
    "home": "https://www.sundrug.co.jp/",
    "source_url": "https://www.sundrug.co.jp/ir/irdata/monthly",
-   "latest_month": "2026-08",
-   "months": 77,
+   "latest_month": "2026-09",
+   "months": 78,
    "tdnet": false,
    "web": false,
    "ir": true
@@ -1549,8 +1549,8 @@
    "status": "ok",
    "home": "https://www.toridoll.com",
    "source_url": "https://www.toridoll.com/ir/finance/report/",
-   "latest_month": "2026-08",
-   "months": 5,
+   "latest_month": "2026-09",
+   "months": 6,
    "tdnet": false,
    "web": true,
    "ir": true
@@ -2366,14 +2366,14 @@
    "ir": false
   },
   "7649": {
-   "status": "covered_elsewhere",
+   "status": "ok",
    "home": "https://www.sugi-hd.co.jp",
-   "source_url": "",
-   "latest_month": "",
-   "months": 0,
+   "source_url": "https://www.sugi-hd.co.jp/ir/library/monthly-report.html",
+   "latest_month": "2025-01",
+   "months": 11,
    "tdnet": true,
    "web": true,
-   "ir": false
+   "ir": true
   },
   "7674": {
    "status": "parser_failed",
