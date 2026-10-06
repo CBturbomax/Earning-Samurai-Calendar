@@ -1,18 +1,18 @@
 {
  "v": 1,
- "ts": "2026-10-06T01:36:09+00:00",
+ "ts": "2026-10-06T07:57:07+00:00",
  "seed": 361,
  "homes": 352,
- "official_ir_data": 65,
- "covered_any": 269,
+ "official_ir_data": 66,
+ "covered_any": 270,
  "status": {
-  "covered_elsewhere": 70,
+  "covered_elsewhere": 69,
   "discontinued": 2,
   "home_pending": 6,
-  "no_monthly_found": 97,
-  "ok": 65,
+  "no_monthly_found": 98,
+  "ok": 66,
   "parser_failed": 117,
-  "pending_discovery": 4
+  "pending_discovery": 3
  },
  "codes": {
   "8267": {
@@ -139,8 +139,8 @@
    "status": "ok",
    "home": "https://corp.skylark.co.jp/",
    "source_url": "https://corp.skylark.co.jp/ir/strategy/growth/existing_store/",
-   "latest_month": "2026-08",
-   "months": 8,
+   "latest_month": "2026-09",
+   "months": 9,
    "tdnet": false,
    "web": false,
    "ir": true
@@ -956,14 +956,14 @@
    "ir": false
   },
   "2726": {
-   "status": "parser_failed",
+   "status": "ok",
    "home": "https://www.palgroup.holdings",
    "source_url": "https://www.palgroup.holdings",
-   "latest_month": "",
-   "months": 0,
+   "latest_month": "2026-02",
+   "months": 1,
    "tdnet": false,
    "web": false,
-   "ir": false
+   "ir": true
   },
   "2730": {
    "status": "parser_failed",
@@ -1326,7 +1326,7 @@
    "ir": true
   },
   "3088": {
-   "status": "covered_elsewhere",
+   "status": "no_monthly_found",
    "home": "https://www.matsukiyococokara.com",
    "source_url": "",
    "latest_month": "",
@@ -2816,9 +2816,9 @@
    "ir": false
   },
   "9616": {
-   "status": "pending_discovery",
+   "status": "parser_failed",
    "home": "https://www.kyoritsugroup.co.jp",
-   "source_url": "",
+   "source_url": "https://www.kyoritsugroup.co.jp",
    "latest_month": "",
    "months": 0,
    "tdnet": false,
