@@ -1,18 +1,18 @@
 {
  "v": 1,
- "ts": "2026-10-07T02:36:39+00:00",
+ "ts": "2026-10-07T09:12:17+00:00",
  "seed": 361,
  "homes": 352,
  "official_ir_data": 67,
  "covered_any": 270,
  "status": {
-  "covered_elsewhere": 69,
+  "covered_elsewhere": 67,
   "discontinued": 2,
   "home_pending": 6,
   "no_monthly_found": 99,
   "ok": 67,
-  "parser_failed": 113,
-  "pending_discovery": 5
+  "parser_failed": 117,
+  "pending_discovery": 3
  },
  "codes": {
   "8267": {
@@ -1296,9 +1296,9 @@
    "ir": false
   },
   "3080": {
-   "status": "pending_discovery",
+   "status": "parser_failed",
    "home": "https://www.jason.co.jp",
-   "source_url": "",
+   "source_url": "https://jason.co.jp/ir/monthly_information_2027_2",
    "latest_month": "",
    "months": 0,
    "tdnet": false,
@@ -1856,9 +1856,9 @@
    "ir": false
   },
   "5892": {
-   "status": "pending_discovery",
+   "status": "parser_failed",
    "home": "https://yutori.tokyo",
-   "source_url": "",
+   "source_url": "https://yutori.tokyo/ir/monthly/",
    "latest_month": "",
    "months": 0,
    "tdnet": false,
@@ -1876,9 +1876,9 @@
    "ir": false
   },
   "6045": {
-   "status": "covered_elsewhere",
+   "status": "parser_failed",
    "home": "https://www.rentracks.co.jp",
-   "source_url": "",
+   "source_url": "https://www.rentracks.co.jp/ir/finance/others.html",
    "latest_month": "",
    "months": 0,
    "tdnet": true,
@@ -3206,9 +3206,9 @@
    "ir": false
   },
   "9163": {
-   "status": "covered_elsewhere",
+   "status": "parser_failed",
    "home": "https://www.nareru-group.co.jp",
-   "source_url": "",
+   "source_url": "https://www.nareru-group.co.jp",
    "latest_month": "",
    "months": 0,
    "tdnet": true,
