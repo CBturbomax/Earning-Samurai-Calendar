@@ -23,7 +23,7 @@ try {
 <script>
 /* GitHub Pages/CDN 이 예전 index.html 을 잡고 있어도, 한 번 최신판을 받은 뒤부터는
    version.txt 를 no-store 로 확인해 새 빌드가 있으면 query string 을 바꿔 강제 갱신한다. */
-const ES_BUILD = "20261008164110";
+const ES_BUILD = "20261008201615";
 setTimeout(() => {
   fetch('./version.txt?t=' + Date.now(), {cache:'no-store'})
     .then(r => r.ok ? r.text() : '')
@@ -717,7 +717,7 @@ svg.bars rect.b:hover { fill:var(--a3); }
 <body>
 <div class="wrap">
 
-<div class="topline"><span class="fl fl-us" role="img" aria-label="미국"></span> 미국 <b>12,658</b> · <span class="fl fl-jp" role="img" aria-label="일본"></span> 일본 <b>7,428</b> · <span class="fl fl-hk" role="img" aria-label="홍콩"></span> 홍콩 <b>9,015</b> · 합계 <b>29,101건</b> · 수집 <b>2025-07-09 ~ 2026-12-06</b> · 갱신 2026-10-09 01:41 KST</div>
+<div class="topline"><span class="fl fl-us" role="img" aria-label="미국"></span> 미국 <b>12,658</b> · <span class="fl fl-jp" role="img" aria-label="일본"></span> 일본 <b>7,428</b> · <span class="fl fl-hk" role="img" aria-label="홍콩"></span> 홍콩 <b>9,015</b> · 합계 <b>29,101건</b> · 수집 <b>2025-07-09 ~ 2026-12-06</b> · 갱신 2026-10-09 05:16 KST</div>
 <h1><span class="mark" aria-hidden="true"></span>Earning <span class="jp">Samurai</span>
     <span class="byline">by CB</span></h1>
 <p class="sub">미국 · 일본 · 홍콩 주간 실적발표 일정 — 누가 언제 무엇을 발표했는지</p>
