@@ -1,6 +1,6 @@
 {
  "v": 1,
- "ts": "2026-10-09T00:27:26+00:00",
+ "ts": "2026-10-09T06:26:18+00:00",
  "seed": 361,
  "homes": 352,
  "official_ir_data": 67,
@@ -11,8 +11,8 @@
   "home_pending": 6,
   "no_monthly_found": 97,
   "ok": 67,
-  "parser_failed": 116,
-  "pending_discovery": 5
+  "parser_failed": 117,
+  "pending_discovery": 4
  },
  "codes": {
   "8267": {
@@ -540,7 +540,7 @@
    "home": "https://www.takashimaya.co.jp/",
    "source_url": "https://www.takashimaya.co.jp/corp/topics/",
    "latest_month": "2026-09",
-   "months": 44,
+   "months": 52,
    "tdnet": false,
    "web": false,
    "ir": true
@@ -1516,9 +1516,9 @@
    "ir": false
   },
   "3370": {
-   "status": "pending_discovery",
+   "status": "parser_failed",
    "home": "https://www.fujitacorp.co.jp",
-   "source_url": "",
+   "source_url": "https://www.fujitacorp.co.jp/main/info/%e2%98%85%e6%9c%88%e6%ac%a1%e5%a3%b2%e4%b8%8a%e9%80%9f%e5%a0%b1%e6%9b%b4%e6%96%b0%e3%81%84%e3%81%9f%e3%81%97%e3%81%be%e3%81%97%e3%81%9f-80/",
    "latest_month": "",
    "months": 0,
    "tdnet": false,
