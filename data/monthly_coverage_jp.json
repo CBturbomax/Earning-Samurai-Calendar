@@ -1,17 +1,17 @@
 {
  "v": 1,
- "ts": "2026-10-09T06:26:18+00:00",
+ "ts": "2026-10-09T13:33:41+00:00",
  "seed": 361,
  "homes": 352,
- "official_ir_data": 67,
- "covered_any": 270,
+ "official_ir_data": 68,
+ "covered_any": 271,
  "status": {
   "covered_elsewhere": 68,
   "discontinued": 2,
   "home_pending": 6,
   "no_monthly_found": 97,
-  "ok": 67,
-  "parser_failed": 117,
+  "ok": 68,
+  "parser_failed": 116,
   "pending_discovery": 4
  },
  "codes": {
@@ -2476,14 +2476,14 @@
    "ir": false
   },
   "8008": {
-   "status": "parser_failed",
+   "status": "ok",
    "home": "https://yondoshi.co.jp",
    "source_url": "https://yondoshi.co.jp",
-   "latest_month": "",
-   "months": 0,
+   "latest_month": "2026-05",
+   "months": 1,
    "tdnet": false,
    "web": false,
-   "ir": false
+   "ir": true
   },
   "8011": {
    "status": "ok",
