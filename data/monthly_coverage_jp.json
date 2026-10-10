@@ -1,18 +1,18 @@
 {
  "v": 1,
- "ts": "2026-10-09T23:08:01+00:00",
+ "ts": "2026-10-10T02:16:27+00:00",
  "seed": 361,
  "homes": 352,
  "official_ir_data": 71,
  "covered_any": 271,
  "status": {
-  "covered_elsewhere": 69,
+  "covered_elsewhere": 64,
   "discontinued": 2,
   "home_pending": 6,
   "no_monthly_found": 100,
   "ok": 71,
-  "parser_failed": 107,
-  "pending_discovery": 6
+  "parser_failed": 115,
+  "pending_discovery": 3
  },
  "codes": {
   "8267": {
@@ -1296,9 +1296,9 @@
    "ir": false
   },
   "3080": {
-   "status": "pending_discovery",
+   "status": "parser_failed",
    "home": "https://www.jason.co.jp",
-   "source_url": "",
+   "source_url": "https://jason.co.jp/ir/monthly_information_2027_2",
    "latest_month": "",
    "months": 0,
    "tdnet": false,
@@ -1416,9 +1416,9 @@
    "ir": false
   },
   "3195": {
-   "status": "covered_elsewhere",
+   "status": "parser_failed",
    "home": "https://www.genepa.com",
-   "source_url": "",
+   "source_url": "https://www.genepa.com",
    "latest_month": "",
    "months": 0,
    "tdnet": true,
@@ -1516,9 +1516,9 @@
    "ir": false
   },
   "3370": {
-   "status": "pending_discovery",
+   "status": "parser_failed",
    "home": "https://www.fujitacorp.co.jp",
-   "source_url": "",
+   "source_url": "https://www.fujitacorp.co.jp/main/info/%e2%98%85%e6%9c%88%e6%ac%a1%e5%a3%b2%e4%b8%8a%e9%80%9f%e5%a0%b1%e6%9b%b4%e6%96%b0%e3%81%84%e3%81%9f%e3%81%97%e3%81%be%e3%81%97%e3%81%9f-80/",
    "latest_month": "",
    "months": 0,
    "tdnet": false,
@@ -1856,9 +1856,9 @@
    "ir": false
   },
   "5892": {
-   "status": "pending_discovery",
+   "status": "parser_failed",
    "home": "https://yutori.tokyo",
-   "source_url": "",
+   "source_url": "https://yutori.tokyo/ir/monthly/",
    "latest_month": "",
    "months": 0,
    "tdnet": false,
@@ -1876,9 +1876,9 @@
    "ir": false
   },
   "6045": {
-   "status": "covered_elsewhere",
+   "status": "parser_failed",
    "home": "https://www.rentracks.co.jp",
-   "source_url": "",
+   "source_url": "https://www.rentracks.co.jp/ir/finance/others.html",
    "latest_month": "",
    "months": 0,
    "tdnet": true,
@@ -2456,9 +2456,9 @@
    "ir": true
   },
   "7865": {
-   "status": "covered_elsewhere",
+   "status": "parser_failed",
    "home": "https://www.people-kk.co.jp",
-   "source_url": "",
+   "source_url": "https://www.people-kk.co.jp/investorrelations/monthly/",
    "latest_month": "",
    "months": 0,
    "tdnet": true,
@@ -3096,9 +3096,9 @@
    "ir": false
   },
   "7585": {
-   "status": "covered_elsewhere",
+   "status": "parser_failed",
    "home": "https://www.kannanmaru.co.jp",
-   "source_url": "",
+   "source_url": "https://www.kannanmaru.co.jp",
    "latest_month": "",
    "months": 0,
    "tdnet": true,
@@ -3206,9 +3206,9 @@
    "ir": false
   },
   "9163": {
-   "status": "covered_elsewhere",
+   "status": "parser_failed",
    "home": "https://www.nareru-group.co.jp",
-   "source_url": "",
+   "source_url": "https://www.nareru-group.co.jp",
    "latest_month": "",
    "months": 0,
    "tdnet": true,
