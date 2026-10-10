@@ -1,17 +1,17 @@
 {
  "v": 1,
- "ts": "2026-10-10T18:58:08+00:00",
+ "ts": "2026-10-10T22:11:06+00:00",
  "seed": 361,
  "homes": 352,
- "official_ir_data": 75,
+ "official_ir_data": 76,
  "covered_any": 271,
  "status": {
-  "covered_elsewhere": 55,
+  "covered_elsewhere": 53,
   "discontinued": 2,
   "home_pending": 6,
   "no_monthly_found": 103,
-  "ok": 75,
-  "parser_failed": 117,
+  "ok": 76,
+  "parser_failed": 118,
   "pending_discovery": 3
  },
  "codes": {
@@ -2136,9 +2136,9 @@
    "ir": false
   },
   "7512": {
-   "status": "covered_elsewhere",
+   "status": "parser_failed",
    "home": "https://www.aeon-hokkaido.jp",
-   "source_url": "",
+   "source_url": "https://www.aeon-hokkaido.jp/corporation/month/",
    "latest_month": "",
    "months": 0,
    "tdnet": false,
@@ -2866,14 +2866,14 @@
    "ir": false
   },
   "9842": {
-   "status": "covered_elsewhere",
+   "status": "ok",
    "home": "https://www.arclands.co.jp",
-   "source_url": "",
-   "latest_month": "",
-   "months": 0,
+   "source_url": "https://www.arclands.co.jp/ja/ir/library/getsuji.html",
+   "latest_month": "2025-08",
+   "months": 91,
    "tdnet": false,
    "web": true,
-   "ir": false
+   "ir": true
   },
   "9850": {
    "status": "no_monthly_found",
