@@ -1,18 +1,18 @@
 {
  "v": 1,
- "ts": "2026-10-10T14:43:38+00:00",
+ "ts": "2026-10-10T18:58:08+00:00",
  "seed": 361,
  "homes": 352,
- "official_ir_data": 73,
+ "official_ir_data": 75,
  "covered_any": 271,
  "status": {
-  "covered_elsewhere": 56,
+  "covered_elsewhere": 55,
   "discontinued": 2,
   "home_pending": 6,
   "no_monthly_found": 103,
-  "ok": 73,
+  "ok": 75,
   "parser_failed": 117,
-  "pending_discovery": 4
+  "pending_discovery": 3
  },
  "codes": {
   "8267": {
@@ -209,8 +209,8 @@
    "status": "ok",
    "home": "https://www.mos.co.jp",
    "source_url": "https://www.mos.co.jp/company/ir/library/monthly_info/",
-   "latest_month": "2026-08",
-   "months": 197,
+   "latest_month": "2026-09",
+   "months": 198,
    "tdnet": false,
    "web": false,
    "ir": true
@@ -376,14 +376,14 @@
    "ir": false
   },
   "9832": {
-   "status": "parser_failed",
+   "status": "ok",
    "home": "https://www.autobacs.co.jp/",
    "source_url": "https://www.autobacs.co.jp/ja/ir/news/auto_20260907532362.html",
-   "latest_month": "",
-   "months": 0,
+   "latest_month": "2026-09",
+   "months": 223,
    "tdnet": true,
    "web": false,
-   "ir": false
+   "ir": true
   },
   "8276": {
    "status": "ok",
@@ -1516,9 +1516,9 @@
    "ir": false
   },
   "3370": {
-   "status": "pending_discovery",
+   "status": "parser_failed",
    "home": "https://www.fujitacorp.co.jp",
-   "source_url": "",
+   "source_url": "https://www.fujitacorp.co.jp/main/info/%e2%98%85%e6%9c%88%e6%ac%a1%e5%a3%b2%e4%b8%8a%e9%80%9f%e5%a0%b1%e6%9b%b4%e6%96%b0%e3%81%84%e3%81%9f%e3%81%97%e3%81%be%e3%81%97%e3%81%9f-80/",
    "latest_month": "",
    "months": 0,
    "tdnet": false,
@@ -1956,14 +1956,14 @@
    "ir": false
   },
   "6627": {
-   "status": "covered_elsewhere",
+   "status": "ok",
    "home": "https://www.teraprobe.com",
-   "source_url": "",
-   "latest_month": "",
-   "months": 0,
+   "source_url": "https://www.teraprobe.com",
+   "latest_month": "2026-08",
+   "months": 10,
    "tdnet": true,
    "web": false,
-   "ir": false
+   "ir": true
   },
   "7049": {
    "status": "covered_elsewhere",
