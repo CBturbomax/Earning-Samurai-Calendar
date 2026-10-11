@@ -1,15 +1,15 @@
 {
  "v": 1,
- "ts": "2026-10-11T06:48:07+00:00",
+ "ts": "2026-10-11T13:38:46+00:00",
  "seed": 361,
  "homes": 352,
  "official_ir_data": 76,
  "covered_any": 271,
  "status": {
-  "covered_elsewhere": 53,
+  "covered_elsewhere": 51,
   "discontinued": 2,
   "home_pending": 6,
-  "no_monthly_found": 103,
+  "no_monthly_found": 105,
   "ok": 76,
   "parser_failed": 118,
   "pending_discovery": 3
@@ -2286,7 +2286,7 @@
    "ir": false
   },
   "7611": {
-   "status": "covered_elsewhere",
+   "status": "no_monthly_found",
    "home": "https://hidakaya.hiday.co.jp",
    "source_url": "",
    "latest_month": "",
@@ -2539,8 +2539,8 @@
    "status": "ok",
    "home": "https://www.joshin.co.jp",
    "source_url": "https://www.joshin.co.jp",
-   "latest_month": "2026-08",
-   "months": 5,
+   "latest_month": "2026-09",
+   "months": 6,
    "tdnet": false,
    "web": false,
    "ir": true
@@ -2689,8 +2689,8 @@
    "status": "ok",
    "home": "https://www.axial-r.com",
    "source_url": "https://www.axial-r.com/ir/monthlysalestrends/",
-   "latest_month": "2026-08",
-   "months": 53,
+   "latest_month": "2026-09",
+   "months": 54,
    "tdnet": true,
    "web": false,
    "ir": true
@@ -2906,7 +2906,7 @@
    "ir": false
   },
   "9887": {
-   "status": "covered_elsewhere",
+   "status": "no_monthly_found",
    "home": "https://www.matsuyafoods.co.jp",
    "source_url": "",
    "latest_month": "",
