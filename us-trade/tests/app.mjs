@@ -21,3 +21,11 @@ element('#search').value='not-matched';element('#search').input();assert.ok(elem
 console.log('US tracker runtime: import/export, 8 charts/tables, USD, season view and company search passed');
 
 element('#search').value='';element('.tabs').click({target:{closest:()=>({dataset:{group:'항공·에너지'},classList:{add(){}}})}});location.hash='#import';listeners.hashchange();assert.equal((element('#cards').innerHTML.match(/<article/g)||[]).length,8,'Switching flow resets incompatible category');
+assert.ok(element('#trade-highlights').innerHTML.includes('지금 볼 품목·기업'));
+assert.ok(element('#trade-highlights').innerHTML.includes('미국 수입'));
+assert.ok(element('#trade-highlights').innerHTML.includes('TSMC'));
+assert.ok(!element('#trade-highlights').innerHTML.includes('보잉'));
+location.hash='#export';listeners.hashchange();
+assert.ok(element('#trade-highlights').innerHTML.includes('미국 수출'));
+assert.ok(!element('#trade-highlights').innerHTML.includes('TSMC'));
+console.log('Highlight flow isolation and related company rendering passed');
