@@ -13,3 +13,8 @@ Public exports_enduse.xlsx and imports_enduse.xlsx supply monthly DATE/ENDUSE/DE
 Company sources are linked per catalog entry; impact notes are conditional analysis, not established statistical correlation or recommendations. Company trade shares are null until the numerator, denominator, scope and period can be supported. Headquarters location does not establish manufacturing origin.
 
 Current limitations: no partner-country breakdown; LNG-only, AI-server-only, transformer-only, semiconductor-equipment-only and Korea-cosmetics-only values cannot be isolated in these public End-use files. Detailed HS expansion requires Census API access. Do not substitute broad categories under narrow labels.
+
+## UI consistency
+US views reuse the Japan export tracker stylesheet and its monthly/seasonal chart design: item panels, company impact notes, 4 KPIs, horizontally scrolling monthly tables, CSV, categories and favorites. The only source-specific restrictions are world-only End-use/SA values and no quantity or unit-price controls. Import/export switch resets the category so a filter unique to the previous flow cannot hide every item.
+
+`node us-trade/tests/japan-layout.mjs` and `node us-trade/tests/app.mjs` verify charts, source units, both flows and controls.
