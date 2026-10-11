@@ -5,6 +5,8 @@ on:
     paths:
       - '*.py'
       - 'us-trade/**'
+      - 'japan-exports/**'
+      - 'trade-shared/**'
       - 'tests/*.cjs'
       - 'data/monthly_universe_jp.json'
       - 'data/monthly_reviewed_jp.json'
@@ -32,6 +34,7 @@ jobs:
       - name: 미국 수출입 데이터 검사
         run: |
           python -m unittest discover -s us-trade/tests -v
+          node trade-shared/highlights.test.mjs
           node us-trade/tests/metrics.mjs
           node us-trade/tests/japan-layout.mjs
           node us-trade/tests/app.mjs

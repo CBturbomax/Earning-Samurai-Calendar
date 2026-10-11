@@ -1,0 +1,16 @@
+import assert from 'node:assert/strict';
+import {highSignal,renderHighlights} from './highlights.mjs';
+import {windowMonths} from '../japan-exports/metrics.mjs';
+const months=windowMonths('2026-08',60), rows=Object.fromEntries(months.map(m=>[m,{value:100}]));
+assert.equal(highSignal(rows,'2026-08').record,true);
+rows['2026-08'].value=110;assert.equal(highSignal(rows,'2026-08').record,true);
+rows['2026-08'].value=90;assert.equal(highSignal(rows,'2026-08').record,false);assert.ok(highSignal(rows,'2026-08').ratio>=95);
+rows['2026-07'].value=0;assert.equal(highSignal(rows,'2026-08'),null);
+delete rows['2026-08'];assert.equal(highSignal(rows,'2026-08'),null);
+assert.equal(highSignal({'2026-08':{value:999}},'2026-08'),null,'Require complete five-year benchmark');
+assert.equal(highSignal(Object.fromEntries(months.map(m=>[m,{value:0}])),'2026-08'),null);
+const full=Object.fromEntries(months.map(m=>[m,{value:100}]));full['2020-01']={value:999999};assert.equal(highSignal(full,'2026-08').record,true,'Ignore outside window');
+full['2026-07'].value=NaN;assert.equal(highSignal(full,'2026-08'),null);
+const html=renderHighlights([{id:'x',name:'<unsafe>',series:{WORLD:Object.fromEntries(months.map(m=>[m,{value:100}]))}}],{latest:'2026-08',country:'WORLD',context:'test',company:()=>({names:'ABC',reason:'출하 확인'})});
+assert.ok(html.includes('&lt;unsafe&gt;'));assert.ok(html.includes('ABC'));assert.ok(html.includes('data-highlight="x"'));
+console.log('High/near-high: complete window, threshold, missing, zero, finite, escaping passed');
