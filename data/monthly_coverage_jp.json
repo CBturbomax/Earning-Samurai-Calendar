@@ -1,15 +1,15 @@
 {
  "v": 1,
- "ts": "2026-10-11T18:28:47+00:00",
+ "ts": "2026-10-11T22:16:58+00:00",
  "seed": 361,
  "homes": 352,
  "official_ir_data": 76,
  "covered_any": 271,
  "status": {
-  "covered_elsewhere": 50,
+  "covered_elsewhere": 48,
   "discontinued": 2,
   "home_pending": 6,
-  "no_monthly_found": 105,
+  "no_monthly_found": 107,
   "ok": 76,
   "parser_failed": 119,
   "pending_discovery": 3
@@ -119,8 +119,8 @@
    "status": "ok",
    "home": "https://www.united-arrows.co.jp/",
    "source_url": "https://www.united-arrows.co.jp/ir/monthly/",
-   "latest_month": "2026-08",
-   "months": 5,
+   "latest_month": "2026-09",
+   "months": 93,
    "tdnet": true,
    "web": true,
    "ir": true
@@ -836,7 +836,7 @@
    "ir": false
   },
   "2653": {
-   "status": "covered_elsewhere",
+   "status": "no_monthly_found",
    "home": "https://www.aeon-kyushu.info",
    "source_url": "",
    "latest_month": "",
@@ -3076,7 +3076,7 @@
    "ir": false
   },
   "9997": {
-   "status": "covered_elsewhere",
+   "status": "no_monthly_found",
    "home": "https://www.belluna.co.jp",
    "source_url": "",
    "latest_month": "",
