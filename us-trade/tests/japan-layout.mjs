@@ -1,0 +1,14 @@
+import assert from 'node:assert/strict';
+import fs from 'node:fs';
+import {monthsEnding} from '../metrics.mjs';
+const html=fs.readFileSync(new URL('../index.html',import.meta.url),'utf8');
+assert.ok(html.includes('id="cards"'),'Japan-style item cards must exist');
+assert.ok(html.includes('id="mode"'),'Year overlay mode must exist');
+assert.ok(html.includes('id="sort"'),'Japan-style item sorting must exist');
+assert.ok(html.includes('data-group="관심"'),'Favorites must exist');
+const {plot}=await import('../charts.mjs');
+const svg=plot({'2026-07':{value:100000000},'2026-08':{value:200000000}},['2026-07','2026-08'],'value','trend');
+assert.ok(svg.includes('억 달러')); assert.ok(svg.includes('2 억 달러'));assert.equal((svg.match(/class="bar"/g)||[]).length,2);
+const season=plot({'2025-08':{value:100000000},'2026-08':{value:200000000}},monthsEnding('2026-08',24),'value','season');assert.ok(season.includes('2025년'));assert.ok(season.includes('2026년'));assert.ok(season.includes('<path'));
+const negative=plot({'2025-08':{value:200},'2026-08':{value:100}},['2026-08'],'yoy','trend');assert.ok(negative.includes('-50%'));
+console.log('Japan-style US cards, controls, USD chart units, seasonal overlay and YoY passed');
