@@ -4,6 +4,7 @@ on:
   pull_request:
     paths:
       - '*.py'
+      - 'us-trade/**'
       - 'tests/*.cjs'
       - 'data/monthly_universe_jp.json'
       - 'data/monthly_reviewed_jp.json'
@@ -28,6 +29,11 @@ jobs:
         run: node tests/daily_chart.cjs
       - name: 월매출 표 정렬 회귀 검사
         run: node tests/monthly_table.cjs
+      - name: 미국 수출입 데이터 검사
+        run: |
+          python -m unittest discover -s us-trade/tests -v
+          node us-trade/tests/metrics.mjs
+          node --check us-trade/app.js
       - name: Python 문법 검사
         run: |
           python -m py_compile monir.py scrape_mon_ir.py scrape_caps.py build.py

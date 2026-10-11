@@ -1,0 +1,62 @@
+name: 미국 수출입 매일 갱신
+on:
+  schedule:
+    - cron: '47 1 * * *'
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - 'us-trade/scripts/**'
+      - 'us-trade/catalog.json'
+      - '.github/workflows/us-trade.yml'
+permissions:
+  contents: write
+  pages: write
+concurrency:
+  group: us-trade
+  cancel-in-progress: false
+jobs:
+  refresh:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: 수집기 검증
+        run: python -m unittest discover -s us-trade/tests -v
+      - name: Census 공식 월별 통계 확인
+        id: collect
+        continue-on-error: true
+        run: python us-trade/scripts/collect.py
+      - name: 검증본 또는 실패 상태 저장
+        if: always() && steps.collect.outcome != 'skipped'
+        env:
+          COLLECT_OUTCOME: ${{ steps.collect.outcome }}
+        run: |
+          set -euo pipefail
+          staging=$(mktemp -d)
+          cp us-trade/data/status.json "$staging/status.json"
+          if [ "$COLLECT_OUTCOME" = success ]; then cp us-trade/data/trade.json "$staging/trade.json"; fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          for attempt in 1 2 3 4 5; do
+            git fetch origin main
+            git reset --hard origin/main
+            cp "$staging/"*.json us-trade/data/
+            git add us-trade/data
+            git diff --cached --quiet && exit 0
+            git commit -m "미국 수출입 공식 통계 확인 [skip ci]"
+            if git push origin HEAD:main; then exit 0; fi
+          done
+          exit 1
+      - name: GitHub Pages 갱신
+        if: always()
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_REPO: ${{ github.repository }}
+        run: gh api --method POST "repos/$GH_REPO/pages/builds"
+      - name: 수집 실패 알림
+        if: steps.collect.outcome == 'failure'
+        run: exit 1

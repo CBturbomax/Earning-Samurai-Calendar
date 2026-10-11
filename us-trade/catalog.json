@@ -1,0 +1,385 @@
+[
+  {
+    "id": "import-chips",
+    "flow": "import",
+    "name": "반도체",
+    "codes": [
+      "21320"
+    ],
+    "group": "반도체·전자",
+    "companies": [
+      {
+        "name": "TSMC",
+        "ticker": "TSM / 2330",
+        "url": "https://www.tsmc.com/english/aboutTSMC"
+      },
+      {
+        "name": "삼성전자",
+        "ticker": "005930",
+        "url": "https://semiconductor.samsung.com/about-us/business-area/memory/"
+      }
+    ],
+    "scope": "메모리·비메모리를 포함한 반도체. HBM 단독 수치가 아닙니다.",
+    "up": "미국향 칩 출하 확대라면 TSMC·삼성전자의 관련 생산분에 긍정적 단서.",
+    "down": "최종 수요와 출하가 함께 줄면 관련 생산분에 부담 가능.",
+    "caution": "칩이 이미 탑재된 서버·스마트폰은 다른 품목일 수 있습니다. 미국 현지 생산 확대는 수입 감소와 함께 나타날 수 있습니다.",
+    "tradeShare": null,
+    "shareNote": "이 통계에서 기업별 금액·점유율은 확인되지 않음. 관련 기업 나열 순서는 점유율 순위가 아닙니다.",
+    "reviewedAt": "2026-10-11"
+  },
+  {
+    "id": "import-computers",
+    "flow": "import",
+    "name": "컴퓨터",
+    "codes": [
+      "21300"
+    ],
+    "group": "반도체·전자",
+    "companies": [
+      {
+        "name": "위윈",
+        "ticker": "6669",
+        "url": "https://www.wiwynn.com/about-wiwynn/company-info"
+      }
+    ],
+    "scope": "컴퓨터 전체. AI 서버만 분리하지 않습니다.",
+    "up": "서버 물량 증가가 동반되면 위윈 등 ODM의 미국향 수요에 긍정적 단서.",
+    "down": "고객 설비투자 축소로 줄었다면 ODM 주문에 부담 가능.",
+    "caution": "PC와 서버가 섞입니다. AI 수혜 판단은 회사 서버 매출·고객 투자와 대조해야 합니다.",
+    "tradeShare": null,
+    "shareNote": "이 통계에서 기업별 금액·점유율은 확인되지 않음. 관련 기업 나열 순서는 점유율 순위가 아닙니다.",
+    "reviewedAt": "2026-10-11"
+  },
+  {
+    "id": "import-accessories",
+    "flow": "import",
+    "name": "컴퓨터 부속품",
+    "codes": [
+      "21301"
+    ],
+    "group": "반도체·전자",
+    "companies": [
+      {
+        "name": "위윈",
+        "ticker": "6669",
+        "url": "https://www.wiwynn.com/about-wiwynn/company-info"
+      },
+      {
+        "name": "삼성전자",
+        "ticker": "005930",
+        "url": "https://semiconductor.samsung.com/about-us/business-area/memory/"
+      }
+    ],
+    "scope": "컴퓨터 부속품 전체. GPU·메모리 모듈만의 통계가 아닙니다.",
+    "up": "부품 수요 확대가 확인되면 서버 공급망에 긍정적 단서.",
+    "down": "재고 조정에 따른 부품 주문 감소라면 공급망에 부담 가능.",
+    "caution": "부품 믹스와 완제품·부품 간 통관 경로 변화의 영향이 큽니다. 연결 강도는 간접적입니다.",
+    "tradeShare": null,
+    "shareNote": "이 통계에서 기업별 금액·점유율은 확인되지 않음. 관련 기업 나열 순서는 점유율 순위가 아닙니다.",
+    "reviewedAt": "2026-10-11"
+  },
+  {
+    "id": "import-beauty",
+    "flow": "import",
+    "name": "세면용품·화장품",
+    "codes": [
+      "40120"
+    ],
+    "group": "소비재",
+    "companies": [
+      {
+        "name": "에이피알",
+        "ticker": "278470",
+        "url": "https://apr-in.com/en/apr_about.html"
+      }
+    ],
+    "scope": "화장품 외 세면용품도 포함. 한국산·메디큐브만의 수입이 아닙니다.",
+    "up": "한국 브랜드의 미국 판매 증가가 함께 확인되면 에이피알 화장품 사업에 긍정적 단서.",
+    "down": "브랜드 판매 둔화와 유통 재고 감소가 동반되면 부담 가능.",
+    "caution": "뷰티 디바이스 매출은 이 분류와 일치하지 않습니다. 전 세계 공급업체를 합친 통계입니다.",
+    "tradeShare": null,
+    "shareNote": "이 통계에서 기업별 금액·점유율은 확인되지 않음. 관련 기업 나열 순서는 점유율 순위가 아닙니다.",
+    "reviewedAt": "2026-10-11"
+  },
+  {
+    "id": "import-electric",
+    "flow": "import",
+    "name": "전기기기",
+    "codes": [
+      "20005"
+    ],
+    "group": "산업재",
+    "companies": [
+      {
+        "name": "HD현대일렉트릭",
+        "ticker": "267260",
+        "url": "https://www.hd-hyundaielectric.com/elect/en/index.jsp"
+      }
+    ],
+    "scope": "전기기기 전체. 변압기만의 통계가 아닙니다.",
+    "up": "전력망 투자와 한국산 납품 확대가 확인되면 HD현대일렉트릭 수출에 긍정적 단서.",
+    "down": "설비투자 취소나 납품 감소로 줄었다면 관련 공급사에 부담 가능.",
+    "caution": "변압기 수주를 직접 추정할 수 없습니다. 미국 현지 공장 생산은 미국 수입에 포함되지 않습니다.",
+    "tradeShare": null,
+    "shareNote": "이 통계에서 기업별 금액·점유율은 확인되지 않음. 관련 기업 나열 순서는 점유율 순위가 아닙니다.",
+    "reviewedAt": "2026-10-11"
+  },
+  {
+    "id": "import-footwear",
+    "flow": "import",
+    "name": "신발",
+    "codes": [
+      "40040"
+    ],
+    "group": "소비재",
+    "companies": [
+      {
+        "name": "나이키",
+        "ticker": "NKE",
+        "url": "https://about.nike.com/en/resources/supplier-relationships"
+      }
+    ],
+    "scope": "모든 브랜드의 신발. 나이키만의 통계가 아닙니다.",
+    "up": "최종 판매 증가에 따른 정상 재입고라면 나이키 등 브랜드의 수요 회복 단서.",
+    "down": "판매 부진에 따른 발주 축소라면 브랜드 성장에 부담 가능.",
+    "caution": "수입 증가가 과잉 재고 축적일 수도 있습니다. 관세 전 선구매와 할인율을 함께 봅니다.",
+    "tradeShare": null,
+    "shareNote": "이 통계에서 기업별 금액·점유율은 확인되지 않음. 관련 기업 나열 순서는 점유율 순위가 아닙니다.",
+    "reviewedAt": "2026-10-11"
+  },
+  {
+    "id": "import-cars",
+    "flow": "import",
+    "name": "승용차",
+    "codes": [
+      "30000"
+    ],
+    "group": "산업재",
+    "companies": [
+      {
+        "name": "현대자동차",
+        "ticker": "005380",
+        "url": "https://www.hyundaiusa.com/us/en/why-hyundai/hyundai-in-america"
+      }
+    ],
+    "scope": "신차·중고 승용차 전체. 특정 제조사·전기차만의 수치가 아닙니다.",
+    "up": "현대차 미국 판매 중 해외 생산분 증가가 확인되면 수출 생산분에 긍정적 단서.",
+    "down": "미국 판매 둔화에 따른 해외 주문 감소라면 부담 가능.",
+    "caution": "현대차는 미국에서도 생산합니다. 현지화로 수입이 줄어도 미국 매출은 늘 수 있습니다.",
+    "tradeShare": null,
+    "shareNote": "이 통계에서 기업별 금액·점유율은 확인되지 않음. 관련 기업 나열 순서는 점유율 순위가 아닙니다.",
+    "reviewedAt": "2026-10-11"
+  },
+  {
+    "id": "import-medical",
+    "flow": "import",
+    "name": "의료기기",
+    "codes": [
+      "21610"
+    ],
+    "group": "헬스케어",
+    "companies": [
+      {
+        "name": "메드트로닉",
+        "ticker": "MDT",
+        "url": "https://www.medtronic.com/en-us/healthcare-professionals/specialties/surgical-solutions/product-portfolio.html"
+      }
+    ],
+    "scope": "의료기기 상품 분류. 의약품과 의료 서비스는 별도입니다.",
+    "up": "미국 의료기기 수요 확대가 동반되면 메드트로닉 관련 해외 생산분에 긍정적 단서.",
+    "down": "수요 둔화에 따른 조달 감소라면 관련 제품에 부담 가능.",
+    "caution": "제품군·생산국·미국 내 생산을 구분해야 합니다. 메드트로닉 전체 매출의 대용치가 아닙니다.",
+    "tradeShare": null,
+    "shareNote": "이 통계에서 기업별 금액·점유율은 확인되지 않음. 관련 기업 나열 순서는 점유율 순위가 아닙니다.",
+    "reviewedAt": "2026-10-11"
+  },
+  {
+    "id": "export-aircraft",
+    "flow": "export",
+    "name": "민간 항공기",
+    "codes": [
+      "22000"
+    ],
+    "group": "항공·에너지",
+    "companies": [
+      {
+        "name": "보잉",
+        "ticker": "BA",
+        "url": "https://www.boeing.com/commercial"
+      }
+    ],
+    "scope": "민간 항공기. 엔진과 부품은 아래 별도 행입니다.",
+    "up": "미국 생산 항공기의 해외 인도 확대라면 보잉 상업용 항공기 매출에 긍정적 단서.",
+    "down": "인도 지연이나 생산 차질에 따른 감소라면 보잉에 부담 가능.",
+    "caution": "한두 대 인도 시점도 월별 금액을 크게 바꿉니다. 회사의 월별 인도 대수와 함께 확인합니다.",
+    "tradeShare": null,
+    "shareNote": "이 통계에서 기업별 금액·점유율은 확인되지 않음. 관련 기업 나열 순서는 점유율 순위가 아닙니다.",
+    "reviewedAt": "2026-10-11"
+  },
+  {
+    "id": "export-engines",
+    "flow": "export",
+    "name": "민간 항공기 엔진",
+    "codes": [
+      "22020"
+    ],
+    "group": "항공·에너지",
+    "companies": [
+      {
+        "name": "GE 에어로스페이스",
+        "ticker": "GE",
+        "url": "https://www.geaerospace.com/commercial/engines"
+      }
+    ],
+    "scope": "민간 항공기 엔진. 정비 서비스 매출은 포함되지 않습니다.",
+    "up": "해외 엔진 인도 확대라면 GE의 미국 생산분에 긍정적 단서.",
+    "down": "엔진 공급 차질·발주 감소가 원인이면 해당 사업에 부담 가능.",
+    "caution": "GE 외 제조사도 포함하며 정비 매출은 무역 상품 통계와 다릅니다.",
+    "tradeShare": null,
+    "shareNote": "이 통계에서 기업별 금액·점유율은 확인되지 않음. 관련 기업 나열 순서는 점유율 순위가 아닙니다.",
+    "reviewedAt": "2026-10-11"
+  },
+  {
+    "id": "export-airparts",
+    "flow": "export",
+    "name": "민간 항공기 부품",
+    "codes": [
+      "22010"
+    ],
+    "group": "항공·에너지",
+    "companies": [
+      {
+        "name": "보잉",
+        "ticker": "BA",
+        "url": "https://www.boeing.com/commercial"
+      },
+      {
+        "name": "GE 에어로스페이스",
+        "ticker": "GE",
+        "url": "https://www.geaerospace.com/commercial/engines"
+      }
+    ],
+    "scope": "민간 항공기 부품. 완성 항공기·엔진과 별도 분류입니다.",
+    "up": "부품의 해외 납품이 늘면 관련 미국 생산 공급망에 긍정적 단서.",
+    "down": "해외 제작·정비 수요 둔화라면 관련 공급망에 부담 가능.",
+    "caution": "보잉·GE 전체 매출 또는 부품 점유율을 뜻하지 않습니다. 정비 서비스는 제외됩니다.",
+    "tradeShare": null,
+    "shareNote": "이 통계에서 기업별 금액·점유율은 확인되지 않음. 관련 기업 나열 순서는 점유율 순위가 아닙니다.",
+    "reviewedAt": "2026-10-11"
+  },
+  {
+    "id": "export-gas",
+    "flow": "export",
+    "name": "천연가스",
+    "codes": [
+      "11200"
+    ],
+    "group": "항공·에너지",
+    "companies": [
+      {
+        "name": "셰니어 에너지",
+        "ticker": "LNG",
+        "url": "https://lngir.cheniere.com/"
+      }
+    ],
+    "scope": "LNG와 파이프라인 천연가스를 포함. LNG 단독 통계가 아닙니다.",
+    "up": "LNG 출하량 증가가 동반되면 셰니어의 가동·판매 확대 단서.",
+    "down": "LNG 물량 감소나 설비 중단이 동반되면 셰니어 관련 매출에 부담 가능.",
+    "caution": "가격만 올라 금액이 늘 수 있습니다. 장기 계약 가격·액화 수수료와 이익은 별도로 봐야 합니다. 셰니어는 미국 주요 LNG 생산·수출사지만 이 전체 품목 점유율은 미확인입니다.",
+    "tradeShare": null,
+    "shareNote": "이 통계에서 기업별 금액·점유율은 확인되지 않음. 관련 기업 나열 순서는 점유율 순위가 아닙니다.",
+    "reviewedAt": "2026-10-11"
+  },
+  {
+    "id": "export-machines",
+    "flow": "export",
+    "name": "기타 산업기계",
+    "codes": [
+      "21180"
+    ],
+    "group": "산업재",
+    "companies": [
+      {
+        "name": "어플라이드 머티어리얼즈",
+        "ticker": "AMAT",
+        "url": "https://www.appliedmaterials.com/us/en/semiconductor/products.html"
+      }
+    ],
+    "scope": "여러 산업기계를 합친 넓은 분류. 반도체 제조장비 전용 지표가 아닙니다.",
+    "up": "반도체 장비 납품 증가가 별도 확인되면 AMAT 미국 생산분에 긍정적 단서.",
+    "down": "반도체 장비 발주 감소가 별도 확인되면 관련 장비 사업에 부담 가능.",
+    "caution": "연결 강도 낮음. 이 합계만으로 반도체 장비 업황을 판단하지 않습니다. 미국 밖 생산·수출은 제외됩니다.",
+    "tradeShare": null,
+    "shareNote": "이 통계에서 기업별 금액·점유율은 확인되지 않음. 관련 기업 나열 순서는 점유율 순위가 아닙니다.",
+    "reviewedAt": "2026-10-11"
+  },
+  {
+    "id": "export-excavation",
+    "flow": "export",
+    "name": "굴착용 기계",
+    "codes": [
+      "21030"
+    ],
+    "group": "산업재",
+    "companies": [
+      {
+        "name": "캐터필러",
+        "ticker": "CAT",
+        "url": "https://www.caterpillar.com/en/brands/cat/products.html"
+      }
+    ],
+    "scope": "굴착용 건설·광산 기계. 캐터필러 전체 제품군이 아닙니다.",
+    "up": "미국 공장 해외 출하 증가라면 캐터필러 관련 생산분에 긍정적 단서.",
+    "down": "해외 건설·광산 투자 둔화에 따른 출하 감소라면 부담 가능.",
+    "caution": "해외 공장 생산은 제외됩니다. 딜러 재고 증가에 따른 선출하인지 구분합니다.",
+    "tradeShare": null,
+    "shareNote": "이 통계에서 기업별 금액·점유율은 확인되지 않음. 관련 기업 나열 순서는 점유율 순위가 아닙니다.",
+    "reviewedAt": "2026-10-11"
+  },
+  {
+    "id": "export-agri",
+    "flow": "export",
+    "name": "농업용 기계·장비",
+    "codes": [
+      "21200"
+    ],
+    "group": "산업재",
+    "companies": [
+      {
+        "name": "디어",
+        "ticker": "DE",
+        "url": "https://www.deere.com/en-us/industries/agriculture"
+      }
+    ],
+    "scope": "농업용 기계·장비 전체. 디어 단독 수출이 아닙니다.",
+    "up": "해외 농기계 수요 확대라면 디어 미국 공장 출하에 긍정적 단서.",
+    "down": "농가 소득 악화·해외 주문 감소라면 관련 사업에 부담 가능.",
+    "caution": "디어 해외 공장 매출은 제외되고 딜러 재고 변동이 출하를 흔들 수 있습니다.",
+    "tradeShare": null,
+    "shareNote": "이 통계에서 기업별 금액·점유율은 확인되지 않음. 관련 기업 나열 순서는 점유율 순위가 아닙니다.",
+    "reviewedAt": "2026-10-11"
+  },
+  {
+    "id": "export-generators",
+    "flow": "export",
+    "name": "발전기·부속품",
+    "codes": [
+      "20000"
+    ],
+    "group": "산업재",
+    "companies": [
+      {
+        "name": "캐터필러",
+        "ticker": "CAT",
+        "url": "https://www.caterpillar.com/en/brands/cat/products.html"
+      }
+    ],
+    "scope": "발전기와 부속품 전체. 데이터센터 비상발전기만의 통계가 아닙니다.",
+    "up": "해외 발전설비 수요와 출하 증가가 확인되면 캐터필러 관련 사업에 긍정적 단서.",
+    "down": "프로젝트 지연에 따른 출하 감소라면 관련 사업에 부담 가능.",
+    "caution": "산업용·기타 용도가 섞입니다. 데이터센터 매출이나 AI 투자액으로 해석하지 않습니다.",
+    "tradeShare": null,
+    "shareNote": "이 통계에서 기업별 금액·점유율은 확인되지 않음. 관련 기업 나열 순서는 점유율 순위가 아닙니다.",
+    "reviewedAt": "2026-10-11"
+  }
+]
