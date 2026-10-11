@@ -1,17 +1,17 @@
 {
  "v": 1,
- "ts": "2026-10-11T13:38:46+00:00",
+ "ts": "2026-10-11T18:28:47+00:00",
  "seed": 361,
  "homes": 352,
  "official_ir_data": 76,
  "covered_any": 271,
  "status": {
-  "covered_elsewhere": 51,
+  "covered_elsewhere": 50,
   "discontinued": 2,
   "home_pending": 6,
   "no_monthly_found": 105,
   "ok": 76,
-  "parser_failed": 118,
+  "parser_failed": 119,
   "pending_discovery": 3
  },
  "codes": {
@@ -2576,9 +2576,9 @@
    "ir": false
   },
   "8198": {
-   "status": "covered_elsewhere",
+   "status": "parser_failed",
    "home": "https://www.mv-tokai.co.jp",
-   "source_url": "",
+   "source_url": "https://www.mv-tokai.co.jp/monthly-recipe/recommended/",
    "latest_month": "",
    "months": 0,
    "tdnet": true,
