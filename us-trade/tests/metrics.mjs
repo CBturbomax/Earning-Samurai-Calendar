@@ -1,0 +1,10 @@
+import assert from 'node:assert/strict';
+import {yoy,monthsEnding,sortItems} from '../metrics.mjs';
+assert.equal(yoy({'2026-08':0,'2025-08':100},'2026-08'),-100);
+assert.equal(yoy({'2026-08':100,'2025-08':0},'2026-08'),null);
+assert.equal(yoy({'2026-08':100},'2026-08'),null);
+assert.deepEqual(monthsEnding('2026-01',3),['2025-11','2025-12','2026-01']);
+const a=[{id:'a',values:{'2026-08':2}},{id:'b',values:{}},{id:'c',values:{'2026-08':9}}];
+assert.deepEqual(sortItems(a,'2026-08','value',true).map(x=>x.id),['c','a','b']);
+assert.deepEqual(sortItems(a,'2026-08','value',false).map(x=>x.id),['a','c','b']);
+console.log('US monthly metrics and sorting passed');

@@ -3235,6 +3235,8 @@ svg.bars rect.b:hover { fill:var(--a3); }
   <a href="./" aria-current="page">실적 캘린더</a>
   <a href="#mnMeta">일본 월매출</a>
   <a href="japan-exports/">일본 수출</a>
+  <a href="us-trade/#export">미국 수출</a>
+  <a href="us-trade/#import">미국 수입</a>
 </nav>
 
 <div class="find">

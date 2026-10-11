@@ -1,0 +1,14 @@
+<!doctype html>
+<html lang="ko"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>미국 수출·수입 | 어닝사무라이</title><meta name="description" content="미국 공식 월별 수출입 통계와 관련 기업: 최근 5년 금액·전년비·투자 해석"><link rel="stylesheet" href="style.css"></head><body>
+<header><a class="brand" href="../">EARNING SAMURAI / US TRADE</a><h1>미국 수출·수입 <span>US</span></h1><p>국경을 넘는 교역에서, 기업 실적의 단서를.</p><div id="status" role="status">공식 통계를 불러오는 중…</div></header>
+<main><nav aria-label="어닝사무라이 메뉴"><a href="../">실적 캘린더</a><a href="../#mnMeta">일본 월매출</a><a href="../japan-exports/">일본 수출</a><a href="#export" data-flow="export">미국 수출</a><a href="#import" data-flow="import">미국 수입</a></nav>
+<div id="warning" role="status"></div>
+<section class="controls" aria-label="조회 조건"><label>품목·기업 검색<input id="search" type="search" placeholder="반도체, 보잉, 278470…"></label><label>기간<select id="range"><option value="60">최근 5년</option><option value="36">최근 3년</option><option value="12">최근 1년</option></select></label><label>표시 지표<select id="metric"><option value="value">금액 · 억 달러</option><option value="yoy">전년 동월 대비 · %</option></select></label><button id="latest">최신월로 →</button></section>
+<div class="summary"><h2 id="heading">미국 수입</h2><span id="count"></span></div>
+<p class="method">세계 전체 ↔ 미국 · 상품 무역 · 명목 달러 · <b>계절조정</b> · Census End-use(용도별) 분류<br>일본 수출의 HS·비계절조정 자료와 기준이 다릅니다. 국가별·기업별 금액과 수량은 이 자료에서 분리할 수 없습니다.</p>
+<section id="detail" aria-label="관련 기업 해석"></section>
+<p class="hint">월 제목 클릭: 큰 숫자부터 / 한 번 더 클릭: 작은 숫자부터 · 품목 클릭: 기업 메모 · 좌우 스크롤 가능</p>
+<div class="tablewrap" tabindex="0" aria-label="월별 수출입 추이, 좌우 스크롤"><table id="table"></table></div>
+<p id="sort-status" role="status"></p>
+<footer><h2>숫자를 읽는 기준</h2><p>수출입 증가는 해당 기업의 이익 증가나 주가 상승을 보장하지 않습니다. 물량·가격·제품 구성·재고·관세 전 선구매·현지 생산 전환을 함께 봅니다. 기업 연결은 사업 내용에 근거한 해석이며 통계적 상관관계를 검증한 결과가 아닙니다.</p><p>금액은 억 달러, 증가율은 정수 %로 표시하며 계산에는 반올림 전 원수치를 사용합니다. 0은 실제 0 또는 반올림된 소액이고, —는 자료 없음·계산 불가입니다. 셀에 마우스를 올리면 원금액을 볼 수 있습니다. 5년 표의 첫해 전년비 계산을 위해 6년 데이터를 보관합니다.</p><p>매일 한국시간 오전 10:47에 공식 월간 발표·수정치를 확인합니다. 실패 시 마지막 검증본을 유지하고 알림을 표시합니다. 기업 메모 검토: 2026-10-11.</p><a href="https://www.census.gov/foreign-trade/statistics/historical/seas.html" target="_blank" rel="noopener">Census 공식 통계 안내 ↗</a> · <a href="https://www.census.gov/foreign-trade/statistics/historical/exports_enduse.xlsx">수출 원자료 XLSX</a> · <a href="https://www.census.gov/foreign-trade/statistics/historical/imports_enduse.xlsx">수입 원자료 XLSX</a></footer></main>
+<script type="module" src="app.js"></script></body></html>
