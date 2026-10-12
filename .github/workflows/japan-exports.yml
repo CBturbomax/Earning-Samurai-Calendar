@@ -30,6 +30,10 @@ jobs:
         id: collect
         continue-on-error: true
         run: python japan-exports/scripts/collect.py
+      - name: 전체 HS4 수출 품목 발굴
+        id: discovery
+        continue-on-error: true
+        run: python japan-exports/scripts/discover.py
       - name: 검증된 데이터 또는 실패 상태 저장
         if: always()
         shell: bash
@@ -53,5 +57,5 @@ jobs:
           GH_REPO: ${{ github.repository }}
         run: gh api --method POST "repos/$GH_REPO/pages/builds"
       - name: 수집 실패 표시
-        if: steps.collect.outcome == 'failure'
+        if: steps.collect.outcome == 'failure' || steps.discovery.outcome == 'failure'
         run: exit 1

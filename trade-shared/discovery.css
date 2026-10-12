@@ -1,0 +1,5 @@
+.discovery-row{padding:10px 0;border-bottom:1px solid #283340}.discovery-row button{background:none;border:0;color:inherit;cursor:pointer;display:flex;align-items:center;gap:10px;text-align:left;flex-wrap:wrap;font:inherit;padding:0}.discovery-row button:hover strong{text-decoration:underline}.discovery-row>small{display:block;color:#9daab7;margin-top:5px;font-size:12px}.discovery-row button small,.discovery-count{color:#9daab7;font-size:12px}.discovery-count{line-height:1.7}#discovery-card:empty{display:none}
+
+.discovery-row button strong{display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;max-width:min(650px,100%);line-height:1.45}
+
+.discovery-search{display:flex;align-items:center;gap:12px;flex-wrap:wrap;color:#a9b7c6;font-size:12px;margin:20px 0 10px}.discovery-search input{width:280px;max-width:100%;padding:8px 10px;color:#e5edf5;background:#151d27;border:1px solid #354252;border-radius:6px;font:inherit}
