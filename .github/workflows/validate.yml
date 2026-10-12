@@ -35,6 +35,8 @@ jobs:
         run: |
           python -m unittest discover -s us-trade/tests -v
           node trade-shared/highlights.test.mjs
+          node japan-exports/tests/test_company_coverage.mjs
+          node japan-exports/tests/test_company_impact.mjs
           node us-trade/tests/metrics.mjs
           node us-trade/tests/japan-layout.mjs
           node us-trade/tests/app.mjs

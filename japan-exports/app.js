@@ -1,6 +1,6 @@
-import {renderHighlights} from '../trade-shared/highlights.mjs?v=20261012-high';
+import {renderHighlights} from '../trade-shared/highlights.mjs?v=20261012-companies';
 import {change,windowMonths,metricValue,priorYear,compatibleSeries,rollingGrowth} from './metrics.mjs?v=20261001-niche';
-import {themes} from './themes.mjs?v=20261001-impact';
+import {themes} from './themes.mjs?v=20261012-companies';
 import {renderCompanyImpact} from './company-impact.mjs?v=20261001-impact';
 const $=s=>document.querySelector(s),esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const fmt=(v,sign=false)=>v==null||!Number.isFinite(v)?'—':`${sign&&Math.round(v)>0?'+':''}${(Math.round(v)||0).toLocaleString('ko-KR')}`;

@@ -1,3 +1,4 @@
+import {companyCoverage} from './company-coverage.mjs?v=20261012-companies';
 // Company/product relationships are editorial research, not measured earnings correlations.
 export const themes={
  semi_testers:{companies:'어드반테스트 6857',precision:'제품군 추적',why:'AI 반도체 테스트 투자와 함께 볼 지표. 회사는 2026년 4~6월 AI용 고성능 반도체 테스터 수요 확대를 설명했습니다.',limit:'웨이퍼 검사 등도 포함. 특정 회사·AI용 매출을 분리하지 못합니다.',url:'https://www.advantest.com/en/investors/financial-highlights/review/'},
@@ -46,4 +47,8 @@ notes.optics={...notes.camera_lenses,caution:'광학부품 전체의 혼합 지�
 for(const [id,t] of Object.entries(themes)){
  const n=notes[id];
  t.impact={...n,exportShare:null,reviewedAt:'2026-10-01',sources:[{label:'기업·제품 근거',url:t.url},customs,...(n.sources||[]),...(n.exposures||[]).map(e=>e.source)]};
+}
+
+for(const [id,t] of Object.entries(companyCoverage)){
+ themes[id]={...t,impact:{up:'해당 기업의 일본 생산 제품 수요가 늘었다면 관련 사업에 긍정적.',down:'해당 기업 제품의 수요 감소라면 관련 사업에 부담.',caution:t.limit,exportShare:null,exposureNote:'이 수출 품목에 대응하는 회사 매출 비중은 별도 확인되지 않았습니다.',reviewedAt:'2026-10-12',sources:[{label:'기업·제품 공식 근거',url:t.url},customs,...t.sources]}};
 }

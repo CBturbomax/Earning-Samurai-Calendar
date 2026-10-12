@@ -1,4 +1,4 @@
-import {renderHighlights} from '../trade-shared/highlights.mjs?v=20261012-high';
+import {renderHighlights} from '../trade-shared/highlights.mjs?v=20261012-companies';
 import {change,windowMonths,priorYear,compatibleSeries,rollingGrowth} from '../japan-exports/metrics.mjs';
 import {plot} from './charts.mjs?v=20261012-japan';
 let themes={},flow=location.hash==='#export'?'export':'import'; const flowLabel=()=>flow==='export'?'수출':'수입'; const metricValue=(r,metric)=>r?.value==null?null:r.value/1e8;
