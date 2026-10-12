@@ -34,6 +34,8 @@ jobs:
       - name: 미국 수출입 데이터 검사
         run: |
           python -m unittest discover -s us-trade/tests -v
+          python -m unittest discover -s japan-exports/tests -v
+          node trade-shared/discovery.test.mjs
           node trade-shared/highlights.test.mjs
           node japan-exports/tests/test_company_coverage.mjs
           node japan-exports/tests/test_company_impact.mjs

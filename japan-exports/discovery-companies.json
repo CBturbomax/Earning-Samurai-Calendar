@@ -1,0 +1,646 @@
+{
+  "3914": {
+    "name": "이온교환수지",
+    "companies": "미쓰비시케미컬그룹 4188",
+    "sources": [
+      {
+        "label": "DIAION 제품",
+        "url": "https://www.diaion.com/en/about/"
+      },
+      {
+        "label": "일본 구로사키 생산",
+        "url": "https://www.m-chemical.co.jp/en/news/kagaku/2013/20130724-1.html"
+      }
+    ],
+    "note": "DIAION 제품과 구로사키 일본 생산 근거. 해외 생산도 있어 일본 수출 전체를 회사 매출로 대체하지 않음. 기업별 수출액·점유율은 확인되지 않음."
+  },
+  "4820": {
+    "name": "노트·수첩·장부",
+    "companies": "고쿠요 7984",
+    "sources": [
+      {
+        "label": "시가 노트 공장",
+        "url": "https://www.kokuyo.com/about/people-and-culture/social-engagement/kougyou-shiga/"
+      },
+      {
+        "label": "Campus 종이제품 제조",
+        "url": "https://www.kokuyo.com/sustainability/sutenaicircle/tsunageloopa_0004/"
+      }
+    ],
+    "note": "그룹 시가 공장의 Campus 노트 생산. HS 전체에는 타사 수첩·앨범 등도 포함. 기업별 수출액·점유율은 확인되지 않음."
+  },
+  "3705": {
+    "name": "현상한 사진판·필름",
+    "companies": "다이닛폰인쇄 7912",
+    "sources": [
+      {
+        "label": "포토마스크 제품",
+        "url": "https://www.dnp.co.jp/our-business/innovation/case-studies/photo-mask.html"
+      },
+      {
+        "label": "2024 상후쿠오카 포토마스크 설비",
+        "url": "https://www.dnp.co.jp/ir/management-policy/midterm-plan/pdf/DNP_midterm-plan-2024j-ProgressReport.pdf"
+      }
+    ],
+    "note": "포토마스크와 상후쿠오카 생산설비 확인. HS의 현상 사진판에 대응하는 제품 사례이며 OLED 금속 마스크와 구분. 기업별 수출액·점유율은 확인되지 않음."
+  },
+  "3910": {
+    "name": "실리콘수지",
+    "companies": "신에츠화학 4063",
+    "sources": [
+      {
+        "label": "일본 공장별 생산품",
+        "url": "https://www.shinetsu.co.jp/en/company/network/plant/"
+      }
+    ],
+    "note": "군마 사업장의 실리콘 생산. 실리콘 웨이퍼와 다른 고분자 소재. 기업별 수출액·점유율은 확인되지 않음."
+  },
+  "3905": {
+    "name": "비닐아세테이트·비닐계 수지",
+    "companies": "구라레 3405",
+    "sources": [
+      {
+        "label": "일본 비닐계 제품 생산 인증",
+        "url": "https://www.kuraray.com/us-en/news/2025/kuraray-acquires-iscc-plus-certification-at-three-sites-in-japan-establishment-of-a-certified-supply-chain-for-five-vinyl-acetate-related-products-in-japan/"
+      }
+    ],
+    "note": "일본 오카야마 등의 PVOH 수지 생산을 확인. HS 전체가 PVOH인 것은 아님. 기업별 수출액·점유율은 확인되지 않음."
+  },
+  "5603": {
+    "name": "부직포",
+    "companies": "도요보 3101",
+    "sources": [
+      {
+        "label": "쓰루가 생산품",
+        "url": "https://www.toyobo-global.com/pdf/company/access/pamp_tsuruga.pdf"
+      }
+    ],
+    "note": "쓰루가 생산거점의 건축용 부직포 확인. 용도·재질이 다양한 HS. 기업별 수출액·점유율은 확인되지 않음."
+  },
+  "4010": {
+    "name": "고무 컨베이어·전동벨트",
+    "companies": "반도화학 5195",
+    "sources": [
+      {
+        "label": "와카야마 고무벨트 공정",
+        "url": "https://www.bandogrp.com/eng/csr/feature/2021/index.html"
+      }
+    ],
+    "note": "와카야마 공장에서 산업용 톱니 고무벨트를 제조. 기업별 수출액·점유율은 확인되지 않음."
+  },
+  "7410": {
+    "name": "동박",
+    "companies": "JX금속 5016",
+    "sources": [
+      {
+        "label": "일본 압연동박 생산",
+        "url": "https://www.jx-nmm.com/english/newsrelease/fy2021/20211208_02.html"
+      }
+    ],
+    "note": "구라미·히타치의 압연동박 제조를 확인. 전해동박도 포함하는 HS 전체와 구분. 기업별 수출액·점유율은 확인되지 않음."
+  },
+  "7409": {
+    "name": "동판·동합금 스트립",
+    "companies": "JX금속 5016",
+    "sources": [
+      {
+        "label": "구라미 동합금 스트립",
+        "url": "https://www.jx-nmm.com/english/newsrelease/fy2022/20230126_02.html"
+      }
+    ],
+    "note": "구라미의 고기능 동합금 스트립 제조. 동박은 별도 HS7410이며 소재 두께별 혼합에 유의. 기업별 수출액·점유율은 확인되지 않음."
+  },
+  "7606": {
+    "name": "알루미늄 판·시트",
+    "companies": "UACJ 5741",
+    "sources": [
+      {
+        "label": "일본 시트 생산거점",
+        "url": "https://www.uacj.co.jp/english/aluminum_future/index.html"
+      },
+      {
+        "label": "상장 코드",
+        "url": "https://www.uacj.co.jp/ir/stockinfo/stock.html"
+      }
+    ],
+    "note": "일본 후쿠이·후카야의 압연 시트·후판 생산. 해외 생산도 존재. 기업별 수출액·점유율은 확인되지 않음."
+  },
+  "8108": {
+    "name": "티타늄·티타늄 제품",
+    "companies": "오사카티타늄 5726",
+    "sources": [
+      {
+        "label": "티타늄 제품",
+        "url": "https://www.osaka-ti.co.jp/e/e_product/titan/"
+      },
+      {
+        "label": "아마가사키 생산능력",
+        "url": "https://www.osaka-ti.co.jp/e/e_ir/pdf/e-ir202411.pdf"
+      }
+    ],
+    "note": "아마가사키 스펀지티타늄 생산 확인. 가공품·스크랩도 포함하는 넓은 HS. 기업별 수출액·점유율은 확인되지 않음."
+  },
+  "6815": {
+    "name": "탄소·광물 제품",
+    "companies": "도요탄소 5310",
+    "sources": [
+      {
+        "label": "흑연 제조·가공 공장",
+        "url": "https://www.toyotanso.com/Brand/Brand_4.html"
+      }
+    ],
+    "note": "일본 등방성 흑연 가공 생산과 연결. 광물 제품 전체 및 다른 탄소재까지 포함. 기업별 수출액·점유율은 확인되지 않음."
+  },
+  "9012": {
+    "name": "전자현미경·회절장치",
+    "companies": "일본전자 JEOL 6951",
+    "sources": [
+      {
+        "label": "제조 인증 범위",
+        "url": "https://www.jeol.com/sustainability/environment/policy.php"
+      },
+      {
+        "label": "전자현미경 제품",
+        "url": "https://www.jeol.com/products/scientific/sem/"
+      }
+    ],
+    "note": "아키시마 전자광학기기 제조 인증과 SEM 제품 확인. 기업별 수출액·점유율은 확인되지 않음."
+  },
+  "3204": {
+    "name": "합성유기 안료·착색제",
+    "companies": "DIC 4631",
+    "sources": [
+      {
+        "label": "가시마 유기안료 공장",
+        "url": "https://www.dic-global.com/en/news/2017/csr/20170731000010.html"
+      },
+      {
+        "label": "안료 제품",
+        "url": "https://www.dic-global.com/en/products/pigments.html"
+      }
+    ],
+    "note": "가시마의 유기안료 제조. 염료 등도 포함된 HS로 LCD용 청색안료 단독 지표가 아님. 기업별 수출액·점유율은 확인되지 않음."
+  },
+  "7019": {
+    "name": "유리섬유·유리직물",
+    "companies": "닛토보 3110",
+    "sources": [
+      {
+        "label": "2025 후쿠시마 유리직물 생산",
+        "url": "https://www.nittobo.co.jp/eng/ir/pdf/Nittobo_Integrated-Report_2025.pdf"
+      }
+    ],
+    "note": "후쿠시마 유리섬유 직물 생산설비 확인. 전자재료용 특수 유리직물 외 제품 포함. 기업별 수출액·점유율은 확인되지 않음."
+  },
+  "8533": {
+    "name": "전기저항기",
+    "companies": "KOA 6999",
+    "sources": [
+      {
+        "label": "일본 저항기 제조거점",
+        "url": "https://career.koaglobal.com/about/location/"
+      },
+      {
+        "label": "저항기 제품",
+        "url": "https://www.koaglobal.com/product"
+      }
+    ],
+    "note": "나가노 MINOWA 제조거점의 고정저항기 생산 확인. 저항기 유형·용도 혼합. 기업별 수출액·점유율은 확인되지 않음."
+  },
+  "7315": {
+    "name": "철강 체인·부분품",
+    "companies": "쓰바키모토체인 6371",
+    "sources": [
+      {
+        "label": "회사 제품·일본 공장",
+        "url": "https://tsubakimoto.com/company/profile/overview/"
+      },
+      {
+        "label": "일본 포함 타이밍체인 생산",
+        "url": "https://tsubakimoto.com/company/news/press/2019/07/09/1/"
+      },
+      {
+        "label": "롤러체인 제품",
+        "url": "https://tsubakimoto.com/"
+      }
+    ],
+    "note": "일본 체인 생산과 글로벌 공급 확인. 산업·자동차용 제품 혼합. 기업별 수출액·점유율은 확인되지 않음."
+  },
+  "3701": {
+    "name": "미노광 사진판·평면필름",
+    "companies": "후지필름홀딩스 4901",
+    "sources": [
+      {
+        "label": "일본 instax 필름 생산",
+        "url": "https://www.fujifilm.com/ca/en/news/hq/13167"
+      }
+    ],
+    "note": "아시가라 instax 필름 생산 증설과 연결. HS 전체를 instax 매출로 해석하지 않음. 기업별 수출액·점유율은 확인되지 않음."
+  },
+  "3702": {
+    "name": "미노광 롤 사진필름",
+    "companies": "후지필름홀딩스 4901",
+    "sources": [
+      {
+        "label": "아시가라 사진필름 제조",
+        "url": "https://photo-rescue.fujifilm.com/en/06.html"
+      },
+      {
+        "label": "사진필름 제조 이력",
+        "url": "https://holdings.fujifilm.com/en/about/history"
+      }
+    ],
+    "note": "아시가라 사진필름 제조 확인. 롤필름 제품군 연관이며 instax 평면필름과 분리. 기업별 수출액·점유율은 확인되지 않음."
+  },
+  "3919": {
+    "name": "플라스틱 점착필름·테이프",
+    "companies": "닛토덴코 6988",
+    "sources": [
+      {
+        "label": "도요하시 점착테이프 생산투자",
+        "url": "https://www-origin.nitto.com/jp/en/press/2025/1223.jsp"
+      }
+    ],
+    "note": "도요하시의 전자기기용 점착테이프 생산투자 확인. 종이·섬유 기재 테이프는 해당 코드와 구분해야 함. 기업별 수출액·점유율은 확인되지 않음."
+  },
+  "6909": {
+    "name": "기술용 세라믹 제품",
+    "companies": "NGK 5333",
+    "sources": [
+      {
+        "label": "일본 세라믹 생산",
+        "url": "https://www.ngk-global.com/news/2018/20180320_10176.html"
+      }
+    ],
+    "note": "지타·고마키·다지미의 반도체 제조장비용 세라믹 생산 근거. HS에는 다른 기술용 세라믹도 포함. 기업별 수출액·점유율은 확인되지 않음."
+  },
+  "8532": {
+    "name": "전기축전기",
+    "companies": "니치콘 6996",
+    "sources": [
+      {
+        "label": "일본 필름콘덴서 공장",
+        "url": "https://www.nichicon.com/en-us/faq/"
+      },
+      {
+        "label": "콘덴서 제품",
+        "url": "https://www.nichicon.co.jp/english/company/about/summary/"
+      },
+      {
+        "label": "일본 전해콘덴서 공장",
+        "url": "https://www.nichicon.co.jp/recruit/location/"
+      }
+    ],
+    "note": "일본 필름콘덴서 공장 확인. MLCC·전해콘덴서 등도 포함하는 HS 전체이며 니치콘 점유율 대용 불가. 기업별 수출액·점유율은 확인되지 않음."
+  },
+  "8481": {
+    "name": "밸브·탭·콕",
+    "companies": "KITZ 6498",
+    "sources": [
+      {
+        "label": "일본 밸브 생산거점",
+        "url": "https://www.kitz.com/english/about/pdf/corporate_report_2019_e_06.pdf"
+      },
+      {
+        "label": "일본 네트워크",
+        "url": "https://www.kitz.com/en/company/group_s/"
+      }
+    ],
+    "note": "나가사카·이나의 일본 밸브 생산거점 확인. 밸브 용도·제조사 혼합. 기업별 수출액·점유율은 확인되지 않음."
+  },
+  "8212": {
+    "name": "면도기·면도날",
+    "companies": "상장사 미확인",
+    "sources": [
+      {
+        "label": "KAI 일본산 면도날 공급",
+        "url": "https://www.kai-group.com/global/en/kai-factory/profile/"
+      }
+    ],
+    "note": "KAI의 일본산 면도날 해외 공급은 확인되나 검증된 상장사 연결이 없어 종목을 지정하지 않음. 기업별 수출액·점유율은 확인되지 않음."
+  },
+  "9017": {
+    "name": "측정·제도 도구",
+    "companies": "상장사 미확인",
+    "sources": [
+      {
+        "label": "미쓰토요 회사정보",
+        "url": "https://www2.mitutoyo.co.jp/eng/corporate/outline/"
+      }
+    ],
+    "note": "미쓰토요의 정밀측정기기 사업은 확인되나 검증된 상장사 연결이 없어 종목을 지정하지 않음. 기업별 수출액·점유율은 확인되지 않음."
+  },
+  "6814": {
+    "name": "가공 운모·운모 제품",
+    "companies": "상장사 미확인",
+    "sources": [
+      {
+        "label": "운모 절연재 제조",
+        "url": "https://www.nipponrika.jp/en/about/profile/index.html"
+      }
+    ],
+    "note": "Nippon Rika의 운모 절연재 사업은 확인되나 검증된 상장사 연결이 없어 종목을 지정하지 않음. 기업별 수출액·점유율은 확인되지 않음."
+  },
+  "5901": {
+    "name": "제본용 도포직물 등",
+    "companies": "상장사 미확인",
+    "sources": [],
+    "note": "검증된 일본 생산 상장사를 찾지 못함. 일반 코팅직물 업체를 임의 연결하지 않음. 기업별 수출액·점유율은 확인되지 않음."
+  },
+  "391400": {
+    "name": "이온교환수지",
+    "companies": "미쓰비시케미컬그룹 4188",
+    "sources": [
+      {
+        "label": "DIAION 제품",
+        "url": "https://www.diaion.com/en/about/"
+      },
+      {
+        "label": "일본 구로사키 생산",
+        "url": "https://www.m-chemical.co.jp/en/news/kagaku/2013/20130724-1.html"
+      }
+    ],
+    "note": "동일 제품 범위의 HS6 연결. DIAION 제품과 구로사키 일본 생산 근거. 해외 생산도 있어 일본 수출 전체를 회사 매출로 대체하지 않음. 기업별 수출액·점유율은 확인되지 않음."
+  },
+  "391000": {
+    "name": "실리콘수지",
+    "companies": "신에츠화학 4063",
+    "sources": [
+      {
+        "label": "일본 공장별 생산품",
+        "url": "https://www.shinetsu.co.jp/en/company/network/plant/"
+      }
+    ],
+    "note": "동일 제품 범위의 HS6 연결. 군마 사업장의 실리콘 생산. 실리콘 웨이퍼와 다른 고분자 소재. 기업별 수출액·점유율은 확인되지 않음."
+  },
+  "370500": {
+    "name": "현상한 사진판·필름",
+    "companies": "다이닛폰인쇄 7912",
+    "sources": [
+      {
+        "label": "포토마스크 제품",
+        "url": "https://www.dnp.co.jp/our-business/innovation/case-studies/photo-mask.html"
+      },
+      {
+        "label": "2024 상후쿠오카 포토마스크 설비",
+        "url": "https://www.dnp.co.jp/ir/management-policy/midterm-plan/pdf/DNP_midterm-plan-2024j-ProgressReport.pdf"
+      }
+    ],
+    "note": "동일 제품 범위의 HS6 연결. 포토마스크와 상후쿠오카 생산설비 확인. HS의 현상 사진판에 대응하는 제품 사례이며 OLED 금속 마스크와 구분. 기업별 수출액·점유율은 확인되지 않음."
+  },
+  "901210": {
+    "name": "전자현미경·회절장치",
+    "companies": "일본전자 JEOL 6951",
+    "sources": [
+      {
+        "label": "제조 인증 범위",
+        "url": "https://www.jeol.com/sustainability/environment/policy.php"
+      },
+      {
+        "label": "전자현미경 제품",
+        "url": "https://www.jeol.com/products/scientific/sem/"
+      }
+    ],
+    "note": "동일 제품 범위의 HS6 연결. 아키시마 전자광학기기 제조 인증과 SEM 제품 확인. 기업별 수출액·점유율은 확인되지 않음."
+  },
+  "482010": {
+    "name": "노트·수첩·장부",
+    "companies": "고쿠요 7984",
+    "sources": [
+      {
+        "label": "시가 노트 공장",
+        "url": "https://www.kokuyo.com/about/people-and-culture/social-engagement/kougyou-shiga/"
+      },
+      {
+        "label": "Campus 종이제품 제조",
+        "url": "https://www.kokuyo.com/sustainability/sutenaicircle/tsunageloopa_0004/"
+      }
+    ],
+    "note": "공식 제품 범위에 맞춘 HS6 연결. 그룹 시가 공장의 Campus 노트 생산. HS 전체에는 타사 수첩·앨범 등도 포함. 기업별 수출액·점유율은 확인되지 않음."
+  },
+  "810820": {
+    "name": "미가공 티타늄·분말",
+    "companies": "오사카티타늄 5726",
+    "sources": [
+      {
+        "label": "티타늄 제품",
+        "url": "https://www.osaka-ti.co.jp/e/e_product/titan/"
+      },
+      {
+        "label": "아마가사키 생산능력",
+        "url": "https://www.osaka-ti.co.jp/e/e_ir/pdf/e-ir202411.pdf"
+      }
+    ],
+    "note": "공식 제품 범위에 맞춘 HS6 연결. 아마가사키 스펀지티타늄 생산 확인. 가공품·스크랩도 포함하는 넓은 HS. 기업별 수출액·점유율은 확인되지 않음."
+  },
+  "853225": {
+    "name": "종이·플라스틱 필름 콘덴서",
+    "companies": "니치콘 6996",
+    "sources": [
+      {
+        "label": "일본 필름콘덴서 공장",
+        "url": "https://www.nichicon.com/en-us/faq/"
+      },
+      {
+        "label": "콘덴서 제품",
+        "url": "https://www.nichicon.co.jp/english/company/about/summary/"
+      },
+      {
+        "label": "일본 전해콘덴서 공장",
+        "url": "https://www.nichicon.co.jp/recruit/location/"
+      }
+    ],
+    "note": "공식 제품 범위에 맞춘 HS6 연결. 일본 필름콘덴서 공장 확인. MLCC·전해콘덴서 등도 포함하는 HS 전체이며 니치콘 점유율 대용 불가. 기업별 수출액·점유율은 확인되지 않음."
+  },
+  "853222": {
+    "name": "알루미늄 전해콘덴서",
+    "companies": "니치콘 6996",
+    "sources": [
+      {
+        "label": "일본 필름콘덴서 공장",
+        "url": "https://www.nichicon.com/en-us/faq/"
+      },
+      {
+        "label": "콘덴서 제품",
+        "url": "https://www.nichicon.co.jp/english/company/about/summary/"
+      },
+      {
+        "label": "일본 전해콘덴서 공장",
+        "url": "https://www.nichicon.co.jp/recruit/location/"
+      }
+    ],
+    "note": "일본 오노·이와테 등 전해콘덴서 제조거점 및 알루미늄 전해콘덴서 제품 확인. 기업별 수출액·점유율은 확인되지 않음."
+  },
+  "320417": {
+    "name": "유기안료·안료 조제품",
+    "companies": "DIC 4631",
+    "sources": [
+      {
+        "label": "가시마 유기안료 공장",
+        "url": "https://www.dic-global.com/en/news/2017/csr/20170731000010.html"
+      },
+      {
+        "label": "안료 제품",
+        "url": "https://www.dic-global.com/en/products/pigments.html"
+      }
+    ],
+    "note": "공식 제품 범위에 맞춘 HS6 연결. 가시마의 유기안료 제조. 염료 등도 포함된 HS로 LCD용 청색안료 단독 지표가 아님. 기업별 수출액·점유율은 확인되지 않음."
+  },
+  "370120": {
+    "name": "인스턴트 평면 사진필름",
+    "companies": "후지필름홀딩스 4901",
+    "sources": [
+      {
+        "label": "일본 instax 필름 생산",
+        "url": "https://www.fujifilm.com/ca/en/news/hq/13167"
+      }
+    ],
+    "note": "공식 제품 범위에 맞춘 HS6 연결. 아시가라 instax 필름 생산 증설과 연결. HS 전체를 instax 매출로 해석하지 않음. 기업별 수출액·점유율은 확인되지 않음."
+  },
+  "731511": {
+    "name": "철강 롤러체인",
+    "companies": "쓰바키모토체인 6371",
+    "sources": [
+      {
+        "label": "회사 제품·일본 공장",
+        "url": "https://tsubakimoto.com/company/profile/overview/"
+      },
+      {
+        "label": "일본 포함 타이밍체인 생산",
+        "url": "https://tsubakimoto.com/company/news/press/2019/07/09/1/"
+      },
+      {
+        "label": "롤러체인 제품",
+        "url": "https://tsubakimoto.com/"
+      }
+    ],
+    "note": "공식 제품 범위에 맞춘 HS6 연결. 일본 체인 생산과 글로벌 공급 확인. 산업·자동차용 제품 혼합. 기업별 수출액·점유율은 확인되지 않음."
+  },
+  "741011": {
+    "name": "비접착 정제동 동박",
+    "companies": "JX금속 5016",
+    "sources": [
+      {
+        "label": "일본 압연동박 생산",
+        "url": "https://www.jx-nmm.com/english/newsrelease/fy2021/20211208_02.html"
+      }
+    ],
+    "note": "공식 제품 범위에 맞춘 HS6 연결. 구라미·히타치의 압연동박 제조를 확인. 전해동박도 포함하는 HS 전체와 구분. 기업별 수출액·점유율은 확인되지 않음."
+  },
+  "760612": {
+    "name": "직사각형 알루미늄합금 판·시트",
+    "companies": "UACJ 5741",
+    "sources": [
+      {
+        "label": "일본 시트 생산거점",
+        "url": "https://www.uacj.co.jp/english/aluminum_future/index.html"
+      },
+      {
+        "label": "상장 코드",
+        "url": "https://www.uacj.co.jp/ir/stockinfo/stock.html"
+      }
+    ],
+    "note": "공식 제품 범위에 맞춘 HS6 연결. 일본 후쿠이·후카야의 압연 시트·후판 생산. 해외 생산도 존재. 기업별 수출액·점유율은 확인되지 않음."
+  },
+  "841410": {
+    "name": "진공펌프",
+    "companies": "알박 6728",
+    "sources": [
+      {
+        "label": "일본 진공펌프 제조",
+        "url": "https://showcase.ulvac.co.jp/en/about-us/introduction-ulvac-cryogenics-inc.html"
+      },
+      {
+        "label": "제조·수출 사업",
+        "url": "https://www.ulvac.co.jp/en/company/outline/"
+      }
+    ],
+    "note": "치가사키 진공펌프 제조와 극저온 펌프 자회사 확인. 반도체 전용만의 수치가 아님. 기업별 수출액·점유율은 확인되지 않음."
+  },
+  "860310": {
+    "name": "전동 철도차량",
+    "companies": "히타치 6501",
+    "sources": [
+      {
+        "label": "가사도 태국행 열차 수출",
+        "url": "https://www.hitachi.com/en/press/articles/2019/09/0925/"
+      }
+    ],
+    "note": "일본 가사도 공장에서 태국 방콕 Red Line 전동열차를 제작·출하한 직접 수출 사례. 기업별 수출액·점유율은 확인되지 않음."
+  },
+  "3818": {
+    "name": "반도체 웨이퍼 소재",
+    "companies": "신에츠화학 4063",
+    "sources": [
+      {
+        "label": "실리콘 웨이퍼 제품",
+        "url": "https://www.shinetsu.co.jp/en/products/semiconductor-silicon-business/silicon-wafers/"
+      },
+      {
+        "label": "일본 반도체 실리콘 공장",
+        "url": "https://www.shinetsu.co.jp/en/company/network/plant/"
+      }
+    ],
+    "note": "일본 반도체 실리콘 생산과 연결. HS는 전자용 도핑 소재 전체로 웨이퍼 종류·제조사가 혼합. 기업별 수출액·점유율은 확인되지 않음."
+  },
+  "8542": {
+    "name": "집적회로",
+    "companies": "키옥시아 285A",
+    "sources": [
+      {
+        "label": "욧카이치 메모리 생산품",
+        "url": "https://www.kioxia.com/en-jp/about/yokkaichi/about.html"
+      }
+    ],
+    "note": "욧카이치 NAND 플래시 메모리 생산. 집적회로 전체에는 DRAM·로직 등도 포함되어 NAND 단독 수치가 아님. 기업별 수출액·점유율은 확인되지 않음."
+  },
+  "903020": {
+    "name": "오실로스코프",
+    "companies": "요코가와전기 6841",
+    "sources": [
+      {
+        "label": "오실로스코프 제품",
+        "url": "https://tmi.yokogawa.com/solutions/products/oscilloscopes/"
+      },
+      {
+        "label": "요코가와 그룹 계측 사업",
+        "url": "https://www.yokogawa.com/solutions/products-and-services/measurement/test-measurement/"
+      }
+    ],
+    "note": "공식 오실로스코프 제품은 확인. 해당 제품의 일본 생산·수출 물량을 별도로 확인하지 못했으므로 제품 연관 후보로만 사용. 기업별 수출액·점유율은 확인되지 않음."
+  },
+  "853223": {
+    "name": "단층 세라믹 콘덴서",
+    "companies": "무라타제작소 6981",
+    "sources": [
+      {
+        "label": "단층 세라믹 제품",
+        "url": "https://www.murata.com/en-global/products/capacitor/slmc"
+      },
+      {
+        "label": "일본 포함 생산 공급망",
+        "url": "https://www.murata.com/en-global/products/capacitor/ceramiccapacitor/overview/strength"
+      }
+    ],
+    "note": "단층 마이크로칩 콘덴서 제품 확인. 일본 포함 세라믹 콘덴서 공급망은 확인되나 단층 제품의 일본 생산물량은 미확인. MLCC와 구분. 기업별 수출액·점유율은 확인되지 않음."
+  },
+  "844520": {
+    "name": "방적기",
+    "companies": "현재 상장사 미확인",
+    "sources": [
+      {
+        "label": "방적기 제품",
+        "url": "https://www.toyota-industries.com/products/textile/spinning/"
+      },
+      {
+        "label": "가리야 생산거점",
+        "url": "https://www.toyota-industries.com/company/location/japan/index.html"
+      },
+      {
+        "label": "상장폐지 안내",
+        "url": "https://www.toyota-industries.com/investors/index.html"
+      }
+    ],
+    "note": "도요타자동직기의 가리야 생산·제품은 확인되지만 2026-06-01 상장폐지. 종전 종목코드 6201을 투자 가능 상장사로 제시하지 않음. 기업별 수출액·점유율은 확인되지 않음."
+  }
+}

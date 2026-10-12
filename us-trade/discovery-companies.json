@@ -1,0 +1,589 @@
+{
+  "import:21400": {
+    "name": "통신장비",
+    "companies": "삼성전자 005930",
+    "sources": [
+      {
+        "label": "삼성전자 미국 Verizon 통신장비 공급",
+        "url": "https://news.samsung.com/us/verizon-5g-commercial-launch/"
+      }
+    ],
+    "note": "한국 통신장비 제조사의 미국 고객 공급 관계 확인. 전체 통신장비 수입과 회사 납품을 동일시하지 않음. 품목 내 관련 사업 예시이며 기업별 교역액·점유율을 뜻하지 않음."
+  },
+  "import:21320": {
+    "name": "반도체",
+    "companies": "TSMC TSM / 2330 · 삼성전자 005930",
+    "sources": [
+      {
+        "label": "TSMC 공식 사업 자료",
+        "url": "https://www.tsmc.com/english/aboutTSMC"
+      },
+      {
+        "label": "삼성전자 공식 사업 자료",
+        "url": "https://semiconductor.samsung.com/about-us/business-area/memory/"
+      }
+    ],
+    "note": "메모리·비메모리를 포함한 반도체. HBM 단독 수치가 아닙니다. 칩이 이미 탑재된 서버·스마트폰은 다른 품목일 수 있습니다. 미국 현지 생산 확대는 수입 감소와 함께 나타날 수 있습니다."
+  },
+  "import:20005": {
+    "name": "전기기기",
+    "companies": "HD현대일렉트릭 267260",
+    "sources": [
+      {
+        "label": "HD현대일렉트릭 공식 사업 자료",
+        "url": "https://www.hd-hyundaielectric.com/elect/en/index.jsp"
+      }
+    ],
+    "note": "전기기기 전체. 변압기만의 통계가 아닙니다. 변압기 수주를 직접 추정할 수 없습니다. 미국 현지 공장 생산은 미국 수입에 포함되지 않습니다."
+  },
+  "import:21180": {
+    "name": "기타 산업기계",
+    "companies": "ASML ASML",
+    "sources": [
+      {
+        "label": "ASML 제품·미국 고객 및 생산",
+        "url": "https://www.asml.com/"
+      },
+      {
+        "label": "ASML 연차보고서",
+        "url": "https://www.investor.asml.com/annual-reports/2025"
+      }
+    ],
+    "note": "네덜란드 노광장비사의 미국 반도체 고객 공급 관련. 넓은 기타 산업기계 분류로 반도체 장비 전용 통계가 아니며 연결 강도 낮음. 품목 내 관련 사업 예시이며 기업별 교역액·점유율을 뜻하지 않음."
+  },
+  "export:21400": {
+    "name": "통신장비",
+    "companies": "시에나 CIEN",
+    "sources": [
+      {
+        "label": "Ciena 통신장비 제품",
+        "url": "https://www.ciena.com/products"
+      },
+      {
+        "label": "Ciena 미국 제조 제품",
+        "url": "https://www.ciena.com/about/corporate-governance/baba-compliance"
+      }
+    ],
+    "note": "미국 통신장비 기업의 광통신·라우팅 제품과 미국 제조 제품 확인. 해외 생산분과 서비스 매출 제외 필요. 품목 내 관련 사업 예시이며 기업별 교역액·점유율을 뜻하지 않음."
+  },
+  "import:21100": {
+    "name": "산업용 엔진",
+    "companies": "구보타 6326",
+    "sources": [
+      {
+        "label": "Kubota Engine America 공급망 공시",
+        "url": "https://www.kubotaengine.com/company-profile/corporate-governance/"
+      },
+      {
+        "label": "Kubota 산업용 엔진",
+        "url": "https://www.kubotaengine.com/engines/all-engines/"
+      }
+    ],
+    "note": "미국 법인의 엔진·발전기·부품 주 공급처가 일본 모회사임을 명시. 품목 내 관련 사업 예시이며 기업별 교역액·점유율을 뜻하지 않음."
+  },
+  "import:21160": {
+    "name": "측정·시험·제어 기기",
+    "companies": "키엔스 6861",
+    "sources": [
+      {
+        "label": "KEYENCE America 측정 센서",
+        "url": "https://www.keyence.com/products/measure/"
+      }
+    ],
+    "note": "일본 측정기 제조사의 미국 판매 제품 확인. 실제 통관 원산지와 미국 수입액은 별도 확인 필요. 품목 내 관련 사업 예시이며 기업별 교역액·점유율을 뜻하지 않음."
+  },
+  "import:00100": {
+    "name": "육류 제품",
+    "companies": "직접 연결 기업 미확인",
+    "sources": [],
+    "note": "품목 범위 또는 미국 교역 방향에 맞는 상장기업의 직접 연결 근거 미확인."
+  },
+  "import:22010": {
+    "name": "민간 항공기 부품",
+    "companies": "사프란 SAF",
+    "sources": [
+      {
+        "label": "Safran Boeing 787 착륙장치",
+        "url": "https://www.safran-group.com/products-services/boeing-787-dreamliner-main-and-nose-landing-gears"
+      }
+    ],
+    "note": "프랑스 항공부품사의 보잉 787 착륙장치 공급 확인. 미국 현지 생산과 정비 서비스는 수입과 구분. 품목 내 관련 사업 예시이며 기업별 교역액·점유율을 뜻하지 않음."
+  },
+  "import:12070": {
+    "name": "담배 원료·왁스 등",
+    "companies": "직접 연결 기업 미확인",
+    "sources": [],
+    "note": "품목 범위 또는 미국 교역 방향에 맞는 상장기업의 직접 연결 근거 미확인."
+  },
+  "import:21120": {
+    "name": "금속가공 공작기계",
+    "companies": "DMG모리 6141",
+    "sources": [
+      {
+        "label": "DMG MORI 미국 공작기계",
+        "url": "https://us.dmgmori.com/"
+      },
+      {
+        "label": "DMG MORI 일본 Nara 생산",
+        "url": "https://us.dmgmori.com/company/locations/production-sites/nara"
+      }
+    ],
+    "note": "일본 생산 금속 절삭·선반·머시닝센터와 미국 판매 사업 확인. 미국 Davis 현지 생산은 수입에서 제외. 품목 내 관련 사업 예시이며 기업별 교역액·점유율을 뜻하지 않음."
+  },
+  "export:00340": {
+    "name": "견과류",
+    "companies": "존B산필리포앤드선 JBSS",
+    "sources": [
+      {
+        "label": "John B. Sanfilippo 견과류 사업",
+        "url": "https://jbssinc.com/"
+      },
+      {
+        "label": "미국 견과류 가공 공급망",
+        "url": "https://jbssinc.com/about-us/vertical-differentiation/"
+      }
+    ],
+    "note": "미국 견과류 조달·가공 기업의 품목 관련성 확인. 수출액이나 품목 전체의 대표성을 주장하지 않음. 품목 내 관련 사업 예시이며 기업별 교역액·점유율을 뜻하지 않음."
+  },
+  "export:12290": {
+    "name": "기타 비철금속",
+    "companies": "직접 연결 기업 미확인",
+    "sources": [],
+    "note": "품목 범위 또는 미국 교역 방향에 맞는 상장기업의 직접 연결 근거 미확인."
+  },
+  "export:12200": {
+    "name": "알루미늄·알루미나",
+    "companies": "알코아 AA",
+    "sources": [
+      {
+        "label": "Alcoa 알루미늄 제품",
+        "url": "https://www.alcoa.com/global/en/what-we-do/aluminum/cast-products"
+      },
+      {
+        "label": "Alcoa 미국 제련소",
+        "url": "https://www.alcoa.com/global/en/pdf/Alcoa-Warrick-Fact-Sheet.pdf"
+      }
+    ],
+    "note": "미국 알루미늄 제련 생산 기반 및 주조 제품 확인. 해외 제련소 생산은 미국 수출과 구분. 품목 내 관련 사업 예시이며 기업별 교역액·점유율을 뜻하지 않음."
+  },
+  "import:16040": {
+    "name": "황·비금속 광물",
+    "companies": "직접 연결 기업 미확인",
+    "sources": [],
+    "note": "품목 범위 또는 미국 교역 방향에 맞는 상장기업의 직접 연결 근거 미확인."
+  },
+  "import:22220": {
+    "name": "선박 엔진·부품",
+    "companies": "바르질라 WRT1V",
+    "sources": [
+      {
+        "label": "Wärtsilä 선박 엔진",
+        "url": "https://www.wartsila.com/marine"
+      },
+      {
+        "label": "Wärtsilä 미국 사업",
+        "url": "https://www.wartsila.com/usa"
+      }
+    ],
+    "note": "핀란드 선박 엔진 제조사와 미국 상선·크루즈·해양 고객 대상 공급 사업 확인. 현지 정비 매출 제외. 품목 내 관련 사업 예시이며 기업별 교역액·점유율을 뜻하지 않음."
+  },
+  "export:40130": {
+    "name": "담배 제품",
+    "companies": "직접 연결 기업 미확인",
+    "sources": [],
+    "note": "품목 범위 또는 미국 교역 방향에 맞는 상장기업의 직접 연결 근거 미확인."
+  },
+  "import:22020": {
+    "name": "민간 항공기 엔진",
+    "companies": "롤스로이스 RR.",
+    "sources": [
+      {
+        "label": "Rolls-Royce Trent 1000",
+        "url": "https://discoverengines.rolls-royce.com/trent-1000"
+      },
+      {
+        "label": "Boeing 787 엔진 사양",
+        "url": "https://www.boeing.com/commercial/787"
+      }
+    ],
+    "note": "영국 엔진 제조사의 보잉 787용 Trent 1000 엔진 공급 확인. 미국 내 생산 및 정비 서비스는 별도. 품목 내 관련 사업 예시이며 기업별 교역액·점유율을 뜻하지 않음."
+  },
+  "export:41310": {
+    "name": "보석류 등",
+    "companies": "직접 연결 기업 미확인",
+    "sources": [],
+    "note": "품목 범위 또는 미국 교역 방향에 맞는 상장기업의 직접 연결 근거 미확인."
+  },
+  "import:42000": {
+    "name": "묘목 등",
+    "companies": "직접 연결 기업 미확인",
+    "sources": [],
+    "note": "품목 범위 또는 미국 교역 방향에 맞는 상장기업의 직접 연결 근거 미확인."
+  },
+  "export:11110": {
+    "name": "연료유",
+    "companies": "발레로 VLO",
+    "sources": [
+      {
+        "label": "Valero 연료유 운송",
+        "url": "https://www.valero.com/refining/transportation-logistics"
+      },
+      {
+        "label": "Valero 정유 제품",
+        "url": "https://www.valero.com/refining/oil-refining"
+      }
+    ],
+    "note": "미국 정유사의 연료유 생산·운송 사업 확인. 해외 정유소와 휘발유 등 다른 품목 제외 필요. 품목 내 관련 사업 예시이며 기업별 교역액·점유율을 뜻하지 않음."
+  },
+  "import:21301": {
+    "name": "컴퓨터 부속품",
+    "companies": "위윈 6669 · 삼성전자 005930",
+    "sources": [
+      {
+        "label": "위윈 공식 사업 자료",
+        "url": "https://www.wiwynn.com/about-wiwynn/company-info"
+      },
+      {
+        "label": "삼성전자 공식 사업 자료",
+        "url": "https://semiconductor.samsung.com/about-us/business-area/memory/"
+      }
+    ],
+    "note": "컴퓨터 부속품 전체. GPU·메모리 모듈만의 통계가 아닙니다. 부품 믹스와 완제품·부품 간 통관 경로 변화의 영향이 큽니다. 연결 강도는 간접적입니다."
+  },
+  "export:20005": {
+    "name": "전기기기",
+    "companies": "이튼 ETN",
+    "sources": [
+      {
+        "label": "Eaton 미국 전기기기 제조",
+        "url": "https://www.eaton.com/us/en-us/company/news-insights/united-states-investments.html"
+      }
+    ],
+    "note": "미국 내 전력 배전·전기기기 제조 기반 확인. 해외 제조 제품과 미국 국내 판매는 수출과 구분. 품목 내 관련 사업 예시이며 기업별 교역액·점유율을 뜻하지 않음."
+  },
+  "export:12770": {
+    "name": "기타 산업용 원부자재",
+    "companies": "직접 연결 기업 미확인",
+    "sources": [],
+    "note": "품목 범위 또는 미국 교역 방향에 맞는 상장기업의 직접 연결 근거 미확인."
+  },
+  "import:14220": {
+    "name": "구리",
+    "companies": "서던코퍼 SCCO",
+    "sources": [
+      {
+        "label": "Southern Copper 2025 연차보고서",
+        "url": "https://www.sec.gov/Archives/edgar/data/1001838/000110465926021492/scco-20251231x10k.htm"
+      }
+    ],
+    "note": "멕시코·페루 구리 생산과 미국 고객 매출을 공시. 구리 원자재 가격과 물량을 분리해 해석. 품목 내 관련 사업 예시이며 기업별 교역액·점유율을 뜻하지 않음."
+  },
+  "export:21160": {
+    "name": "측정·시험·제어 기기",
+    "companies": "키사이트 KEYS",
+    "sources": [
+      {
+        "label": "Keysight 계측기 제품",
+        "url": "https://www.keysight.com/us/en/products.html"
+      },
+      {
+        "label": "Keysight 미국 제조 기술",
+        "url": "https://www.keysight.com/us/en/cmp/2025/custom-semiconductor.html"
+      }
+    ],
+    "note": "미국 계측기 기업의 측정 제품 및 Santa Rosa 제조 기반 확인. 해외 제조분·소프트웨어 제외 필요. 품목 내 관련 사업 예시이며 기업별 교역액·점유율을 뜻하지 않음."
+  },
+  "export:20000": {
+    "name": "발전기·부속품",
+    "companies": "캐터필러 CAT",
+    "sources": [
+      {
+        "label": "캐터필러 공식 사업 자료",
+        "url": "https://www.caterpillar.com/en/brands/cat/products.html"
+      }
+    ],
+    "note": "발전기와 부속품 전체. 데이터센터 비상발전기만의 통계가 아닙니다. 산업용·기타 용도가 섞입니다. 데이터센터 매출이나 AI 투자액으로 해석하지 않습니다."
+  },
+  "export:12210": {
+    "name": "구리",
+    "companies": "프리포트맥모란 FCX",
+    "sources": [
+      {
+        "label": "Freeport 미국 구리 사업",
+        "url": "https://www.fcx.com/operations/united-states"
+      }
+    ],
+    "note": "미국 광산·정련소·동봉 생산 및 구리 제품 판매 확인. 미국 생산분의 해외 출하 관련성만 표시하며 수출 실적 직접 추정 불가. 품목 내 관련 사업 예시이며 기업별 교역액·점유율을 뜻하지 않음."
+  },
+  "export:12110": {
+    "name": "기타 철강 제품",
+    "companies": "직접 연결 기업 미확인",
+    "sources": [],
+    "note": "품목 범위 또는 미국 교역 방향에 맞는 상장기업의 직접 연결 근거 미확인."
+  },
+  "import:14290": {
+    "name": "기타 비철금속",
+    "companies": "직접 연결 기업 미확인",
+    "sources": [],
+    "note": "품목 범위 또는 미국 교역 방향에 맞는 상장기업의 직접 연결 근거 미확인."
+  },
+  "export:01010": {
+    "name": "주류(와인 제외)",
+    "companies": "브라운포먼 BF.B",
+    "sources": [
+      {
+        "label": "Brown-Forman 해외 주류 판매",
+        "url": "https://www.brown-forman.com/article/brown-forman-reports-fiscal-2026-results-june-4-2026"
+      }
+    ],
+    "note": "미국 위스키 Jack Daniel’s 브랜드의 해외 판매 확인. 해외 생산 브랜드 및 재고 이동 구분 필요. 품목 내 관련 사업 예시이며 기업별 교역액·점유율을 뜻하지 않음."
+  },
+  "export:22210": {
+    "name": "기타 상선",
+    "companies": "직접 연결 기업 미확인",
+    "sources": [],
+    "note": "품목 범위 또는 미국 교역 방향에 맞는 상장기업의 직접 연결 근거 미확인."
+  },
+  "export:22010": {
+    "name": "민간 항공기 부품",
+    "companies": "보잉 BA · GE 에어로스페이스 GE",
+    "sources": [
+      {
+        "label": "보잉 공식 사업 자료",
+        "url": "https://www.boeing.com/commercial"
+      },
+      {
+        "label": "GE 에어로스페이스 공식 사업 자료",
+        "url": "https://www.geaerospace.com/commercial/engines"
+      }
+    ],
+    "note": "민간 항공기 부품. 완성 항공기·엔진과 별도 분류입니다. 보잉·GE 전체 매출 또는 부품 점유율을 뜻하지 않습니다. 정비 서비스는 제외됩니다."
+  },
+  "export:21610": {
+    "name": "의료장비",
+    "companies": "스트라이커 SYK",
+    "sources": [
+      {
+        "label": "Stryker 의료·수술 장비",
+        "url": "https://www.stryker.com/us/en/portfolios/medical-surgical-equipment.html"
+      }
+    ],
+    "note": "미국 의료기기 기업의 의료·수술 장비 제품 확인. 생산국별 통관 및 해외 생산 매출 구분 필요. 품목 내 관련 사업 예시이며 기업별 교역액·점유율을 뜻하지 않음."
+  },
+  "import:20000": {
+    "name": "발전기·부속품",
+    "companies": "구보타 6326",
+    "sources": [
+      {
+        "label": "Kubota Engine America 공급망 공시",
+        "url": "https://www.kubotaengine.com/company-profile/corporate-governance/"
+      }
+    ],
+    "note": "미국 법인이 일본 모회사로부터 발전기 등을 공급받는 구조 확인. 발전기 전체 수입의 일부 제품군. 품목 내 관련 사업 예시이며 기업별 교역액·점유율을 뜻하지 않음."
+  },
+  "export:00310": {
+    "name": "유제품·달걀",
+    "companies": "직접 연결 기업 미확인",
+    "sources": [],
+    "note": "품목 범위 또는 미국 교역 방향에 맞는 상장기업의 직접 연결 근거 미확인."
+  },
+  "export:41050": {
+    "name": "휴대전화·기타 가정용품",
+    "companies": "직접 연결 기업 미확인",
+    "sources": [],
+    "note": "품목 범위 또는 미국 교역 방향에 맞는 상장기업의 직접 연결 근거 미확인."
+  },
+  "export:12750": {
+    "name": "산업용 고무 제품",
+    "companies": "게이츠 GTES",
+    "sources": [
+      {
+        "label": "Gates 산업용 호스",
+        "url": "https://www.gates.com/us/en/fluid-power/industrial-hose.html"
+      }
+    ],
+    "note": "산업용 고무 호스·동력전달 제품 제조 사업 확인. 생산국별 통관은 별도 확인 필요. 품목 내 관련 사업 예시이며 기업별 교역액·점유율을 뜻하지 않음."
+  },
+  "export:10150": {
+    "name": "기타 농업 가공품",
+    "companies": "직접 연결 기업 미확인",
+    "sources": [],
+    "note": "품목 범위 또는 미국 교역 방향에 맞는 상장기업의 직접 연결 근거 미확인."
+  },
+  "export:22020": {
+    "name": "민간 항공기 엔진",
+    "companies": "GE 에어로스페이스 GE",
+    "sources": [
+      {
+        "label": "GE 에어로스페이스 공식 사업 자료",
+        "url": "https://www.geaerospace.com/commercial/engines"
+      }
+    ],
+    "note": "민간 항공기 엔진. 정비 서비스 매출은 포함되지 않습니다. GE 외 제조사도 포함하며 정비 매출은 무역 상품 통계와 다릅니다."
+  },
+  "export:00320": {
+    "name": "과일·냉동 주스",
+    "companies": "직접 연결 기업 미확인",
+    "sources": [],
+    "note": "품목 범위 또는 미국 교역 방향에 맞는 상장기업의 직접 연결 근거 미확인."
+  },
+  "export:12760": {
+    "name": "가공 광물 원자재",
+    "companies": "직접 연결 기업 미확인",
+    "sources": [],
+    "note": "품목 범위 또는 미국 교역 방향에 맞는 상장기업의 직접 연결 근거 미확인."
+  },
+  "export:00360": {
+    "name": "기타 식품",
+    "companies": "직접 연결 기업 미확인",
+    "sources": [],
+    "note": "품목 범위 또는 미국 교역 방향에 맞는 상장기업의 직접 연결 근거 미확인."
+  },
+  "import:21150": {
+    "name": "펄프·제지 기계",
+    "companies": "발멧 VALMT",
+    "sources": [
+      {
+        "label": "Valmet 펄프 설비",
+        "url": "https://www.valmet.com/pulp/"
+      },
+      {
+        "label": "Valmet 북미 사업",
+        "url": "https://www.valmet.com/service/service-centers/north-america/"
+      }
+    ],
+    "note": "핀란드 펄프·제지 설비사의 북미 고객 공급망 확인. 현지 제조·서비스는 수입과 구분. 품목 내 관련 사업 예시이며 기업별 교역액·점유율을 뜻하지 않음."
+  },
+  "export:00220": {
+    "name": "기타 동물 사료",
+    "companies": "ADM ADM",
+    "sources": [
+      {
+        "label": "ADM 사료용 원료",
+        "url": "https://www.adm.com/en-us/products-services/animal-nutrition/products/macro-ingredients/"
+      }
+    ],
+    "note": "미국 곡물 가공사의 사료용 단백질박 등 원료 사업 확인. 미국 생산·수출과 해외 생산 구분 필요. 품목 내 관련 사업 예시이며 기업별 교역액·점유율을 뜻하지 않음."
+  },
+  "export:12700": {
+    "name": "일차 형태 합성고무",
+    "companies": "직접 연결 기업 미확인",
+    "sources": [],
+    "note": "품목 범위 또는 미국 교역 방향에 맞는 상장기업의 직접 연결 근거 미확인."
+  },
+  "import:40120": {
+    "name": "세면용품·화장품",
+    "companies": "에이피알 278470",
+    "sources": [
+      {
+        "label": "에이피알 공식 사업 자료",
+        "url": "https://apr-in.com/en/apr_about.html"
+      }
+    ],
+    "note": "화장품 외 세면용품도 포함. 한국산·메디큐브만의 수입이 아닙니다. 뷰티 디바이스 매출은 이 분류와 일치하지 않습니다. 전 세계 공급업체를 합친 통계입니다."
+  },
+  "import:21300": {
+    "name": "컴퓨터",
+    "companies": "위윈 6669",
+    "sources": [
+      {
+        "label": "위윈 공식 사업 자료",
+        "url": "https://www.wiwynn.com/about-wiwynn/company-info"
+      }
+    ],
+    "note": "컴퓨터 전체. AI 서버만 분리하지 않습니다. PC와 서버가 섞입니다. AI 수혜 판단은 회사 서버 매출·고객 투자와 대조해야 합니다."
+  },
+  "import:00150": {
+    "name": "식용유·유지종자",
+    "companies": "번지 BG",
+    "sources": [
+      {
+        "label": "Bunge 식용유 제품·해외 조달",
+        "url": "https://bunge.com/en/food-ingredients/our-businesses/refined-and-specialty-oils"
+      },
+      {
+        "label": "Bunge 북미 식용유",
+        "url": "https://www.bunge.com/en/markets-we-serve/foodservice-na/oils"
+      }
+    ],
+    "note": "글로벌 유지종자·식용유 사업과 아시아산 코코넛유 조달 및 북미 공급 확인. 미국 자체 가공분과 수입분 구분 필요. 품목 내 관련 사업 예시이며 기업별 교역액·점유율을 뜻하지 않음."
+  },
+  "import:16120": {
+    "name": "기타 산업용 원부자재",
+    "companies": "직접 연결 기업 미확인",
+    "sources": [],
+    "note": "품목 범위 또는 미국 교역 방향에 맞는 상장기업의 직접 연결 근거 미확인."
+  },
+  "import:21190": {
+    "name": "사진·서비스업용 기계",
+    "companies": "직접 연결 기업 미확인",
+    "sources": [],
+    "note": "품목 범위 또는 미국 교역 방향에 맞는 상장기업의 직접 연결 근거 미확인."
+  },
+  "export:21190": {
+    "name": "사진·서비스업용 기계",
+    "companies": "직접 연결 기업 미확인",
+    "sources": [],
+    "note": "품목 범위 또는 미국 교역 방향에 맞는 상장기업의 직접 연결 근거 미확인."
+  },
+  "import:30200": {
+    "name": "차량 엔진·엔진 부품",
+    "companies": "보그워너 BWA",
+    "sources": [
+      {
+        "label": "BorgWarner 터보차저",
+        "url": "https://www.borgwarner.com/technologies/boosting-technologies"
+      },
+      {
+        "label": "BorgWarner 글로벌 생산거점",
+        "url": "https://www.borgwarner.com/company/locations"
+      }
+    ],
+    "note": "글로벌 엔진 부품·터보차저 제조와 미국 판매 사업. 해외 생산분만 수입 관련이며 미국 생산분은 제외. 품목 내 관련 사업 예시이며 기업별 교역액·점유율을 뜻하지 않음."
+  },
+  "export:30200": {
+    "name": "차량 엔진·엔진 부품",
+    "companies": "커민스 CMI",
+    "sources": [
+      {
+        "label": "Cummins 2025 연차보고서",
+        "url": "https://investor.cummins.com/sec-filings/annual-reports/content/0000026172-26-000009/cmi-20251231.htm"
+      }
+    ],
+    "note": "미국 차량용 디젤·천연가스 엔진 생산 기업. 비차량용 엔진과 해외 생산분 제외 필요. 품목 내 관련 사업 예시이며 기업별 교역액·점유율을 뜻하지 않음."
+  },
+  "export:21320": {
+    "name": "반도체",
+    "companies": "텍사스인스트루먼트 TXN",
+    "sources": [
+      {
+        "label": "TI 미국 반도체 제조",
+        "url": "https://www.ti.com/about-ti/worldwide-manufacturing.html"
+      }
+    ],
+    "note": "미국 웨이퍼 팹 제조 기반 확인. 해외 조립·테스트 및 완제품 내장 반도체는 구분 필요. 품목 내 관련 사업 예시이며 기업별 교역액·점유율을 뜻하지 않음."
+  },
+  "export:22000": {
+    "name": "민간 항공기",
+    "companies": "보잉 BA",
+    "sources": [
+      {
+        "label": "보잉 공식 사업 자료",
+        "url": "https://www.boeing.com/commercial"
+      }
+    ],
+    "note": "민간 항공기. 엔진과 부품은 아래 별도 행입니다. 한두 대 인도 시점도 월별 금액을 크게 바꿉니다. 회사의 월별 인도 대수와 함께 확인합니다."
+  },
+  "export:12550": {
+    "name": "기타 화학제품",
+    "companies": "직접 연결 기업 미확인",
+    "sources": [],
+    "note": "품목 범위 또는 미국 교역 방향에 맞는 상장기업의 직접 연결 근거 미확인."
+  },
+  "import:40140": {
+    "name": "기타 비내구 소비재",
+    "companies": "직접 연결 기업 미확인",
+    "sources": [],
+    "note": "품목 범위 또는 미국 교역 방향에 맞는 상장기업의 직접 연결 근거 미확인."
+  }
+}

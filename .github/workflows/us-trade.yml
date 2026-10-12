@@ -30,15 +30,22 @@ jobs:
         id: collect
         continue-on-error: true
         run: python us-trade/scripts/collect.py
+      - name: 전체 End-use 수출입 품목 발굴
+        id: discovery
+        continue-on-error: true
+        run: python us-trade/scripts/discover.py
       - name: 검증본 또는 실패 상태 저장
         if: always() && steps.collect.outcome != 'skipped'
         env:
           COLLECT_OUTCOME: ${{ steps.collect.outcome }}
+          DISCOVERY_OUTCOME: ${{ steps.discovery.outcome }}
         run: |
           set -euo pipefail
           staging=$(mktemp -d)
           cp us-trade/data/status.json "$staging/status.json"
           if [ "$COLLECT_OUTCOME" = success ]; then cp us-trade/data/trade.json "$staging/trade.json"; fi
+          if [ -f us-trade/data/discovery-status.json ]; then cp us-trade/data/discovery-status.json "$staging/discovery-status.json"; fi
+          if [ "$DISCOVERY_OUTCOME" = success ]; then cp us-trade/data/discovery.json "$staging/discovery.json"; fi
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           for attempt in 1 2 3 4 5; do
@@ -58,5 +65,5 @@ jobs:
           GH_REPO: ${{ github.repository }}
         run: gh api --method POST "repos/$GH_REPO/pages/builds"
       - name: 수집 실패 알림
-        if: steps.collect.outcome == 'failure'
+        if: steps.collect.outcome == 'failure' || steps.discovery.outcome == 'failure'
         run: exit 1
