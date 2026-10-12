@@ -1,18 +1,18 @@
 {
  "v": 1,
- "ts": "2026-10-11T22:16:58+00:00",
+ "ts": "2026-10-12T01:25:16+00:00",
  "seed": 361,
  "homes": 352,
  "official_ir_data": 76,
  "covered_any": 271,
  "status": {
-  "covered_elsewhere": 48,
+  "covered_elsewhere": 49,
   "discontinued": 2,
   "home_pending": 6,
-  "no_monthly_found": 107,
+  "no_monthly_found": 105,
   "ok": 76,
   "parser_failed": 119,
-  "pending_discovery": 3
+  "pending_discovery": 4
  },
  "codes": {
   "8267": {
@@ -976,7 +976,7 @@
    "ir": false
   },
   "2735": {
-   "status": "no_monthly_found",
+   "status": "covered_elsewhere",
    "home": "https://www.watts-jp.com",
    "source_url": "",
    "latest_month": "",
@@ -1026,7 +1026,7 @@
    "ir": false
   },
   "2752": {
-   "status": "no_monthly_found",
+   "status": "pending_discovery",
    "home": "https://www.fujiofood.com",
    "source_url": "",
    "latest_month": "",
