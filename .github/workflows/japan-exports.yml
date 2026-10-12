@@ -1,7 +1,7 @@
-name: 일본 수출 트래커 매일 갱신
+name: 일본 수출 트래커 15분 간격 갱신
 on:
   schedule:
-    - cron: '17 1 * * *'
+    - cron: '2,17,32,47 * * * *'
   workflow_dispatch:
   push:
     branches: [main]

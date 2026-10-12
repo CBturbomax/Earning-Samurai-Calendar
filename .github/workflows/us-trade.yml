@@ -1,7 +1,7 @@
-name: 미국 수출입 매일 갱신
+name: 미국 수출입 15분 간격 갱신
 on:
   schedule:
-    - cron: '47 1 * * *'
+    - cron: '9,24,39,54 * * * *'
   workflow_dispatch:
   push:
     branches: [main]
