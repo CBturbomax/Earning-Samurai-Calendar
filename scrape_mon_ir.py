@@ -47,7 +47,7 @@ VER = 1
 # 그대로 두었다. 회사 IR 페이지는 **늘 거기 있다.** 다시 받는 값이 싸므로,
 # 규칙이 아직 어린 지금은 **틀린 값을 안고 가느니 다시 받는 편**이 낫다
 # (오검출 하나가 놓침 하나보다 나쁘다). 규칙이 굳으면 그때 바꾼다.
-RULE_VER = 7
+RULE_VER = 8
 
 UA = {"User-Agent": ("Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
                      "AppleWebKit/537.36 (KHTML, like Gecko) "
@@ -81,6 +81,7 @@ ARCHIVE_PER_COMPANY = int(os.environ.get("IR_ARCHIVE_PER_COMPANY", "4"))
 HOME_PER_RUN = int(os.environ.get("IR_HOME_PER_RUN", "24"))
 PROFILE_MISS_DAYS = float(os.environ.get("IR_PROFILE_MISS_DAYS", "14"))
 PARSE_MISS_HOURS = float(os.environ.get("IR_PARSE_MISS_HOURS", "6"))
+PDF_RETRY_DAYS = float(os.environ.get("IR_PDF_RETRY_DAYS", "3"))
 
 # **수집일과 발표일은 완전히 다르다.**
 # 회사의 rolling 月次 페이지가 "최종 업데이트"를 명시할 때만 실제 공개일 후보로 쓴다.
@@ -159,7 +160,6 @@ def load():
         for site in got["sites"].values():
             site.pop("miss", None)
             site.pop("parse_miss", None)
-            site.pop("discontinued", None)
         # parser가 예전에 못 읽은 PDF는 새 규칙에서 반드시 다시 시도한다.
         # 과거에는 표없음 파일도 done에 먼저 들어가 영구적으로 봉인됐다.
         failed = set((got.get("skip") or {}).keys())
@@ -312,11 +312,15 @@ def iter_targets(rec, today):
         seen.add(code)
         order.append(code)
 
-    # **수치 없는 큰 회사부터** 본다. 월차 화면 기본값이 1조원 이상이므로
-    # 대형주가 비어 있는데 소형주부터 round-robin 도는 것은 사용자 가치가 낮다.
     caps = cap_map()
     have = codes_with_numbers(rec)
-    order.sort(key=lambda code: (code in have, -(caps.get(code) or 0), code))
+    # A bounded run must resume with the least recently attempted companies.
+    # Size only breaks ties; repeatedly failing large sites cannot starve the tail.
+    attempts = rec.get("attempts") or {}
+    # HTML visits after the PDF quota is exhausted must not consume a PDF turn.
+    pdf_turns = rec.get("pdf_turns") or {}
+    order.sort(key=lambda code: (pdf_turns.get(code, ""), attempts.get(code, ""), code in have,
+                                 -(caps.get(code) or 0), code))
 
     # 공식 홈페이지를 아직 모르는 종목은 한 실행에 HOME_PER_RUN 개만 새로 찾는다.
     left = HOME_PER_RUN
@@ -355,12 +359,22 @@ def _load_codes_file(name):
     return set((d.get("codes") or {}).keys())
 
 
+def current_month_cutoff(today):
+    """Allow one complete reporting month of publication lag."""
+    index = today.year * 12 + today.month - 3
+    return f"{index // 12:04d}-{index % 12 + 1:02d}"
+
+
 def save_coverage(rec):
     """왜 어떤 회사가 안 보이는지 한 파일에서 바로 알 수 있게 한다."""
     seed = universe_codes()
     td = _load_codes_file("monthly_jp.json")
     web = _load_codes_file("monthly_web_jp.json")
-    ir = set((rec.get("codes") or {}).keys())
+    ir = {code for code, row in (rec.get("codes") or {}).items()
+          if row.get("months") or row.get("pdf")}
+    # Allow one full reporting month of publication lag. Historical coverage is
+    # retained, but a years-old table is not evidence that collection is current.
+    recent_month = current_month_cutoff(date.today())
     sites = rec.get("sites") or {}
     homes = rec.get("homes") or {}
     rows = {}
@@ -369,10 +383,15 @@ def save_coverage(rec):
         ms = dict(cr.get("months") or {})
         ms.update(cr.get("pdf") or {})
         site = sites.get(code) or {}
-        if site.get("discontinued"):
+        reason = getattr(monir, "IR_NON_REVENUE", {}).get(code, "")
+        if reason:
+            status = "non_revenue_kpi"
+        elif site.get("discontinued"):
             status = "discontinued"
         elif code in ir and ms:
-            status = "ok"
+            status = "ok" if max(ms) >= recent_month else "stale"
+        elif site.get("fetch_failed"):
+            status = "fetch_failed"
         elif site.get("page"):
             status = "parser_failed"
         elif site.get("miss"):
@@ -392,6 +411,9 @@ def save_coverage(rec):
             "tdnet": code in td,
             "web": code in web,
             "ir": code in ir,
+            "last_attempt": (rec.get("attempts") or {}).get(code, ""),
+            "last_parse_failure": site.get("parse_miss", ""),
+            "reason": reason,
         }
     payload = {
         "v": 1,
@@ -411,34 +433,52 @@ def save_coverage(rec):
 def read_pdfs(page, url, pdf, rec, today, budget):
     """월차 페이지에 걸린 PDF 를 기존 montable 규칙으로 읽는다."""
     done, skip = set(rec.get("done") or []), rec.setdefault("skip", {})
+    checked = rec.setdefault("pdf_checked", {})
+    # Annual files can retain their URL while adding this month's results.
+    # Revalidate recent reports daily; genuinely old archives remain immutable.
+    recent_docs = {row.get("doc") for period, row in pdf.items()
+                   if period >= f"{today.year - 1:04d}-01"}
     cur = today.strftime("%Y-%m")
     new = n = 0
     looked = False
     for u, lab, when in monir.pdf_links(page, url):
         if budget <= 0 or n >= PDF_PER_COMPANY:
             break
-        if u in done or u in skip:
-            continue
+        failure = skip.get(u)
+        if u in done and not failure:
+            if u not in recent_docs:
+                continue
+            try:
+                age_hours = (today - date.fromisoformat(checked[u])).days * 24
+                if age_hours < PDF_FRESH_HOURS:
+                    continue
+            except (KeyError, TypeError, ValueError):
+                pass
+        if isinstance(failure, dict):
+            try:
+                age = (today - date.fromisoformat(failure["day"])).days
+                if age < PDF_RETRY_DAYS:
+                    continue
+            except (KeyError, TypeError, ValueError):
+                pass
         looked = True
         data = get_bytes(u)
         time.sleep(PAUSE)
         budget -= 1
         n += 1
         if not data:
+            skip[u] = {"reason": "fetch_failed", "day": today.isoformat()}
             continue
         try:
             got = montable.read(data, when, title=lab)
         except Exception as e:
-            skip[u] = type(e).__name__
+            skip[u] = {"reason": type(e).__name__, "day": today.isoformat()}
             continue
         rows = (got or {}).get("rows") or []
         if not rows:
-            skip[u] = "표없음"
+            skip[u] = {"reason": "표없음", "day": today.isoformat()}
             continue
-        # 실제 숫자를 얻은 파일만 완료 처리한다. 실패 파일은 parser 판이
-        # 바뀌면 재시도할 수 있어야 한다.
-        rec.setdefault("done", []).append(u)
-        skip.pop(u, None)
+        accepted = 0
         for r in rows:
             per = r.get("period") or ""
             if not per or per >= cur:
@@ -457,6 +497,15 @@ def read_pdfs(page, url, pdf, rec, today, budget):
             if per not in pdf:
                 new += 1
             pdf[per] = row
+            accepted += 1
+        if accepted:
+            if u not in done:
+                rec.setdefault("done", []).append(u)
+            done.add(u)
+            checked[u] = today.isoformat()
+            skip.pop(u, None)
+        else:
+            skip[u] = {"reason": "no_usable_months", "day": today.isoformat()}
     return pdf, new, budget, looked
 
 
@@ -503,6 +552,8 @@ def main():
 
     targets = iter_targets(rec, today)
     for code, name, top, fixed in targets:
+        if code in getattr(monir, "IR_NON_REVENUE", {}):
+            continue
         if time.time() - t0 > BUDGET:
             print("  시간이 다 됐다 — 여기까지 저장하고 다음 실행에 잇는다")
             break
@@ -510,15 +561,22 @@ def main():
             print(f"  연속 {miss}번 못 받았다 — 이 바퀴는 접는다")
             break
         cur = codes.get(code) or {}
+        site = sites.get(code) or {}
+        source_changed = bool(fixed and fixed != site.get("page"))
+        if source_changed:
+            site = sites[code] = {"page": fixed, "found": today.isoformat()}
         # 이미 달이 쌓인 회사는 자주 안 두드린다. 한 달에 한 번 올라오는 값이다.
-        if cur.get("months") and cur.get("ts") and cur.get("pdf_ts"):
+        if (not source_changed and cur.get("months") and cur.get("ts")
+                and cur.get("pdf_ts")):
             try:
                 age = (now - datetime.fromisoformat(cur["ts"])).total_seconds()
                 p_age = (now - datetime.fromisoformat(
                     cur["pdf_ts"])).total_seconds()
-                have_hist = len(set(cur.get("months") or {}) | set(cur.get("pdf") or {}))
+                periods = set(cur.get("months") or {}) | set(cur.get("pdf") or {})
+                have_hist = len(periods)
+                current = bool(periods and max(periods) >= current_month_cutoff(today))
                 # 24개월이 덜 찬 회사는 PDF backfill을 계속 진행한다.
-                if (have_hist >= 24 and age < FRESH_HOURS * 3600
+                if (current and have_hist >= 24 and age < FRESH_HOURS * 3600
                         and p_age < PDF_FRESH_HOURS * 3600):
                     continue
             except ValueError:
@@ -544,6 +602,9 @@ def main():
                         continue
                 except ValueError:
                     pass
+            rec.setdefault("attempts", {})[code] = now.isoformat(timespec="seconds")
+            if pdf_left > 0:
+                rec.setdefault("pdf_turns", {})[code] = now.isoformat(timespec="seconds")
             url, _n = discover(top)
             time.sleep(PAUSE)
             if not url:
@@ -551,11 +612,20 @@ def main():
                 sites[code] = {"miss": today.isoformat()}
                 continue
             sites[code] = {"page": url, "found": today.isoformat()}
+        rec.setdefault("attempts", {})[code] = now.isoformat(timespec="seconds")
+        if pdf_left > 0:
+            rec.setdefault("pdf_turns", {})[code] = now.isoformat(timespec="seconds")
+        sites.setdefault(code, {})["page"] = url
         page = get(url)
         time.sleep(PAUSE)
-        if not page:
+        feed_urls = monir.IR_FEEDS.get(code) or []
+        if isinstance(feed_urls, str):
+            feed_urls = [feed_urls]
+        if not page and not feed_urls:
             # 주소가 바뀌었을 수 있다 — 다음 실행에 다시 찾게 비워 둔다.
-            sites.pop(code, None)
+            sites[code] = {"page": url, "fetch_failed": now.isoformat(timespec="seconds")}
+            if not fixed:
+                sites[code].pop("page", None)
             miss += 1
             continue
         miss = 0
@@ -568,12 +638,21 @@ def main():
             sites.setdefault(code, {})["updated"] = updated
         got = monir.read(page, today)
         got = {p: dict(v, doc=url) for p, v in got.items()}
-        feed_url = monir.IR_FEEDS.get(code)
-        if feed_url:
+        feed_pages = []
+        for feed_url in feed_urls:
             feed = get(feed_url)
             time.sleep(PAUSE)
+            if not feed:
+                continue
+            feed = monir.materialize_feed(feed)
+            feed_pages.append((feed_url, feed))
             for p, v in monir.read(feed, today).items():
                 got.setdefault(p, dict(v, doc=feed_url))
+        if not page and not feed_pages:
+            sites.setdefault(code, {})["fetch_failed"] = now.isoformat(timespec="seconds")
+            miss += 1
+            continue
+        sites.setdefault(code, {}).pop("fetch_failed", None)
         fresh += 1
 
         # **PDF 목록 꼴도 같이 본다.** 표를 안 싣고 달마다 PDF 한 장을 거는
@@ -581,9 +660,12 @@ def main():
         # 36달이 들어온다(91차). 못 읽는 PDF 는 그냥 지나간다.
         pdf = dict(cur.get("pdf") or {})
         looked = False
-        if pdf_left > 0:
-            pdf, n_new, pdf_left, looked = read_pdfs(page, url, pdf, rec,
-                                                     today, pdf_left)
+        for pdf_url, pdf_page in [(url, page)] + feed_pages:
+            if pdf_left <= 0:
+                break
+            pdf, n_new, pdf_left, page_looked = read_pdfs(
+                pdf_page, pdf_url, pdf, rec, today, pdf_left)
+            looked = looked or page_looked
             new_months += n_new
 
         # 현재 회계연도만 싣는 회사는 과거 연도 HTML 링크도 따라간다.
@@ -625,7 +707,10 @@ def main():
             print(f"  {code} {name}: 0달 ({url})")
             sites.setdefault(code, {})["parse_miss"] = now.isoformat(timespec="seconds")
             continue
-        sites.setdefault(code, {}).pop("parse_miss", None)
+        if got or pdf:
+            sites.setdefault(code, {}).pop("parse_miss", None)
+        else:
+            sites.setdefault(code, {})["parse_miss"] = now.isoformat(timespec="seconds")
         codes[code] = {"name": name, "page": url, "months": months,
                        "ts": now.isoformat(timespec="seconds")}
         if updated:

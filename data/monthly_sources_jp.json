@@ -1,0 +1,798 @@
+{
+ "asOf": "2026-10-13T08:40:50+00:00",
+ "companies": {
+  "8267": {
+   "name": "イオン",
+   "page": "https://www.aeon.info/ir/library/monthly/",
+   "reason": "EIR generated list inaccessible502; reports are subsidiaries not parent total",
+   "status": "recovered"
+  },
+  "4666": {
+   "name": "パーク２４",
+   "page": "https://www.park24.co.jp/ir/financial/monthly.html",
+   "reason": "EIR JS list + backtick YY/MM PDF headers not recognized",
+   "status": "recovered"
+  },
+  "7545": {
+   "name": "西松屋チェーン",
+   "page": "https://www.24028.jp/ir/library",
+   "reason": "Shopping category MONTHLY falsely selected instead of IR",
+   "status": "recovered"
+  },
+  "7630": {
+   "name": "壱番屋",
+   "page": "https://www.ichibanya.jp/ir/finance/monthly/",
+   "reason": "EIR-loaded content; observed eir core and announcements HTTP502",
+   "status": "recovered"
+  },
+  "2502": {
+   "name": "アサヒグループ",
+   "page": "https://www.asahigroup-holdings.com/en/ir/financial_data/monthly_data/",
+   "reason": "English month/category PDF; revenue and volume mixed",
+   "status": "recovered"
+  },
+  "1911": {
+   "name": "住友林業",
+   "page": "https://sfc.jp/information/ir/zaimu/order/",
+   "reason": "Source parent financial menu; monthly disclosure is orders not revenue",
+   "status": "nonrevenue",
+   "excludeReason": "Source parent financial menu; monthly disclosure is orders not revenue"
+  },
+  "2590": {
+   "name": "ＤｙＤｏ",
+   "page": "https://holdings.dydo.co.jp/ir/data/monthly_report/",
+   "reason": "Disclosure sells bottles-volume not monetary revenue; EIR endpoint502",
+   "status": "nonrevenue",
+   "excludeReason": "Disclosure sells bottles-volume not monetary revenue; EIR endpoint502"
+  },
+  "2678": {
+   "name": "アスクル",
+   "page": "https://www.askul.co.jp/corp/investor/finance/",
+   "reason": "Cached URL is customer notification; monthly data in external JS",
+   "status": "recovered"
+  },
+  "2742": {
+   "name": "ハローズ",
+   "page": "https://www.halows.com/ir/finance_monthly/",
+   "reason": "YYYY/MM row headers and rowspans unsupported",
+   "status": "recovered"
+  },
+  "3030": {
+   "name": "ハブ",
+   "page": "https://www.pub-hub.co.jp/ir/month.html",
+   "reason": "PDF list generated with document.write and insert_document",
+   "status": "recovered",
+   "feeds": [
+    "https://ircms.irstreet.com/contents/export.php?template=1565&brand=87&charset=4"
+   ]
+  },
+  "3080": {
+   "name": "ジェーソン",
+   "page": "https://jason.co.jp/ir/monthly_information_2027_2",
+   "reason": "Sales table embedded as PNG; no HTML table",
+   "status": "recovered"
+  },
+  "3317": {
+   "name": "フライングガーデン",
+   "page": "https://www.fgarden.co.jp/ir/index.php",
+   "reason": "Split label 前期同月度 / 対比 below numeric row; no inline sales label",
+   "status": "recovered"
+  },
+  "3548": {
+   "name": "バロック",
+   "page": "https://www.baroque-global.com/jp/ir/monthly/",
+   "reason": "PDF download URL does not end .pdf",
+   "status": "recovered"
+  },
+  "5892": {
+   "name": "ｙｕｔｏｒｉ",
+   "page": "https://yutori.tokyo/ir/presentations/",
+   "reason": "Standalone monthly KPI ended afterApr2026; monthly revenue data moved into quarterly presentations. UnrestrictedXJ feed confirms no missing monthly doctype.",
+   "status": "recovered",
+   "feeds": [
+    "https://www.xj-storage.jp/public-list/GetList2.aspx?company=AS09313&len=10000&doctype=10111&output=json",
+    "https://www.xj-storage.jp/public-list/GetList2.aspx?company=AS09313&len=10000&output=json"
+   ]
+  },
+  "7177": {
+   "name": "ＧＭＯフィナンシャルホールディングス",
+   "page": "https://www.gmofh.com/ir/monthly_report.html",
+   "reason": "Published monthly source is accounts/trading volume, not revenue",
+   "status": "nonrevenue",
+   "excludeReason": "Published monthly source is accounts/trading volume, not revenue"
+  },
+  "7562": {
+   "name": "安楽亭",
+   "page": "https://www.anrakutei.co.jp/ir.html",
+   "reason": "Wrong menu source403; company publishes fiscal-year monthly table annually",
+   "status": "recovered"
+  },
+  "7674": {
+   "name": "ＮＡＴＴＹ ＳＷＡＮＫＹホールディングス",
+   "page": "https://nattyswanky.com/ir/",
+   "reason": "Home-page source; disclosures loaded from XJ JSON",
+   "status": "recovered",
+   "feeds": [
+    "https://www.xj-storage.jp/public-list/GetList2.aspx?company=AS81590&len=10000&output=json"
+   ]
+  },
+  "8194": {
+   "name": "ライフコーポ",
+   "page": "https://www.lifecorp.jp/company/ir/financial/monthly/",
+   "reason": "YYYY/M headers unsupported",
+   "status": "recovered"
+  },
+  "8244": {
+   "name": "近鉄百貨店",
+   "page": "https://www.d-kintetsu.co.jp/corporate/ir/finance/recent_results.html",
+   "reason": "Vertical stores and growth-rate columns; month only title",
+   "status": "recovered"
+  },
+  "9627": {
+   "name": "アインホールディングス",
+   "page": "https://www.ainj.co.jp/corporate/ir/",
+   "reason": "Bare month numbers across two explicitly labeled calendar years, growth-rate values",
+   "status": "recovered"
+  },
+  "7585": {
+   "name": "かんなん丸",
+   "page": "https://kannanmaru.co.jp/",
+   "reason": "Home-page source instead of monthly PDF; split scope headings",
+   "status": "recovered"
+  },
+  "8798": {
+   "name": "アドバンスクリエイト",
+   "page": "https://www.advancecreate.co.jp/ir/topics/monthly_report/",
+   "reason": "Monthly list loaded via .load; headline ANP mistaken for sales; revenue chart has no numeric labels",
+   "status": "source_found"
+  },
+  "8628": {
+   "name": "松井証券",
+   "page": "https://www.matsui.co.jp/company/ir/disclosure/business/",
+   "reason": "Monthly figures are revenue components plus trading/account KPIs, no YoY in latest PDF",
+   "status": "recovered"
+  },
+  "8914": {
+   "name": "エリアリンク",
+   "page": "https://www.arealink.co.jp/news/ir/p17078/",
+   "reason": "Monthly operating occupancy disclosed, not revenue",
+   "status": "nonrevenue",
+   "excludeReason": "Monthly operating occupancy disclosed, not revenue"
+  },
+  "7550": {
+   "name": "ゼンショー",
+   "page": "https://www.zensho.co.jp/jp/ir/finance/monthly/sukiya/",
+   "reason": "Landing page only; brand tables are one level deeper.",
+   "status": "recovered"
+  },
+  "3608": {
+   "name": "ＴＳＩ ＨＤ",
+   "page": "https://www.tsi-holdings.com/tsuki.html",
+   "reason": "Rowspan scope and 計 rows hide sale label; XLSX available.",
+   "status": "recovered"
+  },
+  "3549": {
+   "name": "クスリのアオキＨＤ",
+   "page": "https://kusuri-aoki-hd.co.jp/ir/finance/monthry/",
+   "reason": "売上高 is section header, while data rows say only 全店/既存店; rowspan/context propagation needed.",
+   "status": "recovered"
+  },
+  "3543": {
+   "name": "コメダＨＤ",
+   "page": "https://komeda-holdings.co.jp/monthly/",
+   "reason": "Official monthly list populated by EIR JavaScript; raw HTML has no PDFs. EIR direct fetch returned HTTP502; Firecrawl rendered public page and fetched linked PDF successfully.",
+   "status": "recovered"
+  },
+  "3038": {
+   "name": "神戸物産",
+   "page": "https://www.kobebussan.co.jp/ir/monthly.php",
+   "reason": "Sales amounts and 前年比 are distinct rows. Existing TDnet result selected 業務スーパー店舗仕入れ既存店, a different metric.",
+   "status": "recovered"
+  },
+  "205A": {
+   "name": "ロゴスＨＤ",
+   "page": "https://logos-holdings.jp/ir/order/",
+   "reason": "Monthly disclosure is order count, not revenue.",
+   "status": "nonrevenue",
+   "feeds": [
+    "https://www.xj-storage.jp/public-list/GetList2.aspx?company=AS09113&len=10000&output=json"
+   ],
+   "excludeReason": "Monthly disclosure is order count, not revenue."
+  },
+  "262A": {
+   "name": "インターメスティック",
+   "page": "https://www.zoff.com/ir/monthly/",
+   "reason": "XJ feed and PDF-only list; PDF numbers are signed growth rates, convert +100.",
+   "status": "recovered",
+   "feeds": [
+    "https://www.xj-storage.jp/public-list/GetList2.aspx?company=AS98629&len=10000&output=json"
+   ]
+  },
+  "2685": {
+   "name": "アンドエスティＨＤ",
+   "page": "https://www.andst-hd.co.jp/ir/highlights/sales/fy2027/",
+   "reason": "Old individual announcement used instead of yearly monthly table.",
+   "status": "recovered"
+  },
+  "274A": {
+   "name": "ガーデン",
+   "page": "https://ir-gardengroup.jp/",
+   "reason": "Company homepage 403; separate official IR site available.",
+   "status": "recovered"
+  },
+  "3058": {
+   "name": "三洋堂ホールディングス",
+   "page": "https://ir.sanyodo.co.jp/ir/irnews.html",
+   "reason": "営業概況 is annual financial narrative, not monthly. PDF fullwidth digits require normalization. Existing nums September111.0 differs from official PDF111.7.",
+   "status": "recovered"
+  },
+  "3160": {
+   "name": "大光",
+   "page": "https://www.oomitsu.com",
+   "reason": "Homepage IR links generated by EIR JS; rows alternate revenue and 前年比.",
+   "status": "recovered"
+  },
+  "3358": {
+   "name": "Ｔｒａｉｌｈｅａｄ Ｇｌｏｂａｌ Ｈｏｌｄｉｎｇｓ",
+   "page": "https://thg-hd.com",
+   "reason": "PDF labels monthly YoY 前期比; existing parser kept only absolute revenue.",
+   "status": "recovered",
+   "feeds": [
+    "https://thg-hd.com"
+   ]
+  },
+  "3923": {
+   "name": "ラクス",
+   "page": "https://www.rakus.co.jp/ir/monthly-sales/",
+   "reason": "EIR dynamically injects PDF list; PDF has 13-month mixed-year header and alternating revenue/YoY rows.",
+   "status": "recovered"
+  },
+  "6036": {
+   "name": "ＫｅｅＰｅｒ技研",
+   "page": "https://keepergiken.co.jp/ir/irdata/monthly",
+   "reason": "XJ feed PDF only; sales narrative is reliable. Generic parser may extract weather YoY from same PDF: prohibit climate rows.",
+   "status": "recovered",
+   "feeds": [
+    "https://www.xj-storage.jp/public-list/GetList2.aspx?company=AS02676&len=10000&output=json"
+   ]
+  },
+  "7412": {
+   "name": "アトム",
+   "page": "https://www.atom-corp.co.jp/ir/monthlysale.php",
+   "reason": "Source URL was unrelated fair/event page.",
+   "status": "recovered",
+   "feeds": [
+    "https://www.atom-corp.co.jp/ir/monthlysale.php"
+   ]
+  },
+  "7596": {
+   "name": "魚力",
+   "page": "https://uoriki.co.jp/ir/library/monthly.html",
+   "reason": "Official monthly list populated by EIR JavaScript; raw HTML has no PDFs. EIR direct fetch returned HTTP502; Firecrawl rendered public page and fetched linked PDF successfully.",
+   "status": "recovered"
+  },
+  "7682": {
+   "name": "浜木綿",
+   "page": "https://ir.hamayuu.co.jp/ja/ir.html",
+   "reason": "IR landing has current PDF links; no HTML numeric table.",
+   "status": "recovered",
+   "feeds": [
+    "https://ir.hamayuu.co.jp/ja/ir.html"
+   ]
+  },
+  "8198": {
+   "name": "ＭＶ東海",
+   "page": "https://www.mv-tokai.co.jp/ir-month-tokai/",
+   "reason": "monthly-recipe is recipe category, not financial disclosure.",
+   "status": "recovered"
+  },
+  "9039": {
+   "name": "サカイ引越センター",
+   "page": "https://www.hikkoshi-sakai.co.jp",
+   "reason": "Homepage monthly PDF not reached; PDF regional rows and quarter columns require explicit total selection.",
+   "status": "recovered",
+   "feeds": [
+    "https://www.hikkoshi-sakai.co.jp"
+   ]
+  },
+  "9835": {
+   "name": "ジュンテンド",
+   "page": "https://www.juntendo.co.jp/ir/ir-library/monthly/",
+   "reason": "IR page EIR JS gives no raw PDF links, but corporate homepage news gives the current monthly PDF directly.",
+   "status": "recovered",
+   "feeds": [
+    "https://www.juntendo.co.jp/"
+   ]
+  },
+  "9166": {
+   "name": "ＧＥＮＤＡ",
+   "page": "https://genda.jp/2026/09/16/monthly-report-2609/",
+   "reason": "September report covers August; cannot use article/report month as observation month.",
+   "status": "recovered"
+  },
+  "8963": {
+   "name": "Ｒ－ＩＮＶ",
+   "page": "https://www.invincible-inv.co.jp",
+   "reason": "REIT monthly portfolio report mixes hotel sales, ADR/RevPAR and forward estimates; actual hotel sales are revenue but not investment-corporation revenue.",
+   "status": "recovered",
+   "feeds": [
+    "https://www.invincible-inv.co.jp"
+   ]
+  },
+  "8742": {
+   "name": "小林洋行",
+   "page": "https://www.kobayashiyoko.com",
+   "reason": "Monthly customer futures and financial-instrument trading volumes (枚), only month-over-month changes; no revenue YoY.",
+   "status": "nonrevenue",
+   "feeds": [
+    "https://www.kobayashiyoko.com"
+   ],
+   "excludeReason": "Monthly customer futures and financial-instrument trading volumes (枚), only month-over-month changes; no revenue YoY."
+  },
+  "9285": {
+   "name": "Ｉ－東京インフラＦ",
+   "page": "https://www.tokyo-infra.com",
+   "reason": "Monthly solar generation kWh versus forecast, not revenue or YoY.",
+   "status": "nonrevenue",
+   "feeds": [
+    "https://www.tokyo-infra.com"
+   ],
+   "excludeReason": "Monthly solar generation kWh versus forecast, not revenue or YoY."
+  },
+  "2294": {
+   "name": "柿安本店",
+   "page": "https://www.kakiyasuhonten.co.jp/ir/financial/month.php",
+   "reason": "Selected source was unrelated Jujutsu Kaisen promotion; correct source is EIR-injected monthly list.",
+   "status": "recovered"
+  },
+  "2337": {
+   "name": "いちご",
+   "page": "https://www.ichigo.gr.jp/ir/news/",
+   "reason": "Monthly disclosure is solar/wind generation in kWh; YoY is production, not revenue.",
+   "status": "nonrevenue",
+   "excludeReason": "Monthly disclosure is solar/wind generation in kWh; YoY is production, not revenue."
+  },
+  "2593": {
+   "name": "伊藤園",
+   "page": "https://www.itoen.co.jp/ir/library/monthly_sales_backnumber/",
+   "reason": "販売状況 is JS-injected; now quarterly publication containing monthly sales, not a monthly-titled PDF.",
+   "status": "recovered"
+  },
+  "2654": {
+   "name": "アスモ",
+   "page": "https://www.asmo1.co.jp",
+   "reason": "Homepage selected; monthly PDF has pairs of current-month/cumulative rows and detached total labels.",
+   "status": "recovered"
+  },
+  "2698": {
+   "name": "キャンドゥ",
+   "page": "https://www.cando-web.co.jp/ir/monthly_report/",
+   "reason": "Month headers are two-digit year.month (26.03), not usual 月 labels.",
+   "status": "recovered"
+  },
+  "2705": {
+   "name": "大戸屋ホールディングス",
+   "page": "https://www.ootoya.jp/ir/financial/monthly.html",
+   "reason": "Wrong financial-highlights URL; correct vertical table uses change percent, not ratio.",
+   "status": "recovered"
+  },
+  "2753": {
+   "name": "あみやき",
+   "page": "https://amiyakitei.co.jp/ir/ir_monthly/",
+   "reason": "Selected source was unrelated PR Times menu promotion. Official migrated WordPress news page dated 2026-09-02 has monthly title but empty content/no PDF link even rendered.",
+   "status": "recovered"
+  },
+  "3068": {
+   "name": "ＷＤＩ",
+   "page": "https://www.wdi.co.jp/ir/monthly.html",
+   "reason": "Empty eirArea populated by setParts('monthly'); HTML-only parser sees no links.",
+   "status": "recovered"
+  },
+  "3087": {
+   "name": "ドトール・日レスＨＤ",
+   "page": "https://www.doutor.co.jp/ir/library/monthly/",
+   "reason": "Holding page only links to two subsidiaries, has no revenue table.",
+   "status": "recovered"
+  },
+  "3195": {
+   "name": "ジェネレーションパス",
+   "page": "https://www.genepa.com/ir/",
+   "reason": "Homepage lacks monthly table; IR feed injected through XJ storage.",
+   "status": "recovered"
+  },
+  "3370": {
+   "name": "フジタコーポレーション",
+   "page": "https://www.fujitacorp.co.jp/main/irinfotop/irp07/",
+   "reason": "Old news link timed out; stable IR tools index links monthly PDFs with ordinary filenames.",
+   "status": "recovered"
+  },
+  "3591": {
+   "name": "ワコールＨＤ",
+   "page": "https://www.wacoalholdings.jp/ir/monthlydata/",
+   "reason": "Subsidiary/region and sell-in/sell-through labels, no consolidated all-store series.",
+   "status": "recovered"
+  },
+  "3663": {
+   "name": "セルシス",
+   "page": "https://www.celsys.com/irinfo_news/contents_type=47",
+   "reason": "Monthly report has ARR and three-month moving-average sales; not discrete month revenue.",
+   "status": "nonrevenue",
+   "excludeReason": "Monthly report has ARR and three-month moving-average sales; not discrete month revenue."
+  },
+  "3927": {
+   "name": "フーバーブレイン",
+   "page": "https://www.fuva-brain.co.jp/ir/",
+   "reason": "Monthly revenue disclosure ended with March 2023, explicitly announced May 2 2023; should not be active parser_failed.",
+   "status": "discontinued",
+   "excludeReason": "Monthly revenue disclosure ended with March 2023, explicitly announced May 2 2023; should not be active parser_failed."
+  },
+  "5580": {
+   "name": "プロディライト",
+   "page": "https://prodelight.co.jp/ir/",
+   "reason": "Selected URL was customer case study. Monthly disclosure is account/channel KPI, not company revenue.",
+   "status": "nonrevenue",
+   "excludeReason": "Selected URL was customer case study. Monthly disclosure is account/channel KPI, not company revenue."
+  },
+  "6045": {
+   "name": "レントラックス",
+   "page": "https://www.rentracks.co.jp/ir/finance/others.html",
+   "reason": "Table has current/prior absolute revenue rows, no YoY ratio row; gross transaction value and revenue coexist.",
+   "status": "recovered"
+  },
+  "7512": {
+   "name": "イオン北海",
+   "page": "https://www.aeon-hokkaido.jp/corporation/month/",
+   "reason": "Multirow category labels and 企業計 used both category and all-store row; broad parser can misselect clothing/food rows.",
+   "status": "recovered"
+  },
+  "7604": {
+   "name": "梅の花グループ",
+   "page": "https://www.umenohana.co.jp/investor/archive?category=monthly_sales",
+   "reason": "New Nuxt site hydrates monthly list; PDF is on CloudFront with opaque filename.",
+   "status": "recovered"
+  },
+  "7686": {
+   "name": "ひとまいる",
+   "page": "https://www.hitomile.co.jp/ir/monthly_report.html",
+   "reason": "EIR monthly list dynamically rendered; changed company name and segmented report.",
+   "status": "recovered"
+  },
+  "8207": {
+   "name": "テンアライド",
+   "page": "https://www.teng.co.jp/ir/ir.html",
+   "reason": "PDF all-store and same-store blocks, prior/current/ratio column triplets; generic positional extraction loses detached month labels.",
+   "status": "recovered"
+  },
+  "8985": {
+   "name": "Ｒ－ＪＨＲ",
+   "page": "https://www.jhrth.co.jp/ja/portfolio/review.html",
+   "reason": "Homepage selected and hotel KPI report has revenue, RevPAR, ADR, occupancy together; generic selection risks wrong metric.",
+   "status": "recovered"
+  },
+  "9279": {
+   "name": "ギフトホールディングス",
+   "page": "https://www.gift-group.co.jp/ir/library/04",
+   "reason": "New IRStreet external JS injects table; no initial HTML numbers.",
+   "status": "recovered",
+   "feeds": [
+    "https://ircms.irstreet.com/gift/getsuji/getsuji_tables.js"
+   ]
+  },
+  "9831": {
+   "name": "ヤマダ",
+   "page": "https://www.yamada-holdings.jp/ir/monthly.html",
+   "reason": "PDF contains segment POS sales and mixed orders/sales; generic row selector expects total-store labels.",
+   "status": "recovered"
+  },
+  "9936": {
+   "name": "王将フードサービス",
+   "page": "https://ir.ohsho.co.jp/ir/library/monthly.html",
+   "reason": "XJ storage injected list absent from plain HTML; September PDF link returns 404 but August final PDF works.",
+   "status": "recovered"
+  },
+  "2695": {
+   "name": "くら寿司",
+   "page": "https://www.kurasushi.co.jp/company/ir/library/monthly_reports.html",
+   "reason": "PDF-only listing; table annual rows and quarter/half-year columns, with FY2025 meaning Nov2025-Oct2026.",
+   "status": "recovered"
+  },
+  "8142": {
+   "name": "トーホー",
+   "page": "https://www.to-ho.co.jp/ir/flash.html",
+   "reason": "Selected /toho_news article unrelated to monthly figures; correct page loads EIR content dynamically.",
+   "status": "recovered"
+  },
+  "3222": {
+   "name": "ＵＳＭＨ",
+   "page": "https://www.usmh.co.jp/ir/monthly_reports",
+   "reason": "Multirow headers have five company groups and vertical month rows; generic parser cannot resolve all-company vs same-store columns.",
+   "status": "recovered"
+  },
+  "3612": {
+   "name": "ワールド",
+   "page": "https://corp.world.co.jp/ir/library/monthly/",
+   "reason": "Monthly archive dynamically supplied by EIR; bare HTML has no PDF links; direct ssl4 transport returned502.",
+   "status": "recovered"
+  },
+  "1379": {
+   "name": "ホクト",
+   "page": "https://www.hokto-kinoko.co.jp/corporate/ir/gyouseki/sokuhou/",
+   "reason": "Selected monthly-present contest URL, not sales. Correct rendered sales archive ends Mar2023; no 2026 monthly revenue located.",
+   "status": "source_found"
+  },
+  "2311": {
+   "name": "エプコ",
+   "page": "https://www.epco.co.jp/ir",
+   "reason": "Monthly headline/table is ordinary profit, not sales. Most ratios must be excluded from revenue collection.",
+   "status": "nonrevenue",
+   "excludeReason": "Monthly headline/table is ordinary profit, not sales. Most ratios must be excluded from revenue collection."
+  },
+  "2669": {
+   "name": "カネ美食品",
+   "page": "https://www.kanemi-foods.co.jp/ir/monthly.html",
+   "reason": "Monthly page is EIR JS; PDF presents a single month and cumulative figures side by side, not 3+ month headers.",
+   "status": "recovered"
+  },
+  "2722": {
+   "name": "ＩＫホールディングス",
+   "page": "https://www.ai-kei.co.jp/ir/library_monthly",
+   "reason": "Homepage discovery insufficient; monthly archive exists. PDF month rows vertical and segment detail separate.",
+   "status": "recovered"
+  },
+  "2792": {
+   "name": "ハニーズＨＬＤ",
+   "page": "https://www.honeys.co.jp/ir/data",
+   "reason": "Direct request403 and numerical table embedded as image; official HTML narrative available through web retrieval.",
+   "status": "recovered"
+  },
+  "3069": {
+   "name": "ＪＦＬＡホールディングス",
+   "page": "https://j-fla.com/ir/monthly/",
+   "reason": "Dynamic archive absent in requests HTML; rendered official archive newest entry Mar2023 (published Apr12), not fresh2026.",
+   "status": "source_found"
+  },
+  "3196": {
+   "name": "ホットランドホールディングス",
+   "page": "https://ir.hotland.co.jp/policy/monthlyinfo/",
+   "reason": "Page table built in assets/file_14.js from microCMS; no static cells.",
+   "status": "recovered"
+  },
+  "3395": {
+   "name": "サンマルクホールディングス",
+   "page": "https://www.saint-marc-hd.com/hd/ir/",
+   "reason": "Homepage selected instead of IR monthly detail; table has FY rows and several scopes, no date in some link titles.",
+   "status": "recovered"
+  },
+  "4679": {
+   "name": "田谷",
+   "page": "https://www.taya.co.jp/ir/library/monthly.html",
+   "reason": "JS-generated links; PDF date headers use YYYY/M, not Japanese 月; values labeled 前年比 are deltas near zero.",
+   "status": "recovered",
+   "feeds": [
+    "https://www.xj-storage.jp/public-list/GetList2.aspx?company=AS03932&output=json&len=0"
+   ]
+  },
+  "6073": {
+   "name": "アサンテ",
+   "page": "https://www.asante.co.jp/ir/library/disclosure/",
+   "reason": "Homepage may lag IR feed; PDF 前年同月比 is monetary difference while 対前年同月増減率 is actual percent change.",
+   "status": "recovered"
+  },
+  "7513": {
+   "name": "コジマ",
+   "page": "https://www.kojima.net/corporation/ir/bulletin.html",
+   "reason": "Only one populated month at FY opening; generic extraction/recency selection misses PDF or ratio caption.",
+   "status": "recovered"
+  },
+  "7610": {
+   "name": "テイツー",
+   "page": "https://www.tay2.co.jp/ir/irlibrary/01.html",
+   "reason": "PDF list loaded by xj_monthlysales.js via AS90259 API.",
+   "status": "recovered"
+  },
+  "7865": {
+   "name": "ピープル",
+   "page": "https://www.people-kk.co.jp/investorrelations/monthly/",
+   "reason": "Monthly highlight is single-month comparison (previous/current/YoY) rather than horizontal months; cumulative forecasts also present.",
+   "status": "recovered"
+  },
+  "8214": {
+   "name": "ＡＯＫＩホールディングス",
+   "page": "https://ir.aoki-hd.co.jp/ja/ir/finance/monthlyreport.html",
+   "reason": "Landing monthly page links separate fashion and entertainment child pages; nested tables risk duplicate/cumulative values.",
+   "status": "recovered"
+  },
+  "9603": {
+   "name": "エイチ・アイ・エス",
+   "page": "https://www.his.co.jp/ir/monthly-report/",
+   "reason": "HTML has chart canvases, no table. Values reside inline datasets. Metric is travel transaction value under old accounting basis, not recognized revenue.",
+   "status": "nonrevenue",
+   "excludeReason": "여행 취급액(종전 회계 기준), 인식 매출액과 구분"
+  },
+  "9974": {
+   "name": "ベルク",
+   "page": "https://www.belc.jp/company/library/monthly",
+   "reason": "Selected campaign page unrelated; proper monthly page static HTML says no items while JS renders XJ list.",
+   "status": "recovered"
+  },
+  "9163": {
+   "name": "ナレルグループ",
+   "page": "https://nareru-group.co.jp/ir/finance/indicator/",
+   "reason": "Homepage incorrectly treated as failed revenue source; official monthly indicator page contains staffing/utilization, not monthly revenue.",
+   "status": "nonrevenue",
+   "excludeReason": "Homepage incorrectly treated as failed revenue source; official monthly indicator page contains staffing/utilization, not monthly revenue."
+  },
+  "9206": {
+   "name": "スターフライヤー",
+   "page": "https://www.starflyer.jp/starflyer/ir/traffic_figures/",
+   "reason": "Monthly page is operating/traffic performance (seats, passengers, load factor, flights), not revenue; currently static archive FY2025.",
+   "status": "nonrevenue",
+   "excludeReason": "Monthly page is operating/traffic performance (seats, passengers, load factor, flights), not revenue; currently static archive FY2025."
+  },
+  "9282": {
+   "name": "Ｉ－いちごグリーン",
+   "page": "https://www.ichigo-green.co.jp/",
+   "reason": "Monthly disclosure is kWh solar production; variance is against forecast, NOT revenue or YoY.",
+   "status": "nonrevenue",
+   "excludeReason": "Monthly disclosure is kWh solar production; variance is against forecast, NOT revenue or YoY."
+  },
+  "8410": {
+   "name": "セブン銀行",
+   "page": "https://www.sevenbank.co.jp/ir/finance/monthly_trend/",
+   "reason": "JS table gives ATM counts/transactions, no monthly revenue.",
+   "status": "nonrevenue",
+   "excludeReason": "JS table gives ATM counts/transactions, no monthly revenue."
+  },
+  "3097": {
+   "name": "物語コーポ",
+   "page": "https://www.monogatari.co.jp/ir/date/",
+   "reason": "IRStreet dynamically injects PHP PDF download links; static HTML empty.",
+   "status": "recovered"
+  },
+  "3093": {
+   "name": "トレファク",
+   "page": "https://www.treasurefactory.co.jp/ir/monthly.html",
+   "reason": "EIR injected monthly table not in static HTML.",
+   "status": "recovered"
+  },
+  "8279": {
+   "name": "ヤオコー",
+   "page": "https://www.bluezonesholdings.co.jp/ir/finance/monthly.html",
+   "reason": "XJ graph data and PDF list dynamically injected, on successor holding company domain.",
+   "status": "recovered"
+  },
+  "3099": {
+   "name": "三越伊勢丹ＨＤ",
+   "page": "https://www.imhds.co.jp/corporate/ir/finance/monthly-report.html",
+   "reason": "Old /content/ URL redirects; static and Firecrawl returned empty year selector, search indexed PDF archive.",
+   "status": "recovered",
+   "feeds": [
+    "https://xml.irpocket.com/3099/JS/ir-monthly-latest-1.js"
+   ]
+  },
+  "1417": {
+   "name": "ミライト・ワン",
+   "page": "https://www.mirait-one.com/info/001973.html",
+   "reason": "Monthly source is orders received, not sales revenue.",
+   "status": "nonrevenue",
+   "excludeReason": "Monthly source is orders received, not sales revenue."
+  },
+  "2461": {
+   "name": "ファンコミュニケーションズ",
+   "page": "https://www.fancs.com/news/376546549/",
+   "reason": "PDF upper amount/lower YoY rows plus prior-year panels and separate gross transaction page.",
+   "status": "recovered"
+  },
+  "2674": {
+   "name": "ハードオフコーポレーション",
+   "page": "https://www.hardoff.co.jp/ir/library/sales/",
+   "reason": "HTML contains only [date][title][size] placeholders; dynamic XJ list.",
+   "status": "recovered",
+   "feeds": [
+    "https://www.xj-storage.jp/public-list/GetList2.aspx?company=AS91042&len=10000&output=json"
+   ]
+  },
+  "2730": {
+   "name": "エディオン",
+   "page": "https://www.edion.co.jp/ir/library/monthly",
+   "reason": "Collector pointed at home instead of monthly library; PDF labels have disordered text extraction.",
+   "status": "recovered"
+  },
+  "2910": {
+   "name": "ロックフィルド",
+   "page": "https://www.rockfield.co.jp/ir/library/monthly/",
+   "reason": "Sales scope resides in headings, total row only 合計; parser loses heading context.",
+   "status": "recovered"
+  },
+  "3077": {
+   "name": "ホリイフード",
+   "page": "https://www.horiifood.co.jp/ir/library/prospectus.cgi?id=18",
+   "reason": "Original source Rakuten Pay unrelated; PDF links have no .pdf suffix.",
+   "status": "recovered"
+  },
+  "3199": {
+   "name": "綿半ホールディングス",
+   "page": "https://watahan.co.jp/ir/trends.html",
+   "reason": "Static list empty; current/prior FY tables in same PDF.",
+   "status": "recovered",
+   "feeds": [
+    "https://www.xj-storage.jp/public-list/GetList2.aspx?company=AS99965&len=10000&output=json"
+   ]
+  },
+  "3544": {
+   "name": "サツドラＨＤ",
+   "page": "https://satudora-hd.co.jp/ir/monthly/",
+   "reason": "Collector chose ESG materiality page; monthly uses signed growth, not ratio.",
+   "status": "recovered"
+  },
+  "4680": {
+   "name": "ラウンドワン",
+   "page": "https://www.round1-group.co.jp/en/ir/financial-affairs/sales/",
+   "reason": "Old collector selected amusement game promo; IR moved corporate group domain.",
+   "status": "recovered"
+  },
+  "7157": {
+   "name": "ライフネット生命保険",
+   "page": "https://ir.lifenet-seimei.co.jp/ja/ir/financial/monthly.html",
+   "reason": "Home page lacks monthly table; monthly headline is annualized in-force premium and policy counts, not recognized revenue.",
+   "status": "nonrevenue",
+   "excludeReason": "Home page lacks monthly table; monthly headline is annualized in-force premium and policy counts, not recognized revenue."
+  },
+  "7522": {
+   "name": "ワタミ",
+   "page": "https://www.watami.co.jp/ir/library/recent/",
+   "reason": "Static page contains only archive links; rendered page includes nested scope table.",
+   "status": "recovered"
+  },
+  "7646": {
+   "name": "ＰＬＡＮＴ",
+   "page": "https://www.plant-co.jp/ir/monthly.html",
+   "reason": "Original source unrelated heat campaign press release.",
+   "status": "recovered"
+  },
+  "8160": {
+   "name": "木曽路",
+   "page": "https://www.kisoji.co.jp/ir/monthly.html",
+   "reason": "Annual PDF download endpoint no .pdf suffix; totals are unlabeled continuation rows under sales.",
+   "status": "recovered"
+  },
+  "8218": {
+   "name": "コメリ",
+   "page": "https://www.komeri.bit.or.jp/ir/monthlytrend/",
+   "reason": "Labels separated into sibling left table; numeric table lacks labels.",
+   "status": "recovered"
+  },
+  "9616": {
+   "name": "共立メンテナンス",
+   "page": "https://www.kyoritsugroup.co.jp/ir/library/?category=16",
+   "reason": "Collector at home; correct IR monthly category has company revenue plus occupancy KPIs.",
+   "status": "recovered"
+  },
+  "9993": {
+   "name": "ヤマザワ",
+   "page": "https://yamazawa.co.jp/ir/term-month.html",
+   "reason": "FY represented as 65期 date interval, not 年月期; spaced 売 上 and rowspans.",
+   "status": "recovered"
+  },
+  "8715": {
+   "name": "アニコムホールディングス",
+   "page": "https://www.anicom.co.jp/ir/financial/business/",
+   "reason": "Net premium income amount table not called sales and has FY rows, month columns.",
+   "status": "recovered"
+  },
+  "2154": {
+   "name": "オープンアップグループ",
+   "page": "https://openupgroup.co.jp/ir/result-employees/",
+   "reason": "Monthly reports concern domestic engineers and utilization, not revenue.",
+   "status": "nonrevenue",
+   "excludeReason": "Monthly reports concern domestic engineers and utilization, not revenue."
+  },
+  "8975": {
+   "name": "Ｒ－いちごオフィス",
+   "page": "https://www.ichigo-office.co.jp/portfolio/ratio.html",
+   "reason": "Monthly releases are portfolio occupancy, not revenue.",
+   "status": "nonrevenue",
+   "excludeReason": "Monthly releases are portfolio occupancy, not revenue."
+  }
+ }
+}

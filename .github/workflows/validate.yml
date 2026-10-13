@@ -9,6 +9,7 @@ on:
       - 'trade-shared/**'
       - 'tests/*.cjs'
       - 'data/monthly_universe_jp.json'
+      - 'data/monthly_sources_jp.json'
       - 'data/monthly_reviewed_jp.json'
       - '.github/workflows/*.yml'
   workflow_dispatch:

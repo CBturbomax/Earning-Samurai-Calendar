@@ -116,7 +116,17 @@ def _signed(cell: str) -> bool:
     return bool(re.match(r"^[+\-△▲]", _cell(cell)))
 
 
+def _explicit_period(cell):
+    m = re.fullmatch(r'(20\d{2})[年/.-](\d{1,2})月?', _cell(cell))
+    if m and 1 <= int(m[2]) <= 12:
+        return int(m[1]), int(m[2])
+    return None
+
+
 def _month(cell: str):
+    explicit = _explicit_period(cell)
+    if explicit:
+        return explicit[1]
     text = re.sub(r'(January|February|March|April|May|June|July|August|September|October|November|December)$',
                   '', _cell(cell), flags=re.I)
     m = MONTH_CELL.match(text)
@@ -215,6 +225,41 @@ def _label_ok(lab: str, context: str = ""):
 # 한 표에서 **이름표가 같은 계열이 둘 이상**이면 그 표를 안 읽는다.
 # 세븐＆아이·스시로처럼 브랜드마다 줄이 선 표가 그렇다 — 어느 줄이 회사
 # 전체인지 규칙으로 못 가르므로, 엉뚱한 브랜드를 회사 매출로 싣느니 버린다.
+def _dated_records(rows, today):
+    # Fully dated rows with a separate store-scope column (e.g. Halows).
+    # Only an explicitly labelled revenue YoY column is admissible.
+    headers = rows[0]
+    cols = [i for i, v in enumerate(headers)
+            if re.search(r'売上|営業収益', v) and re.search(r'前年比|前年同月比', v)
+            and not re.search(r'累計|累積|客', v)]
+    if len(cols) != 1:
+        return None
+    col = cols[0]
+    found, conflicts = {}, set()
+    saw = False
+    for row in rows[1:]:
+        period = _explicit_period(row[0])
+        if not period:
+            continue
+        saw = True
+        key = f'{period[0]:04d}-{period[1]:02d}'
+        if key >= today.strftime('%Y-%m'):
+            continue
+        label = ''.join(row[1:col])
+        if re.search(r'累計|累積', label):
+            continue
+        kind = _label_ok(label)
+        value = _ratio(row[col])
+        if not kind or value is None:
+            continue
+        if kind in found.get(key, {}) and found[key][kind] != value:
+            conflicts.add((key, kind))
+        found.setdefault(key, {})[kind] = value
+    for key, kind in conflicts:
+        found[key].pop(kind, None)
+    return {p: v for p, v in found.items() if v} if saw else None
+
+
 def _series(rows, width, today, near, lead=""):
     """표 하나 -> {'YYYY-MM': {'same'|'all': 비율}} 또는 {}.
 
@@ -222,11 +267,30 @@ def _series(rows, width, today, near, lead=""):
     제목에 적히는 일이 흔해서(「2026年2月期 月次売上高」), 그것까지 봐야
     옛 회계연도 표를 제 해에 앉힐 수 있다.
     """
+    records = _dated_records(rows, today)
+    if records is not None:
+        return records
     # (가) 달이 **가로**로 선 표 — 머리줄에 1月…12月
-    for r in range(min(4, len(rows))):
-        cols = [c for c in range(width) if _month(rows[r][c]) is not None]
-        if len(cols) >= 3:
-            return _horizontal(rows, width, r, cols, today, near, lead)
+    horizontal = {}
+    headers = [(r, [c for c in range(width) if _month(rows[r][c]) is not None])
+               for r in range(len(rows))]
+    headers = [(r, cols) for r, cols in headers if len(cols) >= 3]
+    block_fy = _fy(lead + " " + _all_text(rows))
+    last_month = None
+    for i, (r, cols) in enumerate(headers):
+        block_months = [_month(rows[r][c]) for c in cols]
+        if block_fy and block_fy[0] == 'start' and last_month is not None and block_months[0] < last_month:
+            block_fy = ('start', block_fy[1] + 1, 0)
+        end = headers[i + 1][0] if i + 1 < len(headers) else len(rows)
+        got = _horizontal(rows[:end], width, r, cols, today, near, lead, block_fy)
+        last_month = block_months[-1]
+        if block_fy and block_fy[0] == 'start':
+            wraps = sum(b < a for a, b in zip(block_months, block_months[1:]))
+            block_fy = ('start', block_fy[1] + wraps, 0)
+        for period, value in got.items():
+            horizontal.setdefault(period, value)
+    if headers:
+        return horizontal
     # (나) 달이 **세로**로 선 표 — 첫 칸(또는 둘째 칸)에 4月…
     for c0 in (0, 1):
         mrows = [i for i in range(len(rows))
@@ -285,7 +349,7 @@ def _section_row(row):
     return len(vals) >= 3 and len(set(vals)) == 1 and _ratio(vals[0]) is None
 
 
-def _horizontal(rows, width, hr, cols, today, near, lead=""):
+def _horizontal(rows, width, hr, cols, today, near, lead="", fy_override=None):
     months = [_month(rows[hr][c]) for c in cols]
     first = min(cols)
     pairs = []
@@ -299,15 +363,16 @@ def _horizontal(rows, width, hr, cols, today, near, lead=""):
                 break
             continue
         vals = _row_ratios([r[c] for c in cols], delta_hint)
-        if sum(v is not None for v in vals) < 2:
+        if sum(v is not None for v in vals) < (1 if _fy(lead + " " + _all_text(rows)) else 2):
             continue
-        lab = "".join(r[c] for c in range(first))
+        lab = _cell("".join(r[c] for c in range(first)))
         if "累計" in lab or "累積" in lab:
             continue
         kind = _label_ok(lab, lead)
         if kind:
             pairs.append((kind, vals))
-            if re.match(r'^(?:合計|全社|連結合計)(?:全店|全店舗|既存店|売上|$)', lab):
+            if (re.match(r'^(?:合計|全社|連結合計)(?:全店|全店舗|既存店|売上|$)', lab)
+                    or re.fullmatch(r'(?:全店|全店舗|既存店)(?:売上高)?(?:合計|計)', lab)):
                 totals.append((kind, vals))
     # An explicitly labelled company total wins over a directly-operated
     # subtotal. Business-specific totals (e.g. 百貨店事業合計) do not qualify.
@@ -317,9 +382,12 @@ def _horizontal(rows, width, hr, cols, today, near, lead=""):
     if not pairs:
         return {}
     filled = [any(v[i] is not None for _k, v in pairs) for i in range(len(months))]
-    fy = _fy(lead + " " + _all_text(rows))
-    return _collect(pairs, months, _years(months, filled, fy, today),
-                    today, near, fy)
+    fy = fy_override or _fy(lead + " " + _all_text(rows))
+    explicit = [_explicit_period(rows[hr][c]) for c in cols]
+    if any(explicit) and not all(explicit):
+        return {}
+    years = [v[0] for v in explicit] if all(explicit) else _years(months, filled, fy, today)
+    return _collect(pairs, months, years, today, near, fy or all(explicit))
 
 
 def _vertical(rows, width, c0, mrows, today, near, lead=""):
@@ -344,8 +412,66 @@ def _vertical(rows, width, c0, mrows, today, near, lead=""):
         return {}
     filled = [any(v[i] is not None for _k, v in pairs) for i in range(len(months))]
     fy = _fy(lead + " " + _all_text(rows))
-    return _collect(pairs, months, _years(months, filled, fy, today),
-                    today, near, fy)
+    explicit = [_explicit_period(rows[i][c0]) for i in mrows]
+    if any(explicit) and not all(explicit):
+        return {}
+    years = [v[0] for v in explicit] if all(explicit) else _years(months, filled, fy, today)
+    return _collect(pairs, months, years, today, near, fy or all(explicit))
+
+
+def materialize_feed(raw):
+    """Decode public disclosure data to inert HTML; never execute JavaScript."""
+    import ast
+    raw = raw.strip().lstrip('\ufeff')
+    raw = re.sub(r'^(?:\s*//[^\n]*\n)+', '', raw)
+    wrapped = re.fullmatch(r'[\w.$]+\s*\((.*)\)\s*;?\s*', raw, re.S)
+    candidate = wrapped[1] if wrapped else raw
+    try:
+        payload = json.loads(candidate)
+    except (ValueError, TypeError):
+        payload = None
+    if isinstance(payload, dict):
+        items = payload.get('items', payload.get('item', []))
+        if not isinstance(items, list):
+            return ''
+        parts = []
+        for item in items:
+            if not isinstance(item, dict):
+                continue
+            title = str(item.get('title') or '')
+            if not re.search(r'月次|月度|月別|月間|売上速報|Monthly', title, re.I) or PDF_SKIP.search(title):
+                continue
+            group = str(item.get('group_name') or '')
+            fragment = item.get('text')
+            if isinstance(fragment, str) and re.search(r'20\d{2}', group):
+                parts.append('<h2>'+html.escape(group)+'</h2>'+fragment)
+            day = str(item.get('publishDate') or item.get('published') or item.get('date') or '')[:10].replace('/', '-')
+            try:
+                date.fromisoformat(day)
+            except ValueError:
+                day = ''
+            urls = [f.get('url') for f in item.get('files', []) if isinstance(f, dict)]
+            urls += [item.get('link')]
+            for url in urls:
+                if isinstance(url, str) and url.startswith('//'):
+                    url = 'https:' + url
+                if not isinstance(url, str) or not re.match(r'https?://', url):
+                    continue
+                parts.append('<a data-published="'+html.escape(day, quote=True)+'" href="'+html.escape(url, quote=True)+'">'+html.escape(title)+'</a>')
+        return '\n'.join(parts)
+    # Some XJ/IRStreet feeds contain a single quoted HTML literal.
+    literals = re.findall(r'''(?:document\.write|insert_document)\s*\(\s*("(?:\\.|[^"\\])*"|'(?:\\.|[^'\\])*')\s*\)''', raw, re.S)
+    if literals:
+        parts = []
+        for value in literals:
+            try:
+                decoded = ast.literal_eval(value.replace('\\/', '/'))
+            except (SyntaxError, ValueError):
+                continue
+            if isinstance(decoded, str):
+                parts.append(decoded)
+        return '\n'.join(parts)
+    return raw
 
 
 def read(page: str, today=None, near: int = 3):
@@ -516,16 +642,24 @@ def pdf_links(page: str, base: str):
     """月次 페이지 -> [(주소, 이름표, 발표일)]. **언제인지 모르면 안 담는다.**"""
     import urllib.parse
     out, seen = [], set()
-    for href, lab in PDF_A.findall(SCRIPT.sub(" ", page)):
+    for anchor in re.finditer(r"(?is)<a\b([^>]+)>(.*?)</a>", SCRIPT.sub(" ", page)):
+        attrs, lab = anchor.groups()
+        href_match = re.search(r"href=[\"']([^\"']+)[\"']", attrs, re.I)
+        if not href_match:
+            continue
+        href = html.unescape(href_match[1])
+        if not re.search(r'\.pdf(?:[?#]|$)|/notice/download/|/PDF/(?:[?#]|$)|[?&]mode=download(?:&|$)|/ir_disp\.php\?ir_no=', href, re.I):
+            continue
         t = _txt(lab)
         if PDF_SKIP.search(t) or not (PDF_WANT.search(t) or PDF_WANT.search(href)):
             continue
         u = urllib.parse.urljoin(base, href)
-        # 같은 파일에 물음표만 붙여 두 번 거는 목록이 있다(패스트리).
-        key = u.split("?")[0]
+        # 다운로드 CGI는 쿼리의 문서 ID가 주소의 일부다. 앵커만 제거한다.
+        key = re.sub(r"\?=\d+$", "", u.split("#")[0])
         if key in seen:
             continue
-        when = pdf_when(u, t)
+        published = re.search(r"data-published=[\"'](\d{4}-\d{2}-\d{2})[\"']", attrs)
+        when = published[1] if published else pdf_when(u, t)
         if not when:
             continue
         seen.add(key)
@@ -754,6 +888,23 @@ IR_SITES = {
     "2593": ("伊藤園", "https://www.itoen.co.jp/",
              "https://www.itoen.co.jp/ir/library/monthly_sales_backnumber/"),
 }
+
+
+# Investigated official routes; metrics without actual monthly sales are not
+# forced through the revenue parser. Research evidence remains separately stored.
+from pathlib import Path
+_source_path = Path(__file__).resolve().parent / 'data/monthly_sources_jp.json'
+IR_NON_REVENUE = {}
+if _source_path.exists():
+    for _code, _source in json.loads(_source_path.read_text(encoding='utf-8')).get('companies', {}).items():
+        _page = _source.get('page', '')
+        _old = IR_SITES.get(_code, (_source.get('name', _code), _page, ''))
+        if _page:
+            IR_SITES[_code] = (_old[0], _old[1], _page)
+        if _source.get('feeds'):
+            IR_FEEDS[_code] = _source['feeds']
+        if _source.get('excludeReason') and _source.get('status') != 'discontinued':
+            IR_NON_REVENUE[_code] = _source['excludeReason']
 
 
 # ── 스스로 시험 ─────────────────────────────────────────────────────────────
@@ -1071,7 +1222,7 @@ def _selftest():                                          # pragma: no cover
                '<a href="/ir/top/">株主・投資家情報</a>', "https://x.jp/"),
        "https://x.jp/ir/top/")
 
-    # 같은 파일에 물음표만 붙여 두 번 거는 목록이 있다(패스트리).
+    # 다운로드 CGI는 쿼리의 문서 ID가 주소의 일부다. 앵커만 제거한다.
     # (더) **PDF 는 月次 '페이지' 로 고르지 않는다.** 달마다 PDF 한 장을 거는
     #     회사에서 첫 PDF 를 페이지로 잡으면 그 한 장만 보고 목록을 놓친다 —
     #     그럴 때는 **그 PDF 들이 걸린 페이지 자체**가 목록이다.
