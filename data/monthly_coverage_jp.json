@@ -1,19 +1,19 @@
 {
  "v": 1,
- "ts": "2026-10-13T08:52:36+00:00",
+ "ts": "2026-10-13T09:08:40+00:00",
  "seed": 361,
  "homes": 352,
  "official_ir_data": 173,
  "covered_any": 311,
  "status": {
-  "covered_elsewhere": 49,
+  "covered_elsewhere": 46,
   "discontinued": 3,
+  "fetch_failed": 6,
   "home_pending": 6,
   "no_monthly_found": 105,
   "non_revenue_kpi": 18,
   "ok": 151,
-  "parser_failed": 3,
-  "pending_discovery": 4,
+  "parser_failed": 4,
   "stale": 22
  },
  "codes": {
@@ -26,8 +26,8 @@
    "tdnet": true,
    "web": false,
    "ir": true,
-   "last_attempt": "",
-   "last_parse_failure": "",
+   "last_attempt": "2026-10-13T08:59:06+00:00",
+   "last_parse_failure": "2026-10-13T08:59:06+00:00",
    "reason": ""
   },
   "3086": {
@@ -39,7 +39,7 @@
    "tdnet": true,
    "web": false,
    "ir": true,
-   "last_attempt": "",
+   "last_attempt": "2026-10-13T08:59:06+00:00",
    "last_parse_failure": "",
    "reason": ""
   },
@@ -52,7 +52,7 @@
    "tdnet": false,
    "web": false,
    "ir": true,
-   "last_attempt": "",
+   "last_attempt": "2026-10-13T08:59:06+00:00",
    "last_parse_failure": "",
    "reason": ""
   },
@@ -65,7 +65,7 @@
    "tdnet": false,
    "web": true,
    "ir": true,
-   "last_attempt": "",
+   "last_attempt": "2026-10-13T08:59:06+00:00",
    "last_parse_failure": "",
    "reason": ""
   },
@@ -74,11 +74,11 @@
    "home": "https://www.zensho.co.jp/jp/",
    "source_url": "https://www.zensho.co.jp/jp/ir/finance/monthly/sukiya/",
    "latest_month": "2026-09",
-   "months": 6,
+   "months": 30,
    "tdnet": false,
    "web": true,
    "ir": true,
-   "last_attempt": "",
+   "last_attempt": "2026-10-13T08:59:06+00:00",
    "last_parse_failure": "",
    "reason": ""
   },
@@ -91,7 +91,7 @@
    "tdnet": false,
    "web": true,
    "ir": true,
-   "last_attempt": "",
+   "last_attempt": "2026-10-13T08:59:06+00:00",
    "last_parse_failure": "",
    "reason": ""
   },
@@ -104,7 +104,7 @@
    "tdnet": false,
    "web": false,
    "ir": true,
-   "last_attempt": "",
+   "last_attempt": "2026-10-13T08:59:06+00:00",
    "last_parse_failure": "",
    "reason": ""
   },
@@ -117,7 +117,7 @@
    "tdnet": false,
    "web": true,
    "ir": true,
-   "last_attempt": "",
+   "last_attempt": "2026-10-13T08:59:06+00:00",
    "last_parse_failure": "",
    "reason": ""
   },
@@ -176,13 +176,13 @@
   "3197": {
    "status": "ok",
    "home": "https://corp.skylark.co.jp/",
-   "source_url": "https://corp.skylark.co.jp/ir/strategy/growth/existing_store/",
+   "source_url": "https://corp.skylark.co.jp/ir/financial/performance/",
    "latest_month": "2026-09",
    "months": 9,
    "tdnet": false,
    "web": false,
    "ir": true,
-   "last_attempt": "",
+   "last_attempt": "2026-10-13T08:59:06+00:00",
    "last_parse_failure": "",
    "reason": ""
   },
@@ -252,16 +252,16 @@
    "reason": ""
   },
   "8237": {
-   "status": "covered_elsewhere",
+   "status": "parser_failed",
    "home": "https://www.matsuya.com/",
-   "source_url": "",
+   "source_url": "https://www.matsuya.com/corp/ir/monthly-highlight/",
    "latest_month": "",
    "months": 0,
    "tdnet": true,
    "web": false,
    "ir": false,
-   "last_attempt": "",
-   "last_parse_failure": "",
+   "last_attempt": "2026-10-13T08:59:06+00:00",
+   "last_parse_failure": "2026-10-13T08:59:06+00:00",
    "reason": ""
   },
   "8153": {
@@ -554,12 +554,12 @@
    "status": "ok",
    "home": "https://ppih.co.jp/",
    "source_url": "https://ppih.co.jp/ir/highlight/monthly/",
-   "latest_month": "2026-08",
-   "months": 154,
+   "latest_month": "2026-09",
+   "months": 155,
    "tdnet": true,
    "web": true,
    "ir": true,
-   "last_attempt": "",
+   "last_attempt": "2026-10-13T08:59:06+00:00",
    "last_parse_failure": "",
    "reason": ""
   },
@@ -642,15 +642,15 @@
    "reason": ""
   },
   "7453": {
-   "status": "pending_discovery",
+   "status": "fetch_failed",
    "home": "https://www.ryohin-keikaku.jp/",
-   "source_url": "",
+   "source_url": "https://www.ryohin-keikaku.jp/ir/monthly",
    "latest_month": "",
    "months": 0,
    "tdnet": false,
    "web": false,
    "ir": false,
-   "last_attempt": "",
+   "last_attempt": "2026-10-13T08:59:06+00:00",
    "last_parse_failure": "",
    "reason": ""
   },
@@ -676,20 +676,20 @@
    "tdnet": false,
    "web": false,
    "ir": true,
-   "last_attempt": "",
+   "last_attempt": "2026-10-13T08:59:06+00:00",
    "last_parse_failure": "",
    "reason": ""
   },
   "9020": {
-   "status": "pending_discovery",
+   "status": "fetch_failed",
    "home": "https://www.jreast.co.jp/",
-   "source_url": "",
+   "source_url": "https://www.jreast.co.jp/company/ir/library/monthly/",
    "latest_month": "",
    "months": 0,
    "tdnet": false,
    "web": false,
    "ir": false,
-   "last_attempt": "",
+   "last_attempt": "2026-10-13T08:59:06+00:00",
    "last_parse_failure": "",
    "reason": ""
   },
@@ -702,7 +702,7 @@
    "tdnet": false,
    "web": false,
    "ir": true,
-   "last_attempt": "",
+   "last_attempt": "2026-10-13T08:59:06+00:00",
    "last_parse_failure": "",
    "reason": ""
   },
@@ -728,20 +728,20 @@
    "tdnet": false,
    "web": false,
    "ir": true,
-   "last_attempt": "",
-   "last_parse_failure": "",
+   "last_attempt": "2026-10-13T08:59:06+00:00",
+   "last_parse_failure": "2026-10-13T08:59:06+00:00",
    "reason": ""
   },
   "9021": {
    "status": "ok",
    "home": "https://www.westjr.co.jp/",
    "source_url": "https://www.westjr.co.jp/company/ir/finance/monthly/",
-   "latest_month": "2026-08",
-   "months": 73,
+   "latest_month": "2026-09",
+   "months": 74,
    "tdnet": false,
    "web": false,
    "ir": true,
-   "last_attempt": "",
+   "last_attempt": "2026-10-13T08:59:06+00:00",
    "last_parse_failure": "",
    "reason": ""
   },
@@ -793,8 +793,8 @@
    "tdnet": false,
    "web": false,
    "ir": true,
-   "last_attempt": "",
-   "last_parse_failure": "",
+   "last_attempt": "2026-10-13T08:59:06+00:00",
+   "last_parse_failure": "2026-10-13T08:59:06+00:00",
    "reason": ""
   },
   "2670": {
@@ -806,7 +806,7 @@
    "tdnet": true,
    "web": true,
    "ir": true,
-   "last_attempt": "",
+   "last_attempt": "2026-10-13T08:59:06+00:00",
    "last_parse_failure": "",
    "reason": ""
   },
@@ -819,7 +819,7 @@
    "tdnet": true,
    "web": false,
    "ir": true,
-   "last_attempt": "",
+   "last_attempt": "2026-10-13T08:59:06+00:00",
    "last_parse_failure": "",
    "reason": ""
   },
@@ -1053,8 +1053,8 @@
    "tdnet": true,
    "web": false,
    "ir": false,
-   "last_attempt": "",
-   "last_parse_failure": "",
+   "last_attempt": "2026-10-13T08:59:06+00:00",
+   "last_parse_failure": "2026-10-13T08:59:06+00:00",
    "reason": ""
   },
   "8628": {
@@ -1580,14 +1580,14 @@
   "1379": {
    "status": "parser_failed",
    "home": "https://www.hokto-kinoko.co.jp",
-   "source_url": "https://www.hokto-kinoko.co.jp/oubo/oubo_monthlypresent10.php",
+   "source_url": "https://www.hokto-kinoko.co.jp/corporate/ir/gyouseki/sokuhou/",
    "latest_month": "",
    "months": 0,
    "tdnet": false,
    "web": false,
    "ir": false,
-   "last_attempt": "",
-   "last_parse_failure": "",
+   "last_attempt": "2026-10-13T08:59:06+00:00",
+   "last_parse_failure": "2026-10-13T08:59:06+00:00",
    "reason": ""
   },
   "2311": {
@@ -1651,8 +1651,8 @@
    "tdnet": false,
    "web": false,
    "ir": false,
-   "last_attempt": "",
-   "last_parse_failure": "",
+   "last_attempt": "2026-10-13T08:59:06+00:00",
+   "last_parse_failure": "2026-10-13T08:59:06+00:00",
    "reason": ""
   },
   "3196": {
@@ -2293,7 +2293,7 @@
    "reason": ""
   },
   "2735": {
-   "status": "covered_elsewhere",
+   "status": "fetch_failed",
    "home": "https://www.watts-jp.com",
    "source_url": "",
    "latest_month": "",
@@ -2301,7 +2301,7 @@
    "tdnet": true,
    "web": false,
    "ir": false,
-   "last_attempt": "",
+   "last_attempt": "2026-10-13T08:59:06+00:00",
    "last_parse_failure": "",
    "reason": ""
   },
@@ -2332,7 +2332,7 @@
    "reason": ""
   },
   "2752": {
-   "status": "pending_discovery",
+   "status": "fetch_failed",
    "home": "https://www.fujiofood.com",
    "source_url": "",
    "latest_month": "",
@@ -2340,7 +2340,7 @@
    "tdnet": false,
    "web": false,
    "ir": false,
-   "last_attempt": "",
+   "last_attempt": "2026-10-13T08:59:06+00:00",
    "last_parse_failure": "",
    "reason": ""
   },
@@ -2782,7 +2782,7 @@
    "tdnet": false,
    "web": true,
    "ir": true,
-   "last_attempt": "",
+   "last_attempt": "2026-10-13T08:59:06+00:00",
    "last_parse_failure": "",
    "reason": ""
   },
@@ -3710,7 +3710,7 @@
    "reason": ""
   },
   "8165": {
-   "status": "pending_discovery",
+   "status": "fetch_failed",
    "home": "https://www.senshukai.co.jp",
    "source_url": "",
    "latest_month": "",
@@ -3718,7 +3718,7 @@
    "tdnet": false,
    "web": false,
    "ir": false,
-   "last_attempt": "",
+   "last_attempt": "2026-10-13T08:59:06+00:00",
    "last_parse_failure": "",
    "reason": ""
   },
@@ -3944,7 +3944,7 @@
    "reason": ""
   },
   "9251": {
-   "status": "covered_elsewhere",
+   "status": "fetch_failed",
    "home": "https://ab-company.co.jp",
    "source_url": "",
    "latest_month": "",
@@ -3952,7 +3952,7 @@
    "tdnet": true,
    "web": false,
    "ir": false,
-   "last_attempt": "",
+   "last_attempt": "2026-10-13T08:59:06+00:00",
    "last_parse_failure": "",
    "reason": ""
   },
@@ -4342,7 +4342,7 @@
    "tdnet": true,
    "web": false,
    "ir": true,
-   "last_attempt": "",
+   "last_attempt": "2026-10-13T08:59:06+00:00",
    "last_parse_failure": "",
    "reason": ""
   },
