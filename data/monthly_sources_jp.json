@@ -1,5 +1,5 @@
 {
- "asOf": "2026-10-13T08:40:50+00:00",
+ "asOf": "2026-10-13T08:52:36+00:00",
  "companies": {
   "8267": {
    "name": "イオン",
@@ -96,10 +96,12 @@
   },
   "7177": {
    "name": "ＧＭＯフィナンシャルホールディングス",
-   "page": "https://www.gmofh.com/ir/monthly_report.html",
-   "reason": "Published monthly source is accounts/trading volume, not revenue",
-   "status": "nonrevenue",
-   "excludeReason": "Published monthly source is accounts/trading volume, not revenue"
+   "page": "https://www.gmofh.com/ir/news.html",
+   "reason": "Initial monthly_report.html covers trading KPIs, but separate IR-news monthly earnings releases provide consolidated operating revenue. Previous nonrevenue classification was incorrect.",
+   "status": "recovered",
+   "feeds": [
+    "https://www.xj-storage.jp/public-list/GetList2.aspx?company=AS93479&len=10000&output=json"
+   ]
   },
   "7562": {
    "name": "安楽亭",
@@ -524,8 +526,7 @@
    "name": "エプコ",
    "page": "https://www.epco.co.jp/ir",
    "reason": "Monthly headline/table is ordinary profit, not sales. Most ratios must be excluded from revenue collection.",
-   "status": "nonrevenue",
-   "excludeReason": "Monthly headline/table is ordinary profit, not sales. Most ratios must be excluded from revenue collection."
+   "status": "recovered"
   },
   "2669": {
    "name": "カネ美食品",

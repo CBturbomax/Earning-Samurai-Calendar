@@ -207,8 +207,8 @@
    "found": "2026-09-28"
   },
   "2311": {
-   "page": "https://www.epco.co.jp",
-   "found": "2026-09-28"
+   "page": "https://www.epco.co.jp/ir",
+   "found": "2026-10-13"
   },
   "2317": {
    "miss": "2026-10-13"
@@ -1069,8 +1069,8 @@
    "miss": "2026-10-10"
   },
   "7177": {
-   "page": "https://www.gmofh.com/ir/monthly_report.html",
-   "found": "2026-10-10"
+   "page": "https://www.gmofh.com/ir/news.html",
+   "found": "2026-10-13"
   },
   "7516": {
    "page": "https://www.hc-kohnan.com/corporate/ir/monthly-report/",
@@ -17226,10 +17226,14 @@
     "2026-08": {
      "all": 101.7,
      "doc": "https://tdnet-pdf.kabutan.jp/20260910/140120260910534294.pdf"
+    },
+    "2026-09": {
+     "all": 104.5,
+     "doc": "https://japanir.jp/wp-content/uploads/2026/10/8267-20261013-05.pdf"
     }
    },
    "page": "https://www.aeon.info/ir/library/monthly/",
-   "ts": "2026-10-13T08:40:50+00:00",
+   "ts": "2026-10-13T08:52:36+00:00",
    "scope": "이온 리테일 · 일본 GMS"
   },
   "4666": {
@@ -17277,7 +17281,7 @@
     }
    },
    "page": "https://www.park24.co.jp/ir/financial/monthly.html",
-   "ts": "2026-10-13T08:40:50+00:00",
+   "ts": "2026-10-13T08:52:36+00:00",
    "scope": "타임즈 주차장 매출"
   },
   "7545": {
@@ -17313,7 +17317,7 @@
     }
    },
    "page": "https://www.24028.jp/ir/library",
-   "ts": "2026-10-13T08:40:50+00:00",
+   "ts": "2026-10-13T08:52:36+00:00",
    "scope": "국내 전점·온라인 · 매월 21일~20일"
   },
   "7630": {
@@ -17325,7 +17329,7 @@
     }
    },
    "page": "https://www.ichibanya.jp/ir/finance/monthly/",
-   "ts": "2026-10-13T08:40:50+00:00",
+   "ts": "2026-10-13T08:52:36+00:00",
    "scope": "국내 카레하우스 CoCo이치방야"
   },
   "2502": {
@@ -17337,7 +17341,7 @@
     }
    },
    "page": "https://www.asahigroup-holdings.com/en/ir/financial_data/monthly_data/",
-   "ts": "2026-10-13T08:40:50+00:00",
+   "ts": "2026-10-13T08:52:36+00:00",
    "scope": "아사히 식품 부문 매출"
   },
   "2678": {
@@ -17361,7 +17365,7 @@
     }
    },
    "page": "https://www.askul.co.jp/corp/investor/finance/",
-   "ts": "2026-10-13T08:40:50+00:00",
+   "ts": "2026-10-13T08:52:36+00:00",
    "scope": "별도 매출"
   },
   "2742": {
@@ -17465,7 +17469,7 @@
     }
    },
    "page": "https://www.halows.com/ir/finance_monthly/",
-   "ts": "2026-10-13T08:40:50+00:00",
+   "ts": "2026-10-13T08:52:36+00:00",
    "scope": "전점"
   },
   "3030": {
@@ -17501,7 +17505,7 @@
     }
    },
    "page": "https://www.pub-hub.co.jp/ir/month.html",
-   "ts": "2026-10-13T08:40:50+00:00",
+   "ts": "2026-10-13T08:52:36+00:00",
    "scope": "전점"
   },
   "3080": {
@@ -17537,7 +17541,7 @@
     }
    },
    "page": "https://jason.co.jp/ir/monthly_information_2027_2",
-   "ts": "2026-10-13T08:40:50+00:00",
+   "ts": "2026-10-13T08:52:36+00:00",
    "scope": "전점"
   },
   "3317": {
@@ -17569,7 +17573,7 @@
     }
    },
    "page": "https://www.fgarden.co.jp/ir/index.php",
-   "ts": "2026-10-13T08:40:50+00:00",
+   "ts": "2026-10-13T08:52:36+00:00",
    "scope": "전점"
   },
   "3548": {
@@ -17605,7 +17609,7 @@
     }
    },
    "page": "https://www.baroque-global.com/jp/ir/monthly/",
-   "ts": "2026-10-13T08:40:50+00:00",
+   "ts": "2026-10-13T08:52:36+00:00",
    "scope": "일본 전점 · 온라인 포함"
   },
   "5892": {
@@ -17625,8 +17629,48 @@
     }
    },
    "page": "https://yutori.tokyo/ir/presentations/",
-   "ts": "2026-10-13T08:40:50+00:00",
+   "ts": "2026-10-13T08:52:36+00:00",
    "scope": "그룹 매출"
+  },
+  "7177": {
+   "name": "ＧＭＯフィナンシャルホールディングス",
+   "months": {
+    "2026-01": {
+     "yoy": 133.686113,
+     "doc": "https://contents.xj-storage.jp/xcontents/AS93479/d04fdb6f/5c52/4b92/8b3b/f6d24c828a34/140120260914535912.pdf"
+    },
+    "2026-02": {
+     "yoy": 136.748166,
+     "doc": "https://contents.xj-storage.jp/xcontents/AS93479/d04fdb6f/5c52/4b92/8b3b/f6d24c828a34/140120260914535912.pdf"
+    },
+    "2026-03": {
+     "yoy": 108.9585,
+     "doc": "https://contents.xj-storage.jp/xcontents/AS93479/d04fdb6f/5c52/4b92/8b3b/f6d24c828a34/140120260914535912.pdf"
+    },
+    "2026-04": {
+     "yoy": 94.321276,
+     "doc": "https://contents.xj-storage.jp/xcontents/AS93479/d04fdb6f/5c52/4b92/8b3b/f6d24c828a34/140120260914535912.pdf"
+    },
+    "2026-05": {
+     "yoy": 75.188276,
+     "doc": "https://contents.xj-storage.jp/xcontents/AS93479/d04fdb6f/5c52/4b92/8b3b/f6d24c828a34/140120260914535912.pdf"
+    },
+    "2026-06": {
+     "yoy": 123.419689,
+     "doc": "https://contents.xj-storage.jp/xcontents/AS93479/d04fdb6f/5c52/4b92/8b3b/f6d24c828a34/140120260914535912.pdf"
+    },
+    "2026-07": {
+     "yoy": 139.235127,
+     "doc": "https://contents.xj-storage.jp/xcontents/AS93479/d04fdb6f/5c52/4b92/8b3b/f6d24c828a34/140120260914535912.pdf"
+    },
+    "2026-08": {
+     "yoy": 101.868421,
+     "doc": "https://contents.xj-storage.jp/xcontents/AS93479/d04fdb6f/5c52/4b92/8b3b/f6d24c828a34/140120260914535912.pdf"
+    }
+   },
+   "page": "https://www.gmofh.com/ir/news.html",
+   "ts": "2026-10-13T08:52:36+00:00",
+   "scope": "연결 영업수익 · 공시 금액으로 전년비 계산"
   },
   "7562": {
    "name": "安楽亭",
@@ -17681,7 +17725,7 @@
     }
    },
    "page": "https://www.anrakutei.co.jp/ir.html",
-   "ts": "2026-10-13T08:40:50+00:00",
+   "ts": "2026-10-13T08:52:36+00:00",
    "scope": "안라쿠테이 일본 직영 전점"
   },
   "7674": {
@@ -17721,7 +17765,7 @@
     }
    },
    "page": "https://nattyswanky.com/ir/",
-   "ts": "2026-10-13T08:40:50+00:00",
+   "ts": "2026-10-13T08:52:36+00:00",
    "scope": "직영 전점"
   },
   "8194": {
@@ -17825,7 +17869,7 @@
     }
    },
    "page": "https://www.lifecorp.jp/company/ir/financial/monthly/",
-   "ts": "2026-10-13T08:40:50+00:00",
+   "ts": "2026-10-13T08:52:36+00:00",
    "scope": "공시된 대표 매출 지표"
   },
   "8244": {
@@ -17837,7 +17881,7 @@
     }
    },
    "page": "https://www.d-kintetsu.co.jp/corporate/ir/finance/recent_results.html",
-   "ts": "2026-10-13T08:40:50+00:00",
+   "ts": "2026-10-13T08:52:36+00:00",
    "scope": "백화점 매출·임대수입 합계"
   },
   "9627": {
@@ -17877,7 +17921,7 @@
     }
    },
    "page": "https://www.ainj.co.jp/corporate/ir/",
-   "ts": "2026-10-13T08:40:50+00:00",
+   "ts": "2026-10-13T08:52:36+00:00",
    "scope": "조제약국 부문 매출"
   },
   "7585": {
@@ -17893,7 +17937,7 @@
     }
    },
    "page": "https://kannanmaru.co.jp/",
-   "ts": "2026-10-13T08:40:50+00:00",
+   "ts": "2026-10-13T08:52:36+00:00",
    "scope": "외식 전점"
   },
   "8628": {
@@ -17937,7 +17981,7 @@
     }
    },
    "page": "https://www.matsui.co.jp/company/ir/disclosure/business/",
-   "ts": "2026-10-13T08:40:50+00:00",
+   "ts": "2026-10-13T08:52:36+00:00",
    "scope": "증권 위탁수수료 수입"
   },
   "7550": {
@@ -17969,7 +18013,7 @@
     }
    },
    "page": "https://www.zensho.co.jp/jp/ir/finance/monthly/sukiya/",
-   "ts": "2026-10-13T08:40:50+00:00",
+   "ts": "2026-10-13T08:52:36+00:00",
    "scope": "국내 스키야"
   },
   "3608": {
@@ -18005,7 +18049,7 @@
     }
    },
    "page": "https://www.tsi-holdings.com/tsuki.html",
-   "ts": "2026-10-13T08:40:50+00:00",
+   "ts": "2026-10-13T08:52:36+00:00",
    "scope": "国内直営店+オンライン 全店"
   },
   "3549": {
@@ -18061,7 +18105,7 @@
     }
    },
    "page": "https://kusuri-aoki-hd.co.jp/ir/finance/monthry/",
-   "ts": "2026-10-13T08:40:50+00:00",
+   "ts": "2026-10-13T08:52:36+00:00",
    "scope": "공시 전점 매출 · 매월 21일~20일"
   },
   "3543": {
@@ -18073,7 +18117,7 @@
     }
    },
    "page": "https://komeda-holdings.co.jp/monthly/",
-   "ts": "2026-10-13T08:40:50+00:00",
+   "ts": "2026-10-13T08:52:36+00:00",
    "scope": "국내 FC향 도매 매출 · 점포 소매매출과 다름"
   },
   "3038": {
@@ -18121,7 +18165,7 @@
     }
    },
    "page": "https://www.kobebussan.co.jp/ir/monthly.php",
-   "ts": "2026-10-13T08:40:50+00:00",
+   "ts": "2026-10-13T08:52:36+00:00",
    "scope": "고베물산 단독"
   },
   "262A": {
@@ -18165,7 +18209,7 @@
     }
    },
    "page": "https://www.zoff.com/ir/monthly/",
-   "ts": "2026-10-13T08:40:50+00:00",
+   "ts": "2026-10-13T08:52:36+00:00",
    "scope": "国内 Zoff事業 全店"
   },
   "2685": {
@@ -18197,7 +18241,7 @@
     }
    },
    "page": "https://www.andst-hd.co.jp/ir/highlights/sales/fy2027/",
-   "ts": "2026-10-13T08:40:50+00:00",
+   "ts": "2026-10-13T08:52:36+00:00",
    "scope": "공시된 대표 매출 지표"
   },
   "274A": {
@@ -18233,7 +18277,7 @@
     }
    },
    "page": "https://ir-gardengroup.jp/",
-   "ts": "2026-10-13T08:40:50+00:00",
+   "ts": "2026-10-13T08:52:36+00:00",
    "scope": "国内直営店舗 店内売上 全店"
   },
   "3058": {
@@ -18265,7 +18309,7 @@
     }
    },
    "page": "https://ir.sanyodo.co.jp/ir/irnews.html",
-   "ts": "2026-10-13T08:40:50+00:00",
+   "ts": "2026-10-13T08:52:36+00:00",
    "scope": "グループ直営店舗 全店"
   },
   "3160": {
@@ -18289,7 +18333,7 @@
     }
    },
    "page": "https://www.oomitsu.com",
-   "ts": "2026-10-13T08:40:50+00:00",
+   "ts": "2026-10-13T08:52:36+00:00",
    "scope": "全社 外商+アミカ"
   },
   "3358": {
@@ -18321,7 +18365,7 @@
     }
    },
    "page": "https://thg-hd.com",
-   "ts": "2026-10-13T08:40:50+00:00",
+   "ts": "2026-10-13T08:52:36+00:00",
    "scope": "連結"
   },
   "3923": {
@@ -18349,7 +18393,7 @@
     }
    },
    "page": "https://www.rakus.co.jp/ir/monthly-sales/",
-   "ts": "2026-10-13T08:40:50+00:00",
+   "ts": "2026-10-13T08:52:36+00:00",
    "scope": "라쿠스 연결"
   },
   "6036": {
@@ -18361,7 +18405,7 @@
     }
    },
    "page": "https://keepergiken.co.jp/ir/irdata/monthly",
-   "ts": "2026-10-13T08:40:50+00:00",
+   "ts": "2026-10-13T08:52:36+00:00",
    "scope": "全社"
   },
   "7412": {
@@ -18393,7 +18437,7 @@
     }
    },
    "page": "https://www.atom-corp.co.jp/ir/monthlysale.php",
-   "ts": "2026-10-13T08:40:50+00:00",
+   "ts": "2026-10-13T08:52:36+00:00",
    "scope": "全店計 全店"
   },
   "7596": {
@@ -18421,7 +18465,7 @@
     }
    },
    "page": "https://uoriki.co.jp/ir/library/monthly.html",
-   "ts": "2026-10-13T08:40:50+00:00",
+   "ts": "2026-10-13T08:52:36+00:00",
    "scope": "全社計"
   },
   "7682": {
@@ -18437,7 +18481,7 @@
     }
    },
    "page": "https://ir.hamayuu.co.jp/ja/ir.html",
-   "ts": "2026-10-13T08:40:50+00:00",
+   "ts": "2026-10-13T08:52:36+00:00",
    "scope": "直営店 全店"
   },
   "8198": {
@@ -18473,7 +18517,7 @@
     }
    },
    "page": "https://www.mv-tokai.co.jp/ir-month-tokai/",
-   "ts": "2026-10-13T08:40:50+00:00",
+   "ts": "2026-10-13T08:52:36+00:00",
    "scope": "全店"
   },
   "9039": {
@@ -18505,7 +18549,7 @@
     }
    },
    "page": "https://www.hikkoshi-sakai.co.jp",
-   "ts": "2026-10-13T08:40:50+00:00",
+   "ts": "2026-10-13T08:52:36+00:00",
    "scope": "사카이이사센터 별도 매출"
   },
   "9835": {
@@ -18541,7 +18585,7 @@
     }
    },
    "page": "https://www.juntendo.co.jp/ir/ir-library/monthly/",
-   "ts": "2026-10-13T08:40:50+00:00",
+   "ts": "2026-10-13T08:52:36+00:00",
    "scope": "全店舗 ブックセンター含む"
   },
   "9166": {
@@ -18581,7 +18625,7 @@
     }
    },
    "page": "https://genda.jp/2026/09/16/monthly-report-2609/",
-   "ts": "2026-10-13T08:40:50+00:00",
+   "ts": "2026-10-13T08:52:36+00:00",
    "scope": "国内アミューズメント施設 既存店 曜日調整前"
   },
   "8963": {
@@ -18593,7 +18637,7 @@
     }
    },
    "page": "https://www.invincible-inv.co.jp",
-   "ts": "2026-10-13T08:40:50+00:00",
+   "ts": "2026-10-13T08:52:36+00:00",
    "scope": "国内ホテル101物件"
   },
   "2294": {
@@ -18605,7 +18649,7 @@
     }
    },
    "page": "https://www.kakiyasuhonten.co.jp/ir/financial/month.php",
-   "ts": "2026-10-13T08:40:50+00:00",
+   "ts": "2026-10-13T08:52:36+00:00",
    "scope": "전점"
   },
   "2593": {
@@ -18625,7 +18669,7 @@
     }
    },
    "page": "https://www.itoen.co.jp/ir/library/monthly_sales_backnumber/",
-   "ts": "2026-10-13T08:40:50+00:00",
+   "ts": "2026-10-13T08:52:36+00:00",
    "scope": "별도 매출"
   },
   "2654": {
@@ -18653,7 +18697,7 @@
     }
    },
    "page": "https://www.asmo1.co.jp",
-   "ts": "2026-10-13T08:40:50+00:00",
+   "ts": "2026-10-13T08:52:36+00:00",
    "scope": "그룹 매출 단순 합산"
   },
   "2698": {
@@ -18689,7 +18733,7 @@
     }
    },
    "page": "https://www.cando-web.co.jp/ir/monthly_report/",
-   "ts": "2026-10-13T08:40:50+00:00",
+   "ts": "2026-10-13T08:52:36+00:00",
    "scope": "전점"
   },
   "2705": {
@@ -18721,7 +18765,7 @@
     }
    },
    "page": "https://www.ootoya.jp/ir/financial/monthly.html",
-   "ts": "2026-10-13T08:40:50+00:00",
+   "ts": "2026-10-13T08:52:36+00:00",
    "scope": "오토야 고항도코로 전점 · 가맹점 포함"
   },
   "2753": {
@@ -18753,7 +18797,7 @@
     }
    },
    "page": "https://amiyakitei.co.jp/ir/ir_monthly/",
-   "ts": "2026-10-13T08:40:50+00:00",
+   "ts": "2026-10-13T08:52:36+00:00",
    "scope": "전점"
   },
   "3068": {
@@ -18797,7 +18841,7 @@
     }
    },
    "page": "https://www.wdi.co.jp/ir/monthly.html",
-   "ts": "2026-10-13T08:40:50+00:00",
+   "ts": "2026-10-13T08:52:36+00:00",
    "scope": "전점"
   },
   "3087": {
@@ -18853,7 +18897,7 @@
     }
    },
    "page": "https://www.doutor.co.jp/ir/library/monthly/",
-   "ts": "2026-10-13T08:40:50+00:00",
+   "ts": "2026-10-13T08:52:36+00:00",
    "scope": "도토루커피 전업태 · 가맹점 포함"
   },
   "3195": {
@@ -18901,7 +18945,7 @@
     }
    },
    "page": "https://www.genepa.com/ir/",
-   "ts": "2026-10-13T08:40:50+00:00",
+   "ts": "2026-10-13T08:52:36+00:00",
    "scope": "연결 매출 잠정치"
   },
   "3370": {
@@ -18929,7 +18973,7 @@
     }
    },
    "page": "https://www.fujitacorp.co.jp/main/irinfotop/irp07/",
-   "ts": "2026-10-13T08:40:50+00:00",
+   "ts": "2026-10-13T08:52:36+00:00",
    "scope": "전점"
   },
   "3591": {
@@ -18957,7 +19001,7 @@
     }
    },
    "page": "https://www.wacoalholdings.jp/ir/monthlydata/",
-   "ts": "2026-10-13T08:40:50+00:00",
+   "ts": "2026-10-13T08:52:36+00:00",
    "scope": "국내 와코루 출하 기준"
   },
   "6045": {
@@ -18969,7 +19013,7 @@
     }
    },
    "page": "https://www.rentracks.co.jp/ir/finance/others.html",
-   "ts": "2026-10-13T08:40:50+00:00",
+   "ts": "2026-10-13T08:52:36+00:00",
    "scope": "연결 매출 · 인수 편입 포함"
   },
   "7512": {
@@ -18998,10 +19042,14 @@
     "2026-08": {
      "all": 102.1,
      "doc": "https://www.aeon-hokkaido.jp/corporation/month/"
+    },
+    "2026-09": {
+     "all": 102.3,
+     "doc": "https://japanir.jp/wp-content/uploads/2026/10/8267-20261013-05.pdf"
     }
    },
    "page": "https://www.aeon-hokkaido.jp/corporation/month/",
-   "ts": "2026-10-13T08:40:50+00:00",
+   "ts": "2026-10-13T08:52:36+00:00",
    "scope": "공시된 대표 매출 지표"
   },
   "7604": {
@@ -19025,7 +19073,7 @@
     }
    },
    "page": "https://www.umenohana.co.jp/investor/archive?category=monthly_sales",
-   "ts": "2026-10-13T08:40:50+00:00",
+   "ts": "2026-10-13T08:52:36+00:00",
    "scope": "외식 부문 전점"
   },
   "7686": {
@@ -19053,7 +19101,7 @@
     }
    },
    "page": "https://www.hitomile.co.jp/ir/monthly_report.html",
-   "ts": "2026-10-13T08:40:50+00:00",
+   "ts": "2026-10-13T08:52:36+00:00",
    "scope": "연결 매출"
   },
   "8207": {
@@ -19081,7 +19129,7 @@
     }
    },
    "page": "https://www.teng.co.jp/ir/ir.html",
-   "ts": "2026-10-13T08:40:50+00:00",
+   "ts": "2026-10-13T08:52:36+00:00",
    "scope": "전점"
   },
   "8985": {
@@ -19093,7 +19141,7 @@
     }
    },
    "page": "https://www.jhrth.co.jp/ja/portfolio/review.html",
-   "ts": "2026-10-13T08:40:50+00:00",
+   "ts": "2026-10-13T08:52:36+00:00",
    "scope": "변동임대료 호텔 29곳 영업매출"
   },
   "9279": {
@@ -19145,7 +19193,7 @@
     }
    },
    "page": "https://www.gift-group.co.jp/ir/library/04",
-   "ts": "2026-10-13T08:40:50+00:00",
+   "ts": "2026-10-13T08:52:36+00:00",
    "scope": "국내 직영 라멘점"
   },
   "9831": {
@@ -19170,10 +19218,14 @@
     "2026-08": {
      "yoy": 97.5,
      "doc": "https://www.yamada-holdings.jp/ir/monthly/2026/260907.pdf"
+    },
+    "2026-09": {
+     "yoy": 97.0,
+     "doc": "https://www.yamada-holdings.jp/ir/monthly/2026/261005.pdf"
     }
    },
    "page": "https://www.yamada-holdings.jp/ir/monthly.html",
-   "ts": "2026-10-13T08:40:50+00:00",
+   "ts": "2026-10-13T08:52:36+00:00",
    "scope": "덴키 부문 POS매출"
   },
   "9936": {
@@ -19198,10 +19250,14 @@
     "2026-08": {
      "all": 100.1,
      "doc": "https://contents.xj-storage.jp/xcontents/AS00845/578b9dd7/690e/42fe/9d2b/867de902e995/20260911094324894s.pdf"
+    },
+    "2026-09": {
+     "all": 100.4,
+     "doc": "https://www.release.tdnet.info/inbs/140120261002545058.pdf"
     }
    },
    "page": "https://ir.ohsho.co.jp/ir/library/monthly.html",
-   "ts": "2026-10-13T08:40:50+00:00",
+   "ts": "2026-10-13T08:52:36+00:00",
    "scope": "공시된 대표 매출 지표"
   },
   "2695": {
@@ -19253,7 +19309,7 @@
     }
    },
    "page": "https://www.kurasushi.co.jp/company/ir/library/monthly_reports.html",
-   "ts": "2026-10-13T08:40:50+00:00",
+   "ts": "2026-10-13T08:52:36+00:00",
    "scope": "국내 쿠라스시"
   },
   "8142": {
@@ -19265,7 +19321,7 @@
     }
    },
    "page": "https://www.to-ho.co.jp/ir/flash.html",
-   "ts": "2026-10-13T08:40:50+00:00",
+   "ts": "2026-10-13T08:52:36+00:00",
    "scope": "그룹 매출"
   },
   "3222": {
@@ -19297,7 +19353,7 @@
     }
    },
    "page": "https://www.usmh.co.jp/ir/monthly_reports",
-   "ts": "2026-10-13T08:40:50+00:00",
+   "ts": "2026-10-13T08:52:36+00:00",
    "scope": "U.S.M.H 그룹 합계"
   },
   "3612": {
@@ -19333,8 +19389,20 @@
     }
    },
    "page": "https://corp.world.co.jp/ir/library/monthly/",
-   "ts": "2026-10-13T08:40:50+00:00",
+   "ts": "2026-10-13T08:52:36+00:00",
    "scope": "국내 소매사업 · 점포·EC 합계"
+  },
+  "2311": {
+   "name": "エプコ",
+   "months": {
+    "2026-08": {
+     "yoy": 156,
+     "doc": "https://www2.jpx.co.jp/disc/23110/140120260925539933.pdf"
+    }
+   },
+   "page": "https://www.epco.co.jp/ir",
+   "ts": "2026-10-13T08:52:36+00:00",
+   "scope": "자회사 ENE’s 매출 · 연결 전체와 다름"
   },
   "2669": {
    "name": "カネ美食品",
@@ -19345,7 +19413,7 @@
     }
    },
    "page": "https://www.kanemi-foods.co.jp/ir/monthly.html",
-   "ts": "2026-10-13T08:40:50+00:00",
+   "ts": "2026-10-13T08:52:36+00:00",
    "scope": "회사 전체"
   },
   "2722": {
@@ -19369,7 +19437,7 @@
     }
    },
    "page": "https://www.ai-kei.co.jp/ir/library_monthly",
-   "ts": "2026-10-13T08:40:50+00:00",
+   "ts": "2026-10-13T08:52:36+00:00",
    "scope": "연결 매출"
   },
   "2792": {
@@ -19381,7 +19449,7 @@
     }
    },
    "page": "https://www.honeys.co.jp/ir/data",
-   "ts": "2026-10-13T08:40:50+00:00",
+   "ts": "2026-10-13T08:52:36+00:00",
    "scope": "전점"
   },
   "3196": {
@@ -19425,7 +19493,7 @@
     }
    },
    "page": "https://ir.hotland.co.jp/policy/monthlyinfo/",
-   "ts": "2026-10-13T08:40:50+00:00",
+   "ts": "2026-10-13T08:52:36+00:00",
    "scope": "쓰키지 긴다코 전점"
   },
   "3395": {
@@ -19457,7 +19525,7 @@
     }
    },
    "page": "https://www.saint-marc-hd.com/hd/ir/",
-   "ts": "2026-10-13T08:40:50+00:00",
+   "ts": "2026-10-13T08:52:36+00:00",
    "scope": "그룹 전점"
   },
   "4679": {
@@ -19489,7 +19557,7 @@
     }
    },
    "page": "https://www.taya.co.jp/ir/library/monthly.html",
-   "ts": "2026-10-13T08:40:50+00:00",
+   "ts": "2026-10-13T08:52:36+00:00",
    "scope": "미용실 전점"
   },
   "6073": {
@@ -19521,7 +19589,7 @@
     }
    },
    "page": "https://www.asante.co.jp/ir/library/disclosure/",
-   "ts": "2026-10-13T08:40:50+00:00",
+   "ts": "2026-10-13T08:52:36+00:00",
    "scope": "연결 매출"
   },
   "7513": {
@@ -19533,7 +19601,7 @@
     }
    },
    "page": "https://www.kojima.net/corporation/ir/bulletin.html",
-   "ts": "2026-10-13T08:40:50+00:00",
+   "ts": "2026-10-13T08:52:36+00:00",
    "scope": "전점 POS 주문 매출"
   },
   "7610": {
@@ -19565,7 +19633,7 @@
     }
    },
    "page": "https://www.tay2.co.jp/ir/irlibrary/01.html",
-   "ts": "2026-10-13T08:40:50+00:00",
+   "ts": "2026-10-13T08:52:36+00:00",
    "scope": "타이투·야마토쿠 매출 단순 합산"
   },
   "7865": {
@@ -19577,7 +19645,7 @@
     }
    },
    "page": "https://www.people-kk.co.jp/investorrelations/monthly/",
-   "ts": "2026-10-13T08:40:50+00:00",
+   "ts": "2026-10-13T08:52:36+00:00",
    "scope": "회사 전체"
   },
   "8214": {
@@ -19609,7 +19677,7 @@
     }
    },
    "page": "https://ir.aoki-hd.co.jp/ja/ir/finance/monthlyreport.html",
-   "ts": "2026-10-13T08:40:50+00:00",
+   "ts": "2026-10-13T08:52:36+00:00",
    "scope": "패션 부문 전점"
   },
   "9974": {
@@ -19645,7 +19713,7 @@
     }
    },
    "page": "https://www.belc.jp/company/library/monthly",
-   "ts": "2026-10-13T08:40:50+00:00",
+   "ts": "2026-10-13T08:52:36+00:00",
    "scope": "전점"
   },
   "3097": {
@@ -19665,7 +19733,7 @@
     }
    },
    "page": "https://www.monogatari.co.jp/ir/date/",
-   "ts": "2026-10-13T08:40:50+00:00",
+   "ts": "2026-10-13T08:52:36+00:00",
    "scope": "일본 전점 · 가맹점 포함"
   },
   "3093": {
@@ -19701,7 +19769,7 @@
     }
    },
    "page": "https://www.treasurefactory.co.jp/ir/monthly.html",
-   "ts": "2026-10-13T08:40:50+00:00",
+   "ts": "2026-10-13T08:52:36+00:00",
    "scope": "전점"
   },
   "8279": {
@@ -19757,7 +19825,7 @@
     }
    },
    "page": "https://www.bluezonesholdings.co.jp/ir/finance/monthly.html",
-   "ts": "2026-10-13T08:40:50+00:00",
+   "ts": "2026-10-13T08:52:36+00:00",
    "scope": "야오코 기존점"
   },
   "3099": {
@@ -19769,7 +19837,7 @@
     }
    },
    "page": "https://www.imhds.co.jp/corporate/ir/finance/monthly-report.html",
-   "ts": "2026-10-13T08:40:50+00:00",
+   "ts": "2026-10-13T08:52:36+00:00",
    "scope": "일본 백화점 총액 매출"
   },
   "2461": {
@@ -19809,7 +19877,7 @@
     }
    },
    "page": "https://www.fancs.com/news/376546549/",
-   "ts": "2026-10-13T08:40:50+00:00",
+   "ts": "2026-10-13T08:52:36+00:00",
    "scope": "연결 매출"
   },
   "2674": {
@@ -19841,7 +19909,7 @@
     }
    },
    "page": "https://www.hardoff.co.jp/ir/library/sales/",
-   "ts": "2026-10-13T08:40:50+00:00",
+   "ts": "2026-10-13T08:52:36+00:00",
    "scope": "일본 직영 전점 · 에코플러스·에코노스 포함"
   },
   "2730": {
@@ -19873,7 +19941,7 @@
     }
    },
    "page": "https://www.edion.co.jp/ir/library/monthly",
-   "ts": "2026-10-13T08:40:50+00:00",
+   "ts": "2026-10-13T08:52:36+00:00",
    "scope": "전점"
   },
   "2910": {
@@ -19901,7 +19969,7 @@
     }
    },
    "page": "https://www.rockfield.co.jp/ir/library/monthly/",
-   "ts": "2026-10-13T08:40:50+00:00",
+   "ts": "2026-10-13T08:52:36+00:00",
    "scope": "전점"
   },
   "3077": {
@@ -19929,7 +19997,7 @@
     }
    },
    "page": "https://www.horiifood.co.jp/ir/library/prospectus.cgi?id=18",
-   "ts": "2026-10-13T08:40:50+00:00",
+   "ts": "2026-10-13T08:52:36+00:00",
    "scope": "전점"
   },
   "3199": {
@@ -19961,7 +20029,7 @@
     }
    },
    "page": "https://watahan.co.jp/ir/trends.html",
-   "ts": "2026-10-13T08:40:50+00:00",
+   "ts": "2026-10-13T08:52:36+00:00",
    "scope": "전점"
   },
   "3544": {
@@ -19985,7 +20053,7 @@
     }
    },
    "page": "https://satudora-hd.co.jp/ir/monthly/",
-   "ts": "2026-10-13T08:40:50+00:00",
+   "ts": "2026-10-13T08:52:36+00:00",
    "scope": "전점"
   },
   "4680": {
@@ -20017,7 +20085,7 @@
     }
    },
    "page": "https://www.round1-group.co.jp/en/ir/financial-affairs/sales/",
-   "ts": "2026-10-13T08:40:50+00:00",
+   "ts": "2026-10-13T08:52:36+00:00",
    "scope": "일본 라운드원"
   },
   "7522": {
@@ -20049,7 +20117,7 @@
     }
    },
    "page": "https://www.watami.co.jp/ir/library/recent/",
-   "ts": "2026-10-13T08:40:50+00:00",
+   "ts": "2026-10-13T08:52:36+00:00",
    "scope": "일본 전업태 · 가맹점 포함"
   },
   "7646": {
@@ -20093,7 +20161,7 @@
     }
    },
    "page": "https://www.plant-co.jp/ir/monthly.html",
-   "ts": "2026-10-13T08:40:50+00:00",
+   "ts": "2026-10-13T08:52:36+00:00",
    "scope": "전점"
   },
   "8160": {
@@ -20125,7 +20193,7 @@
     }
    },
    "page": "https://www.kisoji.co.jp/ir/monthly.html",
-   "ts": "2026-10-13T08:40:50+00:00",
+   "ts": "2026-10-13T08:52:36+00:00",
    "scope": "전점"
   },
   "8218": {
@@ -20157,7 +20225,7 @@
     }
    },
    "page": "https://www.komeri.bit.or.jp/ir/monthlytrend/",
-   "ts": "2026-10-13T08:40:50+00:00",
+   "ts": "2026-10-13T08:52:36+00:00",
    "scope": "공시된 대표 매출 지표"
   },
   "9616": {
@@ -20169,7 +20237,7 @@
     }
    },
    "page": "https://www.kyoritsugroup.co.jp/ir/library/?category=16",
-   "ts": "2026-10-13T08:40:50+00:00",
+   "ts": "2026-10-13T08:52:36+00:00",
    "scope": "그룹 매출 · 내부거래 차감 전"
   },
   "9993": {
@@ -20205,7 +20273,7 @@
     }
    },
    "page": "https://yamazawa.co.jp/ir/term-month.html",
-   "ts": "2026-10-13T08:40:50+00:00",
+   "ts": "2026-10-13T08:52:36+00:00",
    "scope": "전점"
   },
   "8715": {
@@ -20233,7 +20301,7 @@
     }
    },
    "page": "https://www.anicom.co.jp/ir/financial/business/",
-   "ts": "2026-10-13T08:40:50+00:00",
+   "ts": "2026-10-13T08:52:36+00:00",
    "scope": "보험료 수입 · 공시 금액으로 전년비 계산"
   }
  },
@@ -20241,7 +20309,7 @@
  "note": "회사가 제 사이트에 올린 월차 표에서 읽는다. 값은 전년동월비(%)뿐이고 금액은 없다. 회계연도가 적힌 표는 그 해로 읽으므로 옛 회계연도 표를 함께 싣는 회사는 이력이 길다.",
  "companies": 76,
  "months": 1526,
- "ts": "2026-10-13T08:40:50+00:00",
+ "ts": "2026-10-13T08:52:36+00:00",
  "done": [
   "https://cdn.clipkit.co/tenants/2641/item_files/assets/000/006/513/original/20261009_77.2Q.tanshin.SM.pdf",
   "https://corp.artnature.co.jp/ja/ir/finance/monthly_info/main/0/teaserItems1/00/linkList/0/link/20240415getsuji.pdf",

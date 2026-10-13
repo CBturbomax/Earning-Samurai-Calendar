@@ -1,15 +1,15 @@
 {
- "asOf": "2026-10-13T08:40:50+00:00",
+ "asOf": "2026-10-13T08:52:36+00:00",
  "summary": {
   "targets": 119,
   "statuses": {
-   "recovered": 95,
-   "nonrevenue": 20,
+   "recovered": 97,
+   "nonrevenue": 18,
    "source_found": 3,
    "discontinued": 1
   },
-  "displaySeriesRecovered": 95,
-  "addedReviewedMonths": 419
+  "displaySeriesRecovered": 97,
+  "addedReviewedMonths": 432
  },
  "companies": {
   "8267": {
@@ -17,12 +17,14 @@
    "source_url": "https://www.aeon.info/ir/library/monthly/",
    "evidence_urls": [
     "https://www.aeon.info/ir/library/monthly/",
-    "https://tdnet-pdf.kabutan.jp/20260910/140120260910534294.pdf"
+    "https://tdnet-pdf.kabutan.jp/20260910/140120260910534294.pdf",
+    "https://japanir.jp/wp-content/uploads/2026/10/8267-20261013-05.pdf"
    ],
    "source_type": "eir_js_pdf_mirror",
    "failure_reason": "EIR generated list inaccessible502; reports are subsidiaries not parent total",
-   "extraction_route": "TDnet mirrored company PDF; preserve subsidiary scope; no consolidated total",
+   "extraction_route": "Issuer-authored TDnet company PDF mirrored on public disclosure sites; preserve subsidiary scope; no consolidated parent total. Latest September release published 2026-10-13.",
    "status": "recovered",
+   "latest_verified_month": "2026-09",
    "name": "イオン",
    "observations": [
     {
@@ -132,9 +134,33 @@
      "source": "https://tdnet-pdf.kabutan.jp/20260910/140120260910534294.pdf",
      "kind": "reported",
      "details": {}
+    },
+    {
+     "period": "2026-09",
+     "value": 104.5,
+     "metric": "sales_yoy_pct",
+     "scope": "aeon_retail_subsidiary_all_store",
+     "source": "https://japanir.jp/wp-content/uploads/2026/10/8267-20261013-05.pdf",
+     "kind": "reported",
+     "details": {
+      "published": "2026-10-13",
+      "page": 1
+     }
+    },
+    {
+     "period": "2026-09",
+     "value": 102.6,
+     "metric": "sales_yoy_pct",
+     "scope": "aeon_retail_subsidiary_same_store",
+     "source": "https://japanir.jp/wp-content/uploads/2026/10/8267-20261013-05.pdf",
+     "kind": "reported",
+     "details": {
+      "published": "2026-10-13",
+      "page": 1
+     }
     }
    ],
-   "checkedAt": "2026-10-13T08:40:50+00:00"
+   "checkedAt": "2026-10-13T08:52:36+00:00"
   },
   "4666": {
    "code": "4666",
@@ -241,7 +267,7 @@
      "details": {}
     }
    ],
-   "checkedAt": "2026-10-13T08:40:50+00:00"
+   "checkedAt": "2026-10-13T08:52:36+00:00"
   },
   "7545": {
    "code": "7545",
@@ -383,7 +409,7 @@
      "details": {}
     }
    ],
-   "checkedAt": "2026-10-13T08:40:50+00:00"
+   "checkedAt": "2026-10-13T08:52:36+00:00"
   },
   "7630": {
    "code": "7630",
@@ -423,7 +449,7 @@
      }
     }
    ],
-   "checkedAt": "2026-10-13T08:40:50+00:00"
+   "checkedAt": "2026-10-13T08:52:36+00:00"
   },
   "2502": {
    "code": "2502",
@@ -511,7 +537,7 @@
      "details": {}
     }
    ],
-   "checkedAt": "2026-10-13T08:40:50+00:00"
+   "checkedAt": "2026-10-13T08:52:36+00:00"
   },
   "1911": {
    "code": "1911",
@@ -607,7 +633,7 @@
      "details": {}
     }
    ],
-   "checkedAt": "2026-10-13T08:40:50+00:00"
+   "checkedAt": "2026-10-13T08:52:36+00:00"
   },
   "2590": {
    "code": "2590",
@@ -632,7 +658,7 @@
      "details": {}
     }
    ],
-   "checkedAt": "2026-10-13T08:40:50+00:00"
+   "checkedAt": "2026-10-13T08:52:36+00:00"
   },
   "2678": {
    "code": "2678",
@@ -684,7 +710,7 @@
      "details": {}
     }
    ],
-   "checkedAt": "2026-10-13T08:40:50+00:00"
+   "checkedAt": "2026-10-13T08:52:36+00:00"
   },
   "2742": {
    "code": "2742",
@@ -825,7 +851,7 @@
      "details": {}
     }
    ],
-   "checkedAt": "2026-10-13T08:40:50+00:00"
+   "checkedAt": "2026-10-13T08:52:36+00:00"
   },
   "3030": {
    "code": "3030",
@@ -968,7 +994,7 @@
      "details": {}
     }
    ],
-   "checkedAt": "2026-10-13T08:40:50+00:00"
+   "checkedAt": "2026-10-13T08:52:36+00:00"
   },
   "3080": {
    "code": "3080",
@@ -1138,7 +1164,7 @@
      }
     }
    ],
-   "checkedAt": "2026-10-13T08:40:50+00:00"
+   "checkedAt": "2026-10-13T08:52:36+00:00"
   },
   "3317": {
    "code": "3317",
@@ -1262,7 +1288,7 @@
      "details": {}
     }
    ],
-   "checkedAt": "2026-10-13T08:40:50+00:00"
+   "checkedAt": "2026-10-13T08:52:36+00:00"
   },
   "3548": {
    "code": "3548",
@@ -1404,7 +1430,7 @@
      "details": {}
     }
    ],
-   "checkedAt": "2026-10-13T08:40:50+00:00"
+   "checkedAt": "2026-10-13T08:52:36+00:00"
   },
   "5892": {
    "code": "5892",
@@ -1464,22 +1490,163 @@
      }
     }
    ],
-   "checkedAt": "2026-10-13T08:40:50+00:00"
+   "checkedAt": "2026-10-13T08:52:36+00:00"
   },
   "7177": {
    "code": "7177",
-   "source_url": "https://www.gmofh.com/ir/monthly_report.html",
+   "source_url": "https://www.gmofh.com/ir/news.html",
    "evidence_urls": [
-    "https://www.gmofh.com/ir/monthly_report.html",
-    "https://www.gmofh.com/ir/monthlyreport/monthlyreport.xlsx"
+    "https://www.gmofh.com/ir/news.html",
+    "https://www.gmofh.com/xj/js/XjStorageLoaderTopirNews.js",
+    "https://www.xj-storage.jp/public-list/GetList2.aspx?company=AS93479&len=10000&output=json",
+    "https://contents.xj-storage.jp/xcontents/AS93479/d04fdb6f/5c52/4b92/8b3b/f6d24c828a34/140120260914535912.pdf"
    ],
-   "source_type": "xlsx_and_html_kpi",
-   "failure_reason": "Published monthly source is accounts/trading volume, not revenue",
-   "extraction_route": "Download monthlyreport.xlsx and retain KPI labels; no parent sales YoY confirmed",
-   "status": "nonrevenue",
+   "source_type": "xj_js_monthly_earnings_pdf",
+   "failure_reason": "Initial monthly_report.html covers trading KPIs, but separate IR-news monthly earnings releases provide consolidated operating revenue. Previous nonrevenue classification was incorrect.",
+   "extraction_route": "Use unrestricted XJ GetList2 company AS93479; filter title 月次業績 (not 月次開示情報); download files[].url. Extract 営業収益 rows under explicit 2026/2025 year-month headers, exclude quarter totals and segment rows; derive current/prior *100 from stated JPY million amounts.",
+   "status": "recovered",
+   "latest_verified_month": "2026-08",
+   "metric_note": "Consolidated operating revenue 営業収益; not trading volumes. Preliminary current figures, stated amounts truncated to JPY million; derived ratios are approximate.",
    "name": "ＧＭＯフィナンシャルホールディングス",
-   "observations": [],
-   "checkedAt": "2026-10-13T08:40:50+00:00"
+   "observations": [
+    {
+     "period": "2026-01",
+     "value": 133.686113,
+     "metric": "sales_yoy_pct",
+     "scope": "consolidated_operating_revenue",
+     "source": "https://contents.xj-storage.jp/xcontents/AS93479/d04fdb6f/5c52/4b92/8b3b/f6d24c828a34/140120260914535912.pdf",
+     "kind": "reported",
+     "details": {
+      "published": "2026-09-14",
+      "derivation": "current_operating_revenue/prior_year_same_month_operating_revenue*100",
+      "current_amount": 5179,
+      "prior_year_amount": 3874,
+      "amount_unit": "JPY_million",
+      "page_current": 1,
+      "page_prior": 2
+     }
+    },
+    {
+     "period": "2026-02",
+     "value": 136.748166,
+     "metric": "sales_yoy_pct",
+     "scope": "consolidated_operating_revenue",
+     "source": "https://contents.xj-storage.jp/xcontents/AS93479/d04fdb6f/5c52/4b92/8b3b/f6d24c828a34/140120260914535912.pdf",
+     "kind": "reported",
+     "details": {
+      "published": "2026-09-14",
+      "derivation": "current_operating_revenue/prior_year_same_month_operating_revenue*100",
+      "current_amount": 5593,
+      "prior_year_amount": 4090,
+      "amount_unit": "JPY_million",
+      "page_current": 1,
+      "page_prior": 2
+     }
+    },
+    {
+     "period": "2026-03",
+     "value": 108.9585,
+     "metric": "sales_yoy_pct",
+     "scope": "consolidated_operating_revenue",
+     "source": "https://contents.xj-storage.jp/xcontents/AS93479/d04fdb6f/5c52/4b92/8b3b/f6d24c828a34/140120260914535912.pdf",
+     "kind": "reported",
+     "details": {
+      "published": "2026-09-14",
+      "derivation": "current_operating_revenue/prior_year_same_month_operating_revenue*100",
+      "current_amount": 5461,
+      "prior_year_amount": 5012,
+      "amount_unit": "JPY_million",
+      "page_current": 1,
+      "page_prior": 2
+     }
+    },
+    {
+     "period": "2026-04",
+     "value": 94.321276,
+     "metric": "sales_yoy_pct",
+     "scope": "consolidated_operating_revenue",
+     "source": "https://contents.xj-storage.jp/xcontents/AS93479/d04fdb6f/5c52/4b92/8b3b/f6d24c828a34/140120260914535912.pdf",
+     "kind": "reported",
+     "details": {
+      "published": "2026-09-14",
+      "derivation": "current_operating_revenue/prior_year_same_month_operating_revenue*100",
+      "current_amount": 4850,
+      "prior_year_amount": 5142,
+      "amount_unit": "JPY_million",
+      "page_current": 1,
+      "page_prior": 2
+     }
+    },
+    {
+     "period": "2026-05",
+     "value": 75.188276,
+     "metric": "sales_yoy_pct",
+     "scope": "consolidated_operating_revenue",
+     "source": "https://contents.xj-storage.jp/xcontents/AS93479/d04fdb6f/5c52/4b92/8b3b/f6d24c828a34/140120260914535912.pdf",
+     "kind": "reported",
+     "details": {
+      "published": "2026-09-14",
+      "derivation": "current_operating_revenue/prior_year_same_month_operating_revenue*100",
+      "current_amount": 3694,
+      "prior_year_amount": 4913,
+      "amount_unit": "JPY_million",
+      "page_current": 1,
+      "page_prior": 2
+     }
+    },
+    {
+     "period": "2026-06",
+     "value": 123.419689,
+     "metric": "sales_yoy_pct",
+     "scope": "consolidated_operating_revenue",
+     "source": "https://contents.xj-storage.jp/xcontents/AS93479/d04fdb6f/5c52/4b92/8b3b/f6d24c828a34/140120260914535912.pdf",
+     "kind": "reported",
+     "details": {
+      "published": "2026-09-14",
+      "derivation": "current_operating_revenue/prior_year_same_month_operating_revenue*100",
+      "current_amount": 4764,
+      "prior_year_amount": 3860,
+      "amount_unit": "JPY_million",
+      "page_current": 1,
+      "page_prior": 2
+     }
+    },
+    {
+     "period": "2026-07",
+     "value": 139.235127,
+     "metric": "sales_yoy_pct",
+     "scope": "consolidated_operating_revenue",
+     "source": "https://contents.xj-storage.jp/xcontents/AS93479/d04fdb6f/5c52/4b92/8b3b/f6d24c828a34/140120260914535912.pdf",
+     "kind": "reported",
+     "details": {
+      "published": "2026-09-14",
+      "derivation": "current_operating_revenue/prior_year_same_month_operating_revenue*100",
+      "current_amount": 5898,
+      "prior_year_amount": 4236,
+      "amount_unit": "JPY_million",
+      "page_current": 2,
+      "page_prior": 2
+     }
+    },
+    {
+     "period": "2026-08",
+     "value": 101.868421,
+     "metric": "sales_yoy_pct",
+     "scope": "consolidated_operating_revenue",
+     "source": "https://contents.xj-storage.jp/xcontents/AS93479/d04fdb6f/5c52/4b92/8b3b/f6d24c828a34/140120260914535912.pdf",
+     "kind": "reported",
+     "details": {
+      "published": "2026-09-14",
+      "derivation": "current_operating_revenue/prior_year_same_month_operating_revenue*100",
+      "current_amount": 3871,
+      "prior_year_amount": 3800,
+      "amount_unit": "JPY_million",
+      "page_current": 2,
+      "page_prior": 2
+     }
+    }
+   ],
+   "checkedAt": "2026-10-13T08:52:36+00:00"
   },
   "7562": {
    "code": "7562",
@@ -1711,7 +1878,7 @@
      "details": {}
     }
    ],
-   "checkedAt": "2026-10-13T08:40:50+00:00"
+   "checkedAt": "2026-10-13T08:52:36+00:00"
   },
   "7674": {
    "code": "7674",
@@ -1872,7 +2039,7 @@
      "details": {}
     }
    ],
-   "checkedAt": "2026-10-13T08:40:50+00:00"
+   "checkedAt": "2026-10-13T08:52:36+00:00"
   },
   "8194": {
    "code": "8194",
@@ -2013,7 +2180,7 @@
      "details": {}
     }
    ],
-   "checkedAt": "2026-10-13T08:40:50+00:00"
+   "checkedAt": "2026-10-13T08:52:36+00:00"
   },
   "8244": {
    "code": "8244",
@@ -2047,7 +2214,7 @@
      "details": {}
     }
    ],
-   "checkedAt": "2026-10-13T08:40:50+00:00"
+   "checkedAt": "2026-10-13T08:52:36+00:00"
   },
   "9627": {
    "code": "9627",
@@ -2279,7 +2446,7 @@
      "details": {}
     }
    ],
-   "checkedAt": "2026-10-13T08:40:50+00:00"
+   "checkedAt": "2026-10-13T08:52:36+00:00"
   },
   "7585": {
    "code": "7585",
@@ -2331,7 +2498,7 @@
      "details": {}
     }
    ],
-   "checkedAt": "2026-10-13T08:40:50+00:00"
+   "checkedAt": "2026-10-13T08:52:36+00:00"
   },
   "8798": {
    "code": "8798",
@@ -2357,7 +2524,7 @@
      "details": {}
     }
    ],
-   "checkedAt": "2026-10-13T08:40:50+00:00"
+   "checkedAt": "2026-10-13T08:52:36+00:00"
   },
   "8628": {
    "code": "8628",
@@ -2662,7 +2829,7 @@
      }
     }
    ],
-   "checkedAt": "2026-10-13T08:40:50+00:00"
+   "checkedAt": "2026-10-13T08:52:36+00:00"
   },
   "8914": {
    "code": "8914",
@@ -2687,7 +2854,7 @@
      "details": {}
     }
    ],
-   "checkedAt": "2026-10-13T08:40:50+00:00"
+   "checkedAt": "2026-10-13T08:52:36+00:00"
   },
   "7550": {
    "code": "7550",
@@ -2932,7 +3099,7 @@
      "details": {}
     }
    ],
-   "checkedAt": "2026-10-13T08:40:50+00:00"
+   "checkedAt": "2026-10-13T08:52:36+00:00"
   },
   "3608": {
    "code": "3608",
@@ -3082,7 +3249,7 @@
      "details": {}
     }
    ],
-   "checkedAt": "2026-10-13T08:40:50+00:00"
+   "checkedAt": "2026-10-13T08:52:36+00:00"
   },
   "3549": {
    "code": "3549",
@@ -3178,7 +3345,7 @@
      "details": {}
     }
    ],
-   "checkedAt": "2026-10-13T08:40:50+00:00"
+   "checkedAt": "2026-10-13T08:52:36+00:00"
   },
   "3543": {
    "code": "3543",
@@ -3222,7 +3389,7 @@
      "details": {}
     }
    ],
-   "checkedAt": "2026-10-13T08:40:50+00:00"
+   "checkedAt": "2026-10-13T08:52:36+00:00"
   },
   "3038": {
    "code": "3038",
@@ -3336,7 +3503,7 @@
      "details": {}
     }
    ],
-   "checkedAt": "2026-10-13T08:40:50+00:00"
+   "checkedAt": "2026-10-13T08:52:36+00:00"
   },
   "205A": {
    "code": "205A",
@@ -3397,7 +3564,7 @@
      "details": {}
     }
    ],
-   "checkedAt": "2026-10-13T08:40:50+00:00"
+   "checkedAt": "2026-10-13T08:52:36+00:00"
   },
   "262A": {
    "code": "262A",
@@ -3585,7 +3752,7 @@
      "details": {}
     }
    ],
-   "checkedAt": "2026-10-13T08:40:50+00:00"
+   "checkedAt": "2026-10-13T08:52:36+00:00"
   },
   "2685": {
    "code": "2685",
@@ -3718,7 +3885,7 @@
      "details": {}
     }
    ],
-   "checkedAt": "2026-10-13T08:40:50+00:00"
+   "checkedAt": "2026-10-13T08:52:36+00:00"
   },
   "274A": {
    "code": "274A",
@@ -3870,7 +4037,7 @@
      "details": {}
     }
    ],
-   "checkedAt": "2026-10-13T08:40:50+00:00"
+   "checkedAt": "2026-10-13T08:52:36+00:00"
   },
   "3058": {
    "code": "3058",
@@ -4004,7 +4171,7 @@
      "details": {}
     }
    ],
-   "checkedAt": "2026-10-13T08:40:50+00:00"
+   "checkedAt": "2026-10-13T08:52:36+00:00"
   },
   "3160": {
    "code": "3160",
@@ -4138,7 +4305,7 @@
      "details": {}
     }
    ],
-   "checkedAt": "2026-10-13T08:40:50+00:00"
+   "checkedAt": "2026-10-13T08:52:36+00:00"
   },
   "3358": {
    "code": "3358",
@@ -4217,7 +4384,7 @@
      "details": {}
     }
    ],
-   "checkedAt": "2026-10-13T08:40:50+00:00"
+   "checkedAt": "2026-10-13T08:52:36+00:00"
   },
   "3923": {
    "code": "3923",
@@ -4333,7 +4500,7 @@
      "details": {}
     }
    ],
-   "checkedAt": "2026-10-13T08:40:50+00:00"
+   "checkedAt": "2026-10-13T08:52:36+00:00"
   },
   "6036": {
    "code": "6036",
@@ -4394,7 +4561,7 @@
      "details": {}
     }
    ],
-   "checkedAt": "2026-10-13T08:40:50+00:00"
+   "checkedAt": "2026-10-13T08:52:36+00:00"
   },
   "7412": {
    "code": "7412",
@@ -4528,7 +4695,7 @@
      "details": {}
     }
    ],
-   "checkedAt": "2026-10-13T08:40:50+00:00"
+   "checkedAt": "2026-10-13T08:52:36+00:00"
   },
   "7596": {
    "code": "7596",
@@ -4644,7 +4811,7 @@
      "details": {}
     }
    ],
-   "checkedAt": "2026-10-13T08:40:50+00:00"
+   "checkedAt": "2026-10-13T08:52:36+00:00"
   },
   "7682": {
    "code": "7682",
@@ -4705,7 +4872,7 @@
      "details": {}
     }
    ],
-   "checkedAt": "2026-10-13T08:40:50+00:00"
+   "checkedAt": "2026-10-13T08:52:36+00:00"
   },
   "8198": {
    "code": "8198",
@@ -4857,7 +5024,7 @@
      "details": {}
     }
    ],
-   "checkedAt": "2026-10-13T08:40:50+00:00"
+   "checkedAt": "2026-10-13T08:52:36+00:00"
   },
   "9039": {
    "code": "9039",
@@ -4936,7 +5103,7 @@
      "details": {}
     }
    ],
-   "checkedAt": "2026-10-13T08:40:50+00:00"
+   "checkedAt": "2026-10-13T08:52:36+00:00"
   },
   "9835": {
    "code": "9835",
@@ -5087,7 +5254,7 @@
      "details": {}
     }
    ],
-   "checkedAt": "2026-10-13T08:40:50+00:00"
+   "checkedAt": "2026-10-13T08:52:36+00:00"
   },
   "9166": {
    "code": "9166",
@@ -5193,7 +5360,7 @@
      "details": {}
     }
    ],
-   "checkedAt": "2026-10-13T08:40:50+00:00"
+   "checkedAt": "2026-10-13T08:52:36+00:00"
   },
   "8963": {
    "code": "8963",
@@ -5236,7 +5403,7 @@
      "details": {}
     }
    ],
-   "checkedAt": "2026-10-13T08:40:50+00:00"
+   "checkedAt": "2026-10-13T08:52:36+00:00"
   },
   "8742": {
    "code": "8742",
@@ -5260,7 +5427,7 @@
    ],
    "name": "小林洋行",
    "observations": [],
-   "checkedAt": "2026-10-13T08:40:50+00:00"
+   "checkedAt": "2026-10-13T08:52:36+00:00"
   },
   "9285": {
    "code": "9285",
@@ -5284,7 +5451,7 @@
    ],
    "name": "Ｉ－東京インフラＦ",
    "observations": [],
-   "checkedAt": "2026-10-13T08:40:50+00:00"
+   "checkedAt": "2026-10-13T08:52:36+00:00"
   },
   "2294": {
    "code": "2294",
@@ -5319,7 +5486,7 @@
      "details": {}
     }
    ],
-   "checkedAt": "2026-10-13T08:40:50+00:00"
+   "checkedAt": "2026-10-13T08:52:36+00:00"
   },
   "2337": {
    "code": "2337",
@@ -5334,7 +5501,7 @@
    "extraction_route": "Route 月次発電実績 to nonrevenue KPI; do not insert generation YoY in sales.",
    "name": "いちご",
    "observations": [],
-   "checkedAt": "2026-10-13T08:40:50+00:00"
+   "checkedAt": "2026-10-13T08:52:36+00:00"
   },
   "2593": {
    "code": "2593",
@@ -5378,7 +5545,7 @@
      "details": {}
     }
    ],
-   "checkedAt": "2026-10-13T08:40:50+00:00"
+   "checkedAt": "2026-10-13T08:52:36+00:00"
   },
   "2654": {
    "code": "2654",
@@ -5439,7 +5606,7 @@
      "details": {}
     }
    ],
-   "checkedAt": "2026-10-13T08:40:50+00:00"
+   "checkedAt": "2026-10-13T08:52:36+00:00"
   },
   "2698": {
    "code": "2698",
@@ -5580,7 +5747,7 @@
      "details": {}
     }
    ],
-   "checkedAt": "2026-10-13T08:40:50+00:00"
+   "checkedAt": "2026-10-13T08:52:36+00:00"
   },
   "2705": {
    "code": "2705",
@@ -5706,7 +5873,7 @@
      "details": {}
     }
    ],
-   "checkedAt": "2026-10-13T08:40:50+00:00"
+   "checkedAt": "2026-10-13T08:52:36+00:00"
   },
   "2753": {
    "code": "2753",
@@ -5835,7 +6002,7 @@
      "details": {}
     }
    ],
-   "checkedAt": "2026-10-13T08:40:50+00:00"
+   "checkedAt": "2026-10-13T08:52:36+00:00"
   },
   "3068": {
    "code": "3068",
@@ -6014,7 +6181,7 @@
      "details": {}
     }
    ],
-   "checkedAt": "2026-10-13T08:40:50+00:00"
+   "checkedAt": "2026-10-13T08:52:36+00:00"
   },
   "3087": {
    "code": "3087",
@@ -6376,7 +6543,7 @@
      "details": {}
     }
    ],
-   "checkedAt": "2026-10-13T08:40:50+00:00"
+   "checkedAt": "2026-10-13T08:52:36+00:00"
   },
   "3195": {
    "code": "3195",
@@ -6483,7 +6650,7 @@
      "details": {}
     }
    ],
-   "checkedAt": "2026-10-13T08:40:50+00:00"
+   "checkedAt": "2026-10-13T08:52:36+00:00"
   },
   "3370": {
    "code": "3370",
@@ -6589,7 +6756,7 @@
      "details": {}
     }
    ],
-   "checkedAt": "2026-10-13T08:40:50+00:00"
+   "checkedAt": "2026-10-13T08:52:36+00:00"
   },
   "3591": {
    "code": "3591",
@@ -6758,7 +6925,7 @@
      "details": {}
     }
    ],
-   "checkedAt": "2026-10-13T08:40:50+00:00"
+   "checkedAt": "2026-10-13T08:52:36+00:00"
   },
   "3663": {
    "code": "3663",
@@ -6789,7 +6956,7 @@
    ],
    "name": "セルシス",
    "observations": [],
-   "checkedAt": "2026-10-13T08:40:50+00:00"
+   "checkedAt": "2026-10-13T08:52:36+00:00"
   },
   "3927": {
    "code": "3927",
@@ -6804,7 +6971,7 @@
    "extraction_route": "Classify discontinued as of 2023-03; do not retry contemporary monthly revenue.",
    "name": "フーバーブレイン",
    "observations": [],
-   "checkedAt": "2026-10-13T08:40:50+00:00"
+   "checkedAt": "2026-10-13T08:52:36+00:00"
   },
   "5580": {
    "code": "5580",
@@ -6819,7 +6986,7 @@
    "extraction_route": "EIR feed filters 主要KPI. Aug2026 report account/channel counts; Sept2026 onward planned switch to MRR, ARR and growth rates; retain recurring-revenue KPI identity and do not treat as recognized total revenue.",
    "name": "プロディライト",
    "observations": [],
-   "checkedAt": "2026-10-13T08:40:50+00:00"
+   "checkedAt": "2026-10-13T08:52:36+00:00"
   },
   "6045": {
    "code": "6045",
@@ -6846,18 +7013,19 @@
      "details": {}
     }
    ],
-   "checkedAt": "2026-10-13T08:40:50+00:00"
+   "checkedAt": "2026-10-13T08:52:36+00:00"
   },
   "7512": {
    "code": "7512",
    "source_url": "https://www.aeon-hokkaido.jp/corporation/month/",
    "evidence_urls": [
-    "https://www.aeon-hokkaido.jp/corporation/month/"
+    "https://www.aeon-hokkaido.jp/corporation/month/",
+    "https://japanir.jp/wp-content/uploads/2026/10/8267-20261013-05.pdf"
    ],
    "source_type": "html",
    "status": "recovered",
    "failure_reason": "Multirow category labels and 企業計 used both category and all-store row; broad parser can misselect clothing/food rows.",
-   "extraction_route": "First category 企業計 only: 既存計 -> same; subsequent 企業計 -> all. Fiscal March-February; 2026 year caption.",
+   "extraction_route": "First category 企業計 only: 既存計 -> same; subsequent 企業計 -> all. Fiscal March-February; 2026 year caption. September latest PDF independently verified; appended September observations.",
    "name": "イオン北海",
    "observations": [
     {
@@ -6967,9 +7135,27 @@
      "source": "https://www.aeon-hokkaido.jp/corporation/month/",
      "kind": "reported",
      "details": {}
+    },
+    {
+     "period": "2026-09",
+     "value": 102.3,
+     "metric": "sales",
+     "scope": "all",
+     "source": "https://japanir.jp/wp-content/uploads/2026/10/8267-20261013-05.pdf",
+     "kind": "reported",
+     "details": {}
+    },
+    {
+     "period": "2026-09",
+     "value": 102.7,
+     "metric": "sales",
+     "scope": "same",
+     "source": "https://japanir.jp/wp-content/uploads/2026/10/8267-20261013-05.pdf",
+     "kind": "reported",
+     "details": {}
     }
    ],
-   "checkedAt": "2026-10-13T08:40:50+00:00"
+   "checkedAt": "2026-10-13T08:52:36+00:00"
   },
   "7604": {
    "code": "7604",
@@ -7129,7 +7315,7 @@
      "details": {}
     }
    ],
-   "checkedAt": "2026-10-13T08:40:50+00:00"
+   "checkedAt": "2026-10-13T08:52:36+00:00"
   },
   "7686": {
    "code": "7686",
@@ -7191,7 +7377,7 @@
      "details": {}
     }
    ],
-   "checkedAt": "2026-10-13T08:40:50+00:00"
+   "checkedAt": "2026-10-13T08:52:36+00:00"
   },
   "8207": {
    "code": "8207",
@@ -7297,7 +7483,7 @@
      "details": {}
     }
    ],
-   "checkedAt": "2026-10-13T08:40:50+00:00"
+   "checkedAt": "2026-10-13T08:52:36+00:00"
   },
   "8985": {
    "code": "8985",
@@ -7323,7 +7509,7 @@
      "details": {}
     }
    ],
-   "checkedAt": "2026-10-13T08:40:50+00:00"
+   "checkedAt": "2026-10-13T08:52:36+00:00"
   },
   "9279": {
    "code": "9279",
@@ -7439,19 +7625,20 @@
      "details": {}
     }
    ],
-   "checkedAt": "2026-10-13T08:40:50+00:00"
+   "checkedAt": "2026-10-13T08:52:36+00:00"
   },
   "9831": {
    "code": "9831",
    "source_url": "https://www.yamada-holdings.jp/ir/monthly.html",
    "evidence_urls": [
     "https://www.yamada-holdings.jp/ir/monthly.html",
-    "https://www.yamada-holdings.jp/ir/monthly/2026/260907.pdf"
+    "https://www.yamada-holdings.jp/ir/monthly/2026/260907.pdf",
+    "https://www.yamada-holdings.jp/ir/monthly/2026/261005.pdf"
    ],
    "source_type": "pdf",
    "status": "recovered",
    "failure_reason": "PDF contains segment POS sales and mixed orders/sales; generic row selector expects total-store labels.",
-   "extraction_route": "Follow 月次速報 PDF links; select デンキセグメント POS売上高. Skip quarter/cumulative columns; keep 住建 mixed order/sales separate.",
+   "extraction_route": "Follow 月次速報 PDF links; select デンキセグメント POS売上高. Skip quarter/cumulative columns; keep 住建 mixed order/sales separate. September PDF dated October5 verified directly via official monthly list link; Denki POS revenue ratio97.0.",
    "name": "ヤマダ",
    "observations": [
     {
@@ -7498,9 +7685,18 @@
      "source": "https://www.yamada-holdings.jp/ir/monthly/2026/260907.pdf",
      "kind": "reported",
      "details": {}
+    },
+    {
+     "period": "2026-09",
+     "value": 97.0,
+     "metric": "POS sales",
+     "scope": "デンキセグメント",
+     "source": "https://www.yamada-holdings.jp/ir/monthly/2026/261005.pdf",
+     "kind": "reported",
+     "details": {}
     }
    ],
-   "checkedAt": "2026-10-13T08:40:50+00:00"
+   "checkedAt": "2026-10-13T08:52:36+00:00"
   },
   "9936": {
    "code": "9936",
@@ -7508,12 +7704,13 @@
    "evidence_urls": [
     "https://ir.ohsho.co.jp/ir/library/monthly.html",
     "https://ir.ohsho.co.jp/cmn/js/xjstorage/xjstorage-config.js",
-    "https://contents.xj-storage.jp/xcontents/AS00845/578b9dd7/690e/42fe/9d2b/867de902e995/20260911094324894s.pdf"
+    "https://contents.xj-storage.jp/xcontents/AS00845/578b9dd7/690e/42fe/9d2b/867de902e995/20260911094324894s.pdf",
+    "https://www.release.tdnet.info/inbs/140120261002545058.pdf"
    ],
    "source_type": "XJ JS + PDF",
    "status": "recovered",
    "failure_reason": "XJ storage injected list absent from plain HTML; September PDF link returns 404 but August final PDF works.",
-   "extraction_route": "Resolve XJ AS00845 monthly feed. Prefer final monthly PDFs over flash when available. Page 2 sales columns in all/same halves are ratios despite label 伸び率.",
+   "extraction_route": "Resolve XJ AS00845 monthly feed. Prefer final monthly PDFs over flash when available. Page 2 sales columns in all/same halves are ratios despite label 伸び率. September latest PDF independently verified; appended September observations.",
    "name": "王将フードサービス",
    "observations": [
     {
@@ -7605,9 +7802,27 @@
      "source": "https://contents.xj-storage.jp/xcontents/AS00845/578b9dd7/690e/42fe/9d2b/867de902e995/20260911094324894s.pdf",
      "kind": "reported",
      "details": {}
+    },
+    {
+     "period": "2026-09",
+     "value": 100.4,
+     "metric": "sales",
+     "scope": "all",
+     "source": "https://www.release.tdnet.info/inbs/140120261002545058.pdf",
+     "kind": "reported",
+     "details": {}
+    },
+    {
+     "period": "2026-09",
+     "value": 99.9,
+     "metric": "sales",
+     "scope": "same",
+     "source": "https://www.release.tdnet.info/inbs/140120261002545058.pdf",
+     "kind": "reported",
+     "details": {}
     }
    ],
-   "checkedAt": "2026-10-13T08:40:50+00:00"
+   "checkedAt": "2026-10-13T08:52:36+00:00"
   },
   "2695": {
    "code": "2695",
@@ -7824,7 +8039,7 @@
      "details": {}
     }
    ],
-   "checkedAt": "2026-10-13T08:40:50+00:00"
+   "checkedAt": "2026-10-13T08:52:36+00:00"
   },
   "8142": {
    "code": "8142",
@@ -7888,7 +8103,7 @@
      "details": {}
     }
    ],
-   "checkedAt": "2026-10-13T08:40:50+00:00"
+   "checkedAt": "2026-10-13T08:52:36+00:00"
   },
   "3222": {
    "code": "3222",
@@ -8014,7 +8229,7 @@
      "details": {}
     }
    ],
-   "checkedAt": "2026-10-13T08:40:50+00:00"
+   "checkedAt": "2026-10-13T08:52:36+00:00"
   },
   "3612": {
    "code": "3612",
@@ -8159,7 +8374,7 @@
      "details": {}
     }
    ],
-   "checkedAt": "2026-10-13T08:40:50+00:00",
+   "checkedAt": "2026-10-13T08:52:36+00:00",
    "corrections": [
     {
      "period": "2026-08",
@@ -8226,11 +8441,11 @@
      }
     }
    ],
-   "checkedAt": "2026-10-13T08:40:50+00:00"
+   "checkedAt": "2026-10-13T08:52:36+00:00"
   },
   "2311": {
    "code": "2311",
-   "status": "nonrevenue",
+   "status": "recovered",
    "source_url": "https://www.epco.co.jp/ir",
    "source_type": "official_pdf",
    "failure_reason": "Monthly headline/table is ordinary profit, not sales. Most ratios must be excluded from revenue collection.",
@@ -8243,6 +8458,7 @@
    "investigated_at": "2026-10-13",
    "latest_verified_month": "2026-08",
    "months_extracted": 1,
+   "classificationNote": "자회사 ENE’s 매출 · 연결 전체와 다름",
    "name": "エプコ",
    "observations": [
     {
@@ -8279,7 +8495,7 @@
      }
     }
    ],
-   "checkedAt": "2026-10-13T08:40:50+00:00"
+   "checkedAt": "2026-10-13T08:52:36+00:00"
   },
   "2669": {
    "code": "2669",
@@ -8320,7 +8536,7 @@
      }
     }
    ],
-   "checkedAt": "2026-10-13T08:40:50+00:00"
+   "checkedAt": "2026-10-13T08:52:36+00:00"
   },
   "2722": {
    "code": "2722",
@@ -8375,7 +8591,7 @@
      "details": {}
     }
    ],
-   "checkedAt": "2026-10-13T08:40:50+00:00"
+   "checkedAt": "2026-10-13T08:52:36+00:00"
   },
   "2792": {
    "code": "2792",
@@ -8411,7 +8627,7 @@
      "details": {}
     }
    ],
-   "checkedAt": "2026-10-13T08:40:50+00:00"
+   "checkedAt": "2026-10-13T08:52:36+00:00"
   },
   "3069": {
    "code": "3069",
@@ -8485,7 +8701,7 @@
      "details": {}
     }
    ],
-   "checkedAt": "2026-10-13T08:40:50+00:00"
+   "checkedAt": "2026-10-13T08:52:36+00:00"
   },
   "3196": {
    "code": "3196",
@@ -8667,7 +8883,7 @@
      "details": {}
     }
    ],
-   "checkedAt": "2026-10-13T08:40:50+00:00"
+   "checkedAt": "2026-10-13T08:52:36+00:00"
   },
   "3395": {
    "code": "3395",
@@ -8794,7 +9010,7 @@
      "details": {}
     }
    ],
-   "checkedAt": "2026-10-13T08:40:50+00:00"
+   "checkedAt": "2026-10-13T08:52:36+00:00"
   },
   "4679": {
    "code": "4679",
@@ -8946,7 +9162,7 @@
      }
     }
    ],
-   "checkedAt": "2026-10-13T08:40:50+00:00"
+   "checkedAt": "2026-10-13T08:52:36+00:00"
   },
   "6073": {
    "code": "6073",
@@ -9031,7 +9247,7 @@
      }
     }
    ],
-   "checkedAt": "2026-10-13T08:40:50+00:00"
+   "checkedAt": "2026-10-13T08:52:36+00:00"
   },
   "7513": {
    "code": "7513",
@@ -9068,7 +9284,7 @@
      "details": {}
     }
    ],
-   "checkedAt": "2026-10-13T08:40:50+00:00"
+   "checkedAt": "2026-10-13T08:52:36+00:00"
   },
   "7610": {
    "code": "7610",
@@ -9141,7 +9357,7 @@
      "details": {}
     }
    ],
-   "checkedAt": "2026-10-13T08:40:50+00:00"
+   "checkedAt": "2026-10-13T08:52:36+00:00"
   },
   "7865": {
    "code": "7865",
@@ -9173,7 +9389,7 @@
      }
     }
    ],
-   "checkedAt": "2026-10-13T08:40:50+00:00"
+   "checkedAt": "2026-10-13T08:52:36+00:00"
   },
   "8214": {
    "code": "8214",
@@ -9409,7 +9625,7 @@
      "details": {}
     }
    ],
-   "checkedAt": "2026-10-13T08:40:50+00:00"
+   "checkedAt": "2026-10-13T08:52:36+00:00"
   },
   "9603": {
    "code": "9603",
@@ -9517,7 +9733,7 @@
      "details": {}
     }
    ],
-   "checkedAt": "2026-10-13T08:40:50+00:00",
+   "checkedAt": "2026-10-13T08:52:36+00:00",
    "classificationNote": "여행 취급액(종전 회계 기준), 인식 매출액과 구분"
   },
   "9974": {
@@ -9663,7 +9879,7 @@
      "details": {}
     }
    ],
-   "checkedAt": "2026-10-13T08:40:50+00:00"
+   "checkedAt": "2026-10-13T08:52:36+00:00"
   },
   "9163": {
    "code": "9163",
@@ -9680,7 +9896,7 @@
    "months_extracted": 1,
    "name": "ナレルグループ",
    "observations": [],
-   "checkedAt": "2026-10-13T08:40:50+00:00"
+   "checkedAt": "2026-10-13T08:52:36+00:00"
   },
   "9206": {
    "code": "9206",
@@ -9712,7 +9928,7 @@
      }
     }
    ],
-   "checkedAt": "2026-10-13T08:40:50+00:00"
+   "checkedAt": "2026-10-13T08:52:36+00:00"
   },
   "9282": {
    "code": "9282",
@@ -9730,7 +9946,7 @@
    "months_extracted": 1,
    "name": "Ｉ－いちごグリーン",
    "observations": [],
-   "checkedAt": "2026-10-13T08:40:50+00:00"
+   "checkedAt": "2026-10-13T08:52:36+00:00"
   },
   "8410": {
    "code": "8410",
@@ -9748,7 +9964,7 @@
    "months_extracted": 1,
    "name": "セブン銀行",
    "observations": [],
-   "checkedAt": "2026-10-13T08:40:50+00:00"
+   "checkedAt": "2026-10-13T08:52:36+00:00"
   },
   "3097": {
    "code": "3097",
@@ -9818,7 +10034,7 @@
      "details": {}
     }
    ],
-   "checkedAt": "2026-10-13T08:40:50+00:00"
+   "checkedAt": "2026-10-13T08:52:36+00:00"
   },
   "3093": {
    "code": "3093",
@@ -9960,7 +10176,7 @@
      "details": {}
     }
    ],
-   "checkedAt": "2026-10-13T08:40:50+00:00"
+   "checkedAt": "2026-10-13T08:52:36+00:00"
   },
   "8279": {
    "code": "8279",
@@ -10084,7 +10300,7 @@
      "details": {}
     }
    ],
-   "checkedAt": "2026-10-13T08:40:50+00:00"
+   "checkedAt": "2026-10-13T08:52:36+00:00"
   },
   "3099": {
    "code": "3099",
@@ -10110,7 +10326,7 @@
      "details": {}
     }
    ],
-   "checkedAt": "2026-10-13T08:40:50+00:00"
+   "checkedAt": "2026-10-13T08:52:36+00:00"
   },
   "1417": {
    "code": "1417",
@@ -10124,7 +10340,7 @@
    "status": "nonrevenue",
    "name": "ミライト・ワン",
    "observations": [],
-   "checkedAt": "2026-10-13T08:40:50+00:00"
+   "checkedAt": "2026-10-13T08:52:36+00:00"
   },
   "2461": {
    "code": "2461",
@@ -10212,7 +10428,7 @@
      "details": {}
     }
    ],
-   "checkedAt": "2026-10-13T08:40:50+00:00"
+   "checkedAt": "2026-10-13T08:52:36+00:00"
   },
   "2674": {
    "code": "2674",
@@ -10338,7 +10554,7 @@
      "details": {}
     }
    ],
-   "checkedAt": "2026-10-13T08:40:50+00:00"
+   "checkedAt": "2026-10-13T08:52:36+00:00"
   },
   "2730": {
    "code": "2730",
@@ -10462,7 +10678,7 @@
      "details": {}
     }
    ],
-   "checkedAt": "2026-10-13T08:40:50+00:00"
+   "checkedAt": "2026-10-13T08:52:36+00:00"
   },
   "2910": {
    "code": "2910",
@@ -10567,7 +10783,7 @@
      "details": {}
     }
    ],
-   "checkedAt": "2026-10-13T08:40:50+00:00"
+   "checkedAt": "2026-10-13T08:52:36+00:00"
   },
   "3077": {
    "code": "3077",
@@ -10629,7 +10845,7 @@
      "details": {}
     }
    ],
-   "checkedAt": "2026-10-13T08:40:50+00:00"
+   "checkedAt": "2026-10-13T08:52:36+00:00"
   },
   "3199": {
    "code": "3199",
@@ -10753,7 +10969,7 @@
      "details": {}
     }
    ],
-   "checkedAt": "2026-10-13T08:40:50+00:00"
+   "checkedAt": "2026-10-13T08:52:36+00:00"
   },
   "3544": {
    "code": "3544",
@@ -10841,7 +11057,7 @@
      "details": {}
     }
    ],
-   "checkedAt": "2026-10-13T08:40:50+00:00"
+   "checkedAt": "2026-10-13T08:52:36+00:00"
   },
   "4680": {
    "code": "4680",
@@ -10911,7 +11127,7 @@
      "details": {}
     }
    ],
-   "checkedAt": "2026-10-13T08:40:50+00:00",
+   "checkedAt": "2026-10-13T08:52:36+00:00",
    "corrections": [
     {
      "period": "2026-08",
@@ -10933,7 +11149,7 @@
    "status": "nonrevenue",
    "name": "ライフネット生命保険",
    "observations": [],
-   "checkedAt": "2026-10-13T08:40:50+00:00"
+   "checkedAt": "2026-10-13T08:52:36+00:00"
   },
   "7522": {
    "code": "7522",
@@ -11056,7 +11272,7 @@
      "details": {}
     }
    ],
-   "checkedAt": "2026-10-13T08:40:50+00:00"
+   "checkedAt": "2026-10-13T08:52:36+00:00"
   },
   "7646": {
    "code": "7646",
@@ -11233,7 +11449,7 @@
      "details": {}
     }
    ],
-   "checkedAt": "2026-10-13T08:40:50+00:00"
+   "checkedAt": "2026-10-13T08:52:36+00:00"
   },
   "8160": {
    "code": "8160",
@@ -11357,7 +11573,7 @@
      "details": {}
     }
    ],
-   "checkedAt": "2026-10-13T08:40:50+00:00"
+   "checkedAt": "2026-10-13T08:52:36+00:00"
   },
   "8218": {
    "code": "8218",
@@ -11481,7 +11697,7 @@
      "details": {}
     }
    ],
-   "checkedAt": "2026-10-13T08:40:50+00:00",
+   "checkedAt": "2026-10-13T08:52:36+00:00",
    "corrections": [
     {
      "period": "2026-07",
@@ -11519,7 +11735,7 @@
      }
     }
    ],
-   "checkedAt": "2026-10-13T08:40:50+00:00"
+   "checkedAt": "2026-10-13T08:52:36+00:00"
   },
   "9993": {
    "code": "9993",
@@ -11660,7 +11876,7 @@
      "details": {}
     }
    ],
-   "checkedAt": "2026-10-13T08:40:50+00:00"
+   "checkedAt": "2026-10-13T08:52:36+00:00"
   },
   "8715": {
    "code": "8715",
@@ -11736,7 +11952,7 @@
      }
     }
    ],
-   "checkedAt": "2026-10-13T08:40:50+00:00"
+   "checkedAt": "2026-10-13T08:52:36+00:00"
   },
   "2154": {
    "code": "2154",
@@ -11751,7 +11967,7 @@
    "status": "nonrevenue",
    "name": "オープンアップグループ",
    "observations": [],
-   "checkedAt": "2026-10-13T08:40:50+00:00"
+   "checkedAt": "2026-10-13T08:52:36+00:00"
   },
   "8975": {
    "code": "8975",
@@ -11766,7 +11982,7 @@
    "status": "nonrevenue",
    "name": "Ｒ－いちごオフィス",
    "observations": [],
-   "checkedAt": "2026-10-13T08:40:50+00:00"
+   "checkedAt": "2026-10-13T08:52:36+00:00"
   }
  }
 }
