@@ -31,6 +31,7 @@ on:
       - 'monir.py'
       - 'scrape_caps.py'
       - 'data/monthly_universe_jp.json'
+      - 'data/monthly_sources_jp.json'
       - '.github/workflows/monthly.yml'
 
 permissions:
