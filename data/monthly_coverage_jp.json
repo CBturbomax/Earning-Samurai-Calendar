@@ -1,6 +1,6 @@
 {
  "v": 1,
- "ts": "2026-10-14T01:35:28+00:00",
+ "ts": "2026-10-16T23:40:49+00:00",
  "seed": 361,
  "homes": 352,
  "official_ir_data": 173,
@@ -10,10 +10,10 @@
   "discontinued": 3,
   "fetch_failed": 6,
   "home_pending": 6,
-  "no_monthly_found": 104,
+  "no_monthly_found": 102,
   "non_revenue_kpi": 18,
   "ok": 151,
-  "parser_failed": 5,
+  "parser_failed": 7,
   "stale": 22
  },
  "codes": {
@@ -143,8 +143,8 @@
    "tdnet": false,
    "web": true,
    "ir": true,
-   "last_attempt": "",
-   "last_parse_failure": "",
+   "last_attempt": "2026-10-16T23:31:10+00:00",
+   "last_parse_failure": "2026-10-16T23:31:10+00:00",
    "reason": ""
   },
   "7606": {
@@ -247,7 +247,7 @@
    "tdnet": false,
    "web": false,
    "ir": false,
-   "last_attempt": "",
+   "last_attempt": "2026-10-16T23:31:10+00:00",
    "last_parse_failure": "",
    "reason": ""
   },
@@ -273,7 +273,7 @@
    "tdnet": false,
    "web": false,
    "ir": true,
-   "last_attempt": "",
+   "last_attempt": "2026-10-16T23:31:10+00:00",
    "last_parse_failure": "",
    "reason": ""
   },
@@ -286,7 +286,7 @@
    "tdnet": true,
    "web": false,
    "ir": false,
-   "last_attempt": "",
+   "last_attempt": "2026-10-16T23:31:10+00:00",
    "last_parse_failure": "",
    "reason": ""
   },
@@ -325,7 +325,7 @@
    "tdnet": true,
    "web": false,
    "ir": false,
-   "last_attempt": "",
+   "last_attempt": "2026-10-16T23:31:10+00:00",
    "last_parse_failure": "",
    "reason": ""
   },
@@ -338,7 +338,7 @@
    "tdnet": true,
    "web": false,
    "ir": false,
-   "last_attempt": "",
+   "last_attempt": "2026-10-16T23:31:10+00:00",
    "last_parse_failure": "",
    "reason": ""
   },
@@ -395,29 +395,29 @@
    "reason": ""
   },
   "3387": {
-   "status": "no_monthly_found",
+   "status": "parser_failed",
    "home": "https://www.createrestaurants.com/",
-   "source_url": "",
+   "source_url": "https://www.createrestaurants.com/",
    "latest_month": "",
    "months": 0,
    "tdnet": false,
    "web": false,
    "ir": false,
-   "last_attempt": "",
-   "last_parse_failure": "",
+   "last_attempt": "2026-10-16T23:31:10+00:00",
+   "last_parse_failure": "2026-10-16T23:31:10+00:00",
    "reason": ""
   },
   "7581": {
-   "status": "no_monthly_found",
+   "status": "parser_failed",
    "home": "https://www.saizeriya.co.jp/",
-   "source_url": "",
+   "source_url": "https://www.saizeriya.co.jp/",
    "latest_month": "",
    "months": 0,
    "tdnet": false,
    "web": true,
    "ir": false,
-   "last_attempt": "",
-   "last_parse_failure": "",
+   "last_attempt": "2026-10-16T23:31:10+00:00",
+   "last_parse_failure": "2026-10-16T23:31:10+00:00",
    "reason": ""
   },
   "3050": {
@@ -488,26 +488,26 @@
   "9832": {
    "status": "ok",
    "home": "https://www.autobacs.co.jp/",
-   "source_url": "https://www.autobacs.co.jp/ja/ir/news/auto_20260907532362.html",
+   "source_url": "https://www.autobacs.co.jp/ja/ir/finance/monthly_report.html",
    "latest_month": "2026-09",
    "months": 223,
    "tdnet": true,
    "web": false,
    "ir": true,
-   "last_attempt": "",
+   "last_attempt": "2026-10-16T23:31:10+00:00",
    "last_parse_failure": "",
    "reason": ""
   },
   "8276": {
    "status": "ok",
    "home": "https://www.heiwado.jp",
-   "source_url": "https://www.heiwado.jp/assets/file/news/attachment/92077e239129015e573bc4036e98a9d0",
+   "source_url": "https://www.heiwado.jp/ir/sales/monthly",
    "latest_month": "2026-09",
    "months": 13,
    "tdnet": false,
    "web": false,
    "ir": true,
-   "last_attempt": "",
+   "last_attempt": "2026-10-16T23:31:10+00:00",
    "last_parse_failure": "",
    "reason": ""
   },
@@ -533,7 +533,7 @@
    "tdnet": false,
    "web": false,
    "ir": false,
-   "last_attempt": "",
+   "last_attempt": "2026-10-16T23:31:10+00:00",
    "last_parse_failure": "",
    "reason": ""
   },
@@ -611,8 +611,8 @@
    "tdnet": false,
    "web": false,
    "ir": true,
-   "last_attempt": "",
-   "last_parse_failure": "",
+   "last_attempt": "2026-10-16T23:31:10+00:00",
+   "last_parse_failure": "2026-10-16T23:31:10+00:00",
    "reason": ""
   },
   "3087": {
@@ -624,8 +624,8 @@
    "tdnet": false,
    "web": false,
    "ir": true,
-   "last_attempt": "",
-   "last_parse_failure": "",
+   "last_attempt": "2026-10-16T23:31:10+00:00",
+   "last_parse_failure": "2026-10-16T23:31:10+00:00",
    "reason": ""
   },
   "3612": {
@@ -637,8 +637,8 @@
    "tdnet": true,
    "web": false,
    "ir": true,
-   "last_attempt": "",
-   "last_parse_failure": "",
+   "last_attempt": "2026-10-16T23:31:10+00:00",
+   "last_parse_failure": "2026-10-16T23:31:10+00:00",
    "reason": ""
   },
   "7453": {
@@ -754,7 +754,7 @@
    "tdnet": false,
    "web": false,
    "ir": false,
-   "last_attempt": "",
+   "last_attempt": "2026-10-16T23:31:10+00:00",
    "last_parse_failure": "",
    "reason": ""
   },
@@ -767,7 +767,7 @@
    "tdnet": false,
    "web": false,
    "ir": false,
-   "last_attempt": "",
+   "last_attempt": "2026-10-16T23:31:10+00:00",
    "last_parse_failure": "",
    "reason": ""
   },
@@ -957,12 +957,12 @@
    "status": "ok",
    "home": "https://www.gmofh.com",
    "source_url": "https://www.gmofh.com/ir/news.html",
-   "latest_month": "2026-08",
-   "months": 8,
+   "latest_month": "2026-09",
+   "months": 18,
    "tdnet": true,
    "web": false,
    "ir": true,
-   "last_attempt": "",
+   "last_attempt": "2026-10-16T23:31:10+00:00",
    "last_parse_failure": "",
    "reason": ""
   },
@@ -1261,8 +1261,8 @@
    "tdnet": true,
    "web": false,
    "ir": true,
-   "last_attempt": "",
-   "last_parse_failure": "",
+   "last_attempt": "2026-10-16T23:31:10+00:00",
+   "last_parse_failure": "2026-10-16T23:31:10+00:00",
    "reason": ""
   },
   "9835": {
@@ -1287,8 +1287,8 @@
    "tdnet": true,
    "web": false,
    "ir": true,
-   "last_attempt": "",
-   "last_parse_failure": "",
+   "last_attempt": "2026-10-16T23:31:10+00:00",
+   "last_parse_failure": "2026-10-16T23:31:10+00:00",
    "reason": ""
   },
   "8963": {
@@ -1781,8 +1781,8 @@
    "tdnet": false,
    "web": false,
    "ir": true,
-   "last_attempt": "",
-   "last_parse_failure": "",
+   "last_attempt": "2026-10-16T23:31:10+00:00",
+   "last_parse_failure": "2026-10-16T23:31:10+00:00",
    "reason": ""
   },
   "9163": {
@@ -2106,7 +2106,7 @@
    "tdnet": true,
    "web": false,
    "ir": false,
-   "last_attempt": "",
+   "last_attempt": "2026-10-16T23:31:10+00:00",
    "last_parse_failure": "",
    "reason": ""
   },
@@ -2132,7 +2132,7 @@
    "tdnet": false,
    "web": false,
    "ir": false,
-   "last_attempt": "",
+   "last_attempt": "2026-10-16T23:31:10+00:00",
    "last_parse_failure": "",
    "reason": ""
   },
@@ -2145,7 +2145,7 @@
    "tdnet": false,
    "web": false,
    "ir": false,
-   "last_attempt": "",
+   "last_attempt": "2026-10-16T23:31:10+00:00",
    "last_parse_failure": "",
    "reason": ""
   },
@@ -2158,7 +2158,7 @@
    "tdnet": false,
    "web": false,
    "ir": false,
-   "last_attempt": "",
+   "last_attempt": "2026-10-16T23:31:10+00:00",
    "last_parse_failure": "",
    "reason": ""
   },
@@ -2184,7 +2184,7 @@
    "tdnet": false,
    "web": false,
    "ir": false,
-   "last_attempt": "",
+   "last_attempt": "2026-10-16T23:31:10+00:00",
    "last_parse_failure": "",
    "reason": ""
   },
@@ -2210,7 +2210,7 @@
    "tdnet": false,
    "web": false,
    "ir": false,
-   "last_attempt": "",
+   "last_attempt": "2026-10-16T23:31:10+00:00",
    "last_parse_failure": "",
    "reason": ""
   },
@@ -2236,7 +2236,7 @@
    "tdnet": false,
    "web": false,
    "ir": false,
-   "last_attempt": "",
+   "last_attempt": "2026-10-16T23:31:10+00:00",
    "last_parse_failure": "",
    "reason": ""
   },
@@ -2249,7 +2249,7 @@
    "tdnet": false,
    "web": false,
    "ir": false,
-   "last_attempt": "",
+   "last_attempt": "2026-10-16T23:31:10+00:00",
    "last_parse_failure": "",
    "reason": ""
   },
@@ -2262,7 +2262,7 @@
    "tdnet": false,
    "web": false,
    "ir": false,
-   "last_attempt": "",
+   "last_attempt": "2026-10-16T23:31:10+00:00",
    "last_parse_failure": "",
    "reason": ""
   },
@@ -2327,7 +2327,7 @@
    "tdnet": true,
    "web": false,
    "ir": false,
-   "last_attempt": "",
+   "last_attempt": "2026-10-16T23:31:10+00:00",
    "last_parse_failure": "",
    "reason": ""
   },
@@ -2353,7 +2353,7 @@
    "tdnet": true,
    "web": false,
    "ir": false,
-   "last_attempt": "",
+   "last_attempt": "2026-10-16T23:31:10+00:00",
    "last_parse_failure": "",
    "reason": ""
   },
@@ -2392,7 +2392,7 @@
    "tdnet": true,
    "web": true,
    "ir": false,
-   "last_attempt": "",
+   "last_attempt": "2026-10-16T23:31:10+00:00",
    "last_parse_failure": "",
    "reason": ""
   },
@@ -2470,7 +2470,7 @@
    "tdnet": true,
    "web": false,
    "ir": false,
-   "last_attempt": "",
+   "last_attempt": "2026-10-16T23:31:10+00:00",
    "last_parse_failure": "",
    "reason": ""
   },
@@ -2483,7 +2483,7 @@
    "tdnet": false,
    "web": false,
    "ir": false,
-   "last_attempt": "",
+   "last_attempt": "2026-10-16T23:31:10+00:00",
    "last_parse_failure": "",
    "reason": ""
   },
@@ -2509,7 +2509,7 @@
    "tdnet": false,
    "web": false,
    "ir": false,
-   "last_attempt": "",
+   "last_attempt": "2026-10-16T23:31:10+00:00",
    "last_parse_failure": "",
    "reason": ""
   },
@@ -2522,7 +2522,7 @@
    "tdnet": true,
    "web": false,
    "ir": false,
-   "last_attempt": "",
+   "last_attempt": "2026-10-16T23:31:10+00:00",
    "last_parse_failure": "",
    "reason": ""
   },
@@ -2535,7 +2535,7 @@
    "tdnet": false,
    "web": false,
    "ir": false,
-   "last_attempt": "",
+   "last_attempt": "2026-10-16T23:31:10+00:00",
    "last_parse_failure": "",
    "reason": ""
   },
@@ -2613,7 +2613,7 @@
    "tdnet": false,
    "web": true,
    "ir": false,
-   "last_attempt": "",
+   "last_attempt": "2026-10-16T23:31:10+00:00",
    "last_parse_failure": "",
    "reason": ""
   },
@@ -2691,7 +2691,7 @@
    "tdnet": false,
    "web": false,
    "ir": false,
-   "last_attempt": "",
+   "last_attempt": "2026-10-16T23:31:10+00:00",
    "last_parse_failure": "",
    "reason": ""
   },
@@ -2717,7 +2717,7 @@
    "tdnet": true,
    "web": false,
    "ir": false,
-   "last_attempt": "",
+   "last_attempt": "2026-10-16T23:31:10+00:00",
    "last_parse_failure": "",
    "reason": ""
   },
@@ -2756,7 +2756,7 @@
    "tdnet": true,
    "web": false,
    "ir": false,
-   "last_attempt": "",
+   "last_attempt": "2026-10-16T23:31:10+00:00",
    "last_parse_failure": "",
    "reason": ""
   },
@@ -2769,7 +2769,7 @@
    "tdnet": false,
    "web": true,
    "ir": false,
-   "last_attempt": "",
+   "last_attempt": "2026-10-16T23:31:10+00:00",
    "last_parse_failure": "",
    "reason": ""
   },
@@ -2873,7 +2873,7 @@
    "tdnet": false,
    "web": false,
    "ir": false,
-   "last_attempt": "",
+   "last_attempt": "2026-10-16T23:31:10+00:00",
    "last_parse_failure": "",
    "reason": ""
   },
@@ -3016,7 +3016,7 @@
    "tdnet": true,
    "web": false,
    "ir": false,
-   "last_attempt": "",
+   "last_attempt": "2026-10-16T23:31:10+00:00",
    "last_parse_failure": "",
    "reason": ""
   },
@@ -3055,7 +3055,7 @@
    "tdnet": true,
    "web": false,
    "ir": false,
-   "last_attempt": "",
+   "last_attempt": "2026-10-16T23:31:10+00:00",
    "last_parse_failure": "",
    "reason": ""
   },
@@ -3081,7 +3081,7 @@
    "tdnet": true,
    "web": false,
    "ir": false,
-   "last_attempt": "",
+   "last_attempt": "2026-10-16T23:31:10+00:00",
    "last_parse_failure": "",
    "reason": ""
   },
@@ -3406,7 +3406,7 @@
    "tdnet": false,
    "web": true,
    "ir": true,
-   "last_attempt": "",
+   "last_attempt": "2026-10-16T23:31:10+00:00",
    "last_parse_failure": "",
    "reason": ""
   },
@@ -3523,7 +3523,7 @@
    "tdnet": false,
    "web": false,
    "ir": false,
-   "last_attempt": "",
+   "last_attempt": "2026-10-16T23:31:10+00:00",
    "last_parse_failure": "",
    "reason": ""
   },
@@ -3757,7 +3757,7 @@
    "tdnet": false,
    "web": false,
    "ir": true,
-   "last_attempt": "",
+   "last_attempt": "2026-10-16T23:31:10+00:00",
    "last_parse_failure": "",
    "reason": ""
   },
@@ -3835,7 +3835,7 @@
    "tdnet": true,
    "web": false,
    "ir": false,
-   "last_attempt": "",
+   "last_attempt": "2026-10-16T23:31:10+00:00",
    "last_parse_failure": "",
    "reason": ""
   },
@@ -3848,7 +3848,7 @@
    "tdnet": false,
    "web": true,
    "ir": false,
-   "last_attempt": "",
+   "last_attempt": "2026-10-16T23:31:10+00:00",
    "last_parse_failure": "",
    "reason": ""
   },
@@ -3900,7 +3900,7 @@
    "tdnet": false,
    "web": false,
    "ir": false,
-   "last_attempt": "",
+   "last_attempt": "2026-10-16T23:31:10+00:00",
    "last_parse_failure": "",
    "reason": ""
   },
@@ -3965,7 +3965,7 @@
    "tdnet": true,
    "web": false,
    "ir": false,
-   "last_attempt": "",
+   "last_attempt": "2026-10-16T23:31:10+00:00",
    "last_parse_failure": "",
    "reason": ""
   },
@@ -4004,7 +4004,7 @@
    "tdnet": false,
    "web": false,
    "ir": false,
-   "last_attempt": "",
+   "last_attempt": "2026-10-16T23:31:10+00:00",
    "last_parse_failure": "",
    "reason": ""
   },
@@ -4017,7 +4017,7 @@
    "tdnet": false,
    "web": true,
    "ir": true,
-   "last_attempt": "",
+   "last_attempt": "2026-10-16T23:31:10+00:00",
    "last_parse_failure": "",
    "reason": ""
   },
@@ -4030,7 +4030,7 @@
    "tdnet": false,
    "web": false,
    "ir": false,
-   "last_attempt": "",
+   "last_attempt": "2026-10-16T23:31:10+00:00",
    "last_parse_failure": "",
    "reason": ""
   },
@@ -4238,7 +4238,7 @@
    "tdnet": false,
    "web": false,
    "ir": false,
-   "last_attempt": "",
+   "last_attempt": "2026-10-16T23:31:10+00:00",
    "last_parse_failure": "",
    "reason": ""
   },
@@ -4277,7 +4277,7 @@
    "tdnet": true,
    "web": false,
    "ir": false,
-   "last_attempt": "",
+   "last_attempt": "2026-10-16T23:31:10+00:00",
    "last_parse_failure": "",
    "reason": ""
   },
@@ -4290,7 +4290,7 @@
    "tdnet": true,
    "web": false,
    "ir": false,
-   "last_attempt": "",
+   "last_attempt": "2026-10-16T23:31:10+00:00",
    "last_parse_failure": "",
    "reason": ""
   },
@@ -4316,7 +4316,7 @@
    "tdnet": true,
    "web": false,
    "ir": false,
-   "last_attempt": "",
+   "last_attempt": "2026-10-16T23:31:10+00:00",
    "last_parse_failure": "",
    "reason": ""
   },
@@ -4355,7 +4355,7 @@
    "tdnet": true,
    "web": false,
    "ir": false,
-   "last_attempt": "",
+   "last_attempt": "2026-10-16T23:31:10+00:00",
    "last_parse_failure": "",
    "reason": ""
   },
@@ -4420,7 +4420,7 @@
    "tdnet": true,
    "web": false,
    "ir": false,
-   "last_attempt": "",
+   "last_attempt": "2026-10-16T23:31:10+00:00",
    "last_parse_failure": "",
    "reason": ""
   },
@@ -4433,7 +4433,7 @@
    "tdnet": true,
    "web": false,
    "ir": false,
-   "last_attempt": "",
+   "last_attempt": "2026-10-16T23:31:10+00:00",
    "last_parse_failure": "",
    "reason": ""
   },
@@ -4459,7 +4459,7 @@
    "tdnet": true,
    "web": false,
    "ir": false,
-   "last_attempt": "",
+   "last_attempt": "2026-10-16T23:31:10+00:00",
    "last_parse_failure": "",
    "reason": ""
   },
@@ -4498,7 +4498,7 @@
    "tdnet": true,
    "web": false,
    "ir": false,
-   "last_attempt": "",
+   "last_attempt": "2026-10-16T23:31:10+00:00",
    "last_parse_failure": "",
    "reason": ""
   },
@@ -4563,7 +4563,7 @@
    "tdnet": true,
    "web": false,
    "ir": false,
-   "last_attempt": "",
+   "last_attempt": "2026-10-16T23:31:10+00:00",
    "last_parse_failure": "",
    "reason": ""
   },
@@ -4602,7 +4602,7 @@
    "tdnet": true,
    "web": false,
    "ir": false,
-   "last_attempt": "",
+   "last_attempt": "2026-10-16T23:31:10+00:00",
    "last_parse_failure": "",
    "reason": ""
   },
@@ -4615,7 +4615,7 @@
    "tdnet": true,
    "web": false,
    "ir": false,
-   "last_attempt": "",
+   "last_attempt": "2026-10-16T23:31:10+00:00",
    "last_parse_failure": "",
    "reason": ""
   },
@@ -4628,7 +4628,7 @@
    "tdnet": true,
    "web": false,
    "ir": false,
-   "last_attempt": "",
+   "last_attempt": "2026-10-16T23:31:10+00:00",
    "last_parse_failure": "",
    "reason": ""
   },
@@ -4654,7 +4654,7 @@
    "tdnet": true,
    "web": false,
    "ir": false,
-   "last_attempt": "",
+   "last_attempt": "2026-10-16T23:31:10+00:00",
    "last_parse_failure": "",
    "reason": ""
   },
@@ -4680,7 +4680,7 @@
    "tdnet": true,
    "web": false,
    "ir": false,
-   "last_attempt": "",
+   "last_attempt": "2026-10-16T23:31:10+00:00",
    "last_parse_failure": "",
    "reason": ""
   },
@@ -4693,7 +4693,7 @@
    "tdnet": true,
    "web": false,
    "ir": false,
-   "last_attempt": "",
+   "last_attempt": "2026-10-16T23:31:10+00:00",
    "last_parse_failure": "",
    "reason": ""
   },
@@ -4706,7 +4706,7 @@
    "tdnet": true,
    "web": false,
    "ir": false,
-   "last_attempt": "",
+   "last_attempt": "2026-10-16T23:31:10+00:00",
    "last_parse_failure": "",
    "reason": ""
   }
