@@ -1,20 +1,20 @@
 {
  "v": 1,
- "ts": "2026-10-17T13:31:39+00:00",
+ "ts": "2026-10-17T19:01:50+00:00",
  "seed": 361,
  "homes": 352,
  "official_ir_data": 178,
  "covered_any": 311,
  "status": {
-  "covered_elsewhere": 18,
+  "covered_elsewhere": 3,
   "discontinued": 3,
   "fetch_failed": 7,
   "home_pending": 6,
-  "no_monthly_found": 115,
+  "no_monthly_found": 126,
   "non_revenue_kpi": 18,
-  "ok": 158,
-  "parser_failed": 16,
-  "stale": 20
+  "ok": 159,
+  "parser_failed": 20,
+  "stale": 19
  },
  "codes": {
   "8267": {
@@ -65,7 +65,7 @@
    "tdnet": false,
    "web": true,
    "ir": true,
-   "last_attempt": "2026-10-13T08:59:06+00:00",
+   "last_attempt": "2026-10-17T18:52:27+00:00",
    "last_parse_failure": "",
    "reason": ""
   },
@@ -260,8 +260,8 @@
    "tdnet": true,
    "web": false,
    "ir": false,
-   "last_attempt": "2026-10-13T08:59:06+00:00",
-   "last_parse_failure": "2026-10-13T08:59:06+00:00",
+   "last_attempt": "2026-10-17T18:52:27+00:00",
+   "last_parse_failure": "2026-10-17T18:52:27+00:00",
    "reason": ""
   },
   "8153": {
@@ -572,8 +572,8 @@
    "tdnet": false,
    "web": true,
    "ir": true,
-   "last_attempt": "",
-   "last_parse_failure": "",
+   "last_attempt": "2026-10-17T18:52:27+00:00",
+   "last_parse_failure": "2026-10-17T18:52:27+00:00",
    "reason": ""
   },
   "7616": {
@@ -650,7 +650,7 @@
    "tdnet": false,
    "web": false,
    "ir": false,
-   "last_attempt": "2026-10-13T08:59:06+00:00",
+   "last_attempt": "2026-10-17T18:52:27+00:00",
    "last_parse_failure": "",
    "reason": ""
   },
@@ -689,7 +689,7 @@
    "tdnet": false,
    "web": false,
    "ir": false,
-   "last_attempt": "2026-10-13T08:59:06+00:00",
+   "last_attempt": "2026-10-17T18:52:27+00:00",
    "last_parse_failure": "",
    "reason": ""
   },
@@ -923,8 +923,8 @@
    "tdnet": true,
    "web": false,
    "ir": true,
-   "last_attempt": "",
-   "last_parse_failure": "",
+   "last_attempt": "2026-10-17T18:52:27+00:00",
+   "last_parse_failure": "2026-10-17T18:52:27+00:00",
    "reason": ""
   },
   "3548": {
@@ -1040,8 +1040,8 @@
    "tdnet": true,
    "web": false,
    "ir": true,
-   "last_attempt": "",
-   "last_parse_failure": "",
+   "last_attempt": "2026-10-17T18:52:27+00:00",
+   "last_parse_failure": "2026-10-17T18:52:27+00:00",
    "reason": ""
   },
   "8798": {
@@ -1053,8 +1053,8 @@
    "tdnet": true,
    "web": false,
    "ir": false,
-   "last_attempt": "2026-10-13T08:59:06+00:00",
-   "last_parse_failure": "2026-10-13T08:59:06+00:00",
+   "last_attempt": "2026-10-17T18:52:27+00:00",
+   "last_parse_failure": "2026-10-17T18:52:27+00:00",
    "reason": ""
   },
   "8628": {
@@ -1144,8 +1144,8 @@
    "tdnet": true,
    "web": false,
    "ir": true,
-   "last_attempt": "",
-   "last_parse_failure": "",
+   "last_attempt": "2026-10-17T18:52:27+00:00",
+   "last_parse_failure": "2026-10-17T18:52:27+00:00",
    "reason": ""
   },
   "3160": {
@@ -1170,7 +1170,7 @@
    "tdnet": true,
    "web": false,
    "ir": true,
-   "last_attempt": "",
+   "last_attempt": "2026-10-17T18:52:27+00:00",
    "last_parse_failure": "",
    "reason": ""
   },
@@ -1274,8 +1274,8 @@
    "tdnet": false,
    "web": false,
    "ir": true,
-   "last_attempt": "",
-   "last_parse_failure": "",
+   "last_attempt": "2026-10-17T18:52:27+00:00",
+   "last_parse_failure": "2026-10-17T18:52:27+00:00",
    "reason": ""
   },
   "9166": {
@@ -1365,8 +1365,8 @@
    "tdnet": true,
    "web": false,
    "ir": true,
-   "last_attempt": "",
-   "last_parse_failure": "",
+   "last_attempt": "2026-10-17T18:52:27+00:00",
+   "last_parse_failure": "2026-10-17T18:52:27+00:00",
    "reason": ""
   },
   "2705": {
@@ -1417,8 +1417,8 @@
    "tdnet": true,
    "web": false,
    "ir": true,
-   "last_attempt": "",
-   "last_parse_failure": "",
+   "last_attempt": "2026-10-17T18:52:27+00:00",
+   "last_parse_failure": "2026-10-17T18:52:27+00:00",
    "reason": ""
   },
   "3370": {
@@ -1430,7 +1430,7 @@
    "tdnet": false,
    "web": false,
    "ir": true,
-   "last_attempt": "",
+   "last_attempt": "2026-10-17T18:52:27+00:00",
    "last_parse_failure": "",
    "reason": ""
   },
@@ -1586,8 +1586,8 @@
    "tdnet": false,
    "web": false,
    "ir": false,
-   "last_attempt": "2026-10-13T08:59:06+00:00",
-   "last_parse_failure": "2026-10-13T08:59:06+00:00",
+   "last_attempt": "2026-10-17T18:52:27+00:00",
+   "last_parse_failure": "2026-10-17T18:52:27+00:00",
    "reason": ""
   },
   "2311": {
@@ -1621,11 +1621,11 @@
    "home": "https://www.ai-kei.co.jp",
    "source_url": "https://www.ai-kei.co.jp/ir/library_monthly",
    "latest_month": "2026-09",
-   "months": 4,
+   "months": 6,
    "tdnet": true,
    "web": false,
    "ir": true,
-   "last_attempt": "",
+   "last_attempt": "2026-10-17T18:52:27+00:00",
    "last_parse_failure": "",
    "reason": ""
   },
@@ -1651,8 +1651,8 @@
    "tdnet": false,
    "web": false,
    "ir": false,
-   "last_attempt": "2026-10-13T08:59:06+00:00",
-   "last_parse_failure": "2026-10-13T08:59:06+00:00",
+   "last_attempt": "2026-10-17T18:52:27+00:00",
+   "last_parse_failure": "2026-10-17T18:52:27+00:00",
    "reason": ""
   },
   "3196": {
@@ -1690,8 +1690,8 @@
    "tdnet": false,
    "web": false,
    "ir": true,
-   "last_attempt": "",
-   "last_parse_failure": "",
+   "last_attempt": "2026-10-17T18:52:27+00:00",
+   "last_parse_failure": "2026-10-17T18:52:27+00:00",
    "reason": ""
   },
   "6073": {
@@ -1742,8 +1742,8 @@
    "tdnet": true,
    "web": false,
    "ir": true,
-   "last_attempt": "",
-   "last_parse_failure": "",
+   "last_attempt": "2026-10-17T18:52:27+00:00",
+   "last_parse_failure": "2026-10-17T18:52:27+00:00",
    "reason": ""
   },
   "8214": {
@@ -2085,7 +2085,7 @@
    "reason": "Monthly releases are portfolio occupancy, not revenue."
   },
   "138A": {
-   "status": "covered_elsewhere",
+   "status": "no_monthly_found",
    "home": "https://www.hikari-food-service.jp",
    "source_url": "",
    "latest_month": "",
@@ -2093,7 +2093,7 @@
    "tdnet": true,
    "web": false,
    "ir": false,
-   "last_attempt": "",
+   "last_attempt": "2026-10-17T18:52:27+00:00",
    "last_parse_failure": "",
    "reason": ""
   },
@@ -2197,7 +2197,7 @@
    "tdnet": true,
    "web": false,
    "ir": false,
-   "last_attempt": "",
+   "last_attempt": "2026-10-17T18:52:27+00:00",
    "last_parse_failure": "",
    "reason": ""
   },
@@ -2301,7 +2301,7 @@
    "tdnet": true,
    "web": false,
    "ir": false,
-   "last_attempt": "2026-10-13T08:59:06+00:00",
+   "last_attempt": "2026-10-17T18:52:27+00:00",
    "last_parse_failure": "",
    "reason": ""
   },
@@ -2340,7 +2340,7 @@
    "tdnet": false,
    "web": false,
    "ir": false,
-   "last_attempt": "2026-10-13T08:59:06+00:00",
+   "last_attempt": "2026-10-17T18:52:27+00:00",
    "last_parse_failure": "",
    "reason": ""
   },
@@ -2379,7 +2379,7 @@
    "tdnet": true,
    "web": false,
    "ir": true,
-   "last_attempt": "",
+   "last_attempt": "2026-10-17T18:52:27+00:00",
    "last_parse_failure": "",
    "reason": ""
   },
@@ -2405,7 +2405,7 @@
    "tdnet": true,
    "web": false,
    "ir": false,
-   "last_attempt": "",
+   "last_attempt": "2026-10-17T18:52:27+00:00",
    "last_parse_failure": "",
    "reason": ""
   },
@@ -2678,7 +2678,7 @@
    "tdnet": true,
    "web": false,
    "ir": false,
-   "last_attempt": "",
+   "last_attempt": "2026-10-17T18:52:27+00:00",
    "last_parse_failure": "",
    "reason": ""
   },
@@ -2852,7 +2852,7 @@
    "reason": ""
   },
   "3557": {
-   "status": "covered_elsewhere",
+   "status": "no_monthly_found",
    "home": "https://www.united-collective.co.jp",
    "source_url": "",
    "latest_month": "",
@@ -2860,7 +2860,7 @@
    "tdnet": true,
    "web": false,
    "ir": false,
-   "last_attempt": "",
+   "last_attempt": "2026-10-17T18:52:27+00:00",
    "last_parse_failure": "",
    "reason": ""
   },
@@ -2891,7 +2891,7 @@
    "reason": ""
   },
   "3690": {
-   "status": "covered_elsewhere",
+   "status": "no_monthly_found",
    "home": "https://yrglm.co.jp",
    "source_url": "",
    "latest_month": "",
@@ -2899,7 +2899,7 @@
    "tdnet": true,
    "web": false,
    "ir": false,
-   "last_attempt": "",
+   "last_attempt": "2026-10-17T18:52:27+00:00",
    "last_parse_failure": "",
    "reason": ""
   },
@@ -3203,7 +3203,7 @@
    "reason": ""
   },
   "7049": {
-   "status": "covered_elsewhere",
+   "status": "no_monthly_found",
    "home": "https://corp.shikigaku.jp",
    "source_url": "",
    "latest_month": "",
@@ -3211,7 +3211,7 @@
    "tdnet": true,
    "web": false,
    "ir": false,
-   "last_attempt": "",
+   "last_attempt": "2026-10-17T18:52:27+00:00",
    "last_parse_failure": "",
    "reason": ""
   },
@@ -3229,20 +3229,20 @@
    "reason": ""
   },
   "7112": {
-   "status": "covered_elsewhere",
+   "status": "parser_failed",
    "home": "https://www.cube-co.com",
-   "source_url": "",
+   "source_url": "https://www.cube-co.com/ja/news/mark-lona/mark-lona-23w_sdgs.html",
    "latest_month": "",
    "months": 0,
    "tdnet": true,
    "web": false,
    "ir": false,
-   "last_attempt": "",
-   "last_parse_failure": "",
+   "last_attempt": "2026-10-17T18:52:27+00:00",
+   "last_parse_failure": "2026-10-17T18:52:27+00:00",
    "reason": ""
   },
   "7127": {
-   "status": "covered_elsewhere",
+   "status": "no_monthly_found",
    "home": "https://ikka-holdings.co.jp",
    "source_url": "",
    "latest_month": "",
@@ -3250,7 +3250,7 @@
    "tdnet": true,
    "web": false,
    "ir": false,
-   "last_attempt": "",
+   "last_attempt": "2026-10-17T18:52:27+00:00",
    "last_parse_failure": "",
    "reason": ""
   },
@@ -3289,7 +3289,7 @@
    "tdnet": false,
    "web": false,
    "ir": true,
-   "last_attempt": "",
+   "last_attempt": "2026-10-17T18:52:27+00:00",
    "last_parse_failure": "",
    "reason": ""
   },
@@ -3372,7 +3372,7 @@
    "reason": ""
   },
   "7506": {
-   "status": "covered_elsewhere",
+   "status": "no_monthly_found",
    "home": "https://www.houseofrose.co.jp",
    "source_url": "",
    "latest_month": "",
@@ -3380,7 +3380,7 @@
    "tdnet": true,
    "web": false,
    "ir": false,
-   "last_attempt": "",
+   "last_attempt": "2026-10-17T18:52:27+00:00",
    "last_parse_failure": "",
    "reason": ""
   },
@@ -3466,12 +3466,12 @@
    "status": "ok",
    "home": "https://www.poplar-cvs.co.jp",
    "source_url": "https://www.poplar-cvs.co.jp",
-   "latest_month": "2026-08",
-   "months": 6,
+   "latest_month": "2026-09",
+   "months": 11,
    "tdnet": false,
    "web": false,
    "ir": true,
-   "last_attempt": "",
+   "last_attempt": "2026-10-17T18:52:27+00:00",
    "last_parse_failure": "",
    "reason": ""
   },
@@ -3484,7 +3484,7 @@
    "tdnet": false,
    "web": false,
    "ir": true,
-   "last_attempt": "",
+   "last_attempt": "2026-10-17T18:52:27+00:00",
    "last_parse_failure": "",
    "reason": ""
   },
@@ -3554,7 +3554,7 @@
    "reason": ""
   },
   "7640": {
-   "status": "covered_elsewhere",
+   "status": "no_monthly_found",
    "home": "https://www.topculture.co.jp",
    "source_url": "",
    "latest_month": "",
@@ -3562,7 +3562,7 @@
    "tdnet": true,
    "web": false,
    "ir": false,
-   "last_attempt": "",
+   "last_attempt": "2026-10-17T18:52:27+00:00",
    "last_parse_failure": "",
    "reason": ""
   },
@@ -3658,16 +3658,16 @@
    "reason": ""
   },
   "7918": {
-   "status": "covered_elsewhere",
+   "status": "parser_failed",
    "home": "https://www.via-hd.co.jp",
-   "source_url": "",
+   "source_url": "https://www.via-hd.co.jp/ir/library/monthly-bulletin/",
    "latest_month": "",
    "months": 0,
    "tdnet": true,
    "web": false,
    "ir": false,
-   "last_attempt": "",
-   "last_parse_failure": "",
+   "last_attempt": "2026-10-17T18:52:27+00:00",
+   "last_parse_failure": "2026-10-17T18:52:27+00:00",
    "reason": ""
   },
   "8008": {
@@ -3718,7 +3718,7 @@
    "tdnet": false,
    "web": false,
    "ir": false,
-   "last_attempt": "2026-10-13T08:59:06+00:00",
+   "last_attempt": "2026-10-17T18:52:27+00:00",
    "last_parse_failure": "",
    "reason": ""
   },
@@ -3731,7 +3731,7 @@
    "tdnet": true,
    "web": false,
    "ir": false,
-   "last_attempt": "",
+   "last_attempt": "2026-10-17T18:52:27+00:00",
    "last_parse_failure": "",
    "reason": ""
   },
@@ -3952,7 +3952,7 @@
    "tdnet": true,
    "web": false,
    "ir": false,
-   "last_attempt": "2026-10-13T08:59:06+00:00",
+   "last_attempt": "2026-10-17T18:52:27+00:00",
    "last_parse_failure": "",
    "reason": ""
   },
@@ -4048,16 +4048,16 @@
    "reason": ""
   },
   "9876": {
-   "status": "covered_elsewhere",
+   "status": "parser_failed",
    "home": "https://www.cox-online.co.jp",
-   "source_url": "",
+   "source_url": "https://www.cox-online.co.jp/ir/library/data.html",
    "latest_month": "",
    "months": 0,
    "tdnet": true,
    "web": true,
    "ir": false,
-   "last_attempt": "",
-   "last_parse_failure": "",
+   "last_attempt": "2026-10-17T18:52:27+00:00",
+   "last_parse_failure": "2026-10-17T18:52:27+00:00",
    "reason": ""
   },
   "9887": {
@@ -4108,7 +4108,7 @@
    "tdnet": true,
    "web": false,
    "ir": false,
-   "last_attempt": "",
+   "last_attempt": "2026-10-17T18:52:27+00:00",
    "last_parse_failure": "",
    "reason": ""
   },
@@ -4126,7 +4126,7 @@
    "reason": ""
   },
   "9941": {
-   "status": "covered_elsewhere",
+   "status": "no_monthly_found",
    "home": "https://www.taiyo-bussan.co.jp",
    "source_url": "",
    "latest_month": "",
@@ -4134,7 +4134,7 @@
    "tdnet": true,
    "web": false,
    "ir": false,
-   "last_attempt": "",
+   "last_attempt": "2026-10-17T18:52:27+00:00",
    "last_parse_failure": "",
    "reason": ""
   },
@@ -4191,15 +4191,15 @@
    "reason": ""
   },
   "9973": {
-   "status": "stale",
+   "status": "ok",
    "home": "https://kozohd.co.jp",
    "source_url": "https://kozohd.co.jp",
-   "latest_month": "2021-06",
-   "months": 6,
+   "latest_month": "2026-09",
+   "months": 30,
    "tdnet": true,
    "web": false,
    "ir": true,
-   "last_attempt": "",
+   "last_attempt": "2026-10-17T18:52:27+00:00",
    "last_parse_failure": "",
    "reason": ""
   },
@@ -4321,7 +4321,7 @@
    "reason": ""
   },
   "7043": {
-   "status": "covered_elsewhere",
+   "status": "no_monthly_found",
    "home": "https://www.alue.co.jp",
    "source_url": "",
    "latest_month": "",
@@ -4329,7 +4329,7 @@
    "tdnet": true,
    "web": false,
    "ir": false,
-   "last_attempt": "",
+   "last_attempt": "2026-10-17T18:52:27+00:00",
    "last_parse_failure": "",
    "reason": ""
   },
@@ -4373,7 +4373,7 @@
    "reason": ""
   },
   "7370": {
-   "status": "covered_elsewhere",
+   "status": "no_monthly_found",
    "home": "https://www.y-enjin.co.jp",
    "source_url": "",
    "latest_month": "",
@@ -4381,7 +4381,7 @@
    "tdnet": true,
    "web": false,
    "ir": false,
-   "last_attempt": "",
+   "last_attempt": "2026-10-17T18:52:27+00:00",
    "last_parse_failure": "",
    "reason": ""
   },
@@ -4399,16 +4399,16 @@
    "reason": ""
   },
   "2687": {
-   "status": "covered_elsewhere",
+   "status": "parser_failed",
    "home": "https://www.cvs-bayarea.co.jp",
-   "source_url": "",
+   "source_url": "https://www.cvs-bayarea.co.jp/ir/monthly/",
    "latest_month": "",
    "months": 0,
    "tdnet": true,
    "web": false,
    "ir": false,
-   "last_attempt": "",
-   "last_parse_failure": "",
+   "last_attempt": "2026-10-17T18:52:27+00:00",
+   "last_parse_failure": "2026-10-17T18:52:27+00:00",
    "reason": ""
   },
   "5589": {
@@ -4516,7 +4516,7 @@
    "reason": ""
   },
   "150A": {
-   "status": "covered_elsewhere",
+   "status": "no_monthly_found",
    "home": "https://www.jsh-japan.jp",
    "source_url": "",
    "latest_month": "",
@@ -4524,7 +4524,7 @@
    "tdnet": true,
    "web": false,
    "ir": false,
-   "last_attempt": "",
+   "last_attempt": "2026-10-17T18:52:27+00:00",
    "last_parse_failure": "",
    "reason": ""
   },
