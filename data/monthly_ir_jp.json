@@ -326,7 +326,8 @@
   },
   "274A": {
    "page": "https://ir-gardengroup.jp/",
-   "found": "2026-10-13"
+   "found": "2026-10-13",
+   "parse_miss": "2026-10-17T13:22:11+00:00"
   },
   "2750": {
    "miss": "2026-10-16"
@@ -385,7 +386,8 @@
   },
   "3030": {
    "page": "https://www.pub-hub.co.jp/ir/month.html",
-   "found": "2026-10-13"
+   "found": "2026-10-13",
+   "parse_miss": "2026-10-17T13:22:11+00:00"
   },
   "3034": {
    "miss": "2026-10-16"
@@ -443,9 +445,12 @@
   },
   "3160": {
    "page": "https://www.oomitsu.com",
-   "found": "2026-10-13"
+   "found": "2026-10-13",
+   "parse_miss": "2026-10-17T13:22:11+00:00"
   },
-  "3175": {},
+  "3175": {
+   "miss": "2026-10-17"
+  },
   "3178": {
    "page": "https://www.chimney.co.jp/ir/sales/",
    "found": "2026-09-28"
@@ -459,7 +464,9 @@
   "3191": {
    "miss": "2026-10-16"
   },
-  "3193": {},
+  "3193": {
+   "miss": "2026-10-17"
+  },
   "3196": {
    "page": "https://ir.hotland.co.jp/policy/monthlyinfo/",
    "found": "2026-10-13",
@@ -499,7 +506,7 @@
    "found": "2026-09-28"
   },
   "3415": {
-   "miss": "2026-10-01"
+   "miss": "2026-10-17"
   },
   "3542": {
    "page": "https://www.vega-c.com/ir/library/monthly-report/",
@@ -526,7 +533,9 @@
   "3561": {
    "miss": "2026-10-16"
   },
-  "3566": {},
+  "3566": {
+   "miss": "2026-10-17"
+  },
   "3591": {
    "page": "https://www.wacoalholdings.jp/ir/monthlydata/",
    "found": "2026-10-13",
@@ -833,7 +842,8 @@
   },
   "6073": {
    "page": "https://www.asante.co.jp/ir/library/disclosure/",
-   "found": "2026-10-13"
+   "found": "2026-10-13",
+   "parse_miss": "2026-10-17T13:22:11+00:00"
   },
   "7561": {
    "page": "https://www.hurxley.co.jp/ir_information/month/",
@@ -848,7 +858,8 @@
   },
   "7686": {
    "page": "https://www.hitomile.co.jp/ir/monthly_report.html",
-   "found": "2026-10-13"
+   "found": "2026-10-13",
+   "parse_miss": "2026-10-17T13:22:11+00:00"
   },
   "9993": {
    "page": "https://yamazawa.co.jp/ir/term-month.html",
@@ -856,7 +867,8 @@
   },
   "8207": {
    "page": "https://www.teng.co.jp/ir/ir.html",
-   "found": "2026-10-13"
+   "found": "2026-10-13",
+   "parse_miss": "2026-10-17T13:22:11+00:00"
   },
   "369A": {
    "miss": "2026-10-16"
@@ -884,11 +896,13 @@
   },
   "7610": {
    "page": "https://www.tay2.co.jp/ir/irlibrary/01.html",
-   "found": "2026-10-13"
+   "found": "2026-10-13",
+   "parse_miss": "2026-10-17T13:22:11+00:00"
   },
   "7604": {
    "page": "https://www.umenohana.co.jp/investor/archive?category=monthly_sales",
-   "found": "2026-10-13"
+   "found": "2026-10-13",
+   "parse_miss": "2026-10-17T13:22:11+00:00"
   },
   "7494": {
    "page": "https://www.konaka.co.jp/ir/getsuji_-2026.html",
@@ -917,7 +931,8 @@
   },
   "7674": {
    "page": "https://nattyswanky.com/ir/",
-   "found": "2026-10-13"
+   "found": "2026-10-13",
+   "parse_miss": "2026-10-17T13:22:11+00:00"
   },
   "8742": {
    "page": "https://www.kobayashiyoko.com",
@@ -1116,7 +1131,8 @@
   },
   "3080": {
    "page": "https://jason.co.jp/ir/monthly_information_2027_2",
-   "found": "2026-10-13"
+   "found": "2026-10-13",
+   "parse_miss": "2026-10-17T13:22:11+00:00"
   },
   "3195": {
    "page": "https://www.genepa.com/ir/",
@@ -1272,6 +1288,34 @@
    "page": "https://www.qbnet.jp/ir/library/monthly/",
    "found": "2026-10-17",
    "parse_miss": "2026-10-17T09:54:31+00:00"
+  },
+  "9145": {
+   "miss": "2026-10-17"
+  },
+  "7134": {
+   "miss": "2026-10-17"
+  },
+  "9245": {
+   "miss": "2026-10-17"
+  },
+  "8705": {
+   "page": "https://www.nissansec-g.co.jp",
+   "found": "2026-10-17"
+  },
+  "6561": {
+   "miss": "2026-10-17"
+  },
+  "9890": {
+   "page": "https://www.makiya-group.co.jp/ir/library/sales/",
+   "found": "2026-10-17",
+   "parse_miss": "2026-10-17T13:22:11+00:00"
+  },
+  "556A": {
+   "miss": "2026-10-17"
+  },
+  "5888": {
+   "page": "https://www.daiwa-cycle.co.jp",
+   "found": "2026-10-17"
   }
  },
  "codes": {
@@ -4787,8 +4831,8 @@
    "name": "きちりホールディングス",
    "page": "https://www.kichiri.co.jp/news/2026/ir/4173/",
    "months": {},
-   "ts": "2026-09-29T00:25:52+00:00",
-   "pdf_ts": "2026-09-28T05:58:58+00:00",
+   "ts": "2026-10-17T13:22:11+00:00",
+   "pdf_ts": "2026-10-17T13:22:11+00:00",
    "pdf": {
     "2025-07": {
      "doc": "https://www.kichiri.co.jp/wp-content/uploads/2026/09/2609031111.pdf",
@@ -5543,170 +5587,216 @@
    "months": {
     "2026-04": {
      "all": 88.6,
-     "same": 92.0
+     "same": 92.0,
+     "doc": "https://www.hurxley.co.jp/ir_information/month/"
     },
     "2026-05": {
      "all": 92.7,
-     "same": 94.7
+     "same": 94.7,
+     "doc": "https://www.hurxley.co.jp/ir_information/month/"
     },
     "2026-06": {
      "all": 90.0,
-     "same": 91.1
+     "same": 91.1,
+     "doc": "https://www.hurxley.co.jp/ir_information/month/"
     },
     "2026-07": {
      "all": 92.3,
-     "same": 94.1
+     "same": 94.1,
+     "doc": "https://www.hurxley.co.jp/ir_information/month/"
     },
     "2026-08": {
      "all": 89.4,
-     "same": 91.3
+     "same": 91.3,
+     "doc": "https://www.hurxley.co.jp/ir_information/month/"
     },
     "2025-04": {
      "all": 101.9,
-     "same": 104.1
+     "same": 104.1,
+     "doc": "https://www.hurxley.co.jp/ir_information/month/"
     },
     "2025-05": {
      "all": 98.7,
-     "same": 102.7
+     "same": 102.7,
+     "doc": "https://www.hurxley.co.jp/ir_information/month/"
     },
     "2025-06": {
      "all": 96.4,
-     "same": 101.3
+     "same": 101.3,
+     "doc": "https://www.hurxley.co.jp/ir_information/month/"
     },
     "2025-07": {
      "all": 92.2,
-     "same": 96.8
+     "same": 96.8,
+     "doc": "https://www.hurxley.co.jp/ir_information/month/"
     },
     "2025-08": {
      "all": 95.5,
-     "same": 99.8
+     "same": 99.8,
+     "doc": "https://www.hurxley.co.jp/ir_information/month/"
     },
     "2025-09": {
      "all": 92.8,
-     "same": 97.6
+     "same": 97.6,
+     "doc": "https://www.hurxley.co.jp/ir_information/month/"
     },
     "2025-10": {
      "all": 93.5,
-     "same": 98.4
+     "same": 98.4,
+     "doc": "https://www.hurxley.co.jp/ir_information/month/"
     },
     "2025-11": {
      "all": 96.4,
-     "same": 101.3
+     "same": 101.3,
+     "doc": "https://www.hurxley.co.jp/ir_information/month/"
     },
     "2025-12": {
      "all": 89.8,
-     "same": 96.2
+     "same": 96.2,
+     "doc": "https://www.hurxley.co.jp/ir_information/month/"
     },
     "2026-01": {
      "all": 89.9,
-     "same": 93.9
+     "same": 93.9,
+     "doc": "https://www.hurxley.co.jp/ir_information/month/"
     },
     "2026-02": {
      "all": 93.4,
-     "same": 99.9
+     "same": 99.9,
+     "doc": "https://www.hurxley.co.jp/ir_information/month/"
     },
     "2026-03": {
      "all": 89.5,
-     "same": 89.5
+     "same": 89.5,
+     "doc": "https://www.hurxley.co.jp/ir_information/month/"
     },
     "2024-04": {
      "all": 98.8,
-     "same": 102.2
+     "same": 102.2,
+     "doc": "https://www.hurxley.co.jp/ir_information/month/"
     },
     "2024-05": {
      "all": 99.6,
-     "same": 103.0
+     "same": 103.0,
+     "doc": "https://www.hurxley.co.jp/ir_information/month/"
     },
     "2024-06": {
      "all": 101.7,
-     "same": 104.3
+     "same": 104.3,
+     "doc": "https://www.hurxley.co.jp/ir_information/month/"
     },
     "2024-07": {
      "all": 100.6,
-     "same": 103.2
+     "same": 103.2,
+     "doc": "https://www.hurxley.co.jp/ir_information/month/"
     },
     "2024-08": {
      "all": 99.9,
-     "same": 101.9
+     "same": 101.9,
+     "doc": "https://www.hurxley.co.jp/ir_information/month/"
     },
     "2024-09": {
      "all": 99.2,
-     "same": 101.3
+     "same": 101.3,
+     "doc": "https://www.hurxley.co.jp/ir_information/month/"
     },
     "2024-10": {
      "all": 99.6,
-     "same": 101.8
+     "same": 101.8,
+     "doc": "https://www.hurxley.co.jp/ir_information/month/"
     },
     "2024-11": {
      "all": 100.0,
-     "same": 101.6
+     "same": 101.6,
+     "doc": "https://www.hurxley.co.jp/ir_information/month/"
     },
     "2024-12": {
      "all": 99.7,
-     "same": 101.6
+     "same": 101.6,
+     "doc": "https://www.hurxley.co.jp/ir_information/month/"
     },
     "2025-01": {
      "all": 98.6,
-     "same": 100.2
+     "same": 100.2,
+     "doc": "https://www.hurxley.co.jp/ir_information/month/"
     },
     "2025-02": {
      "all": 96.7,
-     "same": 98.3
+     "same": 98.3,
+     "doc": "https://www.hurxley.co.jp/ir_information/month/"
     },
     "2025-03": {
      "all": 100.5,
-     "same": 101.8
+     "same": 101.8,
+     "doc": "https://www.hurxley.co.jp/ir_information/month/"
     },
     "2023-04": {
      "all": 103.1,
-     "same": 107.1
+     "same": 107.1,
+     "doc": "https://www.hurxley.co.jp/ir_information/month/"
     },
     "2023-05": {
      "all": 100.3,
-     "same": 104.6
+     "same": 104.6,
+     "doc": "https://www.hurxley.co.jp/ir_information/month/"
     },
     "2023-06": {
      "all": 102.2,
-     "same": 106.0
+     "same": 106.0,
+     "doc": "https://www.hurxley.co.jp/ir_information/month/"
     },
     "2023-07": {
      "all": 97.1,
-     "same": 100.7
+     "same": 100.7,
+     "doc": "https://www.hurxley.co.jp/ir_information/month/"
     },
     "2023-08": {
      "all": 96.9,
-     "same": 107.7
+     "same": 107.7,
+     "doc": "https://www.hurxley.co.jp/ir_information/month/"
     },
     "2023-09": {
      "all": 101.5,
-     "same": 104.9
+     "same": 104.9,
+     "doc": "https://www.hurxley.co.jp/ir_information/month/"
     },
     "2023-10": {
      "all": 98.7,
-     "same": 102.6
+     "same": 102.6,
+     "doc": "https://www.hurxley.co.jp/ir_information/month/"
     },
     "2023-11": {
      "all": 98.9,
-     "same": 103.1
+     "same": 103.1,
+     "doc": "https://www.hurxley.co.jp/ir_information/month/"
     },
     "2023-12": {
      "all": 98.3,
-     "same": 102.7
+     "same": 102.7,
+     "doc": "https://www.hurxley.co.jp/ir_information/month/"
     },
     "2024-01": {
      "all": 99.8,
-     "same": 104.2
+     "same": 104.2,
+     "doc": "https://www.hurxley.co.jp/ir_information/month/"
     },
     "2024-02": {
      "all": 101.0,
-     "same": 105.4
+     "same": 105.4,
+     "doc": "https://www.hurxley.co.jp/ir_information/month/"
     },
     "2024-03": {
      "all": 99.6,
-     "same": 103.0
+     "same": 103.0,
+     "doc": "https://www.hurxley.co.jp/ir_information/month/"
+    },
+    "2026-09": {
+     "all": 96.4,
+     "same": 98.6,
+     "doc": "https://www.hurxley.co.jp/ir_information/month/"
     }
    },
-   "ts": "2026-09-29T05:49:47+00:00"
+   "ts": "2026-10-17T13:22:11+00:00"
   },
   "7416": {
    "name": "はるやまホールディングス",
@@ -5714,26 +5804,576 @@
    "months": {
     "2026-04": {
      "all": 96.8,
-     "same": 98.5
+     "same": 98.5,
+     "doc": "https://www.haruyama.co.jp/ir/ir_monthly_data.php"
     },
     "2026-05": {
      "all": 103.3,
-     "same": 105.4
+     "same": 105.4,
+     "doc": "https://www.haruyama.co.jp/ir/ir_monthly_data.php"
     },
     "2026-06": {
      "all": 87.1,
-     "same": 87.9
+     "same": 87.9,
+     "doc": "https://www.haruyama.co.jp/ir/ir_monthly_data.php"
     },
     "2026-07": {
      "all": 96.4,
-     "same": 102.4
+     "same": 102.4,
+     "doc": "https://www.haruyama.co.jp/ir/ir_monthly_data.php"
     },
     "2026-08": {
      "all": 96.1,
-     "same": 95.9
+     "same": 95.9,
+     "doc": "https://www.haruyama.co.jp/ir/ir_monthly_data.php"
+    },
+    "2026-09": {
+     "all": 100.8,
+     "same": 102.8,
+     "doc": "https://www.haruyama.co.jp/ir/ir_monthly_data.php"
+    },
+    "2025-04": {
+     "all": 98.6,
+     "same": 99.0,
+     "doc": "https://www.haruyama.co.jp/ir/ir_monthly_data.php"
+    },
+    "2025-05": {
+     "all": 100.5,
+     "same": 101.4,
+     "doc": "https://www.haruyama.co.jp/ir/ir_monthly_data.php"
+    },
+    "2025-06": {
+     "all": 94.9,
+     "same": 95.0,
+     "doc": "https://www.haruyama.co.jp/ir/ir_monthly_data.php"
+    },
+    "2025-07": {
+     "all": 94.9,
+     "same": 94.9,
+     "doc": "https://www.haruyama.co.jp/ir/ir_monthly_data.php"
+    },
+    "2025-08": {
+     "all": 101.1,
+     "same": 101.6,
+     "doc": "https://www.haruyama.co.jp/ir/ir_monthly_data.php"
+    },
+    "2025-09": {
+     "all": 89.2,
+     "same": 89.5,
+     "doc": "https://www.haruyama.co.jp/ir/ir_monthly_data.php"
+    },
+    "2025-10": {
+     "all": 99.1,
+     "same": 97.7,
+     "doc": "https://www.haruyama.co.jp/ir/ir_monthly_data.php"
+    },
+    "2025-11": {
+     "all": 101.3,
+     "same": 102.2,
+     "doc": "https://www.haruyama.co.jp/ir/ir_monthly_data.php"
+    },
+    "2025-12": {
+     "all": 95.2,
+     "same": 95.3,
+     "doc": "https://www.haruyama.co.jp/ir/ir_monthly_data.php"
+    },
+    "2026-01": {
+     "all": 97.6,
+     "same": 99.8,
+     "doc": "https://www.haruyama.co.jp/ir/ir_monthly_data.php"
+    },
+    "2026-02": {
+     "all": 99.5,
+     "same": 100.7,
+     "doc": "https://www.haruyama.co.jp/ir/ir_monthly_data.php"
+    },
+    "2026-03": {
+     "all": 93.7,
+     "same": 95.0,
+     "doc": "https://www.haruyama.co.jp/ir/ir_monthly_data.php"
+    },
+    "2024-04": {
+     "all": 90.3,
+     "same": 91.3,
+     "doc": "https://www.haruyama.co.jp/ir/ir_monthly_data.php"
+    },
+    "2024-05": {
+     "all": 95.4,
+     "same": 96.7,
+     "doc": "https://www.haruyama.co.jp/ir/ir_monthly_data.php"
+    },
+    "2024-06": {
+     "all": 108.3,
+     "same": 109.7,
+     "doc": "https://www.haruyama.co.jp/ir/ir_monthly_data.php"
+    },
+    "2024-07": {
+     "all": 91.6,
+     "same": 92.9,
+     "doc": "https://www.haruyama.co.jp/ir/ir_monthly_data.php"
+    },
+    "2024-08": {
+     "all": 100.0,
+     "same": 100.8,
+     "doc": "https://www.haruyama.co.jp/ir/ir_monthly_data.php"
+    },
+    "2024-09": {
+     "all": 102.7,
+     "same": 103.5,
+     "doc": "https://www.haruyama.co.jp/ir/ir_monthly_data.php"
+    },
+    "2024-10": {
+     "all": 90.8,
+     "same": 91.3,
+     "doc": "https://www.haruyama.co.jp/ir/ir_monthly_data.php"
+    },
+    "2024-11": {
+     "all": 106.0,
+     "same": 106.7,
+     "doc": "https://www.haruyama.co.jp/ir/ir_monthly_data.php"
+    },
+    "2024-12": {
+     "all": 106.5,
+     "same": 107.7,
+     "doc": "https://www.haruyama.co.jp/ir/ir_monthly_data.php"
+    },
+    "2025-01": {
+     "all": 102.6,
+     "same": 103.4,
+     "doc": "https://www.haruyama.co.jp/ir/ir_monthly_data.php"
+    },
+    "2025-02": {
+     "all": 102.0,
+     "same": 102.2,
+     "doc": "https://www.haruyama.co.jp/ir/ir_monthly_data.php"
+    },
+    "2025-03": {
+     "all": 104.4,
+     "same": 104.7,
+     "doc": "https://www.haruyama.co.jp/ir/ir_monthly_data.php"
+    },
+    "2023-04": {
+     "all": 96.1,
+     "same": 102.4,
+     "doc": "https://www.haruyama.co.jp/ir/ir_monthly_data.php"
+    },
+    "2023-05": {
+     "all": 91.0,
+     "same": 97.9,
+     "doc": "https://www.haruyama.co.jp/ir/ir_monthly_data.php"
+    },
+    "2023-06": {
+     "all": 89.5,
+     "same": 96.1,
+     "doc": "https://www.haruyama.co.jp/ir/ir_monthly_data.php"
+    },
+    "2023-07": {
+     "all": 99.8,
+     "same": 106.4,
+     "doc": "https://www.haruyama.co.jp/ir/ir_monthly_data.php"
+    },
+    "2023-08": {
+     "all": 101.5,
+     "same": 107.8,
+     "doc": "https://www.haruyama.co.jp/ir/ir_monthly_data.php"
+    },
+    "2023-09": {
+     "all": 100.1,
+     "same": 107.0,
+     "doc": "https://www.haruyama.co.jp/ir/ir_monthly_data.php"
+    },
+    "2023-10": {
+     "all": 90.8,
+     "same": 97.1,
+     "doc": "https://www.haruyama.co.jp/ir/ir_monthly_data.php"
+    },
+    "2023-11": {
+     "all": 100.5,
+     "same": 106.8,
+     "doc": "https://www.haruyama.co.jp/ir/ir_monthly_data.php"
+    },
+    "2023-12": {
+     "all": 95.7,
+     "same": 99.7,
+     "doc": "https://www.haruyama.co.jp/ir/ir_monthly_data.php"
+    },
+    "2024-01": {
+     "all": 99.7,
+     "same": 102.2,
+     "doc": "https://www.haruyama.co.jp/ir/ir_monthly_data.php"
+    },
+    "2024-02": {
+     "all": 98.7,
+     "same": 100.5,
+     "doc": "https://www.haruyama.co.jp/ir/ir_monthly_data.php"
+    },
+    "2024-03": {
+     "all": 99.1,
+     "same": 100.5,
+     "doc": "https://www.haruyama.co.jp/ir/ir_monthly_data.php"
+    },
+    "2022-04": {
+     "all": 110.2,
+     "same": 115.6,
+     "doc": "https://www.haruyama.co.jp/ir/ir_monthly_data.php"
+    },
+    "2022-05": {
+     "all": 122.5,
+     "same": 128.8,
+     "doc": "https://www.haruyama.co.jp/ir/ir_monthly_data.php"
+    },
+    "2022-06": {
+     "all": 105.7,
+     "same": 113.8,
+     "doc": "https://www.haruyama.co.jp/ir/ir_monthly_data.php"
+    },
+    "2022-07": {
+     "all": 106.1,
+     "same": 113.5,
+     "doc": "https://www.haruyama.co.jp/ir/ir_monthly_data.php"
+    },
+    "2022-08": {
+     "all": 108.9,
+     "same": 117.2,
+     "doc": "https://www.haruyama.co.jp/ir/ir_monthly_data.php"
+    },
+    "2022-09": {
+     "all": 112.2,
+     "same": 122.4,
+     "doc": "https://www.haruyama.co.jp/ir/ir_monthly_data.php"
+    },
+    "2022-10": {
+     "all": 97.9,
+     "same": 103.9,
+     "doc": "https://www.haruyama.co.jp/ir/ir_monthly_data.php"
+    },
+    "2022-11": {
+     "all": 83.1,
+     "same": 88.4,
+     "doc": "https://www.haruyama.co.jp/ir/ir_monthly_data.php"
+    },
+    "2022-12": {
+     "all": 86.2,
+     "same": 93.3,
+     "doc": "https://www.haruyama.co.jp/ir/ir_monthly_data.php"
+    },
+    "2023-01": {
+     "all": 99.9,
+     "same": 107.3,
+     "doc": "https://www.haruyama.co.jp/ir/ir_monthly_data.php"
+    },
+    "2023-02": {
+     "all": 112.3,
+     "same": 119.1,
+     "doc": "https://www.haruyama.co.jp/ir/ir_monthly_data.php"
+    },
+    "2023-03": {
+     "all": 92.5,
+     "same": 98.3,
+     "doc": "https://www.haruyama.co.jp/ir/ir_monthly_data.php"
+    },
+    "2021-04": {
+     "all": 161.1,
+     "same": 167.8,
+     "doc": "https://www.haruyama.co.jp/ir/ir_monthly_data.php"
+    },
+    "2021-05": {
+     "all": 100.4,
+     "same": 104.6,
+     "doc": "https://www.haruyama.co.jp/ir/ir_monthly_data.php"
+    },
+    "2021-06": {
+     "all": 79.0,
+     "same": 82.4,
+     "doc": "https://www.haruyama.co.jp/ir/ir_monthly_data.php"
+    },
+    "2021-07": {
+     "all": 91.9,
+     "same": 96.4,
+     "doc": "https://www.haruyama.co.jp/ir/ir_monthly_data.php"
+    },
+    "2021-08": {
+     "all": 80.2,
+     "same": 84.8,
+     "doc": "https://www.haruyama.co.jp/ir/ir_monthly_data.php"
+    },
+    "2021-09": {
+     "all": 85.3,
+     "same": 89.7,
+     "doc": "https://www.haruyama.co.jp/ir/ir_monthly_data.php"
+    },
+    "2021-10": {
+     "all": 93.1,
+     "same": 96.9,
+     "doc": "https://www.haruyama.co.jp/ir/ir_monthly_data.php"
+    },
+    "2021-11": {
+     "all": 97.7,
+     "same": 101.0,
+     "doc": "https://www.haruyama.co.jp/ir/ir_monthly_data.php"
+    },
+    "2021-12": {
+     "all": 104.7,
+     "same": 109.1,
+     "doc": "https://www.haruyama.co.jp/ir/ir_monthly_data.php"
+    },
+    "2022-01": {
+     "all": 105.0,
+     "same": 109.4,
+     "doc": "https://www.haruyama.co.jp/ir/ir_monthly_data.php"
+    },
+    "2022-02": {
+     "all": 92.5,
+     "same": 95.6,
+     "doc": "https://www.haruyama.co.jp/ir/ir_monthly_data.php"
+    },
+    "2022-03": {
+     "all": 95.9,
+     "same": 99.2,
+     "doc": "https://www.haruyama.co.jp/ir/ir_monthly_data.php"
+    },
+    "2020-04": {
+     "all": 142.8,
+     "same": 143.4,
+     "doc": "https://www.haruyama.co.jp/ir/ir_monthly_data.php"
+    },
+    "2020-05": {
+     "all": 156.7,
+     "same": 157.1,
+     "doc": "https://www.haruyama.co.jp/ir/ir_monthly_data.php"
+    },
+    "2020-06": {
+     "all": 180.1,
+     "same": 180.9,
+     "doc": "https://www.haruyama.co.jp/ir/ir_monthly_data.php"
+    },
+    "2020-07": {
+     "all": 180.3,
+     "same": 180.4,
+     "doc": "https://www.haruyama.co.jp/ir/ir_monthly_data.php"
+    },
+    "2020-08": {
+     "all": 175.3,
+     "same": 175.7,
+     "doc": "https://www.haruyama.co.jp/ir/ir_monthly_data.php"
+    },
+    "2020-09": {
+     "all": 159.1,
+     "same": 158.2,
+     "doc": "https://www.haruyama.co.jp/ir/ir_monthly_data.php"
+    },
+    "2020-10": {
+     "all": 93.5,
+     "same": 96.9,
+     "doc": "https://www.haruyama.co.jp/ir/ir_monthly_data.php"
+    },
+    "2020-11": {
+     "all": 76.9,
+     "same": 79.0,
+     "doc": "https://www.haruyama.co.jp/ir/ir_monthly_data.php"
+    },
+    "2020-12": {
+     "all": 77.6,
+     "same": 81.3,
+     "doc": "https://www.haruyama.co.jp/ir/ir_monthly_data.php"
+    },
+    "2021-01": {
+     "all": 62.8,
+     "same": 64.5,
+     "doc": "https://www.haruyama.co.jp/ir/ir_monthly_data.php"
+    },
+    "2021-02": {
+     "all": 72.2,
+     "same": 73.9,
+     "doc": "https://www.haruyama.co.jp/ir/ir_monthly_data.php"
+    },
+    "2021-03": {
+     "all": 102.4,
+     "same": 105.3,
+     "doc": "https://www.haruyama.co.jp/ir/ir_monthly_data.php"
+    },
+    "2019-04": {
+     "all": 87.7,
+     "same": 88.8,
+     "doc": "https://www.haruyama.co.jp/ir/ir_monthly_data.php"
+    },
+    "2019-05": {
+     "all": 98.2,
+     "same": 100.0,
+     "doc": "https://www.haruyama.co.jp/ir/ir_monthly_data.php"
+    },
+    "2019-06": {
+     "all": 99.4,
+     "same": 100.9,
+     "doc": "https://www.haruyama.co.jp/ir/ir_monthly_data.php"
+    },
+    "2019-07": {
+     "all": 89.2,
+     "same": 89.5,
+     "doc": "https://www.haruyama.co.jp/ir/ir_monthly_data.php"
+    },
+    "2019-08": {
+     "all": 105.1,
+     "same": 103.8,
+     "doc": "https://www.haruyama.co.jp/ir/ir_monthly_data.php"
+    },
+    "2019-09": {
+     "all": 112.9,
+     "same": 114.3,
+     "doc": "https://www.haruyama.co.jp/ir/ir_monthly_data.php"
+    },
+    "2019-10": {
+     "all": 85.0,
+     "same": 82.8,
+     "doc": "https://www.haruyama.co.jp/ir/ir_monthly_data.php"
+    },
+    "2019-11": {
+     "all": 95.8,
+     "same": 94.5,
+     "doc": "https://www.haruyama.co.jp/ir/ir_monthly_data.php"
+    },
+    "2019-12": {
+     "all": 95.7,
+     "same": 96.2,
+     "doc": "https://www.haruyama.co.jp/ir/ir_monthly_data.php"
+    },
+    "2020-01": {
+     "all": 101.0,
+     "same": 100.5,
+     "doc": "https://www.haruyama.co.jp/ir/ir_monthly_data.php"
+    },
+    "2020-02": {
+     "all": 110.8,
+     "same": 110.6,
+     "doc": "https://www.haruyama.co.jp/ir/ir_monthly_data.php"
+    },
+    "2020-03": {
+     "all": 75.6,
+     "same": 75.6,
+     "doc": "https://www.haruyama.co.jp/ir/ir_monthly_data.php"
+    },
+    "2018-04": {
+     "all": 96.4,
+     "same": 96.2,
+     "doc": "https://www.haruyama.co.jp/ir/ir_monthly_data.php"
+    },
+    "2018-05": {
+     "all": 91.9,
+     "same": 90.2,
+     "doc": "https://www.haruyama.co.jp/ir/ir_monthly_data.php"
+    },
+    "2018-06": {
+     "all": 101.1,
+     "same": 99.7,
+     "doc": "https://www.haruyama.co.jp/ir/ir_monthly_data.php"
+    },
+    "2018-07": {
+     "all": 91.5,
+     "same": 89.4,
+     "doc": "https://www.haruyama.co.jp/ir/ir_monthly_data.php"
+    },
+    "2018-08": {
+     "all": 98.1,
+     "same": 97.0,
+     "doc": "https://www.haruyama.co.jp/ir/ir_monthly_data.php"
+    },
+    "2018-09": {
+     "all": 98.1,
+     "same": 97.8,
+     "doc": "https://www.haruyama.co.jp/ir/ir_monthly_data.php"
+    },
+    "2018-10": {
+     "all": 91.5,
+     "same": 90.6,
+     "doc": "https://www.haruyama.co.jp/ir/ir_monthly_data.php"
+    },
+    "2018-11": {
+     "all": 95.8,
+     "same": 97.1,
+     "doc": "https://www.haruyama.co.jp/ir/ir_monthly_data.php"
+    },
+    "2018-12": {
+     "all": 96.0,
+     "same": 96.1,
+     "doc": "https://www.haruyama.co.jp/ir/ir_monthly_data.php"
+    },
+    "2019-01": {
+     "all": 95.7,
+     "same": 94.9,
+     "doc": "https://www.haruyama.co.jp/ir/ir_monthly_data.php"
+    },
+    "2019-02": {
+     "all": 99.1,
+     "same": 100.0,
+     "doc": "https://www.haruyama.co.jp/ir/ir_monthly_data.php"
+    },
+    "2019-03": {
+     "all": 100.8,
+     "same": 102.1,
+     "doc": "https://www.haruyama.co.jp/ir/ir_monthly_data.php"
+    },
+    "2017-04": {
+     "all": 104.2,
+     "same": 105.0,
+     "doc": "https://www.haruyama.co.jp/ir/ir_monthly_data.php"
+    },
+    "2017-05": {
+     "all": 96.5,
+     "same": 95.2,
+     "doc": "https://www.haruyama.co.jp/ir/ir_monthly_data.php"
+    },
+    "2017-06": {
+     "all": 98.0,
+     "same": 96.8,
+     "doc": "https://www.haruyama.co.jp/ir/ir_monthly_data.php"
+    },
+    "2017-07": {
+     "all": 106.7,
+     "same": 102.7,
+     "doc": "https://www.haruyama.co.jp/ir/ir_monthly_data.php"
+    },
+    "2017-08": {
+     "all": 103.9,
+     "same": 99.1,
+     "doc": "https://www.haruyama.co.jp/ir/ir_monthly_data.php"
+    },
+    "2017-09": {
+     "all": 111.7,
+     "same": 107.5,
+     "doc": "https://www.haruyama.co.jp/ir/ir_monthly_data.php"
+    },
+    "2017-10": {
+     "all": 98.1,
+     "same": 94.2,
+     "doc": "https://www.haruyama.co.jp/ir/ir_monthly_data.php"
+    },
+    "2017-11": {
+     "all": 106.5,
+     "same": 101.9,
+     "doc": "https://www.haruyama.co.jp/ir/ir_monthly_data.php"
+    },
+    "2017-12": {
+     "all": 101.4,
+     "same": 96.9,
+     "doc": "https://www.haruyama.co.jp/ir/ir_monthly_data.php"
+    },
+    "2018-01": {
+     "all": 101.0,
+     "same": 97.9,
+     "doc": "https://www.haruyama.co.jp/ir/ir_monthly_data.php"
+    },
+    "2018-02": {
+     "all": 98.5,
+     "same": 96.9,
+     "doc": "https://www.haruyama.co.jp/ir/ir_monthly_data.php"
+    },
+    "2018-03": {
+     "all": 100.1,
+     "same": 99.4,
+     "doc": "https://www.haruyama.co.jp/ir/ir_monthly_data.php"
     }
    },
-   "ts": "2026-09-29T05:49:47+00:00"
+   "ts": "2026-10-17T13:22:11+00:00"
   },
   "7514": {
    "name": "ヒマラヤ",
@@ -5741,94 +6381,265 @@
    "months": {
     "2025-09": {
      "same": 96.2,
-     "all": 97.2
+     "all": 97.2,
+     "doc": "https://www.hmry.jp/ir/library/monthly/?y=2026"
     },
     "2025-10": {
      "same": 101.6,
-     "all": 102.3
+     "all": 102.3,
+     "doc": "https://www.hmry.jp/ir/library/monthly/?y=2026"
     },
     "2025-11": {
      "same": 98.6,
-     "all": 103.3
+     "all": 103.3,
+     "doc": "https://www.hmry.jp/ir/library/monthly/?y=2026"
     },
     "2025-12": {
      "same": 91.3,
-     "all": 95.6
+     "all": 95.6,
+     "doc": "https://www.hmry.jp/ir/library/monthly/?y=2026"
     },
     "2026-01": {
      "same": 104.9,
-     "all": 103.4
+     "all": 103.4,
+     "doc": "https://www.hmry.jp/ir/library/monthly/?y=2026"
     },
     "2026-02": {
      "same": 96.5,
-     "all": 95.5
+     "all": 95.5,
+     "doc": "https://www.hmry.jp/ir/library/monthly/?y=2026"
     },
     "2026-03": {
      "same": 98.8,
-     "all": 98.7
+     "all": 98.7,
+     "doc": "https://www.hmry.jp/ir/library/monthly/?y=2026"
     },
     "2026-04": {
      "same": 100.0,
-     "all": 100.9
+     "all": 100.9,
+     "doc": "https://www.hmry.jp/ir/library/monthly/?y=2026"
     },
     "2026-05": {
      "same": 105.6,
-     "all": 102.3
+     "all": 102.3,
+     "doc": "https://www.hmry.jp/ir/library/monthly/?y=2026"
     },
     "2026-06": {
      "same": 94.1,
-     "all": 92.9
+     "all": 92.9,
+     "doc": "https://www.hmry.jp/ir/library/monthly/?y=2026"
     },
     "2026-07": {
      "same": 106.1,
-     "all": 98.1
+     "all": 98.1,
+     "doc": "https://www.hmry.jp/ir/library/monthly/?y=2026"
     },
     "2026-08": {
      "same": 105.3,
-     "all": 104.2
+     "all": 104.2,
+     "doc": "https://www.hmry.jp/ir/library/monthly/?y=2026"
     }
    },
-   "ts": "2026-09-29T05:49:47+00:00"
+   "ts": "2026-10-17T13:22:11+00:00"
   },
   "7494": {
    "name": "コナカ",
    "page": "https://www.konaka.co.jp/ir/getsuji_-2026.html",
    "months": {
     "2025-10": {
-     "yoy": 96.4
+     "yoy": 96.4,
+     "doc": "https://www.konaka.co.jp/ir/getsuji_-2026.html"
     },
     "2025-11": {
-     "yoy": 105.1
+     "yoy": 105.1,
+     "doc": "https://www.konaka.co.jp/ir/getsuji_-2026.html"
     },
     "2025-12": {
-     "yoy": 93.4
+     "yoy": 93.4,
+     "doc": "https://www.konaka.co.jp/ir/getsuji_-2026.html"
     },
     "2026-01": {
-     "yoy": 100.2
+     "yoy": 100.2,
+     "doc": "https://www.konaka.co.jp/ir/getsuji_-2026.html"
     },
     "2026-02": {
-     "yoy": 102.0
+     "yoy": 102.0,
+     "doc": "https://www.konaka.co.jp/ir/getsuji_-2026.html"
     },
     "2026-03": {
-     "yoy": 99.8
+     "yoy": 99.8,
+     "doc": "https://www.konaka.co.jp/ir/getsuji_-2026.html"
     },
     "2026-04": {
-     "yoy": 98.3
+     "yoy": 98.3,
+     "doc": "https://www.konaka.co.jp/ir/getsuji_-2026.html"
     },
     "2026-05": {
-     "yoy": 105.8
+     "yoy": 105.9,
+     "doc": "https://www.konaka.co.jp/ir/getsuji_-2026.html"
     },
     "2026-06": {
-     "yoy": 87.4
+     "yoy": 87.4,
+     "doc": "https://www.konaka.co.jp/ir/getsuji_-2026.html"
     },
     "2026-07": {
-     "yoy": 100.6
+     "yoy": 100.3,
+     "doc": "https://www.konaka.co.jp/ir/getsuji_-2026.html"
     },
     "2026-08": {
-     "yoy": 101.0
+     "yoy": 100.1,
+     "doc": "https://www.konaka.co.jp/ir/getsuji_-2026.html"
+    },
+    "2026-09": {
+     "yoy": 100.5,
+     "doc": "https://www.konaka.co.jp/ir/getsuji_-2026.html"
+    },
+    "2024-10": {
+     "yoy": 89.8,
+     "doc": "https://www.konaka.co.jp/ir/getsuji_-2025.html"
+    },
+    "2024-11": {
+     "yoy": 98.2,
+     "doc": "https://www.konaka.co.jp/ir/getsuji_-2025.html"
+    },
+    "2024-12": {
+     "yoy": 99.8,
+     "doc": "https://www.konaka.co.jp/ir/getsuji_-2025.html"
+    },
+    "2025-01": {
+     "yoy": 104.6,
+     "doc": "https://www.konaka.co.jp/ir/getsuji_-2025.html"
+    },
+    "2025-02": {
+     "yoy": 102.1,
+     "doc": "https://www.konaka.co.jp/ir/getsuji_-2025.html"
+    },
+    "2025-03": {
+     "yoy": 100.3,
+     "doc": "https://www.konaka.co.jp/ir/getsuji_-2025.html"
+    },
+    "2023-10": {
+     "yoy": 97.1,
+     "doc": "https://www.konaka.co.jp/ir/getsuji_-2024.html"
+    },
+    "2023-11": {
+     "yoy": 107.3,
+     "doc": "https://www.konaka.co.jp/ir/getsuji_-2024.html"
+    },
+    "2023-12": {
+     "yoy": 103.3,
+     "doc": "https://www.konaka.co.jp/ir/getsuji_-2024.html"
+    },
+    "2024-01": {
+     "yoy": 103.1,
+     "doc": "https://www.konaka.co.jp/ir/getsuji_-2024.html"
+    },
+    "2024-02": {
+     "yoy": 106.6,
+     "doc": "https://www.konaka.co.jp/ir/getsuji_-2024.html"
+    },
+    "2024-03": {
+     "yoy": 107.3,
+     "doc": "https://www.konaka.co.jp/ir/getsuji_-2024.html"
+    },
+    "2022-10": {
+     "yoy": 123.3,
+     "doc": "https://www.konaka.co.jp/ir/getsuji_-2023.html"
+    },
+    "2022-11": {
+     "yoy": 104.7,
+     "doc": "https://www.konaka.co.jp/ir/getsuji_-2023.html"
+    },
+    "2022-12": {
+     "yoy": 101.4,
+     "doc": "https://www.konaka.co.jp/ir/getsuji_-2023.html"
+    },
+    "2023-01": {
+     "yoy": 113.7,
+     "doc": "https://www.konaka.co.jp/ir/getsuji_-2023.html"
+    },
+    "2023-02": {
+     "yoy": 130.7,
+     "doc": "https://www.konaka.co.jp/ir/getsuji_-2023.html"
+    },
+    "2023-03": {
+     "yoy": 109.4,
+     "doc": "https://www.konaka.co.jp/ir/getsuji_-2023.html"
+    },
+    "2021-10": {
+     "yoy": 101.8,
+     "doc": "https://www.konaka.co.jp/ir/getsuji_-9-1.html"
+    },
+    "2021-11": {
+     "yoy": 104.7,
+     "doc": "https://www.konaka.co.jp/ir/getsuji_-9-1.html"
+    },
+    "2021-12": {
+     "yoy": 118.6,
+     "doc": "https://www.konaka.co.jp/ir/getsuji_-9-1.html"
+    },
+    "2022-01": {
+     "yoy": 130.7,
+     "doc": "https://www.konaka.co.jp/ir/getsuji_-9-1.html"
+    },
+    "2022-02": {
+     "yoy": 113.1,
+     "doc": "https://www.konaka.co.jp/ir/getsuji_-9-1.html"
+    },
+    "2022-03": {
+     "yoy": 111.8,
+     "doc": "https://www.konaka.co.jp/ir/getsuji_-9-1.html"
+    },
+    "2020-10": {
+     "yoy": 92.3,
+     "doc": "https://www.konaka.co.jp/ir/getsuji_-9.html"
+    },
+    "2020-11": {
+     "yoy": 80.0,
+     "doc": "https://www.konaka.co.jp/ir/getsuji_-9.html"
+    },
+    "2020-12": {
+     "yoy": 77.6,
+     "doc": "https://www.konaka.co.jp/ir/getsuji_-9.html"
+    },
+    "2021-01": {
+     "yoy": 59.5,
+     "doc": "https://www.konaka.co.jp/ir/getsuji_-9.html"
+    },
+    "2021-02": {
+     "yoy": 67.4,
+     "doc": "https://www.konaka.co.jp/ir/getsuji_-9.html"
+    },
+    "2021-03": {
+     "yoy": 111.8,
+     "doc": "https://www.konaka.co.jp/ir/getsuji_-9.html"
+    },
+    "2019-10": {
+     "yoy": 80.1,
+     "doc": "https://www.konaka.co.jp/ir/getsuji_-0.html"
+    },
+    "2019-11": {
+     "yoy": 97.9,
+     "doc": "https://www.konaka.co.jp/ir/getsuji_-0.html"
+    },
+    "2019-12": {
+     "yoy": 94.6,
+     "doc": "https://www.konaka.co.jp/ir/getsuji_-0.html"
+    },
+    "2020-01": {
+     "yoy": 95.7,
+     "doc": "https://www.konaka.co.jp/ir/getsuji_-0.html"
+    },
+    "2020-02": {
+     "yoy": 101.8,
+     "doc": "https://www.konaka.co.jp/ir/getsuji_-0.html"
+    },
+    "2020-03": {
+     "yoy": 67.2,
+     "doc": "https://www.konaka.co.jp/ir/getsuji_-0.html"
     }
    },
-   "ts": "2026-09-29T05:49:47+00:00"
+   "ts": "2026-10-17T13:22:11+00:00"
   },
   "9021": {
    "name": "ＪＲ西日本",
@@ -9709,209 +10520,278 @@
    "page": "https://www.vega-c.com/ir/library/monthly-report/",
    "months": {
     "2026-04": {
-     "yoy": 112.8
+     "yoy": 112.8,
+     "doc": "https://www.vega-c.com/ir/library/monthly-report/"
     },
     "2026-05": {
-     "yoy": 113.7
+     "yoy": 113.7,
+     "doc": "https://www.vega-c.com/ir/library/monthly-report/"
     },
     "2026-06": {
-     "yoy": 120.4
+     "yoy": 120.4,
+     "doc": "https://www.vega-c.com/ir/library/monthly-report/"
     },
     "2026-07": {
-     "yoy": 124.7
+     "yoy": 124.7,
+     "doc": "https://www.vega-c.com/ir/library/monthly-report/"
     },
     "2026-08": {
-     "yoy": 127.4
+     "yoy": 127.4,
+     "doc": "https://www.vega-c.com/ir/library/monthly-report/"
     },
     "2025-04": {
-     "yoy": 116.4
+     "yoy": 116.4,
+     "doc": "https://www.vega-c.com/ir/library/monthly-report/p202603/"
     },
     "2025-05": {
-     "yoy": 128.9
+     "yoy": 128.9,
+     "doc": "https://www.vega-c.com/ir/library/monthly-report/p202603/"
     },
     "2025-06": {
-     "yoy": 120.7
+     "yoy": 120.7,
+     "doc": "https://www.vega-c.com/ir/library/monthly-report/p202603/"
     },
     "2025-07": {
-     "yoy": 117.3
+     "yoy": 117.3,
+     "doc": "https://www.vega-c.com/ir/library/monthly-report/p202603/"
     },
     "2025-08": {
-     "yoy": 110.2
+     "yoy": 110.2,
+     "doc": "https://www.vega-c.com/ir/library/monthly-report/p202603/"
     },
     "2025-09": {
-     "yoy": 107.7
+     "yoy": 107.7,
+     "doc": "https://www.vega-c.com/ir/library/monthly-report/p202603/"
     },
     "2025-10": {
-     "yoy": 104.4
+     "yoy": 104.4,
+     "doc": "https://www.vega-c.com/ir/library/monthly-report/p202603/"
     },
     "2025-11": {
-     "yoy": 105.9
+     "yoy": 105.9,
+     "doc": "https://www.vega-c.com/ir/library/monthly-report/p202603/"
     },
     "2025-12": {
-     "yoy": 114.5
+     "yoy": 114.5,
+     "doc": "https://www.vega-c.com/ir/library/monthly-report/p202603/"
     },
     "2026-01": {
-     "yoy": 118.0
+     "yoy": 118.0,
+     "doc": "https://www.vega-c.com/ir/library/monthly-report/p202603/"
     },
     "2026-02": {
-     "yoy": 118.1
+     "yoy": 118.1,
+     "doc": "https://www.vega-c.com/ir/library/monthly-report/p202603/"
     },
     "2026-03": {
-     "yoy": 110.6
+     "yoy": 110.6,
+     "doc": "https://www.vega-c.com/ir/library/monthly-report/p202603/"
     },
     "2024-04": {
-     "yoy": 95.6
+     "yoy": 95.6,
+     "doc": "https://www.vega-c.com/ir/library/monthly-report/p202503/"
     },
     "2024-05": {
-     "yoy": 82.3
+     "yoy": 82.3,
+     "doc": "https://www.vega-c.com/ir/library/monthly-report/p202503/"
     },
     "2024-06": {
-     "yoy": 81.3
+     "yoy": 81.3,
+     "doc": "https://www.vega-c.com/ir/library/monthly-report/p202503/"
     },
     "2024-07": {
-     "yoy": 92.9
+     "yoy": 92.9,
+     "doc": "https://www.vega-c.com/ir/library/monthly-report/p202503/"
     },
     "2024-08": {
-     "yoy": 91.8
+     "yoy": 91.8,
+     "doc": "https://www.vega-c.com/ir/library/monthly-report/p202503/"
     },
     "2024-09": {
-     "yoy": 98.3
+     "yoy": 98.3,
+     "doc": "https://www.vega-c.com/ir/library/monthly-report/p202503/"
     },
     "2024-10": {
-     "yoy": 104.1
+     "yoy": 104.1,
+     "doc": "https://www.vega-c.com/ir/library/monthly-report/p202503/"
     },
     "2024-11": {
-     "yoy": 100.8
+     "yoy": 100.8,
+     "doc": "https://www.vega-c.com/ir/library/monthly-report/p202503/"
     },
     "2024-12": {
-     "yoy": 112.3
+     "yoy": 112.3,
+     "doc": "https://www.vega-c.com/ir/library/monthly-report/p202503/"
     },
     "2025-01": {
-     "yoy": 115.0
+     "yoy": 115.0,
+     "doc": "https://www.vega-c.com/ir/library/monthly-report/p202503/"
     },
     "2025-02": {
-     "yoy": 103.4
+     "yoy": 103.4,
+     "doc": "https://www.vega-c.com/ir/library/monthly-report/p202503/"
     },
     "2025-03": {
-     "yoy": 114.2
+     "yoy": 114.2,
+     "doc": "https://www.vega-c.com/ir/library/monthly-report/p202503/"
     },
     "2023-04": {
-     "yoy": 99.5
+     "yoy": 99.5,
+     "doc": "https://www.vega-c.com/ir/library/monthly-report/p202403/"
     },
     "2023-05": {
-     "yoy": 105.9
+     "yoy": 105.9,
+     "doc": "https://www.vega-c.com/ir/library/monthly-report/p202403/"
     },
     "2023-06": {
-     "yoy": 98.4
+     "yoy": 98.4,
+     "doc": "https://www.vega-c.com/ir/library/monthly-report/p202403/"
     },
     "2023-07": {
-     "yoy": 95.6
+     "yoy": 95.6,
+     "doc": "https://www.vega-c.com/ir/library/monthly-report/p202403/"
     },
     "2023-08": {
-     "yoy": 93.3
+     "yoy": 93.3,
+     "doc": "https://www.vega-c.com/ir/library/monthly-report/p202403/"
     },
     "2023-09": {
-     "yoy": 90.5
+     "yoy": 90.5,
+     "doc": "https://www.vega-c.com/ir/library/monthly-report/p202403/"
     },
     "2023-10": {
-     "yoy": 100.4
+     "yoy": 100.4,
+     "doc": "https://www.vega-c.com/ir/library/monthly-report/p202403/"
     },
     "2023-11": {
-     "yoy": 93.6
+     "yoy": 93.6,
+     "doc": "https://www.vega-c.com/ir/library/monthly-report/p202403/"
     },
     "2023-12": {
-     "yoy": 90.9
+     "yoy": 90.9,
+     "doc": "https://www.vega-c.com/ir/library/monthly-report/p202403/"
     },
     "2024-01": {
-     "yoy": 91.4
+     "yoy": 91.4,
+     "doc": "https://www.vega-c.com/ir/library/monthly-report/p202403/"
     },
     "2024-02": {
-     "yoy": 99.1
+     "yoy": 99.1,
+     "doc": "https://www.vega-c.com/ir/library/monthly-report/p202403/"
     },
     "2024-03": {
-     "yoy": 94.1
+     "yoy": 94.1,
+     "doc": "https://www.vega-c.com/ir/library/monthly-report/p202403/"
     },
     "2022-04": {
-     "yoy": 98.5
+     "yoy": 98.5,
+     "doc": "https://www.vega-c.com/ir/library/monthly-report/p202303/"
     },
     "2022-05": {
-     "yoy": 88.6
+     "yoy": 88.6,
+     "doc": "https://www.vega-c.com/ir/library/monthly-report/p202303/"
     },
     "2022-06": {
-     "yoy": 84.3
+     "yoy": 84.3,
+     "doc": "https://www.vega-c.com/ir/library/monthly-report/p202303/"
     },
     "2022-07": {
-     "yoy": 104.3
+     "yoy": 104.3,
+     "doc": "https://www.vega-c.com/ir/library/monthly-report/p202303/"
     },
     "2022-08": {
-     "yoy": 98.3
+     "yoy": 98.3,
+     "doc": "https://www.vega-c.com/ir/library/monthly-report/p202303/"
     },
     "2022-09": {
-     "yoy": 93.3
+     "yoy": 93.3,
+     "doc": "https://www.vega-c.com/ir/library/monthly-report/p202303/"
     },
     "2022-10": {
-     "yoy": 102.6
+     "yoy": 102.6,
+     "doc": "https://www.vega-c.com/ir/library/monthly-report/p202303/"
     },
     "2022-11": {
-     "yoy": 106.3
+     "yoy": 106.3,
+     "doc": "https://www.vega-c.com/ir/library/monthly-report/p202303/"
     },
     "2022-12": {
-     "yoy": 113.0
+     "yoy": 113.0,
+     "doc": "https://www.vega-c.com/ir/library/monthly-report/p202303/"
     },
     "2023-01": {
-     "yoy": 104.2
+     "yoy": 104.2,
+     "doc": "https://www.vega-c.com/ir/library/monthly-report/p202303/"
     },
     "2023-02": {
-     "yoy": 105.7
+     "yoy": 105.7,
+     "doc": "https://www.vega-c.com/ir/library/monthly-report/p202303/"
     },
     "2023-03": {
-     "yoy": 100.8
+     "yoy": 100.8,
+     "doc": "https://www.vega-c.com/ir/library/monthly-report/p202303/"
     },
     "2021-04": {
-     "yoy": 79.4
+     "yoy": 79.4,
+     "doc": "https://www.vega-c.com/ir/library/monthly-report/p202203/"
     },
     "2021-05": {
-     "yoy": 84.0
+     "yoy": 84.0,
+     "doc": "https://www.vega-c.com/ir/library/monthly-report/p202203/"
     },
     "2021-06": {
-     "yoy": 96.0
+     "yoy": 96.0,
+     "doc": "https://www.vega-c.com/ir/library/monthly-report/p202203/"
     },
     "2021-07": {
-     "yoy": 77.8
+     "yoy": 77.8,
+     "doc": "https://www.vega-c.com/ir/library/monthly-report/p202203/"
     },
     "2021-08": {
-     "yoy": 95.0
+     "yoy": 95.0,
+     "doc": "https://www.vega-c.com/ir/library/monthly-report/p202203/"
     },
     "2021-09": {
-     "yoy": 106.8
+     "yoy": 106.8,
+     "doc": "https://www.vega-c.com/ir/library/monthly-report/p202203/"
     },
     "2021-10": {
-     "yoy": 92.3
+     "yoy": 92.3,
+     "doc": "https://www.vega-c.com/ir/library/monthly-report/p202203/"
     },
     "2021-11": {
-     "yoy": 101.1
+     "yoy": 101.1,
+     "doc": "https://www.vega-c.com/ir/library/monthly-report/p202203/"
     },
     "2021-12": {
-     "yoy": 87.1
+     "yoy": 87.1,
+     "doc": "https://www.vega-c.com/ir/library/monthly-report/p202203/"
     },
     "2022-01": {
-     "yoy": 85.1
+     "yoy": 85.1,
+     "doc": "https://www.vega-c.com/ir/library/monthly-report/p202203/"
     },
     "2022-02": {
-     "yoy": 89.2
+     "yoy": 89.2,
+     "doc": "https://www.vega-c.com/ir/library/monthly-report/p202203/"
     },
     "2022-03": {
-     "yoy": 97.5
+     "yoy": 97.5,
+     "doc": "https://www.vega-c.com/ir/library/monthly-report/p202203/"
+    },
+    "2026-09": {
+     "yoy": 132.1,
+     "doc": "https://www.vega-c.com/ir/library/monthly-report/"
     }
    },
-   "ts": "2026-09-29T08:11:18+00:00"
+   "ts": "2026-10-17T13:22:11+00:00"
   },
   "2818": {
    "name": "ピエトロ",
    "page": "https://www.pietro.co.jp",
    "months": {},
-   "ts": "2026-09-29T08:11:18+00:00",
-   "pdf_ts": "2026-09-29T08:11:18+00:00",
+   "ts": "2026-10-17T13:22:11+00:00",
+   "pdf_ts": "2026-10-17T13:22:11+00:00",
    "pdf": {
     "2026-04": {
      "doc": "https://www.pietro.co.jp/assets/upload/news/getsuji_202609.pdf",
@@ -9936,6 +10816,11 @@
     "2026-08": {
      "doc": "https://www.pietro.co.jp/assets/upload/news/getsuji_202609.pdf",
      "yoy": 42.0,
+     "metric": "월매출/영업수입 전년비"
+    },
+    "2026-09": {
+     "doc": "https://www.pietro.co.jp/assets/upload/news/getsuji_202610.pdf",
+     "yoy": 41.0,
      "metric": "월매출/영업수입 전년비"
     }
    }
@@ -10499,8 +11384,8 @@
    "name": "ペッパーフードサービス",
    "page": "https://www.pepper-fs.co.jp/ir/monthly_report/library.php",
    "months": {},
-   "ts": "2026-09-30T22:10:54+00:00",
-   "pdf_ts": "2026-09-30T22:10:54+00:00",
+   "ts": "2026-10-17T13:22:11+00:00",
+   "pdf_ts": "2026-10-17T13:22:11+00:00",
    "pdf": {
     "2026-01": {
      "doc": "https://www.pepper-fs.co.jp/_img/ir/monthly_report/2026/PFS20260313.pdf",
@@ -10541,6 +11426,11 @@
      "doc": "https://www.pepper-fs.co.jp/_img/ir/monthly_report/2026/PFS20260914.pdf",
      "yoy": 109.9,
      "metric": "売上"
+    },
+    "2026-09": {
+     "doc": "https://www.pepper-fs.co.jp/_img/ir/monthly_report/2026/PFS20261015.pdf",
+     "yoy": 108.6,
+     "metric": "売上"
     }
    }
   },
@@ -10548,8 +11438,8 @@
    "name": "ハンズマン",
    "page": "https://www.handsman.co.jp/ir/sales_report",
    "months": {},
-   "ts": "2026-10-01T01:19:04+00:00",
-   "pdf_ts": "2026-10-01T01:19:04+00:00",
+   "ts": "2026-10-17T13:22:11+00:00",
+   "pdf_ts": "2026-10-17T13:22:11+00:00",
    "pdf": {
     "2017-07": {
      "doc": "https://www.handsman.co.jp/wp-content/uploads/ir/i_sales_report/uriage-201706.pdf",
@@ -10733,1220 +11623,1528 @@
    "page": "https://www.village-v.co.jp/company/ir/news/",
    "months": {
     "2026-06": {
-     "same": 110.6,
-     "all": 93.6
+     "same": 103.1,
+     "all": 93.6,
+     "doc": "https://www.village-v.co.jp/company/ir/sales_trend/"
     },
     "2026-07": {
-     "same": 116.9,
-     "all": 101.5
+     "same": 113.8,
+     "all": 101.5,
+     "doc": "https://www.village-v.co.jp/company/ir/sales_trend/"
     },
     "2026-08": {
      "same": 106.2,
-     "all": 90.8
+     "all": 90.8,
+     "doc": "https://www.village-v.co.jp/company/ir/sales_trend/"
     },
     "2025-06": {
      "same": 94.4,
-     "all": 90.5
+     "all": 90.5,
+     "doc": "https://www.village-v.co.jp/company/ir/sales_trend/"
     },
     "2025-07": {
      "same": 93.7,
-     "all": 90.9
+     "all": 90.9,
+     "doc": "https://www.village-v.co.jp/company/ir/sales_trend/"
     },
     "2025-08": {
      "same": 95.3,
-     "all": 92.6
+     "all": 92.6,
+     "doc": "https://www.village-v.co.jp/company/ir/sales_trend/"
     },
     "2025-09": {
      "same": 94.3,
-     "all": 91.8
+     "all": 91.8,
+     "doc": "https://www.village-v.co.jp/company/ir/sales_trend/"
     },
     "2025-10": {
      "same": 106.6,
-     "all": 102.5
+     "all": 102.5,
+     "doc": "https://www.village-v.co.jp/company/ir/sales_trend/"
     },
     "2025-11": {
      "same": 114.5,
-     "all": 110.1
+     "all": 110.1,
+     "doc": "https://www.village-v.co.jp/company/ir/sales_trend/"
     },
     "2025-12": {
      "same": 103.0,
-     "all": 99.1
+     "all": 99.1,
+     "doc": "https://www.village-v.co.jp/company/ir/sales_trend/"
     },
     "2026-01": {
      "same": 106.2,
-     "all": 104.2
+     "all": 104.2,
+     "doc": "https://www.village-v.co.jp/company/ir/sales_trend/"
     },
     "2026-02": {
      "same": 100.0,
-     "all": 98.3
+     "all": 98.3,
+     "doc": "https://www.village-v.co.jp/company/ir/sales_trend/"
     },
     "2026-03": {
      "same": 92.3,
-     "all": 87.7
+     "all": 87.7,
+     "doc": "https://www.village-v.co.jp/company/ir/sales_trend/"
     },
     "2026-04": {
      "same": 102.6,
-     "all": 97.5
+     "all": 97.5,
+     "doc": "https://www.village-v.co.jp/company/ir/sales_trend/"
     },
     "2026-05": {
      "same": 97.2,
-     "all": 95.1
+     "all": 95.1,
+     "doc": "https://www.village-v.co.jp/company/ir/sales_trend/"
     },
     "2024-06": {
      "same": 115.6,
-     "all": 114.8
+     "all": 114.8,
+     "doc": "https://www.village-v.co.jp/company/ir/sales_trend/"
     },
     "2024-07": {
      "same": 102.5,
-     "all": 101.3
+     "all": 101.3,
+     "doc": "https://www.village-v.co.jp/company/ir/sales_trend/"
     },
     "2024-08": {
      "same": 112.1,
-     "all": 111.0
+     "all": 111.0,
+     "doc": "https://www.village-v.co.jp/company/ir/sales_trend/"
     },
     "2024-09": {
      "same": 108.6,
-     "all": 108.8
+     "all": 108.8,
+     "doc": "https://www.village-v.co.jp/company/ir/sales_trend/"
     },
     "2024-10": {
      "same": 97.3,
-     "all": 97.9
+     "all": 97.9,
+     "doc": "https://www.village-v.co.jp/company/ir/sales_trend/"
     },
     "2024-11": {
      "same": 102.2,
-     "all": 101.2
+     "all": 101.2,
+     "doc": "https://www.village-v.co.jp/company/ir/sales_trend/"
     },
     "2024-12": {
      "same": 99.2,
-     "all": 98.4
+     "all": 98.4,
+     "doc": "https://www.village-v.co.jp/company/ir/sales_trend/"
     },
     "2025-01": {
      "same": 102.6,
-     "all": 101.4
+     "all": 101.4,
+     "doc": "https://www.village-v.co.jp/company/ir/sales_trend/"
     },
     "2025-02": {
      "same": 97.0,
-     "all": 94.7
+     "all": 94.7,
+     "doc": "https://www.village-v.co.jp/company/ir/sales_trend/"
     },
     "2025-03": {
      "same": 96.6,
-     "all": 92.9
+     "all": 92.9,
+     "doc": "https://www.village-v.co.jp/company/ir/sales_trend/"
     },
     "2025-04": {
      "same": 99.0,
-     "all": 95.7
+     "all": 95.7,
+     "doc": "https://www.village-v.co.jp/company/ir/sales_trend/"
     },
     "2025-05": {
      "same": 102.7,
-     "all": 99.3
+     "all": 99.3,
+     "doc": "https://www.village-v.co.jp/company/ir/sales_trend/"
     },
     "2023-06": {
      "same": 89.6,
-     "all": 89.2
+     "all": 89.2,
+     "doc": "https://www.village-v.co.jp/company/ir/sales_trend/"
     },
     "2023-07": {
      "same": 97.0,
-     "all": 97.5
+     "all": 97.5,
+     "doc": "https://www.village-v.co.jp/company/ir/sales_trend/"
     },
     "2023-08": {
      "same": 106.1,
-     "all": 106.0
+     "all": 106.0,
+     "doc": "https://www.village-v.co.jp/company/ir/sales_trend/"
     },
     "2023-09": {
      "same": 102.9,
-     "all": 101.3
+     "all": 101.3,
+     "doc": "https://www.village-v.co.jp/company/ir/sales_trend/"
     },
     "2023-10": {
      "same": 87.4,
-     "all": 86.0
+     "all": 86.0,
+     "doc": "https://www.village-v.co.jp/company/ir/sales_trend/"
     },
     "2023-11": {
      "same": 94.2,
-     "all": 94.3
+     "all": 94.3,
+     "doc": "https://www.village-v.co.jp/company/ir/sales_trend/"
     },
     "2023-12": {
      "same": 98.9,
-     "all": 98.0
+     "all": 98.0,
+     "doc": "https://www.village-v.co.jp/company/ir/sales_trend/"
     },
     "2024-01": {
      "same": 99.1,
-     "all": 97.8
+     "all": 97.8,
+     "doc": "https://www.village-v.co.jp/company/ir/sales_trend/"
     },
     "2024-02": {
      "same": 105.9,
-     "all": 106.6
+     "all": 106.6,
+     "doc": "https://www.village-v.co.jp/company/ir/sales_trend/"
     },
     "2024-03": {
      "same": 109.7,
-     "all": 110.4
+     "all": 110.4,
+     "doc": "https://www.village-v.co.jp/company/ir/sales_trend/"
     },
     "2024-04": {
      "same": 101.4,
-     "all": 101.1
+     "all": 101.1,
+     "doc": "https://www.village-v.co.jp/company/ir/sales_trend/"
     },
     "2024-05": {
      "same": 98.3,
-     "all": 97.8
+     "all": 97.8,
+     "doc": "https://www.village-v.co.jp/company/ir/sales_trend/"
     },
     "2022-06": {
      "same": 106.4,
-     "all": 104.3
+     "all": 104.3,
+     "doc": "https://www.village-v.co.jp/company/ir/sales_trend/"
     },
     "2022-07": {
      "same": 98.4,
-     "all": 96.0
+     "all": 96.0,
+     "doc": "https://www.village-v.co.jp/company/ir/sales_trend/"
     },
     "2022-08": {
      "same": 107.1,
-     "all": 104.6
+     "all": 104.6,
+     "doc": "https://www.village-v.co.jp/company/ir/sales_trend/"
     },
     "2022-09": {
      "same": 101.5,
-     "all": 100.3
+     "all": 100.3,
+     "doc": "https://www.village-v.co.jp/company/ir/sales_trend/"
     },
     "2022-10": {
      "same": 95.0,
-     "all": 94.7
+     "all": 94.7,
+     "doc": "https://www.village-v.co.jp/company/ir/sales_trend/"
     },
     "2022-11": {
      "same": 93.0,
-     "all": 91.6
+     "all": 91.6,
+     "doc": "https://www.village-v.co.jp/company/ir/sales_trend/"
     },
     "2022-12": {
      "same": 90.3,
-     "all": 89.4
+     "all": 89.4,
+     "doc": "https://www.village-v.co.jp/company/ir/sales_trend/"
     },
     "2023-01": {
      "same": 99.0,
-     "all": 98.0
+     "all": 98.0,
+     "doc": "https://www.village-v.co.jp/company/ir/sales_trend/"
     },
     "2023-02": {
      "same": 101.8,
-     "all": 99.6
+     "all": 99.6,
+     "doc": "https://www.village-v.co.jp/company/ir/sales_trend/"
     },
     "2023-03": {
      "same": 88.7,
-     "all": 87.8
+     "all": 87.8,
+     "doc": "https://www.village-v.co.jp/company/ir/sales_trend/"
     },
     "2023-04": {
      "same": 91.1,
-     "all": 91.7
+     "all": 91.7,
+     "doc": "https://www.village-v.co.jp/company/ir/sales_trend/"
     },
     "2023-05": {
      "same": 94.3,
-     "all": 94.5
+     "all": 94.5,
+     "doc": "https://www.village-v.co.jp/company/ir/sales_trend/"
     },
     "2021-06": {
      "same": 83.1,
-     "all": 82.2
+     "all": 82.2,
+     "doc": "https://www.village-v.co.jp/company/ir/sales_trend/"
     },
     "2021-07": {
      "same": 100.1,
-     "all": 98.1
+     "all": 98.1,
+     "doc": "https://www.village-v.co.jp/company/ir/sales_trend/"
     },
     "2021-08": {
      "same": 95.6,
-     "all": 93.5
+     "all": 93.5,
+     "doc": "https://www.village-v.co.jp/company/ir/sales_trend/"
     },
     "2021-09": {
      "same": 91.1,
-     "all": 88.4
+     "all": 88.4,
+     "doc": "https://www.village-v.co.jp/company/ir/sales_trend/"
     },
     "2021-10": {
      "same": 104.8,
-     "all": 102.2
+     "all": 102.2,
+     "doc": "https://www.village-v.co.jp/company/ir/sales_trend/"
     },
     "2021-11": {
      "same": 100.0,
-     "all": 99.7
+     "all": 99.7,
+     "doc": "https://www.village-v.co.jp/company/ir/sales_trend/"
     },
     "2021-12": {
      "same": 105.7,
-     "all": 103.3
+     "all": 103.3,
+     "doc": "https://www.village-v.co.jp/company/ir/sales_trend/"
     },
     "2022-01": {
      "same": 104.5,
-     "all": 102.4
+     "all": 102.4,
+     "doc": "https://www.village-v.co.jp/company/ir/sales_trend/"
     },
     "2022-02": {
      "same": 93.9,
-     "all": 91.5
+     "all": 91.5,
+     "doc": "https://www.village-v.co.jp/company/ir/sales_trend/"
     },
     "2022-03": {
      "same": 99.5,
-     "all": 97.3
+     "all": 97.3,
+     "doc": "https://www.village-v.co.jp/company/ir/sales_trend/"
     },
     "2022-04": {
      "same": 104.1,
-     "all": 101.4
+     "all": 101.4,
+     "doc": "https://www.village-v.co.jp/company/ir/sales_trend/"
     },
     "2022-05": {
      "same": 131.8,
-     "all": 128.2
+     "all": 128.2,
+     "doc": "https://www.village-v.co.jp/company/ir/sales_trend/"
     },
     "2020-06": {
      "same": 91.7,
-     "all": 91.7
+     "all": 91.7,
+     "doc": "https://www.village-v.co.jp/company/ir/sales_trend/"
     },
     "2020-07": {
      "same": 86.1,
-     "all": 86.7
+     "all": 86.7,
+     "doc": "https://www.village-v.co.jp/company/ir/sales_trend/"
     },
     "2020-08": {
      "same": 72.7,
-     "all": 73.9
+     "all": 73.9,
+     "doc": "https://www.village-v.co.jp/company/ir/sales_trend/"
     },
     "2020-09": {
      "same": 82.4,
-     "all": 83.2
+     "all": 83.2,
+     "doc": "https://www.village-v.co.jp/company/ir/sales_trend/"
     },
     "2020-10": {
      "same": 97.9,
-     "all": 98.0
+     "all": 98.0,
+     "doc": "https://www.village-v.co.jp/company/ir/sales_trend/"
     },
     "2020-11": {
      "same": 95.4,
-     "all": 95.7
+     "all": 95.7,
+     "doc": "https://www.village-v.co.jp/company/ir/sales_trend/"
     },
     "2020-12": {
      "same": 81.9,
-     "all": 81.9
+     "all": 81.9,
+     "doc": "https://www.village-v.co.jp/company/ir/sales_trend/"
     },
     "2021-01": {
      "same": 80.9,
-     "all": 80.7
+     "all": 80.7,
+     "doc": "https://www.village-v.co.jp/company/ir/sales_trend/"
     },
     "2021-02": {
      "same": 88.1,
-     "all": 87.1
+     "all": 87.1,
+     "doc": "https://www.village-v.co.jp/company/ir/sales_trend/"
     },
     "2021-03": {
      "same": 112.9,
-     "all": 112.9
+     "all": 112.9,
+     "doc": "https://www.village-v.co.jp/company/ir/sales_trend/"
     },
     "2021-04": {
      "same": 255.8,
-     "all": 255.0
+     "all": 255.0,
+     "doc": "https://www.village-v.co.jp/company/ir/sales_trend/"
     },
     "2021-05": {
      "same": 170.0,
-     "all": 167.6
+     "all": 167.6,
+     "doc": "https://www.village-v.co.jp/company/ir/sales_trend/"
     },
     "2019-06": {
      "same": 104.6,
-     "all": 101.3
+     "all": 101.3,
+     "doc": "https://www.village-v.co.jp/company/ir/sales_trend/"
     },
     "2019-07": {
      "same": 96.8,
-     "all": 94.8
+     "all": 94.8,
+     "doc": "https://www.village-v.co.jp/company/ir/sales_trend/"
     },
     "2019-08": {
      "same": 103.4,
-     "all": 101.6
+     "all": 101.6,
+     "doc": "https://www.village-v.co.jp/company/ir/sales_trend/"
     },
     "2019-09": {
      "same": 101.1,
-     "all": 99.0
+     "all": 99.0,
+     "doc": "https://www.village-v.co.jp/company/ir/sales_trend/"
     },
     "2019-10": {
      "same": 97.2,
-     "all": 95.5
+     "all": 95.5,
+     "doc": "https://www.village-v.co.jp/company/ir/sales_trend/"
     },
     "2019-11": {
      "same": 93.7,
-     "all": 92.3
+     "all": 92.3,
+     "doc": "https://www.village-v.co.jp/company/ir/sales_trend/"
     },
     "2019-12": {
      "same": 100.4,
-     "all": 99.0
+     "all": 99.0,
+     "doc": "https://www.village-v.co.jp/company/ir/sales_trend/"
     },
     "2020-01": {
      "same": 97.7,
-     "all": 97.5
+     "all": 97.5,
+     "doc": "https://www.village-v.co.jp/company/ir/sales_trend/"
     },
     "2020-02": {
      "same": 103.4,
-     "all": 103.8
+     "all": 103.8,
+     "doc": "https://www.village-v.co.jp/company/ir/sales_trend/"
     },
     "2020-03": {
      "same": 74.4,
-     "all": 74.4
+     "all": 74.4,
+     "doc": "https://www.village-v.co.jp/company/ir/sales_trend/"
     },
     "2020-04": {
      "same": 33.3,
-     "all": 32.4
+     "all": 32.4,
+     "doc": "https://www.village-v.co.jp/company/ir/sales_trend/"
     },
     "2020-05": {
      "same": 46.8,
-     "all": 45.9
+     "all": 45.9,
+     "doc": "https://www.village-v.co.jp/company/ir/sales_trend/"
     },
     "2018-06": {
      "same": 102.8,
-     "all": 99.6
+     "all": 99.6,
+     "doc": "https://www.village-v.co.jp/company/ir/sales_trend/"
     },
     "2018-07": {
      "same": 98.6,
-     "all": 94.6
+     "all": 94.6,
+     "doc": "https://www.village-v.co.jp/company/ir/sales_trend/"
     },
     "2018-08": {
      "same": 99.6,
-     "all": 98.6
+     "all": 98.6,
+     "doc": "https://www.village-v.co.jp/company/ir/sales_trend/"
     },
     "2018-09": {
      "same": 102.8,
-     "all": 101.8
+     "all": 101.8,
+     "doc": "https://www.village-v.co.jp/company/ir/sales_trend/"
     },
     "2018-10": {
      "same": 93.2,
-     "all": 93.0
+     "all": 93.0,
+     "doc": "https://www.village-v.co.jp/company/ir/sales_trend/"
     },
     "2018-11": {
      "same": 101.8,
-     "all": 100.7
+     "all": 100.7,
+     "doc": "https://www.village-v.co.jp/company/ir/sales_trend/"
     },
     "2018-12": {
      "same": 97.6,
-     "all": 96.5
+     "all": 96.5,
+     "doc": "https://www.village-v.co.jp/company/ir/sales_trend/"
     },
     "2019-01": {
      "same": 102.2,
-     "all": 100.8
+     "all": 100.8,
+     "doc": "https://www.village-v.co.jp/company/ir/sales_trend/"
     },
     "2019-02": {
      "same": 103.0,
-     "all": 101.9
+     "all": 101.9,
+     "doc": "https://www.village-v.co.jp/company/ir/sales_trend/"
     },
     "2019-03": {
      "same": 106.8,
-     "all": 105.0
+     "all": 105.0,
+     "doc": "https://www.village-v.co.jp/company/ir/sales_trend/"
     },
     "2019-04": {
      "same": 100.2,
-     "all": 98.1
+     "all": 98.1,
+     "doc": "https://www.village-v.co.jp/company/ir/sales_trend/"
     },
     "2019-05": {
      "same": 99.6,
-     "all": 97.4
+     "all": 97.4,
+     "doc": "https://www.village-v.co.jp/company/ir/sales_trend/"
     },
     "2017-06": {
      "same": 99.4,
-     "all": 98.1
+     "all": 98.1,
+     "doc": "https://www.village-v.co.jp/company/ir/sales_trend/"
     },
     "2017-07": {
      "same": 102.5,
-     "all": 102.6
+     "all": 102.6,
+     "doc": "https://www.village-v.co.jp/company/ir/sales_trend/"
     },
     "2017-08": {
      "same": 104.2,
-     "all": 101.7
+     "all": 101.7,
+     "doc": "https://www.village-v.co.jp/company/ir/sales_trend/"
     },
     "2017-09": {
      "same": 95.8,
-     "all": 92.9
+     "all": 92.9,
+     "doc": "https://www.village-v.co.jp/company/ir/sales_trend/"
     },
     "2017-10": {
      "same": 96.5,
-     "all": 93.3
+     "all": 93.3,
+     "doc": "https://www.village-v.co.jp/company/ir/sales_trend/"
     },
     "2017-11": {
      "same": 102.5,
-     "all": 98.2
+     "all": 98.2,
+     "doc": "https://www.village-v.co.jp/company/ir/sales_trend/"
     },
     "2017-12": {
      "same": 97.9,
-     "all": 94.2
+     "all": 94.2,
+     "doc": "https://www.village-v.co.jp/company/ir/sales_trend/"
     },
     "2018-01": {
      "same": 98.3,
-     "all": 93.2
+     "all": 93.2,
+     "doc": "https://www.village-v.co.jp/company/ir/sales_trend/"
     },
     "2018-02": {
      "same": 94.9,
-     "all": 89.7
+     "all": 89.7,
+     "doc": "https://www.village-v.co.jp/company/ir/sales_trend/"
     },
     "2018-03": {
      "same": 100.0,
-     "all": 96.1
+     "all": 96.1,
+     "doc": "https://www.village-v.co.jp/company/ir/sales_trend/"
     },
     "2018-04": {
      "same": 105.1,
-     "all": 101.4
+     "all": 101.4,
+     "doc": "https://www.village-v.co.jp/company/ir/sales_trend/"
     },
     "2018-05": {
      "same": 99.3,
-     "all": 95.0
+     "all": 95.0,
+     "doc": "https://www.village-v.co.jp/company/ir/sales_trend/"
     },
     "2016-06": {
      "same": 98.5,
-     "all": 96.7
+     "all": 96.7,
+     "doc": "https://www.village-v.co.jp/company/ir/sales_trend/"
     },
     "2016-07": {
      "same": 100.9,
-     "all": 101.2
+     "all": 101.2,
+     "doc": "https://www.village-v.co.jp/company/ir/sales_trend/"
     },
     "2016-08": {
      "same": 92.2,
-     "all": 92.2
+     "all": 92.2,
+     "doc": "https://www.village-v.co.jp/company/ir/sales_trend/"
     },
     "2016-09": {
      "same": 95.7,
-     "all": 96.6
+     "all": 96.6,
+     "doc": "https://www.village-v.co.jp/company/ir/sales_trend/"
     },
     "2016-10": {
      "same": 96.3,
-     "all": 97.5
+     "all": 97.5,
+     "doc": "https://www.village-v.co.jp/company/ir/sales_trend/"
     },
     "2016-11": {
      "same": 90.6,
-     "all": 91.4
+     "all": 91.4,
+     "doc": "https://www.village-v.co.jp/company/ir/sales_trend/"
     },
     "2016-12": {
      "same": 94.6,
-     "all": 94.3
+     "all": 94.3,
+     "doc": "https://www.village-v.co.jp/company/ir/sales_trend/"
     },
     "2017-01": {
      "same": 99.2,
-     "all": 98.8
+     "all": 98.8,
+     "doc": "https://www.village-v.co.jp/company/ir/sales_trend/"
     },
     "2017-02": {
      "same": 94.3,
-     "all": 92.3
+     "all": 92.3,
+     "doc": "https://www.village-v.co.jp/company/ir/sales_trend/"
     },
     "2017-03": {
      "same": 95.0,
-     "all": 94.3
+     "all": 94.3,
+     "doc": "https://www.village-v.co.jp/company/ir/sales_trend/"
     },
     "2017-04": {
      "same": 95.1,
-     "all": 94.5
+     "all": 94.5,
+     "doc": "https://www.village-v.co.jp/company/ir/sales_trend/"
     },
     "2017-05": {
      "same": 93.8,
-     "all": 93.5
+     "all": 93.5,
+     "doc": "https://www.village-v.co.jp/company/ir/sales_trend/"
     },
     "2015-06": {
      "same": 96.3,
-     "all": 93.2
+     "all": 93.2,
+     "doc": "https://www.village-v.co.jp/company/ir/sales_trend/"
     },
     "2015-07": {
      "same": 100.3,
-     "all": 96.1
+     "all": 96.1,
+     "doc": "https://www.village-v.co.jp/company/ir/sales_trend/"
     },
     "2015-08": {
      "same": 99.1,
-     "all": 95.2
+     "all": 95.2,
+     "doc": "https://www.village-v.co.jp/company/ir/sales_trend/"
     },
     "2015-09": {
      "same": 102.1,
-     "all": 98.5
+     "all": 98.5,
+     "doc": "https://www.village-v.co.jp/company/ir/sales_trend/"
     },
     "2015-10": {
      "same": 106.9,
-     "all": 103.0
+     "all": 103.0,
+     "doc": "https://www.village-v.co.jp/company/ir/sales_trend/"
     },
     "2015-11": {
      "same": 99.3,
-     "all": 96.1
+     "all": 96.1,
+     "doc": "https://www.village-v.co.jp/company/ir/sales_trend/"
     },
     "2015-12": {
      "same": 104.6,
-     "all": 103.5
+     "all": 103.5,
+     "doc": "https://www.village-v.co.jp/company/ir/sales_trend/"
     },
     "2016-01": {
      "same": 105.7,
-     "all": 104.3
+     "all": 104.3,
+     "doc": "https://www.village-v.co.jp/company/ir/sales_trend/"
     },
     "2016-02": {
      "same": 101.9,
-     "all": 102.4
+     "all": 102.4,
+     "doc": "https://www.village-v.co.jp/company/ir/sales_trend/"
     },
     "2016-03": {
      "same": 100.2,
-     "all": 99.9
+     "all": 99.9,
+     "doc": "https://www.village-v.co.jp/company/ir/sales_trend/"
     },
     "2016-04": {
      "same": 104.1,
-     "all": 102.2
+     "all": 102.2,
+     "doc": "https://www.village-v.co.jp/company/ir/sales_trend/"
     },
     "2016-05": {
      "same": 99.2,
-     "all": 99.1
+     "all": 99.1,
+     "doc": "https://www.village-v.co.jp/company/ir/sales_trend/"
     },
     "2014-06": {
      "same": 97.3,
-     "all": 99.3
+     "all": 99.3,
+     "doc": "https://www.village-v.co.jp/company/ir/sales_trend/"
     },
     "2014-07": {
      "same": 102.3,
-     "all": 105.4
+     "all": 105.4,
+     "doc": "https://www.village-v.co.jp/company/ir/sales_trend/"
     },
     "2014-08": {
      "same": 105.7,
-     "all": 110.1
+     "all": 110.1,
+     "doc": "https://www.village-v.co.jp/company/ir/sales_trend/"
     },
     "2014-09": {
      "same": 99.9,
-     "all": 101.1
+     "all": 101.1,
+     "doc": "https://www.village-v.co.jp/company/ir/sales_trend/"
     },
     "2014-10": {
      "same": 103.8,
-     "all": 104.2
+     "all": 104.2,
+     "doc": "https://www.village-v.co.jp/company/ir/sales_trend/"
     },
     "2014-11": {
      "same": 108.3,
-     "all": 110.6
+     "all": 110.6,
+     "doc": "https://www.village-v.co.jp/company/ir/sales_trend/"
     },
     "2014-12": {
      "same": 100.1,
-     "all": 98.9
+     "all": 98.9,
+     "doc": "https://www.village-v.co.jp/company/ir/sales_trend/"
     },
     "2015-01": {
      "same": 104.7,
-     "all": 102.8
+     "all": 102.8,
+     "doc": "https://www.village-v.co.jp/company/ir/sales_trend/"
     },
     "2015-02": {
      "same": 107.7,
-     "all": 103.7
+     "all": 103.7,
+     "doc": "https://www.village-v.co.jp/company/ir/sales_trend/"
     },
     "2015-03": {
      "same": 99.6,
-     "all": 97.1
+     "all": 97.1,
+     "doc": "https://www.village-v.co.jp/company/ir/sales_trend/"
     },
     "2015-04": {
      "same": 105.1,
-     "all": 102.4
+     "all": 102.4,
+     "doc": "https://www.village-v.co.jp/company/ir/sales_trend/"
     },
     "2015-05": {
      "same": 103.7,
-     "all": 101.8
+     "all": 101.8,
+     "doc": "https://www.village-v.co.jp/company/ir/sales_trend/"
     },
     "2013-06": {
      "same": 99.4,
-     "all": 99.3
+     "all": 99.3,
+     "doc": "https://www.village-v.co.jp/company/ir/sales_trend/"
     },
     "2013-07": {
      "same": 93.7,
-     "all": 93.2
+     "all": 93.2,
+     "doc": "https://www.village-v.co.jp/company/ir/sales_trend/"
     },
     "2013-08": {
      "same": 98.8,
-     "all": 96.8
+     "all": 96.8,
+     "doc": "https://www.village-v.co.jp/company/ir/sales_trend/"
     },
     "2013-09": {
      "same": 92.7,
-     "all": 92.0
+     "all": 92.0,
+     "doc": "https://www.village-v.co.jp/company/ir/sales_trend/"
     },
     "2013-10": {
      "same": 92.6,
-     "all": 91.9
+     "all": 91.9,
+     "doc": "https://www.village-v.co.jp/company/ir/sales_trend/"
     },
     "2013-11": {
      "same": 93.2,
-     "all": 92.5
+     "all": 92.5,
+     "doc": "https://www.village-v.co.jp/company/ir/sales_trend/"
     },
     "2013-12": {
      "same": 93.2,
-     "all": 93.7
+     "all": 93.7,
+     "doc": "https://www.village-v.co.jp/company/ir/sales_trend/"
     },
     "2014-01": {
      "same": 91.5,
-     "all": 92.4
+     "all": 92.4,
+     "doc": "https://www.village-v.co.jp/company/ir/sales_trend/"
     },
     "2014-02": {
      "same": 89.4,
-     "all": 91.7
+     "all": 91.7,
+     "doc": "https://www.village-v.co.jp/company/ir/sales_trend/"
     },
     "2014-03": {
      "same": 98.0,
-     "all": 99.5
+     "all": 99.5,
+     "doc": "https://www.village-v.co.jp/company/ir/sales_trend/"
     },
     "2014-04": {
      "same": 93.4,
-     "all": 95.2
+     "all": 95.2,
+     "doc": "https://www.village-v.co.jp/company/ir/sales_trend/"
     },
     "2014-05": {
      "same": 99.7,
-     "all": 101.0
+     "all": 101.0,
+     "doc": "https://www.village-v.co.jp/company/ir/sales_trend/"
     },
     "2012-06": {
      "same": 92.5,
-     "all": 98.9
+     "all": 98.9,
+     "doc": "https://www.village-v.co.jp/company/ir/sales_trend/"
     },
     "2012-07": {
      "same": 88.8,
-     "all": 93.9
+     "all": 93.9,
+     "doc": "https://www.village-v.co.jp/company/ir/sales_trend/"
     },
     "2012-08": {
      "same": 90.8,
-     "all": 95.1
+     "all": 95.1,
+     "doc": "https://www.village-v.co.jp/company/ir/sales_trend/"
     },
     "2012-09": {
      "same": 94.5,
-     "all": 98.1
+     "all": 98.1,
+     "doc": "https://www.village-v.co.jp/company/ir/sales_trend/"
     },
     "2012-10": {
      "same": 88.6,
-     "all": 92.6
+     "all": 92.6,
+     "doc": "https://www.village-v.co.jp/company/ir/sales_trend/"
     },
     "2012-11": {
      "same": 93.1,
-     "all": 97.1
+     "all": 97.1,
+     "doc": "https://www.village-v.co.jp/company/ir/sales_trend/"
     },
     "2012-12": {
      "same": 94.7,
-     "all": 98.0
+     "all": 98.0,
+     "doc": "https://www.village-v.co.jp/company/ir/sales_trend/"
     },
     "2013-01": {
      "same": 94.3,
-     "all": 97.2
+     "all": 97.2,
+     "doc": "https://www.village-v.co.jp/company/ir/sales_trend/"
     },
     "2013-02": {
      "same": 96.5,
-     "all": 97.7
+     "all": 97.7,
+     "doc": "https://www.village-v.co.jp/company/ir/sales_trend/"
     },
     "2013-03": {
      "same": 99.1,
-     "all": 100.6
+     "all": 100.6,
+     "doc": "https://www.village-v.co.jp/company/ir/sales_trend/"
     },
     "2013-04": {
      "same": 95.0,
-     "all": 96.4
+     "all": 96.4,
+     "doc": "https://www.village-v.co.jp/company/ir/sales_trend/"
     },
     "2013-05": {
      "same": 96.0,
-     "all": 96.9
+     "all": 96.9,
+     "doc": "https://www.village-v.co.jp/company/ir/sales_trend/"
     },
     "2011-06": {
      "same": 97.7,
-     "all": 106.3
+     "all": 106.3,
+     "doc": "https://www.village-v.co.jp/company/ir/sales_trend/"
     },
     "2011-07": {
      "same": 98.4,
-     "all": 107.4
+     "all": 107.4,
+     "doc": "https://www.village-v.co.jp/company/ir/sales_trend/"
     },
     "2011-08": {
      "same": 95.1,
-     "all": 104.0
+     "all": 104.0,
+     "doc": "https://www.village-v.co.jp/company/ir/sales_trend/"
     },
     "2011-09": {
      "same": 97.9,
-     "all": 106.6
+     "all": 106.6,
+     "doc": "https://www.village-v.co.jp/company/ir/sales_trend/"
     },
     "2011-10": {
      "same": 97.7,
-     "all": 105.3
+     "all": 105.3,
+     "doc": "https://www.village-v.co.jp/company/ir/sales_trend/"
     },
     "2011-11": {
      "same": 98.2,
-     "all": 104.1
+     "all": 104.1,
+     "doc": "https://www.village-v.co.jp/company/ir/sales_trend/"
     },
     "2011-12": {
      "same": 98.0,
-     "all": 104.7
+     "all": 104.7,
+     "doc": "https://www.village-v.co.jp/company/ir/sales_trend/"
     },
     "2012-01": {
      "same": 97.6,
-     "all": 105.3
+     "all": 105.3,
+     "doc": "https://www.village-v.co.jp/company/ir/sales_trend/"
     },
     "2012-02": {
      "same": 94.3,
-     "all": 102.1
+     "all": 102.1,
+     "doc": "https://www.village-v.co.jp/company/ir/sales_trend/"
     },
     "2012-03": {
      "same": 102.5,
-     "all": 112.0
+     "all": 112.0,
+     "doc": "https://www.village-v.co.jp/company/ir/sales_trend/"
     },
     "2012-04": {
      "same": 91.5,
-     "all": 99.8
+     "all": 99.8,
+     "doc": "https://www.village-v.co.jp/company/ir/sales_trend/"
     },
     "2012-05": {
      "same": 86.8,
-     "all": 92.9
+     "all": 92.9,
+     "doc": "https://www.village-v.co.jp/company/ir/sales_trend/"
     },
     "2010-06": {
      "same": 97.3,
-     "all": 104.5
+     "all": 104.5,
+     "doc": "https://www.village-v.co.jp/company/ir/sales_trend/"
     },
     "2010-07": {
      "same": 100.5,
-     "all": 107.0
+     "all": 107.0,
+     "doc": "https://www.village-v.co.jp/company/ir/sales_trend/"
     },
     "2010-08": {
      "same": 100.6,
-     "all": 106.8
+     "all": 106.8,
+     "doc": "https://www.village-v.co.jp/company/ir/sales_trend/"
     },
     "2010-09": {
      "same": 99.0,
-     "all": 105.5
+     "all": 105.5,
+     "doc": "https://www.village-v.co.jp/company/ir/sales_trend/"
     },
     "2010-10": {
      "same": 104.8,
-     "all": 111.7
+     "all": 111.7,
+     "doc": "https://www.village-v.co.jp/company/ir/sales_trend/"
     },
     "2010-11": {
      "same": 98.7,
-     "all": 107.1
+     "all": 107.1,
+     "doc": "https://www.village-v.co.jp/company/ir/sales_trend/"
     },
     "2010-12": {
      "same": 102.5,
-     "all": 109.5
+     "all": 109.5,
+     "doc": "https://www.village-v.co.jp/company/ir/sales_trend/"
     },
     "2011-01": {
      "same": 101.3,
-     "all": 107.8
+     "all": 107.8,
+     "doc": "https://www.village-v.co.jp/company/ir/sales_trend/"
     },
     "2011-02": {
      "same": 101.5,
-     "all": 109.7
+     "all": 109.7,
+     "doc": "https://www.village-v.co.jp/company/ir/sales_trend/"
     },
     "2011-03": {
      "same": 92.1,
-     "all": 99.2
+     "all": 99.2,
+     "doc": "https://www.village-v.co.jp/company/ir/sales_trend/"
     },
     "2011-04": {
      "same": 100.8,
-     "all": 107.0
+     "all": 107.0,
+     "doc": "https://www.village-v.co.jp/company/ir/sales_trend/"
     },
     "2011-05": {
      "same": 97.6,
-     "all": 105.7
+     "all": 105.7,
+     "doc": "https://www.village-v.co.jp/company/ir/sales_trend/"
     },
     "2009-06": {
      "same": 93.9,
-     "all": 115.9
+     "all": 115.9,
+     "doc": "https://www.village-v.co.jp/company/ir/sales_trend/"
     },
     "2009-07": {
      "same": 96.8,
-     "all": 120.1
+     "all": 120.1,
+     "doc": "https://www.village-v.co.jp/company/ir/sales_trend/"
     },
     "2009-08": {
      "same": 92.4,
-     "all": 114.6
+     "all": 114.6,
+     "doc": "https://www.village-v.co.jp/company/ir/sales_trend/"
     },
     "2009-09": {
      "same": 95.3,
-     "all": 117.4
+     "all": 117.4,
+     "doc": "https://www.village-v.co.jp/company/ir/sales_trend/"
     },
     "2009-10": {
      "same": 93.0,
-     "all": 108.2
+     "all": 108.2,
+     "doc": "https://www.village-v.co.jp/company/ir/sales_trend/"
     },
     "2009-11": {
      "same": 90.2,
-     "all": 101.7
+     "all": 101.7,
+     "doc": "https://www.village-v.co.jp/company/ir/sales_trend/"
     },
     "2009-12": {
      "same": 96.6,
-     "all": 105.9
+     "all": 105.9,
+     "doc": "https://www.village-v.co.jp/company/ir/sales_trend/"
     },
     "2010-01": {
      "same": 95.8,
-     "all": 105.1
+     "all": 105.1,
+     "doc": "https://www.village-v.co.jp/company/ir/sales_trend/"
     },
     "2010-02": {
      "same": 93.7,
-     "all": 102.5
+     "all": 102.5,
+     "doc": "https://www.village-v.co.jp/company/ir/sales_trend/"
     },
     "2010-03": {
      "same": 96.0,
-     "all": 106.9
+     "all": 106.9,
+     "doc": "https://www.village-v.co.jp/company/ir/sales_trend/"
     },
     "2010-04": {
      "same": 99.5,
-     "all": 109.6
+     "all": 109.6,
+     "doc": "https://www.village-v.co.jp/company/ir/sales_trend/"
     },
     "2010-05": {
      "same": 96.1,
-     "all": 105.0
+     "all": 105.0,
+     "doc": "https://www.village-v.co.jp/company/ir/sales_trend/"
     },
     "2008-06": {
      "same": 103.1,
-     "all": 115.2
+     "all": 115.2,
+     "doc": "https://www.village-v.co.jp/company/ir/sales_trend/"
     },
     "2008-07": {
      "same": 101.0,
-     "all": 111.8
+     "all": 111.8,
+     "doc": "https://www.village-v.co.jp/company/ir/sales_trend/"
     },
     "2008-08": {
      "same": 107.4,
-     "all": 121.2
+     "all": 121.2,
+     "doc": "https://www.village-v.co.jp/company/ir/sales_trend/"
     },
     "2008-09": {
      "same": 98.6,
-     "all": 111.6
+     "all": 111.6,
+     "doc": "https://www.village-v.co.jp/company/ir/sales_trend/"
     },
     "2008-10": {
      "same": 100.3,
-     "all": 122.4
+     "all": 122.4,
+     "doc": "https://www.village-v.co.jp/company/ir/sales_trend/"
     },
     "2008-11": {
      "same": 104.6,
-     "all": 129.6
+     "all": 129.6,
+     "doc": "https://www.village-v.co.jp/company/ir/sales_trend/"
     },
     "2008-12": {
      "same": 100.0,
-     "all": 123.2
+     "all": 123.2,
+     "doc": "https://www.village-v.co.jp/company/ir/sales_trend/"
     },
     "2009-01": {
      "same": 101.0,
-     "all": 126.1
+     "all": 126.1,
+     "doc": "https://www.village-v.co.jp/company/ir/sales_trend/"
     },
     "2009-02": {
      "same": 98.5,
-     "all": 121.8
+     "all": 121.8,
+     "doc": "https://www.village-v.co.jp/company/ir/sales_trend/"
     },
     "2009-03": {
      "same": 94.6,
-     "all": 116.1
+     "all": 116.1,
+     "doc": "https://www.village-v.co.jp/company/ir/sales_trend/"
     },
     "2009-04": {
      "same": 96.6,
-     "all": 117.7
+     "all": 117.7,
+     "doc": "https://www.village-v.co.jp/company/ir/sales_trend/"
     },
     "2009-05": {
      "same": 98.7,
-     "all": 122.0
+     "all": 122.0,
+     "doc": "https://www.village-v.co.jp/company/ir/sales_trend/"
     },
     "2007-06": {
      "same": 109.7,
-     "all": 125.3
+     "all": 125.3,
+     "doc": "https://www.village-v.co.jp/company/ir/sales_trend/"
     },
     "2007-07": {
      "same": 107.6,
-     "all": 123.1
+     "all": 123.1,
+     "doc": "https://www.village-v.co.jp/company/ir/sales_trend/"
     },
     "2007-08": {
      "same": 107.6,
-     "all": 122.4
+     "all": 122.4,
+     "doc": "https://www.village-v.co.jp/company/ir/sales_trend/"
     },
     "2007-09": {
      "same": 110.5,
-     "all": 124.6
+     "all": 124.6,
+     "doc": "https://www.village-v.co.jp/company/ir/sales_trend/"
     },
     "2007-10": {
      "same": 104.8,
-     "all": 116.8
+     "all": 116.8,
+     "doc": "https://www.village-v.co.jp/company/ir/sales_trend/"
     },
     "2007-11": {
      "same": 108.6,
-     "all": 120.0
+     "all": 120.0,
+     "doc": "https://www.village-v.co.jp/company/ir/sales_trend/"
     },
     "2007-12": {
      "same": 110.7,
-     "all": 120.2
+     "all": 120.2,
+     "doc": "https://www.village-v.co.jp/company/ir/sales_trend/"
     },
     "2008-01": {
      "same": 104.3,
-     "all": 113.1
+     "all": 113.1,
+     "doc": "https://www.village-v.co.jp/company/ir/sales_trend/"
     },
     "2008-02": {
      "same": 101.0,
-     "all": 110.6
+     "all": 110.6,
+     "doc": "https://www.village-v.co.jp/company/ir/sales_trend/"
     },
     "2008-03": {
      "same": 106.9,
-     "all": 118.5
+     "all": 118.5,
+     "doc": "https://www.village-v.co.jp/company/ir/sales_trend/"
     },
     "2008-04": {
      "same": 101.0,
-     "all": 112.8
+     "all": 112.8,
+     "doc": "https://www.village-v.co.jp/company/ir/sales_trend/"
     },
     "2008-05": {
      "same": 104.2,
-     "all": 114.6
+     "all": 114.6,
+     "doc": "https://www.village-v.co.jp/company/ir/sales_trend/"
     },
     "2006-06": {
      "same": 103.2,
-     "all": 124.1
+     "all": 124.1,
+     "doc": "https://www.village-v.co.jp/company/ir/sales_trend/"
     },
     "2006-07": {
      "same": 103.3,
-     "all": 122.1
+     "all": 122.1,
+     "doc": "https://www.village-v.co.jp/company/ir/sales_trend/"
     },
     "2006-08": {
      "same": 100.4,
-     "all": 122.7
+     "all": 122.7,
+     "doc": "https://www.village-v.co.jp/company/ir/sales_trend/"
     },
     "2006-09": {
      "same": 103.6,
-     "all": 124.8
+     "all": 124.8,
+     "doc": "https://www.village-v.co.jp/company/ir/sales_trend/"
     },
     "2006-10": {
      "same": 100.5,
-     "all": 119.5
+     "all": 119.5,
+     "doc": "https://www.village-v.co.jp/company/ir/sales_trend/"
     },
     "2006-11": {
      "same": 100.5,
-     "all": 121.2
+     "all": 121.2,
+     "doc": "https://www.village-v.co.jp/company/ir/sales_trend/"
     },
     "2006-12": {
      "same": 104.1,
-     "all": 126.3
+     "all": 126.3,
+     "doc": "https://www.village-v.co.jp/company/ir/sales_trend/"
     },
     "2007-01": {
      "same": 104.9,
-     "all": 128.0
+     "all": 128.0,
+     "doc": "https://www.village-v.co.jp/company/ir/sales_trend/"
     },
     "2007-02": {
      "same": 111.0,
-     "all": 133.0
+     "all": 133.0,
+     "doc": "https://www.village-v.co.jp/company/ir/sales_trend/"
     },
     "2007-03": {
      "same": 107.8,
-     "all": 126.1
+     "all": 126.1,
+     "doc": "https://www.village-v.co.jp/company/ir/sales_trend/"
     },
     "2007-04": {
      "same": 105.4,
-     "all": 123.1
+     "all": 123.1,
+     "doc": "https://www.village-v.co.jp/company/ir/sales_trend/"
     },
     "2007-05": {
      "same": 104.0,
-     "all": 122.4
+     "all": 122.4,
+     "doc": "https://www.village-v.co.jp/company/ir/sales_trend/"
     },
     "2005-06": {
      "same": 106.0,
-     "all": 135.9
+     "all": 135.9,
+     "doc": "https://www.village-v.co.jp/company/ir/sales_trend/"
     },
     "2005-07": {
      "same": 108.3,
-     "all": 136.7
+     "all": 136.7,
+     "doc": "https://www.village-v.co.jp/company/ir/sales_trend/"
     },
     "2005-08": {
      "same": 102.4,
-     "all": 126.0
+     "all": 126.0,
+     "doc": "https://www.village-v.co.jp/company/ir/sales_trend/"
     },
     "2005-09": {
      "same": 101.9,
-     "all": 130.2
+     "all": 130.2,
+     "doc": "https://www.village-v.co.jp/company/ir/sales_trend/"
     },
     "2005-10": {
      "same": 105.6,
-     "all": 135.2
+     "all": 135.2,
+     "doc": "https://www.village-v.co.jp/company/ir/sales_trend/"
     },
     "2005-11": {
      "same": 102.4,
-     "all": 130.0
+     "all": 130.0,
+     "doc": "https://www.village-v.co.jp/company/ir/sales_trend/"
     },
     "2005-12": {
      "same": 105.7,
-     "all": 135.8
+     "all": 135.8,
+     "doc": "https://www.village-v.co.jp/company/ir/sales_trend/"
     },
     "2006-01": {
      "same": 102.4,
-     "all": 130.4
+     "all": 130.4,
+     "doc": "https://www.village-v.co.jp/company/ir/sales_trend/"
     },
     "2006-02": {
      "same": 125.7,
-     "all": 125.7
+     "all": 125.7,
+     "doc": "https://www.village-v.co.jp/company/ir/sales_trend/"
     },
     "2006-03": {
      "same": 104.0,
-     "all": 132.6
+     "all": 132.6,
+     "doc": "https://www.village-v.co.jp/company/ir/sales_trend/"
     },
     "2006-04": {
      "same": 104.3,
-     "all": 130.7
+     "all": 130.7,
+     "doc": "https://www.village-v.co.jp/company/ir/sales_trend/"
     },
     "2006-05": {
      "same": 100.4,
-     "all": 121.2
+     "all": 121.2,
+     "doc": "https://www.village-v.co.jp/company/ir/sales_trend/"
     },
     "2004-06": {
      "same": 106.0,
-     "all": 135.9
+     "all": 135.9,
+     "doc": "https://www.village-v.co.jp/company/ir/sales_trend/"
     },
     "2004-07": {
      "same": 108.3,
-     "all": 136.7
+     "all": 136.7,
+     "doc": "https://www.village-v.co.jp/company/ir/sales_trend/"
     },
     "2004-08": {
      "same": 102.4,
-     "all": 126.0
+     "all": 126.0,
+     "doc": "https://www.village-v.co.jp/company/ir/sales_trend/"
     },
     "2004-09": {
      "same": 101.9,
-     "all": 130.2
+     "all": 130.2,
+     "doc": "https://www.village-v.co.jp/company/ir/sales_trend/"
     },
     "2004-10": {
      "same": 105.6,
-     "all": 135.2
+     "all": 135.2,
+     "doc": "https://www.village-v.co.jp/company/ir/sales_trend/"
     },
     "2004-11": {
      "same": 102.4,
-     "all": 130.0
+     "all": 130.0,
+     "doc": "https://www.village-v.co.jp/company/ir/sales_trend/"
     },
     "2004-12": {
      "same": 105.7,
-     "all": 135.8
+     "all": 135.8,
+     "doc": "https://www.village-v.co.jp/company/ir/sales_trend/"
     },
     "2005-01": {
      "same": 102.4,
-     "all": 130.4
+     "all": 130.4,
+     "doc": "https://www.village-v.co.jp/company/ir/sales_trend/"
     },
     "2005-02": {
      "same": 102.2,
-     "all": 125.7
+     "all": 125.7,
+     "doc": "https://www.village-v.co.jp/company/ir/sales_trend/"
     },
     "2005-03": {
      "same": 104.0,
-     "all": 132.6
+     "all": 132.6,
+     "doc": "https://www.village-v.co.jp/company/ir/sales_trend/"
     },
     "2005-04": {
      "same": 104.3,
-     "all": 130.7
+     "all": 130.7,
+     "doc": "https://www.village-v.co.jp/company/ir/sales_trend/"
     },
     "2005-05": {
      "same": 100.4,
-     "all": 121.2
+     "all": 121.2,
+     "doc": "https://www.village-v.co.jp/company/ir/sales_trend/"
     },
     "2003-06": {
      "same": 107.7,
-     "all": 125.7
+     "all": 125.7,
+     "doc": "https://www.village-v.co.jp/company/ir/sales_trend/"
     },
     "2003-07": {
      "same": 109.9,
-     "all": 126.7
+     "all": 126.7,
+     "doc": "https://www.village-v.co.jp/company/ir/sales_trend/"
     },
     "2003-08": {
      "same": 105.3,
-     "all": 123.7
+     "all": 123.7,
+     "doc": "https://www.village-v.co.jp/company/ir/sales_trend/"
     },
     "2003-09": {
      "same": 106.4,
-     "all": 125.8
+     "all": 125.8,
+     "doc": "https://www.village-v.co.jp/company/ir/sales_trend/"
     },
     "2003-10": {
      "same": 105.5,
-     "all": 126.9
+     "all": 126.9,
+     "doc": "https://www.village-v.co.jp/company/ir/sales_trend/"
     },
     "2003-11": {
      "same": 112.1,
-     "all": 136.8
+     "all": 136.8,
+     "doc": "https://www.village-v.co.jp/company/ir/sales_trend/"
     },
     "2003-12": {
      "same": 110.7,
-     "all": 134.0
+     "all": 134.0,
+     "doc": "https://www.village-v.co.jp/company/ir/sales_trend/"
     },
     "2004-01": {
      "same": 110.2,
-     "all": 134.6
+     "all": 134.6,
+     "doc": "https://www.village-v.co.jp/company/ir/sales_trend/"
     },
     "2004-02": {
      "same": 114.0,
-     "all": 138.5
+     "all": 138.5,
+     "doc": "https://www.village-v.co.jp/company/ir/sales_trend/"
     },
     "2004-03": {
      "same": 108.9,
-     "all": 130.5
+     "all": 130.5,
+     "doc": "https://www.village-v.co.jp/company/ir/sales_trend/"
     },
     "2004-04": {
      "same": 105.5,
-     "all": 127.6
+     "all": 127.6,
+     "doc": "https://www.village-v.co.jp/company/ir/sales_trend/"
     },
     "2004-05": {
      "same": 107.1,
-     "all": 125.9
+     "all": 125.9,
+     "doc": "https://www.village-v.co.jp/company/ir/sales_trend/"
     },
     "2002-06": {
      "same": 103.6,
-     "all": 123.4
+     "all": 123.4,
+     "doc": "https://www.village-v.co.jp/company/ir/sales_trend/"
     },
     "2002-07": {
      "same": 103.3,
-     "all": 121.5
+     "all": 121.5,
+     "doc": "https://www.village-v.co.jp/company/ir/sales_trend/"
     },
     "2002-08": {
      "same": 109.1,
-     "all": 125.6
+     "all": 125.6,
+     "doc": "https://www.village-v.co.jp/company/ir/sales_trend/"
     },
     "2002-09": {
      "same": 105.3,
-     "all": 118.6
+     "all": 118.6,
+     "doc": "https://www.village-v.co.jp/company/ir/sales_trend/"
     },
     "2002-10": {
      "same": 107.1,
-     "all": 120.0
+     "all": 120.0,
+     "doc": "https://www.village-v.co.jp/company/ir/sales_trend/"
     },
     "2002-11": {
      "same": 105.1,
-     "all": 119.5
+     "all": 119.5,
+     "doc": "https://www.village-v.co.jp/company/ir/sales_trend/"
     },
     "2002-12": {
      "same": 109.6,
-     "all": 124.5
+     "all": 124.5,
+     "doc": "https://www.village-v.co.jp/company/ir/sales_trend/"
     },
     "2003-01": {
      "same": 104.2,
-     "all": 116.4
+     "all": 116.4,
+     "doc": "https://www.village-v.co.jp/company/ir/sales_trend/"
     },
     "2003-02": {
      "same": 106.5,
-     "all": 121.2
+     "all": 121.2,
+     "doc": "https://www.village-v.co.jp/company/ir/sales_trend/"
     },
     "2003-03": {
      "same": 106.4,
-     "all": 119.6
+     "all": 119.6,
+     "doc": "https://www.village-v.co.jp/company/ir/sales_trend/"
     },
     "2003-04": {
      "same": 105.7,
-     "all": 119.0
+     "all": 119.0,
+     "doc": "https://www.village-v.co.jp/company/ir/sales_trend/"
     },
     "2003-05": {
      "same": 105.8,
-     "all": 124.4
+     "all": 124.4,
+     "doc": "https://www.village-v.co.jp/company/ir/sales_trend/"
     },
     "2001-06": {
      "same": 123.9,
-     "all": 163.9
+     "all": 163.9,
+     "doc": "https://www.village-v.co.jp/company/ir/sales_trend/"
     },
     "2001-07": {
      "same": 112.5,
-     "all": 151.7
+     "all": 151.7,
+     "doc": "https://www.village-v.co.jp/company/ir/sales_trend/"
     },
     "2001-08": {
      "same": 116.1,
-     "all": 154.9
+     "all": 154.9,
+     "doc": "https://www.village-v.co.jp/company/ir/sales_trend/"
     },
     "2001-09": {
      "same": 122.0,
-     "all": 160.4
+     "all": 160.4,
+     "doc": "https://www.village-v.co.jp/company/ir/sales_trend/"
     },
     "2001-10": {
      "same": 111.8,
-     "all": 137.9
+     "all": 137.9,
+     "doc": "https://www.village-v.co.jp/company/ir/sales_trend/"
     },
     "2001-11": {
      "same": 112.9,
-     "all": 135.8
+     "all": 135.8,
+     "doc": "https://www.village-v.co.jp/company/ir/sales_trend/"
     },
     "2001-12": {
      "same": 117.3,
-     "all": 139.4
+     "all": 139.4,
+     "doc": "https://www.village-v.co.jp/company/ir/sales_trend/"
     },
     "2002-01": {
      "same": 116.1,
-     "all": 140.1
+     "all": 140.1,
+     "doc": "https://www.village-v.co.jp/company/ir/sales_trend/"
     },
     "2002-02": {
      "same": 110.0,
-     "all": 128.0
+     "all": 128.0,
+     "doc": "https://www.village-v.co.jp/company/ir/sales_trend/"
     },
     "2002-03": {
      "same": 110.0,
-     "all": 130.7
+     "all": 130.7,
+     "doc": "https://www.village-v.co.jp/company/ir/sales_trend/"
     },
     "2002-04": {
      "same": 105.8,
-     "all": 122.2
+     "all": 122.2,
+     "doc": "https://www.village-v.co.jp/company/ir/sales_trend/"
     },
     "2002-05": {
      "same": 106.3,
-     "all": 126.1
+     "all": 126.1,
+     "doc": "https://www.village-v.co.jp/company/ir/sales_trend/"
+    },
+    "2026-09": {
+     "same": 107.8,
+     "all": 89.5,
+     "doc": "https://www.village-v.co.jp/company/ir/sales_trend/"
     }
    },
-   "ts": "2026-10-01T01:19:04+00:00",
-   "pdf_ts": "2026-10-01T01:19:04+00:00"
+   "ts": "2026-10-17T13:22:11+00:00",
+   "pdf_ts": "2026-10-17T13:22:11+00:00"
   },
   "9973": {
    "name": "ＫＯＺＯＨＤ",
@@ -15073,8 +16271,8 @@
    "name": "スターシーズ",
    "page": "https://starseeds.co.jp",
    "months": {},
-   "ts": "2026-10-04T02:01:53+00:00",
-   "pdf_ts": "2026-10-04T02:01:53+00:00",
+   "ts": "2026-10-17T13:22:11+00:00",
+   "pdf_ts": "2026-10-17T13:22:11+00:00",
    "pdf": {
     "2026-03": {
      "doc": "https://ssl4.eir-parts.net/doc/3083/ir_material2/286930/00.pdf",
@@ -19187,6 +20385,7 @@
   },
   "3030": {
    "name": "ハブ",
+   "page": "https://www.pub-hub.co.jp/ir/month.html",
    "months": {
     "2026-03": {
      "all": 110.2,
@@ -19217,12 +20416,11 @@
      "doc": "https://ircms.irstreet.com/contents/data_file.php?template=1565&brand=87&data=501690&filename=pdf_file.pdf"
     }
    },
-   "page": "https://www.pub-hub.co.jp/ir/month.html",
-   "ts": "2026-10-13T08:52:36+00:00",
-   "scope": "전점"
+   "ts": "2026-10-17T13:22:11+00:00"
   },
   "3080": {
    "name": "ジェーソン",
+   "page": "https://jason.co.jp/ir/monthly_information_2027_2",
    "months": {
     "2026-03": {
      "all": 98.4,
@@ -19253,9 +20451,7 @@
      "doc": "https://jason.co.jp/wptest/wp-content/uploads/2026/10/2027年2月期_202609.png"
     }
    },
-   "page": "https://jason.co.jp/ir/monthly_information_2027_2",
-   "ts": "2026-10-13T08:52:36+00:00",
-   "scope": "전점"
+   "ts": "2026-10-17T13:22:11+00:00"
   },
   "3317": {
    "name": "フライングガーデン",
@@ -20476,6 +21672,7 @@
   },
   "7674": {
    "name": "ＮＡＴＴＹ ＳＷＡＮＫＹホールディングス",
+   "page": "https://nattyswanky.com/ir/",
    "months": {
     "2026-02": {
      "all": 104.1,
@@ -20510,9 +21707,8 @@
      "doc": "https://contents.xj-storage.jp/xcontents/AS81590/c7ab06bc/7fb9/400c/a551/7bc78ccd60ea/140120261007546987.pdf"
     }
    },
-   "page": "https://nattyswanky.com/ir/",
-   "ts": "2026-10-13T08:52:36+00:00",
-   "scope": "직영 전점"
+   "ts": "2026-10-17T13:22:11+00:00",
+   "pdf_ts": "2026-10-17T13:22:11+00:00"
   },
   "8194": {
    "name": "ライフコーポ",
@@ -22075,6 +23271,7 @@
   },
   "274A": {
    "name": "ガーデン",
+   "page": "https://ir-gardengroup.jp/",
    "months": {
     "2026-03": {
      "all": 107.9,
@@ -22105,9 +23302,7 @@
      "doc": "https://www.release.tdnet.info/inbs/140120261007547012.pdf"
     }
    },
-   "page": "https://ir-gardengroup.jp/",
-   "ts": "2026-10-13T08:52:36+00:00",
-   "scope": "国内直営店舗 店内売上 全店"
+   "ts": "2026-10-17T13:22:11+00:00"
   },
   "3058": {
    "name": "三洋堂ホールディングス",
@@ -22143,6 +23338,7 @@
   },
   "3160": {
    "name": "大光",
+   "page": "https://www.oomitsu.com",
    "months": {
     "2026-06": {
      "yoy": 110.6,
@@ -22161,9 +23357,8 @@
      "doc": "https://www.release.tdnet.info/inbs/140120261013549233.pdf"
     }
    },
-   "page": "https://www.oomitsu.com",
-   "ts": "2026-10-13T08:52:36+00:00",
-   "scope": "全社 外商+アミカ"
+   "ts": "2026-10-17T13:22:11+00:00",
+   "pdf_ts": "2026-10-17T13:22:11+00:00"
   },
   "3358": {
    "name": "Ｔｒａｉｌｈｅａｄ Ｇｌｏｂａｌ Ｈｏｌｄｉｎｇｓ",
@@ -22418,6 +23613,7 @@
   },
   "7682": {
    "name": "浜木綿",
+   "page": "https://ir.hamayuu.co.jp/ja/ir.html",
    "months": {
     "2026-08": {
      "all": 104.9,
@@ -22428,9 +23624,20 @@
      "doc": "https://ir.hamayuu.co.jp/ja/ir/news/news-7041927872435864695/main/0/link/pdffile.pdf"
     }
    },
-   "page": "https://ir.hamayuu.co.jp/ja/ir.html",
-   "ts": "2026-10-13T08:52:36+00:00",
-   "scope": "直営店 全店"
+   "ts": "2026-10-17T13:22:11+00:00",
+   "pdf_ts": "2026-10-17T13:22:11+00:00",
+   "pdf": {
+    "2026-08": {
+     "doc": "https://ir.hamayuu.co.jp/ja/ir/news/news-7041927872435864695/main/0/link/pdffile.pdf",
+     "yoy": 104.9,
+     "metric": "売上高"
+    },
+    "2026-09": {
+     "doc": "https://ir.hamayuu.co.jp/ja/ir/news/news-7041927872435864695/main/0/link/pdffile.pdf",
+     "yoy": 107.8,
+     "metric": "売上高"
+    }
+   }
   },
   "8198": {
    "name": "ＭＶ東海",
@@ -23253,15 +24460,34 @@
   },
   "6045": {
    "name": "レントラックス",
+   "page": "https://www.rentracks.co.jp/ir/finance/others.html",
    "months": {
     "2026-08": {
-     "yoy": 1059.6,
-     "doc": "https://www.rentracks.co.jp/ir/library/pdf/22th/2027_03_08_monthly.pdf"
+     "yoy": 302.0,
+     "doc": "https://www.rentracks.co.jp/ir/finance/others.html"
+    },
+    "2026-04": {
+     "yoy": 333.0,
+     "doc": "https://www.rentracks.co.jp/ir/finance/others.html"
+    },
+    "2026-05": {
+     "yoy": 344.0,
+     "doc": "https://www.rentracks.co.jp/ir/finance/others.html"
+    },
+    "2026-06": {
+     "yoy": 342.0,
+     "doc": "https://www.rentracks.co.jp/ir/finance/others.html"
+    },
+    "2026-07": {
+     "yoy": 358.0,
+     "doc": "https://www.rentracks.co.jp/ir/finance/others.html"
+    },
+    "2026-09": {
+     "yoy": 389.0,
+     "doc": "https://www.rentracks.co.jp/ir/finance/others.html"
     }
    },
-   "page": "https://www.rentracks.co.jp/ir/finance/others.html",
-   "ts": "2026-10-13T08:52:36+00:00",
-   "scope": "연결 매출 · 인수 편입 포함"
+   "ts": "2026-10-17T13:22:11+00:00"
   },
   "7512": {
    "name": "イオン北海",
@@ -23300,6 +24526,7 @@
   },
   "7604": {
    "name": "梅の花グループ",
+   "page": "https://www.umenohana.co.jp/investor/archive?category=monthly_sales",
    "months": {
     "2026-05": {
      "all": 106.8,
@@ -23318,12 +24545,11 @@
      "doc": "https://d2t9fdkhmis4do.cloudfront.net/images/app/public/ir-pdfs/01M2EVA7P7H6EYBD7282YR7B4X.pdf"
     }
    },
-   "page": "https://www.umenohana.co.jp/investor/archive?category=monthly_sales",
-   "ts": "2026-10-13T08:52:36+00:00",
-   "scope": "외식 부문 전점"
+   "ts": "2026-10-17T13:22:11+00:00"
   },
   "7686": {
    "name": "ひとまいる",
+   "page": "https://www.hitomile.co.jp/ir/monthly_report.html",
    "months": {
     "2026-04": {
      "yoy": 104.2,
@@ -23346,12 +24572,11 @@
      "doc": "https://ssl4.eir-parts.net/doc/7686/tdnet/2883694/00.pdf"
     }
    },
-   "page": "https://www.hitomile.co.jp/ir/monthly_report.html",
-   "ts": "2026-10-13T08:52:36+00:00",
-   "scope": "연결 매출"
+   "ts": "2026-10-17T13:22:11+00:00"
   },
   "8207": {
    "name": "テンアライド",
+   "page": "https://www.teng.co.jp/ir/ir.html",
    "months": {
     "2026-04": {
      "all": 101.7,
@@ -23374,9 +24599,8 @@
      "doc": "https://www.teng.co.jp/ir/e33ae10ba8b47180afa67db60d0d7e479531a1a1.pdf"
     }
    },
-   "page": "https://www.teng.co.jp/ir/ir.html",
-   "ts": "2026-10-13T08:52:36+00:00",
-   "scope": "전점"
+   "ts": "2026-10-17T13:22:11+00:00",
+   "pdf_ts": "2026-10-17T13:22:11+00:00"
   },
   "8985": {
    "name": "Ｒ－ＪＨＲ",
@@ -23646,15 +24870,57 @@
   },
   "2311": {
    "name": "エプコ",
+   "page": "https://www.epco.co.jp/ir",
    "months": {
     "2026-08": {
      "yoy": 156,
      "doc": "https://www2.jpx.co.jp/disc/23110/140120260925539933.pdf"
     }
    },
-   "page": "https://www.epco.co.jp/ir",
-   "ts": "2026-10-13T08:52:36+00:00",
-   "scope": "자회사 ENE’s 매출 · 연결 전체와 다름"
+   "ts": "2026-10-17T13:22:11+00:00",
+   "pdf_ts": "2026-10-17T13:22:11+00:00",
+   "pdf": {
+    "2026-01": {
+     "doc": "https://ssl4.eir-parts.net/doc/2311/tdnet/2887431/00.pdf",
+     "yoy": 335.0,
+     "metric": "前年同月比"
+    },
+    "2026-02": {
+     "doc": "https://ssl4.eir-parts.net/doc/2311/tdnet/2887431/00.pdf",
+     "yoy": 394.0,
+     "metric": "前年同月比"
+    },
+    "2026-03": {
+     "doc": "https://ssl4.eir-parts.net/doc/2311/tdnet/2887431/00.pdf",
+     "yoy": 139.0,
+     "metric": "前年同月比"
+    },
+    "2026-04": {
+     "doc": "https://ssl4.eir-parts.net/doc/2311/tdnet/2887431/00.pdf",
+     "yoy": 42.0,
+     "metric": "前年同月比"
+    },
+    "2026-05": {
+     "doc": "https://ssl4.eir-parts.net/doc/2311/tdnet/2887431/00.pdf",
+     "yoy": 6.0,
+     "metric": "前年同月比"
+    },
+    "2026-06": {
+     "doc": "https://ssl4.eir-parts.net/doc/2311/tdnet/2887431/00.pdf",
+     "yoy": 180.0,
+     "metric": "前年同月比"
+    },
+    "2026-07": {
+     "doc": "https://ssl4.eir-parts.net/doc/2311/tdnet/2887431/00.pdf",
+     "yoy": 67.0,
+     "metric": "前年同月比"
+    },
+    "2026-08": {
+     "doc": "https://ssl4.eir-parts.net/doc/2311/tdnet/2887431/00.pdf",
+     "yoy": 49.0,
+     "metric": "前年同月比"
+    }
+   }
   },
   "2669": {
    "name": "カネ美食品",
@@ -23811,6 +25077,7 @@
   },
   "6073": {
    "name": "アサンテ",
+   "page": "https://www.asante.co.jp/ir/library/disclosure/",
    "months": {
     "2026-04": {
      "yoy": 85.1,
@@ -23837,9 +25104,8 @@
      "doc": "https://contents.xj-storage.jp/xcontents/60730/21c5e1da/157b/4bdc/a051/9b8dcbd93988/140120261003545596.pdf"
     }
    },
-   "page": "https://www.asante.co.jp/ir/library/disclosure/",
-   "ts": "2026-10-13T08:52:36+00:00",
-   "scope": "연결 매출"
+   "ts": "2026-10-17T13:22:11+00:00",
+   "pdf_ts": "2026-10-17T13:22:11+00:00"
   },
   "7513": {
    "name": "コジマ",
@@ -23854,6 +25120,7 @@
   },
   "7610": {
    "name": "テイツー",
+   "page": "https://www.tay2.co.jp/ir/irlibrary/01.html",
    "months": {
     "2026-03": {
      "yoy": 117,
@@ -23880,9 +25147,7 @@
      "doc": "https://contents.xj-storage.jp/xcontents/AS90259/df40d077/1985/4ef1/a694/5b2133e0bb21/140120260907532511.pdf"
     }
    },
-   "page": "https://www.tay2.co.jp/ir/irlibrary/01.html",
-   "ts": "2026-10-13T08:52:36+00:00",
-   "scope": "타이투·야마토쿠 매출 단순 합산"
+   "ts": "2026-10-17T13:22:11+00:00"
   },
   "7865": {
    "name": "ピープル",
@@ -24279,6 +25544,7 @@
   },
   "3077": {
    "name": "ホリイフード",
+   "page": "https://www.horiifood.co.jp/ir/library/prospectus.cgi?id=18",
    "months": {
     "2025-12": {
      "all": 116.5,
@@ -24301,9 +25567,100 @@
      "doc": "https://www.horiifood.co.jp/ir/library/prospectus?file_id=1&id=20&mode=download"
     }
    },
-   "page": "https://www.horiifood.co.jp/ir/library/prospectus.cgi?id=18",
-   "ts": "2026-10-13T08:52:36+00:00",
-   "scope": "전점"
+   "ts": "2026-10-17T13:22:11+00:00",
+   "pdf_ts": "2026-10-17T13:22:11+00:00",
+   "pdf": {
+    "2025-04": {
+     "doc": "https://www.horiifood.co.jp/ir/library/prospectus.cgi?mode=download&id=22&file_id=1",
+     "yoy": 111.2,
+     "metric": "売上高"
+    },
+    "2025-05": {
+     "doc": "https://www.horiifood.co.jp/ir/library/prospectus.cgi?mode=download&id=22&file_id=1",
+     "yoy": 119.7,
+     "metric": "売上高"
+    },
+    "2025-06": {
+     "doc": "https://www.horiifood.co.jp/ir/library/prospectus.cgi?mode=download&id=22&file_id=1",
+     "yoy": 106.3,
+     "metric": "売上高"
+    },
+    "2025-07": {
+     "doc": "https://www.horiifood.co.jp/ir/library/prospectus.cgi?mode=download&id=22&file_id=1",
+     "yoy": 112.1,
+     "metric": "売上高"
+    },
+    "2025-08": {
+     "doc": "https://www.horiifood.co.jp/ir/library/prospectus.cgi?mode=download&id=22&file_id=1",
+     "yoy": 117.5,
+     "metric": "売上高"
+    },
+    "2025-10": {
+     "doc": "https://www.horiifood.co.jp/ir/library/prospectus.cgi?mode=download&id=22&file_id=1",
+     "yoy": 115.7,
+     "metric": "売上高"
+    },
+    "2025-11": {
+     "doc": "https://www.horiifood.co.jp/ir/library/prospectus.cgi?mode=download&id=22&file_id=1",
+     "yoy": 112.6,
+     "metric": "売上高"
+    },
+    "2025-12": {
+     "doc": "https://www.horiifood.co.jp/ir/library/prospectus.cgi?mode=download&id=23&file_id=1",
+     "yoy": 116.5,
+     "metric": "売上高"
+    },
+    "2026-01": {
+     "doc": "https://www.horiifood.co.jp/ir/library/prospectus.cgi?mode=download&id=23&file_id=1",
+     "yoy": 120.5,
+     "metric": "売上高"
+    },
+    "2026-02": {
+     "doc": "https://www.horiifood.co.jp/ir/library/prospectus.cgi?mode=download&id=23&file_id=1",
+     "yoy": 108.3,
+     "metric": "売上高"
+    },
+    "2026-03": {
+     "doc": "https://www.horiifood.co.jp/ir/library/prospectus.cgi?mode=download&id=23&file_id=1",
+     "yoy": 116.8,
+     "metric": "売上高"
+    },
+    "2026-04": {
+     "doc": "https://www.horiifood.co.jp/ir/library/prospectus.cgi?mode=download&id=23&file_id=1",
+     "yoy": 115.9,
+     "metric": "売上高"
+    },
+    "2026-05": {
+     "doc": "https://www.horiifood.co.jp/ir/library/prospectus.cgi?mode=download&id=23&file_id=1",
+     "yoy": 120.8,
+     "metric": "売上高"
+    },
+    "2026-06": {
+     "doc": "https://www.horiifood.co.jp/ir/library/prospectus.cgi?mode=download&id=23&file_id=1",
+     "yoy": 116.6,
+     "metric": "売上高"
+    },
+    "2026-07": {
+     "doc": "https://www.horiifood.co.jp/ir/library/prospectus.cgi?mode=download&id=23&file_id=1",
+     "yoy": 120.9,
+     "metric": "売上高"
+    },
+    "2026-08": {
+     "doc": "https://www.horiifood.co.jp/ir/library/prospectus.cgi?mode=download&id=24&file_id=1",
+     "yoy": 132.1,
+     "metric": "売上高"
+    },
+    "2026-09": {
+     "doc": "https://www.horiifood.co.jp/ir/library/prospectus.cgi?mode=download&id=25&file_id=1",
+     "yoy": 106.3,
+     "metric": "売上高"
+    },
+    "2025-09": {
+     "doc": "https://www.horiifood.co.jp/ir/library/prospectus.cgi?mode=download&id=22&file_id=1",
+     "yoy": 110.0,
+     "metric": "売上高"
+    }
+   }
   },
   "3199": {
    "name": "綿半ホールディングス",
@@ -24804,6 +26161,7 @@
   },
   "7646": {
    "name": "ＰＬＡＮＴ",
+   "page": "https://www.plant-co.jp/ir/monthly.html",
    "months": {
     "2026-01": {
      "all": 98.9,
@@ -24842,9 +26200,480 @@
      "doc": "https://www.plant-co.jp/ir/monthly.html"
     }
    },
-   "page": "https://www.plant-co.jp/ir/monthly.html",
-   "ts": "2026-10-13T08:52:36+00:00",
-   "scope": "전점"
+   "ts": "2026-10-17T13:22:11+00:00",
+   "pdf_ts": "2026-10-17T13:22:11+00:00",
+   "pdf": {
+    "2024-10": {
+     "doc": "https://www.plant-co.jp/corp/pdf/uriselm_202509.pdf",
+     "yoy": 100.6,
+     "metric": "売上高"
+    },
+    "2024-11": {
+     "doc": "https://www.plant-co.jp/corp/pdf/uriselm_202509.pdf",
+     "yoy": 94.7,
+     "metric": "売上高"
+    },
+    "2024-12": {
+     "doc": "https://www.plant-co.jp/corp/pdf/uriselm_202509.pdf",
+     "yoy": 100.1,
+     "metric": "売上高"
+    },
+    "2025-01": {
+     "doc": "https://www.plant-co.jp/corp/pdf/uriselm_202509.pdf",
+     "yoy": 101.4,
+     "metric": "売上高"
+    },
+    "2025-02": {
+     "doc": "https://www.plant-co.jp/corp/pdf/uriselm_202509.pdf",
+     "yoy": 97.3,
+     "metric": "売上高"
+    },
+    "2025-03": {
+     "doc": "https://www.plant-co.jp/corp/pdf/uriselm_202509.pdf",
+     "yoy": 97.3,
+     "metric": "売上高"
+    },
+    "2025-04": {
+     "doc": "https://www.plant-co.jp/corp/pdf/uriselm_202509.pdf",
+     "yoy": 102.0,
+     "metric": "売上高"
+    },
+    "2025-05": {
+     "doc": "https://www.plant-co.jp/corp/pdf/uriselm_202509.pdf",
+     "yoy": 95.8,
+     "metric": "売上高"
+    },
+    "2025-06": {
+     "doc": "https://www.plant-co.jp/corp/pdf/uriselm_202509.pdf",
+     "yoy": 99.7,
+     "metric": "売上高"
+    },
+    "2025-07": {
+     "doc": "https://www.plant-co.jp/corp/pdf/uriselm_202509.pdf",
+     "yoy": 106.0,
+     "metric": "売上高"
+    },
+    "2025-08": {
+     "doc": "https://www.plant-co.jp/corp/pdf/uriselm_202509.pdf",
+     "yoy": 96.3,
+     "metric": "売上高"
+    },
+    "2025-09": {
+     "doc": "https://www.plant-co.jp/corp/pdf/uriselm_202509.pdf",
+     "yoy": 99.9,
+     "metric": "売上高"
+    },
+    "2023-10": {
+     "doc": "https://www.plant-co.jp/corp/pdf/uriselm_202409.pdf",
+     "yoy": 104.4,
+     "metric": "売上高"
+    },
+    "2023-11": {
+     "doc": "https://www.plant-co.jp/corp/pdf/uriselm_202409.pdf",
+     "yoy": 104.3,
+     "metric": "売上高"
+    },
+    "2023-12": {
+     "doc": "https://www.plant-co.jp/corp/pdf/uriselm_202409.pdf",
+     "yoy": 103.4,
+     "metric": "売上高"
+    },
+    "2024-01": {
+     "doc": "https://www.plant-co.jp/corp/pdf/uriselm_202409.pdf",
+     "yoy": 104.8,
+     "metric": "売上高"
+    },
+    "2024-02": {
+     "doc": "https://www.plant-co.jp/corp/pdf/uriselm_202409.pdf",
+     "yoy": 101.5,
+     "metric": "売上高"
+    },
+    "2024-03": {
+     "doc": "https://www.plant-co.jp/corp/pdf/uriselm_202409.pdf",
+     "yoy": 105.6,
+     "metric": "売上高"
+    },
+    "2024-04": {
+     "doc": "https://www.plant-co.jp/corp/pdf/uriselm_202409.pdf",
+     "yoy": 101.9,
+     "metric": "売上高"
+    },
+    "2024-05": {
+     "doc": "https://www.plant-co.jp/corp/pdf/uriselm_202409.pdf",
+     "yoy": 100.9,
+     "metric": "売上高"
+    },
+    "2024-06": {
+     "doc": "https://www.plant-co.jp/corp/pdf/uriselm_202409.pdf",
+     "yoy": 95.8,
+     "metric": "売上高"
+    },
+    "2024-07": {
+     "doc": "https://www.plant-co.jp/corp/pdf/uriselm_202409.pdf",
+     "yoy": 96.6,
+     "metric": "売上高"
+    },
+    "2024-08": {
+     "doc": "https://www.plant-co.jp/corp/pdf/uriselm_202409.pdf",
+     "yoy": 98.4,
+     "metric": "売上高"
+    },
+    "2024-09": {
+     "doc": "https://www.plant-co.jp/corp/pdf/uriselm_202409.pdf",
+     "yoy": 98.4,
+     "metric": "売上高"
+    },
+    "2022-10": {
+     "doc": "https://www.plant-co.jp/corp/pdf/uriselm_202309.pdf",
+     "yoy": 101.1,
+     "metric": "売上高"
+    },
+    "2022-11": {
+     "doc": "https://www.plant-co.jp/corp/pdf/uriselm_202309.pdf",
+     "yoy": 103.3,
+     "metric": "売上高"
+    },
+    "2022-12": {
+     "doc": "https://www.plant-co.jp/corp/pdf/uriselm_202309.pdf",
+     "yoy": 99.2,
+     "metric": "売上高"
+    },
+    "2023-01": {
+     "doc": "https://www.plant-co.jp/corp/pdf/uriselm_202309.pdf",
+     "yoy": 102.1,
+     "metric": "売上高"
+    },
+    "2023-02": {
+     "doc": "https://www.plant-co.jp/corp/pdf/uriselm_202309.pdf",
+     "yoy": 99.8,
+     "metric": "売上高"
+    },
+    "2023-03": {
+     "doc": "https://www.plant-co.jp/corp/pdf/uriselm_202309.pdf",
+     "yoy": 100.5,
+     "metric": "売上高"
+    },
+    "2023-04": {
+     "doc": "https://www.plant-co.jp/corp/pdf/uriselm_202309.pdf",
+     "yoy": 100.1,
+     "metric": "売上高"
+    },
+    "2023-05": {
+     "doc": "https://www.plant-co.jp/corp/pdf/uriselm_202309.pdf",
+     "yoy": 103.6,
+     "metric": "売上高"
+    },
+    "2023-06": {
+     "doc": "https://www.plant-co.jp/corp/pdf/uriselm_202309.pdf",
+     "yoy": 101.2,
+     "metric": "売上高"
+    },
+    "2023-07": {
+     "doc": "https://www.plant-co.jp/corp/pdf/uriselm_202309.pdf",
+     "yoy": 102.4,
+     "metric": "売上高"
+    },
+    "2023-08": {
+     "doc": "https://www.plant-co.jp/corp/pdf/uriselm_202309.pdf",
+     "yoy": 110.1,
+     "metric": "売上高"
+    },
+    "2023-09": {
+     "doc": "https://www.plant-co.jp/corp/pdf/uriselm_202309.pdf",
+     "yoy": 105.1,
+     "metric": "売上高"
+    },
+    "2021-10": {
+     "doc": "https://www.plant-co.jp/corp/pdf/uriselm_202209.pdf",
+     "yoy": 98.1,
+     "metric": "売上高"
+    },
+    "2021-11": {
+     "doc": "https://www.plant-co.jp/corp/pdf/uriselm_202209.pdf",
+     "yoy": 101.2,
+     "metric": "売上高"
+    },
+    "2022-01": {
+     "doc": "https://www.plant-co.jp/corp/pdf/uriselm_202209.pdf",
+     "yoy": 98.9,
+     "metric": "売上高"
+    },
+    "2022-02": {
+     "doc": "https://www.plant-co.jp/corp/pdf/uriselm_202209.pdf",
+     "yoy": 102.1,
+     "metric": "売上高"
+    },
+    "2022-03": {
+     "doc": "https://www.plant-co.jp/corp/pdf/uriselm_202209.pdf",
+     "yoy": 104.7,
+     "metric": "売上高"
+    },
+    "2022-04": {
+     "doc": "https://www.plant-co.jp/corp/pdf/uriselm_202209.pdf",
+     "yoy": 100.6,
+     "metric": "売上高"
+    },
+    "2022-05": {
+     "doc": "https://www.plant-co.jp/corp/pdf/uriselm_202209.pdf",
+     "yoy": 101.5,
+     "metric": "売上高"
+    },
+    "2022-07": {
+     "doc": "https://www.plant-co.jp/corp/pdf/uriselm_202209.pdf",
+     "yoy": 98.1,
+     "metric": "売上高"
+    },
+    "2022-08": {
+     "doc": "https://www.plant-co.jp/corp/pdf/uriselm_202209.pdf",
+     "yoy": 104.1,
+     "metric": "売上高"
+    },
+    "2022-09": {
+     "doc": "https://www.plant-co.jp/corp/pdf/uriselm_202209.pdf",
+     "yoy": 99.6,
+     "metric": "売上高"
+    },
+    "2020-10": {
+     "doc": "https://www.plant-co.jp/corp/pdf/uriselm_202109.pdf",
+     "yoy": 98.6,
+     "metric": "売上高"
+    },
+    "2020-11": {
+     "doc": "https://www.plant-co.jp/corp/pdf/uriselm_202109.pdf",
+     "yoy": 104.7,
+     "metric": "売上高"
+    },
+    "2020-12": {
+     "doc": "https://www.plant-co.jp/corp/pdf/uriselm_202109.pdf",
+     "yoy": 110.2,
+     "metric": "売上高"
+    },
+    "2021-01": {
+     "doc": "https://www.plant-co.jp/corp/pdf/uriselm_202109.pdf",
+     "yoy": 99.7,
+     "metric": "売上高"
+    },
+    "2021-02": {
+     "doc": "https://www.plant-co.jp/corp/pdf/uriselm_202109.pdf",
+     "yoy": 107.2,
+     "metric": "売上高"
+    },
+    "2021-03": {
+     "doc": "https://www.plant-co.jp/corp/pdf/uriselm_202109.pdf",
+     "yoy": 92.9,
+     "metric": "売上高"
+    },
+    "2021-04": {
+     "doc": "https://www.plant-co.jp/corp/pdf/uriselm_202109.pdf",
+     "yoy": 94.9,
+     "metric": "売上高"
+    },
+    "2021-05": {
+     "doc": "https://www.plant-co.jp/corp/pdf/uriselm_202109.pdf",
+     "yoy": 98.0,
+     "metric": "売上高"
+    },
+    "2021-06": {
+     "doc": "https://www.plant-co.jp/corp/pdf/uriselm_202109.pdf",
+     "yoy": 97.3,
+     "metric": "売上高"
+    },
+    "2021-07": {
+     "doc": "https://www.plant-co.jp/corp/pdf/uriselm_202109.pdf",
+     "yoy": 98.8,
+     "metric": "売上高"
+    },
+    "2021-08": {
+     "doc": "https://www.plant-co.jp/corp/pdf/uriselm_202109.pdf",
+     "yoy": 99.4,
+     "metric": "売上高"
+    },
+    "2021-09": {
+     "doc": "https://www.plant-co.jp/corp/pdf/uriselm_202109.pdf",
+     "yoy": 102.6,
+     "metric": "売上高"
+    },
+    "2014-10": {
+     "doc": "https://www.plant-co.jp/corp/pdf/uriselm_201509.pdf",
+     "yoy": 109.5,
+     "metric": "売上高"
+    },
+    "2014-11": {
+     "doc": "https://www.plant-co.jp/corp/pdf/uriselm_201509.pdf",
+     "yoy": 108.2,
+     "metric": "売上高"
+    },
+    "2014-12": {
+     "doc": "https://www.plant-co.jp/corp/pdf/uriselm_201509.pdf",
+     "yoy": 104.5,
+     "metric": "売上高"
+    },
+    "2015-01": {
+     "doc": "https://www.plant-co.jp/corp/pdf/uriselm_201509.pdf",
+     "yoy": 103.8,
+     "metric": "売上高"
+    },
+    "2015-02": {
+     "doc": "https://www.plant-co.jp/corp/pdf/uriselm_201509.pdf",
+     "yoy": 105.3,
+     "metric": "売上高"
+    },
+    "2015-03": {
+     "doc": "https://www.plant-co.jp/corp/pdf/uriselm_201509.pdf",
+     "yoy": 98.0,
+     "metric": "売上高"
+    },
+    "2015-04": {
+     "doc": "https://www.plant-co.jp/corp/pdf/uriselm_201509.pdf",
+     "yoy": 97.0,
+     "metric": "売上高"
+    },
+    "2015-05": {
+     "doc": "https://www.plant-co.jp/corp/pdf/uriselm_201509.pdf",
+     "yoy": 111.0,
+     "metric": "売上高"
+    },
+    "2015-06": {
+     "doc": "https://www.plant-co.jp/corp/pdf/uriselm_201509.pdf",
+     "yoy": 107.4,
+     "metric": "売上高"
+    },
+    "2015-07": {
+     "doc": "https://www.plant-co.jp/corp/pdf/uriselm_201509.pdf",
+     "yoy": 104.4,
+     "metric": "売上高"
+    },
+    "2015-08": {
+     "doc": "https://www.plant-co.jp/corp/pdf/uriselm_201509.pdf",
+     "yoy": 106.1,
+     "metric": "売上高"
+    },
+    "2015-09": {
+     "doc": "https://www.plant-co.jp/corp/pdf/uriselm_201509.pdf",
+     "yoy": 105.3,
+     "metric": "売上高"
+    },
+    "2013-10": {
+     "doc": "https://www.plant-co.jp/corp/pdf/uriselm_201409.pdf",
+     "yoy": 101.5,
+     "metric": "売上高"
+    },
+    "2013-11": {
+     "doc": "https://www.plant-co.jp/corp/pdf/uriselm_201409.pdf",
+     "yoy": 97.5,
+     "metric": "売上高"
+    },
+    "2013-12": {
+     "doc": "https://www.plant-co.jp/corp/pdf/uriselm_201409.pdf",
+     "yoy": 103.8,
+     "metric": "売上高"
+    },
+    "2014-01": {
+     "doc": "https://www.plant-co.jp/corp/pdf/uriselm_201409.pdf",
+     "yoy": 103.7,
+     "metric": "売上高"
+    },
+    "2014-02": {
+     "doc": "https://www.plant-co.jp/corp/pdf/uriselm_201409.pdf",
+     "yoy": 104.8,
+     "metric": "売上高"
+    },
+    "2014-03": {
+     "doc": "https://www.plant-co.jp/corp/pdf/uriselm_201409.pdf",
+     "yoy": 109.9,
+     "metric": "売上高"
+    },
+    "2014-04": {
+     "doc": "https://www.plant-co.jp/corp/pdf/uriselm_201409.pdf",
+     "yoy": 115.9,
+     "metric": "売上高"
+    },
+    "2014-05": {
+     "doc": "https://www.plant-co.jp/corp/pdf/uriselm_201409.pdf",
+     "yoy": 98.8,
+     "metric": "売上高"
+    },
+    "2014-06": {
+     "doc": "https://www.plant-co.jp/corp/pdf/uriselm_201409.pdf",
+     "yoy": 102.6,
+     "metric": "売上高"
+    },
+    "2014-07": {
+     "doc": "https://www.plant-co.jp/corp/pdf/uriselm_201409.pdf",
+     "yoy": 103.5,
+     "metric": "売上高"
+    },
+    "2014-08": {
+     "doc": "https://www.plant-co.jp/corp/pdf/uriselm_201409.pdf",
+     "yoy": 102.4,
+     "metric": "売上高"
+    },
+    "2014-09": {
+     "doc": "https://www.plant-co.jp/corp/pdf/uriselm_201409.pdf",
+     "yoy": 108.9,
+     "metric": "売上高"
+    },
+    "2012-10": {
+     "doc": "https://www.plant-co.jp/corp/pdf/uriselm_201309.pdf",
+     "yoy": 99.6,
+     "metric": "売上高"
+    },
+    "2012-11": {
+     "doc": "https://www.plant-co.jp/corp/pdf/uriselm_201309.pdf",
+     "yoy": 99.7,
+     "metric": "売上高"
+    },
+    "2012-12": {
+     "doc": "https://www.plant-co.jp/corp/pdf/uriselm_201309.pdf",
+     "yoy": 99.9,
+     "metric": "売上高"
+    },
+    "2013-01": {
+     "doc": "https://www.plant-co.jp/corp/pdf/uriselm_201309.pdf",
+     "yoy": 101.4,
+     "metric": "売上高"
+    },
+    "2013-02": {
+     "doc": "https://www.plant-co.jp/corp/pdf/uriselm_201309.pdf",
+     "yoy": 95.1,
+     "metric": "売上高"
+    },
+    "2013-03": {
+     "doc": "https://www.plant-co.jp/corp/pdf/uriselm_201309.pdf",
+     "yoy": 96.9,
+     "metric": "売上高"
+    },
+    "2013-04": {
+     "doc": "https://www.plant-co.jp/corp/pdf/uriselm_201309.pdf",
+     "yoy": 100.9,
+     "metric": "売上高"
+    },
+    "2013-05": {
+     "doc": "https://www.plant-co.jp/corp/pdf/uriselm_201309.pdf",
+     "yoy": 94.8,
+     "metric": "売上高"
+    },
+    "2013-06": {
+     "doc": "https://www.plant-co.jp/corp/pdf/uriselm_201309.pdf",
+     "yoy": 98.9,
+     "metric": "売上高"
+    },
+    "2013-07": {
+     "doc": "https://www.plant-co.jp/corp/pdf/uriselm_201309.pdf",
+     "yoy": 100.4,
+     "metric": "売上高"
+    },
+    "2013-08": {
+     "doc": "https://www.plant-co.jp/corp/pdf/uriselm_201309.pdf",
+     "yoy": 96.2,
+     "metric": "売上高"
+    },
+    "2013-09": {
+     "doc": "https://www.plant-co.jp/corp/pdf/uriselm_201309.pdf",
+     "yoy": 96.8,
+     "metric": "売上高"
+    }
+   }
   },
   "8160": {
    "name": "木曽路",
@@ -24922,29 +26751,36 @@
   },
   "9993": {
    "name": "ヤマザワ",
+   "page": "https://yamazawa.co.jp/ir/term-month.html",
    "months": {
     "2026-03": {
      "all": 92.4,
+     "same": 100.0,
      "doc": "https://yamazawa.co.jp/ir/term-month.html"
     },
     "2026-04": {
      "all": 93.2,
+     "same": 101.1,
      "doc": "https://yamazawa.co.jp/ir/term-month.html"
     },
     "2026-05": {
      "all": 97.2,
+     "same": 105.6,
      "doc": "https://yamazawa.co.jp/ir/term-month.html"
     },
     "2026-06": {
      "all": 91.3,
+     "same": 99.2,
      "doc": "https://yamazawa.co.jp/ir/term-month.html"
     },
     "2026-07": {
      "all": 92.6,
+     "same": 100.7,
      "doc": "https://yamazawa.co.jp/ir/term-month.html"
     },
     "2026-08": {
      "all": 90.9,
+     "same": 98.9,
      "doc": "https://yamazawa.co.jp/ir/term-month.html"
     },
     "2026-09": {
@@ -24952,9 +26788,7 @@
      "doc": "https://yamazawa.co.jp/ir/term-month.html"
     }
    },
-   "page": "https://yamazawa.co.jp/ir/term-month.html",
-   "ts": "2026-10-13T08:52:36+00:00",
-   "scope": "전점"
+   "ts": "2026-10-17T13:22:11+00:00"
   },
   "8715": {
    "name": "アニコムホールディングス",
@@ -25555,13 +27389,146 @@
     }
    },
    "ts": "2026-10-17T09:54:31+00:00"
+  },
+  "8705": {
+   "name": "日産証券グループ",
+   "page": "https://www.nissansec-g.co.jp",
+   "months": {},
+   "ts": "2026-10-17T13:22:11+00:00",
+   "pdf_ts": "2026-10-17T13:22:11+00:00",
+   "pdf": {
+    "2026-04": {
+     "doc": "https://www.nissansec-g.co.jp/pdf/press20260612.pdf",
+     "rev": 517774000.0,
+     "metric": "純営業収益（千円）"
+    },
+    "2026-05": {
+     "doc": "https://www.nissansec-g.co.jp/pdf/press20260612.pdf",
+     "rev": 536200000.0,
+     "metric": "純営業収益（千円）"
+    },
+    "2026-06": {
+     "doc": "https://www.nissansec-g.co.jp/pdf/press20260713.pdf",
+     "rev": 747738000.0,
+     "metric": "純営業収益（千円）"
+    },
+    "2026-07": {
+     "doc": "https://www.nissansec-g.co.jp/pdf/press20260817.pdf",
+     "rev": 465570000.0,
+     "metric": "純営業収益（千円）"
+    },
+    "2026-08": {
+     "doc": "https://www.nissansec-g.co.jp/pdf/press20260910.pdf",
+     "rev": 558575000.0,
+     "metric": "純営業収益（千円）"
+    },
+    "2026-09": {
+     "doc": "https://www.nissansec-g.co.jp/pdf/press20261015.pdf",
+     "rev": 548777000.0,
+     "metric": "純営業収益（千円）"
+    },
+    "2025-11": {
+     "doc": "https://www.nissansec-g.co.jp/pdf/press20260115.pdf",
+     "rev": 560955000.0,
+     "metric": "純営業収益（千円）"
+    },
+    "2025-12": {
+     "doc": "https://www.nissansec-g.co.jp/pdf/press20260115.pdf",
+     "rev": 788946000.0,
+     "metric": "純営業収益（千円）"
+    },
+    "2026-01": {
+     "doc": "https://www.nissansec-g.co.jp/pdf/press20260312.pdf",
+     "rev": 649422000000.0,
+     "metric": "預かり資産（百万円）"
+    },
+    "2026-02": {
+     "doc": "https://www.nissansec-g.co.jp/pdf/press20260312.pdf",
+     "rev": 665492000000.0,
+     "metric": "預かり資産（百万円）"
+    },
+    "2026-03": {
+     "doc": "https://www.nissansec-g.co.jp/pdf/press20260414.pdf",
+     "rev": 921406000.0,
+     "metric": "純営業収益（千円）"
+    },
+    "2025-10": {
+     "doc": "https://www.nissansec-g.co.jp/pdf/press20260115.pdf",
+     "rev": 957401000.0,
+     "metric": "純営業収益（千円）"
+    },
+    "2025-09": {
+     "doc": "https://www.nissansec-g.co.jp/pdf/press20260115.pdf",
+     "rev": 810696000.0,
+     "metric": "純営業収益（千円）"
+    },
+    "2025-08": {
+     "doc": "https://www.nissansec-g.co.jp/pdf/press20260115.pdf",
+     "rev": 482702000.0,
+     "metric": "純営業収益（千円）"
+    },
+    "2025-07": {
+     "doc": "https://www.nissansec-g.co.jp/pdf/press20260115.pdf",
+     "rev": 550063000.0,
+     "metric": "純営業収益（千円）"
+    }
+   }
+  },
+  "5888": {
+   "name": "ＤＡＩＷＡ ＣＹＣＬＥ",
+   "page": "https://www.daiwa-cycle.co.jp",
+   "months": {},
+   "ts": "2026-10-17T13:22:11+00:00",
+   "pdf_ts": "2026-10-17T13:22:11+00:00",
+   "pdf": {
+    "2026-02": {
+     "doc": "https://ssl4.eir-parts.net/doc/5888/tdnet/2884563/00.pdf",
+     "yoy": 118.3,
+     "metric": "全店売上高"
+    },
+    "2026-03": {
+     "doc": "https://ssl4.eir-parts.net/doc/5888/tdnet/2884563/00.pdf",
+     "yoy": 115.3,
+     "metric": "全店売上高"
+    },
+    "2026-04": {
+     "doc": "https://ssl4.eir-parts.net/doc/5888/tdnet/2884563/00.pdf",
+     "yoy": 117.2,
+     "metric": "全店売上高"
+    },
+    "2026-05": {
+     "doc": "https://ssl4.eir-parts.net/doc/5888/tdnet/2884563/00.pdf",
+     "yoy": 112.6,
+     "metric": "全店売上高"
+    },
+    "2026-06": {
+     "doc": "https://ssl4.eir-parts.net/doc/5888/tdnet/2884563/00.pdf",
+     "yoy": 111.8,
+     "metric": "全店売上高"
+    },
+    "2026-07": {
+     "doc": "https://ssl4.eir-parts.net/doc/5888/tdnet/2884563/00.pdf",
+     "yoy": 117.8,
+     "metric": "全店売上高"
+    },
+    "2026-08": {
+     "doc": "https://ssl4.eir-parts.net/doc/5888/tdnet/2884563/00.pdf",
+     "yoy": 123.1,
+     "metric": "全店売上高"
+    },
+    "2026-09": {
+     "doc": "https://ssl4.eir-parts.net/doc/5888/tdnet/2895392/00.pdf",
+     "yoy": 106.8,
+     "metric": "全店売上高"
+    }
+   }
   }
  },
  "source": "회사 IR 페이지 (月次 표)",
  "note": "회사가 제 사이트에 올린 월차 표에서 읽는다. 값은 전년동월비(%)뿐이고 금액은 없다. 회계연도가 적힌 표는 그 해로 읽으므로 옛 회계연도 표를 함께 싣는 회사는 이력이 길다.",
- "companies": 176,
- "months": 2687,
- "ts": "2026-10-17T10:04:00+00:00",
+ "companies": 178,
+ "months": 2841,
+ "ts": "2026-10-17T13:31:38+00:00",
  "done": [
   "https://amiyakitei.co.jp/prd/wordpress/wp-content/uploads/2025/04/●連結開示-202503.pdf",
   "https://amiyakitei.co.jp/prd/wordpress/wp-content/uploads/2026/04/monthly_newsflash1097.pdf",
@@ -25687,6 +27654,7 @@
   "https://corp.artnature.co.jp/ja/ir/finance/monthly_info/main/08/teaserItems1/00/linkList/0/link/00.pdf",
   "https://corp.artnature.co.jp/ja/ir/finance/monthly_info/main/09/teaserItems1/00/linkList/0/link/00.pdf",
   "https://gyet.co.jp/wp/wp-content/uploads/2026/06/202608前年比速報.pdf",
+  "https://ir.hamayuu.co.jp/ja/ir/news/news-7041927872435864695/main/0/link/pdffile.pdf",
   "https://kozohd.co.jp/wp-content/uploads/2021/03/62aee7c506643bb2ed85039f526476fe.pdf",
   "https://kozohd.co.jp/wp-content/uploads/2021/04/0708f8d3eaacf89734e9019a5cbe5a8d.pdf",
   "https://kozohd.co.jp/wp-content/uploads/2021/05/38ec8a9e7505559e48746d8a9e53c4f1.pdf",
@@ -25718,7 +27686,10 @@
   "https://ppih.co.jp/ir/highlight/monthly/pdf/month_2016.pdf",
   "https://ppih.co.jp/ir/highlight/monthly/pdf/month_2017.pdf",
   "https://ppih.co.jp/ir/highlight/monthly/pdf/month_2018.pdf",
+  "https://ssl4.eir-parts.net/doc/2311/tdnet/2887431/00.pdf",
   "https://ssl4.eir-parts.net/doc/3083/ir_material2/286930/00.pdf",
+  "https://ssl4.eir-parts.net/doc/5888/tdnet/2884563/00.pdf",
+  "https://ssl4.eir-parts.net/doc/5888/tdnet/2895392/00.pdf",
   "https://ssl4.eir-parts.net/doc/7476/tdnet/2883022/00.pdf",
   "https://ssl4.eir-parts.net/doc/7476/tdnet/2893032/00.pdf",
   "https://ssl4.eir-parts.net/doc/9278/tdnet/2537288/00.pdf",
@@ -25944,6 +27915,10 @@
   "https://www.hc-kohnan.com/files/corporate/ir/monthly-report/monthly-report_46th.pdf",
   "https://www.hc-kohnan.com/files/corporate/ir/monthly-report/monthly-report_47th.pdf",
   "https://www.hc-kohnan.com/files/corporate/ir/monthly-report/monthly-report_48th.pdf",
+  "https://www.horiifood.co.jp/ir/library/prospectus.cgi?mode=download&id=22&file_id=1",
+  "https://www.horiifood.co.jp/ir/library/prospectus.cgi?mode=download&id=23&file_id=1",
+  "https://www.horiifood.co.jp/ir/library/prospectus.cgi?mode=download&id=24&file_id=1",
+  "https://www.horiifood.co.jp/ir/library/prospectus.cgi?mode=download&id=25&file_id=1",
   "https://www.j-front-retailing.com/_data/ir_monthly/1102_renketsu110315.pdf",
   "https://www.j-front-retailing.com/ir/pdf/monthly/matsuzakaya/h19_2007/getsuji_0704.pdf",
   "https://www.joshin.co.jp/ja/ir/news/news-6065434174700526662/main/0/link/20260804%20Joshin%20Monthly%20sale%20report.pdf",
@@ -25960,6 +27935,16 @@
   "https://www.mrmaxhd.co.jp/ir/ir-library/monthly/upload/202202.pdf",
   "https://www.mrmaxhd.co.jp/ir/ir-library/monthly/upload/202302.pdf",
   "https://www.mv-tokai.co.jp/wp/wp-content/uploads/2026/10/c0ea3489e1551f98124d352b727c6cf8.pdf",
+  "https://www.nissansec-g.co.jp/pdf/press20260115.pdf",
+  "https://www.nissansec-g.co.jp/pdf/press202602134.pdf",
+  "https://www.nissansec-g.co.jp/pdf/press20260312.pdf",
+  "https://www.nissansec-g.co.jp/pdf/press20260414.pdf",
+  "https://www.nissansec-g.co.jp/pdf/press20260518.pdf",
+  "https://www.nissansec-g.co.jp/pdf/press20260612.pdf",
+  "https://www.nissansec-g.co.jp/pdf/press20260713.pdf",
+  "https://www.nissansec-g.co.jp/pdf/press20260817.pdf",
+  "https://www.nissansec-g.co.jp/pdf/press20260910.pdf",
+  "https://www.nissansec-g.co.jp/pdf/press20261015.pdf",
   "https://www.odakyu.jp/ir/news/ho5toc000000cu52-att/2026.06.pdf",
   "https://www.palgroup.holdings/wp/wp-content/uploads/2026/10/0e41d29abb8e043ebe0a18351ec1a642.pdf",
   "https://www.palgroup.holdings/wp/wp-content/uploads/2026/10/5b6c0842f4d058e04740f702a20904d5.pdf",
@@ -25970,7 +27955,17 @@
   "https://www.pepper-fs.co.jp/_img/ir/monthly_report/2026/PFS20260715.pdf",
   "https://www.pepper-fs.co.jp/_img/ir/monthly_report/2026/PFS20260817.pdf",
   "https://www.pepper-fs.co.jp/_img/ir/monthly_report/2026/PFS20260914.pdf",
+  "https://www.pepper-fs.co.jp/_img/ir/monthly_report/2026/PFS20261015.pdf",
   "https://www.pietro.co.jp/assets/upload/news/getsuji_202609.pdf",
+  "https://www.pietro.co.jp/assets/upload/news/getsuji_202610.pdf",
+  "https://www.plant-co.jp/corp/pdf/uriselm_201309.pdf",
+  "https://www.plant-co.jp/corp/pdf/uriselm_201409.pdf",
+  "https://www.plant-co.jp/corp/pdf/uriselm_201509.pdf",
+  "https://www.plant-co.jp/corp/pdf/uriselm_202109.pdf",
+  "https://www.plant-co.jp/corp/pdf/uriselm_202209.pdf",
+  "https://www.plant-co.jp/corp/pdf/uriselm_202309.pdf",
+  "https://www.plant-co.jp/corp/pdf/uriselm_202409.pdf",
+  "https://www.plant-co.jp/corp/pdf/uriselm_202509.pdf",
   "https://www.poplar-cvs.co.jp/ir/pdf/index/2026/tsukiji260810.pdf",
   "https://www.poplar-cvs.co.jp/ir/pdf/index/2026/tsukiji260910.pdf",
   "https://www.sacs-bar.co.jp/pdf/20251126.pdf",
@@ -29462,9 +31457,669 @@
   "https://www.anrakutei.co.jp/ir/2016/20160520.pdf": {
    "reason": "표없음",
    "day": "2026-10-17"
+  },
+  "https://www.pepper-fs.co.jp/_img/ir/monthly_report/2026/PFS20260216.pdf": {
+   "reason": "표없음",
+   "day": "2026-10-17"
+  },
+  "https://www.pietro.co.jp/assets/upload/newsrelease/newsrelease_20261016.pdf": {
+   "reason": "표없음",
+   "day": "2026-10-17"
+  },
+  "https://www.pietro.co.jp/assets/upload/newsrelease/newsrelease_20261001.pdf": {
+   "reason": "표없음",
+   "day": "2026-10-17"
+  },
+  "https://www.pietro.co.jp/assets/upload/newsrelease/newsrelease_20260917.pdf": {
+   "reason": "표없음",
+   "day": "2026-10-17"
+  },
+  "https://www.pietro.co.jp/assets/upload/newsrelease/newsrelease_20260805_5.pdf": {
+   "reason": "표없음",
+   "day": "2026-10-17"
+  },
+  "https://www.pietro.co.jp/assets/upload/newsrelease/newsrelease_20260805_4.pdf": {
+   "reason": "표없음",
+   "day": "2026-10-17"
+  },
+  "https://contents.xj-storage.jp/xcontents/60730/21c5e1da/157b/4bdc/a051/9b8dcbd93988/140120261003545596.pdf": {
+   "reason": "표없음",
+   "day": "2026-10-17"
+  },
+  "https://contents.xj-storage.jp/xcontents/60730/f4ebf668/4386/48c5/9a09/8de228297fc1/140120260907532662.pdf": {
+   "reason": "표없음",
+   "day": "2026-10-17"
+  },
+  "https://contents.xj-storage.jp/xcontents/60730/767a9f1e/779c/4f6d/ae05/3219480e3281/140120260718596245.pdf": {
+   "reason": "표없음",
+   "day": "2026-10-17"
+  },
+  "https://contents.xj-storage.jp/xcontents/60730/11239d3d/fdfb/4639/b0b6/b007cbafa970/140120260706588587.pdf": {
+   "reason": "표없음",
+   "day": "2026-10-17"
+  },
+  "https://contents.xj-storage.jp/xcontents/60730/8b90c98d/e72d/4d2e/8bca/ce451b613060/140120260604562555.pdf": {
+   "reason": "표없음",
+   "day": "2026-10-17"
+  },
+  "https://contents.xj-storage.jp/xcontents/60730/cfb55bc5/4fdf/4f0a/ac15/b84518ce6531/140120260430515324.pdf": {
+   "reason": "표없음",
+   "day": "2026-10-17"
+  },
+  "https://contents.xj-storage.jp/xcontents/60730/24b60b42/93f4/450d/9d20/450a149c235b/140120260403598417.pdf": {
+   "reason": "표없음",
+   "day": "2026-10-17"
+  },
+  "https://contents.xj-storage.jp/xcontents/60730/f6f24514/f6d5/43a8/91be/adbc4b9303d2/140120260303574905.pdf": {
+   "reason": "표없음",
+   "day": "2026-10-17"
+  },
+  "https://contents.xj-storage.jp/xcontents/60730/237eab4e/c1bf/412e/8ef4/7f686ac47611/140120260205548645.pdf": {
+   "reason": "표없음",
+   "day": "2026-10-17"
+  },
+  "https://contents.xj-storage.jp/xcontents/60730/6809ca40/aeaf/482f/a5e5/36c5b12f5f90/140120260114533925.pdf": {
+   "reason": "표없음",
+   "day": "2026-10-17"
+  },
+  "https://www.plant-co.jp/corp/pdf/uriselm_202009.pdf": {
+   "reason": "표없음",
+   "day": "2026-10-17"
+  },
+  "https://www.plant-co.jp/corp/pdf/uriselm_201909.pdf": {
+   "reason": "표없음",
+   "day": "2026-10-17"
+  },
+  "https://www.plant-co.jp/corp/pdf/uriselm_201809.pdf": {
+   "reason": "표없음",
+   "day": "2026-10-17"
+  },
+  "https://www.plant-co.jp/corp/pdf/uriselm_201709.pdf": {
+   "reason": "표없음",
+   "day": "2026-10-17"
+  },
+  "https://www.plant-co.jp/corp/pdf/uriselm_201609.pdf": {
+   "reason": "표없음",
+   "day": "2026-10-17"
+  },
+  "https://www.plant-co.jp/corp/pdf/uriselm_201209.pdf": {
+   "reason": "표없음",
+   "day": "2026-10-17"
+  },
+  "https://www.plant-co.jp/corp/pdf/uriselm_201109.pdf": {
+   "reason": "표없음",
+   "day": "2026-10-17"
+  },
+  "https://www.plant-co.jp/corp/pdf/uriselm_201009.pdf": {
+   "reason": "표없음",
+   "day": "2026-10-17"
+  },
+  "https://www.plant-co.jp/corp/pdf/uriselm_200909.pdf": {
+   "reason": "표없음",
+   "day": "2026-10-17"
+  },
+  "https://www.plant-co.jp/corp/pdf/uriselm_200809.pdf": {
+   "reason": "표없음",
+   "day": "2026-10-17"
+  },
+  "https://www.plant-co.jp/corp/pdf/uriselm_200709.pdf": {
+   "reason": "표없음",
+   "day": "2026-10-17"
+  },
+  "https://www.plant-co.jp/corp/pdf/uriselm_200609.pdf": {
+   "reason": "표없음",
+   "day": "2026-10-17"
+  },
+  "https://ssl4.eir-parts.net/doc/3083/announcement/125563/00.pdf": {
+   "reason": "표없음",
+   "day": "2026-10-17"
+  },
+  "https://ssl4.eir-parts.net/doc/3083/tdnet/2894979/00.pdf": {
+   "reason": "표없음",
+   "day": "2026-10-17"
+  },
+  "https://www.teng.co.jp/ir/9a9cb695349e25a0bca084815ff23ef62d5903de.pdf": {
+   "reason": "표없음",
+   "day": "2026-10-17"
+  },
+  "https://www.handsman.co.jp/wp-content/uploads/ir/i_sales_report/63th/uriage-202609.pdf": {
+   "reason": "표없음",
+   "day": "2026-10-17"
+  },
+  "https://www.handsman.co.jp/wp-content/uploads/ir/i_sales_report/63th/uriage-202608.pdf": {
+   "reason": "표없음",
+   "day": "2026-10-17"
+  },
+  "https://www.handsman.co.jp/wp-content/uploads/2026/08/uriage-202607.pdf": {
+   "reason": "표없음",
+   "day": "2026-10-17"
+  },
+  "https://www.handsman.co.jp/wp-content/uploads/2026/07/uriage-202606.pdf": {
+   "reason": "표없음",
+   "day": "2026-10-17"
+  },
+  "https://www.handsman.co.jp/wp-content/uploads/2026/06/uriage-202605.pdf": {
+   "reason": "표없음",
+   "day": "2026-10-17"
+  },
+  "https://www.handsman.co.jp/wp-content/uploads/2026/05/uriage-202604-1.pdf": {
+   "reason": "표없음",
+   "day": "2026-10-17"
+  },
+  "https://www.handsman.co.jp/wp-content/uploads/2026/04/uriage-202603-1.pdf": {
+   "reason": "표없음",
+   "day": "2026-10-17"
+  },
+  "https://www.handsman.co.jp/wp-content/uploads/2026/03/uriage-202602-1.pdf": {
+   "reason": "표없음",
+   "day": "2026-10-17"
+  },
+  "https://www.handsman.co.jp/wp-content/uploads/2026/02/uriage-202601-6.pdf": {
+   "reason": "표없음",
+   "day": "2026-10-17"
+  },
+  "https://www.handsman.co.jp/wp-content/uploads/2026/01/uriage-202512.pdf": {
+   "reason": "표없음",
+   "day": "2026-10-17"
+  },
+  "https://www.handsman.co.jp/wp-content/uploads/2025/12/uriage-202511-1.pdf": {
+   "reason": "표없음",
+   "day": "2026-10-17"
+  },
+  "https://www.handsman.co.jp/wp-content/uploads/2025/11/uriage-202510-2.pdf": {
+   "reason": "표없음",
+   "day": "2026-10-17"
+  },
+  "https://www.handsman.co.jp/wp-content/uploads/ir/i_sales_report/62th/uriage-202509.pdf": {
+   "reason": "표없음",
+   "day": "2026-10-17"
+  },
+  "https://www.handsman.co.jp/wp-content/uploads/ir/i_sales_report/62th/uriage-202508.pdf": {
+   "reason": "표없음",
+   "day": "2026-10-17"
+  },
+  "https://www.handsman.co.jp/wp-content/uploads/ir/i_sales_report/62th/uriage-202507.pdf": {
+   "reason": "표없음",
+   "day": "2026-10-17"
+  },
+  "https://www.handsman.co.jp/wp-content/uploads/ir/i_sales_report/61th/uriage-202506.pdf": {
+   "reason": "표없음",
+   "day": "2026-10-17"
+  },
+  "https://www.handsman.co.jp/wp-content/uploads/ir/i_sales_report/61th/uriage-202505.pdf": {
+   "reason": "표없음",
+   "day": "2026-10-17"
+  },
+  "https://www.handsman.co.jp/wp-content/uploads/ir/i_sales_report/61th/uriage-202504.pdf": {
+   "reason": "표없음",
+   "day": "2026-10-17"
+  },
+  "https://www.handsman.co.jp/wp-content/uploads/ir/i_sales_report/61th/uriage-202503.pdf": {
+   "reason": "표없음",
+   "day": "2026-10-17"
+  },
+  "https://www.handsman.co.jp/wp-content/uploads/ir/i_sales_report/61th/uriage-202502.pdf": {
+   "reason": "표없음",
+   "day": "2026-10-17"
+  },
+  "https://www.handsman.co.jp/wp-content/uploads/ir/i_sales_report/61th/uriage-202501.pdf": {
+   "reason": "표없음",
+   "day": "2026-10-17"
+  },
+  "https://www.handsman.co.jp/wp-content/uploads/ir/i_sales_report/61th/uriage-202412.pdf": {
+   "reason": "표없음",
+   "day": "2026-10-17"
+  },
+  "https://www.handsman.co.jp/wp-content/uploads/ir/i_sales_report/61th/uriage-202411.pdf": {
+   "reason": "표없음",
+   "day": "2026-10-17"
+  },
+  "https://www.handsman.co.jp/wp-content/uploads/ir/i_sales_report/61th/uriage-202410.pdf": {
+   "reason": "표없음",
+   "day": "2026-10-17"
+  },
+  "https://www.handsman.co.jp/wp-content/uploads/ir/i_sales_report/61th/uriage-202409.pdf": {
+   "reason": "표없음",
+   "day": "2026-10-17"
+  },
+  "https://www.handsman.co.jp/wp-content/uploads/ir/i_sales_report/61th/uriage-202408.pdf": {
+   "reason": "표없음",
+   "day": "2026-10-17"
+  },
+  "https://www.handsman.co.jp/wp-content/uploads/ir/i_sales_report/61th/uriage-202407.pdf": {
+   "reason": "표없음",
+   "day": "2026-10-17"
+  },
+  "https://www.handsman.co.jp/wp-content/uploads/ir/i_sales_report/60th/uriage-202406.pdf": {
+   "reason": "표없음",
+   "day": "2026-10-17"
+  },
+  "https://www.handsman.co.jp/wp-content/uploads/ir/i_sales_report/60th/uriage-202405.pdf": {
+   "reason": "표없음",
+   "day": "2026-10-17"
+  },
+  "https://www.handsman.co.jp/wp-content/uploads/ir/i_sales_report/60th/uriage-202404.pdf": {
+   "reason": "표없음",
+   "day": "2026-10-17"
+  },
+  "https://www.handsman.co.jp/wp-content/uploads/ir/i_sales_report/60th/uriage-202403.pdf": {
+   "reason": "표없음",
+   "day": "2026-10-17"
+  },
+  "https://www.handsman.co.jp/wp-content/uploads/ir/i_sales_report/60th/uriage-202402.pdf": {
+   "reason": "표없음",
+   "day": "2026-10-17"
+  },
+  "https://www.handsman.co.jp/wp-content/uploads/ir/i_sales_report/60th/uriage-202401.pdf": {
+   "reason": "표없음",
+   "day": "2026-10-17"
+  },
+  "https://www.handsman.co.jp/wp-content/uploads/ir/i_sales_report/60th/uriage-202312.pdf": {
+   "reason": "표없음",
+   "day": "2026-10-17"
+  },
+  "https://www.handsman.co.jp/wp-content/uploads/ir/i_sales_report/60th/uriage-202311.pdf": {
+   "reason": "표없음",
+   "day": "2026-10-17"
+  },
+  "https://www.handsman.co.jp/wp-content/uploads/ir/i_sales_report/60th/uriage-202310.pdf": {
+   "reason": "표없음",
+   "day": "2026-10-17"
+  },
+  "https://www.nissansec-g.co.jp/pdf/press20260916.pdf": {
+   "reason": "표없음",
+   "day": "2026-10-17"
+  },
+  "https://www.nissansec-g.co.jp/pdf/press20260730.pdf": {
+   "reason": "표없음",
+   "day": "2026-10-17"
+  },
+  "https://www.nissansec-g.co.jp/pdf/press202604301.pdf": {
+   "reason": "표없음",
+   "day": "2026-10-17"
+  },
+  "https://www.nissansec-g.co.jp/pdf/press202602133.pdf": {
+   "reason": "표없음",
+   "day": "2026-10-17"
+  },
+  "https://www.nissansec-g.co.jp/pdf/press20260129.pdf": {
+   "reason": "표없음",
+   "day": "2026-10-17"
+  },
+  "https://www.horiifood.co.jp/ir/library/prospectus.cgi?mode=download&id=21&file_id=1": {
+   "reason": "표없음",
+   "day": "2026-10-17"
+  },
+  "https://www.horiifood.co.jp/ir/library/prospectus.cgi?mode=download&id=20&file_id=1": {
+   "reason": "표없음",
+   "day": "2026-10-17"
+  },
+  "https://www.horiifood.co.jp/ir/library/prospectus.cgi?mode=download&id=19&file_id=1": {
+   "reason": "표없음",
+   "day": "2026-10-17"
+  },
+  "https://www.horiifood.co.jp/ir/library/prospectus.cgi?mode=download&id=18&file_id=1": {
+   "reason": "표없음",
+   "day": "2026-10-17"
+  },
+  "https://www.horiifood.co.jp/ir/library/prospectus.cgi?mode=download&id=17&file_id=1": {
+   "reason": "표없음",
+   "day": "2026-10-17"
+  },
+  "https://www.horiifood.co.jp/ir/library/prospectus.cgi?mode=download&id=16&file_id=1": {
+   "reason": "표없음",
+   "day": "2026-10-17"
+  },
+  "https://www.horiifood.co.jp/ir/library/prospectus.cgi?mode=download&id=15&file_id=1": {
+   "reason": "표없음",
+   "day": "2026-10-17"
+  },
+  "https://www.horiifood.co.jp/ir/library/prospectus.cgi?mode=download&id=14&file_id=1": {
+   "reason": "표없음",
+   "day": "2026-10-17"
+  },
+  "https://www.horiifood.co.jp/ir/library/prospectus.cgi?mode=download&id=13&file_id=1": {
+   "reason": "표없음",
+   "day": "2026-10-17"
+  },
+  "https://www.horiifood.co.jp/ir/library/prospectus.cgi?mode=download&id=12&file_id=1": {
+   "reason": "표없음",
+   "day": "2026-10-17"
+  },
+  "https://www.horiifood.co.jp/ir/library/prospectus.cgi?mode=download&id=10&file_id=1": {
+   "reason": "표없음",
+   "day": "2026-10-17"
+  },
+  "https://www.horiifood.co.jp/ir/library/prospectus.cgi?mode=download&id=9&file_id=1": {
+   "reason": "표없음",
+   "day": "2026-10-17"
+  },
+  "https://www.oomitsu.com/topics2017/ooame_20260911.pdf": {
+   "reason": "표없음",
+   "day": "2026-10-17"
+  },
+  "https://www.oomitsu.com/topics2017/syoukai_20260630.pdf": {
+   "reason": "표없음",
+   "day": "2026-10-17"
+  },
+  "https://www.oomitsu.com/topics2017/syoukai_20260525.pdf": {
+   "reason": "표없음",
+   "day": "2026-10-17"
+  },
+  "https://www.oomitsu.com/topics2017/fckeiyaku_20260206.pdf": {
+   "reason": "표없음",
+   "day": "2026-10-17"
+  },
+  "https://www.oomitsu.com/topics2017/syoukai_20260115.pdf": {
+   "reason": "표없음",
+   "day": "2026-10-17"
+  },
+  "https://www.oomitsu.com/topics2017/syoukai_20251222.pdf": {
+   "reason": "표없음",
+   "day": "2026-10-17"
+  },
+  "https://www.oomitsu.com/topics2017/syoukai_20251014.pdf": {
+   "reason": "표없음",
+   "day": "2026-10-17"
+  },
+  "https://www.oomitsu.com/topics2017/syoukai_20250917.pdf": {
+   "reason": "표없음",
+   "day": "2026-10-17"
+  },
+  "https://www.oomitsu.com/topics2017/syoukai_20250905.pdf": {
+   "reason": "표없음",
+   "day": "2026-10-17"
+  },
+  "https://www.oomitsu.com/topics2017/syoukai_20250823.pdf": {
+   "reason": "표없음",
+   "day": "2026-10-17"
+  },
+  "https://www.oomitsu.com/topics2017/syoukai_20250718.pdf": {
+   "reason": "표없음",
+   "day": "2026-10-17"
+  },
+  "https://www.oomitsu.com/topics2017/syoukai_20250529.pdf": {
+   "reason": "표없음",
+   "day": "2026-10-17"
+  },
+  "https://www.oomitsu.com/topics2017/syoukai_20250514.pdf": {
+   "reason": "표없음",
+   "day": "2026-10-17"
+  },
+  "https://www.oomitsu.com/topics2017/syoukai_20250510.pdf": {
+   "reason": "표없음",
+   "day": "2026-10-17"
+  },
+  "https://www.oomitsu.com/topics2017/syoukai_20250121.pdf": {
+   "reason": "표없음",
+   "day": "2026-10-17"
+  },
+  "https://www.oomitsu.com/topics2017/syoukai_20241220.pdf": {
+   "reason": "표없음",
+   "day": "2026-10-17"
+  },
+  "https://www.oomitsu.com/topics2017/syoukai_20241205.pdf": {
+   "reason": "표없음",
+   "day": "2026-10-17"
+  },
+  "https://www.oomitsu.com/topics2017/syoukai_20241127.pdf": {
+   "reason": "표없음",
+   "day": "2026-10-17"
+  },
+  "https://www.oomitsu.com/topics2017/syoukai_20240930.pdf": {
+   "reason": "표없음",
+   "day": "2026-10-17"
+  },
+  "https://www.oomitsu.com/topics2017/syoukai_20240904.pdf": {
+   "reason": "표없음",
+   "day": "2026-10-17"
+  },
+  "https://www.oomitsu.com/topics2017/syoukai_20240730.pdf": {
+   "reason": "표없음",
+   "day": "2026-10-17"
+  },
+  "https://www.oomitsu.com/topics2017/syoukai_20240704.pdf": {
+   "reason": "표없음",
+   "day": "2026-10-17"
+  },
+  "https://www.oomitsu.com/topics2017/syoukai_20240702.pdf": {
+   "reason": "표없음",
+   "day": "2026-10-17"
+  },
+  "https://www.oomitsu.com/topics2017/syoukai_20240524.pdf": {
+   "reason": "표없음",
+   "day": "2026-10-17"
+  },
+  "https://www.oomitsu.com/topics2017/syoukai_20240205.pdf": {
+   "reason": "표없음",
+   "day": "2026-10-17"
+  },
+  "https://www.oomitsu.com/topics2017/syoukai_20240122.pdf": {
+   "reason": "표없음",
+   "day": "2026-10-17"
+  },
+  "https://www.oomitsu.com/topics2017/syoukai_20231221.pdf": {
+   "reason": "표없음",
+   "day": "2026-10-17"
+  },
+  "https://www.oomitsu.com/topics2017/syoukai_20231219.pdf": {
+   "reason": "표없음",
+   "day": "2026-10-17"
+  },
+  "https://www.oomitsu.com/topics2017/syoukai_20231201.pdf": {
+   "reason": "표없음",
+   "day": "2026-10-17"
+  },
+  "https://www.oomitsu.com/topics2017/syoukai_20231030.pdf": {
+   "reason": "표없음",
+   "day": "2026-10-17"
+  },
+  "https://www.oomitsu.com/topics2017/syoukai_20230919.pdf": {
+   "reason": "표없음",
+   "day": "2026-10-17"
+  },
+  "https://www.oomitsu.com/topics2017/syoukai_20230605.pdf": {
+   "reason": "표없음",
+   "day": "2026-10-17"
+  },
+  "https://www.oomitsu.com/topics2017/syoukai_20230410.pdf": {
+   "reason": "표없음",
+   "day": "2026-10-17"
+  },
+  "https://www.oomitsu.com/topics2017/syoukai_20230331.pdf": {
+   "reason": "표없음",
+   "day": "2026-10-17"
+  },
+  "https://www.oomitsu.com/topics2017/syoukai_202301030.pdf": {
+   "reason": "표없음",
+   "day": "2026-10-17"
+  },
+  "https://www.oomitsu.com/topics2017/syoukai_202301026.pdf": {
+   "reason": "표없음",
+   "day": "2026-10-17"
+  },
+  "https://www.oomitsu.com/topics2017/syoukai_20230116.pdf": {
+   "reason": "표없음",
+   "day": "2026-10-17"
+  },
+  "https://ir.hamayuu.co.jp/ja/ir/news/auto_20261012549163/pdfFile.pdf": {
+   "reason": "표없음",
+   "day": "2026-10-17"
+  },
+  "https://ir.hamayuu.co.jp/ja/ir/news/auto_20260925540237/pdfFile.pdf": {
+   "reason": "표없음",
+   "day": "2026-10-17"
+  },
+  "https://ir.hamayuu.co.jp/ja/ir/news/auto_20260925540046/pdfFile.pdf": {
+   "reason": "표없음",
+   "day": "2026-10-17"
+  },
+  "https://ir.hamayuu.co.jp/ja/ir/library/result/main/0110/teaserItems1/00/linkList/0/link/20250319_1.pdf": {
+   "reason": "표없음",
+   "day": "2026-10-17"
+  },
+  "https://ir.hamayuu.co.jp/ja/ir/library/result/main/00/teaserItems1/0/linkList/0/link/202007kessan.pdf": {
+   "reason": "표없음",
+   "day": "2026-10-17"
+  },
+  "https://www.village-v.co.jp/company/docs/bafb618903156fd1e304ff852e92b34b996a088d.pdf": {
+   "reason": "표없음",
+   "day": "2026-10-17"
+  },
+  "https://www.village-v.co.jp/company/docs/7aa569fc45582d5abf9e20ba3bcffb48ef572cd1.pdf": {
+   "reason": "표없음",
+   "day": "2026-10-17"
+  },
+  "https://ssl4.eir-parts.net/doc/2311/ir_material_for_fiscal_ym/212038/00.pdf": {
+   "reason": "표없음",
+   "day": "2026-10-17"
+  },
+  "https://contents.xj-storage.jp/xcontents/AS81590/c7ab06bc/7fb9/400c/a551/7bc78ccd60ea/140120261007546987.pdf": {
+   "reason": "표없음",
+   "day": "2026-10-17"
+  },
+  "https://contents.xj-storage.jp/xcontents/AS81590/2e2cd354/8607/46d7/8aab/59a2b988ac49/140120260907532387.pdf": {
+   "reason": "표없음",
+   "day": "2026-10-17"
+  },
+  "https://contents.xj-storage.jp/xcontents/AS81590/779cd3fa/8dfb/4202/8c49/2ac461d3ee50/140120260806512422.pdf": {
+   "reason": "표없음",
+   "day": "2026-10-17"
+  },
+  "https://contents.xj-storage.jp/xcontents/AS81590/f9c80ba9/04ba/4cf2/a0da/79337095d94d/140120260707588722.pdf": {
+   "reason": "표없음",
+   "day": "2026-10-17"
+  },
+  "https://contents.xj-storage.jp/xcontents/AS81590/041859f8/6590/49a1/bbc3/3a9c36dea361/140120260605563920.pdf": {
+   "reason": "표없음",
+   "day": "2026-10-17"
+  },
+  "https://contents.xj-storage.jp/xcontents/AS81590/b07267f2/0fd7/49cc/be35/bc28a41492a3/140120260512525601.pdf": {
+   "reason": "표없음",
+   "day": "2026-10-17"
+  },
+  "https://contents.xj-storage.jp/xcontents/AS81590/3b46dff8/a6be/4ba5/b559/a8c52e626d89/140120260407599197.pdf": {
+   "reason": "표없음",
+   "day": "2026-10-17"
+  },
+  "https://contents.xj-storage.jp/xcontents/AS81590/6b1469a9/3261/4a9e/a61b/ff8f1950035e/140120260306577560.pdf": {
+   "reason": "표없음",
+   "day": "2026-10-17"
+  },
+  "https://contents.xj-storage.jp/xcontents/AS81590/74f20f06/0a9e/426d/ae8f/590f45fb525d/140120260206550484.pdf": {
+   "reason": "표없음",
+   "day": "2026-10-17"
+  },
+  "https://contents.xj-storage.jp/xcontents/AS81590/9b0c1e6c/d7e0/4160/b29f/87133f6e7da1/140120260108530537.pdf": {
+   "reason": "표없음",
+   "day": "2026-10-17"
+  },
+  "https://contents.xj-storage.jp/xcontents/AS81590/2b651b40/bfb2/4e0a/a408/83fadf0ad78b/140120251205515158.pdf": {
+   "reason": "표없음",
+   "day": "2026-10-17"
+  },
+  "https://contents.xj-storage.jp/xcontents/AS81590/616c993c/d0c5/414e/b090/65f95baff1a8/140120251110593101.pdf": {
+   "reason": "표없음",
+   "day": "2026-10-17"
+  },
+  "https://contents.xj-storage.jp/xcontents/AS81590/65c8e273/fb10/42cd/a168/71578f43f483/140120251007569418.pdf": {
+   "reason": "표없음",
+   "day": "2026-10-17"
+  },
+  "https://contents.xj-storage.jp/xcontents/AS81590/21a70554/940d/4c3f/a7b4/03dbd703b480/140120250905553921.pdf": {
+   "reason": "표없음",
+   "day": "2026-10-17"
+  },
+  "https://contents.xj-storage.jp/xcontents/AS81590/281dcf97/dbd9/4236/93dd/7af00b1f7462/140120250807533321.pdf": {
+   "reason": "표없음",
+   "day": "2026-10-17"
+  },
+  "https://contents.xj-storage.jp/xcontents/AS81590/77a911f3/245e/42d7/b571/b659ac41ca3c/140120250707509356.pdf": {
+   "reason": "표없음",
+   "day": "2026-10-17"
+  },
+  "https://contents.xj-storage.jp/xcontents/AS81590/6af63fe5/d108/4b2d/a0c5/871fe1e832cc/140120250605583200.pdf": {
+   "reason": "표없음",
+   "day": "2026-10-17"
+  },
+  "https://contents.xj-storage.jp/xcontents/AS81590/3d40a3b1/c15d/44e2/8880/bf54c681fb33/140120250509536745.pdf": {
+   "reason": "표없음",
+   "day": "2026-10-17"
+  },
+  "https://contents.xj-storage.jp/xcontents/AS81590/ac8dbd5c/6b80/450a/a9f1/706ae6680c8b/140120250407509709.pdf": {
+   "reason": "표없음",
+   "day": "2026-10-17"
+  },
+  "https://contents.xj-storage.jp/xcontents/AS81590/dc7cce15/d764/49ed/a19b/0edd5f250c83/140120250307590489.pdf": {
+   "reason": "표없음",
+   "day": "2026-10-17"
+  },
+  "https://contents.xj-storage.jp/xcontents/AS81590/7d6b1ca7/aa04/4370/bb1a/af143d5114d5/140120250207566574.pdf": {
+   "reason": "표없음",
+   "day": "2026-10-17"
+  },
+  "https://contents.xj-storage.jp/xcontents/AS81590/10b0437d/f831/40ca/a009/aa40ea7c6b31/140120250110549383.pdf": {
+   "reason": "표없음",
+   "day": "2026-10-17"
+  },
+  "https://contents.xj-storage.jp/xcontents/AS81590/67fcc9a4/a88c/4283/9af9/64ea4338e7ad/140120241206535086.pdf": {
+   "reason": "표없음",
+   "day": "2026-10-17"
+  },
+  "https://contents.xj-storage.jp/xcontents/AS81590/32ca622e/5555/4cf0/b516/c6c35aa49cba/140120241108515655.pdf": {
+   "reason": "표없음",
+   "day": "2026-10-17"
+  },
+  "https://contents.xj-storage.jp/xcontents/AS81590/fbbd7125/5869/47ab/bed6/b9cff95913a9/140120241007594288.pdf": {
+   "reason": "표없음",
+   "day": "2026-10-17"
+  },
+  "https://contents.xj-storage.jp/xcontents/AS81590/4f6cee69/15d7/4132/b3a7/718796d894c8/140120240906581917.pdf": {
+   "reason": "표없음",
+   "day": "2026-10-17"
+  },
+  "https://contents.xj-storage.jp/xcontents/AS81590/ea2efd75/9de1/4003/81d2/c23b0d95dd1c/140120240807564697.pdf": {
+   "reason": "표없음",
+   "day": "2026-10-17"
+  },
+  "https://contents.xj-storage.jp/xcontents/AS81590/d9e8cf9e/976e/47d7/b6a5/c69bac7dd28f/140120240705544698.pdf": {
+   "reason": "표없음",
+   "day": "2026-10-17"
+  },
+  "https://contents.xj-storage.jp/xcontents/AS81590/387d8c5a/9a7a/42cd/827b/769d8ff5fbee/140120240607523893.pdf": {
+   "reason": "표없음",
+   "day": "2026-10-17"
+  },
+  "https://contents.xj-storage.jp/xcontents/AS81590/f56699f1/c607/4593/85ae/476de9c3f917/140120240509585978.pdf": {
+   "reason": "표없음",
+   "day": "2026-10-17"
+  },
+  "https://contents.xj-storage.jp/xcontents/AS81590/6fefd80b/3456/4fab/b4da/03dc7a27066f/140120240405566541.pdf": {
+   "reason": "표없음",
+   "day": "2026-10-17"
+  },
+  "https://contents.xj-storage.jp/xcontents/AS81590/0c0e6949/547a/4817/9991/745ea1f30f27/140120240307549833.pdf": {
+   "reason": "표없음",
+   "day": "2026-10-17"
+  },
+  "https://contents.xj-storage.jp/xcontents/AS81590/cb9d87ef/d3bc/42bd/9206/f85be74167c8/140120240207528195.pdf": {
+   "reason": "표없음",
+   "day": "2026-10-17"
+  },
+  "https://contents.xj-storage.jp/xcontents/AS81590/7f450d9a/15b3/4418/b96b/64d94c46c718/140120240111513352.pdf": {
+   "reason": "표없음",
+   "day": "2026-10-17"
+  },
+  "https://contents.xj-storage.jp/xcontents/AS81590/8f0a850f/36b4/422d/addf/02de9913bc6e/140120231207500053.pdf": {
+   "reason": "표없음",
+   "day": "2026-10-17"
+  },
+  "https://contents.xj-storage.jp/xcontents/AS81590/02c9110d/dec2/4180/8c8e/ea1553035f4a/140120231108582012.pdf": {
+   "reason": "표없음",
+   "day": "2026-10-17"
   }
  },
- "pdf_months": 2132,
+ "pdf_months": 2279,
  "homes": {
   "1379": "https://www.hokto-kinoko.co.jp",
   "138A": "https://www.hikari-food-service.jp",
@@ -30035,7 +32690,46 @@
   "3544": "2026-10-17T09:54:31+00:00",
   "5892": "2026-10-17T09:54:31+00:00",
   "6571": "2026-10-17T09:54:31+00:00",
-  "7562": "2026-10-17T09:54:31+00:00"
+  "7562": "2026-10-17T09:54:31+00:00",
+  "3193": "2026-10-17T13:22:11+00:00",
+  "6045": "2026-10-17T13:22:11+00:00",
+  "3542": "2026-10-17T13:22:11+00:00",
+  "274A": "2026-10-17T13:22:11+00:00",
+  "3415": "2026-10-17T13:22:11+00:00",
+  "3053": "2026-10-17T13:22:11+00:00",
+  "7561": "2026-10-17T13:22:11+00:00",
+  "7686": "2026-10-17T13:22:11+00:00",
+  "3175": "2026-10-17T13:22:11+00:00",
+  "9145": "2026-10-17T13:22:11+00:00",
+  "2818": "2026-10-17T13:22:11+00:00",
+  "6073": "2026-10-17T13:22:11+00:00",
+  "7646": "2026-10-17T13:22:11+00:00",
+  "9993": "2026-10-17T13:22:11+00:00",
+  "3083": "2026-10-17T13:22:11+00:00",
+  "8207": "2026-10-17T13:22:11+00:00",
+  "3030": "2026-10-17T13:22:11+00:00",
+  "3082": "2026-10-17T13:22:11+00:00",
+  "7134": "2026-10-17T13:22:11+00:00",
+  "9245": "2026-10-17T13:22:11+00:00",
+  "7636": "2026-10-17T13:22:11+00:00",
+  "3080": "2026-10-17T13:22:11+00:00",
+  "7416": "2026-10-17T13:22:11+00:00",
+  "7514": "2026-10-17T13:22:11+00:00",
+  "8705": "2026-10-17T13:22:11+00:00",
+  "6561": "2026-10-17T13:22:11+00:00",
+  "9890": "2026-10-17T13:22:11+00:00",
+  "3077": "2026-10-17T13:22:11+00:00",
+  "556A": "2026-10-17T13:22:11+00:00",
+  "7610": "2026-10-17T13:22:11+00:00",
+  "3160": "2026-10-17T13:22:11+00:00",
+  "7604": "2026-10-17T13:22:11+00:00",
+  "7682": "2026-10-17T13:22:11+00:00",
+  "7494": "2026-10-17T13:22:11+00:00",
+  "2769": "2026-10-17T13:22:11+00:00",
+  "5888": "2026-10-17T13:22:11+00:00",
+  "2311": "2026-10-17T13:22:11+00:00",
+  "3566": "2026-10-17T13:22:11+00:00",
+  "7674": "2026-10-17T13:22:11+00:00"
  },
  "pdf_turns": {
   "9020": "2026-10-13T08:59:06+00:00",
@@ -30292,7 +32986,46 @@
   "3544": "2026-10-17T09:54:31+00:00",
   "5892": "2026-10-17T09:54:31+00:00",
   "6571": "2026-10-17T09:54:31+00:00",
-  "7562": "2026-10-17T09:54:31+00:00"
+  "7562": "2026-10-17T09:54:31+00:00",
+  "3193": "2026-10-17T13:22:11+00:00",
+  "6045": "2026-10-17T13:22:11+00:00",
+  "3542": "2026-10-17T13:22:11+00:00",
+  "274A": "2026-10-17T13:22:11+00:00",
+  "3415": "2026-10-17T13:22:11+00:00",
+  "3053": "2026-10-17T13:22:11+00:00",
+  "7561": "2026-10-17T13:22:11+00:00",
+  "7686": "2026-10-17T13:22:11+00:00",
+  "3175": "2026-10-17T13:22:11+00:00",
+  "9145": "2026-10-17T13:22:11+00:00",
+  "2818": "2026-10-17T13:22:11+00:00",
+  "6073": "2026-10-17T13:22:11+00:00",
+  "7646": "2026-10-17T13:22:11+00:00",
+  "9993": "2026-10-17T13:22:11+00:00",
+  "3083": "2026-10-17T13:22:11+00:00",
+  "8207": "2026-10-17T13:22:11+00:00",
+  "3030": "2026-10-17T13:22:11+00:00",
+  "3082": "2026-10-17T13:22:11+00:00",
+  "7134": "2026-10-17T13:22:11+00:00",
+  "9245": "2026-10-17T13:22:11+00:00",
+  "7636": "2026-10-17T13:22:11+00:00",
+  "3080": "2026-10-17T13:22:11+00:00",
+  "7416": "2026-10-17T13:22:11+00:00",
+  "7514": "2026-10-17T13:22:11+00:00",
+  "8705": "2026-10-17T13:22:11+00:00",
+  "6561": "2026-10-17T13:22:11+00:00",
+  "9890": "2026-10-17T13:22:11+00:00",
+  "3077": "2026-10-17T13:22:11+00:00",
+  "556A": "2026-10-17T13:22:11+00:00",
+  "7610": "2026-10-17T13:22:11+00:00",
+  "3160": "2026-10-17T13:22:11+00:00",
+  "7604": "2026-10-17T13:22:11+00:00",
+  "7682": "2026-10-17T13:22:11+00:00",
+  "7494": "2026-10-17T13:22:11+00:00",
+  "2769": "2026-10-17T13:22:11+00:00",
+  "5888": "2026-10-17T13:22:11+00:00",
+  "2311": "2026-10-17T13:22:11+00:00",
+  "3566": "2026-10-17T13:22:11+00:00",
+  "7674": "2026-10-17T13:22:11+00:00"
  },
  "pdf_checked": {
   "https://www.fastretailing.com/jp/ir/monthly/pdf/MonthlySales_2026.pdf": "2026-10-13",
@@ -30536,6 +33269,42 @@
   "https://www.anrakutei.co.jp/ir/2019/20190416_3.pdf": "2026-10-17",
   "https://www.anrakutei.co.jp/ir/2018/20180420.pdf": "2026-10-17",
   "https://www.anrakutei.co.jp/ir/2017/20170510.pdf": "2026-10-17",
-  "https://www.anrakutei.co.jp/ir/2016/20160502.pdf": "2026-10-17"
+  "https://www.anrakutei.co.jp/ir/2016/20160502.pdf": "2026-10-17",
+  "https://www.pepper-fs.co.jp/_img/ir/monthly_report/2026/PFS20261015.pdf": "2026-10-17",
+  "https://www.pepper-fs.co.jp/_img/ir/monthly_report/2026/PFS20260914.pdf": "2026-10-17",
+  "https://www.pepper-fs.co.jp/_img/ir/monthly_report/2026/PFS20260715.pdf": "2026-10-17",
+  "https://www.pepper-fs.co.jp/_img/ir/monthly_report/2026/PFS20260612.pdf": "2026-10-17",
+  "https://www.pepper-fs.co.jp/_img/ir/monthly_report/2026/PFS20260519.pdf": "2026-10-17",
+  "https://www.pepper-fs.co.jp/_img/ir/monthly_report/2026/PFS20260414.pdf": "2026-10-17",
+  "https://www.pepper-fs.co.jp/_img/ir/monthly_report/2026/PFS20260313.pdf": "2026-10-17",
+  "https://www.pietro.co.jp/assets/upload/news/getsuji_202610.pdf": "2026-10-17",
+  "https://www.pietro.co.jp/assets/upload/news/getsuji_202609.pdf": "2026-10-17",
+  "https://www.plant-co.jp/corp/pdf/uriselm_202509.pdf": "2026-10-17",
+  "https://www.plant-co.jp/corp/pdf/uriselm_202409.pdf": "2026-10-17",
+  "https://www.plant-co.jp/corp/pdf/uriselm_202309.pdf": "2026-10-17",
+  "https://www.plant-co.jp/corp/pdf/uriselm_202209.pdf": "2026-10-17",
+  "https://www.plant-co.jp/corp/pdf/uriselm_202109.pdf": "2026-10-17",
+  "https://www.plant-co.jp/corp/pdf/uriselm_201509.pdf": "2026-10-17",
+  "https://www.plant-co.jp/corp/pdf/uriselm_201409.pdf": "2026-10-17",
+  "https://www.plant-co.jp/corp/pdf/uriselm_201309.pdf": "2026-10-17",
+  "https://www.kichiri.co.jp/wp-content/uploads/2026/09/2609031111.pdf": "2026-10-17",
+  "https://www.nissansec-g.co.jp/pdf/press20261015.pdf": "2026-10-17",
+  "https://www.nissansec-g.co.jp/pdf/press20260910.pdf": "2026-10-17",
+  "https://www.nissansec-g.co.jp/pdf/press20260817.pdf": "2026-10-17",
+  "https://www.nissansec-g.co.jp/pdf/press20260713.pdf": "2026-10-17",
+  "https://www.nissansec-g.co.jp/pdf/press20260612.pdf": "2026-10-17",
+  "https://www.nissansec-g.co.jp/pdf/press20260518.pdf": "2026-10-17",
+  "https://www.nissansec-g.co.jp/pdf/press20260414.pdf": "2026-10-17",
+  "https://www.nissansec-g.co.jp/pdf/press20260312.pdf": "2026-10-17",
+  "https://www.nissansec-g.co.jp/pdf/press202602134.pdf": "2026-10-17",
+  "https://www.nissansec-g.co.jp/pdf/press20260115.pdf": "2026-10-17",
+  "https://www.horiifood.co.jp/ir/library/prospectus.cgi?mode=download&id=25&file_id=1": "2026-10-17",
+  "https://www.horiifood.co.jp/ir/library/prospectus.cgi?mode=download&id=24&file_id=1": "2026-10-17",
+  "https://www.horiifood.co.jp/ir/library/prospectus.cgi?mode=download&id=23&file_id=1": "2026-10-17",
+  "https://www.horiifood.co.jp/ir/library/prospectus.cgi?mode=download&id=22&file_id=1": "2026-10-17",
+  "https://ir.hamayuu.co.jp/ja/ir/news/news-7041927872435864695/main/0/link/pdffile.pdf": "2026-10-17",
+  "https://ssl4.eir-parts.net/doc/5888/tdnet/2895392/00.pdf": "2026-10-17",
+  "https://ssl4.eir-parts.net/doc/5888/tdnet/2884563/00.pdf": "2026-10-17",
+  "https://ssl4.eir-parts.net/doc/2311/tdnet/2887431/00.pdf": "2026-10-17"
  }
 }
