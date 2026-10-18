@@ -1,6 +1,6 @@
 {
  "v": 1,
- "ts": "2026-10-18T05:27:00+00:00",
+ "ts": "2026-10-18T09:50:04+00:00",
  "seed": 361,
  "homes": 352,
  "official_ir_data": 178,
@@ -143,8 +143,8 @@
    "tdnet": false,
    "web": true,
    "ir": true,
-   "last_attempt": "2026-10-16T23:31:10+00:00",
-   "last_parse_failure": "2026-10-16T23:31:10+00:00",
+   "last_attempt": "2026-10-18T09:40:51+00:00",
+   "last_parse_failure": "2026-10-18T09:40:51+00:00",
    "reason": ""
   },
   "7606": {
@@ -208,7 +208,7 @@
    "tdnet": true,
    "web": false,
    "ir": true,
-   "last_attempt": "2026-10-17T01:27:27+00:00",
+   "last_attempt": "2026-10-18T09:40:51+00:00",
    "last_parse_failure": "",
    "reason": ""
   },
@@ -273,7 +273,7 @@
    "tdnet": false,
    "web": false,
    "ir": true,
-   "last_attempt": "2026-10-16T23:31:10+00:00",
+   "last_attempt": "2026-10-18T09:40:51+00:00",
    "last_parse_failure": "",
    "reason": ""
   },
@@ -464,11 +464,11 @@
    "home": "https://www.24028.jp/",
    "source_url": "https://www.24028.jp/ir/library",
    "latest_month": "2026-09",
-   "months": 25,
+   "months": 37,
    "tdnet": true,
    "web": true,
    "ir": true,
-   "last_attempt": "2026-10-17T01:27:27+00:00",
+   "last_attempt": "2026-10-18T09:40:51+00:00",
    "last_parse_failure": "",
    "reason": ""
   },
@@ -494,7 +494,7 @@
    "tdnet": true,
    "web": false,
    "ir": true,
-   "last_attempt": "2026-10-16T23:31:10+00:00",
+   "last_attempt": "2026-10-18T09:40:51+00:00",
    "last_parse_failure": "",
    "reason": ""
   },
@@ -507,7 +507,7 @@
    "tdnet": false,
    "web": false,
    "ir": true,
-   "last_attempt": "2026-10-16T23:31:10+00:00",
+   "last_attempt": "2026-10-18T09:40:51+00:00",
    "last_parse_failure": "",
    "reason": ""
   },
@@ -611,8 +611,8 @@
    "tdnet": false,
    "web": false,
    "ir": true,
-   "last_attempt": "2026-10-16T23:31:10+00:00",
-   "last_parse_failure": "2026-10-16T23:31:10+00:00",
+   "last_attempt": "2026-10-18T09:40:51+00:00",
+   "last_parse_failure": "2026-10-18T09:40:51+00:00",
    "reason": ""
   },
   "3087": {
@@ -624,8 +624,8 @@
    "tdnet": false,
    "web": false,
    "ir": true,
-   "last_attempt": "2026-10-16T23:31:10+00:00",
-   "last_parse_failure": "2026-10-16T23:31:10+00:00",
+   "last_attempt": "2026-10-18T09:40:51+00:00",
+   "last_parse_failure": "2026-10-18T09:40:51+00:00",
    "reason": ""
   },
   "3612": {
@@ -637,8 +637,8 @@
    "tdnet": true,
    "web": false,
    "ir": true,
-   "last_attempt": "2026-10-16T23:31:10+00:00",
-   "last_parse_failure": "2026-10-16T23:31:10+00:00",
+   "last_attempt": "2026-10-18T09:40:51+00:00",
+   "last_parse_failure": "2026-10-18T09:40:51+00:00",
    "reason": ""
   },
   "7453": {
@@ -871,7 +871,7 @@
    "tdnet": true,
    "web": false,
    "ir": true,
-   "last_attempt": "2026-10-17T01:27:27+00:00",
+   "last_attempt": "2026-10-18T09:40:51+00:00",
    "last_parse_failure": "",
    "reason": ""
   },
@@ -1192,11 +1192,11 @@
    "home": "https://www.keepercoating.jp",
    "source_url": "https://keepergiken.co.jp/ir/irdata/monthly",
    "latest_month": "2026-09",
-   "months": 25,
+   "months": 49,
    "tdnet": true,
    "web": false,
    "ir": true,
-   "last_attempt": "2026-10-17T01:27:27+00:00",
+   "last_attempt": "2026-10-18T09:40:51+00:00",
    "last_parse_failure": "",
    "reason": ""
   },
@@ -1248,7 +1248,7 @@
    "tdnet": true,
    "web": true,
    "ir": true,
-   "last_attempt": "2026-10-17T01:27:27+00:00",
+   "last_attempt": "2026-10-18T09:40:51+00:00",
    "last_parse_failure": "",
    "reason": ""
   },
@@ -1261,8 +1261,8 @@
    "tdnet": true,
    "web": false,
    "ir": true,
-   "last_attempt": "2026-10-16T23:31:10+00:00",
-   "last_parse_failure": "2026-10-16T23:31:10+00:00",
+   "last_attempt": "2026-10-18T09:40:51+00:00",
+   "last_parse_failure": "2026-10-18T09:40:51+00:00",
    "reason": ""
   },
   "9835": {
@@ -1287,8 +1287,8 @@
    "tdnet": true,
    "web": false,
    "ir": true,
-   "last_attempt": "2026-10-16T23:31:10+00:00",
-   "last_parse_failure": "2026-10-16T23:31:10+00:00",
+   "last_attempt": "2026-10-18T09:40:51+00:00",
+   "last_parse_failure": "2026-10-18T09:40:51+00:00",
    "reason": ""
   },
   "8963": {
@@ -1495,8 +1495,8 @@
    "tdnet": false,
    "web": true,
    "ir": true,
-   "last_attempt": "2026-10-17T01:27:27+00:00",
-   "last_parse_failure": "2026-10-17T01:27:27+00:00",
+   "last_attempt": "2026-10-18T09:40:51+00:00",
+   "last_parse_failure": "2026-10-18T09:40:51+00:00",
    "reason": ""
   },
   "7604": {
@@ -1716,8 +1716,8 @@
    "tdnet": false,
    "web": false,
    "ir": true,
-   "last_attempt": "2026-10-17T01:27:27+00:00",
-   "last_parse_failure": "2026-10-17T01:27:27+00:00",
+   "last_attempt": "2026-10-18T09:40:51+00:00",
+   "last_parse_failure": "2026-10-18T09:40:51+00:00",
    "reason": ""
   },
   "7610": {
@@ -1781,8 +1781,8 @@
    "tdnet": false,
    "web": false,
    "ir": true,
-   "last_attempt": "2026-10-16T23:31:10+00:00",
-   "last_parse_failure": "2026-10-16T23:31:10+00:00",
+   "last_attempt": "2026-10-18T09:40:51+00:00",
+   "last_parse_failure": "2026-10-18T09:40:51+00:00",
    "reason": ""
   },
   "9163": {
@@ -3193,12 +3193,12 @@
    "status": "ok",
    "home": "https://www.teraprobe.com",
    "source_url": "https://www.teraprobe.com",
-   "latest_month": "2026-08",
-   "months": 10,
+   "latest_month": "2026-09",
+   "months": 11,
    "tdnet": true,
    "web": false,
    "ir": true,
-   "last_attempt": "2026-10-17T01:27:27+00:00",
+   "last_attempt": "2026-10-18T09:40:51+00:00",
    "last_parse_failure": "",
    "reason": ""
   },
@@ -3406,7 +3406,7 @@
    "tdnet": false,
    "web": true,
    "ir": true,
-   "last_attempt": "2026-10-16T23:31:10+00:00",
+   "last_attempt": "2026-10-18T09:40:51+00:00",
    "last_parse_failure": "",
    "reason": ""
   },
@@ -3744,7 +3744,7 @@
    "tdnet": false,
    "web": false,
    "ir": true,
-   "last_attempt": "2026-10-17T01:27:27+00:00",
+   "last_attempt": "2026-10-18T09:40:51+00:00",
    "last_parse_failure": "",
    "reason": ""
   },
@@ -3757,7 +3757,7 @@
    "tdnet": false,
    "web": false,
    "ir": true,
-   "last_attempt": "2026-10-16T23:31:10+00:00",
+   "last_attempt": "2026-10-18T09:40:51+00:00",
    "last_parse_failure": "",
    "reason": ""
   },
@@ -3861,7 +3861,7 @@
    "tdnet": true,
    "web": false,
    "ir": true,
-   "last_attempt": "2026-10-17T01:27:27+00:00",
+   "last_attempt": "2026-10-18T09:40:51+00:00",
    "last_parse_failure": "",
    "reason": ""
   },
@@ -4017,7 +4017,7 @@
    "tdnet": false,
    "web": true,
    "ir": true,
-   "last_attempt": "2026-10-16T23:31:10+00:00",
+   "last_attempt": "2026-10-18T09:40:51+00:00",
    "last_parse_failure": "",
    "reason": ""
   },
