@@ -6,6 +6,7 @@ on:
     paths:
       - 'build.py'
       - 'data/monthly_reviewed_jp.json'
+      - 'data/monthly_ledger_jp.json'
       - '.github/workflows/build-page.yml'
   workflow_dispatch:
 
