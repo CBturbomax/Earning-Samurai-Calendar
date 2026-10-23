@@ -2181,6 +2181,49 @@ def apply_reviewed_monthly(monthly, nums):
                       'latest': {'period': latest[0], 'yoy': latest[2], 'base': base}}
     return list(rows.values()), nums
 
+def apply_ledger_fill(monthly, nums):
+    """월차 원장(`data/monthly_ledger_jp.json`)으로 **빈 달만** 채운다.
+
+    원장 값은 화면 기준(전점/기존점/매출)과 같은 계열이고, 이미 있는 값과 겹치는
+    달이 전부 맞을 때만 파일에 실렸다(만드는 쪽에서 대조). 여기서는 있는 값을
+    절대 덮지 않는다. 검증된 이력이 없던 회사만 원장 계열을 통째로 들인다.
+    """
+    path = HERE / 'data' / 'monthly_ledger_jp.json'
+    if not path.exists():
+        return monthly, nums
+    board = json.loads(path.read_text(encoding='utf-8'))
+    known = {r[2] for r in monthly}
+    sect_ko = {'小売業': '소매업', 'サービス業': '서비스', '卸売業': '도매업',
+               '陸運業': '육운업', '食料品': '식료품', '繊維製品': '섬유'}
+    for code, c in board.get('companies', {}).items():
+        if code not in known:
+            # 원장에만 있는 회사(TDnet 제목이 월매출로 안 읽히거나 IR 에만 올리는 곳).
+            ko, _ = to_korean(c.get('name', ''), companies.NOTABLE.get(code, ("",))[0])
+            monthly.append(['', '', code, ko, c.get('name', ''), c.get('latestMonth', ''),
+                            '', '월차 원장', c.get('source', ''), CAPS.get('jp:' + code, 0),
+                            sect_ko.get(c.get('sector', ''), '기타'), 'unknown', ''])
+            known.add(code)
+        n = nums.get(code)
+        col = c['series']
+        if not n or not n.get('historyVerified'):
+            base = '기존점' if '既存' in col else '전점' if '全店' in col else '매출'
+            n = nums[code] = {'m': [], 'src': '월차 원장', 'base': base,
+                              'scope': col.replace(' 전년比', '').replace(' (금액 환산)', ''),
+                              'historySrc': '월차 원장 보충', 'historyBase': base,
+                              'verified': True, 'historyVerified': True,
+                              'doc': c.get('source', '')}
+        have = {r[0] for r in n['m'] if r[2] is not None}
+        n['m'] = [r for r in n['m'] if r[0] not in c['months'] or r[2] is not None]
+        ev = n.setdefault('evidence', {})
+        for p, ratio in c['months'].items():
+            if p in have:
+                continue
+            n['m'].append([p, None, ratio, 0])
+            ev[p] = {'ratio': ratio, 'source': c.get('source', ''),
+                     'kind': '월차 원장 보충', 'scope': col}
+        n['m'].sort(key=lambda r: r[0])
+    return monthly, nums
+
 def pack_jp(r):
     """일본만 기계 변환을 거친다. 원본이 일본어라 그대로는 훑어보기가 안 된다."""
     ko, lvl = to_korean(r["name"], companies.NOTABLE.get(r["code"], ("",))[0])
@@ -2314,6 +2357,7 @@ def build():
     monthly = load_monthly(packed)
     monthly_nums = load_monthly_nums(monthly)
     monthly, monthly_nums = apply_reviewed_monthly(monthly, monthly_nums)
+    monthly, monthly_nums = apply_ledger_fill(monthly, monthly_nums)
     per_day = Counter(p[0] for p in packed)
     notable_hits = sum(1 for p in packed if p[9] + ":" + p[1] in notable)
     all_ok = sorted({d for m in ok_days for d in ok_days[m]})
