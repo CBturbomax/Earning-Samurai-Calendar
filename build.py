@@ -2677,6 +2677,11 @@ __FLAGCSS__
 .mnsummary b { color:#f2f7ff; }
 .mnsummary .mnup { color:#ffaaa5; }.mnsummary .mndown { color:#72d8bd; }
 .mnscrollhint { color:#b4c9e5; font-size:14px; margin:0 0 12px; }
+.mnnews { display:flex; align-items:center; gap:6px 12px; flex-wrap:wrap; border:1px solid #33465f; border-left:3px solid #e8b04a; border-radius:8px; background:#101b2a; padding:7px 12px; margin:0 0 14px; font-size:13px; color:#b1c3d9; }
+.mnnews > b { color:#e8b04a; white-space:nowrap; }
+.mnnews button { background:none; border:0; padding:0; font:inherit; color:#dce7f5; cursor:pointer; white-space:nowrap; }
+.mnnews button:hover { text-decoration:underline; }
+.mnnews .mnnewsd { color:#8ea3bd; margin-right:4px; }
 .mnfoot { color:#a7bad1; font-size:14px; margin-top:10px; }
 .mnbar { display:flex; align-items:center; gap:20px; border-bottom:1px solid #293747; margin-bottom:14px; }
 .mnbar button { padding:12px 0; border:0; border-bottom:2px solid transparent; background:none; color:#899fb9; font:inherit; cursor:pointer; }
@@ -4124,6 +4129,22 @@ function mnHeatReason(code, period) {
   const row = (n.m || []).find(r => r[0] === period);
   return row && row[1] != null ? '매출액은 있으나 전년동월비 미수집' : '이 달의 전년동월비 미수집';
 }
+/* 최근 업데이트 알리미 — 공식 발표일이 확인된 줄만, 최신 5건. 필터와 무관하게
+   '방금 누가 냈나'를 보여 준다. 발표일 모르는 줄은 순서를 못 매기므로 뺀다. */
+function mnRecentNews(byCode) {
+  const hits = [];
+  for (const x of byCode.values()) {
+    const r = x.rows.filter(m => m[0] && m[11] === 'official').pop();
+    if (r) hits.push({x, day:r[0], per:r[5]});
+  }
+  hits.sort((a,b) => b.day.localeCompare(a.day) || b.x.cap - a.x.cap);
+  if (!hits.length) return '';
+  return '<div class="mnnews" aria-label="최근 업데이트된 월매출"><b>🔔 최근 업데이트</b>' +
+    hits.slice(0,5).map(h => '<button data-mcode="' + esc(h.x.code) + '" title="' + esc(h.x.orig) + '"><span class="mnnewsd">' +
+      (+h.day.slice(5,7)) + '/' + (+h.day.slice(8,10)) + '</span>' + esc(h.x.ko) + ' ' + (h.per ? (+h.per.slice(5)) + '월분' : '') + '</button>').join('<span aria-hidden="true">·</span>') +
+    '</div>';
+}
+
 function renderMonthly() {
   const host = document.getElementById('mnList');
   if (!host) return;
@@ -4155,6 +4176,7 @@ function renderMonthly() {
     (capMin ? '시총 ' + capMin + '조원 이상 · ' : '') + '24개월 · <b>' + total.toLocaleString() +
     '개 수치</b> · 기간 완전 수집 <b>' + full + '사</b></span>' +
     '<span><span class="mnup">■ 매출 증가</span>　<span class="mndown">■ 매출 감소</span>　빈칸 클릭: 수집 상태</span></div>';
+  html += mnRecentNews(byCode);
   if (!list.length) { host.innerHTML = html + '<div class="mnempty">조건에 맞는 월매출 종목이 없습니다.</div>'; return; }
   if (mnView === 'audit') {
     html += '<div class="mnboard"><table class="mnaudit"><thead><tr><th>기업</th><th>수집 개월</th><th>비교 기준</th><th>수치 출처</th><th>미수집 월</th><th>최근 원자료</th></tr></thead><tbody>';
