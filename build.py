@@ -1597,21 +1597,52 @@ def _stale_from(last):
 
 
 MONTHLY_SALES_TITLE = re.compile(
-    r"売上|営業収益|営業収入|取扱高|販売高|月次業績|月商", re.I)
+    r"売上|営業収益|営業収入|取扱高|販売高|月次業績|月商|"
+    r"営業速報|営業概況|営業情報|販売状況|前年比速報|前年比データ|月次営業", re.I)
 MONTHLY_NONSALES_TITLE = re.compile(
-    r"在籍|技術者|稼働率|契約件数|口座|運用実績|客室|ADR|RevPAR|会員数|"
-    r"人員|KPI(?!.*売上)|輸送人員|乗車人員", re.I)
+    r"在籍|技術者|稼働|契約件数|口座|運用実績|運営実績|運用資産|客室|ADR|RevPAR|"
+    r"会員数|人員|KPI|輸送|乗車|旅客|発電|ポートフォリオ|ビットコイン|"
+    r"イーサリアム|ETF|売買実績|受注|店舗数|取引台数|ホテル|経営パラメータ|保有", re.I)
+# 「月次概況」「月次情報」처럼 무엇의 숫자인지 제목이 말하지 않는 꼴. 이런 제목은
+# 첨부에서 **매출로 읽힌 수치가 있을 때만** 월매출로 친다(오검출이 놓침보다 나쁘다).
+MONTHLY_GENERIC_TITLE = re.compile(r"月次|月度|前年比", re.I)
+MONTHLY_SALES_METRIC = re.compile(r"売上|営業収益|営業収入|월매출|영업수입|全店|既存店", re.I)
+_MON_SALES_NUMS = None
+
+
+def _mon_sales_nums():
+    """첨부 PDF 에서 매출 계열 수치가 읽힌 종목 코드."""
+    global _MON_SALES_NUMS
+    if _MON_SALES_NUMS is None:
+        _MON_SALES_NUMS = set()
+        try:
+            codes = json.loads((HERE / "data" / "monthly_nums_jp.json")
+                               .read_text(encoding="utf-8")).get("codes", {})
+        except (ValueError, OSError):
+            codes = {}
+        for c, v in codes.items():
+            ms = (v or {}).get("months") or {}
+            if any(MONTHLY_SALES_METRIC.search(str(m.get("metric") or ""))
+                   for m in ms.values()):
+                _MON_SALES_NUMS.add(c)
+    return _MON_SALES_NUMS
 
 
 def _monthly_sales_td(r):
     """TDnet 月次 중 **월매출/매출성 지표**만 남긴다.
 
     '매달 내는 KPI' 전체와 '월매출'은 다르다. 가동률·기술자수·REIT 운용실적을
-    월매출 화면에 섞지 않는다.
+    월매출 화면에 섞지 않는다. 다만 제목에 「売上」이 박혀 있으면 KPI 가 같이
+    적혀 있어도(「月次売上高及び…会員数」) 월매출이다.
     """
     title = str(r.get("title") or "")
-    return bool(MONTHLY_SALES_TITLE.search(title)) and not bool(
-        MONTHLY_NONSALES_TITLE.search(title))
+    has_sales = "売上" in title
+    if MONTHLY_NONSALES_TITLE.search(title) and not has_sales:
+        return False
+    if MONTHLY_SALES_TITLE.search(title):
+        return True
+    return bool(MONTHLY_GENERIC_TITLE.search(title)
+                and str(r.get("code") or "") in _mon_sales_nums())
 
 
 def load_monthly(packed):
@@ -2682,6 +2713,14 @@ __FLAGCSS__
 .mnnews button { background:none; border:0; padding:0; font:inherit; color:#dce7f5; cursor:pointer; white-space:nowrap; }
 .mnnews button:hover { text-decoration:underline; }
 .mnnews .mnnewsd { color:#8ea3bd; margin-right:4px; }
+.mnnews .mnnewsmore { color:#e8b04a; border:1px solid #5a4a2a; border-radius:999px; padding:1px 9px; }
+.mnnews.open { align-items:flex-start; }
+.mnnews.open .mnnewslist { display:grid; grid-template-columns:repeat(auto-fill,minmax(210px,1fr)); gap:4px 14px; width:100%; }
+.mnnews.open .mnnewslist > span { display:none; }
+.mnnews.open .mnnewslist button { text-align:left; overflow:hidden; text-overflow:ellipsis; }
+.mnnewslist { display:contents; }
+.mnmatrix tr.mnflash > * { animation:mnflash 2.6s ease-out; }
+@keyframes mnflash { 0%,40% { box-shadow:inset 0 0 0 9999px rgba(232,176,74,.28); } 100% { box-shadow:none; } }
 .mnfoot { color:#a7bad1; font-size:14px; margin-top:10px; }
 .mnbar { display:flex; align-items:center; gap:20px; border-bottom:1px solid #293747; margin-bottom:14px; }
 .mnbar button { padding:12px 0; border:0; border-bottom:2px solid transparent; background:none; color:#899fb9; font:inherit; cursor:pointer; }
@@ -3280,9 +3319,9 @@ svg.bars rect.b:hover { fill:var(--a3); }
 <div class="tools">
   <input type="search" id="mnQ" placeholder="회사·코드 검색 — 뷰셀 / 7685 / 라운드원" autocomplete="off">
   <select id="mnCap">
-    <option value="0">시총 가리지 않기</option>
+    <option value="0" selected>시총 가리지 않기</option>
     <option value="0.5">시총 5,000억원 이상</option>
-    <option value="1" selected>1조원 이상</option>
+    <option value="1">1조원 이상</option>
     <option value="3">3조원 이상</option>
   </select>
   <label class="chk"><input type="checkbox" id="mnNum" checked>수치 있는 종목만</label>
@@ -4081,6 +4120,7 @@ function mnYoyHtml(code, targetPeriod) {
 }
 
 let mnView = 'compare';
+let mnNewsOpen = false;
 let mnMonthSort = null;
 let mnCompareScroll = null;
 function mnSortCompanies(list, sort) {
@@ -4139,10 +4179,38 @@ function mnRecentNews(byCode) {
   }
   hits.sort((a,b) => b.day.localeCompare(a.day) || b.x.cap - a.x.cap);
   if (!hits.length) return '';
-  return '<div class="mnnews" aria-label="최근 업데이트된 월매출"><b>🔔 최근 업데이트</b>' +
-    hits.slice(0,5).map(h => '<button data-mcode="' + esc(h.x.code) + '" title="' + esc(h.x.orig) + '"><span class="mnnewsd">' +
+  // 접힌 때 12건, 펼치면 최근 30일 전부.
+  const since = iso(new Date(parse(hits[0].day).getTime() - 30 * 864e5));
+  const all = hits.filter(h => h.day >= since);
+  const shown = mnNewsOpen ? all : all.slice(0, 12);
+  const more = all.length > 12
+    ? '<button class="mnnewsmore" data-mnnews>' + (mnNewsOpen ? '접기 ▲' : '+' + (all.length - 12) + '곳 더보기 ▼') + '</button>' : '';
+  return '<div class="mnnews' + (mnNewsOpen ? ' open' : '') + '" aria-label="최근 업데이트된 월매출"><b>🔔 최근 업데이트 <small>(' + all.length + '곳 · 30일)</small></b>' +
+    (mnNewsOpen ? more : '') + '<div class="mnnewslist">' +
+    shown.map(h => '<button data-mngo="' + esc(h.x.code) + '" title="' + esc(h.x.orig + ' · 표에서 이 회사로 이동') + '"><span class="mnnewsd">' +
       (+h.day.slice(5,7)) + '/' + (+h.day.slice(8,10)) + '</span>' + esc(h.x.ko) + ' ' + (h.per ? (+h.per.slice(5)) + '월분' : '') + '</button>').join('<span aria-hidden="true">·</span>') +
-    '</div>';
+    '</div>' + (mnNewsOpen ? '' : more) + '</div>';
+}
+
+/* 알리미에서 누르면 표의 그 회사 줄로 간다. 필터에 가려져 있으면 필터를 풀고 간다. */
+function mnGoTo(code) {
+  const host = document.getElementById('mnList');
+  const find = () => host.querySelector('.mnmatrix tr[data-mrow="' + CSS.escape(code) + '"]');
+  let tr = mnView === 'compare' ? find() : null;
+  if (!tr) {
+    mnView = 'compare';
+    document.querySelectorAll('[data-mnview]').forEach(b => b.setAttribute('aria-selected', String(b.dataset.mnview === 'compare')));
+    document.getElementById('mnQ').value = '';
+    document.getElementById('mnCap').value = '0';
+    renderMonthly();
+    tr = find();
+    if (!tr) { document.getElementById('mnNum').checked = false; renderMonthly(); tr = find(); }
+  }
+  if (!tr) { openMonthly(code); return; }
+  const board = tr.closest('.mnboard'), head = board.querySelector('thead');
+  board.scrollTop = tr.offsetTop - (head ? head.offsetHeight : 0);
+  board.scrollIntoView({block:'start', behavior:'smooth'});
+  tr.classList.remove('mnflash'); void tr.offsetWidth; tr.classList.add('mnflash');
 }
 
 function renderMonthly() {
@@ -4190,7 +4258,7 @@ function renderMonthly() {
       months.map((p,i) => '<th scope="col" aria-sort="' + mnSortAria(p, sort) + '" class="' + (i === 23 ? 'mnlatestcol ' : '') + (p.endsWith('-01') ? 'mnyear' : '') + '"><button class="mnsort" data-mnsort="' + p + '" aria-label="' + p + ' 월매출 정렬">' + p.slice(2,4) + '년<br>' + (+p.slice(5)) + '월' + mnSortArrow(p, sort) + (i === 23 ? '<small style="display:block;font-size:12px">최신</small>' : '') + '</button></th>').join('') + '</tr></thead><tbody>';
     html += list.map(x => {
       const n = MNUM[x.code] || {}, basis = n.historyBase || n.base || '월매출';
-      return '<tr><th scope="row"><button class="mncompany" data-mcode="' + esc(x.code) + '" title="' + esc(x.orig + ' · ' + (n.scope || basis)) + '">' + esc(x.ko) + '<small><span class="mnticker">' + esc(x.code) + '</span><span class="mnmeta">' + esc(basis + ' · ' + x.sect) + '</span></small></button></th><td class="mncapcell">' + (x.cap ? capJo(x.cap).toFixed(1) + '조 원' : '—') + '</td><td class="mncoverage">' + '<strong>' + x.coverage + '</strong> / 24<small>개월 수집</small></td>' + months.map((p,i) => {
+      return '<tr data-mrow="' + esc(x.code) + '"><th scope="row"><button class="mncompany" data-mcode="' + esc(x.code) + '" title="' + esc(x.orig + ' · ' + (n.scope || basis)) + '">' + esc(x.ko) + '<small><span class="mnticker">' + esc(x.code) + '</span><span class="mnmeta">' + esc(basis + ' · ' + x.sect) + '</span></small></button></th><td class="mncapcell">' + (x.cap ? capJo(x.cap).toFixed(1) + '조 원' : '—') + '</td><td class="mncoverage">' + '<strong>' + x.coverage + '</strong> / 24<small>개월 수집</small></td>' + months.map((p,i) => {
         const value = mnHeatValue(x.series.get(p));
         const rounded = value === null ? null : Math.round(value);
         const label = rounded === null ? '—' : (rounded > 0 ? '+' : '') + rounded + '%';
@@ -4990,6 +5058,10 @@ document.addEventListener('click', e => {
     document.querySelectorAll('[data-mnview]').forEach(b => b.setAttribute('aria-selected', String(b === viewButton)));
     renderMonthly(); return;
   }
+  const newsMore = e.target.closest('#mnList [data-mnnews]');
+  if (newsMore) { mnNewsOpen = !mnNewsOpen; renderMonthly(); return; }
+  const newsGo = e.target.closest('#mnList [data-mngo]');
+  if (newsGo) { mnGoTo(newsGo.dataset.mngo); return; }
   const monthlySort = e.target.closest('#mnList [data-mnsort]');
   if (monthlySort) { mnHeaderSort(monthlySort.dataset.mnsort); return; }
   const mrow = e.target.closest('#mnList [data-mcode]');
