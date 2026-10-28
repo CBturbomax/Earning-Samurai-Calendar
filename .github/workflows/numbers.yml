@@ -44,6 +44,7 @@ on:
 
 permissions:
   contents: write
+  actions: write      # 다음 실행 예약(이어달리기)
 
 concurrency:
   group: numbers-${{ github.ref_name }}
@@ -55,6 +56,9 @@ jobs:
     if: github.ref_name == 'main'
     timeout-minutes: 29
     steps:
+      - name: 시작 시각
+        run: echo "T0=$(date +%s)" >> "$GITHUB_ENV"
+
       - uses: actions/checkout@v4
       # **최신 main 으로 맞추고 시작한다.** checkout 은 이 실행을 부른 커밋을
       # 꺼내 오는데, 실행이 줄을 서면 그게 벌써 낡은 것이다 — 앞 실행이 방금
@@ -215,3 +219,16 @@ jobs:
           path: ${{ runner.temp }}/collected-data.tar.gz
           if-no-files-found: error
           retention-days: 14
+
+      # **이어달리기** — GitHub 크론은 몇 시간씩 밀린다(5분 주기라 적어 놨는데
+      # 실제로는 3~6시간에 한 번 돌았다). 끝날 때 다음 실행을 걸어 둔다. 금방 끝난
+      # 실행이 쉬지 않고 연달아 돌지 않게 시작부터 5분은 채운다. 앞 단계가
+      # 실패해도 건다(always) — 안 걸면 사슬이 끊겨 다시 크론에 기대게 된다.
+      - name: 다음 실행 예약
+        if: always()
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          left=$(( 300 - ($(date +%s) - ${T0:-0}) ))
+          [ "$left" -gt 0 ] && sleep "$left"
+          gh workflow run numbers.yml --ref main -R "$GITHUB_REPOSITORY" || echo "예약 실패 — 크론에 맡긴다"
