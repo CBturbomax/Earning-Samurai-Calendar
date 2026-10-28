@@ -146,6 +146,33 @@ def period_of(fy):
     return f"{names[int(m.group(2)) - 1]} {m.group(1)}"
 
 
+CIK_CACHE = HERE / ".cache" / "cik.json"      # 커밋하지 않는다(data/ 밖)
+
+
+def cik_map_cached():
+    """SEC 티커 목록(수 MB)을 3분마다 받지 않는다 — 여섯 시간 캐시.
+
+    이 실행은 다섯 시간 동안 3분마다 돈다. 매번 받으면 SEC 에 큰 파일을 백 번
+    두드리고, 한 번 막히면 그 바퀴가 아무것도 못 쓰고 죽는다. 막히면 헌 캐시라도 쓴다.
+    """
+    try:
+        fresh = time.time() - CIK_CACHE.stat().st_mtime < 6 * 3600
+        cached = json.loads(CIK_CACHE.read_text(encoding="utf-8"))
+    except (OSError, ValueError):
+        fresh, cached = False, None
+    if fresh and cached:
+        return cached
+    try:
+        m = ss.cik_map()
+    except ss.Blocked:
+        if cached:
+            return cached
+        raise
+    CIK_CACHE.parent.mkdir(parents=True, exist_ok=True)
+    CIK_CACHE.write_text(json.dumps(m), encoding="utf-8")
+    return m
+
+
 def main():
     t0 = time.time()
     try:
@@ -161,7 +188,11 @@ def main():
     today = et_today()
     floor = (today - timedelta(days=KEEP_DAYS)).isoformat()
     stocks = {s: v for s, v in old.items() if v.get("date", "") >= floor}
-    cikmap = ss.cik_map()
+    try:
+        cikmap = cik_map_cached()
+    except ss.Blocked as e:
+        print(f"  SEC 티커 목록 막힘: {e} — 이번 바퀴는 EPS 만 본다", file=sys.stderr)
+        cikmap = {}
     seen_8k = seen_eps = new_8k = new_eps = 0
     for r in targets(today):
         if time.time() - t0 > SECS:

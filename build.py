@@ -2398,6 +2398,48 @@ def pack_en(r, mkt):
             ] + list(est or to_kst(mkt, r["date"], hhmm, timing))
 
 
+def pack_fcst(packed):
+    """상세창의 연간 표(직전년도 실적 · 당해 · 차기 · 차차기 + PER·PBR·PSR).
+
+    `scrape_fcst.py` 가 받은 것을 화면에 실린 종목만 눕혀 싣는다. 원화 환산은
+    **사이트가 이미 쓰는 시총**(달러, 고정 환율)과 그 소스의 현지 통화 시총의
+    비로 한다 — 그래야 상세창 위의 「약 115.4조원」과 표의 숫자가 같은 잣대다.
+    주가 통화와 재무 통화가 다르면(위안으로 보고하는 홍콩 회사·미국 ADR) 이
+    비가 성립하지 않으므로 그 종목은 표를 안 낸다(틀린 표보다 없는 표가 낫다).
+    """
+    p = HERE / "data" / "forecast.json"
+    try:
+        stocks = json.loads(p.read_text(encoding="utf-8")).get("stocks", {})
+    except (ValueError, OSError):
+        return {}
+    cap = {}
+    for r in packed:
+        k = r[9] + ":" + r[1]
+        cap[k] = max(cap.get(k, 0), r[11] or 0)
+    out = {}
+    for k, rec in stocks.items():
+        ys = rec.get("years") or []
+        if k not in cap or not ys or not rec.get("mcap") or not cap[k]:
+            continue
+        if rec.get("curFin") and rec.get("curPrice") and rec["curFin"] != rec["curPrice"]:
+            continue
+        act = [y for y in ys if not y.get("est")]
+        est = [y for y in ys if y.get("est")]
+        if not act:
+            continue
+        rows = [act[-1]] + est[:1]
+        out[k] = {
+            "y": [[y["end"], y.get("rev"), y.get("opi"), y.get("ni"), y.get("eps"), y.get("est", 0)]
+                  for y in rows],
+            "n": [(rec.get("next") or {}).get("rev"), (rec.get("next") or {}).get("eps")],
+            "m": rec["mcap"], "e": rec.get("equity"),
+            # 현지 통화 1단위가 몇 원인가 — 시총 두 개의 비.
+            "k": cap[k] * 1e9 * USD_KRW / rec["mcap"],
+            "ts": (rec.get("ts") or "")[:10],
+        }
+    return out
+
+
 def build():
     data = {m: load(m) for m in MARKET_ORDER}
     have = [m for m in MARKET_ORDER if data[m]]
@@ -2590,6 +2632,7 @@ def build():
         # 점은 [라벨, 매출, 영업이익] 배열로 눕힌다. 이름표를 종목마다 스무 번씩
         # 되풀이하면 그것만으로 파일이 반 메가 늘어난다. 종료일과 순이익은
         # 화면에서 안 쓰므로 빼고, 자료 파일에는 그대로 남겨 둔다.
+        "fcst": pack_fcst(packed),
         "fin": {s: pack_fin(rec) for s, rec in FIN.items()
                 if (rec.get("points") or rec.get("eps"))
                 and s in {p[9] + ":" + p[1] for p in packed}},
@@ -3272,6 +3315,18 @@ td.dim { color:var(--mute); font-size:18px; }
 #mdFin { margin-top:18px; }
 .finnote { color:var(--mute); font-size:17px; margin:10px 0 0; }
 .finwrap { border-top:1px solid var(--line); padding-top:14px; }
+.fcwrap { margin:4px 0 16px; overflow-x:auto; }
+.fctab { border-collapse:collapse; font-size:15px; min-width:520px; width:100%; font-variant-numeric:tabular-nums; }
+.fctab th,.fctab td { border:1px solid var(--line); padding:5px 10px; text-align:right; white-space:nowrap; }
+.fctab thead th { background:#2a2a1a; color:#f3e7a8; font-weight:600; line-height:1.35; vertical-align:bottom; }
+.fctab thead th small { display:block; color:#c9bd7d; font-weight:400; font-size:12px; }
+.fctab thead th b { display:block; }
+.fctab thead th.act { background:#2c2416; }
+.fctab tbody th { text-align:left; font-weight:600; color:var(--ink, #e6edf5); background:transparent; }
+.fctab td.act { color:#cfd8e3; }
+.fctab tr.gap > * { border-top:2px solid var(--line); }
+.fctab .fcunit { text-align:left; vertical-align:middle; }
+.fcnote { color:var(--mute); font-size:12.5px; margin:6px 0 0; }
 .finhead { font-size:18px; font-weight:700; margin-bottom:8px; }
 .finhead .warn { color:var(--a3); font-weight:400; font-size:16px; margin-left:10px; }
 .finhead.sub { margin-top:14px; }
@@ -4769,10 +4824,55 @@ function bizLine(m, code) {
   return '<p class="biz raw"><span class="tagx">원문</span>' + esc(raw) + '</p>';
 }
 
+/* **연간 표 — 증권사 화면의 그 표.** 회원님이 "실적 볼 때 이런 것도 중시한다"며
+   직전년도 실적 · 당해 · 차기 · 차차기 매출·영업이익·순이익과 PER·PBR·PSR 을
+   원화 억원으로 달라고 하셨다. 무료 컨센서스(S&P Global, stockanalysis)가 주는
+   만큼만 채우고 나머지는 「—」 로 둔다 — 지어 넣지 않는다.
+   PER·PSR 은 지금 시총을 그 해 순이익·매출로 나눈 것이고, PBR 은 지금 자본으로
+   한 번만 적는다(앞날 자본 추정은 없다). 차기 순이익은 차기 EPS × 올해 주식수. */
+function fcstTable(m, code) {
+  const F = D.fcst && D.fcst[m + ':' + code];
+  if (!F) return '';
+  const [a, b] = [F.y[0], F.y[1]];
+  const yr = d => d ? +d.slice(0, 4) : null;
+  const shares = b && b[3] && b[4] ? b[3] / b[4] : null;
+  const c2ni = F.n[1] && shares ? F.n[1] * shares : null;
+  const cols = [
+    { tag: '-0FY', name: '직전년도', end: a[0], rev: a[1], opi: a[2], ni: a[3] },
+    { tag: '1FY', name: '당해년도', end: b ? b[0] : null, rev: b && b[1], opi: b && b[2], ni: b && b[3] },
+    { tag: '2FY', name: '차기년도', end: null, rev: F.n[0], opi: null, ni: c2ni },
+    { tag: '3FY', name: '차차기년도', end: null, rev: null, opi: null, ni: null },
+  ];
+  // 차기·차차기 결산일은 당해 결산일에서 한 해씩 민다.
+  const base = cols[1].end || cols[0].end;
+  [2, 3].forEach((i, j) => {
+    const y = yr(base) + (cols[1].end ? j + 1 : j + 2);
+    cols[i].end = y + base.slice(4);
+  });
+  const won = v => (v == null || !isFinite(v)) ? '—' : Math.round(v * F.k / 1e8).toLocaleString();
+  const ratio = (num, den) => (!den || den <= 0) ? (den < 0 ? '적자' : '—') : (num / den).toFixed(1);
+  const row = (lab, f, cls) => '<tr' + (cls ? ' class="' + cls + '"' : '') + '><th>' + lab + '</th>' +
+    cols.map((c, i) => '<td' + (i === 0 ? ' class="act"' : '') + '>' + f(c, i) + '</td>').join('') + '</tr>';
+  return '<div class="fcwrap"><table class="fctab">' +
+    '<thead><tr><th class="fcunit">원화기준 실적<br><small>단위: 억원</small></th>' +
+      cols.map((c, i) => '<th' + (i === 0 ? ' class="act"' : '') + '>' + esc(c.end || '') +
+        '<small>' + c.tag + '</small><b>' + c.name + '</b></th>').join('') + '</tr></thead><tbody>' +
+    row('매출', c => won(c.rev)) +
+    row('영업이익', c => won(c.opi)) +
+    row('순이익', c => won(c.ni)) +
+    row('PER', c => c.ni == null ? '—' : ratio(F.m * F.k, c.ni * F.k), 'gap') +
+    row('PBR', (c, i) => i === 0 && F.e ? ratio(F.m, F.e) : '—') +
+    row('PSR', c => c.rev == null ? '—' : ratio(F.m, c.rev)) +
+    '</tbody></table><p class="fcnote">직전년도는 실적, 그 뒤는 애널리스트 컨센서스(S&amp;P Global) · ' +
+    'PER·PSR 은 현재 시총 기준 · PBR 은 현재 자본 기준 · 차기 순이익은 EPS×주식수 환산 · ' +
+    '차기 영업이익·차차기는 무료 자료에 없음 · 원화는 고정 환율 어림' +
+    (F.ts ? ' · ' + esc(F.ts) + ' 받음' : '') + '</p></div>';
+}
+
 function finBlock(m, code) {
   const key = m + ':' + code;
   const f = D.fin[key], sg = D.seg[key];
-  const biz = bizLine(m, code);
+  const biz = bizLine(m, code) + fcstTable(m, code);
   // 실적 수치가 없어도 부문은 있을 수 있다. 그때 통화를 'USD' 로 박아 두면
   // 일본 회사의 엔화 막대에 '단위: bil USD' 라고 적히는 거짓말이 된다.
   const MKT_CUR = { jp: 'JPY', hk: 'HKD' };

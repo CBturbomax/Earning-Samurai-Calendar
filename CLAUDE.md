@@ -115,6 +115,7 @@ python scrape_desc.py                       # 사업 설명 원문
 | 회사 사업 설명(한국어) | `descriptions.py`의 `DESC_KO` — 원문 수집은 `scrape_desc.py` |
 | 실적 브리핑(숫자 요약·문구) | `build.py`의 `briefBlock` — 한국어 코멘트는 `briefs.py`, 원문 수집은 `scrape_pr_us.py`(미국)·`scrape_fin_jp.py`의 `fcst`(일본 가이던스) |
 | 차트 모양·통화 표기 | `build.py`의 `finChart` / `segChart` / `CUR` |
+| 상세창 **연간 표**(컨센서스·PER·PBR·PSR) | 수집 `scrape_fcst.py` → `data/forecast.json`, 싣기 `build.py` 의 `pack_fcst`, 그리기 `fcstTable`. 무료 범위: 직전년도 실적·당해 매출/영업이익/순이익·차기 매출/EPS 뿐 — 나머지는 「—」 |
 
 `index.html`은 **직접 고치지 않는다.** `build.py`가 덮어쓴다.
 
@@ -1152,7 +1153,7 @@ HPE 가 Compute·Storage·Intelligent Edge 를 Cloud&AI·Networking 으로 바�
 |---|---|---|
 | `fresh.yml` | **3분 루프** | `data/earnings_jp_past.json` · `data/monthly_jp.json` · `data/financials_jp.json` · `data/segments_jp.json` · `data/briefs_jp.json` · `data/briefs_us.json` · `data/live_us.json` |
 | `collect.yml` | **5분**(크론 하한) | `data/earnings.json` · `data/earnings_jp_sched.json` · `data/earnings_us.json` · `data/earnings_hk.json` · `data/caps.json` |
-| `numbers.yml` | **5분**(크론 하한) | `data/financials.json` · `data/financials_intl.json` · `data/segments.json` · `data/segments_hk.json` · `data/desc.json` |
+| `numbers.yml` | **5분**(크론 하한) | `data/financials.json` · `data/financials_intl.json` · `data/segments.json` · `data/segments_hk.json` · `data/desc.json` · `data/forecast.json` |
 | `segments.yml` | 30분 | `data/segments_sec.json` · `data/segments_edgar.json` · `data/segments_fpi.json` · `data/financials_fpi.json` |
 | `monthly.yml` | 10분 | `data/monthly_nums_jp.json` (월매출 수치 — 첨부 PDF) · `data/monthly_web_jp.json` (월매출 — 流通ニュース) · `data/monthly_ir_jp.json` (월매출 — 회사 IR) |
 | `segments_hist.yml` | 하루 1번 | `data/segments_jp_hist.json` (EDINETDB_KEY 있을 때만) |
