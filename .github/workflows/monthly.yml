@@ -36,6 +36,7 @@ on:
 
 permissions:
   contents: write
+  actions: write      # 다음 실행 예약(이어달리기)
 
 concurrency:
   group: monthly-${{ github.ref_name }}
@@ -51,6 +52,9 @@ jobs:
     # 못 한다). 빌드·되커밋까지 넉넉히 잡는다.
     timeout-minutes: 50
     steps:
+      - name: 시작 시각
+        run: echo "T0=$(date +%s)" >> "$GITHUB_ENV"
+
       - uses: actions/checkout@v4
       # **최신 main 으로 맞추고 시작한다.** checkout 은 이 실행을 부른 커밋을
       # 꺼내 오는데, 실행이 줄을 서면 그게 벌써 낡은 것이다 — 앞 실행이 방금
@@ -112,10 +116,14 @@ jobs:
       # 에도 안 실리는 회사(이온·세븐＆아이·니토리·스카이락·온워드)가 제
       # 사이트에는 월차 표를 올린다. 집계 사이트와 달리 데이터센터 IP 를
       # 막지 않는다(84차: 24곳 중 21곳 열림). 손으로 잇는 것은 주소 하나뿐이다.
+      # **이 단계가 죽어도 저장은 한다.** 10분 제한에 걸려 실패하면 뒤의 '저장소에
+      # 반영'이 통째로 건너뛰어져, 앞 단계(첨부 PDF·流通ニュース)에서 받은 것까지
+      # 버려졌다 — 10/27~28 실행이 전부 그랬다. 예산도 제한보다 넉넉히 낮춘다.
       - name: 🏢 월매출 (회사 IR 페이지)
-        timeout-minutes: 10
+        continue-on-error: true
+        timeout-minutes: 12
         env:
-          IR_SECS: '540'
+          IR_SECS: '360'
           IR_PAUSE: '0.8'
           IR_PDF_PER_COMPANY: '36'
           IR_PDF_PER_RUN: '260'
@@ -178,3 +186,16 @@ jobs:
             sleep $((2**i))
           done
           exit 1
+
+      # **이어달리기** — GitHub 크론은 몇 시간씩 밀린다(10분 주기라 적어 놨는데
+      # 실제로는 3~6시간에 한 번 돌았다). 끝날 때 다음 실행을 걸어 둔다. 금방 끝난
+      # 실행이 쉬지 않고 연달아 돌지 않게 시작부터 10분은 채운다. 앞 단계가
+      # 실패해도 건다(always) — 안 걸면 사슬이 끊겨 다시 크론에 기대게 된다.
+      - name: 다음 실행 예약
+        if: always()
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          left=$(( 600 - ($(date +%s) - ${T0:-0}) ))
+          [ "$left" -gt 0 ] && sleep "$left"
+          gh workflow run monthly.yml --ref main -R "$GITHUB_REPOSITORY" || echo "예약 실패 — 크론에 맡긴다"
