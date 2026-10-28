@@ -67,29 +67,36 @@ def targets(today):
     return sorted(best.values(), key=lambda r: -(r.get("cap") or 0))[:MAX]
 
 
-def accepted_et(raw, filing_date):
-    """acceptanceDateTime -> 'YYYY-MM-DD HH:MM'(동부 시각).
+def accepted_et(raw, filing_date=""):
+    """acceptanceDateTime -> 'YYYY-MM-DD HH:MM'(미국 동부 시각).
 
-    EDGAR 는 끝에 Z 를 붙이지만 값은 **동부 시각**이다(장후 실적이 16:05 로
-    찍힌다). 그래도 믿기 전에 제출일과 맞춰 본다 — 17:30 전에 접수된 서류는
-    그날이 제출일이다. 동부로 읽어 안 맞고 UTC 로 읽어 맞으면 UTC 로 본다.
+    값은 **UTC** 다(끝의 Z 그대로). 처음에 동부 시각이라 보고 그대로 적었더니
+    장전에 낸 AEP 가 10:59(장중), 장후에 낸 벤타스가 20:32 로 찍혔다 — 첫
+    실데이터에서 바로 드러났다. 동부로 옮겨 적는다(서머타임은 zoneinfo 가 안다).
     """
     try:
-        t = datetime.fromisoformat(raw.replace("Z", "")[:19])
+        t = datetime.fromisoformat(raw.replace("Z", "")[:19]).replace(tzinfo=timezone.utc)
     except ValueError:
         return ""
+    return t.astimezone(ET).strftime("%Y-%m-%d %H:%M")
 
-    def fits(dt):
-        if dt.hour * 60 + dt.minute < 17 * 60 + 30:
-            return dt.date().isoformat() == filing_date
-        return dt.date().isoformat() <= filing_date
 
-    if not filing_date or fits(t):
-        return t.strftime("%Y-%m-%d %H:%M")
-    u = t.replace(tzinfo=timezone.utc).astimezone(ET).replace(tzinfo=None)
-    if fits(u):
-        return u.strftime("%Y-%m-%d %H:%M")
-    return ""                                # 둘 다 안 맞으면 안 적는다
+def _fix_v1(prev):
+    """v1 파일은 UTC 값을 동부라 적었다. 한 번만 옮겨 적는다."""
+    def conv(v):
+        try:
+            t = datetime.strptime(v, "%Y-%m-%d %H:%M").replace(tzinfo=timezone.utc)
+        except ValueError:
+            return v
+        return t.astimezone(ET).strftime("%Y-%m-%d %H:%M")
+    for rec in prev.get("stocks", {}).values():
+        if rec.get("accepted"):
+            rec["accepted"] = conv(rec["accepted"])
+    typ = prev.get("typical", {})
+    for sym, rec in prev.get("stocks", {}).items():
+        if rec.get("accepted") and sym in typ:
+            typ[sym] = rec["accepted"][11:16]
+    return prev
 
 
 def find_8k(cik, since):
@@ -145,6 +152,8 @@ def main():
         prev = json.loads(OUT.read_text(encoding="utf-8"))
     except (ValueError, OSError):
         prev = {}
+    if prev and prev.get("v") != 2:
+        prev = _fix_v1(prev)
     old = prev.get("stocks", {})
     # 회사마다 지난번 8-K 접수 시각(동부 HH:MM). 지우지 않고 쌓는다 —
     # 다음 분기 예정 시각을 어림하는 데 쓴다(회사는 대개 같은 시각에 낸다).
@@ -191,6 +200,7 @@ def main():
     OUT.parent.mkdir(parents=True, exist_ok=True)
     tmp = OUT.with_suffix(".tmp")
     tmp.write_text(json.dumps({
+        "v": 2,
         "source": "SEC 8-K(Item 2.02) 접수 시각 + 나스닥 EPS",
         "note": "accepted·typical 은 미국 동부 시각. stocks 는 오늘·어제 발표 종목만, typical 은 회사별 지난번 접수 시각.",
         "stocks": stocks, "typical": typical}, ensure_ascii=False), encoding="utf-8")
