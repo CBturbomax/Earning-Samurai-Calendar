@@ -101,7 +101,7 @@ def _fix_v1(prev):
 
 def find_8k(cik, since):
     """발표일(since) 이후 실적 8-K. (접수번호, 접수 시각, 원문 주소) 또는 None."""
-    blob = sec_get(SUBS.format(cik=cik), binary=False)
+    blob = sec_get(SUBS.format(cik=cik), timeout=15, binary=False)
     if blob is None:
         return None
     try:
@@ -124,7 +124,7 @@ def find_8k(cik, since):
 def eps_actual(sym, want_period):
     """나스닥 EPS 중 이번 분기 실제치. want_period 는 'Sep 2026' 꼴."""
     try:
-        d = nas_get(NAS_EPS.format(sym=sym), NAS_UA)
+        d = nas_get(NAS_EPS.format(sym=sym), NAS_UA, timeout=15)
     except Exception:
         return None
     for e in (d.get("data") or {}).get("earningsPerShare") or []:
@@ -173,8 +173,25 @@ def cik_map_cached():
     return m
 
 
+def save(stocks, typical, status):
+    """중간중간 쓴다. 끝에 한 번만 쓰면 바퀴가 시간에 잘렸을 때 아무것도 안 남는다.
+
+    `status` 는 이 바퀴가 어디까지 갔고 무엇에 막혔는지다. GitHub Actions 로그를
+    밖에서 못 볼 때(이 저장소를 돌보는 세션이 그랬다) 이 파일만 보고 진단한다.
+    """
+    OUT.parent.mkdir(parents=True, exist_ok=True)
+    tmp = OUT.with_suffix(".tmp")
+    tmp.write_text(json.dumps({
+        "v": 2,
+        "source": "SEC 8-K(Item 2.02) 접수 시각 + 나스닥 EPS",
+        "note": "accepted·typical 은 미국 동부 시각. stocks 는 오늘·어제 발표 종목만, typical 은 회사별 지난번 접수 시각.",
+        "status": status, "stocks": stocks, "typical": typical}, ensure_ascii=False), encoding="utf-8")
+    tmp.replace(OUT)
+
+
 def main():
     t0 = time.time()
+    now = lambda: datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%S")
     try:
         prev = json.loads(OUT.read_text(encoding="utf-8"))
     except (ValueError, OSError):
@@ -188,56 +205,75 @@ def main():
     today = et_today()
     floor = (today - timedelta(days=KEEP_DAYS)).isoformat()
     stocks = {s: v for s, v in old.items() if v.get("date", "") >= floor}
+    st = {"started": now(), "finished": "", "stage": "시작", "targets": 0,
+          "checked8k": 0, "new8k": 0, "checkedEps": 0, "newEps": 0, "errors": []}
+
+    def err(msg):
+        st["errors"] = (st["errors"] + [msg[:200]])[-8:]
+        print("  " + msg, file=sys.stderr, flush=True)
+
+    save(stocks, typical, st)
     try:
-        cikmap = cik_map_cached()
-    except ss.Blocked as e:
-        print(f"  SEC 티커 목록 막힘: {e} — 이번 바퀴는 EPS 만 본다", file=sys.stderr)
-        cikmap = {}
-    seen_8k = seen_eps = new_8k = new_eps = 0
-    for r in targets(today):
-        if time.time() - t0 > SECS:
-            print("  시간이 다 됐다 — 다음 바퀴에서 이어서")
-            break
-        sym, day = r["code"], r["date"]
-        rec = stocks.get(sym)
-        if not rec or rec.get("date") != day:
-            rec = stocks[sym] = {"date": day, "period": period_of(r.get("fy"))}
+        st["stage"] = "SEC 티커 목록"
         try:
-            if not rec.get("acc"):
-                cik = ss.cik_of(cikmap, sym)
-                if not cik:
-                    continue
-                seen_8k += 1
-                hit = find_8k(cik, day)
-                time.sleep(PAUSE)
-                if hit:
-                    rec["acc"], rec["accepted"], rec["url"] = hit
-                    rec["found"] = datetime.now(timezone.utc).isoformat(timespec="minutes")
-                    new_8k += 1
-                    if rec["accepted"]:
-                        typical[sym] = rec["accepted"][11:16]
-                    print(f"  8-K {sym} {rec['accepted'] or '(시각 불명)'}")
-            if rec.get("acc") and not rec.get("eps") and rec.get("period"):
-                seen_eps += 1
-                e = eps_actual(sym, rec["period"])
-                time.sleep(0.3)
-                if e:
-                    rec["eps"] = e
-                    new_eps += 1
-                    print(f"  EPS {sym} {e['actual']} (예상 {e['consensus']})")
+            cikmap = cik_map_cached()
         except ss.Blocked as e:
-            print(f"  막힘: {e} — 이번 바퀴는 여기까지", file=sys.stderr)
-            break
-    OUT.parent.mkdir(parents=True, exist_ok=True)
-    tmp = OUT.with_suffix(".tmp")
-    tmp.write_text(json.dumps({
-        "v": 2,
-        "source": "SEC 8-K(Item 2.02) 접수 시각 + 나스닥 EPS",
-        "note": "accepted·typical 은 미국 동부 시각. stocks 는 오늘·어제 발표 종목만, typical 은 회사별 지난번 접수 시각.",
-        "stocks": stocks, "typical": typical}, ensure_ascii=False), encoding="utf-8")
-    tmp.replace(OUT)
-    print(f"미국 속보: 8-K 확인 {seen_8k} · 새로 {new_8k} | EPS 확인 {seen_eps} · 새로 {new_eps}"
-          f" ({time.time() - t0:.0f}초)")
+            err(f"SEC 티커 목록 막힘: {e}")
+            cikmap = {}
+        tg = targets(today)
+        st["targets"] = len(tg)
+        st["stage"] = "종목 훑기"
+        streak = 0
+        for i, r in enumerate(tg):
+            if time.time() - t0 > SECS:
+                st["stage"] = f"시간 끝 ({i}/{len(tg)})"
+                break
+            sym, day = r["code"], r["date"]
+            rec = stocks.get(sym)
+            if not rec or rec.get("date") != day:
+                rec = stocks[sym] = {"date": day, "period": period_of(r.get("fy"))}
+            try:
+                if not rec.get("acc"):
+                    cik = ss.cik_of(cikmap, sym) if cikmap else None
+                    if cik:
+                        st["checked8k"] += 1
+                        hit = find_8k(cik, day)
+                        time.sleep(PAUSE)
+                        if hit:
+                            rec["acc"], rec["accepted"], rec["url"] = hit
+                            rec["found"] = now()
+                            st["new8k"] += 1
+                            if rec["accepted"]:
+                                typical[sym] = rec["accepted"][11:16]
+                            print(f"  8-K {sym} {rec['accepted'] or '(시각 불명)'}")
+                if rec.get("acc") and not rec.get("eps") and rec.get("period"):
+                    st["checkedEps"] += 1
+                    e = eps_actual(sym, rec["period"])
+                    time.sleep(0.3)
+                    if e:
+                        rec["eps"] = e
+                        st["newEps"] += 1
+                        print(f"  EPS {sym} {e['actual']} (예상 {e['consensus']})")
+                streak = 0
+            except ss.Blocked as e:
+                # 한 번 막혔다고 바퀴를 접지 않는다 — 다섯 번 연달아일 때만.
+                streak += 1
+                err(f"{sym} 막힘: {e}")
+                if streak >= 5:
+                    st["stage"] = f"연속 막힘으로 중단 ({i}/{len(tg)})"
+                    break
+            if i % 15 == 14:
+                save(stocks, typical, st)
+        else:
+            st["stage"] = "끝"
+    except Exception as e:                       # 무엇이든 남기고 죽는다
+        import traceback
+        err("예외: " + "".join(traceback.format_exception_only(type(e), e)).strip())
+        st["stage"] = "예외로 중단"
+    st["finished"] = now()
+    st["secs"] = round(time.time() - t0)
+    save(stocks, typical, st)
+    print(f"미국 속보: {st}")
 
 
 if __name__ == "__main__":
