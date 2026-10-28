@@ -26,7 +26,7 @@ import sys
 import time
 import urllib.error
 import urllib.request
-from datetime import date, timedelta
+from datetime import date, datetime, timedelta, timezone
 from pathlib import Path
 
 HERE = Path(__file__).parent
@@ -86,7 +86,8 @@ GIVE_UP_AFTER = 5          # 연속 이만큼 막히면 이번 실행은 접는�
 
 # 다시 받는 주기. 발표일 언저리 종목은 매일, 나머지는 이 간격으로.
 NEAR_DAYS = int(os.environ.get("FIN_NEAR_DAYS", "4"))     # 발표일 ±4일이면 '언저리'
-STALE_DAYS = int(os.environ.get("FIN_STALE_DAYS", "7"))   # 그 밖은 7일마다
+STALE_DAYS = int(os.environ.get("FIN_STALE_DAYS", "7"))
+NEAR_REFRESH_H = float(os.environ.get("FIN_NEAR_REFRESH_H", "2"))  # 발표 당일 재수집 간격   # 그 밖은 7일마다
 
 
 class Throttled(Exception):
@@ -609,6 +610,7 @@ def queue(old, cand):
     today = date.today().isoformat()
     stale = (date.today() - timedelta(days=STALE_DAYS)).isoformat()
     cold = (date.today() - timedelta(days=STALE_DAYS * 4)).isoformat()
+    recent = (datetime.now(timezone.utc) - timedelta(hours=NEAR_REFRESH_H)).strftime("%Y-%m-%dT%H:%M")
     picks = []
     for sym, (cap, gap) in cand.items():
         rec = old.get(sym)
@@ -632,6 +634,10 @@ def queue(old, cand):
                 else:
                     pri = 3
             elif gap <= NEAR_DAYS and ts < today:
+                pri = 1
+            elif gap <= 1 and ts < recent:
+                # 발표 당일·이튿날은 두 시간마다 — 10-Q 가 발표 당일 오후에
+                # 올라오는 회사가 많다. 하루 한 번이면 그날 밤까지 못 싣는다.
                 pri = 1
             elif ts < stale:
                 pri = 2
@@ -738,7 +744,8 @@ def main():
             rec = dict(stocks.get(sym) or {})
             rec["none"] = 1
         rec["v"] = FIN_VER
-        rec["ts"] = today
+        # 분까지 적는다 — 날짜만 적으면 발표 전 아침에 받은 것과 발표 뒤를 못 가른다.
+        rec["ts"] = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M")
         stocks[sym] = rec
         if i % 25 == 24:
             print(f"    {i+1}/{len(todo)} (확보 {got})", flush=True)

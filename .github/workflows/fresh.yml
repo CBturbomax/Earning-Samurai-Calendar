@@ -12,7 +12,7 @@
 # **여기가 이 파일들의 주인이다** (numbers.yml·collect.yml 에서 옮겨 왔다):
 #   data/earnings_jp_past.json · data/monthly_jp.json
 #   data/financials_jp.json · data/segments_jp.json
-#   data/briefs_jp.json · data/briefs_us.json
+#   data/briefs_jp.json · data/briefs_us.json · data/live_us.json
 # 다른 워크플로는 읽기만 한다. 두 워크플로가 같은 파일에 쓰면 한쪽 수집분이
 # 머지에서 사라진다 — 이 저장소가 한 번 겪은 일이다.
 
@@ -138,6 +138,12 @@ jobs:
             # 여러 바퀴에 나눠 끝났다. 날마다 써두므로 잘려도 잃지는 않지만,
             # 고친 규칙이 화면에 닿는 것은 한 바퀴로 끝나는 편이 낫다.
             timeout 150 python scrape_jp_tdnet.py || true
+            # 미국 발표 속보 — 오늘·어제 발표 종목의 8-K 접수(실제 시각)와 실제 EPS.
+            # 회원님: "실적 나온 지 3시간이 지났는데 왜 반영이 안 되냐"(EAT).
+            # 예전에는 8-K 를 30분에 한 번, EPS 는 하루 한 번 봤다.
+            timeout 110 python scrape_live_us.py || true
+            # 방금 8-K 가 잡힌 종목의 보도자료(회사가 한 말)도 매 바퀴 조금씩.
+            PR_PER_RUN=15 timeout 60 python scrape_pr_us.py || true
             JP_BACK_DAYS=2 timeout 150 python scrape_fin_jp.py || true
             # 월매출 **숫자**(첨부 PDF)는 monthly.yml 로 옮겼다 — 여기 끼우면
             # 한 바퀴가 길어지고, 무엇보다 이 루프의 로그에 묻혀 안 보인다.
@@ -146,7 +152,6 @@ jobs:
             # 45일 = TDnet 보관창 전체. 판(SEG_JP_VER 등)을 올리면 이 창 안의
             # 공시가 저절로 다시 뜯힌다 — 따라잡은 뒤에는 목록만 훑고 금방 끝난다.
             if [ $((n % 10)) -eq 1 ]; then
-              PR_PER_RUN=60 timeout 90 python scrape_pr_us.py || true
               JP_BACK_DAYS=45 timeout 240 python scrape_fin_jp.py || true
             fi
             push_changes || exit 1

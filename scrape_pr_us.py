@@ -87,8 +87,18 @@ def want():
         cur = best.get(sym)
         if not cur or (fresh, cap) > (cur[0], cur[1]):
             best[sym] = (fresh, cap)
-    ordered = sorted(best.items(), key=lambda kv: (-kv[1][0], -kv[1][1]))
-    return [sym for sym, _ in ordered]
+    ordered = [sym for sym, _ in
+               sorted(best.items(), key=lambda kv: (-kv[1][0], -kv[1][1]))]
+    # **방금 8-K 가 잡힌 종목이 맨 앞이다**(scrape_live_us.py 가 3분마다 적는다).
+    # 시총 순으로만 줄을 세우면 작은 회사의 오늘 보도자료는 몇 시간 뒤에야 닿는다.
+    try:
+        live = json.loads((HERE / "data" / "live_us.json").read_text(encoding="utf-8"))["stocks"]
+        have = json.loads(OUT.read_text(encoding="utf-8")).get("stocks", {})
+    except (ValueError, OSError, KeyError):
+        live, have = {}, {}
+    hot = [s for s, v in live.items()
+           if v.get("acc") and (have.get(s) or {}).get("acc") != v["acc"]]
+    return hot + [s for s in ordered if s not in set(hot)]
 
 
 def latest_earnings_8k(cik):

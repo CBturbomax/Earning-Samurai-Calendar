@@ -213,6 +213,16 @@ def to_kst(mkt: str, day: str, hhmm: str, timing: str):
             exact = 0
         shift = KST - HKT                                       # 한국이 1시간 빠르다
     else:                                                       # 미국
+        if hhmm:
+            # SEC 8-K 접수 시각(동부). 실제로 낸 시각이라 정확도 1 이다.
+            # 날짜는 접수일 기준으로 옮긴다(장후 8-K 가 이튿날 아침에 접수되기도 한다).
+            day = hhmm[:10] if len(hhmm) > 5 else day
+            d = date.fromisoformat(day)
+            h, m = int(hhmm[-5:-3]), int(hhmm[-2:])
+            shift = KST - us_utc_offset(d)
+            total = h * 60 + m + shift * 60
+            day_shift, mins = divmod(total, 24 * 60)
+            return (d + timedelta(days=day_shift)).isoformat(), "%02d:%02d" % divmod(mins, 60), 1
         if timing == "장전":
             h, m = US_BMO
         elif timing == "장후":
@@ -564,6 +574,56 @@ def merge_fin(a, b):
 
 
 FIN = load_fin()
+
+
+def load_live():
+    """`scrape_live_us.py` 가 3분마다 쓰는 미국 발표 속보(8-K 시각·실제 EPS)."""
+    p = HERE / "data" / "live_us.json"
+    try:
+        return json.loads(p.read_text(encoding="utf-8")).get("stocks", {})
+    except (ValueError, OSError):
+        return {}
+
+
+LIVE = load_live()
+
+
+def load_last_times():
+    """회사마다 지난번 실제 발표 시각 — 예정 시각을 어림하는 데 쓴다.
+
+    일본은 TDnet 공시 시각(earnings_jp_past.json), 미국은 8-K 접수 시각을
+    scrape_live_us.py 가 쌓아 둔 것(live_us.json 의 typical, 동부 시각).
+    """
+    jp = {}
+    try:
+        rows = json.loads((HERE / "data" / "earnings_jp_past.json")
+                          .read_text(encoding="utf-8")).get("rows", [])
+    except (ValueError, OSError):
+        rows = []
+    for r in sorted(rows, key=lambda r: r.get("date", "")):
+        t = r.get("time") or ""
+        if re.fullmatch(r"\d\d:\d\d", t):
+            jp[r["code"]] = t
+    try:
+        us = json.loads((HERE / "data" / "live_us.json")
+                        .read_text(encoding="utf-8")).get("typical", {})
+    except (ValueError, OSError):
+        us = {}
+    return jp, us
+
+
+JP_LAST_TIME, US_LAST_TIME = load_last_times()
+# 방금 나온 실제 EPS 를 실적 수치에 얹는다 — scrape_fin 은 SEC 10-Q 를 기다리느라
+# 늦다. 같은 분기가 이미 있으면 그대로 둔다(나중에 받은 정식 값이 이긴다).
+for _sym, _rec in LIVE.items():
+    _e = _rec.get("eps")
+    if not _e:
+        continue
+    _f = FIN.setdefault("us:" + _sym, {})
+    _eps = _f.setdefault("eps", {})
+    _done = _eps.setdefault("done", [])
+    if not any(x.get("period") == _e["period"] for x in _done):
+        _done.append(dict(_e))
 
 
 # ── 기준이 바뀐 부문 정리 ────────────────────────────────────────────
@@ -2233,8 +2293,13 @@ def pack_jp(r):
             SECTOR_KO.get(r.get("sector", ""), r.get("sector", "")),
             MARKET_KO.get(r.get("market", ""), r.get("market", "")),
             r["name"], lvl, "jp", "", CAPS.get("jp:" + r["code"], 0)
-            # TDnet 줄에는 실제 공시 시각이 있다. 닛케이 줄에는 없어 빈칸이다.
-            ] + list(to_kst("jp", r["date"], r.get("time", ""), ""))
+            # TDnet 줄에는 실제 공시 시각이 있다. 닛케이·JPX 예정에는 없다.
+            ] + list(to_kst("jp", r["date"], r.get("time", ""), "")
+                     if r.get("time") or r["code"] not in JP_LAST_TIME
+                     # 시각이 없는 예정은 **그 회사가 지난번 실제로 낸 시각**으로
+                     # 어림한다. 일괄 15시는 15:30·16:00 에 내는 대형주를 다 틀렸다.
+                     # 어림이므로 정확도는 0(「경」)이다.
+                     else (r["date"], JP_LAST_TIME[r["code"]], 0))
 
 
 # 홍콩 결산기는 원본이 공시 문서 제목이라 통째로 영어 한 문장이다.
@@ -2303,6 +2368,21 @@ def pack_en(r, mkt):
     raw_time = r.get("time", "")
     timing = TIMING_KO.get(raw_time, "") if mkt == "us" else ""
     hhmm = raw_time if mkt == "hk" else ""
+    live = LIVE.get(r["code"]) if mkt == "us" else None
+    if live and live.get("date") == r["date"] and live.get("accepted"):
+        # 실제 8-K 접수 시각이 있으면 그걸 쓴다. 장전/장후도 거기서 다시 가른다
+        # (나스닥이 발표가 끝난 날의 장전/장후 표시를 지우고 주는 일이 있다).
+        hhmm = live["accepted"]
+        hm = int(hhmm[11:13]) * 60 + int(hhmm[14:16])
+        timing = "장전" if hm < 9 * 60 + 30 else "장후" if hm >= 16 * 60 else "장중"
+    est = None
+    if not hhmm and mkt == "us" and timing and r["code"] in US_LAST_TIME:
+        # 아직 안 낸 발표는 지난번 8-K 접수 시각으로 어림한다(장전·장후가 같을
+        # 때만). 일괄 7:00·16:15 보다 회사마다 실제에 가깝다. 정확도는 0 이다.
+        t = US_LAST_TIME[r["code"]]
+        hm = int(t[:2]) * 60 + int(t[3:5])
+        if (timing == "장전" and hm < 9 * 60 + 30) or (timing == "장후" and hm >= 16 * 60):
+            est = to_kst(mkt, r["date"], r["date"] + " " + t, timing)[:2] + (0,)
     # 업종은 원본에 없다. 미국은 나스닥 스크리너에서 따로 받아둔 것을 붙인다.
     sec = r.get("sector", "") or SECTORS.get(mkt + ":" + r["code"], "")
     fy = r.get("fy", "")
@@ -2315,7 +2395,7 @@ def pack_en(r, mkt):
             name, 2, mkt, timing,
             # 미국은 나스닥이 시총을 같이 주고, 홍콩은 따로 받아둔 것을 붙인다.
             r.get("cap", 0) or CAPS.get(mkt + ":" + r["code"], 0)
-            ] + list(to_kst(mkt, r["date"], hhmm, timing))
+            ] + list(est or to_kst(mkt, r["date"], hhmm, timing))
 
 
 def build():
@@ -4636,7 +4716,8 @@ function openModal(k, dt) {
                        ' ' + surprise(dn.actual, dn.consensus) + '</span>' : '')
         : '') + '</dd>' +
     (r[10] ? '<dt>발표 시각</dt><dd>' + esc(r[10]) +
-             (r[10] === '장전' ? ' (Before Open)' : ' (After Close)') + '</dd>' : '') +
+             (r[10] === '장전' ? ' (Before Open)' : r[10] === '장중' ? ' (Market Hours)' : ' (After Close)') +
+             (r[13] ? ' · 한국 ' + esc(r[12].slice(5).replace('-', '/')) + ' ' + r[13] + (r[14] ? ' (실제 공시 시각)' : '경') : '') + '</dd>' : '') +
     '<dt>분기</dt><dd>' +
       (dn ? '<b>' + esc(epsQ(dn.period)) + '</b> · ' : '') +
       esc([r[4], r[3]].filter(Boolean).join(' · ') || '—') + '</dd>' +

@@ -184,6 +184,9 @@ def scrape_day(day: date, exch: dict):
 # 지난 날은 굳는다(이미 발표한 것은 안 바뀐다). **어제부터 앞으로**는 이 시간이
 # 지나면 다시 받는다. 하루 네 번꼴이고 앞으로 60일이면 240요청/일이라 싸다.
 FRESH_HOURS = float(os.environ.get("US_FRESH_HOURS", "6"))
+# **오늘·어제는 훨씬 자주 받는다.** 여섯 시간에 한 번이면 오늘 아침 발표한
+# 종목이 저녁까지 그대로였다(회원님: "3시간이 지났는데 왜 반영이 안 되냐").
+NEAR_MINUTES = float(os.environ.get("US_NEAR_MINUTES", "15"))
 
 
 def load_cache():
@@ -210,7 +213,9 @@ def stale(key: str, seen: dict, today: date) -> bool:
         got = datetime.fromisoformat(ts)
     except ValueError:
         return True
-    return (datetime.now(timezone.utc) - got).total_seconds() > FRESH_HOURS * 3600
+    near = key <= (today + timedelta(days=1)).isoformat()
+    limit = NEAR_MINUTES * 60 if near else FRESH_HOURS * 3600
+    return (datetime.now(timezone.utc) - got).total_seconds() > limit
 
 
 def save(by_day: dict, start: date, end: date, seen: dict):
@@ -263,6 +268,22 @@ def main(start: date, end: date):
                     break
             else:
                 streak = 0
+                # **아는 것을 모르는 것으로 덮지 않는다.** 나스닥은 발표가 끝난 날을
+                # 다시 주면 장전/장후 표시를 지우고 준다. 그대로 갈아끼웠더니 어제
+                # 미국 종목의 발표 시각이 통째로 사라졌다(10/27 비자·코카콜라…).
+                prev = {r["code"]: r for r in by_day.get(key, [])}
+                for r in got:
+                    o = prev.get(r["code"])
+                    if not o:
+                        continue
+                    blank = ("", "time-not-supplied")
+                    if r.get("time", "") in blank and o.get("time", "") not in blank:
+                        r["time"] = o["time"]
+                    for k in ("fy", "kind", "eps", "market"):
+                        if not r.get(k) and o.get(k):
+                            r[k] = o[k]
+                    if not r.get("cap") and o.get("cap"):
+                        r["cap"] = o["cap"]
                 by_day[key] = got
                 seen[key] = datetime.now(timezone.utc).isoformat(timespec="seconds")
                 now = {r["code"] for r in got}

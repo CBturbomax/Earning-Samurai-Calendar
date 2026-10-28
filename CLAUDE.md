@@ -1150,7 +1150,7 @@ HPE 가 Compute·Storage·Intelligent Edge 를 Cloud&AI·Networking 으로 바�
 
 | 워크플로 | 주기 | 쓰는 파일 |
 |---|---|---|
-| `fresh.yml` | **3분 루프** | `data/earnings_jp_past.json` · `data/monthly_jp.json` · `data/financials_jp.json` · `data/segments_jp.json` · `data/briefs_jp.json` · `data/briefs_us.json` |
+| `fresh.yml` | **3분 루프** | `data/earnings_jp_past.json` · `data/monthly_jp.json` · `data/financials_jp.json` · `data/segments_jp.json` · `data/briefs_jp.json` · `data/briefs_us.json` · `data/live_us.json` |
 | `collect.yml` | **5분**(크론 하한) | `data/earnings.json` · `data/earnings_jp_sched.json` · `data/earnings_us.json` · `data/earnings_hk.json` · `data/caps.json` |
 | `numbers.yml` | **5분**(크론 하한) | `data/financials.json` · `data/financials_intl.json` · `data/segments.json` · `data/segments_hk.json` · `data/desc.json` |
 | `segments.yml` | 30분 | `data/segments_sec.json` · `data/segments_edgar.json` · `data/segments_fpi.json` · `data/financials_fpi.json` |
@@ -1194,6 +1194,24 @@ git reset --hard origin/main` 으로 맞추고 시작한다(fresh.yml 의 `sync_
 월매출 수치(첨부 PDF)를 3분 루프에 끼웠더니 수집기가 시간을 넘겨 죽고 있는데도
 `|| true` 가 오류를 삼켜 겉으로는 멀쩡해 보였다. 한 시간 넘게 아무것도 안
 들어오고 나서야 알았다. `monthly.yml` 로 떼니 로그가 그대로 보인다.
+
+**미국 발표 속보는 3분 루프에서 따로 본다 — `scrape_live_us.py`.** 회원님이
+"EAT 실적 나온 지 3시간인데 왜 반영이 안 되냐"고 짚으셨다. 원인이 셋이었다.
+(1) 실적 수치(`scrape_fin.py`)의 `ts` 가 **날짜**라 발표 전 아침에 받은 것과
+발표 뒤를 못 갈라 하루 한 번만 받았다 — 지금은 분까지 적고 발표 당일·이튿날은
+두 시간마다(`FIN_NEAR_REFRESH_H`). (2) 8-K 를 보는 `scrape_pr_us.py` 는 30분에
+한 번 시총 큰 순 60종목만 봤다. (3) 나스닥 일정은 여섯 시간마다 다시 받았다 —
+지금 오늘·어제·내일은 15분(`US_NEAR_MINUTES`).
+`scrape_live_us.py` 는 **오늘·어제 발표 예정 종목만** SEC 제출 목록에서 실적
+8-K(Item 2.02)를 찾고, 잡히면 **접수 시각**(동부, 정확도 1)과 나스닥 실제 EPS 를
+`data/live_us.json` 에 적는다. build.py 가 그 시각으로 화면 시각을 바꾸고
+(「경」이 빠진다) EPS 를 `eps.done` 에 얹는다. 매출 차트는 여전히 10-Q 가
+나와야 들어온다 — 보도자료 숫자를 긁어 지어 넣지 않는다.
+
+**아는 것을 모르는 것으로 덮지 않는다(발표 시각).** 나스닥은 발표가 끝난 날을
+다시 주면 장전/장후를 `time-not-supplied` 로 지우고 준다. 다시 받을 때 줄을
+통째로 갈아끼웠더니 **어제 미국 종목의 발표 시각이 전부 사라졌다**(10/27 비자·
+코카콜라·보잉…). 지금 `scrape_us.py` 는 새 값이 비어 있으면 헌 값을 남긴다.
 
 **`bash -e` 가 루프를 죽인다.** GitHub 은 `run` 블록을 `bash -e` 로 돌린다.
 `git merge-base --is-ancestor … && return 0` 처럼 **거짓일 수 있는 것을 `&&` 의
