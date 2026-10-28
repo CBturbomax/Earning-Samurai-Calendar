@@ -23,7 +23,7 @@ try {
 <script>
 /* GitHub Pages/CDN 이 예전 index.html 을 잡고 있어도, 한 번 최신판을 받은 뒤부터는
    version.txt 를 no-store 로 확인해 새 빌드가 있으면 query string 을 바꿔 강제 갱신한다. */
-const ES_BUILD = "20261028154648";
+const ES_BUILD = "20261028155300";
 setTimeout(() => {
   fetch('./version.txt?t=' + Date.now(), {cache:'no-store'})
     .then(r => r.ok ? r.text() : '')
@@ -608,6 +608,18 @@ td.dim { color:var(--mute); font-size:18px; }
 #mdFin { margin-top:18px; }
 .finnote { color:var(--mute); font-size:17px; margin:10px 0 0; }
 .finwrap { border-top:1px solid var(--line); padding-top:14px; }
+.fcwrap { margin:4px 0 16px; overflow-x:auto; }
+.fctab { border-collapse:collapse; font-size:15px; min-width:520px; width:100%; font-variant-numeric:tabular-nums; }
+.fctab th,.fctab td { border:1px solid var(--line); padding:5px 10px; text-align:right; white-space:nowrap; }
+.fctab thead th { background:#2a2a1a; color:#f3e7a8; font-weight:600; line-height:1.35; vertical-align:bottom; }
+.fctab thead th small { display:block; color:#c9bd7d; font-weight:400; font-size:12px; }
+.fctab thead th b { display:block; }
+.fctab thead th.act { background:#2c2416; }
+.fctab tbody th { text-align:left; font-weight:600; color:var(--ink, #e6edf5); background:transparent; }
+.fctab td.act { color:#cfd8e3; }
+.fctab tr.gap > * { border-top:2px solid var(--line); }
+.fctab .fcunit { text-align:left; vertical-align:middle; }
+.fcnote { color:var(--mute); font-size:12.5px; margin:6px 0 0; }
 .finhead { font-size:18px; font-weight:700; margin-bottom:8px; }
 .finhead .warn { color:var(--a3); font-weight:400; font-size:16px; margin-left:10px; }
 .finhead.sub { margin-top:14px; }
@@ -730,7 +742,7 @@ svg.bars rect.b:hover { fill:var(--a3); }
 <body>
 <div class="wrap">
 
-<div class="topline"><span class="fl fl-us" role="img" aria-label="미국"></span> 미국 <b>12,986</b> · <span class="fl fl-jp" role="img" aria-label="일본"></span> 일본 <b>7,764</b> · <span class="fl fl-hk" role="img" aria-label="홍콩"></span> 홍콩 <b>9,190</b> · 합계 <b>29,940건</b> · 수집 <b>2025-07-09 ~ 2026-12-27</b> · 갱신 2026-10-29 00:46 KST</div>
+<div class="topline"><span class="fl fl-us" role="img" aria-label="미국"></span> 미국 <b>12,986</b> · <span class="fl fl-jp" role="img" aria-label="일본"></span> 일본 <b>7,764</b> · <span class="fl fl-hk" role="img" aria-label="홍콩"></span> 홍콩 <b>9,190</b> · 합계 <b>29,940건</b> · 수집 <b>2025-07-09 ~ 2026-12-27</b> · 갱신 2026-10-29 00:53 KST</div>
 <h1><span class="mark" aria-hidden="true"></span>Earning <span class="jp">Samurai</span>
     <span class="byline">by CB</span></h1>
 <p class="sub">미국 · 일본 · 홍콩 주간 실적발표 일정 — 누가 언제 무엇을 발표했는지</p>
@@ -2105,10 +2117,55 @@ function bizLine(m, code) {
   return '<p class="biz raw"><span class="tagx">원문</span>' + esc(raw) + '</p>';
 }
 
+/* **연간 표 — 증권사 화면의 그 표.** 회원님이 "실적 볼 때 이런 것도 중시한다"며
+   직전년도 실적 · 당해 · 차기 · 차차기 매출·영업이익·순이익과 PER·PBR·PSR 을
+   원화 억원으로 달라고 하셨다. 무료 컨센서스(S&P Global, stockanalysis)가 주는
+   만큼만 채우고 나머지는 「—」 로 둔다 — 지어 넣지 않는다.
+   PER·PSR 은 지금 시총을 그 해 순이익·매출로 나눈 것이고, PBR 은 지금 자본으로
+   한 번만 적는다(앞날 자본 추정은 없다). 차기 순이익은 차기 EPS × 올해 주식수. */
+function fcstTable(m, code) {
+  const F = D.fcst && D.fcst[m + ':' + code];
+  if (!F) return '';
+  const [a, b] = [F.y[0], F.y[1]];
+  const yr = d => d ? +d.slice(0, 4) : null;
+  const shares = b && b[3] && b[4] ? b[3] / b[4] : null;
+  const c2ni = F.n[1] && shares ? F.n[1] * shares : null;
+  const cols = [
+    { tag: '-0FY', name: '직전년도', end: a[0], rev: a[1], opi: a[2], ni: a[3] },
+    { tag: '1FY', name: '당해년도', end: b ? b[0] : null, rev: b && b[1], opi: b && b[2], ni: b && b[3] },
+    { tag: '2FY', name: '차기년도', end: null, rev: F.n[0], opi: null, ni: c2ni },
+    { tag: '3FY', name: '차차기년도', end: null, rev: null, opi: null, ni: null },
+  ];
+  // 차기·차차기 결산일은 당해 결산일에서 한 해씩 민다.
+  const base = cols[1].end || cols[0].end;
+  [2, 3].forEach((i, j) => {
+    const y = yr(base) + (cols[1].end ? j + 1 : j + 2);
+    cols[i].end = y + base.slice(4);
+  });
+  const won = v => (v == null || !isFinite(v)) ? '—' : Math.round(v * F.k / 1e8).toLocaleString();
+  const ratio = (num, den) => (!den || den <= 0) ? (den < 0 ? '적자' : '—') : (num / den).toFixed(1);
+  const row = (lab, f, cls) => '<tr' + (cls ? ' class="' + cls + '"' : '') + '><th>' + lab + '</th>' +
+    cols.map((c, i) => '<td' + (i === 0 ? ' class="act"' : '') + '>' + f(c, i) + '</td>').join('') + '</tr>';
+  return '<div class="fcwrap"><table class="fctab">' +
+    '<thead><tr><th class="fcunit">원화기준 실적<br><small>단위: 억원</small></th>' +
+      cols.map((c, i) => '<th' + (i === 0 ? ' class="act"' : '') + '>' + esc(c.end || '') +
+        '<small>' + c.tag + '</small><b>' + c.name + '</b></th>').join('') + '</tr></thead><tbody>' +
+    row('매출', c => won(c.rev)) +
+    row('영업이익', c => won(c.opi)) +
+    row('순이익', c => won(c.ni)) +
+    row('PER', c => c.ni == null ? '—' : ratio(F.m * F.k, c.ni * F.k), 'gap') +
+    row('PBR', (c, i) => i === 0 && F.e ? ratio(F.m, F.e) : '—') +
+    row('PSR', c => c.rev == null ? '—' : ratio(F.m, c.rev)) +
+    '</tbody></table><p class="fcnote">직전년도는 실적, 그 뒤는 애널리스트 컨센서스(S&amp;P Global) · ' +
+    'PER·PSR 은 현재 시총 기준 · PBR 은 현재 자본 기준 · 차기 순이익은 EPS×주식수 환산 · ' +
+    '차기 영업이익·차차기는 무료 자료에 없음 · 원화는 고정 환율 어림' +
+    (F.ts ? ' · ' + esc(F.ts) + ' 받음' : '') + '</p></div>';
+}
+
 function finBlock(m, code) {
   const key = m + ':' + code;
   const f = D.fin[key], sg = D.seg[key];
-  const biz = bizLine(m, code);
+  const biz = bizLine(m, code) + fcstTable(m, code);
   // 실적 수치가 없어도 부문은 있을 수 있다. 그때 통화를 'USD' 로 박아 두면
   // 일본 회사의 엔화 막대에 '단위: bil USD' 라고 적히는 거짓말이 된다.
   const MKT_CUR = { jp: 'JPY', hk: 'HKD' };
