@@ -1,7 +1,7 @@
 {
  "source": "JPX 결산발표 예정일",
  "source_url": "https://www.jpx.co.jp/listing/event-schedules/financial-announcement/index.html",
- "fetched": "2026-10-28T15:24+09:00",
+ "fetched": "2026-10-28T22:18+09:00",
  "files": [
   "kessan08_1002.xlsx",
   "kessan09_1023.xlsx",
@@ -5796,6 +5796,15 @@
   },
   {
    "date": "2026-10-29",
+   "code": "7775",
+   "name": "大研医器",
+   "fy": "3月期",
+   "kind": "第２",
+   "sector": "精密機器",
+   "market": "東証"
+  },
+  {
+   "date": "2026-10-29",
    "code": "7919",
    "name": "野崎印刷紙業",
    "fy": "3月期",
@@ -7832,15 +7841,6 @@
    "date": "2026-10-30",
    "code": "7774",
    "name": "ジャパン・ティッシュエンジニアリング",
-   "fy": "3月期",
-   "kind": "第２",
-   "sector": "精密機器",
-   "market": "東証"
-  },
-  {
-   "date": "2026-10-30",
-   "code": "7775",
-   "name": "大研医器",
    "fy": "3月期",
    "kind": "第２",
    "sector": "精密機器",
