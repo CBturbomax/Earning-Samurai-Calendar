@@ -1,6 +1,6 @@
 {
  "v": 1,
- "ts": "2026-10-28T17:17:53+00:00",
+ "ts": "2026-10-28T17:39:03+00:00",
  "seed": 361,
  "homes": 352,
  "official_ir_data": 178,
@@ -8,12 +8,12 @@
  "status": {
   "covered_elsewhere": 3,
   "discontinued": 3,
-  "fetch_failed": 8,
+  "fetch_failed": 9,
   "home_pending": 6,
   "no_monthly_found": 124,
   "non_revenue_kpi": 18,
   "ok": 159,
-  "parser_failed": 21,
+  "parser_failed": 20,
   "stale": 19
  },
  "codes": {
@@ -26,8 +26,8 @@
    "tdnet": true,
    "web": false,
    "ir": true,
-   "last_attempt": "2026-10-23T23:20:14+00:00",
-   "last_parse_failure": "2026-10-23T23:20:14+00:00",
+   "last_attempt": "2026-10-28T17:32:35+00:00",
+   "last_parse_failure": "2026-10-28T17:32:35+00:00",
    "reason": ""
   },
   "3086": {
@@ -65,7 +65,7 @@
    "tdnet": false,
    "web": true,
    "ir": true,
-   "last_attempt": "2026-10-23T23:20:14+00:00",
+   "last_attempt": "2026-10-28T17:32:35+00:00",
    "last_parse_failure": "",
    "reason": ""
   },
@@ -91,7 +91,7 @@
    "tdnet": false,
    "web": true,
    "ir": true,
-   "last_attempt": "2026-10-23T23:20:14+00:00",
+   "last_attempt": "2026-10-28T17:32:35+00:00",
    "last_parse_failure": "",
    "reason": ""
   },
@@ -260,8 +260,8 @@
    "tdnet": true,
    "web": false,
    "ir": false,
-   "last_attempt": "2026-10-23T23:20:14+00:00",
-   "last_parse_failure": "2026-10-23T23:20:14+00:00",
+   "last_attempt": "2026-10-28T17:32:35+00:00",
+   "last_parse_failure": "2026-10-28T17:32:35+00:00",
    "reason": ""
   },
   "8153": {
@@ -299,7 +299,7 @@
    "tdnet": true,
    "web": false,
    "ir": true,
-   "last_attempt": "2026-10-23T20:29:18+00:00",
+   "last_attempt": "2026-10-28T17:32:35+00:00",
    "last_parse_failure": "",
    "reason": ""
   },
@@ -312,8 +312,8 @@
    "tdnet": true,
    "web": false,
    "ir": true,
-   "last_attempt": "2026-10-23T20:29:18+00:00",
-   "last_parse_failure": "2026-10-23T20:29:18+00:00",
+   "last_attempt": "2026-10-28T17:32:35+00:00",
+   "last_parse_failure": "2026-10-28T17:32:35+00:00",
    "reason": ""
   },
   "9823": {
@@ -351,7 +351,7 @@
    "tdnet": true,
    "web": false,
    "ir": true,
-   "last_attempt": "2026-10-23T20:29:18+00:00",
+   "last_attempt": "2026-10-28T17:32:35+00:00",
    "last_parse_failure": "",
    "reason": ""
   },
@@ -364,8 +364,8 @@
    "tdnet": true,
    "web": false,
    "ir": true,
-   "last_attempt": "2026-10-23T20:29:18+00:00",
-   "last_parse_failure": "2026-10-23T20:29:18+00:00",
+   "last_attempt": "2026-10-28T17:32:35+00:00",
+   "last_parse_failure": "2026-10-28T17:32:35+00:00",
    "reason": ""
   },
   "3093": {
@@ -377,8 +377,8 @@
    "tdnet": true,
    "web": false,
    "ir": true,
-   "last_attempt": "2026-10-23T20:29:18+00:00",
-   "last_parse_failure": "2026-10-23T20:29:18+00:00",
+   "last_attempt": "2026-10-28T17:32:35+00:00",
+   "last_parse_failure": "2026-10-28T17:32:35+00:00",
    "reason": ""
   },
   "9861": {
@@ -559,7 +559,7 @@
    "tdnet": true,
    "web": true,
    "ir": true,
-   "last_attempt": "2026-10-23T23:20:14+00:00",
+   "last_attempt": "2026-10-28T17:32:35+00:00",
    "last_parse_failure": "",
    "reason": ""
   },
@@ -650,7 +650,7 @@
    "tdnet": false,
    "web": false,
    "ir": false,
-   "last_attempt": "2026-10-23T23:20:14+00:00",
+   "last_attempt": "2026-10-28T17:32:35+00:00",
    "last_parse_failure": "",
    "reason": ""
   },
@@ -689,7 +689,7 @@
    "tdnet": false,
    "web": false,
    "ir": false,
-   "last_attempt": "2026-10-23T23:20:14+00:00",
+   "last_attempt": "2026-10-28T17:32:35+00:00",
    "last_parse_failure": "",
    "reason": ""
   },
@@ -793,8 +793,8 @@
    "tdnet": false,
    "web": false,
    "ir": true,
-   "last_attempt": "2026-10-23T23:20:14+00:00",
-   "last_parse_failure": "2026-10-23T23:20:14+00:00",
+   "last_attempt": "2026-10-28T17:32:35+00:00",
+   "last_parse_failure": "2026-10-28T17:32:35+00:00",
    "reason": ""
   },
   "2670": {
@@ -1053,8 +1053,8 @@
    "tdnet": true,
    "web": false,
    "ir": false,
-   "last_attempt": "2026-10-23T23:20:14+00:00",
-   "last_parse_failure": "2026-10-23T23:20:14+00:00",
+   "last_attempt": "2026-10-28T17:32:35+00:00",
+   "last_parse_failure": "2026-10-28T17:32:35+00:00",
    "reason": ""
   },
   "8628": {
@@ -1105,7 +1105,7 @@
    "tdnet": true,
    "web": false,
    "ir": true,
-   "last_attempt": "2026-10-23T20:29:18+00:00",
+   "last_attempt": "2026-10-28T17:32:35+00:00",
    "last_parse_failure": "",
    "reason": ""
   },
@@ -1209,8 +1209,8 @@
    "tdnet": false,
    "web": false,
    "ir": true,
-   "last_attempt": "2026-10-23T20:29:18+00:00",
-   "last_parse_failure": "2026-10-23T20:29:18+00:00",
+   "last_attempt": "2026-10-28T17:32:35+00:00",
+   "last_parse_failure": "2026-10-28T17:32:35+00:00",
    "reason": ""
   },
   "7596": {
@@ -1578,7 +1578,7 @@
    "reason": ""
   },
   "1379": {
-   "status": "parser_failed",
+   "status": "fetch_failed",
    "home": "https://www.hokto-kinoko.co.jp",
    "source_url": "https://www.hokto-kinoko.co.jp/corporate/ir/gyouseki/sokuhou/",
    "latest_month": "",
@@ -1586,8 +1586,8 @@
    "tdnet": false,
    "web": false,
    "ir": false,
-   "last_attempt": "2026-10-23T23:20:14+00:00",
-   "last_parse_failure": "2026-10-23T23:20:14+00:00",
+   "last_attempt": "2026-10-28T17:32:35+00:00",
+   "last_parse_failure": "",
    "reason": ""
   },
   "2311": {
@@ -1651,8 +1651,8 @@
    "tdnet": false,
    "web": false,
    "ir": false,
-   "last_attempt": "2026-10-23T23:20:14+00:00",
-   "last_parse_failure": "2026-10-23T23:20:14+00:00",
+   "last_attempt": "2026-10-28T17:32:35+00:00",
+   "last_parse_failure": "2026-10-28T17:32:35+00:00",
    "reason": ""
   },
   "3196": {
@@ -1677,8 +1677,8 @@
    "tdnet": false,
    "web": false,
    "ir": true,
-   "last_attempt": "2026-10-23T20:29:18+00:00",
-   "last_parse_failure": "2026-10-23T20:29:18+00:00",
+   "last_attempt": "2026-10-28T17:32:35+00:00",
+   "last_parse_failure": "2026-10-28T17:32:35+00:00",
    "reason": ""
   },
   "4679": {
@@ -2301,7 +2301,7 @@
    "tdnet": true,
    "web": false,
    "ir": false,
-   "last_attempt": "2026-10-23T23:20:14+00:00",
+   "last_attempt": "2026-10-28T17:32:35+00:00",
    "last_parse_failure": "",
    "reason": ""
   },
@@ -2340,7 +2340,7 @@
    "tdnet": false,
    "web": false,
    "ir": false,
-   "last_attempt": "2026-10-23T23:20:14+00:00",
+   "last_attempt": "2026-10-28T17:32:35+00:00",
    "last_parse_failure": "",
    "reason": ""
   },
@@ -2418,7 +2418,7 @@
    "tdnet": false,
    "web": false,
    "ir": true,
-   "last_attempt": "2026-10-23T20:29:18+00:00",
+   "last_attempt": "2026-10-28T17:32:35+00:00",
    "last_parse_failure": "",
    "reason": ""
   },
@@ -2431,7 +2431,7 @@
    "tdnet": false,
    "web": false,
    "ir": true,
-   "last_attempt": "2026-10-23T20:29:18+00:00",
+   "last_attempt": "2026-10-28T17:32:35+00:00",
    "last_parse_failure": "",
    "reason": ""
   },
@@ -2912,7 +2912,7 @@
    "tdnet": true,
    "web": false,
    "ir": true,
-   "last_attempt": "2026-10-23T20:29:18+00:00",
+   "last_attempt": "2026-10-28T17:32:35+00:00",
    "last_parse_failure": "",
    "reason": ""
   },
@@ -2951,8 +2951,8 @@
    "tdnet": true,
    "web": false,
    "ir": false,
-   "last_attempt": "2026-10-23T23:20:14+00:00",
-   "last_parse_failure": "2026-10-23T23:20:14+00:00",
+   "last_attempt": "2026-10-28T17:32:35+00:00",
+   "last_parse_failure": "2026-10-28T17:32:35+00:00",
    "reason": ""
   },
   "3910": {
@@ -3029,8 +3029,8 @@
    "tdnet": true,
    "web": false,
    "ir": false,
-   "last_attempt": "2026-10-23T20:29:18+00:00",
-   "last_parse_failure": "2026-10-23T20:29:18+00:00",
+   "last_attempt": "2026-10-28T17:32:35+00:00",
+   "last_parse_failure": "2026-10-28T17:32:35+00:00",
    "reason": ""
   },
   "4343": {
@@ -3679,7 +3679,7 @@
    "tdnet": false,
    "web": false,
    "ir": true,
-   "last_attempt": "2026-10-23T20:29:18+00:00",
+   "last_attempt": "2026-10-28T17:32:35+00:00",
    "last_parse_failure": "",
    "reason": ""
   },
@@ -3718,7 +3718,7 @@
    "tdnet": false,
    "web": false,
    "ir": false,
-   "last_attempt": "2026-10-23T23:20:14+00:00",
+   "last_attempt": "2026-10-28T17:32:35+00:00",
    "last_parse_failure": "",
    "reason": ""
   },
@@ -3783,8 +3783,8 @@
    "tdnet": true,
    "web": true,
    "ir": false,
-   "last_attempt": "2026-10-23T20:29:18+00:00",
-   "last_parse_failure": "2026-10-23T20:29:18+00:00",
+   "last_attempt": "2026-10-28T17:32:35+00:00",
+   "last_parse_failure": "2026-10-28T17:32:35+00:00",
    "reason": ""
   },
   "8203": {
@@ -3887,7 +3887,7 @@
    "tdnet": false,
    "web": false,
    "ir": true,
-   "last_attempt": "2026-10-23T20:29:18+00:00",
+   "last_attempt": "2026-10-28T17:32:35+00:00",
    "last_parse_failure": "",
    "reason": ""
   },
@@ -3952,7 +3952,7 @@
    "tdnet": true,
    "web": false,
    "ir": false,
-   "last_attempt": "2026-10-23T23:20:14+00:00",
+   "last_attempt": "2026-10-28T17:32:35+00:00",
    "last_parse_failure": "",
    "reason": ""
   },
@@ -4160,8 +4160,8 @@
    "tdnet": false,
    "web": true,
    "ir": false,
-   "last_attempt": "2026-10-23T20:29:18+00:00",
-   "last_parse_failure": "2026-10-23T20:29:18+00:00",
+   "last_attempt": "2026-10-28T17:32:35+00:00",
+   "last_parse_failure": "2026-10-28T17:32:35+00:00",
    "reason": ""
   },
   "9956": {
@@ -4394,8 +4394,8 @@
    "tdnet": true,
    "web": false,
    "ir": false,
-   "last_attempt": "2026-10-23T20:29:18+00:00",
-   "last_parse_failure": "2026-10-23T20:29:18+00:00",
+   "last_attempt": "2026-10-28T17:32:35+00:00",
+   "last_parse_failure": "2026-10-28T17:32:35+00:00",
    "reason": ""
   },
   "2687": {
