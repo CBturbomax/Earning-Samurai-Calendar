@@ -30,6 +30,7 @@ on:
 
 permissions:
   contents: write
+  actions: write      # 다음 실행을 스스로 예약한다(아래 '이어달리기')
 
 concurrency:
   group: fresh-${{ github.ref_name }}
@@ -46,6 +47,20 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: '3.12'
+
+      # **이어달리기 — 다음 실행을 먼저 줄 세워 둔다.** 30분 크론을 안전망으로
+      # 믿었는데 GitHub 크론은 몇 시간씩 밀리거나 건너뛴다. 10/28 에 08:03 실행이
+      # 12:48 쯤 끝난 뒤 다음 실행이 15:16 에야 섰다 — **두 시간 반 동안 속보가
+      # 통째로 멈췄고** 그 사이 나온 실적(브링커 EAT)이 안 들어왔다. 회원님이
+      # "3시간이 지났는데 왜 반영이 안 되냐"고 짚으신 자리다.
+      # 들머리에서 workflow_dispatch 로 다음 실행을 걸어 두면 concurrency 대기줄에
+      # 서 있다가 이 실행이 끝나는 즉시 이어받는다(GITHUB_TOKEN 으로 거는
+      # workflow_dispatch 는 새 실행을 만든다 — 막히는 것은 push 등 다른 이벤트다).
+      # 대기줄에는 하나만 서므로 몇 번 걸어도 겹치지 않는다.
+      - name: 다음 실행 예약
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh workflow run fresh.yml --ref main -R "$GITHUB_REPOSITORY" || echo "예약 실패 — 크론 안전망에 맡긴다"
 
       - name: 3분 루프
         run: |
