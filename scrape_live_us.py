@@ -222,6 +222,14 @@ def main():
             cikmap = {}
         tg = targets(today)
         st["targets"] = len(tg)
+        # **본 지 오래된 종목부터.** 시총 순으로만 돌면 한 바퀴 100초에 앞의 120개쯤만
+        # 보고 끝나서, 뒤쪽 종목(브링커 EAT)은 영영 차례가 안 왔다(첫 진단에서 드러남).
+        # 이미 끝난 종목(8-K 와 EPS 가 다 있다)은 맨 뒤로 보낸다.
+        def order(r):
+            rec = stocks.get(r["code"]) or {}
+            done = bool(rec.get("acc") and (rec.get("eps") or not rec.get("period")))
+            return (done, rec.get("chk", ""))
+        tg.sort(key=order)
         st["stage"] = "종목 훑기"
         streak = 0
         for i, r in enumerate(tg):
@@ -232,6 +240,9 @@ def main():
             rec = stocks.get(sym)
             if not rec or rec.get("date") != day:
                 rec = stocks[sym] = {"date": day, "period": period_of(r.get("fy"))}
+            if rec.get("acc") and (rec.get("eps") or not rec.get("period")):
+                continue                         # 다 받았다
+            rec["chk"] = now()
             try:
                 if not rec.get("acc"):
                     cik = ss.cik_of(cikmap, sym) if cikmap else None
