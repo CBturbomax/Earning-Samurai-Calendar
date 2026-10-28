@@ -2633,6 +2633,8 @@ def build():
         # 되풀이하면 그것만으로 파일이 반 메가 늘어난다. 종료일과 순이익은
         # 화면에서 안 쓰므로 빼고, 자료 파일에는 그대로 남겨 둔다.
         "fcst": pack_fcst(packed),
+        # 실적 8-K 가 잡힌 미국 종목 — 나스닥 EPS 를 기다리지 않고 ✓ 를 단다.
+        "live": {s: [v["date"], v.get("url", "")] for s, v in LIVE.items() if v.get("acc")},
         "fin": {s: pack_fin(rec) for s, rec in FIN.items()
                 if (rec.get("points") or rec.get("eps"))
                 and s in {p[9] + ":" + p[1] for p in packed}},
@@ -3851,10 +3853,15 @@ function epsKey(p) {
 function doneInfo(r) {
   if (r[9] !== 'us') return null;
   const f = D.fin['us:' + r[1]];
-  if (!f || !f.eps || !f.eps.done) return null;
   const want = fyKey(r[3]);
-  if (!want) return null;
-  return f.eps.done.find(x => epsKey(x.period) === want) || null;
+  const hit = f && f.eps && f.eps.done && want
+    ? f.eps.done.find(x => epsKey(x.period) === want) : null;
+  if (hit) return hit;
+  // **나스닥 EPS 는 하루쯤 늦다.** 브링커(EAT)는 아침 8시에 8-K 를 냈는데 아홉 시간
+  // 뒤에도 나스닥은 그 분기를 '발표 전(0.0)'으로 두고 있었다. SEC 에 실적 8-K 가
+  // 올라왔으면 발표는 끝난 것이다 — ✓ 를 달고 원문을 잇는다. 숫자는 나중에 붙는다.
+  const lv = D.live && D.live[r[1]];
+  return lv && lv[0] === r[0] ? { live: 1, url: lv[1] } : null;
 }
 
 /* **발표일이 지났으면 발표된 것이다.**
@@ -4768,13 +4775,15 @@ function openModal(k, dt) {
     (dd === 0 ? '· 오늘' : dd > 0 ? '· D-' + dd : '· ' + (-dd) + '일 전') +
     (dn ? ' <span class="donetag">✓ 발표 완료</span>' +
           (dn.actual ? ' <span class="dim">EPS ' + esc(String(dn.actual)) +
-                       ' ' + surprise(dn.actual, dn.consensus) + '</span>' : '')
+                       ' ' + surprise(dn.actual, dn.consensus) + '</span>' : '') +
+          (dn.url ? ' <a class="dim" target="_blank" rel="noopener" href="' + esc(dn.url) +
+                    '">SEC 8-K 원문 ↗</a> <span class="dim">(EPS 는 나스닥 반영 후)</span>' : '')
         : '') + '</dd>' +
     (r[10] ? '<dt>발표 시각</dt><dd>' + esc(r[10]) +
              (r[10] === '장전' ? ' (Before Open)' : r[10] === '장중' ? ' (Market Hours)' : ' (After Close)') +
              (r[13] ? ' · 한국 ' + esc(r[12].slice(5).replace('-', '/')) + ' ' + r[13] + (r[14] ? ' (실제 공시 시각)' : '경') : '') + '</dd>' : '') +
     '<dt>분기</dt><dd>' +
-      (dn ? '<b>' + esc(epsQ(dn.period)) + '</b> · ' : '') +
+      (dn && dn.period ? '<b>' + esc(epsQ(dn.period)) + '</b> · ' : '') +
       esc([r[4], r[3]].filter(Boolean).join(' · ') || '—') + '</dd>' +
     (r[11] ? '<dt>시가총액</dt><dd>' + capKo(r[11]) + '</dd>' : '') +
     (r[5] ? '<dt>업종</dt><dd>' + esc(r[5]) + '</dd>' : '') +
