@@ -91,7 +91,7 @@ jobs:
               if [ -z "$stuck" ]; then
                 echo "merge 실패(충돌 아님), 재시도"; sleep $((2**i)); continue
               fi
-              others=$(echo "$stuck" | grep -v -e '^data/' -e '^index\.html$' || true)
+              others=$(echo "$stuck" | grep -v -e '^data/' -e '^index\.html$' -e '^version\.txt$' || true)
               if [ -n "$others" ]; then
                 echo "코드가 부딪혔다. 손으로 봐야 한다:"; echo "$others"; exit 1
               fi
