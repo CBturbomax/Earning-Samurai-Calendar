@@ -5978,6 +5978,13 @@ function rtApply(ev) {
   }
   if (m === 'us') { D.live = D.live || {}; D.live[code] = [ev.date, ev.url || '']; }
   if (ev.brief && (ev.brief.segs || []).length) RTSEG[key] = Object.assign({ src: ev.src }, ev.brief);
+  // 일본 회사 통기 예상(가이던스) — 연간 표의 당해 칸·브리핑이 곧바로 새 예상을 쓴다.
+  if (m === 'jp' && ev.guide && ev.guide.end && ev.guide.now) {
+    const o = D.fcst[key] || {};
+    D.fcst[key] = Object.assign({}, o, { end: ev.guide.end, rev: ev.guide.now[0], opi: ev.guide.now[1], ts: ev.date,
+      prevRev: o.end === ev.guide.end && o.rev !== ev.guide.now[0] ? o.rev : o.prevRev,
+      prevOpi: o.end === ev.guide.end && o.opi !== ev.guide.now[1] ? o.opi : o.prevOpi });
+  }
   if (ev.point && ev.point[1] != null) {
     const f = D.fin[key] = D.fin[key] || { freq: 'Q', cur: ev.cur, points: [] };
     const pt = [ev.point[0], ev.point[1], ev.point[2]];

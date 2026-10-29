@@ -251,7 +251,7 @@ class Guide:
             tmp = self.path.with_suffix(".tmp")
             tmp.write_text(json.dumps(self.own))
             tmp.replace(self.path)
-        return {"stage": st, "prev": prev, "now": [fc.get("rev"), fc.get("opi")]}
+        return {"stage": st, "prev": prev, "now": [fc.get("rev"), fc.get("opi")], "end": fc["end"]}
 
     def get(self, code, ann=None):
         try:
