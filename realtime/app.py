@@ -530,8 +530,8 @@ def finish(ev, point=None):
     more = ev.pop("_more", None)
     box = {}
     names = seg_names_now(seg)
-    th = threading.Thread(target=lambda: box.update(b=brief.why(ev["name"], text + (more() if more else ""), names=names)),
-                          daemon=True)
+    # '왜'는 본문만 읽고 바로 — IR 첨부는 따로 읽어 사업부 숫자만 채운다(답장을 늦추지 않게).
+    th = threading.Thread(target=lambda: box.update(b=brief.why(ev["name"], text, names=names)), daemon=True)
     th.start()
     with H.lock:
         ann = H.D.get("ann", {}).get(key)
@@ -573,8 +573,26 @@ def finish(ev, point=None):
         S.update(ev)
     log(f"실적 {ev['mkt']}:{ev['code']} {ev['name']} · 공개 {ev.get('published')} 감지 {ev['detected']} "
         f"텔레그램 {'보냄 ' + ev['t_tg'] if send else '안 보냄'} ({why}) · 그림 {len(pngs)}")
-    th.join(200)                                 # ② '왜'·AI 판독은 받는 대로 답장으로 (IR 자료 기다림 포함)
+    th.join(100)                                 # ② '왜'는 받는 대로 답장으로
     b = box.get("b")
+    if more:                                     # ③ IR 자료 — 본문에 사업부 표가 없었을 때만 따로 읽는다
+        def ir():
+            if b and b.get("segs"):
+                return
+            extra = more()
+            if not extra.strip():
+                return
+            b2 = brief.why(ev["name"], text + extra, names=names)
+            if b2 and b2.get("segs"):
+                e2 = dict(ev, brief=dict(ev.get("brief") or b or {}, segs=b2["segs"], unit=b2.get("unit"),
+                                         basis=b2.get("basis"), scale=b2.get("scale")))
+                sp = seg_ai_try(e2, e2["brief"], seg)
+                if sp and not ev.get("replay"):
+                    ev["segPoint"] = sp
+                    S.update(ev)
+                    S.broadcast(ev)
+                log("IR 자료 사업부", key, "받음" if sp else "못 씀")
+        threading.Thread(target=ir, daemon=True).start()
     if not b:
         return
     ev["brief"] = b
