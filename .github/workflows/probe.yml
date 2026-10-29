@@ -9,6 +9,8 @@ jobs:
   probe:
     runs-on: ubuntu-latest
     timeout-minutes: 20
+    permissions:
+      contents: write
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
@@ -19,7 +21,7 @@ jobs:
       - name: 🔎 MarketScreener (96차)
         timeout-minutes: 12
         run: |
-          python - <<'EOF'
+          python - > /tmp/probe.txt 2>&1 <<'EOF'
           import re, urllib.error, urllib.request, html
           UA = {"User-Agent": ("Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
                                "AppleWebKit/537.36 (KHTML, like Gecko) "
@@ -56,6 +58,13 @@ jobs:
                       cells = [re.sub(r"\s+"," ",html.unescape(re.sub(r"<[^>]+>","",c))).strip() for c in re.findall(r"<t[hd][^>]*>(.*?)</t[hd]>", r, re.S)]
                       if cells: print("    ", cells[:12])
           EOF
+
+      - name: 결과를 probe-out 가지에
+        if: always()
+        run: |
+          cd /tmp && rm -rf po && mkdir po && cd po && git init -q
+          cp /tmp/probe.txt . ; git add . && git -c user.name=bot -c user.email=b@b commit -qm probe
+          git push -f "https://x-access-token:${{ github.token }}@github.com/${{ github.repository }}" HEAD:refs/heads/probe-out
 
       # 95차 — eir.js 가 주소를 어떻게 짓는가. 94차에서 `ssl4.eir-parts.net`
       # 과 `/Custom/public/v5parts/` 까지는 봤다. 회사 번호를 어디서 가져오는지,
