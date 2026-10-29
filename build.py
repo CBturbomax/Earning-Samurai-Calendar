@@ -925,7 +925,13 @@ def jp_hist_records():
         for fy, q in sorted(per):
             row = per[(fy, q)]
             pts.append([jp_hist_end(fy, q, endmon)] + [row.get(n) for n in names])
-        out[key] = {"v": 1, "axis": "사업부문", "names": names, "pts": pts}
+        # 일본어 이름 -> 영문명. TDnet 꼬리는 영문명으로 오므로(Energy Partner Company)
+        # 이게 없으면 꼬리가 안 붙어 오늘 낸 분기가 통째로 빠진다(도쿄전력 3Q26, 10/29).
+        en = {}
+        for row in rows:
+            if row[2] in names and row[3]:
+                en[row[2]] = row[3]
+        out[key] = {"v": 1, "axis": "사업부문", "names": names, "pts": pts, "en": en}
     if tossed:
         print(f"  segments_jp_hist.json: 총매출과 안 맞아 뺀 종목 {tossed:,}")
     return out
@@ -1024,12 +1030,16 @@ def jp_hist_quarters(rows, annual):
             # 이름 중 하나여야** 한다 — 닮은 이름으로 아무거나 집으면 엉뚱한
             # 부문의 연간값이 들어와 그 칸만 열 배로 솟는다(아식스 4Q23).
             mine = members.get((fy, nm), {nm})
-            keys = {seg_key(x) for x in mine}
-            tot = None
-            for k, vv in ann.get(fy, {}).items():
-                if k in mine or seg_key(k) in keys:
-                    tot = vv
-                    break
+            # seg_key 는 가나·한자를 통째로 지운다 — 빈 열쇠로 맞추면 일본어 부문이 전부
+            # 첫 연간 줄과 짝이 되어 4분기가 통째로 버려졌다(도쿄전력 9501, 10/29).
+            keys = {seg_key(x) for x in mine} - {""}
+            ann_y = ann.get(fy, {})
+            tot = next((ann_y[x] for x in mine if x in ann_y), None)
+            if tot is None:
+                for k, vv in ann_y.items():
+                    if seg_key(k) and seg_key(k) in keys:
+                        tot = vv
+                        break
             # 결산 분기가 9개월 누계보다 클 수는 없다. 넘으면 잘못 짝지은 것이다.
             if tot is not None and d[3] < tot <= d[3] * 2:
                 out.setdefault((fy, 4), {})[show] = tot - d[3]
@@ -1272,6 +1282,10 @@ def load_seg():
     grew = seeded = 0
     for k, base in hist.items():
         tail = out.get(k)
+        en = base.pop("en", {})
+        if tail and en:
+            by_en = {seg_key(e): ja for ja, e in en.items() if seg_key(e)}
+            tail = dict(tail, names=[by_en.get(seg_key(n), n) for n in tail.get("names") or []])
         if tail:
             # 꼬리를 못 붙였으면(이름이 안 맞거나 새로 낼 분기가 없으면) **긴
             # 쪽을 남긴다.** 무턱대고 이력으로 갈아치우면 TDnet 이 방금 받아 온
@@ -1381,10 +1395,18 @@ _SEG_EN_WORD = re.compile(r"[A-Za-z0-9&,\-./·'()% ]+")
 _CJK_LEFT = re.compile(r"[\u3040-\u30ff\u3400-\u9fff\uff01-\uff60]")
 
 
+try:
+    # 일·중 부문 이름 통짜 번역(10/29, 6,794개 — 뜻으로 옮겼다, 한자음으로 읽지 않았다).
+    # 사전·토막 치환이 못 옮긴 이름만 여기서 찾는다. 새 이름은 원문으로 남으니 모이면 또 옮긴다.
+    SEG_KO_FILE = json.loads((HERE / "data" / "seg_ko.json").read_text(encoding="utf-8"))
+except (OSError, ValueError):
+    SEG_KO_FILE = {}
+
+
 def seg_ko(name):
     """부문 이름 -> 한글. 확신이 없으면 원문 그대로."""
     name = (name or "").strip()
-    hit = SEG_KO_FULL.get(name)
+    hit = SEG_KO_FULL.get(name) or SEG_KO_FILE.get(name)
     if hit:
         return hit
     if _SEG_EN_WORD.fullmatch(name):
