@@ -610,7 +610,21 @@ def merge_fin(a, b):
     by_end = {p["end"]: p for p in lose.get("points") or [] if p.get("end")}
     by_end.update({p["end"]: p for p in win.get("points") or [] if p.get("end")})
     pts = [by_end[e] for e in sorted(by_end)]
-    mixed = len(pts) > len(base.get("points") or [])
+    # **겹치는 분기에서 이긴 쪽에 영업이익이 비면 진 쪽 값으로 채운다.** SEC 에
+    # OperatingIncomeLoss 를 안 다는 회사(일라이릴리·셰브런·머크·DHI… 미국 409종목)는
+    # 영업이익률 선이 통째로 빠졌다(회원님 10/30). 종료일이 52/53주 회계력으로 며칠씩
+    # 어긋나므로 열흘 안이면 같은 분기로 본다.
+    lose_pts = [p for p in lose.get("points") or [] if p.get("end") and p.get("opi") is not None]
+    filled = 0
+    for i, p in enumerate(pts):
+        if p.get("opi") is not None or not p.get("end"):
+            continue
+        e = date.fromisoformat(p["end"])
+        near = min(lose_pts, key=lambda q: abs((date.fromisoformat(q["end"]) - e).days), default=None)
+        if near and abs((date.fromisoformat(near["end"]) - e).days) <= 10:
+            pts[i] = dict(p, opi=near["opi"])
+            filled += 1
+    mixed = len(pts) > len(base.get("points") or []) or filled > 0
     out = dict(base)
     out["points"] = pts
     out["src"] = "mix" if mixed else base.get("src")
@@ -5978,6 +5992,7 @@ function rtApply(ev) {
   }
   if (m === 'us') { D.live = D.live || {}; D.live[code] = [ev.date, ev.url || '']; }
   if (ev.brief && (ev.brief.segs || []).length) RTSEG[key] = Object.assign({ src: ev.src }, ev.brief);
+  if (ev.finAll && !(D.fin[key] && (D.fin[key].points || []).length >= 2)) D.fin[key] = ev.finAll;
   // 일본 회사 통기 예상(가이던스) — 연간 표의 당해 칸·브리핑이 곧바로 새 예상을 쓴다.
   if (m === 'jp' && ev.guide && ev.guide.end && ev.guide.now) {
     const o = D.fcst[key] || {};
