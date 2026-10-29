@@ -17,20 +17,11 @@ jobs:
         with:
           python-version: '3.12'
 
-      # 96차 — MarketScreener: 검색 → 종목 주소 → finances 의 3년 추정표.
-      - name: 🔎 외국 상장사 실적 6-K 수집 시험 (101차)
-        timeout-minutes: 12
-        env:
-          FPI_SECS: '420'
+      - name: 🔎 Railway 실시간 서버 확인
         run: |
-          python scrape_us_fpi.py > /tmp/probe.txt 2>&1 || true
-          python - >> /tmp/probe.txt 2>&1 <<'EOF'
-          import json
-          d = json.load(open("data/earnings_us_fpi.json"))
-          print("대상", len(d["screen"]["rows"]), "본 종목", len(d["checked"]), "판정", len(d["seen"]), "실적", sum(d["seen"].values()))
-          for r in sorted(d["rows"], key=lambda r: -r["cap"])[:70]:
-              print(f'{r["date"]} {r["accepted"][11:]} {r["code"]:6} {r["cap"]:7.1f} {r["kind"]:4} {r["name"][:28]:28} | {r["why"][:90]}')
-          EOF
+          U=https://earning-samurai-calendar-production.up.railway.app
+          for p in /health /api/stats /api/live; do echo "== $p"; curl -sS -m 20 $U$p | head -c 3000; echo; done > /tmp/probe.txt 2>&1
+          echo "== stream" >> /tmp/probe.txt; timeout 8 curl -sSN $U/stream | head -c 400 >> /tmp/probe.txt 2>&1 || true
 
       - name: 결과를 probe-out 가지에
         if: always()
