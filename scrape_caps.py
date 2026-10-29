@@ -315,7 +315,11 @@ def main():
                 print(f"    재시도 실패: {e}", file=sys.stderr, flush=True)
             time.sleep(1.0)
 
-    rates = fx_rates({r.get("currency") for r in raw})
+    # 시총에 쓰는 통화 + 연간 표가 재무 통화를 원화로 옮길 때 쓰는 통화(유로로 보고하는
+    # 매그넘·페로비알, 파운드의 유니레버·디아지오…). 없으면 build.py 가 그 종목 표를 못 낸다.
+    rates = fx_rates({r.get("currency") for r in raw} | {
+        "EUR", "GBP", "CHF", "CAD", "AUD", "DKK", "SEK", "NOK", "BRL", "MXN",
+        "INR", "KRW", "TWD", "SGD", "ZAR", "ILS", "CLP", "COP", "PEN", "ARS", "TRY", "IDR"})
 
     # **이미 받아둔 시총을 이어 쓴다.** 예전에는 매 실행 처음부터 새로 만들었다.
     # 그러면 이번에 실패한 묶음의 종목들은 지난번에 잘 받아 뒀어도 통째로 사라진다.
