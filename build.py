@@ -2458,14 +2458,22 @@ def pack_fcst(packed):
         k = r[9] + ":" + r[1]
         cap[k] = max(cap.get(k, 0), r[11] or 0)
     out = {}
+    recent = (date.today() - timedelta(days=120)).isoformat()
     for k, rec in stocks.items():
         ys = rec.get("years") or []
         if k not in cap or not ys or not rec.get("mcap") or not cap[k]:
             continue
         if rec.get("curFin") and rec.get("curPrice") and rec["curFin"] != rec["curPrice"]:
             continue
+        # 결산은 끝났지만 아직 발표 전인 해는 소스가 실적(est=0)으로 표시하는데
+        # 숫자는 추정 평균이다(애플 2026-09 등). 실적은 천 단위로 떨어지고
+        # 평균은 안 떨어진다 — 마지막 실적 해가 넉 달 안에 끝났으면 그걸로 가린다.
         act = [y for y in ys if not y.get("est")]
         est = [y for y in ys if y.get("est")]
+        if act and act[-1]["end"] >= recent:
+            r = act[-1].get("rev")
+            if r is not None and abs(r - round(r / 1000) * 1000) > 0.5:
+                est.insert(0, dict(act.pop(), est=1))
         if not act:
             continue
         rows = [act[-1]] + est[:1]
@@ -2473,7 +2481,9 @@ def pack_fcst(packed):
             "y": [[y["end"], y.get("rev"), y.get("opi"), y.get("ni"), y.get("eps"), y.get("est", 0)]
                   for y in rows],
             "n": [(rec.get("next") or {}).get("rev"), (rec.get("next") or {}).get("eps")],
-            "m": rec["mcap"], "e": rec.get("equity"),
+            "m": rec["mcap"], "e": rec.get("equity"), "p": rec.get("price"),
+            # 나스닥 연간 EPS 컨센서스(미국) — 차기·차차기 순이익에 쓴다.
+            "q": [[y[0], y[1]] for y in rec.get("ny") or []],
             # 현지 통화 1단위가 몇 원인가 — 시총 두 개의 비.
             "k": cap[k] * 1e9 * USD_KRW / rec["mcap"],
             "ts": (rec.get("ts") or "")[:10],
@@ -3361,23 +3371,30 @@ td.dim { color:var(--mute); font-size:18px; }
 #mdFin { margin-top:18px; }
 .finnote { color:var(--mute); font-size:17px; margin:10px 0 0; }
 .finwrap { border-top:1px solid var(--line); padding-top:14px; }
-.fcwrap { display:inline-block; max-width:100%; overflow-x:auto; margin:0 0 14px;
-          background:#141c24; border:1px solid var(--line); border-radius:10px; padding:8px 12px 7px; }
-.fctab { border-collapse:collapse; font-size:14px; font-variant-numeric:tabular-nums; }
-.fctab tr,.fctab th,.fctab td { background:transparent !important; }
-.fctab th,.fctab td { padding:3px 0 3px 22px; text-align:right; white-space:nowrap;
-                     font-size:14px; line-height:1.45; height:auto; border:0; }
-.fctab th:first-child,.fctab td:first-child { padding-left:0; }
-.fctab thead th { color:var(--mute); font-weight:600; font-size:13px; line-height:1.25;
-                  padding-bottom:5px; border-bottom:1px solid var(--line); vertical-align:bottom; }
-.fctab thead th b { display:block; color:var(--fg); font-size:13px; }
+.fcwrap { display:inline-block; max-width:100%; overflow-x:auto; margin:0 0 16px;
+          border:1px solid var(--line); border-radius:10px; }
+.fctab { border-collapse:collapse; font-size:16px; font-variant-numeric:tabular-nums; }
+.fctab tr,.fctab th,.fctab td { background:transparent; }
+.fctab th,.fctab td { padding:7px 16px; text-align:right; white-space:nowrap;
+                     font-size:16px; line-height:1.4; height:auto; border:0; }
+.fctab thead th { background:#1d2a36 !important; color:var(--mute); font-weight:600;
+                  font-size:13px; line-height:1.3; padding:8px 16px; vertical-align:bottom;
+                  border-bottom:1px solid #2f4252; }
+.fctab thead th:first-child { text-align:left; font-weight:400; font-size:12px; }
+.fctab thead th b { display:block; color:var(--fg); font-size:15px; }
 .fctab thead th small { display:block; font-weight:400; font-size:12px; }
-.fctab thead th.est b { color:var(--a2); }
-.fctab tbody th { text-align:left; color:var(--mute); font-weight:600; }
+.fctab tbody tr { background:#141c24 !important; }
+.fctab tbody tr + tr > * { border-top:1px solid #1f2a33; }
+.fctab tbody th { text-align:left; color:var(--mute); font-weight:600; background:#18222b !important;
+                  border-right:1px solid #243039; }
 .fctab tbody td { color:var(--fg); }
 .fctab tbody td.na { color:#4a5866; }
-.fctab tr.gap > * { border-top:1px solid var(--line); padding-top:5px; }
-.fcnote { color:var(--mute); font-size:12px; margin:5px 0 0; white-space:normal; }
+.fctab tr.gap > * { border-top:1px solid #2f4252 !important; }
+.fctab .cur { background:rgba(91,155,213,.10) !important; }
+.fctab thead th.cur { background:#22405a !important; box-shadow:inset 0 3px 0 var(--a2); }
+.fctab thead th.cur b { color:#9cc6ee; }
+.fctab td.cur { font-weight:700; }
+.fctab .pst b { color:#c9d4dc; }
 .prnote { color:#e8c46a; }
 .prnote a { color:#e8c46a; }
 .finhead { font-size:18px; font-weight:700; margin-bottom:8px; }
@@ -4895,29 +4912,36 @@ function fcstTable(m, code) {
   if (!F) return '';
   const [a, b] = [F.y[0], F.y[1]];
   const yr = d => d ? +d.slice(0, 4) : null;
-  const shares = b && b[3] && b[4] ? b[3] / b[4] : null;
-  const c2ni = F.n[1] && shares ? F.n[1] * shares : null;
+  // 주식 수 = 시총 ÷ 주가(없으면 당해 순이익 ÷ EPS). 앞날 순이익은 EPS × 주식 수.
+  const shares = F.p ? F.m / F.p : (b && b[3] && b[4] ? b[3] / b[4] : null);
   const cols = [
     { name: '직전년도', end: a[0], rev: a[1], opi: a[2], ni: a[3] },
     { name: '당해년도', end: b ? b[0] : null, rev: b && b[1], opi: b && b[2], ni: b && b[3] },
-    { name: '차기년도', end: null, rev: F.n[0], opi: null, ni: c2ni },
-    { name: '차차기년도', end: null, rev: null, opi: null, ni: null },
+    { name: '차기년도', end: null, rev: F.n[0], opi: null, eps: F.n[1] },
+    { name: '차차기년도', end: null, rev: null, opi: null, eps: null },
   ];
   // 차기·차차기 결산일은 당해 결산일에서 한 해씩 민다.
   const base = cols[1].end || cols[0].end;
   [2, 3].forEach((i, j) => {
     const y = yr(base) + (cols[1].end ? j + 1 : j + 2);
     cols[i].end = y + base.slice(4);
+    // 나스닥 연간 EPS 중 결산월이 ±1달 안에 드는 것.
+    const mo = d => +d.slice(0, 4) * 12 + +d.slice(5, 7);
+    const q = (F.q || []).find(x => Math.abs(mo(x[0]) - mo(cols[i].end)) <= 1);
+    if (cols[i].eps == null && q) cols[i].eps = q[1];
+    cols[i].ni = cols[i].eps != null && shares ? cols[i].eps * shares : null;
   });
   const won = v => (v == null || !isFinite(v)) ? null : Math.round(v * F.k / 1e8).toLocaleString();
   const ratio = (num, den) => (!den || den <= 0) ? (den < 0 ? '적자' : null) : (num / den).toFixed(1);
-  const cell = v => v == null ? '<td class="na">—</td>' : '<td>' + v + '</td>';
+  // 당해년도 칸에 하이라이트.
+  const cell = (v, i) => '<td class="' + (v == null ? 'na' : '') + (i === 1 ? ' cur' : '') + '">' +
+    (v == null ? '—' : v) + '</td>';
   const row = (lab, f, cls) => '<tr' + (cls ? ' class="' + cls + '"' : '') + '><th>' + lab + '</th>' +
-    cols.map((c, i) => cell(f(c, i))).join('') + '</tr>';
+    cols.map((c, i) => cell(f(c, i), i)).join('') + '</tr>';
   const ym = d => d ? d.slice(2, 4) + '.' + d.slice(5, 7) : '';
   return '<div class="fcwrap"><table class="fctab">' +
     '<thead><tr><th>단위: 억 원 환산</th>' +
-      cols.map((c, i) => '<th' + (i ? ' class="est"' : '') + '><b>' + c.name + '</b><small>' +
+      cols.map((c, i) => '<th class="' + (i === 1 ? 'cur' : i ? 'est' : 'pst') + '"><b>' + c.name + '</b><small>' +
         ym(c.end) + '</small></th>').join('') + '</tr></thead><tbody>' +
     row('매출', c => won(c.rev)) +
     row('영업이익', c => won(c.opi)) +
@@ -4925,8 +4949,7 @@ function fcstTable(m, code) {
     row('PER', c => c.ni == null ? null : ratio(F.m * F.k, c.ni * F.k), 'gap') +
     row('PBR', (c, i) => i === 0 && F.e ? ratio(F.m, F.e) : null) +
     row('PSR', c => c.rev == null ? null : ratio(F.m, c.rev)) +
-    '</tbody></table><p class="fcnote">직전년도 실적 · 이후 컨센서스(S&amp;P Global) · 배수는 현재 시총 기준' +
-    (F.ts ? ' · ' + esc(F.ts.slice(5).replace('-', '/')) + ' 기준' : '') + '</p></div>';
+    '</tbody></table></div>';
 }
 
 function finBlock(m, code) {
