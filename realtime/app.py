@@ -692,7 +692,8 @@ def jp_process(row, day, replay=False):
     ev["replay"] = replay
     point = blob = None
     try:
-        blob = fj.get(row["zip"], binary=True)
+        zurl = "https://www.release.tdnet.info/inbs/" + row["zip"]
+        blob = fj.get(zurl, binary=True)
         if blob:
             vals = fj.read_summary(blob)
             ev["_text"] = fj.read_narrative(blob)
@@ -702,7 +703,7 @@ def jp_process(row, day, replay=False):
             q = fj.quarter_from(vals, prior) if vals else None
             if q:
                 point = {"label": q["label"], "rev": q["rev"], "opi": q.get("opi"), "ni": q.get("ni")}
-            ev["url"] = row["zip"]
+            ev["url"] = zurl
     except Exception:                                            # noqa: BLE001
         log("일본 결산단신 실패", code, traceback.format_exc(limit=2))
     log("일본", code, "zip" if blob else "zip 없음", "수치" if point else "수치 없음", "설명", len(ev.get("_text") or ""))
