@@ -1398,6 +1398,18 @@ results'·trading update 꼴을 찾는다(보도자료 꼬리의 "actual results
 (홍콩과 같은 지나간 발표). `build.py` 의 `merge_us_fpi` 가 미국 캘린더에 합치고, 시총·실적·연간 표·
 설명 수집기 우주에도 이 파일을 넣었다.
 
+**실시간 서버(Railway) — `realtime/`.** 회원님: "실적 뜨자마자 텔레로, 사이트도 바로."
+GitHub Actions 는 예약이 밀리고 사이트를 다시 만들어 배포해야 해서 늦다. `realtime/app.py` 가 24시간 돌며
+SEC 최신 공시 피드(8-K Item 2.02, 2초)·TDnet 오늘 목록(3초)·HKEXnews(10초)를 보고, 새 실적이면 **기존
+수집기 함수**(pr_table · scrape_fin_jp.read_summary/quarter_from · scrape_live_us.sec_prior)로 숫자를 뽑아
+`realtime/charts.py` 로 차트(매출·성장률 / 영업이익률 / 사업부별)를 그린다. 텔레그램 앨범(`/start` 한 대화방이
+구독자)과 사이트(`/stream` SSE, 처음 열 때 `/api/live`)에 같이 보낸다. 이력은 사이트 payload·data/*.json 을
+20분마다 다시 받는다. 텔레그램은 **거른다**(사이트는 전부) — 은행·증권·보험·화학·철강·리츠 제외, 시총 1조 원
+이상 무조건, 그 밑은 매출 +15%↑·영업이익 +15%↑/흑자 전환·분기 매출 최고일 때만(`tg_pick`). 시각 넷
+(공개·감지·텔레그램·사이트)을 남기고 `/api/stats` 가 지연을 보여준다. 배포는 루트 `railway.json`
+(Dockerfile = realtime/Dockerfile, `watchPatterns` 로 수집 봇의 잦은 커밋에는 재배포 안 함). 서버 주소는
+`realtime/URL` 한 줄 — 있으면 build.py 가 `D.rt` 로 싣고 화면이 붙는다(`rtApply`/`rtRepaint`).
+
 **오른쪽 위 「방금 발표」 피드**(회원님 요청 10/29: "방금 실적 발표한 회사들 실시간으로 쭈루룩, 알람처럼").
 `build.py` 의 `renderFeed`. **실제 공시 시각이 있는 줄(시각정확도 1)만** 싣는다 — 미국 8-K 접수 시각,
 일본 TDnet, 홍콩 HKEXnews. 「경」으로 어림한 시각을 '방금'이라 부르면 거짓말이다. 최근 72시간·80건,
