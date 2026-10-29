@@ -18,33 +18,26 @@ jobs:
           python-version: '3.12'
 
       # 96차 — MarketScreener: 검색 → 종목 주소 → finances 의 3년 추정표.
-      - name: 🔎 나스닥 캘린더에 없는 미국 상장사 (99차)
+      - name: 🔎 외국 상장사 6-K 생김새 (100차)
         timeout-minutes: 10
         run: |
           python - > /tmp/probe.txt 2>&1 <<'EOF'
-          import json, urllib.request, http.cookiejar
-          UA = {"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36", "Accept": "application/json, text/plain, */*"}
-          cj = http.cookiejar.CookieJar(); op = urllib.request.build_opener(urllib.request.HTTPCookieProcessor(cj))
+          import json, urllib.request, time
+          H = {"User-Agent": "Earning Samurai Calendar (cbpark@wisdomasset.co.kr)"}
           def get(u):
-              try:
-                  with op.open(urllib.request.Request(u, headers=UA), timeout=40) as r: return r.status, r.read().decode("utf-8", "ignore")
-              except Exception as e: return str(e)[:80], ""
-          st, t = get("https://api.nasdaq.com/api/screener/stocks?tableonly=true&limit=10000&download=true")
-          rows = (json.loads(t).get("data") or {}).get("rows") or [] if t else []
-          print("screener", st, len(rows))
-          cal = {r["code"] for r in json.load(open("data/earnings_us.json"))["rows"]}
-          def cap(r):
-              try: return float(r.get("marketCap") or 0) / 1e9
-              except: return 0
-          miss = sorted([(cap(r), r["symbol"], r.get("name", "")[:40], r.get("country", "")) for r in rows if r["symbol"] not in cal and cap(r) >= 1], reverse=True)
-          print("미수록 시총 10억달러+", len(miss))
-          from collections import Counter
-          print(Counter(m[3] for m in miss).most_common(12))
-          for m in miss[:80]: print(f"  {m[0]:8.1f} {m[1]:7} {m[3]:14} {m[2]}")
-          get("https://fc.yahoo.com"); st, crumb = get("https://query1.finance.yahoo.com/v1/test/getcrumb")
-          for s in ["MICC", "FER", "SHEL", "TM"]:
-              st, t = get(f"https://query1.finance.yahoo.com/v10/finance/quoteSummary/{s}?modules=calendarEvents,earnings&crumb={crumb}")
-              print("yahoo", s, st, t[:400])
+              with urllib.request.urlopen(urllib.request.Request(u, headers=H), timeout=40) as r: return r.read().decode("utf-8", "ignore")
+          tk = json.loads(get("https://www.sec.gov/files/company_tickers.json"))
+          cik = {v["ticker"]: v["cik_str"] for v in tk.values()}
+          for t in ["MICC", "UL", "RIO", "DEO", "FER", "BTI", "SNN", "WSE"]:
+              c = cik.get(t); print("=====", t, c)
+              if not c: continue
+              d = json.loads(get(f"https://data.sec.gov/submissions/CIK{c:010d}.json")); time.sleep(0.3)
+              r = d["filings"]["recent"]; n = 0
+              for i, f in enumerate(r["form"]):
+                  if f not in ("6-K", "20-F", "10-Q", "8-K"): continue
+                  print("  ", r["filingDate"][i], r["acceptanceDateTime"][i][11:16], f, "X" if r["isXBRL"][i] else "-", r["primaryDocument"][i][:40], "|", r["primaryDocDescription"][i][:60], "|", r.get("items", [""]*999)[i])
+                  n += 1
+                  if n >= 18: break
           EOF
 
       - name: 결과를 probe-out 가지에
