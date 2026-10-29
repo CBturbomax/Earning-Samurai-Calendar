@@ -115,7 +115,7 @@ python scrape_desc.py                       # 사업 설명 원문
 | 회사 사업 설명(한국어) | `descriptions.py`의 `DESC_KO` — 원문 수집은 `scrape_desc.py` |
 | 실적 브리핑(숫자 요약·문구) | `build.py`의 `briefBlock` — 한국어 코멘트는 `briefs.py`, 원문 수집은 `scrape_pr_us.py`(미국)·`scrape_fin_jp.py`의 `fcst`(일본 가이던스) |
 | 차트 모양·통화 표기 | `build.py`의 `finChart` / `segChart` / `CUR` |
-| 상세창 **연간 표**(컨센서스·PER·PBR·PSR) | 수집 `scrape_fcst.py` → `data/forecast.json`, 싣기 `build.py` 의 `pack_fcst`, 그리기 `fcstTable`. 무료 범위: 직전년도 실적·당해 매출/영업이익/순이익·차기 매출/EPS 뿐 — 나머지는 「—」 |
+| 상세창 **연간 표**(컨센서스·PER·PBR·PSR) | 수집 `scrape_fcst.py` → `data/forecast.json`, 싣기 `build.py` 의 `pack_fcst`, 그리기 `fcstTable`. 무료 범위: 직전년도 실적·당해 매출/영업이익/순이익·차기 매출/EPS. 미국은 나스닥 연간 EPS(`ny`)로 차기·차차기 순이익·PER 을 더 채운다. 차기 영업이익은 무료 소스가 없다(MarketScreener 403·IFIS 503·닛케이/사계보 유료, 2026-10 실측) — 「—」. 결산 끝났는데 발표 전인 해(소스가 est=0 으로 줌)는 숫자가 천 단위로 안 떨어지면 추정으로 돌린다(`pack_fcst`) |
 
 `index.html`은 **직접 고치지 않는다.** `build.py`가 덮어쓴다.
 
