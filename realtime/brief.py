@@ -25,7 +25,7 @@ CC_MODEL = os.environ.get("CLAUDE_MODEL", "haiku")      # Max 안에서 — 빠�
 OR_MODEL = os.environ.get("LLM_MODEL", "google/gemini-3-flash-preview")
 AN_MODEL = os.environ.get("LLM_MODEL_ANTHROPIC", "claude-haiku-5-5")
 LOG = print
-LIMIT = 9000                                       # 원문 글자 수 — 길면 느리고 비싸다
+LIMIT = 24000                                      # 원문 글자 수 — 길면 느리고 비싸다
 
 SYSTEM = """너는 실적 발표 자료를 읽고 '실적이 왜 이렇게 나왔는지'를 한국 투자자에게 쉬운 말로 짚어 주는 사람이다.
 
@@ -37,7 +37,9 @@ SYSTEM = """너는 실적 발표 자료를 읽고 '실적이 왜 이렇게 나�
   (堅調→호조, 価格転嫁→가격 인상 반영, 円安→엔화 약세, 不採算→적자 사업).
 - 제품·지역·고객처럼 구체적인 것을 우선한다(예: "AI 서버용 수요 급증으로 데이터센터 매출 2배").
 
-JSON 으로만 답한다: {"key": "자료에 적힌 이번 기간 핵심 숫자 한 줄 — 매출·영업이익(또는 순이익)과 전년 대비 %를 자료 표기 그대로 통화 단위 붙여(예: 매출 120.5억 위안(+35%) · 순이익 18.2억 위안(+52%)). 자료에 없으면 빈 문자열", "why": [최대 3줄 — 실적을 움직인 이유], "watch": [최대 2줄 — 일회성·환율·감익 부문·가이던스 하향 등 주의할 점], "guide": "가이던스·전망에 대한 회사 언급 한 줄(없으면 빈 문자열)"}"""
+JSON 으로만 답한다: {"key": "자료에 적힌 이번 기간 핵심 숫자 한 줄 — 매출·영업이익(또는 순이익)과 전년 대비 %를 자료 표기 그대로 통화 단위 붙여(예: 매출 120.5억 위안(+35%) · 순이익 18.2억 위안(+52%)). 자료에 없으면 빈 문자열", "why": [최대 3줄 — 실적을 움직인 이유], "watch": [최대 2줄 — 일회성·환율·감익 부문·가이던스 하향 등 주의할 점], "guide": "가이던스·전망에 대한 회사 언급 한 줄(없으면 빈 문자열)", "segs": [자료의 사업부문(세그먼트)별 또는 제품·지역별 매출 표가 있으면 이번 기간 값을 표에서 그대로 — {"n": 부문 이름(쉬운 한국어), "v": 숫자(표에 적힌 그대로, 단위 변환 없이), "y": 전년 같은 기간 대비 %(표의 전년 칸으로 계산하거나 적힌 값, 모르면 null)}. 합계·조정·소거 줄은 빼고 최대 8개. 표가 없으면 []], "unit": "segs 숫자의 단위(예: 백만 엔, 백만 달러, 천 위안)", "basis": "segs 기간(예: 3개월, 9개월 누계, 반기)"}
+
+segs 는 표에 적힌 숫자만 옮긴다. 본문 문장 속 숫자를 끌어 모아 표를 지어내지 않는다."""
 
 
 def _post(url, body, headers, timeout):
@@ -56,14 +58,14 @@ def _ask(user, timeout):
         LOG("Claude Code 실패:", r.returncode, (r.stderr or r.stdout)[-300:])
     if AN_KEY:
         d = _post("https://api.anthropic.com/v1/messages",
-                  {"model": AN_MODEL, "max_tokens": 600, "system": SYSTEM,
+                  {"model": AN_MODEL, "max_tokens": 1200, "system": SYSTEM,
                    "messages": [{"role": "user", "content": user}]},
                   {"x-api-key": AN_KEY, "anthropic-version": "2023-06-01", "content-type": "application/json"},
                   timeout)
         return "".join(b.get("text", "") for b in d.get("content", []))
     if OR_KEY:
         d = _post("https://openrouter.ai/api/v1/chat/completions",
-                  {"model": OR_MODEL, "temperature": 0.1, "max_tokens": 600,
+                  {"model": OR_MODEL, "temperature": 0.1, "max_tokens": 1200,
                    "response_format": {"type": "json_object"},
                    "messages": [{"role": "system", "content": SYSTEM}, {"role": "user", "content": user}]},
                   {"Authorization": f"Bearer {OR_KEY}", "content-type": "application/json"}, timeout)
@@ -112,6 +114,17 @@ def why(name, text, timeout=40):
     clean = lambda xs: [str(x).strip() for x in (xs or []) if str(x).strip()]   # noqa: E731
     res = {"why": clean(d.get("why"))[:3], "watch": clean(d.get("watch"))[:2],
            "guide": str(d.get("guide") or "").strip(), "key": str(d.get("key") or "").strip()[:160]}
+    segs = []
+    for x in d.get("segs") or []:
+        try:
+            v = float(str(x.get("v")).replace(",", "")) if x.get("v") is not None else None
+            y = float(x["y"]) if x.get("y") not in (None, "") else None
+        except (TypeError, ValueError, AttributeError):
+            continue
+        if x.get("n") and v is not None:
+            segs.append({"n": str(x["n"])[:30], "v": v, "y": y})
+    if len(segs) >= 2:
+        res.update(segs=segs[:8], unit=str(d.get("unit") or "")[:20], basis=str(d.get("basis") or "")[:20])
     if not (res["why"] or res["watch"] or res["guide"] or res["key"]):
         LOG("요약 내용 없음:", name, "원문", len(text), repr(text[:120]))
         return None

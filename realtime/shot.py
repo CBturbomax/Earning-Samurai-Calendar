@@ -85,6 +85,10 @@ window.tgBuild = function (ev, gh) {
     const s = segChart(sg, (f && f.cur) || MC[m] || 'USD');
     if (s) out.push(s.replace(/(<div class="finhead[^"]*">)/, '$1' + title + ' '));
   }
+  try {
+    const r = rtSegBlock(key);                       // 방금 발표 사업부별(AI 판독) — 사이트 상세창과 같은 것
+    if (r) out.push('<div class="finhead">' + title + ' 이번 발표 사업부별 매출</div>' + r);
+  } catch (e) {}
   let host = document.getElementById('tgshot');
   if (!host) {
     host = document.createElement('div');
@@ -93,7 +97,7 @@ window.tgBuild = function (ev, gh) {
     document.body.appendChild(host);
   }
   host.innerHTML = out.map((h, i) => '<div class="tgpart" style="padding:22px 26px 14px;background:#0f1419' +
-    (i === 0 && t ? ';width:fit-content' : '') + '">' + h + '</div>').join('');
+    (/class="(fcbox|rtseg)"/.test(h) ? ';width:fit-content' : '') + '">' + h + '</div>').join('');
   return out.length;
 };
 """
