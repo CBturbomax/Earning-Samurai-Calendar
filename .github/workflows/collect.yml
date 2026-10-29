@@ -102,18 +102,10 @@ jobs:
         timeout-minutes: 25
         run: python scrape_us.py "${{ steps.range.outputs.from }}" "${{ steps.range.outputs.to }}"
 
-      # 나스닥 캘린더가 안 싣는 미국 상장 외국 회사(매그넘 MICC·유니레버·리오틴토·
-      # 디아지오…)의 실적 6-K 를 SEC 에서 받는다. 종목마다 15분에 한 번만 다시 본다.
-      - name: 🇺🇸 미국 상장 외국 회사 (SEC 6-K)
-        continue-on-error: true
-        timeout-minutes: 8
-        env:
-          SEC_UA: 'Earning Samurai Calendar (cbpark@wisdomasset.co.kr)'
-        run: python scrape_us_fpi.py
-
       # 닛케이는 데이터센터 IP 를 막는다. 집에서 돌리면 되지만 여기서는 첫 요청부터
       # 껍데기가 온다. 오래 붙들지 않게 한 번 실패하면 바로 접는다.
       # (이미 받아둔 일본 자료는 그대로 살아 있고, 새 날짜만 못 채운다.)
+
       - name: 🇯🇵 일본 (닛케이)
         continue-on-error: true
         timeout-minutes: 20
