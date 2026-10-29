@@ -115,7 +115,7 @@ python scrape_desc.py                       # 사업 설명 원문
 | 회사 사업 설명(한국어) | `descriptions.py`의 `DESC_KO` — 원문 수집은 `scrape_desc.py` |
 | 실적 브리핑(숫자 요약·문구) | `build.py`의 `briefBlock` — 한국어 코멘트는 `briefs.py`, 원문 수집은 `scrape_pr_us.py`(미국)·`scrape_fin_jp.py`의 `fcst`(일본 가이던스) |
 | 차트 모양·통화 표기 | `build.py`의 `finChart` / `segChart` / `CUR` |
-| 상세창 **연간 표**(컨센서스·PER·PBR·PSR) | 수집 `scrape_fcst.py` → `data/forecast.json`, 싣기 `build.py` 의 `pack_fcst`, 그리기 `fcstTable`. 무료 범위: 직전년도 실적·당해 매출/영업이익/순이익·차기 매출/EPS. 차기·차차기 매출·영업이익·순이익은 **Business Insider** 종목 페이지 Estimates 표(`bi` 주소, `by` 표 — 미국은 티커, 일본·홍콩은 영문 이름 검색 + ISIN 국가, 당해/차기 매출이 stockanalysis 와 ±12% 안일 때만 채택). BI 가 없으면 미국은 나스닥 연간 EPS(`ny`)로 순이익만. MarketScreener·finanzen.net 403, IFIS 503(2026-10 실측). 결산 끝났는데 발표 전인 해(소스가 est=0 으로 줌)는 숫자가 천 단위로 안 떨어지면 추정으로 돌린다(`pack_fcst`) |
+| 상세창 **연간 표**(컨센서스·PER·PBR·PSR) | 수집 `scrape_fcst.py` → `data/forecast.json`, 싣기 `build.py` 의 `pack_fcst`, 그리기 `fcstTable`. 무료 범위: 직전년도 실적·당해 매출/영업이익/순이익·차기 매출/EPS. 차기·차차기 매출·영업이익·순이익은 **Business Insider** 종목 페이지 Estimates 표(`bi` 주소, `by` 표 — 미국은 티커, 일본·홍콩은 영문 이름 검색 + ISIN 국가, 당해/차기 매출이 stockanalysis 와 ±12% 안일 때만 채택, 매출이 비면 순이익·EPS 로 대조). 검색어는 여러 꼴(전체·군더더기 뗀·앞 두 낱말·첫 낱말)로 넣고 이름 낱말 겹침으로 고른다. 미국도 티커 주소가 없으면 이름 검색. **소형주까지 전 종목**(MIN_CAP 0, 1만여)이라 제 워크플로 `fcst.yml`(25분·6갈래 병렬·이어달리기)이 돈다. 재무 통화가 주가 통화와 다르면(위안 보고 홍콩주) caps.json 환율로 옮긴다. BI 가 없으면 미국은 나스닥 연간 EPS(`ny`)로 순이익만. MarketScreener·finanzen.net 403, IFIS 503(2026-10 실측). 결산 끝났는데 발표 전인 해(소스가 est=0 으로 줌)는 숫자가 천 단위로 안 떨어지면 추정으로 돌린다(`pack_fcst`) |
 
 `index.html`은 **직접 고치지 않는다.** `build.py`가 덮어쓴다.
 
@@ -1165,7 +1165,8 @@ HPE 가 Compute·Storage·Intelligent Edge 를 Cloud&AI·Networking 으로 바�
 |---|---|---|
 | `fresh.yml` | **3분 루프** | `data/earnings_jp_past.json` · `data/monthly_jp.json` · `data/financials_jp.json` · `data/segments_jp.json` · `data/briefs_jp.json` · `data/briefs_us.json` · `data/live_us.json` |
 | `collect.yml` | **5분**(크론 하한) | `data/earnings.json` · `data/earnings_jp_sched.json` · `data/earnings_us.json` · `data/earnings_hk.json` · `data/caps.json` |
-| `numbers.yml` | **5분**(크론 하한) | `data/financials.json` · `data/financials_intl.json` · `data/segments.json` · `data/segments_hk.json` · `data/desc.json` · `data/forecast.json` |
+| `numbers.yml` | **5분**(크론 하한) | `data/financials.json` · `data/financials_intl.json` · `data/segments.json` · `data/segments_hk.json` · `data/desc.json` |
+| `fcst.yml` | 25분 루프 | `data/forecast.json` (연간 표 컨센서스) |
 | `segments.yml` | 30분 | `data/segments_sec.json` · `data/segments_edgar.json` · `data/segments_fpi.json` · `data/financials_fpi.json` |
 | `monthly.yml` | 10분 | `data/monthly_nums_jp.json` (월매출 수치 — 첨부 PDF) · `data/monthly_web_jp.json` (월매출 — 流通ニュース) · `data/monthly_ir_jp.json` (월매출 — 회사 IR) |
 | `segments_hist.yml` | 하루 1번 | `data/segments_jp_hist.json` (EDINETDB_KEY 있을 때만) |
