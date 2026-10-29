@@ -90,10 +90,24 @@ HK_SEC = re.compile(r"MANAGEMENT DISCUSSION|BUSINESS REVIEW|OPERATIONAL REVIEW|F
 
 
 def hk_text(pdf_bytes):
-    import pdftext
-    t = re.sub(r"\s+", " ", pdftext.extract_text(pdf_bytes, max_pages=25) or "")
-    m = HK_SEC.search(t)
-    return t[m.start():] if m else t
+    """홍콩 실적 PDF -> 글. poppler 의 pdftotext 가 우리 표준 라이브러리 판독기보다 훨씬 낫다
+    (메이디그룹 PDF 가 우리 것으로는 깨진 기호 1,300자뿐이었다). 없으면 우리 것으로."""
+    t = ""
+    if shutil.which("pdftotext"):
+        try:
+            r = subprocess.run(["pdftotext", "-layout", "-l", "40", "-", "-"], input=pdf_bytes,
+                               capture_output=True, timeout=30)
+            t = r.stdout.decode("utf-8", "replace")
+        except Exception as e:                                   # noqa: BLE001
+            LOG("pdftotext 실패", repr(e)[:200])
+    if len(t.strip()) < 500:
+        import pdftext
+        t = pdftext.extract_text(pdf_bytes, max_pages=25) or ""
+    t = re.sub(r"[ \t]+", " ", t)
+    t = re.sub(r"\n\s*\n+", "\n", t)
+    m = HK_SEC.search(t, 3000)
+    # 앞쪽(실적 요약 표·하이라이트) + 경영진 설명 절 — 숫자와 이유가 둘 다 들어가게.
+    return (t[:9000] + "\n…\n" + t[m.start():m.start() + 14000]) if m and m.start() > 9000 else t
 
 
 def why(name, text, timeout=40):
