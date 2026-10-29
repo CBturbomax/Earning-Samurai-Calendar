@@ -1,0 +1,14 @@
+{
+  "$schema": "https://railway.com/railway.schema.json",
+  "build": {
+    "builder": "DOCKERFILE",
+    "dockerfilePath": "realtime/Dockerfile",
+    "watchPatterns": ["realtime/**", "railway.json", "pr_table.py", "scrape_fin_jp.py",
+                      "scrape_live_us.py", "scrape_seg_sec.py", "scrape_fin.py", "scrape_hk.py", "markets.py"]
+  },
+  "deploy": {
+    "restartPolicyType": "ALWAYS",
+    "healthcheckPath": "/health",
+    "healthcheckTimeout": 300
+  }
+}
