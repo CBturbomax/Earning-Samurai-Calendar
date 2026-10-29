@@ -295,6 +295,11 @@ def us_needs_quarters():
         done = reported.get(code)
         if done and done > last:
             out.add(code)
+            continue
+        # 최근 네 분기 중 둘 이상 영업이익이 비면 메운다 — SEC 에 영업이익 태그를
+        # 안 다는 회사(제약·정유·주택…)는 영업이익률 선이 통째로 빠진다(10/30).
+        if sum(1 for p in pts[-4:] if p.get("opi") is None) >= 2:
+            out.add(code)
     return out
 
 
