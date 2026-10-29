@@ -45,7 +45,8 @@ PAUSE = float(os.environ.get("LIVE_PAUSE", "0.12"))   # SEC 는 초당 10건까�
 KEEP_DAYS = 4
 # 보도자료 표 읽기 규칙 판. 올리면 이미 읽은 종목도 다시 읽는다(pr_table 을 고칠 때).
 # 2: 누계 열 거르기(직전 분기의 0.5~2배) · 영업이익·순이익 전년 대조 0.6%
-PR_V = 2
+# 3: 직전 분기 0.6~1.7배 · 전년 분기 0.5~2.0배 (CVLT·LECO 오검출)
+PR_V = 3
 
 
 def et_today():
