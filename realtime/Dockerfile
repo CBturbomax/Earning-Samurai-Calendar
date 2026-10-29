@@ -4,7 +4,8 @@ RUN apt-get update && apt-get install -y --no-install-recommends fonts-noto-cjk 
     && rm -rf /var/lib/apt/lists/*
 # '왜' 요약을 회원님 Claude Max 로 돌린다 — Claude Code 를 CLAUDE_CODE_OAUTH_TOKEN 으로 부른다(brief.py).
 RUN npm install -g @anthropic-ai/claude-code && npm cache clean --force
-RUN pip install --no-cache-dir matplotlib==3.9.2
+RUN pip install --no-cache-dir matplotlib==3.9.2 playwright==1.48.0 \
+    && playwright install --with-deps chromium && rm -rf /var/lib/apt/lists/*
 WORKDIR /app
 COPY . /app
 ENV PYTHONUNBUFFERED=1 DATA_DIR=/data
