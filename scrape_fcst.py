@@ -18,7 +18,7 @@
 Estimates 표(5개 연도, 백만 단위)에서 받는다(`bi`). 미국은 티커가 주소고,
 일본·홍콩은 영문 이름으로 BI 검색(SearchController_Suggest)을 해 ISIN 국가가 맞는
 종목을 고른다. 엉뚱한 회사·통화를 막으려고 **당해년도 매출이 stockanalysis 것과
-±25% 안에 들 때만** 쓴다. MarketScreener·finanzen.net·IFIS 는 GitHub 서버에서
+±12% 안에 들 때만** 쓴다. MarketScreener·finanzen.net·IFIS 는 GitHub 서버에서
 403/503, 닛케이·사계보는 유료라 못 쓴다(실측 2026-10).
 
 없는 칸은 비워 둔다 — 지어 넣지 않는다. 내년 순이익만은 내년 EPS × 올해 주식수
@@ -40,7 +40,7 @@ from scrape_fin_intl import Throttled, get, unflatten, url_for
 HERE = Path(__file__).parent
 OUT = HERE / "data" / "forecast.json"
 PER_RUN = int(os.environ.get("FCST_PER_RUN", "120"))
-SECS = int(os.environ.get("FCST_SECS", "200"))
+SECS = int(os.environ.get("FCST_SECS", "240"))
 PAUSE = float(os.environ.get("FCST_PAUSE", "0.6"))
 STALE_DAYS = int(os.environ.get("FCST_STALE_DAYS", "7"))
 NEAR_DAYS = 4                     # 발표일 ±4일은 하루 한 번(컨센서스가 그때 바뀐다)
@@ -225,15 +225,19 @@ def bi_candidates(market, code, name):
     return [x[2] for x in sorted(out)][:3]
 
 
-def bi_fetch(market, code, name, ref_rev, ref_year, slug=None):
+def bi_fetch(market, code, name, ref_rev, ref_year, slug=None, next_rev=None):
     """검증된 BI 추정 [slug, 표]. 못 찾으면 [None, []]."""
     for sl in ([slug] if slug else bi_candidates(market, code, name)):
         txt = get(f"{BI}/stocks/{sl}-stock")
         time.sleep(PAUSE)
         ys = parse_bi(txt or "")
-        ref = next((y for y in ys if y[0] == ref_year and y[1]), None)
-        if ref and ref_rev and 0.75 <= ref[1] / ref_rev <= 1.33:
-            return sl, ys
+        # 당해년도 매출(없으면 차기 매출)이 stockanalysis 와 맞아야 같은 회사·통화다.
+        for yy, rv in ((ref_year, ref_rev), (ref_year + 1, next_rev)):
+            ref = next((y for y in ys if y[0] == yy and y[1]), None)
+            if ref and rv:
+                if 0.88 <= ref[1] / rv <= 1.13:
+                    return sl, ys
+                break
     return None, []
 
 
@@ -384,13 +388,14 @@ def main():
                 # Business Insider 추정(차기·차차기 영업이익까지).
                 ys = rec["years"]
                 ref = next((y for y in ys if y.get("est")), None) or ys[-1]
+                nrev = (rec.get("next") or {}).get("rev")
                 try:
                     sl, bys = bi_fetch(market, code, rec.get("name") or names.get(k, ""),
                                        ref.get("rev"), int(ref["end"][:4]),
-                                       (old.get(k) or {}).get("bi"))
+                                       (old.get(k) or {}).get("bi"), nrev)
                     if not sl and (old.get(k) or {}).get("bi"):
                         sl, bys = bi_fetch(market, code, rec.get("name") or names.get(k, ""),
-                                           ref.get("rev"), int(ref["end"][:4]))
+                                           ref.get("rev"), int(ref["end"][:4]), None, nrev)
                     rec["bi"], rec["by"] = sl or "", bys
                 except Throttled as e:
                     print(f"  {k} BI 막힘: {e}", file=sys.stderr)
@@ -446,7 +451,8 @@ def probe(args):
         if f and f["years"]:
             ys = f["years"]
             ref = next((y for y in ys if y.get("est")), None) or ys[-1]
-            print("  bi", bi_fetch(market, code, f.get("name"), ref.get("rev"), int(ref["end"][:4])))
+            print("  bi", bi_fetch(market, code, f.get("name"), ref.get("rev"), int(ref["end"][:4]),
+                                   None, (f.get("next") or {}).get("rev")))
 
 
 if __name__ == "__main__":
