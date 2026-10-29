@@ -18,9 +18,34 @@ jobs:
           python-version: '3.12'
 
       # 96차 — MarketScreener: 검색 → 종목 주소 → finances 의 3년 추정표.
-      - name: 🔎 BI 실패 원인 (98차)
+      - name: 🔎 나스닥 캘린더에 없는 미국 상장사 (99차)
         timeout-minutes: 10
-        run: python scrape_fcst.py --probe jp:3038 jp:3769 jp:2579 us:PENG hk:00700 hk:01810 hk:06055 jp:4816 jp:5938 hk:02285 > /tmp/probe.txt 2>&1 || true
+        run: |
+          python - > /tmp/probe.txt 2>&1 <<'EOF'
+          import json, urllib.request, http.cookiejar
+          UA = {"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36", "Accept": "application/json, text/plain, */*"}
+          cj = http.cookiejar.CookieJar(); op = urllib.request.build_opener(urllib.request.HTTPCookieProcessor(cj))
+          def get(u):
+              try:
+                  with op.open(urllib.request.Request(u, headers=UA), timeout=40) as r: return r.status, r.read().decode("utf-8", "ignore")
+              except Exception as e: return str(e)[:80], ""
+          st, t = get("https://api.nasdaq.com/api/screener/stocks?tableonly=true&limit=10000&download=true")
+          rows = (json.loads(t).get("data") or {}).get("rows") or [] if t else []
+          print("screener", st, len(rows))
+          cal = {r["code"] for r in json.load(open("data/earnings_us.json"))["rows"]}
+          def cap(r):
+              try: return float(r.get("marketCap") or 0) / 1e9
+              except: return 0
+          miss = sorted([(cap(r), r["symbol"], r.get("name", "")[:40], r.get("country", "")) for r in rows if r["symbol"] not in cal and cap(r) >= 1], reverse=True)
+          print("미수록 시총 10억달러+", len(miss))
+          from collections import Counter
+          print(Counter(m[3] for m in miss).most_common(12))
+          for m in miss[:80]: print(f"  {m[0]:8.1f} {m[1]:7} {m[3]:14} {m[2]}")
+          get("https://fc.yahoo.com"); st, crumb = get("https://query1.finance.yahoo.com/v1/test/getcrumb")
+          for s in ["MICC", "FER", "SHEL", "TM"]:
+              st, t = get(f"https://query1.finance.yahoo.com/v10/finance/quoteSummary/{s}?modules=calendarEvents,earnings&crumb={crumb}")
+              print("yahoo", s, st, t[:400])
+          EOF
 
       - name: 결과를 probe-out 가지에
         if: always()
