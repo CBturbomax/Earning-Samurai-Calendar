@@ -23,7 +23,7 @@ try {
 <script>
 /* GitHub Pages/CDN 이 예전 index.html 을 잡고 있어도, 한 번 최신판을 받은 뒤부터는
    version.txt 를 no-store 로 확인해 새 빌드가 있으면 query string 을 바꿔 강제 갱신한다. */
-const ES_BUILD = "20261029060139";
+const ES_BUILD = "20261029060356";
 setTimeout(() => {
   fetch('./version.txt?t=' + Date.now(), {cache:'no-store'})
     .then(r => r.ok ? r.text() : '')
@@ -614,12 +614,12 @@ td.dim { color:var(--mute); font-size:18px; }
 .fctab tr,.fctab th,.fctab td { background:transparent; }
 .fctab th,.fctab td { padding:7px 16px; text-align:right; white-space:nowrap;
                      font-size:16px; line-height:1.4; height:auto; border:0; }
-.fctab thead th { background:#1d2a36 !important; color:var(--mute); font-weight:600;
+.fctab thead th { background:#22384c !important; color:#a9bccb; font-weight:600;
                   font-size:13px; line-height:1.3; padding:8px 16px; vertical-align:bottom;
-                  border-bottom:1px solid #2f4252; }
+                  border-bottom:2px solid #3a5a76; }
 .fctab thead th:first-child { text-align:left; font-weight:400; font-size:12px; }
 .fctab thead th b { display:block; color:var(--fg); font-size:15px; }
-.fctab thead th small { display:block; font-weight:400; font-size:12px; }
+.fctab thead th small { display:block; font-weight:400; font-size:12px; color:#8fa7ba; }
 .fctab tbody tr { background:#141c24 !important; }
 .fctab tbody tr + tr > * { border-top:1px solid #1f2a33; }
 .fctab tbody th { text-align:left; color:var(--mute); font-weight:600; background:#18222b !important;
@@ -627,8 +627,13 @@ td.dim { color:var(--mute); font-size:18px; }
 .fctab tbody td { color:var(--fg); }
 .fctab tbody td.na { color:#4a5866; }
 .fctab tr.gap > * { border-top:1px solid #2f4252 !important; }
+.fctab tr.per > * { background:rgba(255,176,32,.09) !important; border-top:1px solid rgba(255,176,32,.35) !important;
+                    border-bottom:1px solid rgba(255,176,32,.35); }
+.fctab tr.per th { color:var(--a3); border-left:3px solid var(--a3); }
+.fctab tr.per td { color:#ffe2a8; font-weight:600; }
+.fctab tr.per td.cur { background:rgba(255,176,32,.17) !important; color:#fff; font-weight:800; }
 .fctab .cur { background:rgba(91,155,213,.10) !important; }
-.fctab thead th.cur { background:#22405a !important; box-shadow:inset 0 3px 0 var(--a2); }
+.fctab thead th.cur { background:#2b5578 !important; box-shadow:inset 0 3px 0 var(--a2); }
 .fctab thead th.cur b { color:#9cc6ee; }
 .fctab td.cur { font-weight:700; }
 .fctab .pst b { color:#c9d4dc; }
@@ -756,7 +761,7 @@ svg.bars rect.b:hover { fill:var(--a3); }
 <body>
 <div class="wrap">
 
-<div class="topline"><span class="fl fl-us" role="img" aria-label="미국"></span> 미국 <b>12,986</b> · <span class="fl fl-jp" role="img" aria-label="일본"></span> 일본 <b>7,766</b> · <span class="fl fl-hk" role="img" aria-label="홍콩"></span> 홍콩 <b>9,192</b> · 합계 <b>28,418건</b> · 수집 <b>2025-07-09 ~ 2026-12-28</b> · 갱신 2026-10-29 15:01 KST</div>
+<div class="topline"><span class="fl fl-us" role="img" aria-label="미국"></span> 미국 <b>12,986</b> · <span class="fl fl-jp" role="img" aria-label="일본"></span> 일본 <b>7,766</b> · <span class="fl fl-hk" role="img" aria-label="홍콩"></span> 홍콩 <b>9,192</b> · 합계 <b>28,418건</b> · 수집 <b>2025-07-09 ~ 2026-12-28</b> · 갱신 2026-10-29 15:03 KST</div>
 <h1><span class="mark" aria-hidden="true"></span>Earning <span class="jp">Samurai</span>
     <span class="byline">by CB</span></h1>
 <p class="sub">미국 · 일본 · 홍콩 주간 실적발표 일정 — 누가 언제 무엇을 발표했는지</p>
@@ -2183,7 +2188,7 @@ function fcstTable(m, code) {
     row('매출', c => won(c.rev)) +
     row('영업이익', c => won(c.opi)) +
     row('순이익', c => won(c.ni)) +
-    row('PER', c => c.ni == null ? null : ratio(F.m * F.k, c.ni * F.k), 'gap') +
+    row('PER', c => c.ni == null ? null : ratio(F.m * F.k, c.ni * F.k), 'gap per') +
     row('PBR', (c, i) => i === 0 && F.e ? ratio(F.m, F.e) : null) +
     row('PSR', c => c.rev == null ? null : ratio(F.m, c.rev)) +
     '</tbody></table></div>';
