@@ -18,50 +18,9 @@ jobs:
           python-version: '3.12'
 
       # 96차 — MarketScreener: 검색 → 종목 주소 → finances 의 3년 추정표.
-      - name: 🔎 MarketScreener (96차)
-        timeout-minutes: 12
-        run: |
-          python - > /tmp/probe.txt 2>&1 <<'EOF'
-          import re, urllib.error, urllib.request, urllib.parse, html, json
-          UA = {"User-Agent": ("Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
-                               "AppleWebKit/537.36 (KHTML, like Gecko) "
-                               "Chrome/131.0.0.0 Safari/537.36"),
-                "Accept-Language": "ja,en-US;q=0.8"}
-          def get(u, h=None):
-              try:
-                  with urllib.request.urlopen(urllib.request.Request(u, headers=dict(UA, **(h or {}))), timeout=25) as r:
-                      return r.status, r.read(5_000_000).decode("utf-8", "ignore")
-              except urllib.error.HTTPError as e:
-                  return e.code, ""
-              except Exception as e:
-                  return type(e).__name__, str(e)[:200]
-          def fin(u):
-              try:
-                  with urllib.request.urlopen(urllib.request.Request(u, headers=UA), timeout=25) as r:
-                      return r.status, r.geturl(), r.read(4_000_000).decode("utf-8", "ignore")
-              except urllib.error.HTTPError as e:
-                  return e.code, u, ""
-              except Exception as e:
-                  return type(e).__name__, u, ""
-          def table(t, kw="EBIT"):
-              i = t.find(">" + kw + "<")
-              if i < 0: i = t.find(kw)
-              if i < 0: return
-              seg = t[t.rfind("<table", 0, i):t.find("</table>", i)]
-              for r in re.findall(r"<tr[^>]*>(.*?)</tr>", seg, re.S)[:16]:
-                  cells = [re.sub(r"\s+", " ", html.unescape(re.sub(r"<[^>]+>", "", c))).strip() for c in re.findall(r"<t[hd][^>]*>(.*?)</t[hd]>", r, re.S)]
-                  print("   ", cells[:8])
-          BI = "https://markets.businessinsider.com"
-          for q in ["Kobe Bussan", "Keyence", "BYD", "Xiaomi", "Fast Retailing"]:
-              st, fu, t = fin(BI + "/ajax/SearchController_Suggest?max_results=8&query=" + urllib.parse.quote(q))
-              print("suggest", q, st, re.findall(r'new Array\("([^"]*)", "Stocks", "([^"]*)", "\d+", "", "([^"]*)"\)', t))
-          for slug in ["toyof", "snejf", "tctzf", "toyota_motor", "kyccf"]:
-              st, fu, t = fin(BI + "/stocks/" + slug + "-stock")
-              m = re.search(r"Estimates\*? in ([A-Z]{3})", t)
-              print("=====", slug, st, len(t), m and m.group(0))
-              if st == 200:
-                  table(t)
-          EOF
+      - name: 🔎 BI 수집 시험 (97차)
+        timeout-minutes: 8
+        run: python scrape_fcst.py --probe jp:7203 us:AAPL hk:00700 jp:6861 jp:3038 us:MSFT jp:6758 hk:01810 jp:9983 us:BRK.B > /tmp/probe.txt 2>&1 || true
 
       - name: 결과를 probe-out 가지에
         if: always()
