@@ -47,6 +47,7 @@ from markets import excluded       # noqa: E402
 
 import brief                       # noqa: E402
 import charts                      # noqa: E402
+import shot                        # noqa: E402
 
 DATA = Path(os.environ.get("DATA_DIR", "/data"))
 DATA.mkdir(parents=True, exist_ok=True)
@@ -109,6 +110,7 @@ class History:
         self.rows_by_key = {}
         self.ind = {}
         self.ts = 0
+        self.html = ""
 
     def refresh(self):
         try:
@@ -119,6 +121,7 @@ class History:
             i = t.index('<script id="payload" type="application/json">')
             i = t.index(">", i) + 1
             D = json.loads(t[i:t.index("</script>", i)])
+            self.html = t
         except Exception as e:                                   # noqa: BLE001
             log("이력: 사이트 payload 실패", e)
             D = None
@@ -143,6 +146,7 @@ class History:
                 self.rows_by_key = by
             self.ind = ind
             self.ts = time.time()
+        shot.reload()
         log(f"이력 새로: 종목 {len(self.rows_by_key):,} · 실적 {len(self.D.get('fin', {})):,}")
 
     def row(self, key, day=None):
@@ -474,11 +478,21 @@ def finish(ev, point=None):
         ann = H.D.get("ann", {}).get(key)
         G = H.D.get("fcst", {}).get(key)
     gh = GD.get(ev["code"], ann) if ev["mkt"] == "jp" else None
-    pngs = []
-    try:
-        pngs = charts.render(ev, pts, seg, fin.get("freq", "Q"), ann, G, gh)
-    except Exception:                                            # noqa: BLE001
-        log("차트 실패", key, traceback.format_exc(limit=2))
+    if gh and sum(1 for v in gh.values() for s in v if s != "실제") < 3:
+        gh = None                                                # 한두 칸짜리 변천은 안 그린다
+    pngs = None
+    if H.html:
+        try:                                                     # 사이트 화면 그대로 찍는다
+            pngs = shot.render({k: v for k, v in ev.items() if not k.startswith("_")}, gh)
+        except Exception:                                        # noqa: BLE001
+            log("사이트 그림 실패", key, traceback.format_exc(limit=2))
+    if not pngs:
+        log("사이트 그림 없음 — matplotlib 로", key)
+        try:
+            pngs = charts.render(ev, pts, seg, fin.get("freq", "Q"), ann, G, gh)
+        except Exception:                                        # noqa: BLE001
+            log("차트 실패", key, traceback.format_exc(limit=2))
+            pngs = []
     th.join(45)
     if box.get("b"):
         ev["brief"] = box["b"]
@@ -979,6 +993,7 @@ def llm_selftest():
 def main():
     log("시작 — 텔레그램", "켜짐" if TG_TOKEN else "꺼짐(TG_BOT_TOKEN 없음)", "· 구독", len(TG.subs))
     H.refresh()
+    shot.start(lambda: H.html)
     for fn in (TG.poll, us_watch, jp_watch, hk_watch, history_loop, llm_selftest, replay_loop):
         threading.Thread(target=fn, daemon=True, name=fn.__name__).start()
     ThreadingHTTPServer(("0.0.0.0", PORT), Handler).serve_forever()
