@@ -1,6 +1,6 @@
 {
  "v": 1,
- "ts": "2026-10-29T04:18:02+00:00",
+ "ts": "2026-10-29T04:36:37+00:00",
  "seed": 361,
  "homes": 352,
  "official_ir_data": 178,
@@ -26,8 +26,8 @@
    "tdnet": true,
    "web": false,
    "ir": true,
-   "last_attempt": "2026-10-29T03:51:15+00:00",
-   "last_parse_failure": "2026-10-29T03:51:15+00:00",
+   "last_attempt": "2026-10-29T04:30:37+00:00",
+   "last_parse_failure": "2026-10-29T04:30:37+00:00",
    "reason": ""
   },
   "3086": {
@@ -52,7 +52,7 @@
    "tdnet": false,
    "web": false,
    "ir": true,
-   "last_attempt": "2026-10-29T03:51:15+00:00",
+   "last_attempt": "2026-10-29T04:30:37+00:00",
    "last_parse_failure": "",
    "reason": ""
   },
@@ -65,7 +65,7 @@
    "tdnet": false,
    "web": true,
    "ir": true,
-   "last_attempt": "2026-10-29T03:51:15+00:00",
+   "last_attempt": "2026-10-29T04:30:37+00:00",
    "last_parse_failure": "",
    "reason": ""
   },
@@ -91,7 +91,7 @@
    "tdnet": false,
    "web": true,
    "ir": true,
-   "last_attempt": "2026-10-29T03:51:15+00:00",
+   "last_attempt": "2026-10-29T04:30:37+00:00",
    "last_parse_failure": "",
    "reason": ""
   },
@@ -312,8 +312,8 @@
    "tdnet": true,
    "web": false,
    "ir": true,
-   "last_attempt": "2026-10-29T03:34:33+00:00",
-   "last_parse_failure": "2026-10-29T03:34:33+00:00",
+   "last_attempt": "2026-10-29T04:30:37+00:00",
+   "last_parse_failure": "2026-10-29T04:30:37+00:00",
    "reason": ""
   },
   "9823": {
@@ -351,7 +351,7 @@
    "tdnet": true,
    "web": false,
    "ir": true,
-   "last_attempt": "2026-10-29T03:34:33+00:00",
+   "last_attempt": "2026-10-29T04:30:37+00:00",
    "last_parse_failure": "",
    "reason": ""
   },
@@ -364,8 +364,8 @@
    "tdnet": true,
    "web": false,
    "ir": true,
-   "last_attempt": "2026-10-29T03:34:33+00:00",
-   "last_parse_failure": "2026-10-29T03:34:33+00:00",
+   "last_attempt": "2026-10-29T04:30:37+00:00",
+   "last_parse_failure": "2026-10-29T04:30:37+00:00",
    "reason": ""
   },
   "3093": {
@@ -377,8 +377,8 @@
    "tdnet": true,
    "web": false,
    "ir": true,
-   "last_attempt": "2026-10-29T03:34:33+00:00",
-   "last_parse_failure": "2026-10-29T03:34:33+00:00",
+   "last_attempt": "2026-10-29T04:30:37+00:00",
+   "last_parse_failure": "2026-10-29T04:30:37+00:00",
    "reason": ""
   },
   "9861": {
@@ -572,8 +572,8 @@
    "tdnet": false,
    "web": true,
    "ir": true,
-   "last_attempt": "2026-10-29T03:34:33+00:00",
-   "last_parse_failure": "2026-10-29T03:34:33+00:00",
+   "last_attempt": "2026-10-29T04:30:37+00:00",
+   "last_parse_failure": "2026-10-29T04:30:37+00:00",
    "reason": ""
   },
   "7616": {
@@ -650,7 +650,7 @@
    "tdnet": false,
    "web": false,
    "ir": false,
-   "last_attempt": "2026-10-29T03:51:15+00:00",
+   "last_attempt": "2026-10-29T04:30:37+00:00",
    "last_parse_failure": "",
    "reason": ""
   },
@@ -689,7 +689,7 @@
    "tdnet": false,
    "web": false,
    "ir": false,
-   "last_attempt": "2026-10-29T03:51:15+00:00",
+   "last_attempt": "2026-10-29T04:30:37+00:00",
    "last_parse_failure": "",
    "reason": ""
   },
@@ -728,8 +728,8 @@
    "tdnet": false,
    "web": false,
    "ir": true,
-   "last_attempt": "2026-10-29T03:51:15+00:00",
-   "last_parse_failure": "2026-10-29T03:51:15+00:00",
+   "last_attempt": "2026-10-29T04:30:37+00:00",
+   "last_parse_failure": "2026-10-29T04:30:37+00:00",
    "reason": ""
   },
   "9021": {
@@ -793,8 +793,8 @@
    "tdnet": false,
    "web": false,
    "ir": true,
-   "last_attempt": "2026-10-29T03:51:15+00:00",
-   "last_parse_failure": "2026-10-29T03:51:15+00:00",
+   "last_attempt": "2026-10-29T04:30:37+00:00",
+   "last_parse_failure": "2026-10-29T04:30:37+00:00",
    "reason": ""
   },
   "2670": {
@@ -923,7 +923,7 @@
    "tdnet": true,
    "web": false,
    "ir": true,
-   "last_attempt": "2026-10-29T03:34:33+00:00",
+   "last_attempt": "2026-10-29T04:30:37+00:00",
    "last_parse_failure": "",
    "reason": ""
   },
@@ -962,7 +962,7 @@
    "tdnet": true,
    "web": false,
    "ir": true,
-   "last_attempt": "2026-10-28T22:12:47+00:00",
+   "last_attempt": "2026-10-29T04:30:37+00:00",
    "last_parse_failure": "",
    "reason": ""
   },
@@ -1040,8 +1040,8 @@
    "tdnet": true,
    "web": false,
    "ir": true,
-   "last_attempt": "2026-10-29T03:34:33+00:00",
-   "last_parse_failure": "2026-10-29T03:34:33+00:00",
+   "last_attempt": "2026-10-29T04:30:37+00:00",
+   "last_parse_failure": "2026-10-29T04:30:37+00:00",
    "reason": ""
   },
   "8798": {
@@ -1144,8 +1144,8 @@
    "tdnet": true,
    "web": false,
    "ir": true,
-   "last_attempt": "2026-10-29T03:34:33+00:00",
-   "last_parse_failure": "2026-10-29T03:34:33+00:00",
+   "last_attempt": "2026-10-29T04:30:37+00:00",
+   "last_parse_failure": "2026-10-29T04:30:37+00:00",
    "reason": ""
   },
   "3160": {
@@ -1170,7 +1170,7 @@
    "tdnet": true,
    "web": false,
    "ir": true,
-   "last_attempt": "2026-10-29T03:34:33+00:00",
+   "last_attempt": "2026-10-29T04:30:37+00:00",
    "last_parse_failure": "",
    "reason": ""
   },
@@ -1222,8 +1222,8 @@
    "tdnet": false,
    "web": false,
    "ir": true,
-   "last_attempt": "2026-10-29T03:34:33+00:00",
-   "last_parse_failure": "2026-10-29T03:34:33+00:00",
+   "last_attempt": "2026-10-29T04:30:37+00:00",
+   "last_parse_failure": "2026-10-29T04:30:37+00:00",
    "reason": ""
   },
   "7682": {
@@ -1274,8 +1274,8 @@
    "tdnet": false,
    "web": false,
    "ir": true,
-   "last_attempt": "2026-10-29T03:34:33+00:00",
-   "last_parse_failure": "2026-10-29T03:34:33+00:00",
+   "last_attempt": "2026-10-29T04:30:37+00:00",
+   "last_parse_failure": "2026-10-29T04:30:37+00:00",
    "reason": ""
   },
   "9166": {
@@ -1339,8 +1339,8 @@
    "tdnet": true,
    "web": false,
    "ir": true,
-   "last_attempt": "2026-10-29T03:34:33+00:00",
-   "last_parse_failure": "2026-10-29T03:34:33+00:00",
+   "last_attempt": "2026-10-29T04:30:37+00:00",
+   "last_parse_failure": "2026-10-29T04:30:37+00:00",
    "reason": ""
   },
   "2337": {
@@ -1365,8 +1365,8 @@
    "tdnet": true,
    "web": false,
    "ir": true,
-   "last_attempt": "2026-10-29T03:34:33+00:00",
-   "last_parse_failure": "2026-10-29T03:34:33+00:00",
+   "last_attempt": "2026-10-29T04:30:37+00:00",
+   "last_parse_failure": "2026-10-29T04:30:37+00:00",
    "reason": ""
   },
   "2705": {
@@ -1417,8 +1417,8 @@
    "tdnet": true,
    "web": false,
    "ir": true,
-   "last_attempt": "2026-10-29T03:34:33+00:00",
-   "last_parse_failure": "2026-10-29T03:34:33+00:00",
+   "last_attempt": "2026-10-29T04:30:37+00:00",
+   "last_parse_failure": "2026-10-29T04:30:37+00:00",
    "reason": ""
   },
   "3370": {
@@ -1612,8 +1612,8 @@
    "tdnet": true,
    "web": false,
    "ir": true,
-   "last_attempt": "2026-10-29T03:34:33+00:00",
-   "last_parse_failure": "2026-10-29T03:34:33+00:00",
+   "last_attempt": "2026-10-29T04:30:37+00:00",
+   "last_parse_failure": "2026-10-29T04:30:37+00:00",
    "reason": ""
   },
   "2722": {
@@ -1625,7 +1625,7 @@
    "tdnet": true,
    "web": false,
    "ir": true,
-   "last_attempt": "2026-10-29T03:34:33+00:00",
+   "last_attempt": "2026-10-29T04:30:37+00:00",
    "last_parse_failure": "",
    "reason": ""
   },
@@ -1638,8 +1638,8 @@
    "tdnet": false,
    "web": true,
    "ir": true,
-   "last_attempt": "2026-10-29T03:34:33+00:00",
-   "last_parse_failure": "2026-10-29T03:34:33+00:00",
+   "last_attempt": "2026-10-29T04:30:37+00:00",
+   "last_parse_failure": "2026-10-29T04:30:37+00:00",
    "reason": ""
   },
   "3069": {
@@ -1664,8 +1664,8 @@
    "tdnet": false,
    "web": false,
    "ir": true,
-   "last_attempt": "2026-10-29T03:34:33+00:00",
-   "last_parse_failure": "2026-10-29T03:34:33+00:00",
+   "last_attempt": "2026-10-29T04:30:37+00:00",
+   "last_parse_failure": "2026-10-29T04:30:37+00:00",
    "reason": ""
   },
   "3395": {
@@ -1690,8 +1690,8 @@
    "tdnet": false,
    "web": false,
    "ir": true,
-   "last_attempt": "2026-10-29T03:34:33+00:00",
-   "last_parse_failure": "2026-10-29T03:34:33+00:00",
+   "last_attempt": "2026-10-29T04:30:37+00:00",
+   "last_parse_failure": "2026-10-29T04:30:37+00:00",
    "reason": ""
   },
   "6073": {
@@ -1742,8 +1742,8 @@
    "tdnet": true,
    "web": false,
    "ir": true,
-   "last_attempt": "2026-10-29T03:34:33+00:00",
-   "last_parse_failure": "2026-10-29T03:34:33+00:00",
+   "last_attempt": "2026-10-29T04:30:37+00:00",
+   "last_parse_failure": "2026-10-29T04:30:37+00:00",
    "reason": ""
   },
   "8214": {
@@ -1859,8 +1859,8 @@
    "tdnet": true,
    "web": false,
    "ir": true,
-   "last_attempt": "2026-10-29T03:34:33+00:00",
-   "last_parse_failure": "2026-10-29T03:34:33+00:00",
+   "last_attempt": "2026-10-29T04:30:37+00:00",
+   "last_parse_failure": "2026-10-29T04:30:37+00:00",
    "reason": ""
   },
   "2674": {
@@ -1898,8 +1898,8 @@
    "tdnet": false,
    "web": false,
    "ir": true,
-   "last_attempt": "2026-10-29T03:34:33+00:00",
-   "last_parse_failure": "2026-10-29T03:34:33+00:00",
+   "last_attempt": "2026-10-29T04:30:37+00:00",
+   "last_parse_failure": "2026-10-29T04:30:37+00:00",
    "reason": ""
   },
   "3077": {
@@ -1976,7 +1976,7 @@
    "tdnet": false,
    "web": false,
    "ir": true,
-   "last_attempt": "2026-10-29T03:34:33+00:00",
+   "last_attempt": "2026-10-29T04:30:37+00:00",
    "last_parse_failure": "",
    "reason": ""
   },
@@ -2171,7 +2171,7 @@
    "tdnet": true,
    "web": false,
    "ir": true,
-   "last_attempt": "2026-10-29T03:34:33+00:00",
+   "last_attempt": "2026-10-29T04:30:37+00:00",
    "last_parse_failure": "",
    "reason": ""
   },
@@ -2379,7 +2379,7 @@
    "tdnet": true,
    "web": false,
    "ir": true,
-   "last_attempt": "2026-10-29T03:34:33+00:00",
+   "last_attempt": "2026-10-29T04:30:37+00:00",
    "last_parse_failure": "",
    "reason": ""
   },
@@ -2418,7 +2418,7 @@
    "tdnet": false,
    "web": false,
    "ir": true,
-   "last_attempt": "2026-10-29T03:34:33+00:00",
+   "last_attempt": "2026-10-29T04:30:37+00:00",
    "last_parse_failure": "",
    "reason": ""
   },
@@ -2470,8 +2470,8 @@
    "tdnet": true,
    "web": false,
    "ir": false,
-   "last_attempt": "2026-10-29T02:20:55+00:00",
-   "last_parse_failure": "2026-10-29T02:20:55+00:00",
+   "last_attempt": "2026-10-29T04:30:37+00:00",
+   "last_parse_failure": "2026-10-29T04:30:37+00:00",
    "reason": ""
   },
   "3028": {
@@ -2652,7 +2652,7 @@
    "tdnet": true,
    "web": false,
    "ir": true,
-   "last_attempt": "2026-10-29T03:34:33+00:00",
+   "last_attempt": "2026-10-29T04:30:37+00:00",
    "last_parse_failure": "",
    "reason": ""
   },
@@ -3289,7 +3289,7 @@
    "tdnet": false,
    "web": false,
    "ir": true,
-   "last_attempt": "2026-10-29T03:34:33+00:00",
+   "last_attempt": "2026-10-29T04:30:37+00:00",
    "last_parse_failure": "",
    "reason": ""
   },
@@ -3341,7 +3341,7 @@
    "tdnet": false,
    "web": false,
    "ir": true,
-   "last_attempt": "2026-10-29T03:34:33+00:00",
+   "last_attempt": "2026-10-29T04:30:37+00:00",
    "last_parse_failure": "",
    "reason": ""
   },
@@ -3471,7 +3471,7 @@
    "tdnet": false,
    "web": false,
    "ir": true,
-   "last_attempt": "2026-10-29T03:34:33+00:00",
+   "last_attempt": "2026-10-29T04:30:37+00:00",
    "last_parse_failure": "",
    "reason": ""
   },
@@ -3484,7 +3484,7 @@
    "tdnet": false,
    "web": false,
    "ir": true,
-   "last_attempt": "2026-10-29T03:34:33+00:00",
+   "last_attempt": "2026-10-29T04:30:37+00:00",
    "last_parse_failure": "",
    "reason": ""
   },
@@ -3614,7 +3614,7 @@
    "tdnet": true,
    "web": false,
    "ir": true,
-   "last_attempt": "2026-10-29T03:34:33+00:00",
+   "last_attempt": "2026-10-29T04:30:37+00:00",
    "last_parse_failure": "",
    "reason": ""
   },
@@ -3627,7 +3627,7 @@
    "tdnet": true,
    "web": false,
    "ir": false,
-   "last_attempt": "2026-10-29T03:34:33+00:00",
+   "last_attempt": "2026-10-29T04:30:37+00:00",
    "last_parse_failure": "",
    "reason": ""
   },
@@ -3653,7 +3653,7 @@
    "tdnet": true,
    "web": false,
    "ir": true,
-   "last_attempt": "2026-10-29T03:34:33+00:00",
+   "last_attempt": "2026-10-29T04:30:37+00:00",
    "last_parse_failure": "",
    "reason": ""
   },
@@ -3679,7 +3679,7 @@
    "tdnet": false,
    "web": false,
    "ir": true,
-   "last_attempt": "2026-10-29T03:34:33+00:00",
+   "last_attempt": "2026-10-29T04:30:37+00:00",
    "last_parse_failure": "",
    "reason": ""
   },
@@ -3692,8 +3692,8 @@
    "tdnet": false,
    "web": false,
    "ir": true,
-   "last_attempt": "2026-10-29T03:34:33+00:00",
-   "last_parse_failure": "2026-10-29T03:34:33+00:00",
+   "last_attempt": "2026-10-29T04:30:37+00:00",
+   "last_parse_failure": "2026-10-29T04:30:37+00:00",
    "reason": ""
   },
   "8163": {
@@ -3718,7 +3718,7 @@
    "tdnet": false,
    "web": false,
    "ir": false,
-   "last_attempt": "2026-10-29T03:51:15+00:00",
+   "last_attempt": "2026-10-29T04:30:37+00:00",
    "last_parse_failure": "",
    "reason": ""
   },
@@ -3770,7 +3770,7 @@
    "tdnet": false,
    "web": false,
    "ir": true,
-   "last_attempt": "2026-10-29T03:34:33+00:00",
+   "last_attempt": "2026-10-29T04:30:37+00:00",
    "last_parse_failure": "",
    "reason": ""
   },
@@ -3822,7 +3822,7 @@
    "tdnet": false,
    "web": true,
    "ir": true,
-   "last_attempt": "2026-10-29T03:34:33+00:00",
+   "last_attempt": "2026-10-29T04:30:37+00:00",
    "last_parse_failure": "",
    "reason": ""
   },
@@ -3887,7 +3887,7 @@
    "tdnet": false,
    "web": false,
    "ir": true,
-   "last_attempt": "2026-10-29T03:34:33+00:00",
+   "last_attempt": "2026-10-29T04:30:37+00:00",
    "last_parse_failure": "",
    "reason": ""
   },
@@ -3952,7 +3952,7 @@
    "tdnet": true,
    "web": false,
    "ir": false,
-   "last_attempt": "2026-10-29T03:51:15+00:00",
+   "last_attempt": "2026-10-29T04:30:37+00:00",
    "last_parse_failure": "",
    "reason": ""
   },
@@ -4056,8 +4056,8 @@
    "tdnet": true,
    "web": true,
    "ir": false,
-   "last_attempt": "2026-10-29T02:20:55+00:00",
-   "last_parse_failure": "2026-10-29T02:20:55+00:00",
+   "last_attempt": "2026-10-29T04:30:37+00:00",
+   "last_parse_failure": "2026-10-29T04:30:37+00:00",
    "reason": ""
   },
   "9887": {
@@ -4082,8 +4082,8 @@
    "tdnet": true,
    "web": false,
    "ir": false,
-   "last_attempt": "2026-10-29T02:20:55+00:00",
-   "last_parse_failure": "2026-10-29T02:20:55+00:00",
+   "last_attempt": "2026-10-29T04:30:37+00:00",
+   "last_parse_failure": "2026-10-29T04:30:37+00:00",
    "reason": ""
   },
   "9900": {
@@ -4433,8 +4433,8 @@
    "tdnet": true,
    "web": false,
    "ir": false,
-   "last_attempt": "2026-10-29T02:20:55+00:00",
-   "last_parse_failure": "2026-10-29T02:20:55+00:00",
+   "last_attempt": "2026-10-29T04:30:37+00:00",
+   "last_parse_failure": "2026-10-29T04:30:37+00:00",
    "reason": ""
   },
   "212A": {
