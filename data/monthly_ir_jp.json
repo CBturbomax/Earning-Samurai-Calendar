@@ -293,7 +293,7 @@
   },
   "2678": {
    "page": "https://www.askul.co.jp/corp/investor/finance/",
-   "fetch_failed": "2026-10-29T05:30:36+00:00"
+   "fetch_failed": "2026-10-29T06:24:39+00:00"
   },
   "2681": {
    "miss": "2026-10-28"
@@ -568,7 +568,7 @@
   "8963": {
    "page": "https://www.invincible-inv.co.jp",
    "found": "2026-10-13",
-   "parse_miss": "2026-10-29T05:30:36+00:00"
+   "parse_miss": "2026-10-29T06:24:39+00:00"
   },
   "9989": {
    "page": "https://www.sundrug.co.jp/ir/irdata/monthly"
@@ -620,7 +620,7 @@
   "9279": {
    "page": "https://www.gift-group.co.jp/ir/library/04",
    "found": "2026-10-13",
-   "parse_miss": "2026-10-29T05:30:36+00:00"
+   "parse_miss": "2026-10-29T06:24:39+00:00"
   },
   "2337": {
    "page": "https://www.ichigo.gr.jp",
@@ -652,11 +652,11 @@
   "9166": {
    "page": "https://genda.jp/2026/09/16/monthly-report-2609/",
    "found": "2026-10-13",
-   "parse_miss": "2026-10-29T05:30:36+00:00"
+   "parse_miss": "2026-10-29T06:24:39+00:00"
   },
   "3612": {
    "page": "https://corp.world.co.jp/ir/library/monthly/",
-   "fetch_failed": "2026-10-29T05:30:36+00:00"
+   "fetch_failed": "2026-10-29T06:24:39+00:00"
   },
   "8153": {
    "page": "https://www.mos.co.jp/company/ir/library/monthly_info/",
@@ -673,7 +673,7 @@
   "7513": {
    "page": "https://www.kojima.net/corporation/ir/bulletin.html",
    "found": "2026-10-13",
-   "parse_miss": "2026-10-29T05:30:36+00:00"
+   "parse_miss": "2026-10-29T06:24:39+00:00"
   },
   "8255": {
    "page": "https://www.axial-r.com/ir/monthlysalestrends/",
@@ -706,22 +706,22 @@
   "8244": {
    "page": "https://www.d-kintetsu.co.jp/corporate/ir/finance/recent_results.html",
    "found": "2026-10-13",
-   "parse_miss": "2026-10-29T05:30:36+00:00"
+   "parse_miss": "2026-10-29T06:24:39+00:00"
   },
   "8715": {
    "page": "https://www.anicom.co.jp/ir/financial/business/",
    "found": "2026-10-13",
-   "parse_miss": "2026-10-29T05:30:36+00:00"
+   "parse_miss": "2026-10-29T06:24:39+00:00"
   },
   "7412": {
    "page": "https://www.atom-corp.co.jp/ir/monthlysale.php",
    "found": "2026-10-13",
-   "parse_miss": "2026-10-29T05:30:36+00:00"
+   "parse_miss": "2026-10-29T06:24:39+00:00"
   },
   "8160": {
    "page": "https://www.kisoji.co.jp/ir/monthly.html",
    "found": "2026-10-13",
-   "parse_miss": "2026-10-29T05:30:36+00:00"
+   "parse_miss": "2026-10-29T06:24:39+00:00"
   },
   "9900": {
    "page": "https://www.sagami-holdings.co.jp/ir/month/",
@@ -1184,7 +1184,7 @@
   "7512": {
    "page": "https://www.aeon-hokkaido.jp/corporation/month/",
    "found": "2026-10-13",
-   "parse_miss": "2026-10-29T05:30:36+00:00"
+   "parse_miss": "2026-10-29T06:24:39+00:00"
   },
   "9842": {
    "page": "https://www.arclands.co.jp/ja/ir/library/getsuji.html",
@@ -3765,7 +3765,7 @@
      "doc": "https://www.onward-hd.co.jp/ir/finance/monthly.html"
     }
    },
-   "ts": "2026-10-29T05:30:36+00:00"
+   "ts": "2026-10-29T06:24:39+00:00"
   },
   "9948": {
    "name": "アークス",
@@ -5280,7 +5280,7 @@
      "doc": "https://www.axial-r.com/ir/monthlysalestrends/"
     }
    },
-   "ts": "2026-10-29T05:30:36+00:00"
+   "ts": "2026-10-29T06:24:39+00:00"
   },
   "9900": {
    "name": "サガミホールディングス",
@@ -5378,7 +5378,7 @@
      "doc": "https://www.sagami-holdings.co.jp/ir/month/"
     }
    },
-   "ts": "2026-10-29T05:30:36+00:00",
+   "ts": "2026-10-29T06:24:39+00:00",
    "updated": "2026-10-08"
   },
   "8011": {
@@ -5483,7 +5483,7 @@
      "doc": "https://www.mrmaxhd.co.jp/ir/ir-library/monthly/"
     }
    },
-   "ts": "2026-10-29T00:03:51+00:00",
+   "ts": "2026-10-29T06:24:39+00:00",
    "pdf_ts": "2026-10-28T17:52:55+00:00",
    "pdf": {
     "2022-04": {
@@ -7883,7 +7883,7 @@
      "doc": "https://www.kappa-create.co.jp/monthly2020/"
     }
    },
-   "ts": "2026-10-29T05:30:36+00:00"
+   "ts": "2026-10-29T06:24:39+00:00"
   },
   "2791": {
    "name": "大黒天物産",
@@ -8573,7 +8573,7 @@
      "doc": "https://srsholdings.com/pages/ir-library-monthly"
     }
    },
-   "ts": "2026-10-29T05:30:36+00:00"
+   "ts": "2026-10-29T06:24:39+00:00"
   },
   "9278": {
    "name": "ブックオフＧＨＤ",
@@ -16865,8 +16865,8 @@
    "name": "ＳＲＡホールディングス",
    "page": "https://www.sra-hd.co.jp/ir/ir-news/index_2026.html",
    "months": {},
-   "ts": "2026-10-29T05:30:36+00:00",
-   "pdf_ts": "2026-10-29T05:30:36+00:00",
+   "ts": "2026-10-29T06:24:39+00:00",
+   "pdf_ts": "2026-10-29T06:24:39+00:00",
    "pdf": {
     "2026-06": {
      "doc": "https://www.sra-hd.co.jp/Portals/0/ir/negotiable/houkoku201408.pdf",
@@ -16882,6 +16882,31 @@
      "doc": "https://www.sra-hd.co.jp/Portals/0/ir/negotiable/houkoku201408.pdf",
      "rev": 35146000000.0,
      "metric": "売上高（百万円）"
+    },
+    "2006-03": {
+     "doc": "https://www.sra-hd.co.jp/Portals/0/ir/settlement/fuzoku/fuzoku200908.pdf",
+     "rev": 8687000000.0,
+     "metric": "全社合計"
+    },
+    "2007-03": {
+     "doc": "https://www.sra-hd.co.jp/Portals/0/ir/settlement/fuzoku/fuzoku200908.pdf",
+     "rev": 9369000000.0,
+     "metric": "全社合計"
+    },
+    "2008-03": {
+     "doc": "https://www.sra-hd.co.jp/Portals/0/ir/settlement/fuzoku/fuzoku200908.pdf",
+     "rev": 12573000000.0,
+     "metric": "全社合計"
+    },
+    "2009-03": {
+     "doc": "https://www.sra-hd.co.jp/Portals/0/ir/settlement/fuzoku/fuzoku200908.pdf",
+     "rev": 10681000000.0,
+     "metric": "全社合計"
+    },
+    "2010-03": {
+     "doc": "https://www.sra-hd.co.jp/Portals/0/ir/settlement/fuzoku/fuzoku200908.pdf",
+     "rev": 8653000000.0,
+     "metric": "全社合計"
     }
    }
   },
@@ -18051,7 +18076,7 @@
    "name": "テラプローブ",
    "page": "https://www.teraprobe.com",
    "months": {},
-   "ts": "2026-10-29T05:30:36+00:00",
+   "ts": "2026-10-29T06:24:39+00:00",
    "pdf_ts": "2026-10-29T00:03:51+00:00",
    "pdf": {
     "2026-07": {
@@ -18121,7 +18146,7 @@
    "name": "オートバックス",
    "page": "https://www.autobacs.co.jp/ja/ir/finance/monthly_report.html",
    "months": {},
-   "ts": "2026-10-29T05:30:36+00:00",
+   "ts": "2026-10-29T06:24:39+00:00",
    "pdf_ts": "2026-10-29T00:03:51+00:00",
    "pdf": {
     "2026-04": {
@@ -19387,7 +19412,7 @@
    "name": "アークランズ",
    "page": "https://www.arclands.co.jp/ja/ir/library/getsuji.html",
    "months": {},
-   "ts": "2026-10-29T05:30:36+00:00",
+   "ts": "2026-10-29T06:24:39+00:00",
    "pdf_ts": "2026-10-29T00:03:51+00:00",
    "pdf": {
     "2025-03": {
@@ -21244,7 +21269,7 @@
      "doc": "https://www.halows.com/ir/finance_monthly/"
     }
    },
-   "ts": "2026-10-29T05:30:36+00:00"
+   "ts": "2026-10-29T06:24:39+00:00"
   },
   "3030": {
    "name": "ハブ",
@@ -21381,7 +21406,7 @@
      "doc": "https://www.baroque-global.com/jp/notice/download/428/7583"
     }
    },
-   "ts": "2026-10-29T00:22:09+00:00",
+   "ts": "2026-10-29T06:24:39+00:00",
    "pdf_ts": "2026-10-29T00:22:09+00:00",
    "pdf": {
     "2026-03": {
@@ -23077,7 +23102,7 @@
      "doc": "https://www.d-kintetsu.co.jp/corporate/ir/upload_file/m005-m005_01/20261001.pdf"
     }
    },
-   "ts": "2026-10-29T05:30:36+00:00",
+   "ts": "2026-10-29T06:24:39+00:00",
    "pdf_ts": "2026-10-29T00:03:51+00:00"
   },
   "9627": {
@@ -23678,7 +23703,7 @@
      "doc": "https://www.tsi-holdings.com/tsuki/20222.html"
     }
    },
-   "ts": "2026-10-29T05:30:36+00:00"
+   "ts": "2026-10-29T06:24:39+00:00"
   },
   "3549": {
    "name": "クスリのアオキＨＤ",
@@ -25202,7 +25227,7 @@
      "doc": "https://www.atom-corp.co.jp/ir/ir_disp.php?ir_no=868"
     }
    },
-   "ts": "2026-10-29T05:30:36+00:00"
+   "ts": "2026-10-29T06:24:39+00:00"
   },
   "7596": {
    "name": "魚力",
@@ -25292,7 +25317,7 @@
      "doc": "https://www.release.tdnet.info/inbs/140120261008547779.pdf"
     }
    },
-   "ts": "2026-10-29T05:30:36+00:00",
+   "ts": "2026-10-29T06:24:39+00:00",
    "pdf_ts": "2026-10-29T00:03:51+00:00",
    "pdf": {
     "2025-09": {
@@ -25432,7 +25457,7 @@
      "doc": "https://genda.jp/wp-content/uploads/2026/09/【適時開示】GENDA-売上進捗レポート発行に関するお知らせ【2026-年９月】.pdf"
     }
    },
-   "ts": "2026-10-29T05:30:36+00:00",
+   "ts": "2026-10-29T06:24:39+00:00",
    "pdf_ts": "2026-10-28T16:45:30+00:00"
   },
   "8963": {
@@ -25444,7 +25469,7 @@
      "doc": "https://www.invincible-inv.co.jp/news/upd/140120260925540060.pdf"
     }
    },
-   "ts": "2026-10-29T05:30:36+00:00",
+   "ts": "2026-10-29T06:24:39+00:00",
    "pdf_ts": "2026-10-28T19:15:46+00:00"
   },
   "2294": {
@@ -25575,7 +25600,7 @@
      "doc": "https://www.ootoya.jp/ir/financial/monthly.html"
     }
    },
-   "ts": "2026-10-29T05:30:36+00:00"
+   "ts": "2026-10-29T06:24:39+00:00"
   },
   "2753": {
    "name": "あみやき",
@@ -25606,7 +25631,7 @@
      "doc": "https://amiyakitei.co.jp/prd/wordpress/wp-content/uploads/2026/10/連結月次売上前年比較推移表_202609.pdf"
     }
    },
-   "ts": "2026-10-29T00:03:51+00:00",
+   "ts": "2026-10-29T06:24:39+00:00",
    "pdf_ts": "2026-10-29T00:03:51+00:00",
    "pdf": {
     "2026-04": {
@@ -26383,7 +26408,7 @@
      "doc": "https://japanir.jp/wp-content/uploads/2026/10/8267-20261013-05.pdf"
     }
    },
-   "ts": "2026-10-29T05:30:36+00:00"
+   "ts": "2026-10-29T06:24:39+00:00"
   },
   "7604": {
    "name": "梅の花グループ",
@@ -26532,7 +26557,7 @@
      "doc": "https://www.gift-group.co.jp/ir/library/04"
     }
    },
-   "ts": "2026-10-29T05:30:36+00:00"
+   "ts": "2026-10-29T06:24:39+00:00"
   },
   "9831": {
    "name": "ヤマダ",
@@ -27028,7 +27053,7 @@
      "doc": "https://www.kojima.net/corporation/ir/pdf/bulletin_20261005.pdf"
     }
    },
-   "ts": "2026-10-29T05:30:36+00:00"
+   "ts": "2026-10-29T06:24:39+00:00"
   },
   "7610": {
    "name": "テイツー",
@@ -27329,8 +27354,8 @@
      "doc": "https://contents.xj-storage.jp/xcontents/AS91042/78cc9910/d4e2/41f3/9c4e/5ec10db3f1bf/140120261013549234.pdf"
     }
    },
-   "ts": "2026-10-29T00:03:51+00:00",
-   "pdf_ts": "2026-10-29T00:03:51+00:00",
+   "ts": "2026-10-29T06:24:39+00:00",
+   "pdf_ts": "2026-10-29T06:24:39+00:00",
    "pdf": {
     "2025-10": {
      "doc": "https://contents.xj-storage.jp/xcontents/AS91042/69c48ac5/0f0f/4f8d/b5a8/9201a94ecc4c/140120251210517124.pdf",
@@ -27495,13 +27520,13 @@
      "metric": "前年同月比"
     },
     "2023-04": {
-     "doc": "https://contents.xj-storage.jp/xcontents/AS91042/e90f6a0f/9a24/40e7/982f/e28b755d6bb4/140120230709519428.pdf",
+     "doc": "https://contents.xj-storage.jp/xcontents/AS91042/7fe78836/6926/41b7/b437/608182811ab5/140120230612501244.pdf",
      "rev": 2215000000.0,
      "yoy": 110.7,
      "metric": "全店売上高"
     },
     "2023-05": {
-     "doc": "https://contents.xj-storage.jp/xcontents/AS91042/e90f6a0f/9a24/40e7/982f/e28b755d6bb4/140120230709519428.pdf",
+     "doc": "https://contents.xj-storage.jp/xcontents/AS91042/7fe78836/6926/41b7/b437/608182811ab5/140120230612501244.pdf",
      "rev": 2256000000.0,
      "yoy": 106.9,
      "metric": "全店売上高"
@@ -27558,6 +27583,132 @@
     "2024-03": {
      "doc": "https://contents.xj-storage.jp/xcontents/AS91042/0cbdb9e4/87ba/448e/aebd/1c67cf6ad231/140120240410568168.pdf",
      "yoy": 113.4,
+     "metric": "前年同月比"
+    },
+    "2022-04": {
+     "doc": "https://contents.xj-storage.jp/xcontents/AS91042/2ecb8405/2348/4524/9aae/f6c448126ea7/140120220610576396.pdf",
+     "rev": 2001000000.0,
+     "yoy": 110.1,
+     "metric": "全店売上高"
+    },
+    "2022-05": {
+     "doc": "https://contents.xj-storage.jp/xcontents/AS91042/2ecb8405/2348/4524/9aae/f6c448126ea7/140120220610576396.pdf",
+     "rev": 2111000000.0,
+     "yoy": 108.7,
+     "metric": "全店売上高"
+    },
+    "2022-06": {
+     "doc": "https://contents.xj-storage.jp/xcontents/AS91042/57bd27b3/1020/4ea5/9445/2f6cd2999b8c/140120220711597619.pdf",
+     "rev": 1925000000.0,
+     "yoy": 110.8,
+     "metric": "全店売上高"
+    },
+    "2022-07": {
+     "doc": "https://contents.xj-storage.jp/xcontents/AS91042/41790e72/2592/481b/9f9d/9c3e71666667/140120220810517376.pdf",
+     "rev": 2029000000.0,
+     "yoy": 113.0,
+     "metric": "全店売上高"
+    },
+    "2022-08": {
+     "doc": "https://contents.xj-storage.jp/xcontents/AS91042/b26b0cba/9d02/4761/962d/658858ea32bc/140120220912531142.pdf",
+     "rev": 1925000000.0,
+     "yoy": 109.2,
+     "metric": "全店売上高"
+    },
+    "2022-09": {
+     "doc": "https://contents.xj-storage.jp/xcontents/AS91042/4bb80eca/e292/4803/814b/430a155a1efd/140120221011542381.pdf",
+     "rev": 1915000000.0,
+     "yoy": 109.4,
+     "metric": "全店売上高"
+    },
+    "2022-10": {
+     "doc": "https://contents.xj-storage.jp/xcontents/AS91042/116302ee/835f/4f11/9a18/8daea0e04784/140120221212577245.pdf",
+     "yoy": 110.8,
+     "metric": "前年同月比"
+    },
+    "2022-11": {
+     "doc": "https://contents.xj-storage.jp/xcontents/AS91042/116302ee/835f/4f11/9a18/8daea0e04784/140120221212577245.pdf",
+     "yoy": 107.5,
+     "metric": "前年同月比"
+    },
+    "2022-12": {
+     "doc": "https://contents.xj-storage.jp/xcontents/AS91042/f7fcfd5d/3501/455d/9e27/60ce0394ccaa/140120230109586634.pdf",
+     "yoy": 106.0,
+     "metric": "前年同月比"
+    },
+    "2023-01": {
+     "doc": "https://contents.xj-storage.jp/xcontents/AS91042/cf8fb69d/dcd1/4c6c/9616/ac255c063c90/140120230209505683.pdf",
+     "yoy": 109.8,
+     "metric": "前年同月比"
+    },
+    "2023-02": {
+     "doc": "https://contents.xj-storage.jp/xcontents/AS91042/78e1ae78/e76d/4da6/8378/8d0382ccb370/140120230310528577.pdf",
+     "yoy": 113.6,
+     "metric": "前年同月比"
+    },
+    "2023-03": {
+     "doc": "https://contents.xj-storage.jp/xcontents/AS91042/d6afeeb1/1950/4d17/ba6d/96ce23f893b0/140120230409544359.pdf",
+     "yoy": 108.9,
+     "metric": "前年同月比"
+    },
+    "2021-04": {
+     "doc": "https://contents.xj-storage.jp/xcontents/AS91042/b9ad691c/c1dd/40d5/8c21/ae55572f475f/140120220510536633.pdf",
+     "yoy": 116.5,
+     "metric": "既存店売上高"
+    },
+    "2021-05": {
+     "doc": "https://contents.xj-storage.jp/xcontents/AS91042/b9ad691c/c1dd/40d5/8c21/ae55572f475f/140120220510536633.pdf",
+     "yoy": 110.9,
+     "metric": "既存店売上高"
+    },
+    "2021-06": {
+     "doc": "https://contents.xj-storage.jp/xcontents/AS91042/b9ad691c/c1dd/40d5/8c21/ae55572f475f/140120220510536633.pdf",
+     "yoy": 92.5,
+     "metric": "既存店売上高"
+    },
+    "2021-07": {
+     "doc": "https://contents.xj-storage.jp/xcontents/AS91042/b9ad691c/c1dd/40d5/8c21/ae55572f475f/140120220510536633.pdf",
+     "yoy": 95.9,
+     "metric": "既存店売上高"
+    },
+    "2021-08": {
+     "doc": "https://contents.xj-storage.jp/xcontents/AS91042/b9ad691c/c1dd/40d5/8c21/ae55572f475f/140120220510536633.pdf",
+     "yoy": 97.1,
+     "metric": "既存店売上高"
+    },
+    "2021-09": {
+     "doc": "https://contents.xj-storage.jp/xcontents/AS91042/b9ad691c/c1dd/40d5/8c21/ae55572f475f/140120220510536633.pdf",
+     "yoy": 101.7,
+     "metric": "既存店売上高"
+    },
+    "2021-10": {
+     "doc": "https://contents.xj-storage.jp/xcontents/AS91042/54e78f30/a122/4065/a262/e3bfe5193340/140120220411519783.pdf",
+     "yoy": 108.0,
+     "metric": "前年同月比"
+    },
+    "2021-11": {
+     "doc": "https://contents.xj-storage.jp/xcontents/AS91042/54e78f30/a122/4065/a262/e3bfe5193340/140120220411519783.pdf",
+     "yoy": 108.0,
+     "metric": "前年同月比"
+    },
+    "2021-12": {
+     "doc": "https://contents.xj-storage.jp/xcontents/AS91042/54e78f30/a122/4065/a262/e3bfe5193340/140120220411519783.pdf",
+     "yoy": 109.1,
+     "metric": "前年同月比"
+    },
+    "2022-01": {
+     "doc": "https://contents.xj-storage.jp/xcontents/AS91042/54e78f30/a122/4065/a262/e3bfe5193340/140120220411519783.pdf",
+     "yoy": 115.3,
+     "metric": "前年同月比"
+    },
+    "2022-02": {
+     "doc": "https://contents.xj-storage.jp/xcontents/AS91042/54e78f30/a122/4065/a262/e3bfe5193340/140120220411519783.pdf",
+     "yoy": 105.2,
+     "metric": "前年同月比"
+    },
+    "2022-03": {
+     "doc": "https://contents.xj-storage.jp/xcontents/AS91042/54e78f30/a122/4065/a262/e3bfe5193340/140120220411519783.pdf",
+     "yoy": 110.5,
      "metric": "前年同月比"
     }
    }
@@ -27770,8 +27921,8 @@
      "doc": "https://contents.xj-storage.jp/xcontents/AS99965/5f8b2cae/33d3/4679/a620/69265d365b2f/140120261008548139.pdf"
     }
    },
-   "ts": "2026-10-29T00:03:51+00:00",
-   "pdf_ts": "2026-10-29T00:03:51+00:00",
+   "ts": "2026-10-29T06:24:39+00:00",
+   "pdf_ts": "2026-10-29T06:24:39+00:00",
    "pdf": {
     "2025-04": {
      "doc": "https://contents.xj-storage.jp/xcontents/AS99965/ff7bc483/7906/461f/9038/5d8363184a38/140120250610585600.pdf",
@@ -28164,37 +28315,37 @@
      "metric": "売上"
     },
     "2019-04": {
-     "doc": "https://contents.xj-storage.jp/xcontents/AS99965/d9f59741/f155/434a/b34b/58438bce4621/140120200514414414.pdf",
+     "doc": "https://contents.xj-storage.jp/xcontents/AS99965/3d54aa5b/935f/485d/a487/f6258b5860bb/140120190910496344.pdf",
      "yoy": 122.1,
      "metric": "売上"
     },
     "2019-05": {
-     "doc": "https://contents.xj-storage.jp/xcontents/AS99965/d9f59741/f155/434a/b34b/58438bce4621/140120200514414414.pdf",
+     "doc": "https://contents.xj-storage.jp/xcontents/AS99965/3d54aa5b/935f/485d/a487/f6258b5860bb/140120190910496344.pdf",
      "yoy": 123.4,
      "metric": "売上"
     },
     "2019-06": {
-     "doc": "https://contents.xj-storage.jp/xcontents/AS99965/d9f59741/f155/434a/b34b/58438bce4621/140120200514414414.pdf",
+     "doc": "https://contents.xj-storage.jp/xcontents/AS99965/3d54aa5b/935f/485d/a487/f6258b5860bb/140120190910496344.pdf",
      "yoy": 119.8,
      "metric": "売上"
     },
     "2019-07": {
-     "doc": "https://contents.xj-storage.jp/xcontents/AS99965/d9f59741/f155/434a/b34b/58438bce4621/140120200514414414.pdf",
+     "doc": "https://contents.xj-storage.jp/xcontents/AS99965/3d54aa5b/935f/485d/a487/f6258b5860bb/140120190910496344.pdf",
      "yoy": 116.4,
      "metric": "売上"
     },
     "2019-08": {
-     "doc": "https://contents.xj-storage.jp/xcontents/AS99965/d9f59741/f155/434a/b34b/58438bce4621/140120200514414414.pdf",
+     "doc": "https://contents.xj-storage.jp/xcontents/AS99965/3d54aa5b/935f/485d/a487/f6258b5860bb/140120190910496344.pdf",
      "yoy": 122.5,
      "metric": "売上"
     },
     "2019-09": {
-     "doc": "https://contents.xj-storage.jp/xcontents/AS99965/d9f59741/f155/434a/b34b/58438bce4621/140120200514414414.pdf",
+     "doc": "https://contents.xj-storage.jp/xcontents/AS99965/180289f0/aec1/4d33/922c/74b1d841567d/140120191108422128.pdf",
      "yoy": 136.3,
      "metric": "売上"
     },
     "2019-10": {
-     "doc": "https://contents.xj-storage.jp/xcontents/AS99965/d9f59741/f155/434a/b34b/58438bce4621/140120200514414414.pdf",
+     "doc": "https://contents.xj-storage.jp/xcontents/AS99965/180289f0/aec1/4d33/922c/74b1d841567d/140120191108422128.pdf",
      "yoy": 109.3,
      "metric": "売上"
     },
@@ -28221,6 +28372,186 @@
     "2020-03": {
      "doc": "https://contents.xj-storage.jp/xcontents/AS99965/d9f59741/f155/434a/b34b/58438bce4621/140120200514414414.pdf",
      "yoy": 97.9,
+     "metric": "売上"
+    },
+    "2018-04": {
+     "doc": "https://contents.xj-storage.jp/xcontents/AS99965/81be3964/a517/4771/94bd/4ad6e2b4144d/140120190208473007.pdf",
+     "yoy": 91.4,
+     "metric": "売上"
+    },
+    "2018-05": {
+     "doc": "https://contents.xj-storage.jp/xcontents/AS99965/81be3964/a517/4771/94bd/4ad6e2b4144d/140120190208473007.pdf",
+     "yoy": 89.1,
+     "metric": "売上"
+    },
+    "2018-06": {
+     "doc": "https://contents.xj-storage.jp/xcontents/AS99965/81be3964/a517/4771/94bd/4ad6e2b4144d/140120190208473007.pdf",
+     "yoy": 93.3,
+     "metric": "売上"
+    },
+    "2018-07": {
+     "doc": "https://contents.xj-storage.jp/xcontents/AS99965/81be3964/a517/4771/94bd/4ad6e2b4144d/140120190208473007.pdf",
+     "yoy": 93.4,
+     "metric": "売上"
+    },
+    "2018-08": {
+     "doc": "https://contents.xj-storage.jp/xcontents/AS99965/81be3964/a517/4771/94bd/4ad6e2b4144d/140120190208473007.pdf",
+     "yoy": 93.2,
+     "metric": "売上"
+    },
+    "2018-09": {
+     "doc": "https://contents.xj-storage.jp/xcontents/AS99965/81be3964/a517/4771/94bd/4ad6e2b4144d/140120190208473007.pdf",
+     "yoy": 95.6,
+     "metric": "売上"
+    },
+    "2018-10": {
+     "doc": "https://contents.xj-storage.jp/xcontents/AS99965/81be3964/a517/4771/94bd/4ad6e2b4144d/140120190208473007.pdf",
+     "yoy": 94.0,
+     "metric": "売上"
+    },
+    "2018-11": {
+     "doc": "https://contents.xj-storage.jp/xcontents/AS99965/81be3964/a517/4771/94bd/4ad6e2b4144d/140120190208473007.pdf",
+     "yoy": 92.7,
+     "metric": "売上"
+    },
+    "2018-12": {
+     "doc": "https://contents.xj-storage.jp/xcontents/AS99965/81be3964/a517/4771/94bd/4ad6e2b4144d/140120190208473007.pdf",
+     "yoy": 111.2,
+     "metric": "売上"
+    },
+    "2019-01": {
+     "doc": "https://contents.xj-storage.jp/xcontents/AS99965/81be3964/a517/4771/94bd/4ad6e2b4144d/140120190208473007.pdf",
+     "yoy": 116.3,
+     "metric": "売上"
+    },
+    "2019-02": {
+     "doc": "https://contents.xj-storage.jp/xcontents/AS99965/3d54aa5b/935f/485d/a487/f6258b5860bb/140120190910496344.pdf",
+     "yoy": 116.7,
+     "metric": "売上"
+    },
+    "2019-03": {
+     "doc": "https://contents.xj-storage.jp/xcontents/AS99965/3d54aa5b/935f/485d/a487/f6258b5860bb/140120190910496344.pdf",
+     "yoy": 125.3,
+     "metric": "売上"
+    },
+    "2017-04": {
+     "doc": "https://contents.xj-storage.jp/xcontents/AS99965/dad0a864/d2e5/48cb/bd39/fe3d4b7f8dd7/140120170609401829.pdf",
+     "yoy": 128.4,
+     "metric": "売上"
+    },
+    "2017-05": {
+     "doc": "https://contents.xj-storage.jp/xcontents/AS99965/dad0a864/d2e5/48cb/bd39/fe3d4b7f8dd7/140120170609401829.pdf",
+     "yoy": 128.5,
+     "metric": "売上"
+    },
+    "2017-06": {
+     "doc": "https://contents.xj-storage.jp/xcontents/AS99965/81be3964/a517/4771/94bd/4ad6e2b4144d/140120190208473007.pdf",
+     "yoy": 126.6,
+     "metric": "売上"
+    },
+    "2017-07": {
+     "doc": "https://contents.xj-storage.jp/xcontents/AS99965/81be3964/a517/4771/94bd/4ad6e2b4144d/140120190208473007.pdf",
+     "yoy": 127.8,
+     "metric": "売上"
+    },
+    "2017-08": {
+     "doc": "https://contents.xj-storage.jp/xcontents/AS99965/81be3964/a517/4771/94bd/4ad6e2b4144d/140120190208473007.pdf",
+     "yoy": 127.3,
+     "metric": "売上"
+    },
+    "2017-09": {
+     "doc": "https://contents.xj-storage.jp/xcontents/AS99965/81be3964/a517/4771/94bd/4ad6e2b4144d/140120190208473007.pdf",
+     "yoy": 126.1,
+     "metric": "売上"
+    },
+    "2017-10": {
+     "doc": "https://contents.xj-storage.jp/xcontents/AS99965/81be3964/a517/4771/94bd/4ad6e2b4144d/140120190208473007.pdf",
+     "yoy": 116.8,
+     "metric": "売上"
+    },
+    "2017-11": {
+     "doc": "https://contents.xj-storage.jp/xcontents/AS99965/81be3964/a517/4771/94bd/4ad6e2b4144d/140120190208473007.pdf",
+     "yoy": 125.8,
+     "metric": "売上"
+    },
+    "2017-12": {
+     "doc": "https://contents.xj-storage.jp/xcontents/AS99965/81be3964/a517/4771/94bd/4ad6e2b4144d/140120190208473007.pdf",
+     "yoy": 102.1,
+     "metric": "売上"
+    },
+    "2018-01": {
+     "doc": "https://contents.xj-storage.jp/xcontents/AS99965/81be3964/a517/4771/94bd/4ad6e2b4144d/140120190208473007.pdf",
+     "yoy": 97.0,
+     "metric": "売上"
+    },
+    "2018-02": {
+     "doc": "https://contents.xj-storage.jp/xcontents/AS99965/81be3964/a517/4771/94bd/4ad6e2b4144d/140120190208473007.pdf",
+     "yoy": 96.3,
+     "metric": "売上"
+    },
+    "2018-03": {
+     "doc": "https://contents.xj-storage.jp/xcontents/AS99965/81be3964/a517/4771/94bd/4ad6e2b4144d/140120190208473007.pdf",
+     "yoy": 93.3,
+     "metric": "売上"
+    },
+    "2016-04": {
+     "doc": "https://contents.xj-storage.jp/xcontents/AS99965/f65b3eff/0d7a/4d6e/95d4/0a17efd622e3/140120170410438243.pdf",
+     "yoy": 111.3,
+     "metric": "売上"
+    },
+    "2016-05": {
+     "doc": "https://contents.xj-storage.jp/xcontents/AS99965/f65b3eff/0d7a/4d6e/95d4/0a17efd622e3/140120170410438243.pdf",
+     "yoy": 111.2,
+     "metric": "売上"
+    },
+    "2016-06": {
+     "doc": "https://contents.xj-storage.jp/xcontents/AS99965/f65b3eff/0d7a/4d6e/95d4/0a17efd622e3/140120170410438243.pdf",
+     "yoy": 104.2,
+     "metric": "売上"
+    },
+    "2016-07": {
+     "doc": "https://contents.xj-storage.jp/xcontents/AS99965/f65b3eff/0d7a/4d6e/95d4/0a17efd622e3/140120170410438243.pdf",
+     "yoy": 111.9,
+     "metric": "売上"
+    },
+    "2016-08": {
+     "doc": "https://contents.xj-storage.jp/xcontents/AS99965/f65b3eff/0d7a/4d6e/95d4/0a17efd622e3/140120170410438243.pdf",
+     "yoy": 108.6,
+     "metric": "売上"
+    },
+    "2016-09": {
+     "doc": "https://contents.xj-storage.jp/xcontents/AS99965/f65b3eff/0d7a/4d6e/95d4/0a17efd622e3/140120170410438243.pdf",
+     "yoy": 112.2,
+     "metric": "売上"
+    },
+    "2016-10": {
+     "doc": "https://contents.xj-storage.jp/xcontents/AS99965/f65b3eff/0d7a/4d6e/95d4/0a17efd622e3/140120170410438243.pdf",
+     "yoy": 117.0,
+     "metric": "売上"
+    },
+    "2016-11": {
+     "doc": "https://contents.xj-storage.jp/xcontents/AS99965/f65b3eff/0d7a/4d6e/95d4/0a17efd622e3/140120170410438243.pdf",
+     "yoy": 109.8,
+     "metric": "売上"
+    },
+    "2016-12": {
+     "doc": "https://contents.xj-storage.jp/xcontents/AS99965/f65b3eff/0d7a/4d6e/95d4/0a17efd622e3/140120170410438243.pdf",
+     "yoy": 103.7,
+     "metric": "売上"
+    },
+    "2017-01": {
+     "doc": "https://contents.xj-storage.jp/xcontents/AS99965/f65b3eff/0d7a/4d6e/95d4/0a17efd622e3/140120170410438243.pdf",
+     "yoy": 120.3,
+     "metric": "売上"
+    },
+    "2017-02": {
+     "doc": "https://contents.xj-storage.jp/xcontents/AS99965/f65b3eff/0d7a/4d6e/95d4/0a17efd622e3/140120170410438243.pdf",
+     "yoy": 122.3,
+     "metric": "売上"
+    },
+    "2017-03": {
+     "doc": "https://contents.xj-storage.jp/xcontents/AS99965/f65b3eff/0d7a/4d6e/95d4/0a17efd622e3/140120170410438243.pdf",
+     "yoy": 118.8,
      "metric": "売上"
     }
    }
@@ -29083,7 +29414,7 @@
      "doc": "https://www.kisoji.co.jp/ir/media//ir/media-download/3318/f25304a5224ba96f/PDF/"
     }
    },
-   "ts": "2026-10-29T05:30:36+00:00"
+   "ts": "2026-10-29T06:24:39+00:00"
   },
   "8218": {
    "name": "コメリ",
@@ -29194,7 +29525,7 @@
      "doc": "https://www.anicom.co.jp/ir/financial/business/"
     }
    },
-   "ts": "2026-10-29T05:30:36+00:00"
+   "ts": "2026-10-29T06:24:39+00:00"
   },
   "3733": {
    "name": "ソフトウェア・サービス",
@@ -29907,7 +30238,7 @@
  "note": "회사가 제 사이트에 올린 월차 표에서 읽는다. 값은 전년동월비(%)뿐이고 금액은 없다. 회계연도가 적힌 표는 그 해로 읽으므로 옛 회계연도 표를 함께 싣는 회사는 이력이 길다.",
  "companies": 178,
  "months": 2917,
- "ts": "2026-10-29T06:09:51+00:00",
+ "ts": "2026-10-29T06:30:39+00:00",
  "done": [
   "https://amiyakitei.co.jp/prd/wordpress/wp-content/uploads/2025/04/●連結開示-202503.pdf",
   "https://amiyakitei.co.jp/prd/wordpress/wp-content/uploads/2026/04/monthly_newsflash1097.pdf",
@@ -29990,19 +30321,29 @@
   "https://contents.xj-storage.jp/xcontents/AS91042/07f3e4fd/a511/4c6c/a8b6/858a9b9adcc3/140120260511521769.pdf",
   "https://contents.xj-storage.jp/xcontents/AS91042/0ab28511/ad56/41c1/8c32/2cfa05ef8bea/140120260810516036.pdf",
   "https://contents.xj-storage.jp/xcontents/AS91042/0cbdb9e4/87ba/448e/aebd/1c67cf6ad231/140120240410568168.pdf",
+  "https://contents.xj-storage.jp/xcontents/AS91042/116302ee/835f/4f11/9a18/8daea0e04784/140120221212577245.pdf",
   "https://contents.xj-storage.jp/xcontents/AS91042/13a57d32/337f/4177/a3c0/b5c5a9c8a23b/140120250210567691.pdf",
+  "https://contents.xj-storage.jp/xcontents/AS91042/15917013/b98d/4600/afe7/bc271501c366/140120221110561929.pdf",
   "https://contents.xj-storage.jp/xcontents/AS91042/18f97779/cd48/4c50/9950/41f26fbade14/140120260710590939.pdf",
+  "https://contents.xj-storage.jp/xcontents/AS91042/21eac847/770a/4667/93d8/7f164f05ec30/140120230509561045.pdf",
+  "https://contents.xj-storage.jp/xcontents/AS91042/2ecb8405/2348/4524/9aae/f6c448126ea7/140120220610576396.pdf",
   "https://contents.xj-storage.jp/xcontents/AS91042/2f18b75f/25e7/42df/b1e6/9012c304a16c/140120250609585432.pdf",
   "https://contents.xj-storage.jp/xcontents/AS91042/3067c1b9/80cb/4c87/9707/e01d32e825d0/140120240610525135.pdf",
   "https://contents.xj-storage.jp/xcontents/AS91042/329e9c43/c446/4aec/afe4/9b4f8c8958e5/140120240509587635.pdf",
+  "https://contents.xj-storage.jp/xcontents/AS91042/41790e72/2592/481b/9f9d/9c3e71666667/140120220810517376.pdf",
+  "https://contents.xj-storage.jp/xcontents/AS91042/4bb80eca/e292/4803/814b/430a155a1efd/140120221011542381.pdf",
   "https://contents.xj-storage.jp/xcontents/AS91042/4fa89d35/60fd/448c/ac7b/ee00293248e7/140120240311551163.pdf",
   "https://contents.xj-storage.jp/xcontents/AS91042/525cbbae/1438/42b7/9cb9/ae4516a86404/140120231009564105.pdf",
+  "https://contents.xj-storage.jp/xcontents/AS91042/54e78f30/a122/4065/a262/e3bfe5193340/140120220411519783.pdf",
   "https://contents.xj-storage.jp/xcontents/AS91042/55ed57ec/afb6/459e/add6/ffb5f3b18f5c/140120241009595458.pdf",
+  "https://contents.xj-storage.jp/xcontents/AS91042/57bd27b3/1020/4ea5/9445/2f6cd2999b8c/140120220711597619.pdf",
   "https://contents.xj-storage.jp/xcontents/AS91042/5a2ae6b4/2ae9/4c06/980e/46d7b130ebad/140120250512540491.pdf",
   "https://contents.xj-storage.jp/xcontents/AS91042/69c48ac5/0f0f/4f8d/b5a8/9201a94ecc4c/140120251210517124.pdf",
   "https://contents.xj-storage.jp/xcontents/AS91042/6da2e841/5b2a/499e/9484/43bafd108c6f/140120240710546684.pdf",
   "https://contents.xj-storage.jp/xcontents/AS91042/78cc9910/d4e2/41f3/9c4e/5ec10db3f1bf/140120261013549234.pdf",
+  "https://contents.xj-storage.jp/xcontents/AS91042/78e1ae78/e76d/4da6/8378/8d0382ccb370/140120230310528577.pdf",
   "https://contents.xj-storage.jp/xcontents/AS91042/7a70edc3/703d/4ac9/8aea/752b383bddcc/140120230911552644.pdf",
+  "https://contents.xj-storage.jp/xcontents/AS91042/7fe78836/6926/41b7/b437/608182811ab5/140120230612501244.pdf",
   "https://contents.xj-storage.jp/xcontents/AS91042/8292f028/37cd/4fc7/81e1/995d2f0375df/140120250407509873.pdf",
   "https://contents.xj-storage.jp/xcontents/AS91042/842725e6/14ab/4a41/972e/6bd3919f7449/140120260209552288.pdf",
   "https://contents.xj-storage.jp/xcontents/AS91042/84a0828f/ddb0/4f54/bf56/e12215cbcc11/140120260112532004.pdf",
@@ -30012,10 +30353,14 @@
   "https://contents.xj-storage.jp/xcontents/AS91042/aa5072e0/a8c4/4de3/ad38/7b783d084621/140120230809538139.pdf",
   "https://contents.xj-storage.jp/xcontents/AS91042/aef21158/f3c9/4c83/8d15/9b78dad84ea9/140120240213533624.pdf",
   "https://contents.xj-storage.jp/xcontents/AS91042/b100bf65/ef48/46d4/a2b5/073324140fbe/140120240809568636.pdf",
+  "https://contents.xj-storage.jp/xcontents/AS91042/b26b0cba/9d02/4761/962d/658858ea32bc/140120220912531142.pdf",
   "https://contents.xj-storage.jp/xcontents/AS91042/b7da127e/955e/4da6/8ed6/55834d03a730/140120260610566949.pdf",
+  "https://contents.xj-storage.jp/xcontents/AS91042/b9ad691c/c1dd/40d5/8c21/ae55572f475f/140120220510536633.pdf",
   "https://contents.xj-storage.jp/xcontents/AS91042/bd63bb51/89e3/48df/ae4d/3649534f2519/140120251110593345.pdf",
   "https://contents.xj-storage.jp/xcontents/AS91042/c1f03133/01f0/44bf/8261/6c062e5e743f/140120250309590608.pdf",
+  "https://contents.xj-storage.jp/xcontents/AS91042/cf8fb69d/dcd1/4c6c/9616/ac255c063c90/140120230209505683.pdf",
   "https://contents.xj-storage.jp/xcontents/AS91042/cff46084/42d8/48e8/aabb/e88848ad1a7f/140120231211501255.pdf",
+  "https://contents.xj-storage.jp/xcontents/AS91042/d6afeeb1/1950/4d17/ba6d/96ce23f893b0/140120230409544359.pdf",
   "https://contents.xj-storage.jp/xcontents/AS91042/e34d4601/5231/4d0e/b195/33fa7de76d4c/140120250811538667.pdf",
   "https://contents.xj-storage.jp/xcontents/AS91042/e5f14395/7318/4456/8d4f/df697a6ff943/140120241209535921.pdf",
   "https://contents.xj-storage.jp/xcontents/AS91042/e8155589/690d/4fe1/9fa2/7b20ae387f28/140120250909555383.pdf",
@@ -30026,6 +30371,7 @@
   "https://contents.xj-storage.jp/xcontents/AS91042/e99f285f/bddb/4db2/8d84/02288447e97b/140120260910534100.pdf",
   "https://contents.xj-storage.jp/xcontents/AS91042/ece83e0f/694c/4539/8792/6ea90f010d60/140120260310578811.pdf",
   "https://contents.xj-storage.jp/xcontents/AS91042/eec25956/b69f/4119/9d50/485d70288032/140120241111517284.pdf",
+  "https://contents.xj-storage.jp/xcontents/AS91042/f7fcfd5d/3501/455d/9e27/60ce0394ccaa/140120230109586634.pdf",
   "https://contents.xj-storage.jp/xcontents/AS93479/05b2b99a/761a/48fa/8fe1/a4f4e843cc1c/140120260304575585.pdf",
   "https://contents.xj-storage.jp/xcontents/AS93479/06a6ea5b/7130/4c3e/a539/dc327eb7616e/140120260203546211.pdf",
   "https://contents.xj-storage.jp/xcontents/AS93479/077225e4/4f0a/4523/ab71/65ddf958f0e7/140120250127555909.pdf",
@@ -30097,6 +30443,7 @@
   "https://contents.xj-storage.jp/xcontents/AS99965/0627b371/f53e/4582/a696/6c75aff0eb6a/140120241210536242.pdf",
   "https://contents.xj-storage.jp/xcontents/AS99965/0e369a56/1de6/447a/b047/f2faf6b1ed8d/140120231110585931.pdf",
   "https://contents.xj-storage.jp/xcontents/AS99965/125d639e/b3cb/41b9/88a4/86b1542eccb0/140120221209576764.pdf",
+  "https://contents.xj-storage.jp/xcontents/AS99965/180289f0/aec1/4d33/922c/74b1d841567d/140120191108422128.pdf",
   "https://contents.xj-storage.jp/xcontents/AS99965/1a7ba7b1/b641/4947/8865/43f3fc4ecf9b/140120221007541768.pdf",
   "https://contents.xj-storage.jp/xcontents/AS99965/1b441c3d/82cc/414b/96bf/6c66ee99fef4/140120240809569943.pdf",
   "https://contents.xj-storage.jp/xcontents/AS99965/204f70be/7ee0/4bbd/acc9/205c677e4b97/140120210910496525.pdf",
@@ -30104,6 +30451,7 @@
   "https://contents.xj-storage.jp/xcontents/AS99965/2d591b04/b7c4/4090/8c90/f2b08f213e1e/140120211008408256.pdf",
   "https://contents.xj-storage.jp/xcontents/AS99965/2ef60a64/1be2/401c/8df1/3a71d9dbc983/140120251010571351.pdf",
   "https://contents.xj-storage.jp/xcontents/AS99965/3c2ffdb9/550e/4b1f/8030/2afc3e6e007d/140120260410501256.pdf",
+  "https://contents.xj-storage.jp/xcontents/AS99965/3d54aa5b/935f/485d/a487/f6258b5860bb/140120190910496344.pdf",
   "https://contents.xj-storage.jp/xcontents/AS99965/40494bef/eb47/4f69/aa7b/eb8a000f96ef/140120220111565482.pdf",
   "https://contents.xj-storage.jp/xcontents/AS99965/4812b9b4/cbfc/4af3/9684/b8aea5576677/140120210210460424.pdf",
   "https://contents.xj-storage.jp/xcontents/AS99965/4f99de43/0e81/4e7e/8ba0/029b96d07792/140120210810482258.pdf",
@@ -30122,6 +30470,7 @@
   "https://contents.xj-storage.jp/xcontents/AS99965/78e04b0d/86b3/4a79/8b30/51f97913bc57/140120230310528559.pdf",
   "https://contents.xj-storage.jp/xcontents/AS99965/7c59ba55/f26b/4c69/96ec/63bea95038c6/140120260310578785.pdf",
   "https://contents.xj-storage.jp/xcontents/AS99965/7fd097a9/dbd9/4331/8cfe/9c522dfcc497/140120241108516022.pdf",
+  "https://contents.xj-storage.jp/xcontents/AS99965/81be3964/a517/4771/94bd/4ad6e2b4144d/140120190208473007.pdf",
   "https://contents.xj-storage.jp/xcontents/AS99965/8633be07/cb92/40e1/9dba/5dc29f2d9526/140120220210586105.pdf",
   "https://contents.xj-storage.jp/xcontents/AS99965/86a1cb31/14fd/4cdb/8d75/1f5106e69d6a/140120220909530553.pdf",
   "https://contents.xj-storage.jp/xcontents/AS99965/8cf1d946/55d3/4016/bee4/add7ef17d68c/140120211210450212.pdf",
@@ -30150,6 +30499,7 @@
   "https://contents.xj-storage.jp/xcontents/AS99965/d75568c9/b686/4f5a/bc71/b9f4aa1bfbd6/140120240710546869.pdf",
   "https://contents.xj-storage.jp/xcontents/AS99965/d9c8d47b/9ae6/4f30/9b6c/07c19e8c86fb/140120200710460487.pdf",
   "https://contents.xj-storage.jp/xcontents/AS99965/d9f59741/f155/434a/b34b/58438bce4621/140120200514414414.pdf",
+  "https://contents.xj-storage.jp/xcontents/AS99965/dad0a864/d2e5/48cb/bd39/fe3d4b7f8dd7/140120170609401829.pdf",
   "https://contents.xj-storage.jp/xcontents/AS99965/de128c2c/665e/4b81/a404/45457c4e949e/140120240610525456.pdf",
   "https://contents.xj-storage.jp/xcontents/AS99965/debbd397/f19d/48bb/ba42/640784a9a9e7/140120251110593018.pdf",
   "https://contents.xj-storage.jp/xcontents/AS99965/dfebe540/d066/413f/b833/c8877dbf9fdb/140120230410544695.pdf",
@@ -30162,6 +30512,7 @@
   "https://contents.xj-storage.jp/xcontents/AS99965/ee5d8113/41a4/4033/8686/44e3081646a2/140120240308550753.pdf",
   "https://contents.xj-storage.jp/xcontents/AS99965/eea4bc48/2d7f/4ba0/83d2/830af4ab9f16/140120200807477938.pdf",
   "https://contents.xj-storage.jp/xcontents/AS99965/f28efcb5/34cb/4dca/8899/24632d80e3ff/140120220310503275.pdf",
+  "https://contents.xj-storage.jp/xcontents/AS99965/f65b3eff/0d7a/4d6e/95d4/0a17efd622e3/140120170410438243.pdf",
   "https://contents.xj-storage.jp/xcontents/AS99965/f7747c1b/9037/459e/877c/154d20ea92da/140120200610441343.pdf",
   "https://contents.xj-storage.jp/xcontents/AS99965/f9b4543b/1914/4268/ba48/c0413ad19101/140120201210433245.pdf",
   "https://contents.xj-storage.jp/xcontents/AS99965/ff3dd577/25cd/41a9/b0dd/425534bde379/140120210108442214.pdf",
@@ -30882,6 +31233,9 @@
   "https://www.sra-hd.co.jp/Portals/0/ir/negotiable/houkoku201508.pdf",
   "https://www.sra-hd.co.jp/Portals/0/ir/negotiable/houkoku201608.pdf",
   "https://www.sra-hd.co.jp/Portals/0/ir/negotiable/houkoku201611.pdf",
+  "https://www.sra-hd.co.jp/Portals/0/ir/settlement/fuzoku/fuzoku200908.pdf",
+  "https://www.sra-hd.co.jp/Portals/0/ir/settlement/fuzoku/fuzoku200911.pdf",
+  "https://www.sra-hd.co.jp/Portals/0/ir/settlement/fuzoku/fuzoku201002.pdf",
   "https://www.sugi-hd.co.jp/pdf/ir/monthly-report/Sugi Holdings News 250212_v5.pdf",
   "https://www.tabaya-holdings.co.jp/wp-content/uploads/2022/08/2019sokuho.pdf",
   "https://www.tabaya-holdings.co.jp/wp-content/uploads/2022/08/2020sokuho.pdf",
@@ -38717,27 +39071,27 @@
   },
   "https://contents.xj-storage.jp/xcontents/AS91042/b4ea53ba/e4a4/4b76/bc42/359ec6860d51/20231211111847745s.pdf": {
    "reason": "표없음",
-   "day": "2026-10-23"
+   "day": "2026-10-29"
   },
   "https://contents.xj-storage.jp/xcontents/AS91042/75929717/fe4d/4b0a/a935/8cae1dcf64f0/20231110121023469s.pdf": {
    "reason": "표없음",
-   "day": "2026-10-23"
+   "day": "2026-10-29"
   },
   "https://contents.xj-storage.jp/xcontents/AS91042/caa31cfb/ba8d/4fd0/9ff3/badb3bf95865/20231009170717129s.pdf": {
    "reason": "표없음",
-   "day": "2026-10-23"
+   "day": "2026-10-29"
   },
   "https://contents.xj-storage.jp/xcontents/AS91042/f30b1931/737c/4ffa/a047/528f6d1d508e/20230910140619883s.pdf": {
    "reason": "표없음",
-   "day": "2026-10-23"
+   "day": "2026-10-29"
   },
   "https://contents.xj-storage.jp/xcontents/AS91042/334e4443/5aec/4c4a/880f/0d30709204ca/20230809103903982s.pdf": {
    "reason": "표없음",
-   "day": "2026-10-23"
+   "day": "2026-10-29"
   },
   "https://contents.xj-storage.jp/xcontents/AS91042/b31e0d02/8662/4ce1/a527/84f236c1ebed/20230709175643910s.pdf": {
    "reason": "표없음",
-   "day": "2026-10-23"
+   "day": "2026-10-29"
   },
   "https://www.chimney.co.jp/pdf/ir/sales/doukou_201809.pdf": {
    "reason": "표없음",
@@ -42410,9 +42764,325 @@
   "https://www.nissansec-g.co.jp/pdf/press20261029.pdf": {
    "reason": "표없음",
    "day": "2026-10-29"
+  },
+  "https://contents.xj-storage.jp/xcontents/AS91042/b64f2e1e/ad5d/4c9b/b8b3/c0e47c9cacca/20230612105128387s.pdf": {
+   "reason": "표없음",
+   "day": "2026-10-29"
+  },
+  "https://contents.xj-storage.jp/xcontents/AS91042/8595d8af/e1fd/426f/a4b7/bf818e297b8f/20230509120406116s.pdf": {
+   "reason": "표없음",
+   "day": "2026-10-29"
+  },
+  "https://contents.xj-storage.jp/xcontents/AS91042/ac9890c7/193f/4b67/a62d/3831f20d552f/20230410111655079s.pdf": {
+   "reason": "표없음",
+   "day": "2026-10-29"
+  },
+  "https://contents.xj-storage.jp/xcontents/AS91042/42406e72/aa41/4d95/9aec/4c2f90f0ede7/20230310130939389s.pdf": {
+   "reason": "표없음",
+   "day": "2026-10-29"
+  },
+  "https://contents.xj-storage.jp/xcontents/AS91042/57c5887d/f3d5/4f8c/bc31/58b9f83893d7/20230209194107687s.pdf": {
+   "reason": "표없음",
+   "day": "2026-10-29"
+  },
+  "https://contents.xj-storage.jp/xcontents/AS91042/7f05615b/a8a9/479d/9360/14210ee33e8b/20230110132358759s.pdf": {
+   "reason": "표없음",
+   "day": "2026-10-29"
+  },
+  "https://contents.xj-storage.jp/xcontents/AS91042/f9f3750c/e6a4/49d0/98a1/7c8bde44291b/20221212103420534s.pdf": {
+   "reason": "표없음",
+   "day": "2026-10-29"
+  },
+  "https://contents.xj-storage.jp/xcontents/AS91042/799662b9/fa06/4cfd/8f88/28c26ffa39bc/20221110110314525s.pdf": {
+   "reason": "표없음",
+   "day": "2026-10-29"
+  },
+  "https://contents.xj-storage.jp/xcontents/AS91042/f0dff813/365e/4fca/8b25/c0b877909808/20221011170009604s.pdf": {
+   "reason": "표없음",
+   "day": "2026-10-29"
+  },
+  "https://contents.xj-storage.jp/xcontents/AS91042/576af7f1/7e2e/408e/9e31/69f8915f366b/20220912104206175s.pdf": {
+   "reason": "표없음",
+   "day": "2026-10-29"
+  },
+  "https://contents.xj-storage.jp/xcontents/AS91042/b0f71aab/8ce2/4c60/a4de/0c483939a1d9/20220810112925482s.pdf": {
+   "reason": "표없음",
+   "day": "2026-10-29"
+  },
+  "https://contents.xj-storage.jp/xcontents/AS91042/b718dcab/b41e/4dad/9355/3ffdbf6a4eef/20220711144806629s.pdf": {
+   "reason": "표없음",
+   "day": "2026-10-29"
+  },
+  "https://contents.xj-storage.jp/xcontents/AS91042/33911a29/7923/4972/be7a/575148ee8920/20220609185327110s.pdf": {
+   "reason": "표없음",
+   "day": "2026-10-29"
+  },
+  "https://contents.xj-storage.jp/xcontents/AS91042/954de3b3/b732/4b43/b6a9/717fa33eaf47/20220510094453616s.pdf": {
+   "reason": "표없음",
+   "day": "2026-10-29"
+  },
+  "https://contents.xj-storage.jp/xcontents/AS91042/867dce3d/8e35/4b29/92fd/1595940a53d4/20220411143309345s.pdf": {
+   "reason": "표없음",
+   "day": "2026-10-29"
+  },
+  "https://contents.xj-storage.jp/xcontents/AS99965/ff33a698/8596/4ac0/a3f9/b731488db97e/140120200207459864.pdf": {
+   "reason": "표없음",
+   "day": "2026-10-29"
+  },
+  "https://contents.xj-storage.jp/xcontents/AS99965/06352c3c/077b/4b1d/89d7/73e0c8667d8e/140120200110445306.pdf": {
+   "reason": "표없음",
+   "day": "2026-10-29"
+  },
+  "https://contents.xj-storage.jp/xcontents/AS99965/0b0478f1/2450/4a49/bf79/c3a1768b981d/140120191210435353.pdf": {
+   "reason": "표없음",
+   "day": "2026-10-29"
+  },
+  "https://contents.xj-storage.jp/xcontents/AS99965/9f3ec327/bb73/425a/b675/7479d63fbdb5/140120191010406557.pdf": {
+   "reason": "표없음",
+   "day": "2026-10-29"
+  },
+  "https://contents.xj-storage.jp/xcontents/AS99965/f0527e8e/be81/47b9/94f6/8be46e93fc67/140120190809486360.pdf": {
+   "reason": "표없음",
+   "day": "2026-10-29"
+  },
+  "https://contents.xj-storage.jp/xcontents/AS99965/47798d79/179b/4c06/b3e4/fe4253585406/140120190710469593.pdf": {
+   "reason": "표없음",
+   "day": "2026-10-29"
+  },
+  "https://contents.xj-storage.jp/xcontents/AS99965/0bf2a2ff/7fea/437a/94d2/1f1b596cc052/140120190610450732.pdf": {
+   "reason": "표없음",
+   "day": "2026-10-29"
+  },
+  "https://contents.xj-storage.jp/xcontents/AS99965/b278864d/4768/43e1/8da2/6ae95772ba8f/140120190510420027.pdf": {
+   "reason": "표없음",
+   "day": "2026-10-29"
+  },
+  "https://contents.xj-storage.jp/xcontents/AS99965/b2068df5/088d/435a/9e17/e5f268e2fb3c/140120190410402427.pdf": {
+   "reason": "표없음",
+   "day": "2026-10-29"
+  },
+  "https://contents.xj-storage.jp/xcontents/AS99965/36259da8/f017/4d6a/8c9e/eb1d46dc2767/140120190308487708.pdf": {
+   "reason": "표없음",
+   "day": "2026-10-29"
+  },
+  "https://contents.xj-storage.jp/xcontents/AS99965/fb6f13e8/df69/481f/9e05/fa5171243b91/140120190110458353.pdf": {
+   "reason": "표없음",
+   "day": "2026-10-29"
+  },
+  "https://contents.xj-storage.jp/xcontents/AS99965/262563aa/f801/4328/95ae/fb5ac310e48d/140120181210446974.pdf": {
+   "reason": "표없음",
+   "day": "2026-10-29"
+  },
+  "https://contents.xj-storage.jp/xcontents/AS99965/7f72862f/ba04/4fca/abfb/251bfa5b1c82/140120181109433840.pdf": {
+   "reason": "표없음",
+   "day": "2026-10-29"
+  },
+  "https://contents.xj-storage.jp/xcontents/AS99965/926ce382/e533/4395/ae8f/5ab86a8956de/140120181010415806.pdf": {
+   "reason": "표없음",
+   "day": "2026-10-29"
+  },
+  "https://contents.xj-storage.jp/xcontents/AS99965/e6058b95/7ec9/4843/b903/6436b2170800/140120180910405295.pdf": {
+   "reason": "표없음",
+   "day": "2026-10-29"
+  },
+  "https://contents.xj-storage.jp/xcontents/AS99965/518a4676/1c1f/46b0/97d6/2ec6e97d1812/140120180810495960.pdf": {
+   "reason": "표없음",
+   "day": "2026-10-29"
+  },
+  "https://contents.xj-storage.jp/xcontents/AS99965/79fa0a2b/b55c/496c/8910/bd62261813ef/140120180710478928.pdf": {
+   "reason": "표없음",
+   "day": "2026-10-29"
+  },
+  "https://contents.xj-storage.jp/xcontents/AS99965/bff9722e/9d63/412d/ab1e/cfbcd43189f1/140120180608460411.pdf": {
+   "reason": "표없음",
+   "day": "2026-10-29"
+  },
+  "https://contents.xj-storage.jp/xcontents/AS99965/c29e0ece/dd40/4515/8cba/eff77aa6ce2f/140120180511434450.pdf": {
+   "reason": "표없음",
+   "day": "2026-10-29"
+  },
+  "https://contents.xj-storage.jp/xcontents/AS99965/801cdab7/38ca/4b65/8093/ca04230fdfdc/140120180410408189.pdf": {
+   "reason": "표없음",
+   "day": "2026-10-29"
+  },
+  "https://contents.xj-storage.jp/xcontents/AS99965/67426bfe/5fd7/4ab5/b3e6/795c3e9db235/140120180309486163.pdf": {
+   "reason": "표없음",
+   "day": "2026-10-29"
+  },
+  "https://contents.xj-storage.jp/xcontents/AS99965/d500db21/ec52/4f6b/8c35/fc34413dad14/140120180208467559.pdf": {
+   "reason": "표없음",
+   "day": "2026-10-29"
+  },
+  "https://contents.xj-storage.jp/xcontents/AS99965/24054794/8e78/47ac/b844/279c40140b6e/140120180110448200.pdf": {
+   "reason": "표없음",
+   "day": "2026-10-29"
+  },
+  "https://contents.xj-storage.jp/xcontents/AS99965/d6eff4df/8558/4e9c/8d6a/47e499bac352/140120171207432343.pdf": {
+   "reason": "표없음",
+   "day": "2026-10-29"
+  },
+  "https://contents.xj-storage.jp/xcontents/AS99965/00d171d7/8569/47fa/8533/cae302741227/140120171109414259.pdf": {
+   "reason": "표없음",
+   "day": "2026-10-29"
+  },
+  "https://contents.xj-storage.jp/xcontents/AS99965/e0378390/e165/4f4e/8461/4fd3e42361ac/140120171010487294.pdf": {
+   "reason": "표없음",
+   "day": "2026-10-29"
+  },
+  "https://contents.xj-storage.jp/xcontents/AS99965/91c9657b/0a09/40e9/839a/a5dc34808036/140120170907469663.pdf": {
+   "reason": "표없음",
+   "day": "2026-10-29"
+  },
+  "https://contents.xj-storage.jp/xcontents/AS99965/f05f97de/2594/4e2f/8ed7/f89e8cea306e/140120170809453534.pdf": {
+   "reason": "표없음",
+   "day": "2026-10-29"
+  },
+  "https://contents.xj-storage.jp/xcontents/AS99965/d40b2bba/7133/413a/899d/de3d3622abb0/140120170710428268.pdf": {
+   "reason": "표없음",
+   "day": "2026-10-29"
+  },
+  "https://contents.xj-storage.jp/xcontents/AS99965/15e2a24a/3cbf/4dfd/bdfd/d3dd7bbf357e/140120170509463594.pdf": {
+   "reason": "표없음",
+   "day": "2026-10-29"
+  },
+  "https://contents.xj-storage.jp/xcontents/AS99965/72b716c3/cfca/4a7a/ac5e/64887006e9b3/140120170310416742.pdf": {
+   "reason": "표없음",
+   "day": "2026-10-29"
+  },
+  "https://www.sra-hd.co.jp/Portals/0/ir/settlement/fuzoku/fuzoku201202.pdf": {
+   "reason": "표없음",
+   "day": "2026-10-29"
+  },
+  "https://www.sra-hd.co.jp/Portals/0/ir/bizqrt_report/tsushin201111.pdf": {
+   "reason": "표없음",
+   "day": "2026-10-29"
+  },
+  "https://www.sra-hd.co.jp/Portals/0/ir/negotiable/houkoku201111.pdf": {
+   "reason": "표없음",
+   "day": "2026-10-29"
+  },
+  "https://www.sra-hd.co.jp/Portals/0/ir/corporate_exp/setsumei111115.pdf": {
+   "reason": "표없음",
+   "day": "2026-10-29"
+  },
+  "https://www.sra-hd.co.jp/Portals/0/ir/settlement/fuzoku/fuzoku201111.pdf": {
+   "reason": "표없음",
+   "day": "2026-10-29"
+  },
+  "https://www.sra-hd.co.jp/Portals/0/ir/bizqrt_report/tsushin201108.pdf": {
+   "reason": "표없음",
+   "day": "2026-10-29"
+  },
+  "https://www.sra-hd.co.jp/Portals/0/ir/negotiable/houkoku201108.pdf": {
+   "reason": "표없음",
+   "day": "2026-10-29"
+  },
+  "https://www.sra-hd.co.jp/Portals/0/ir/settlement/fuzoku/fuzoku201108.pdf": {
+   "reason": "표없음",
+   "day": "2026-10-29"
+  },
+  "https://www.sra-hd.co.jp/Portals/0/ir/bizqrt_report/tsushin201106.pdf": {
+   "reason": "표없음",
+   "day": "2026-10-29"
+  },
+  "https://www.sra-hd.co.jp/Portals/0/ir/corporate_exp/setsumei110513.pdf": {
+   "reason": "표없음",
+   "day": "2026-10-29"
+  },
+  "https://www.sra-hd.co.jp/Portals/0/ir/settlement/fuzoku/fuzoku201105.pdf": {
+   "reason": "표없음",
+   "day": "2026-10-29"
+  },
+  "https://www.sra-hd.co.jp/Portals/0/ir/bizqrt_report/tsushin201102.pdf": {
+   "reason": "표없음",
+   "day": "2026-10-29"
+  },
+  "https://www.sra-hd.co.jp/Portals/0/ir/negotiable/houkoku201102.pdf": {
+   "reason": "표없음",
+   "day": "2026-10-29"
+  },
+  "https://www.sra-hd.co.jp/Portals/0/ir/settlement/fuzoku/fuzoku201102.pdf": {
+   "reason": "표없음",
+   "day": "2026-10-29"
+  },
+  "https://www.sra-hd.co.jp/Portals/0/ir/bizqrt_report/tsushin201011.pdf": {
+   "reason": "표없음",
+   "day": "2026-10-29"
+  },
+  "https://www.sra-hd.co.jp/Portals/0/ir/negotiable/houkoku201011.pdf": {
+   "reason": "표없음",
+   "day": "2026-10-29"
+  },
+  "https://www.sra-hd.co.jp/Portals/0/ir/corporate_exp/setsumei101118.pdf": {
+   "reason": "표없음",
+   "day": "2026-10-29"
+  },
+  "https://www.sra-hd.co.jp/Portals/0/ir/settlement/fuzoku/fuzoku201011.pdf": {
+   "reason": "표없음",
+   "day": "2026-10-29"
+  },
+  "https://www.sra-hd.co.jp/Portals/0/ir/bizqrt_report/tsushin201008.pdf": {
+   "reason": "표없음",
+   "day": "2026-10-29"
+  },
+  "https://www.sra-hd.co.jp/Portals/0/ir/negotiable/houkoku201008.pdf": {
+   "reason": "표없음",
+   "day": "2026-10-29"
+  },
+  "https://www.sra-hd.co.jp/Portals/0/ir/settlement/fuzoku/fuzoku201008.pdf": {
+   "reason": "표없음",
+   "day": "2026-10-29"
+  },
+  "https://www.sra-hd.co.jp/Portals/0/ir/bizqrt_report/tsushin201006.pdf": {
+   "reason": "표없음",
+   "day": "2026-10-29"
+  },
+  "https://www.sra-hd.co.jp/Portals/0/ir/corporate_exp/setsumei100519.pdf": {
+   "reason": "표없음",
+   "day": "2026-10-29"
+  },
+  "https://www.sra-hd.co.jp/Portals/0/ir/settlement/fuzoku/fuzoku201005.pdf": {
+   "reason": "표없음",
+   "day": "2026-10-29"
+  },
+  "https://www.sra-hd.co.jp/Portals/0/ir/bizqrt_report/tsushin201002.pdf": {
+   "reason": "표없음",
+   "day": "2026-10-29"
+  },
+  "https://www.sra-hd.co.jp/Portals/0/ir/negotiable/houkoku201002.pdf": {
+   "reason": "표없음",
+   "day": "2026-10-29"
+  },
+  "https://www.sra-hd.co.jp/Portals/0/ir/bizqrt_report/tsushin200911.pdf": {
+   "reason": "표없음",
+   "day": "2026-10-29"
+  },
+  "https://www.sra-hd.co.jp/Portals/0/ir/negotiable/houkoku200911.pdf": {
+   "reason": "표없음",
+   "day": "2026-10-29"
+  },
+  "https://www.sra-hd.co.jp/Portals/0/ir/corporate_exp/setsumei091118.pdf": {
+   "reason": "표없음",
+   "day": "2026-10-29"
+  },
+  "https://www.sra-hd.co.jp/Portals/0/ir/bizqrt_report/tsushin200908.pdf": {
+   "reason": "표없음",
+   "day": "2026-10-29"
+  },
+  "https://www.sra-hd.co.jp/Portals/0/ir/negotiable/houkoku200908.pdf": {
+   "reason": "표없음",
+   "day": "2026-10-29"
+  },
+  "https://www.sra-hd.co.jp/Portals/0/ir/bizqrt_report/tsushin200906.pdf": {
+   "reason": "표없음",
+   "day": "2026-10-29"
+  },
+  "https://www.sra-hd.co.jp/Portals/0/ir/corporate_exp/setsumei090520.pdf": {
+   "reason": "표없음",
+   "day": "2026-10-29"
   }
  },
- "pdf_months": 2665,
+ "pdf_months": 2730,
  "homes": {
   "1379": "https://www.hokto-kinoko.co.jp",
   "138A": "https://www.hikari-food-service.jp",
@@ -42793,7 +43463,7 @@
   "2702": "2026-10-28T18:34:38+00:00",
   "8985": "2026-10-29T06:03:39+00:00",
   "7649": "2026-10-28T21:55:35+00:00",
-  "8963": "2026-10-29T05:30:36+00:00",
+  "8963": "2026-10-29T06:24:39+00:00",
   "141A": "2026-10-29T06:03:39+00:00",
   "7564": "2026-10-29T02:02:54+00:00",
   "9989": "2026-10-29T05:47:28+00:00",
@@ -42896,40 +43566,40 @@
   "8179": "2026-10-29T06:03:39+00:00",
   "9974": "2026-10-29T06:03:39+00:00",
   "8276": "2026-10-29T06:03:39+00:00",
-  "9166": "2026-10-29T05:30:36+00:00",
+  "9166": "2026-10-29T06:24:39+00:00",
   "8153": "2026-10-29T06:03:39+00:00",
   "9039": "2026-10-29T06:03:39+00:00",
-  "9832": "2026-10-29T05:30:36+00:00",
-  "3612": "2026-10-29T05:30:36+00:00",
-  "9842": "2026-10-29T05:30:36+00:00",
+  "9832": "2026-10-29T06:24:39+00:00",
+  "3612": "2026-10-29T06:24:39+00:00",
+  "9842": "2026-10-29T06:24:39+00:00",
   "7545": "2026-10-29T04:53:16+00:00",
-  "7512": "2026-10-29T05:30:36+00:00",
-  "7513": "2026-10-29T05:30:36+00:00",
+  "7512": "2026-10-29T06:24:39+00:00",
+  "7513": "2026-10-29T06:24:39+00:00",
   "9887": "2026-10-28T16:25:02+00:00",
-  "8255": "2026-10-29T05:30:36+00:00",
+  "8255": "2026-10-29T06:24:39+00:00",
   "7611": "2026-10-28T16:25:02+00:00",
   "8173": "2026-10-28T20:22:30+00:00",
-  "2678": "2026-10-29T05:30:36+00:00",
-  "8016": "2026-10-29T05:30:36+00:00",
+  "2678": "2026-10-29T06:24:39+00:00",
+  "8016": "2026-10-29T06:24:39+00:00",
   "9997": "2026-10-28T16:25:02+00:00",
   "6036": "2026-10-29T05:30:36+00:00",
-  "8198": "2026-10-29T05:30:36+00:00",
-  "6627": "2026-10-29T05:30:36+00:00",
+  "8198": "2026-10-29T06:24:39+00:00",
+  "6627": "2026-10-29T06:24:39+00:00",
   "2653": "2026-10-29T05:21:29+00:00",
-  "9279": "2026-10-29T05:30:36+00:00",
-  "8715": "2026-10-29T05:30:36+00:00",
-  "2742": "2026-10-29T05:30:36+00:00",
-  "7421": "2026-10-29T05:30:36+00:00",
-  "8244": "2026-10-29T05:30:36+00:00",
-  "3608": "2026-10-29T05:30:36+00:00",
-  "2705": "2026-10-29T05:30:36+00:00",
-  "8160": "2026-10-29T05:30:36+00:00",
+  "9279": "2026-10-29T06:24:39+00:00",
+  "8715": "2026-10-29T06:24:39+00:00",
+  "2742": "2026-10-29T06:24:39+00:00",
+  "7421": "2026-10-29T06:24:39+00:00",
+  "8244": "2026-10-29T06:24:39+00:00",
+  "3608": "2026-10-29T06:24:39+00:00",
+  "2705": "2026-10-29T06:24:39+00:00",
+  "8160": "2026-10-29T06:24:39+00:00",
   "7606": "2026-10-29T05:30:36+00:00",
-  "9900": "2026-10-29T05:30:36+00:00",
-  "3817": "2026-10-29T05:30:36+00:00",
-  "8163": "2026-10-29T05:30:36+00:00",
+  "9900": "2026-10-29T06:24:39+00:00",
+  "3817": "2026-10-29T06:24:39+00:00",
+  "8163": "2026-10-29T06:24:39+00:00",
   "8200": "2026-10-29T05:47:28+00:00",
-  "7412": "2026-10-29T05:30:36+00:00",
+  "7412": "2026-10-29T06:24:39+00:00",
   "4343": "2026-10-28T16:25:02+00:00",
   "3395": "2026-10-29T05:30:36+00:00",
   "3733": "2026-10-29T05:30:36+00:00",
@@ -42951,7 +43621,7 @@
   "6238": "2026-10-28T16:25:02+00:00",
   "8011": "2026-10-29T05:47:28+00:00",
   "2669": "2026-10-29T05:47:28+00:00",
-  "2674": "2026-10-29T00:03:51+00:00",
+  "2674": "2026-10-29T06:24:39+00:00",
   "2910": "2026-10-29T05:47:28+00:00",
   "7522": "2026-10-29T05:47:28+00:00",
   "8185": "2026-10-29T05:47:28+00:00",
@@ -42961,15 +43631,15 @@
   "7679": "2026-10-29T05:47:28+00:00",
   "7596": "2026-10-29T05:47:28+00:00",
   "7683": "2026-10-29T05:47:28+00:00",
-  "2753": "2026-10-29T00:03:51+00:00",
+  "2753": "2026-10-29T06:24:39+00:00",
   "7823": "2026-10-29T05:47:28+00:00",
   "2461": "2026-10-29T05:47:28+00:00",
   "4058": "2026-10-29T06:03:39+00:00",
   "3179": "2026-10-28T16:25:02+00:00",
-  "8203": "2026-10-29T00:03:51+00:00",
+  "8203": "2026-10-29T06:24:39+00:00",
   "2294": "2026-10-29T05:47:28+00:00",
-  "3199": "2026-10-29T00:03:51+00:00",
-  "3548": "2026-10-29T00:22:09+00:00",
+  "3199": "2026-10-29T06:24:39+00:00",
+  "3548": "2026-10-29T06:24:39+00:00",
   "7554": "2026-10-29T06:03:39+00:00",
   "7185": "2026-10-28T20:22:30+00:00",
   "9990": "2026-10-29T06:03:39+00:00",
@@ -43126,7 +43796,7 @@
   "2702": "2026-10-28T18:34:38+00:00",
   "8985": "2026-10-29T06:03:39+00:00",
   "7649": "2026-10-28T21:55:35+00:00",
-  "8963": "2026-10-29T05:30:36+00:00",
+  "8963": "2026-10-29T06:24:39+00:00",
   "141A": "2026-10-29T06:03:39+00:00",
   "7564": "2026-10-29T02:02:54+00:00",
   "9989": "2026-10-29T05:47:28+00:00",
@@ -43229,40 +43899,40 @@
   "8179": "2026-10-29T06:03:39+00:00",
   "9974": "2026-10-29T06:03:39+00:00",
   "8276": "2026-10-29T06:03:39+00:00",
-  "9166": "2026-10-29T05:30:36+00:00",
+  "9166": "2026-10-29T06:24:39+00:00",
   "8153": "2026-10-29T06:03:39+00:00",
   "9039": "2026-10-29T06:03:39+00:00",
-  "9832": "2026-10-29T05:30:36+00:00",
-  "3612": "2026-10-29T05:30:36+00:00",
-  "9842": "2026-10-29T05:30:36+00:00",
+  "9832": "2026-10-29T06:24:39+00:00",
+  "3612": "2026-10-29T06:24:39+00:00",
+  "9842": "2026-10-29T06:24:39+00:00",
   "7545": "2026-10-29T04:53:16+00:00",
-  "7512": "2026-10-29T05:30:36+00:00",
-  "7513": "2026-10-29T05:30:36+00:00",
+  "7512": "2026-10-29T06:24:39+00:00",
+  "7513": "2026-10-29T06:24:39+00:00",
   "9887": "2026-10-28T16:25:02+00:00",
-  "8255": "2026-10-29T05:30:36+00:00",
+  "8255": "2026-10-29T06:24:39+00:00",
   "7611": "2026-10-28T16:25:02+00:00",
   "8173": "2026-10-28T20:22:30+00:00",
-  "2678": "2026-10-29T05:30:36+00:00",
-  "8016": "2026-10-29T05:30:36+00:00",
+  "2678": "2026-10-29T06:24:39+00:00",
+  "8016": "2026-10-29T06:24:39+00:00",
   "9997": "2026-10-28T16:25:02+00:00",
   "6036": "2026-10-29T05:30:36+00:00",
-  "8198": "2026-10-29T05:30:36+00:00",
-  "6627": "2026-10-29T05:30:36+00:00",
+  "8198": "2026-10-29T06:24:39+00:00",
+  "6627": "2026-10-29T06:24:39+00:00",
   "2653": "2026-10-29T05:21:29+00:00",
-  "9279": "2026-10-29T05:30:36+00:00",
-  "8715": "2026-10-29T05:30:36+00:00",
-  "2742": "2026-10-29T05:30:36+00:00",
-  "7421": "2026-10-29T05:30:36+00:00",
-  "8244": "2026-10-29T05:30:36+00:00",
-  "3608": "2026-10-29T05:30:36+00:00",
-  "2705": "2026-10-29T05:30:36+00:00",
-  "8160": "2026-10-29T05:30:36+00:00",
+  "9279": "2026-10-29T06:24:39+00:00",
+  "8715": "2026-10-29T06:24:39+00:00",
+  "2742": "2026-10-29T06:24:39+00:00",
+  "7421": "2026-10-29T06:24:39+00:00",
+  "8244": "2026-10-29T06:24:39+00:00",
+  "3608": "2026-10-29T06:24:39+00:00",
+  "2705": "2026-10-29T06:24:39+00:00",
+  "8160": "2026-10-29T06:24:39+00:00",
   "7606": "2026-10-29T05:30:36+00:00",
-  "9900": "2026-10-29T05:30:36+00:00",
-  "3817": "2026-10-29T05:30:36+00:00",
-  "8163": "2026-10-29T05:30:36+00:00",
+  "9900": "2026-10-29T06:24:39+00:00",
+  "3817": "2026-10-29T06:24:39+00:00",
+  "8163": "2026-10-29T06:24:39+00:00",
   "8200": "2026-10-29T05:47:28+00:00",
-  "7412": "2026-10-29T05:30:36+00:00",
+  "7412": "2026-10-29T06:24:39+00:00",
   "4343": "2026-10-28T16:25:02+00:00",
   "3395": "2026-10-29T05:30:36+00:00",
   "3733": "2026-10-29T05:30:36+00:00",
@@ -43284,7 +43954,7 @@
   "6238": "2026-10-28T16:25:02+00:00",
   "8011": "2026-10-29T05:47:28+00:00",
   "2669": "2026-10-29T05:47:28+00:00",
-  "2674": "2026-10-29T00:03:51+00:00",
+  "2674": "2026-10-29T06:24:39+00:00",
   "2910": "2026-10-29T05:47:28+00:00",
   "7522": "2026-10-29T05:47:28+00:00",
   "8185": "2026-10-29T05:47:28+00:00",
@@ -43294,15 +43964,15 @@
   "7679": "2026-10-29T05:47:28+00:00",
   "7596": "2026-10-29T05:47:28+00:00",
   "7683": "2026-10-29T05:47:28+00:00",
-  "2753": "2026-10-29T00:03:51+00:00",
+  "2753": "2026-10-29T06:24:39+00:00",
   "7823": "2026-10-29T05:47:28+00:00",
   "2461": "2026-10-29T05:47:28+00:00",
   "4058": "2026-10-29T06:03:39+00:00",
   "3179": "2026-10-28T16:25:02+00:00",
-  "8203": "2026-10-29T00:03:51+00:00",
+  "8203": "2026-10-29T06:24:39+00:00",
   "2294": "2026-10-29T05:47:28+00:00",
-  "3199": "2026-10-29T00:03:51+00:00",
-  "3548": "2026-10-29T00:22:09+00:00",
+  "3199": "2026-10-29T06:24:39+00:00",
+  "3548": "2026-10-29T06:24:39+00:00",
   "7554": "2026-10-29T06:03:39+00:00",
   "7185": "2026-10-28T20:22:30+00:00",
   "9990": "2026-10-29T06:03:39+00:00",
@@ -44229,6 +44899,29 @@
   "https://contents.xj-storage.jp/xcontents/AS02676/baacde50/ebd5/446d/9671/1eea8b3fa46f/140120220301598345.pdf": "2026-10-29",
   "https://contents.xj-storage.jp/xcontents/AS02676/f346f2ed/fb50/4e9c/a2fa/23a52f4b0c70/140120220201577461.pdf": "2026-10-29",
   "https://contents.xj-storage.jp/xcontents/AS02676/9adfa626/3d3a/43f4/b48b/f87b2cc20419/140120220104563377.pdf": "2026-10-29",
-  "https://contents.xj-storage.jp/xcontents/AS02676/8e3dea78/867d/46ab/a539/96cb945b4807/140120211201444877.pdf": "2026-10-29"
+  "https://contents.xj-storage.jp/xcontents/AS02676/8e3dea78/867d/46ab/a539/96cb945b4807/140120211201444877.pdf": "2026-10-29",
+  "https://contents.xj-storage.jp/xcontents/AS91042/7fe78836/6926/41b7/b437/608182811ab5/140120230612501244.pdf": "2026-10-29",
+  "https://contents.xj-storage.jp/xcontents/AS91042/21eac847/770a/4667/93d8/7f164f05ec30/140120230509561045.pdf": "2026-10-29",
+  "https://contents.xj-storage.jp/xcontents/AS91042/d6afeeb1/1950/4d17/ba6d/96ce23f893b0/140120230409544359.pdf": "2026-10-29",
+  "https://contents.xj-storage.jp/xcontents/AS91042/78e1ae78/e76d/4da6/8378/8d0382ccb370/140120230310528577.pdf": "2026-10-29",
+  "https://contents.xj-storage.jp/xcontents/AS91042/cf8fb69d/dcd1/4c6c/9616/ac255c063c90/140120230209505683.pdf": "2026-10-29",
+  "https://contents.xj-storage.jp/xcontents/AS91042/f7fcfd5d/3501/455d/9e27/60ce0394ccaa/140120230109586634.pdf": "2026-10-29",
+  "https://contents.xj-storage.jp/xcontents/AS91042/116302ee/835f/4f11/9a18/8daea0e04784/140120221212577245.pdf": "2026-10-29",
+  "https://contents.xj-storage.jp/xcontents/AS91042/15917013/b98d/4600/afe7/bc271501c366/140120221110561929.pdf": "2026-10-29",
+  "https://contents.xj-storage.jp/xcontents/AS91042/4bb80eca/e292/4803/814b/430a155a1efd/140120221011542381.pdf": "2026-10-29",
+  "https://contents.xj-storage.jp/xcontents/AS91042/b26b0cba/9d02/4761/962d/658858ea32bc/140120220912531142.pdf": "2026-10-29",
+  "https://contents.xj-storage.jp/xcontents/AS91042/41790e72/2592/481b/9f9d/9c3e71666667/140120220810517376.pdf": "2026-10-29",
+  "https://contents.xj-storage.jp/xcontents/AS91042/57bd27b3/1020/4ea5/9445/2f6cd2999b8c/140120220711597619.pdf": "2026-10-29",
+  "https://contents.xj-storage.jp/xcontents/AS91042/2ecb8405/2348/4524/9aae/f6c448126ea7/140120220610576396.pdf": "2026-10-29",
+  "https://contents.xj-storage.jp/xcontents/AS91042/b9ad691c/c1dd/40d5/8c21/ae55572f475f/140120220510536633.pdf": "2026-10-29",
+  "https://contents.xj-storage.jp/xcontents/AS91042/54e78f30/a122/4065/a262/e3bfe5193340/140120220411519783.pdf": "2026-10-29",
+  "https://contents.xj-storage.jp/xcontents/AS99965/180289f0/aec1/4d33/922c/74b1d841567d/140120191108422128.pdf": "2026-10-29",
+  "https://contents.xj-storage.jp/xcontents/AS99965/3d54aa5b/935f/485d/a487/f6258b5860bb/140120190910496344.pdf": "2026-10-29",
+  "https://contents.xj-storage.jp/xcontents/AS99965/81be3964/a517/4771/94bd/4ad6e2b4144d/140120190208473007.pdf": "2026-10-29",
+  "https://contents.xj-storage.jp/xcontents/AS99965/dad0a864/d2e5/48cb/bd39/fe3d4b7f8dd7/140120170609401829.pdf": "2026-10-29",
+  "https://contents.xj-storage.jp/xcontents/AS99965/f65b3eff/0d7a/4d6e/95d4/0a17efd622e3/140120170410438243.pdf": "2026-10-29",
+  "https://www.sra-hd.co.jp/Portals/0/ir/settlement/fuzoku/fuzoku201002.pdf": "2026-10-29",
+  "https://www.sra-hd.co.jp/Portals/0/ir/settlement/fuzoku/fuzoku200911.pdf": "2026-10-29",
+  "https://www.sra-hd.co.jp/Portals/0/ir/settlement/fuzoku/fuzoku200908.pdf": "2026-10-29"
  }
 }
