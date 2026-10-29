@@ -23,7 +23,7 @@ try {
 <script>
 /* GitHub Pages/CDN 이 예전 index.html 을 잡고 있어도, 한 번 최신판을 받은 뒤부터는
    version.txt 를 no-store 로 확인해 새 빌드가 있으면 query string 을 바꿔 강제 갱신한다. */
-const ES_BUILD = "20261029045219";
+const ES_BUILD = "20261029045614";
 setTimeout(() => {
   fetch('./version.txt?t=' + Date.now(), {cache:'no-store'})
     .then(r => r.ok ? r.text() : '')
@@ -608,18 +608,23 @@ td.dim { color:var(--mute); font-size:18px; }
 #mdFin { margin-top:18px; }
 .finnote { color:var(--mute); font-size:17px; margin:10px 0 0; }
 .finwrap { border-top:1px solid var(--line); padding-top:14px; }
-.fcwrap { margin:4px 0 16px; overflow-x:auto; }
-.fctab { border-collapse:collapse; font-size:15px; min-width:520px; width:100%; font-variant-numeric:tabular-nums; }
-.fctab th,.fctab td { border:1px solid var(--line); padding:5px 10px; text-align:right; white-space:nowrap; }
-.fctab thead th { background:#2a2a1a; color:#f3e7a8; font-weight:600; line-height:1.35; vertical-align:bottom; }
-.fctab thead th small { display:block; color:#c9bd7d; font-weight:400; font-size:12px; }
-.fctab thead th b { display:block; }
-.fctab thead th.act { background:#2c2416; }
-.fctab tbody th { text-align:left; font-weight:600; color:var(--ink, #e6edf5); background:transparent; }
-.fctab td.act { color:#cfd8e3; }
-.fctab tr.gap > * { border-top:2px solid var(--line); }
-.fctab .fcunit { text-align:left; vertical-align:middle; }
-.fcnote { color:var(--mute); font-size:12.5px; margin:6px 0 0; }
+.fcwrap { display:inline-block; max-width:100%; overflow-x:auto; margin:0 0 14px;
+          background:#141c24; border:1px solid var(--line); border-radius:10px; padding:8px 12px 7px; }
+.fctab { border-collapse:collapse; font-size:14px; font-variant-numeric:tabular-nums; }
+.fctab tr,.fctab th,.fctab td { background:transparent !important; }
+.fctab th,.fctab td { padding:3px 0 3px 22px; text-align:right; white-space:nowrap;
+                     font-size:14px; line-height:1.45; height:auto; border:0; }
+.fctab th:first-child,.fctab td:first-child { padding-left:0; }
+.fctab thead th { color:var(--mute); font-weight:600; font-size:13px; line-height:1.25;
+                  padding-bottom:5px; border-bottom:1px solid var(--line); vertical-align:bottom; }
+.fctab thead th b { display:block; color:var(--fg); font-size:13px; }
+.fctab thead th small { display:block; font-weight:400; font-size:12px; }
+.fctab thead th.est b { color:var(--a2); }
+.fctab tbody th { text-align:left; color:var(--mute); font-weight:600; }
+.fctab tbody td { color:var(--fg); }
+.fctab tbody td.na { color:#4a5866; }
+.fctab tr.gap > * { border-top:1px solid var(--line); padding-top:5px; }
+.fcnote { color:var(--mute); font-size:12px; margin:5px 0 0; white-space:normal; }
 .prnote { color:#e8c46a; }
 .prnote a { color:#e8c46a; }
 .finhead { font-size:18px; font-weight:700; margin-bottom:8px; }
@@ -744,7 +749,7 @@ svg.bars rect.b:hover { fill:var(--a3); }
 <body>
 <div class="wrap">
 
-<div class="topline"><span class="fl fl-us" role="img" aria-label="미국"></span> 미국 <b>12,986</b> · <span class="fl fl-jp" role="img" aria-label="일본"></span> 일본 <b>7,766</b> · <span class="fl fl-hk" role="img" aria-label="홍콩"></span> 홍콩 <b>9,191</b> · 합계 <b>29,135건</b> · 수집 <b>2025-07-09 ~ 2026-12-28</b> · 갱신 2026-10-29 13:52 KST</div>
+<div class="topline"><span class="fl fl-us" role="img" aria-label="미국"></span> 미국 <b>12,986</b> · <span class="fl fl-jp" role="img" aria-label="일본"></span> 일본 <b>7,766</b> · <span class="fl fl-hk" role="img" aria-label="홍콩"></span> 홍콩 <b>9,191</b> · 합계 <b>29,135건</b> · 수집 <b>2025-07-09 ~ 2026-12-28</b> · 갱신 2026-10-29 13:56 KST</div>
 <h1><span class="mark" aria-hidden="true"></span>Earning <span class="jp">Samurai</span>
     <span class="byline">by CB</span></h1>
 <p class="sub">미국 · 일본 · 홍콩 주간 실적발표 일정 — 누가 언제 무엇을 발표했는지</p>
@@ -2140,10 +2145,10 @@ function fcstTable(m, code) {
   const shares = b && b[3] && b[4] ? b[3] / b[4] : null;
   const c2ni = F.n[1] && shares ? F.n[1] * shares : null;
   const cols = [
-    { tag: '-0FY', name: '직전년도', end: a[0], rev: a[1], opi: a[2], ni: a[3] },
-    { tag: '1FY', name: '당해년도', end: b ? b[0] : null, rev: b && b[1], opi: b && b[2], ni: b && b[3] },
-    { tag: '2FY', name: '차기년도', end: null, rev: F.n[0], opi: null, ni: c2ni },
-    { tag: '3FY', name: '차차기년도', end: null, rev: null, opi: null, ni: null },
+    { name: '직전년도', end: a[0], rev: a[1], opi: a[2], ni: a[3] },
+    { name: '당해년도', end: b ? b[0] : null, rev: b && b[1], opi: b && b[2], ni: b && b[3] },
+    { name: '차기년도', end: null, rev: F.n[0], opi: null, ni: c2ni },
+    { name: '차차기년도', end: null, rev: null, opi: null, ni: null },
   ];
   // 차기·차차기 결산일은 당해 결산일에서 한 해씩 민다.
   const base = cols[1].end || cols[0].end;
@@ -2151,24 +2156,24 @@ function fcstTable(m, code) {
     const y = yr(base) + (cols[1].end ? j + 1 : j + 2);
     cols[i].end = y + base.slice(4);
   });
-  const won = v => (v == null || !isFinite(v)) ? '—' : Math.round(v * F.k / 1e8).toLocaleString();
-  const ratio = (num, den) => (!den || den <= 0) ? (den < 0 ? '적자' : '—') : (num / den).toFixed(1);
+  const won = v => (v == null || !isFinite(v)) ? null : Math.round(v * F.k / 1e8).toLocaleString();
+  const ratio = (num, den) => (!den || den <= 0) ? (den < 0 ? '적자' : null) : (num / den).toFixed(1);
+  const cell = v => v == null ? '<td class="na">—</td>' : '<td>' + v + '</td>';
   const row = (lab, f, cls) => '<tr' + (cls ? ' class="' + cls + '"' : '') + '><th>' + lab + '</th>' +
-    cols.map((c, i) => '<td' + (i === 0 ? ' class="act"' : '') + '>' + f(c, i) + '</td>').join('') + '</tr>';
+    cols.map((c, i) => cell(f(c, i))).join('') + '</tr>';
+  const ym = d => d ? d.slice(2, 4) + '.' + d.slice(5, 7) : '';
   return '<div class="fcwrap"><table class="fctab">' +
-    '<thead><tr><th class="fcunit">원화기준 실적<br><small>단위: 억원</small></th>' +
-      cols.map((c, i) => '<th' + (i === 0 ? ' class="act"' : '') + '>' + esc(c.end || '') +
-        '<small>' + c.tag + '</small><b>' + c.name + '</b></th>').join('') + '</tr></thead><tbody>' +
+    '<thead><tr><th>단위: 억 원 환산</th>' +
+      cols.map((c, i) => '<th' + (i ? ' class="est"' : '') + '><b>' + c.name + '</b><small>' +
+        ym(c.end) + '</small></th>').join('') + '</tr></thead><tbody>' +
     row('매출', c => won(c.rev)) +
     row('영업이익', c => won(c.opi)) +
     row('순이익', c => won(c.ni)) +
-    row('PER', c => c.ni == null ? '—' : ratio(F.m * F.k, c.ni * F.k), 'gap') +
-    row('PBR', (c, i) => i === 0 && F.e ? ratio(F.m, F.e) : '—') +
-    row('PSR', c => c.rev == null ? '—' : ratio(F.m, c.rev)) +
-    '</tbody></table><p class="fcnote">직전년도는 실적, 그 뒤는 애널리스트 컨센서스(S&amp;P Global) · ' +
-    'PER·PSR 은 현재 시총 기준 · PBR 은 현재 자본 기준 · 차기 순이익은 EPS×주식수 환산 · ' +
-    '차기 영업이익·차차기는 무료 자료에 없음 · 원화는 고정 환율 어림' +
-    (F.ts ? ' · ' + esc(F.ts) + ' 받음' : '') + '</p></div>';
+    row('PER', c => c.ni == null ? null : ratio(F.m * F.k, c.ni * F.k), 'gap') +
+    row('PBR', (c, i) => i === 0 && F.e ? ratio(F.m, F.e) : null) +
+    row('PSR', c => c.rev == null ? null : ratio(F.m, c.rev)) +
+    '</tbody></table><p class="fcnote">직전년도 실적 · 이후 컨센서스(S&amp;P Global) · 배수는 현재 시총 기준' +
+    (F.ts ? ' · ' + esc(F.ts.slice(5).replace('-', '/')) + ' 기준' : '') + '</p></div>';
 }
 
 function finBlock(m, code) {
