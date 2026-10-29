@@ -202,6 +202,10 @@ class Telegram:
             self.subs = set(json.loads(self.path.read_text()))
         except (OSError, ValueError):
             self.subs = set()
+        # 기존 봇이 보내던 대화방(TELEGRAM_CHAT_ID)은 /start 없이 바로 받는다.
+        for cid in re.split(r"[,\s]+", os.environ.get("TELEGRAM_CHAT_ID", "")):
+            if cid.lstrip("-").isdigit():
+                self.subs.add(int(cid))
         self.offset = 0
 
     def api(self, method, data=None, files=None, timeout=60):
