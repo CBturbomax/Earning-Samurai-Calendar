@@ -37,7 +37,7 @@ SYSTEM = """너는 실적 발표 자료를 읽고 '실적이 왜 이렇게 나�
   (堅調→호조, 価格転嫁→가격 인상 반영, 円安→엔화 약세, 不採算→적자 사업).
 - 제품·지역·고객처럼 구체적인 것을 우선한다(예: "AI 서버용 수요 급증으로 데이터센터 매출 2배").
 
-JSON 으로만 답한다: {"why": [최대 3줄 — 실적을 움직인 이유], "watch": [최대 2줄 — 일회성·환율·감익 부문·가이던스 하향 등 주의할 점], "guide": "가이던스·전망에 대한 회사 언급 한 줄(없으면 빈 문자열)"}"""
+JSON 으로만 답한다: {"key": "자료에 적힌 이번 기간 핵심 숫자 한 줄 — 매출·영업이익(또는 순이익)과 전년 대비 %를 자료 표기 그대로 통화 단위 붙여(예: 매출 120.5억 위안(+35%) · 순이익 18.2억 위안(+52%)). 자료에 없으면 빈 문자열", "why": [최대 3줄 — 실적을 움직인 이유], "watch": [최대 2줄 — 일회성·환율·감익 부문·가이던스 하향 등 주의할 점], "guide": "가이던스·전망에 대한 회사 언급 한 줄(없으면 빈 문자열)"}"""
 
 
 def _post(url, body, headers, timeout):
@@ -111,8 +111,8 @@ def why(name, text, timeout=40):
         return None
     clean = lambda xs: [str(x).strip() for x in (xs or []) if str(x).strip()]   # noqa: E731
     res = {"why": clean(d.get("why"))[:3], "watch": clean(d.get("watch"))[:2],
-           "guide": str(d.get("guide") or "").strip()}
-    if not (res["why"] or res["watch"] or res["guide"]):
+           "guide": str(d.get("guide") or "").strip(), "key": str(d.get("key") or "").strip()[:160]}
+    if not (res["why"] or res["watch"] or res["guide"] or res["key"]):
         LOG("요약 내용 없음:", name, "원문", len(text), repr(text[:120]))
         return None
     return res
