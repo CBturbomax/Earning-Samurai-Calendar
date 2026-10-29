@@ -137,6 +137,18 @@ python scrape_desc.py                       # 사업 설명 원문
 종목을 가리키는 열쇠는 코드가 아니라 **`시장:코드`** 다. 일본 8035(도쿄일렉트론)와
 홍콩 08035는 다른 회사다.
 
+**은행·리츠는 싣지 않는다 — 세 시장 공통**(회원님 지시 2026-10-29: "은행 리츠
+같은 건 다 빼버려, 안 가져와도 돼"). 판별은 `markets.py` 의 `excluded()` 한 곳이고
+빌드(`build.py` 의 `drop_banks_reits`)·미국 속보(`scrape_live_us`)·연간 표
+(`scrape_fcst`)가 같이 쓴다. **세부 업종을 먼저, 없을 때만 이름으로** 가른다 —
+일본 `銀行`·`銀行業`·`REIT`·이름 `投資法人`·TDnet `Ｒ－`/`Ｉ－`, 미국 나스닥 industry
+(`Major Banks`·`Savings Institutions`·`Real Estate Investment Trusts`), 홍콩 야후
+industry(`Banks - …`·`REIT - …`). 세부 업종은 `scrape_caps.py` 가 `caps.json` 의
+`industries` 에 받는다. 'Finance'·'Real Estate' 같은 큰 업종으로 거르지 말 것 —
+보험·증권·부동산 개발사까지 쓸려 나간다(빼라고 한 것은 은행과 리츠뿐이다).
+일본은 **종목 단위로** 뺀다 — TDnet 줄은 업종이 비어 오므로 같은 회사의 닛케이·
+JPX 줄 하나라도 은행이면 그 회사 전부를 뺀다.
+
 **관심종목(★ 담기)과 .ics 내보내기는 걷어냈다.** 둘 다 쓸 일이 없었다. ★ 는
 칩·표·상세창·필터 네 군데에 자리를 차지하면서 정작 회사 이름을 잘라먹었고,
 **CSS 를 자를 때 이웃 규칙을 같이 지우지 말 것.** 월매출 CSS 를 갈아끼우며

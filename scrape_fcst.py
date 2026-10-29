@@ -18,6 +18,7 @@
 결과: data/forecast.json  {"stocks": {"jp:2914": {...}}}
 """
 import json
+from markets import excluded
 import os
 import re
 import sys
@@ -162,6 +163,25 @@ def to_num(s):
     return float(m.group(1)) * mul
 
 
+def _caps_meta():
+    """caps.json 의 업종·세부 업종 — 은행·리츠를 수집 단계에서부터 뺀다."""
+    try:
+        d = json.loads((HERE / "data" / "caps.json").read_text(encoding="utf-8"))
+        return d.get("sectors", {}), d.get("industries", {})
+    except (ValueError, OSError):
+        return {}, {}
+
+
+def _skip(mkt, code, name, sector=""):
+    sec, ind = _META
+    k = f"{mkt}:{code}"
+    i = ind.get(k, "")
+    return excluded(mkt, name or "", sector or sec.get(k, ""), "" if i == "-" else i)
+
+
+_META = _caps_meta()
+
+
 def universe():
     """{시장:코드: (시총, 발표일까지 남은 날)} — 화면에 오르는 종목 중 MIN_CAP 이상."""
     caps = {}
@@ -183,6 +203,8 @@ def universe():
             if not c:
                 continue
             k = f"{market}:{c}"
+            if _skip(market, c, r.get("name"), r.get("sector", "")):
+                continue                          # 은행·리츠는 안 받는다
             cap = (r.get("cap") if market == "us" else 0) or caps.get(k) or 0
             try:
                 gap = abs((date.fromisoformat(r.get("date") or "") - today).days)

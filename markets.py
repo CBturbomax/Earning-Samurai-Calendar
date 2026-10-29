@@ -506,3 +506,40 @@ SEG_KO_CJK = {
     "飲料": "음료",
     "製薬": "제약",
 }
+
+
+# ── 은행·리츠는 싣지 않는다 ─────────────────────────────────────────
+# 회원님 지시(2026-10-29): "은행 리츠 같은 건 어닝사무라이에서 다 빼버려. 일본 미국
+# 홍콩 전부 공통." 매출 줄이 없거나(은행은 이자수익·리츠는 임대수익) 실적 표의
+# 생김새가 달라 이 화면이 보려는 '매출·영업이익' 틀에 안 맞는다.
+#
+# 가르는 근거는 시장마다 다르다 — **세부 업종을 먼저, 없으면 이름으로.**
+#   일본  업종 `銀行`·`銀行業`·`REIT`, 이름 `投資法人`, TDnet 이름 앞 `Ｒ－`(리츠)·`Ｉ－`(인프라펀드)
+#   미국  나스닥 세부 업종 `Major Banks`·`Savings Institutions`·`Real Estate Investment Trusts`
+#   홍콩  야후 세부 업종 `Banks - …`·`REIT - …`
+# 업종 이름 'Finance'·'Real Estate' 로는 거르지 않는다 — 보험·증권·부동산 개발사까지
+# 쓸려 나간다(회원님이 빼라고 한 것은 은행과 리츠뿐이다).
+import re as _re
+
+_IND_OUT = _re.compile(r"\bbanks?\b|savings institution|real estate investment trust|\breit\b",
+                       _re.I)
+_US_NAME_BANK = _re.compile(r"\bbancorp|\bbancshares|\bbankshares|\bbanc\b|\bbank\b", _re.I)
+_US_NAME_REIT = _re.compile(r"\breit\b|real estate investment trust|realty trust", _re.I)
+_HK_NAME_OUT = _re.compile(r"\bbank\b|\bbk\b|銀行|\breit\b|產業信託|置業信託|房託|房地產投資信託", _re.I)
+_JP_SECT_OUT = {"銀行", "銀行業", "REIT"}
+_JP_NAME_OUT = _re.compile(r"投資法人|^[ＲＩRI][－\-]")
+
+
+def excluded(mkt, name="", sector="", industry=""):
+    """은행·리츠인가. 세부 업종(industry)이 있으면 그것만 보고, 없을 때만 이름을 본다."""
+    if mkt == "jp":
+        return sector in _JP_SECT_OUT or bool(_JP_NAME_OUT.search(name or ""))
+    if industry:
+        return bool(_IND_OUT.search(industry))
+    if mkt == "us":
+        if sector == "Finance" and _US_NAME_BANK.search(name or ""):
+            return True
+        return sector == "Real Estate" and bool(_US_NAME_REIT.search(name or ""))
+    if mkt == "hk":
+        return bool(_HK_NAME_OUT.search(name or ""))
+    return False
