@@ -35,23 +35,31 @@ jobs:
                   return e.code, ""
               except Exception as e:
                   return type(e).__name__, str(e)[:200]
-          def dump(lab, u, kws, w=900, h=None):
-              st, t = get(u, h)
-              print("=====", lab, st, len(t))
-              for kw in kws:
-                  for m in list(re.finditer(kw, t))[:3]:
-                      x = re.sub(r"<[^>]+>", " ", t[max(0, m.start()-100):m.start()+w])
-                      print("  ", kw, re.sub(r"\s+", " ", x))
-          dump("kabuyoho", "https://kabuyoho.ifis.co.jp/index.php?action=tp1&sa=report_top&bcode=7203", ["営業利益", "来期"])
-          dump("nikkei", "https://www.nikkei.com/nkd/company/kessan/?scode=7203", ["予", "営業利益"], 600)
-          dump("yjp-cons", "https://finance.yahoo.co.jp/quote/7203.T/performance?styl=analystcons", ["performanceForecastList"], 600)
-          st, t = get("https://api.nasdaq.com/api/analyst/AAPL/earnings-forecast", {"Accept": "application/json"})
-          try:
-              print("nasdaq yearly", json.dumps(json.loads(t)["data"]["yearlyForecast"])[:1500])
-          except Exception as e:
-              print("nasdaq err", e)
-          st, t = get("https://api.nasdaq.com/api/analyst/0700/earnings-forecast", {"Accept": "application/json"})
-          print("nasdaq tsla", st, t[:300])
+          def fin(u):
+              try:
+                  with urllib.request.urlopen(urllib.request.Request(u, headers=UA), timeout=25) as r:
+                      return r.status, r.geturl(), r.read(4_000_000).decode("utf-8", "ignore")
+              except urllib.error.HTTPError as e:
+                  return e.code, u, ""
+              except Exception as e:
+                  return type(e).__name__, u, ""
+          for q in ["Toyota", "JP3633400001", "US0378331005", "Apple", "Tencent", "KYG875721634", "7203", "AAPL"]:
+              st, fu, t = fin("https://www.finanzen.net/suchergebnis.asp?_search=" + q)
+              links = sorted(set(re.findall(r'href="(/aktien/[a-z0-9_\-]+-aktie)"', t)))[:8]
+              print("search", q, st, fu, len(t), links)
+          for slug in ["toyota", "apple", "tencent", "sony"]:
+              st, fu, t = fin("https://www.finanzen.net/schaetzungen/" + slug)
+              print("=====", slug, st, fu, len(t))
+              for kw in ["EBIT", "Umsatz"]:
+                  i = t.find(">" + kw)
+                  if i > 0:
+                      seg = t[t.rfind("<table", 0, i):t.find("</table>", i)]
+                      for r in re.findall(r"<tr[^>]*>(.*?)</tr>", seg, re.S)[:14]:
+                          cells = [re.sub(r"\s+", " ", html.unescape(re.sub(r"<[^>]+>", "", c))).strip() for c in re.findall(r"<t[hd][^>]*>(.*?)</t[hd]>", r, re.S)]
+                          print("   ", cells[:8])
+                      break
+          for u in ["https://www.finanzen.ch/schaetzungen/toyota", "https://markets.businessinsider.com/stocks/aapl-stock"]:
+              st, fu, t = fin(u); print("=====", u, st, len(t), "EBIT" in t)
           EOF
 
       - name: 결과를 probe-out 가지에

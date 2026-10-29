@@ -3377,12 +3377,12 @@ td.dim { color:var(--mute); font-size:18px; }
 .fctab tr,.fctab th,.fctab td { background:transparent; }
 .fctab th,.fctab td { padding:7px 16px; text-align:right; white-space:nowrap;
                      font-size:16px; line-height:1.4; height:auto; border:0; }
-.fctab thead th { background:#1d2a36 !important; color:var(--mute); font-weight:600;
+.fctab thead th { background:#22384c !important; color:#a9bccb; font-weight:600;
                   font-size:13px; line-height:1.3; padding:8px 16px; vertical-align:bottom;
-                  border-bottom:1px solid #2f4252; }
+                  border-bottom:2px solid #3a5a76; }
 .fctab thead th:first-child { text-align:left; font-weight:400; font-size:12px; }
 .fctab thead th b { display:block; color:var(--fg); font-size:15px; }
-.fctab thead th small { display:block; font-weight:400; font-size:12px; }
+.fctab thead th small { display:block; font-weight:400; font-size:12px; color:#8fa7ba; }
 .fctab tbody tr { background:#141c24 !important; }
 .fctab tbody tr + tr > * { border-top:1px solid #1f2a33; }
 .fctab tbody th { text-align:left; color:var(--mute); font-weight:600; background:#18222b !important;
@@ -3390,8 +3390,13 @@ td.dim { color:var(--mute); font-size:18px; }
 .fctab tbody td { color:var(--fg); }
 .fctab tbody td.na { color:#4a5866; }
 .fctab tr.gap > * { border-top:1px solid #2f4252 !important; }
+.fctab tr.per > * { background:rgba(255,176,32,.09) !important; border-top:1px solid rgba(255,176,32,.35) !important;
+                    border-bottom:1px solid rgba(255,176,32,.35); }
+.fctab tr.per th { color:var(--a3); border-left:3px solid var(--a3); }
+.fctab tr.per td { color:#ffe2a8; font-weight:600; }
+.fctab tr.per td.cur { background:rgba(255,176,32,.17) !important; color:#fff; font-weight:800; }
 .fctab .cur { background:rgba(91,155,213,.10) !important; }
-.fctab thead th.cur { background:#22405a !important; box-shadow:inset 0 3px 0 var(--a2); }
+.fctab thead th.cur { background:#2b5578 !important; box-shadow:inset 0 3px 0 var(--a2); }
 .fctab thead th.cur b { color:#9cc6ee; }
 .fctab td.cur { font-weight:700; }
 .fctab .pst b { color:#c9d4dc; }
@@ -4946,7 +4951,7 @@ function fcstTable(m, code) {
     row('매출', c => won(c.rev)) +
     row('영업이익', c => won(c.opi)) +
     row('순이익', c => won(c.ni)) +
-    row('PER', c => c.ni == null ? null : ratio(F.m * F.k, c.ni * F.k), 'gap') +
+    row('PER', c => c.ni == null ? null : ratio(F.m * F.k, c.ni * F.k), 'gap per') +
     row('PBR', (c, i) => i === 0 && F.e ? ratio(F.m, F.e) : null) +
     row('PSR', c => c.rev == null ? null : ratio(F.m, c.rev)) +
     '</tbody></table></div>';
