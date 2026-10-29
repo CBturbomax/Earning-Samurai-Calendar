@@ -590,8 +590,14 @@ def jp_watch():
 
 
 # ── 홍콩 ────────────────────────────────────────────────────────────────
+# 실적 공시 분류에 같이 걸려 오는 안내 공시(설명회 소집·이사회 날짜 등)는 실적이 아니다.
+HK_NOT = re.compile(r"CONVEN|PRESENTATION|BRIEFING|BOARD MEETING|DATE OF|NOTICE OF|POSTPONE|DELAY|"
+                    r"說明會|業績會|董事會會議", re.I)
+
+
 def hk_watch():
     seen = set()
+    sent = set()
     first = True
     while True:
         t0 = time.time()
@@ -603,7 +609,11 @@ def hk_watch():
                     continue
                 seen.add(k)
                 if first and QUIET or not r["time"]:
+                    sent.add((r["date"], r["code"]))
                     continue
+                if HK_NOT.search(r["fy"] or "") or (r["date"], r["code"]) in sent:
+                    continue
+                sent.add((r["date"], r["code"]))
                 if H.skip("hk", r["code"], r["name"]):
                     continue
                 ev = base_event("hk", r["code"], r["name"], f"{r['date']} {r['time']}", HKT,
