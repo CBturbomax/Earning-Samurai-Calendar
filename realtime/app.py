@@ -479,7 +479,11 @@ def finish(ev, point=None):
         (DATA / "charts").mkdir(exist_ok=True)
         (DATA / "charts" / f"{fname(ev['id'])}_{i}.png").write_bytes(png)
     ev["charts"] = [f"/chart/{fname(ev['id'])}_{i}.png" for i in range(len(pngs))]
-    if not S.add(ev):
+    if not ev.get("replay") and not S.add(ev):
+        return
+    if ev.get("replay"):                         # 시험 — 사이트·보관은 안 건드리고 텔레그램으로만
+        TG.send_album("🧪 <i>지난 공시 다시 보내기(시험)</i>\n" + caption(ev), pngs)
+        log("다시 보내기", ev["key"], "요약" if ev.get("brief") else "요약 없음", len(pngs), "장")
         return
     S.broadcast(ev)
     send, why = tg_pick(ev, pts)
@@ -614,7 +618,7 @@ def label_of(period):
     return f"{(mi - 1) // 3 + 1}Q{int(y) % 100:02d}"
 
 
-def us_process(cik, acc, name, upd):
+def us_process(cik, acc, name, upd, replay=False):
     tick = cik_ticker().get(cik)
     if not tick:
         return
@@ -624,6 +628,7 @@ def us_process(cik, acc, name, upd):
     pub_et = datetime.fromisoformat(upd).astimezone(ET).strftime("%Y-%m-%d %H:%M")
     url = f"https://www.sec.gov/Archives/edgar/data/{cik}/{acc.replace('-', '')}/{acc}-index.htm"
     ev = base_event("us", code, name, pub_et, ET, "SEC 8-K 보도자료", url)
+    ev["replay"] = replay
     point = None
     try:
         raw = lu.ex99_html(cik, acc.replace("-", ""))
@@ -671,12 +676,13 @@ def us_watch():
 
 
 # ── 일본 ────────────────────────────────────────────────────────────────
-def jp_process(row, day):
+def jp_process(row, day, replay=False):
     code = row["code"]
     if H.skip("jp", code, row["name"]):
         return
     ev = base_event("jp", code, row["name"], f"{day} {row['time']}", JST, "TDnet 결산단신",
                     fj.LIST_URL.format(page=1, day=day.replace("-", "")), row["title"])
+    ev["replay"] = replay
     point = None
     try:
         blob = fj.get(row["zip"], binary=True)
@@ -771,6 +777,81 @@ def safe(fn, *a):
         fn(*a)
     except Exception:                                            # noqa: BLE001
         log("작업 실패", fn.__name__, traceback.format_exc(limit=3))
+
+
+# ── 다시 보내기(시험) ──────────────────────────────────────────────────
+# 저장소 맨 위 replay.txt 를 고치면(첫 줄 = 아무 새 이름, 다음 줄 = "us 3" · "jp 2" · "hk 2")
+# 오늘 나온 실제 공시 몇 건을 지금 모양으로 다시 그려 텔레그램에만 보낸다. 서버가 켜질 때
+# 이미 있던 이름은 안 돌린다. railway.json 의 watchPatterns 밖이라 재배포도 안 일어난다.
+REPLAY_URL = "https://api.github.com/repos/CBturbomax/Earning-Samurai-Calendar/contents/replay.txt?ref=main"
+
+
+def replay_run(lines):
+    for ln in lines:
+        m = re.match(r"(us|jp|hk)\s+(\d+)", ln.strip())
+        if not m:
+            continue
+        mkt, n = m.group(1), min(int(m.group(2)), 5)
+        if mkt == "us":
+            xml = http_get(FEED.format(form="8-K").replace("count=40", "count=100"), timeout=15)
+            got = 0
+            for e in ENTRY.findall(xml):
+                if "2.02" not in html.unescape(e) or got >= n:
+                    continue
+                acc = re.search(r"AccNo:\s*</b>\s*([\d-]+)|AccNo:\s*([\d-]+)", html.unescape(e))
+                t = re.search(r"<title>[^<]*?-\s*(.*?)\s*\((\d{10})\)", e)
+                upd = re.search(r"<updated>([^<]+)</updated>", e)
+                if acc and t and upd and cik_ticker().get(int(t.group(2))):
+                    us_process(int(t.group(2)), acc.group(1) or acc.group(2), html.unescape(t.group(1)), upd.group(1), True)
+                    got += 1
+        elif mkt == "jp":
+            for back in range(0, 5):
+                day = (datetime.now(JST) - timedelta(days=back)).strftime("%Y-%m-%d")
+                rows = [r for r in fj.listing(day, 1) if fj.TANSHIN.search(r["title"])
+                        and not fj.NOT_TANSHIN.search(r["title"]) and r["zip"] and not H.skip("jp", r["code"], r["name"])]
+                if rows:
+                    for r in rows[:n]:
+                        jp_process(r, day, True)
+                    break
+        else:
+            for back in range(0, 4):
+                d = (datetime.now(HKT) - timedelta(days=back)).date()
+                rows = [r for r in hk.fetch_day(d) if r["time"] and not HK_NOT.search(r["fy"] or "")
+                        and not H.skip("hk", r["code"], r["name"])]
+                if rows:
+                    for r in sorted(rows, key=lambda r: -((H.row(f"hk:{r['code']}") or [0] * 12)[11] or 0))[:n]:
+                        ev = base_event("hk", r["code"], r["name"], f"{r['date']} {r['time']}", HKT,
+                                        "HKEXnews 실적 공시", r["link"], r["fy"])
+                        ev["replay"] = True
+                        hk_process(ev)
+                    break
+
+
+def replay_loop():
+    path = DATA / "replay_id"
+    try:
+        last = path.read_text().strip()
+    except OSError:
+        last = None
+    while True:
+        try:
+            req = urllib.request.Request(REPLAY_URL, headers={"Accept": "application/vnd.github.raw",
+                                                               "User-Agent": "earning-samurai"})
+            with urllib.request.urlopen(req, timeout=20) as r:
+                lines = r.read().decode().splitlines()
+            rid = lines[0].strip() if lines else ""
+            if rid and rid != last:
+                path.write_text(rid)
+                if last is not None:
+                    log("다시 보내기 요청", rid, lines[1:])
+                    replay_run(lines[1:])
+                last = rid
+        except Exception as e:                                   # noqa: BLE001
+            if "404" not in str(e):
+                log("다시 보내기:", e)
+            if last is None:
+                last = ""
+        time.sleep(90)
 
 
 def history_loop():
@@ -886,7 +967,7 @@ def llm_selftest():
 def main():
     log("시작 — 텔레그램", "켜짐" if TG_TOKEN else "꺼짐(TG_BOT_TOKEN 없음)", "· 구독", len(TG.subs))
     H.refresh()
-    for fn in (TG.poll, us_watch, jp_watch, hk_watch, history_loop, llm_selftest):
+    for fn in (TG.poll, us_watch, jp_watch, hk_watch, history_loop, llm_selftest, replay_loop):
         threading.Thread(target=fn, daemon=True, name=fn.__name__).start()
     ThreadingHTTPServer(("0.0.0.0", PORT), Handler).serve_forever()
 
