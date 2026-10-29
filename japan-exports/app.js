@@ -1,4 +1,5 @@
 import {renderDiscovery,discoveryHits,fetchDiscovery,fetchDiscoveryStatus} from '../trade-shared/discovery.mjs?v=20261012-discovery';
+import {renderAlerts} from './alerts.mjs?v=20261029-alerts';
 import {renderHighlights} from '../trade-shared/highlights.mjs?v=20261012-companies';
 import {change,windowMonths,metricValue,priorYear,compatibleSeries,rollingGrowth} from './metrics.mjs?v=20261001-niche';
 import {themes} from './themes.mjs?v=20261012-companies';
@@ -47,7 +48,7 @@ function cardClick(e){let b=e.target.closest('button');if(!b)return;if(b.dataset
 $('#cards').addEventListener('click',cardClick);$('#discovery-card').addEventListener('click',cardClick);
 document.addEventListener('pointermove',e=>{let t=e.target.closest?.('[data-tip]');if(!t){tooltip.style.display='none';return}tooltip.textContent=t.dataset.tip;tooltip.style.display='block';tooltip.style.left=Math.min(e.clientX+14,window.innerWidth-tooltip.offsetWidth-10)+'px';tooltip.style.top=Math.max(5,e.clientY-48)+'px'});
 async function load(){try{let r=await fetch('data/exports.json.gz?catalog=49',{cache:'no-cache'});if(!r.ok)throw Error('통계 파일을 불러올 수 없습니다.');data=await new Response(r.body.pipeThrough(new DecompressionStream('gzip'))).json();if(!data.items?.length)throw Error('통계 데이터가 비어 있습니다.');const all=[...new Set(data.items.flatMap(i=>Object.keys(i.series)))].filter(c=>c!=='WORLD');all.sort((a,b)=>Number(!!data.countries[b])-Number(!!data.countries[a])||countryName(a).localeCompare(countryName(b),'ko'));$('#country').innerHTML='<option value="WORLD">세계 전체</option>'+all.map(c=>`<option value="${esc(c)}">${esc(countryName(c))}</option>`).join('');$('#period').textContent=`최신 ${fullDate(data.latestMonth)} · 5년 추적`;$('#checked').textContent=`확인 ${new Date(data.checkedAt).toLocaleString('ko-KR',{timeZone:'Asia/Seoul',month:'numeric',day:'numeric',hour:'2-digit',minute:'2-digit'})} KST`;$('#sources').innerHTML=data.sources.map(s=>`<a href="${esc(s.url)}" target="_blank" rel="noopener">${esc(s.label.replace(/CSV.*$/,''))} ↗</a>`).join('');if(group==='기업 연결'){$('.tabs .active')?.classList.remove('active');$('[data-group="기업 연결"]').classList.add('active');$('#sort').value='rolling'}render();try{let r=await fetch('data/status.json',{cache:'no-store'});if(r.ok){let st=await r.json();if(!st.ok)$('#notice').innerHTML='<div class="warning">최근 수집에 실패해 마지막으로 검증된 데이터를 표시합니다. 원자료 확인이 재개되면 자동으로 갱신됩니다.</div>'}}catch{}}catch(e){$('#cards').innerHTML=`<div class="empty error">${esc(e.message)}<br>잠시 후 새로고침해 주세요.</div>`}}
-let discoveryData=null,discoveryCompanies={},discoveryError=false,selectedDiscovery=null,discoveryStatus=null,discoveryStatusError=false;
+let hsKo={},discoveryData=null,discoveryCompanies={},discoveryError=false,selectedDiscovery=null,discoveryStatus=null,discoveryStatusError=false;
 function discoveryMappings(){
  const mapping={...discoveryCompanies};
  for(const item of discoveryData?.items||[]){const matching=(data?.items||[]).filter(i=>i.hs.some(h=>h.startsWith(item.code))),exactNames=[...new Set(matching.filter(i=>i.hs.length===1&&i.hs[0]===item.code).map(i=>i.name))],names=matching.map(i=>themes[i.id]?.companies).filter(Boolean);mapping[item.code]={...(exactNames.length===1?{name:exactNames[0]}:{}),...(names.length?{companies:[...new Set(names)].join(' · ')}:{}),...mapping[item.code]};}
@@ -55,7 +56,7 @@ function discoveryMappings(){
 }
 function renderDiscoveryPanel(){
  const options={companies:discoveryMappings(),latest:data?.latestMonth,country:$('#country').value,error:discoveryError,status:discoveryStatus,statusError:discoveryStatusError,query:$('#discovery-search').value};
- $('#trade-discovery').innerHTML=renderDiscovery(discoveryData,options);
+ $('#trade-discovery').innerHTML=renderAlerts(discoveryData,{names:hsKo,companies:options.companies,query:options.query,error:discoveryError});
  const selected=selectedDiscovery&&discoveryHits(discoveryData,options).find(x=>x.item.id===selectedDiscovery.id)?.item;
  selectedDiscovery=selected||null;
  $('#discovery-card').innerHTML=selected&&data&&options.country==='WORLD'?panel(selected,state(),windowMonths(selected.latestMonth,state().range)):'';
@@ -65,6 +66,7 @@ $('#trade-discovery').addEventListener('click',e=>{const b=e.target.closest('[da
 async function loadDiscovery(){
  renderDiscoveryPanel();
  fetchDiscoveryStatus('data/discovery-status.json').then(status=>{discoveryStatus=status;renderDiscoveryPanel()}).catch(()=>{discoveryStatusError=true;renderDiscoveryPanel()});
+ fetch('hs-ko.json',{cache:'no-cache'}).then(r=>r.ok?r.json():{}).then(m=>{hsKo=m;renderDiscoveryPanel()}).catch(()=>{});
  const companies=fetch('discovery-companies.json',{cache:'no-cache'}).then(r=>r.ok?r.json():{}).then(mapping=>{discoveryCompanies=mapping;renderDiscoveryPanel()}).catch(()=>{});
  try{discoveryData=await fetchDiscovery('data/discovery.json')}catch{discoveryError=true}renderDiscoveryPanel();
 }
