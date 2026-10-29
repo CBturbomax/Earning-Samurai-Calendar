@@ -1633,6 +1633,15 @@ def seg_fit(rec, fin_rec):
 SEG_KEEP = 20        # 화면에 그리는 것이 스물두 분기라 그만큼만 싣는다
 
 
+def lab_key(lab):
+    """'3Q26'·'1H26' -> 차례를 견줄 열쇠."""
+    m = re.match(r"(\d)([QH])(\d\d)", lab or "")
+    if not m:
+        return (0, 0)
+    n = int(m.group(1)) * (2 if m.group(2) == "H" else 1)
+    return (int(m.group(3)), n)
+
+
 def pack_seg(rec, fin_rec):
     """[분기 라벨, 부문1, 부문2, …]. 라벨은 총매출 쪽 것을 빌려 온다."""
     fit = seg_fit(rec, fin_rec)
@@ -2700,6 +2709,33 @@ def build():
             seg[s] = got
         else:
             tossed.append(s.split(":")[-1])
+    # 실시간 서버가 실적 보도자료의 부문 표를 AI 로 읽은 것 — 10-Q 보다 며칠~몇 주 빠르다.
+    # 회원님(10/30): "3분기 실적은 가져오는데 왜 3분기 브레이크다운은 못 가져오냐."
+    # 서버가 사이트 표기 이름 그대로 받아 오고, 합이 그 분기 총매출과 맞을 때만 담겼다.
+    # 이미 그 분기가 있으면(10-Q 가 들어오면) 손대지 않는다 — 공식 자료가 이긴다.
+    try:
+        AI = json.loads((HERE / "data" / "segments_ai.json").read_text(encoding="utf-8"))
+    except (OSError, ValueError):
+        AI = {}
+    ai_n = 0
+    for k, r in AI.items():
+        if k not in on_screen or not r.get("label"):
+            continue
+        lab, vals = r["label"], dict(zip(r.get("names") or [], r.get("vals") or []))
+        cur = seg.get(k)
+        if cur:
+            labs = [p[0] for p in cur["pts"]]
+            if lab in labs or (labs and lab_key(lab) <= lab_key(labs[-1])):
+                continue
+            if sum(1 for n in cur["names"] if vals.get(n) is not None) < 2:
+                continue
+            cur["pts"].append([lab] + [int(vals[n]) if vals.get(n) else None for n in cur["names"]])
+            cur["ai"] = lab
+        else:
+            seg[k] = {"names": list(vals), "pts": [[lab] + [int(v) if v else None for v in vals.values()]], "ai": lab}
+        ai_n += 1
+    if AI:
+        print(f"  사업부별 매출: 보도자료 AI 판독으로 이번 분기를 이은 종목 {ai_n:,}")
     if SEG:
         note = f"  사업부별 매출 {len(seg):,}종목"
         if tossed:
@@ -5993,6 +6029,14 @@ function rtApply(ev) {
   if (m === 'us') { D.live = D.live || {}; D.live[code] = [ev.date, ev.url || '']; }
   if (ev.brief && (ev.brief.segs || []).length) RTSEG[key] = Object.assign({ src: ev.src }, ev.brief);
   if (ev.finAll && !(D.fin[key] && (D.fin[key].points || []).length >= 2)) D.fin[key] = ev.finAll;
+  // 보도자료 부문 표(AI 판독) — 사업부별 막대에 이번 분기를 곧바로 얹는다.
+  const sp = ev.segPoint;
+  if (sp && sp.label) {
+    const sg = D.seg[key], v = {};
+    (sp.names || []).forEach((n, i) => { v[n] = sp.vals[i]; });
+    if (sg && !sg.pts.some(p => p[0] === sp.label)) sg.pts.push([sp.label].concat(sg.names.map(n => v[n] == null ? null : v[n])));
+    else if (!sg) D.seg[key] = { names: sp.names, pts: [[sp.label].concat(sp.vals)] };
+  }
   // 일본 회사 통기 예상(가이던스) — 연간 표의 당해 칸·브리핑이 곧바로 새 예상을 쓴다.
   if (m === 'jp' && ev.guide && ev.guide.end && ev.guide.now) {
     const o = D.fcst[key] || {};
