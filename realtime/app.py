@@ -527,9 +527,11 @@ def finish(ev, point=None):
             else:
                 ev["turn"] = "적자 지속"
     text = ev.pop("_text", "")
+    more = ev.pop("_more", None)
     box = {}
     names = seg_names_now(seg)
-    th = threading.Thread(target=lambda: box.update(b=brief.why(ev["name"], text, names=names)), daemon=True)
+    th = threading.Thread(target=lambda: box.update(b=brief.why(ev["name"], text + (more() if more else ""), names=names)),
+                          daemon=True)
     th.start()
     with H.lock:
         ann = H.D.get("ann", {}).get(key)
@@ -571,7 +573,7 @@ def finish(ev, point=None):
         S.update(ev)
     log(f"실적 {ev['mkt']}:{ev['code']} {ev['name']} · 공개 {ev.get('published')} 감지 {ev['detected']} "
         f"텔레그램 {'보냄 ' + ev['t_tg'] if send else '안 보냄'} ({why}) · 그림 {len(pngs)}")
-    th.join(100)                                 # ② '왜'·AI 판독은 받는 대로 답장으로
+    th.join(200)                                 # ② '왜'·AI 판독은 받는 대로 답장으로 (IR 자료 기다림 포함)
     b = box.get("b")
     if not b:
         return
@@ -838,6 +840,33 @@ def label_of(period):
     return f"{(mi - 1) // 3 + 1}Q{int(y) % 100:02d}"
 
 
+def us_extra_text(cik, acc):
+    """같은 8-K 에 붙은 보도자료 말고 다른 첨부(투자자 발표자료 EX-99.2 등, htm·pdf) — 부문 표가 거기 있는 회사가 많다.
+    회원님(10/30): "IR 자료도 같이 읽어라." """
+    try:
+        blob = lu.sec_get(lu.FILES.format(cik=cik, acc=acc), timeout=15, binary=False)
+        items = json.loads(blob)["directory"]["item"] if blob else []
+        ex = sorted([(it["name"], int(it.get("size") or 0)) for it in items
+                     if re.search(r"ex[-_]?99|99[-_.]?[2-9]|presentation|slides|supplement", it["name"], re.I)
+                     and it["name"].lower().endswith((".htm", ".html", ".pdf"))], key=lambda t: -t[1])
+        if len(ex) < 2:
+            return ""
+        out = []
+        for name, _sz in ex[1:3]:                               # 가장 큰 것(보도자료)은 이미 읽었다
+            raw = lu.sec_get(lu.DOC.format(cik=cik, acc=acc, name=name), timeout=25)
+            if not raw:
+                continue
+            t = brief.hk_text(raw) if name.lower().endswith(".pdf") else brief.plain(raw.decode("utf-8", "replace"))
+            i = max(t.lower().find("segment"), 0)
+            out.append(f"\n\n[투자자 자료 {name}]\n" + t[max(0, i - 300):max(0, i - 300) + 7000])
+        if out:
+            log("미국 IR 첨부", acc, len(out), "개")
+        return "".join(out)
+    except Exception as e:                                       # noqa: BLE001
+        log("미국 IR 첨부 실패", acc, repr(e)[:120])
+        return ""
+
+
 def us_process(cik, acc, name, upd, replay=False):
     tick = cik_ticker().get(cik)
     if not tick:
@@ -852,7 +881,8 @@ def us_process(cik, acc, name, upd, replay=False):
     point = None
     try:
         raw = lu.ex99_html(cik, acc.replace("-", ""))
-        ev["_text"] = brief.us_text(raw)                      # 보도자료 — 부문 표가 뒤쪽에 있다
+        ev["_text"] = brief.us_text(raw)
+        ev["_more"] = lambda: us_extra_text(cik, acc.replace("-", ""))   # IR 첨부는 요약 단계에서(앨범을 늦추지 않게)
         period = us_period(ev["key"], pub_et[:10])
         prior = lu.sec_prior(code, period)
         got = pr_table.read(raw, prior) if raw and prior else None
@@ -919,7 +949,18 @@ def jp_seg_text(blob):
 IR_TITLE = re.compile(r"説明資料|補足資料|プレゼンテーション|決算概要|Presentation|ハイライト")
 
 
-def jp_ir_text(code, day):
+def jp_ir_text(code, day, tries=3):
+    """설명자료가 결산단신보다 몇십 초 늦게 올라오는 회사가 있다 — 30초 간격으로 세 번까지 본다.
+    (요약은 그림 앨범을 보낸 뒤에 붙으므로 기다려도 알림이 늦지 않는다.)"""
+    for n in range(tries):
+        t = _jp_ir_text(code, day)
+        if t or n == tries - 1:
+            return t
+        time.sleep(30)
+    return ""
+
+
+def _jp_ir_text(code, day):
     """같은 날 TDnet 에 올라온 그 회사의 결산 설명자료(IR PDF) 글 — 분기 사업부 표가 대개 여기 있다.
     회원님(10/30): "IR 자료랑 IR 홈페이지 같은 것도 활용하면 되잖아." """
     try:
@@ -960,8 +1001,8 @@ def jp_process(row, day, replay=False):
         blob = fj.get(zurl, binary=True)
         if blob:
             vals = fj.read_summary(blob)
-            ev["_text"] = (fj.read_narrative(blob) + "\n\n[세그먼트 정보]\n" + jp_seg_text(blob)
-                           + "\n\n[결산 설명자료(IR)]\n" + jp_ir_text(code, day))
+            ev["_text"] = fj.read_narrative(blob) + "\n\n[세그먼트 정보]\n" + jp_seg_text(blob)
+            ev["_more"] = lambda: "\n\n[결산 설명자료(IR)]\n" + jp_ir_text(code, day)
             if vals:
                 ev["guide"] = GD.add(code, fj.forecast_from(vals), day)
             prior = fj.base_series().get(f"jp:{code}", {})
