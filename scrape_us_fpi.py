@@ -52,7 +52,8 @@ BAD = re.compile(
     r"(?i)notice of|notification of|release date|date of|conference call|webcast|\bagm\b|"
     r"annual general|tender|restated|dividend|voting rights|own shares|pdmr|bond|notes due|"
     r"buy[- ]?back|repurchase|director|holding\(s\)|scrip|delisting|invitation|presentation date|"
-    r"capital markets day|will (?:publish|announce|report|release)|to (?:publish|announce|report|release)")
+    r"capital markets day|will (?:publish|announce|report|release)|to (?:publish|announce|report|release)|"
+    r"ahead of|pre-close|forward[- ]looking|outlined|as a result")
 GENERIC = re.compile(r"(?i)^(?:form )?6-k$|report of foreign|press release|^$")
 # 본문으로 가릴 때는 더 좁게 — 보도자료 꼬리의 "actual results may differ" 같은
 # 상투구가 아무 6-K 에나 들어 있다. '기간 + results' 나 trading statement 꼴만.
@@ -129,7 +130,7 @@ def kind_of(text, doc):
     end = f"{m.group(1)}년 {int(m.group(2))}월 분기" if m and 1 <= int(m.group(2)) <= 12 else ""
     if re.search(r"\bq1\b|\b1q\b|first quarter", t):
         k = "1Q"
-    elif re.search(r"\bq3\b|\b3q\b|third quarter|nine months", t):
+    elif re.search(r"\bq3\b|\b3q\b|third quarter|nine[- ]months?", t):
         k = "3Q"
     elif re.search(r"half[- ]?year|first half|\bh1\b|\b1h\b|interim|\bq2\b|\b2q\b|second quarter", t):
         k = "반기"
@@ -232,13 +233,18 @@ def main():
                                 "cap": cap, "acc": acc, "accepted": when, "country": country,
                                 "url": url, "why": why[:160]}
             n_new += 1
-    # 같은 회사가 같은 날 실적 6-K 를 여럿 내면(XBRL 본·보도자료 본) 가장 이른 것 하나만.
-    best = {}
-    for r in rows.values():
-        k = (r["code"], r["date"])
-        if k not in best or r["accepted"] < best[k]["accepted"]:
-            best[k] = r
-    out = sorted(best.values(), key=lambda r: (r["date"], r["code"]))
+    # 한 번의 발표가 6-K 여러 장으로 온다 — 보도자료 본·XBRL 재무제표 본, 그리고
+    # 며칠 뒤의 정식 반기보고서(스미스앤드네퓨 8/4 실적 → 8/14 XBRL, 프루덴셜 8/27
+    # 실적 → 9/2 「HALF-YEAR REPORT」). 같은 회사의 실적 6-K 가 25일 안에 이어지면
+    # 첫 장 하나만 남긴다(분기 실적끼리는 석 달 떨어져 있다).
+    out, last = [], {}
+    for r in sorted(rows.values(), key=lambda r: (r["code"], r["accepted"])):
+        prev = last.get(r["code"])
+        if prev and (date.fromisoformat(r["date"]) - date.fromisoformat(prev)).days <= 25:
+            continue
+        last[r["code"]] = r["date"]
+        out.append(r)
+    out.sort(key=lambda r: (r["date"], r["code"]))
     OUT.write_text(json.dumps({
         "source": "SEC EDGAR 6-K (나스닥 캘린더에 없는 미국 상장 외국 회사)",
         "note": "실적 6-K 의 접수 시각(동부). 앞으로의 예정은 없다.",
