@@ -163,14 +163,22 @@ def announcements(day):
 # 주식수 · EPS 뿐이다. IFRS 금융사는 요약을 이익부터 시작한다.
 # 없는 값을 다른 항목으로 대신 채우지 말 것 — 세전이익을 매출이라 적는 셈이다.
 # 이 회사들은 stockanalysis 가 며칠 뒤에 매출을 실어 주므로 그때 메워진다.
-NAME_REV = ("NetSales", "NetSalesIFRS", "Sales", "SalesIFRS", "Revenue", "RevenueIFRS",
+# **미국 기준(米国基準) 회사는 이름 끝에 `US` 가 붙는다**(probe 실측 2026-10-29).
+# 캐논 `NetSalesUS`·`OperatingIncomeUS`·`NetIncomeUS`, 노무라 `TotalRevenuesUS`·
+# `TotalRevenuesAfterDeductingFinancialExpenseUS`. 이걸 몰라서 캐논·노무라·소니(옛)
+# 같은 미국 기준 회사는 발표 당일 수치가 비고 stockanalysis 로 하루 늦게 들어왔다.
+# 노무라는 기존 차트가 **순수익(금융비용 차감 후)** 기준이라 그쪽을 먼저 본다.
+NAME_REV = ("TotalRevenuesAfterDeductingFinancialExpenseUS", "NetSalesUS",
+            "TotalRevenuesUS", "OperatingRevenuesUS", "RevenuesUS",
+            "NetSales", "NetSalesIFRS", "Sales", "SalesIFRS", "Revenue", "RevenueIFRS",
             "OperatingRevenues", "OperatingRevenuesIFRS",
             "NetSalesOfCompletedConstructionContracts",
             "OrdinaryIncomeBanks", "GrossOperatingRevenues")
-NAME_OPI = ("OperatingIncome", "OperatingIncomeIFRS", "OperatingIncomeLoss",
+NAME_OPI = ("OperatingIncomeUS", "OperatingIncome", "OperatingIncomeIFRS", "OperatingIncomeLoss",
             "ProfitFromOperatingActivitiesIFRS", "OperatingProfitLossIFRS",
             "BusinessProfitIFRS", "OrdinaryIncome", "OrdinaryIncomeLoss")
-NAME_NI = ("ProfitAttributableToOwnersOfParent",
+NAME_NI = ("NetIncomeAttributableToOwnersOfParentUS", "NetIncomeUS",
+           "ProfitAttributableToOwnersOfParent",
            "ProfitAttributableToOwnersOfParentIFRS",
            "NetIncome", "NetIncomeLoss", "ProfitLoss",
            "ProfitLossAttributableToOwnersOfParent")
@@ -1047,6 +1055,13 @@ def collect():
     # 놓친다. 한 벌만 적었다가 실제로 그럴 뻔했다 — 파일이 생기는 순간 다시
     # 훑기가 멈춘다. **둘 다 본 공시만** 건너뛴다.
     done = set(load_done())
+    # 미국 기준 공시는 이름 규칙(US 꼬리)을 알기 전에 '봤다'고 적혔다 — 한 번 다시 뜯는다.
+    try:
+        us_done = set(json.loads(OUT.read_text(encoding="utf-8")).get("docs_us", []))
+    except (ValueError, OSError):
+        us_done = set()
+    US_DONE.update(us_done)
+    us_done = US_DONE
     seg_done = set(load_seg_done())
     if len(done - seg_done) > 50:
         print(f"  부문을 아직 안 본 공시가 {len(done - seg_done):,}건 있다. 다시 뜯는다.",
@@ -1073,6 +1088,9 @@ def collect():
         print(f"  {day}: 결산단신 {len(rows)}건", flush=True)
         for r in rows:
             key = "jp:" + r["code"]
+            if "米国基準" in (r.get("title") or "") and r["zip"] not in us_done:
+                done.discard(r["zip"])
+                us_done.add(r["zip"])
             if (r["zip"] in done and r["zip"] in seg_done
                     and r["zip"] in fcst_done and r["zip"] in narr_done):
                 continue                    # 지난 실행에서 넷 다 봤다
@@ -1303,6 +1321,9 @@ def save_segments(raw, seg_done=(), quiet=False):
               f"(누계 점을 가진 종목 {len(raw):,})")
 
 
+US_DONE = set()
+
+
 def save(stocks, done, got, skipped, segs=None, seg_done=(), fcst_done=(),
          narrs=None, narr_done=(), quiet=False):
     payload = {
@@ -1312,6 +1333,7 @@ def save(stocks, done, got, skipped, segs=None, seg_done=(), fcst_done=(),
         "count": len(stocks),
         # 이미 본 공시. TDnet 은 한 달치만 남기므로 이만큼이면 넉넉하다.
         "docs": sorted(done)[-6000:],
+        "docs_us": sorted(US_DONE)[-3000:],
         # 가이던스(통기 예상)까지 뜯어본 공시. docs 와 따로 두는 이유는 부문의
         # seg_done 과 같다 — 한 벌만 적으면 나중에 붙인 수집이 영영 안 돈다.
         "fcst_docs": sorted(fcst_done)[-6000:],
