@@ -373,6 +373,13 @@ def targets():
             if c and c in need:
                 k = "us:" + c
                 out[k] = max(out.get(k, 0), r.get("cap") or 0)
+    # 나스닥 캘린더에 없는 미국 상장 외국 회사(scrape_us_fpi.py) — SEC 분기가 없으니 전부.
+    try:
+        for r in json.loads((HERE / "data" / "earnings_us_fpi.json").read_text(encoding="utf-8")).get("rows", []):
+            k = "us:" + r["code"]
+            out[k] = max(out.get(k, 0), r.get("cap") or 0)
+    except (ValueError, OSError):
+        pass
     return out
 
 
@@ -387,7 +394,8 @@ def announcements():
     out = {}
     for market, fn in (("jp", "earnings.json"), ("jp", "earnings_jp_past.json"),
                        ("jp", "earnings_jp_sched.json"),
-                       ("hk", "earnings_hk.json"), ("us", "earnings_us.json")):
+                       ("hk", "earnings_hk.json"), ("us", "earnings_us.json"),
+                       ("us", "earnings_us_fpi.json")):
         f = HERE / "data" / fn
         if not f.exists():
             continue
