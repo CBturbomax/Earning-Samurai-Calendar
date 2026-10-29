@@ -680,7 +680,9 @@ def segfill(n):
             newest[k] = f["points"][-1]
     import collections
     # 가장 흔한 최신 분기 — 최댓값을 쓰면 라벨이 엉뚱한 한 종목(2Q31)에 끌려간다.
-    top = collections.Counter(p[0] for p in newest.values()).most_common(1)[0][0] if newest else None
+    cnt = collections.Counter(p[0] for p in newest.values())
+    ok = [lab for lab, c in cnt.items() if c >= 50 and re.match(r"\dQ\d\d$", lab)]
+    top = max(ok, key=lambda l: (l[2:], l[0])) if ok else None   # 50곳 넘게 낸 가장 새 분기 = 이번 시즌
     rev_map = {v: k for k, v in cik_ticker().items()}
     todo = []
     for k, p in newest.items():
