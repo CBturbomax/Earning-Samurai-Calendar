@@ -12,14 +12,17 @@ on:
 permissions:
   contents: write
   pages: write
+  actions: write      # 다음 실행 예약(이어달리기)
 concurrency:
   group: japan-exports
   cancel-in-progress: false
 jobs:
   refresh:
     runs-on: ubuntu-latest
-    timeout-minutes: 25
+    timeout-minutes: 40
     steps:
+      - name: 시작 시각
+        run: echo "T0=$(date +%s)" >> "$GITHUB_ENV"
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
         with:
@@ -59,3 +62,39 @@ jobs:
       - name: 수집 실패 표시
         if: steps.collect.outcome == 'failure' || steps.discovery.outcome == 'failure'
         run: exit 1
+
+      # **발표 즉시 잡기.** 크론은 몇 시간씩 밀린다(9월분 확보를 아침 공개 뒤 오후
+      # 3시에 받았다). 여기서 25분 동안 e-Stat 목록 한 장만 1분마다 보고, 새 달이
+      # 뜨면 그 자리에서 수집·저장한다. 끝나면 다음 실행을 걸어 감시가 끊기지 않게 한다.
+      - name: 새 달 감시 (1분 간격)
+        if: always()
+        shell: bash
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_REPO: ${{ github.repository }}
+        run: |
+          set +e
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          while [ $(( $(date +%s) - T0 )) -lt 1800 ]; do
+            if timeout 90 python japan-exports/scripts/watch.py; then
+              echo "새 달 — 바로 수집한다"
+              python japan-exports/scripts/collect.py && python japan-exports/scripts/discover.py
+              git add japan-exports/data
+              if ! git diff --cached --quiet; then
+                git commit -qm "일본 수출 새 달 반영 [skip ci]"
+                for a in 1 2 3 4 5; do
+                  timeout 120 git pull -q --rebase origin main && timeout 120 git push -q origin HEAD:main && break
+                  git rebase --abort 2>/dev/null; sleep $((a*3))
+                done
+                gh api --method POST "repos/$GH_REPO/pages/builds" >/dev/null || true
+              fi
+            fi
+            sleep 60
+          done
+
+      - name: 다음 실행 예약
+        if: ${{ !cancelled() }}
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: gh workflow run japan-exports.yml --ref main -R "$GITHUB_REPOSITORY" || echo "예약 실패 — 크론에 맡긴다"
