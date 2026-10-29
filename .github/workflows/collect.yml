@@ -102,18 +102,10 @@ jobs:
         timeout-minutes: 25
         run: python scrape_us.py "${{ steps.range.outputs.from }}" "${{ steps.range.outputs.to }}"
 
-      # 나스닥 캘린더가 안 싣는 미국 상장 외국 회사(매그넘 MICC·유니레버·리오틴토·
-      # 디아지오…)의 실적 6-K 를 SEC 에서 받는다. 종목마다 15분에 한 번만 다시 본다.
-      - name: 🇺🇸 미국 상장 외국 회사 (SEC 6-K)
-        continue-on-error: true
-        timeout-minutes: 8
-        env:
-          SEC_UA: 'Earning Samurai Calendar (cbpark@wisdomasset.co.kr)'
-        run: python scrape_us_fpi.py
-
       # 닛케이는 데이터센터 IP 를 막는다. 집에서 돌리면 되지만 여기서는 첫 요청부터
       # 껍데기가 온다. 오래 붙들지 않게 한 번 실패하면 바로 접는다.
       # (이미 받아둔 일본 자료는 그대로 살아 있고, 새 날짜만 못 채운다.)
+
       - name: 🇯🇵 일본 (닛케이)
         continue-on-error: true
         timeout-minutes: 20
@@ -231,12 +223,19 @@ jobs:
               git commit --no-edit
             fi
 
-            # 상대가 build.py 나 표기를 고쳤을 수 있다. 합친 코드 + 합친 자료로 다시.
-            python build.py > /dev/null
-            git add index.html version.txt
-            git diff --cached --quiet || git commit -m "페이지 다시 만들기 [skip ci]"
-
-            git push origin "HEAD:$BR" && exit 0
+            # **자료부터 민다 — 페이지는 그다음.** 예전에는 재시도마다 페이지를 다시
+            # 만들고(2분) 밀었는데, 그 사이 3분 루프가 먼저 밀어 매번 졌다(10/29
+            # 매그넘 6-K 수집분이 그래서 30분 넘게 안 올라갔다). numbers.yml 과 같은 규칙.
+            if git push origin "HEAD:$BR"; then
+              python build.py > /dev/null || true
+              git add index.html version.txt
+              if ! git diff --cached --quiet; then
+                git commit -m "페이지 다시 만들기 [skip ci]"
+                git fetch origin "$BR" && git merge --no-edit -X ours "origin/$BR" && \
+                  git push origin "HEAD:$BR" || echo "페이지 푸시는 다음 루프에 맡긴다"
+              fi
+              exit 0
+            fi
             echo "푸시 실패, $((2**i))초 뒤 재시도"; sleep $((2**i))
           done
           echo "푸시를 끝내 못 했다"; exit 1

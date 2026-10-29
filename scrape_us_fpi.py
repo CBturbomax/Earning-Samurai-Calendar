@@ -36,7 +36,7 @@ NAS_UA = ("Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 "
 MIN_CAP = float(os.environ.get("FPI_MIN_CAP", "0.3"))      # 십억 달러
 DAYS = int(os.environ.get("FPI_DAYS", "200"))
 RECHECK_MIN = int(os.environ.get("FPI_RECHECK_MIN", "15"))
-SECS = int(os.environ.get("FPI_SECS", "240"))
+SECS = int(os.environ.get("FPI_SECS", "240"))   # main() 에서 다시 읽는다(속보 루프가 남은 시간을 넘긴다)
 SCREEN_HOURS = 6
 
 NOT_COMMON = re.compile(
@@ -163,6 +163,7 @@ def judge(desc, doc, xbrl, fetch_text):
 
 def main():
     t0 = time.time()
+    SECS = int(os.environ.get("FPI_SECS", "240"))
     try:
         old = json.loads(OUT.read_text(encoding="utf-8"))
     except (ValueError, OSError):
@@ -174,12 +175,21 @@ def main():
     cal = calendar_codes()
     uni = {s: v for s, v in screen["rows"].items()
            if s not in cal and s.replace(".", "-") not in cal and s.replace("-", ".") not in cal}
+    # SEC 티커 목록(1MB)은 3분 루프마다 받지 않는다 — 러너 안에 반나절 둔다.
+    cache = HERE / ".cache" / "sec_tickers.json"
     try:
-        tk = json.loads(get("https://www.sec.gov/files/company_tickers.json"))
+        if time.time() - cache.stat().st_mtime > 12 * 3600:
+            raise OSError
+        ciks = json.loads(cache.read_text())
+    except (OSError, ValueError):
+        try:
+            tk = json.loads(get("https://www.sec.gov/files/company_tickers.json"))
+        except Exception as e:                                # noqa: BLE001
+            print(f"SEC 티커 목록 실패: {e}", file=sys.stderr)
+            return 1
         ciks = {v["ticker"].upper(): v["cik_str"] for v in tk.values()}
-    except Exception as e:                                    # noqa: BLE001
-        print(f"SEC 티커 목록 실패: {e}", file=sys.stderr)
-        return 1
+        cache.parent.mkdir(exist_ok=True)
+        cache.write_text(json.dumps(ciks))
     since = (date.today() - timedelta(days=DAYS)).isoformat()
     now = datetime.now(timezone.utc)
     due = sorted(uni, key=lambda s: (checked.get(s, ""), -uni[s][0]))
@@ -245,11 +255,13 @@ def main():
         last[r["code"]] = r["date"]
         out.append(r)
     out.sort(key=lambda r: (r["date"], r["code"]))
-    OUT.write_text(json.dumps({
+    tmp = OUT.with_suffix(".tmp")
+    tmp.write_text(json.dumps({
         "source": "SEC EDGAR 6-K (나스닥 캘린더에 없는 미국 상장 외국 회사)",
         "note": "실적 6-K 의 접수 시각(동부). 앞으로의 예정은 없다.",
         "screen": screen, "checked": checked, "seen": seen, "rows": out,
     }, ensure_ascii=False), encoding="utf-8")
+    tmp.replace(OUT)
     print(f"외국 상장사 6-K: 대상 {len(uni)} · 이번에 본 FPI {fpi} · 새 실적 {n_new} · 누적 {len(out)}건 "
           f"({time.time() - t0:.0f}초)")
     return 0
