@@ -132,15 +132,21 @@ def covered():
     return out
 
 
+def _fpi_rows():
+    try:
+        return json.loads((HERE / "data" / "earnings_us_fpi.json").read_text(encoding="utf-8")).get("rows", [])
+    except (ValueError, OSError):
+        return []
+
+
 def announced_recently(days=12):
     """최근 며칠 안에 실적을 발표한 미국 종목 -> 발표일."""
     p = HERE / "data" / "earnings_us.json"
-    if not p.exists():
-        return {}
     try:
         rows = json.loads(p.read_text(encoding="utf-8")).get("rows", [])
     except (ValueError, OSError):
-        return {}
+        rows = []
+    rows = rows + _fpi_rows()
     lo = (date.fromordinal(date.today().toordinal() - days)).isoformat()
     hi = date.today().isoformat()
     out = {}
@@ -215,7 +221,10 @@ def universe(old):
        안 따진다 — 그 명단으로 가르던 시절 아메르스포츠가 통째로 새어나갔다.
     2. 그다음이 **부문이 아직 없는 종목**, 시총 큰 순.
     """
-    caps = ss.want_tickers()
+    caps = dict(ss.want_tickers())
+    # 나스닥 캘린더에 없는 미국 상장 외국 회사(scrape_us_fpi.py — MICC·UL·DEO …)도.
+    for r in _fpi_rows():
+        caps[r["code"]] = max(caps.get(r["code"], 0) or 0, r.get("cap") or 0)
     have = covered()
     seen = old.get("seen", {})
     pokes = old.get("pokes", {})
