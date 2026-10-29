@@ -1443,7 +1443,9 @@ def load_fcst():
     for code, rec in stocks.items():
         f = rec.get("fcst")
         if f and (f.get("rev") or f.get("opi")):
-            out["jp:" + code] = f
+            # financials_jp.json 의 열쇠는 이미 "jp:코드" 다(예전엔 앞에 또 붙여
+            # "jp:jp:3551" 이 되어 회사 예상이 화면에 한 번도 안 떴다).
+            out[code if code.startswith("jp:") else "jp:" + code] = f
     return out
 
 
@@ -2450,6 +2452,10 @@ def pack_fcst(packed):
     """
     p = HERE / "data" / "forecast.json"
     try:
+        RATES = json.loads((HERE / "data" / "caps.json").read_text(encoding="utf-8")).get("rates", {})
+    except (ValueError, OSError):
+        RATES = {}
+    try:
         stocks = json.loads(p.read_text(encoding="utf-8")).get("stocks", {})
     except (ValueError, OSError):
         return {}
@@ -2463,8 +2469,14 @@ def pack_fcst(packed):
         ys = rec.get("years") or []
         if k not in cap or not ys or not rec.get("mcap") or not cap[k]:
             continue
+        # 주가 통화와 재무 통화가 다르면(위안으로 보고하는 홍콩 회사 등) 시총 비율을
+        # 못 쓴다. 대신 caps.json 의 환율로 재무 통화를 바로 원화로 옮기고, 시총도
+        # 재무 통화로 바꿔 배수를 낸다. 환율이 없는 통화면 표를 안 낸다.
+        fx = None
         if rec.get("curFin") and rec.get("curPrice") and rec["curFin"] != rec["curPrice"]:
-            continue
+            fx = RATES.get(rec["curFin"])
+            if not fx:
+                continue
         # 결산은 끝났지만 아직 발표 전인 해는 소스가 실적(est=0)으로 표시하는데
         # 숫자는 추정 평균이다(애플 2026-09 등). 실적은 천 단위로 떨어지고
         # 평균은 안 떨어진다 — 마지막 실적 해가 넉 달 안에 끝났으면 그걸로 가린다.
@@ -2481,13 +2493,14 @@ def pack_fcst(packed):
             "y": [[y["end"], y.get("rev"), y.get("opi"), y.get("ni"), y.get("eps"), y.get("est", 0)]
                   for y in rows],
             "n": [(rec.get("next") or {}).get("rev"), (rec.get("next") or {}).get("eps")],
-            "m": rec["mcap"], "e": rec.get("equity"), "p": rec.get("price"),
+            "m": cap[k] * 1e9 * fx if fx else rec["mcap"], "e": rec.get("equity"),
+            "p": None if fx else rec.get("price"),
             # 나스닥 연간 EPS 컨센서스(미국) — 차기·차차기 순이익에 쓴다.
             "q": [[y[0], y[1]] for y in rec.get("ny") or []],
             # Business Insider 연간 추정 [결산연도, 매출, 영업이익(EBIT), 순이익] — 차기·차차기.
             "b": [y[:4] for y in rec.get("by") or []],
             # 현지 통화 1단위가 몇 원인가 — 시총 두 개의 비.
-            "k": cap[k] * 1e9 * USD_KRW / rec["mcap"],
+            "k": USD_KRW / fx if fx else cap[k] * 1e9 * USD_KRW / rec["mcap"],
             "ts": (rec.get("ts") or "")[:10],
         }
     return out
@@ -2688,7 +2701,9 @@ def build():
         # 점은 [라벨, 매출, 영업이익] 배열로 눕힌다. 이름표를 종목마다 스무 번씩
         # 되풀이하면 그것만으로 파일이 반 메가 늘어난다. 종료일과 순이익은
         # 화면에서 안 쓰므로 빼고, 자료 파일에는 그대로 남겨 둔다.
-        "fcst": pack_fcst(packed),
+        # 상세창 연간 표. 위의 "fcst"(회사 통기 예상)와 이름이 겹쳐 그걸 덮어쓰고
+        # 있었다 — 따로 "ann" 으로 싣는다.
+        "ann": pack_fcst(packed),
         # 실적 8-K 가 잡힌 미국 종목 — 나스닥 EPS 를 기다리지 않고 ✓ 를 단다.
         "live": {s: [v["date"], v.get("url", "")] for s, v in LIVE.items() if v.get("acc")},
         "fin": {s: pack_fin(rec) for s, rec in FIN.items()
@@ -4915,7 +4930,7 @@ function bizLine(m, code) {
    PER·PSR 은 지금 시총을 그 해 순이익·매출로 나눈 것이고, PBR 은 지금 자본으로
    한 번만 적는다(앞날 자본 추정은 없다). 차기 순이익은 차기 EPS × 올해 주식수. */
 function fcstTable(m, code) {
-  const F = D.fcst && D.fcst[m + ':' + code];
+  const F = D.ann && D.ann[m + ':' + code];
   if (!F) return '';
   const [a, b] = [F.y[0], F.y[1]];
   const yr = d => d ? +d.slice(0, 4) : null;
@@ -4938,6 +4953,13 @@ function fcstTable(m, code) {
     if (cols[i].eps == null && q) cols[i].eps = q[1];
     cols[i].ni = cols[i].eps != null && shares ? cols[i].eps * shares : null;
   });
+  // 일본: 당해 칸이 비면 회사 통기 예상(결산단신 공시)으로 메운다 — 결산기가 같을 때만.
+  const G = m === 'jp' && D.fcst && D.fcst['jp:' + code];
+  if (G && cols[1].end && G.end && G.end.slice(0, 7) === cols[1].end.slice(0, 7)) {
+    if (cols[1].rev == null && G.rev) cols[1].rev = G.rev;
+    if (cols[1].opi == null && G.opi != null) cols[1].opi = G.opi;
+    if (cols[1].ni == null && G.ni != null) cols[1].ni = G.ni;
+  }
   // Business Insider 추정이 있으면 그 해 칸을 채운다(차기·차차기는 통째로, 당해는 빈 곳만).
   (F.b || []).forEach(x => {
     const c = cols.find(c => c.end && yr(c.end) === x[0]);
