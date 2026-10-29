@@ -2484,6 +2484,8 @@ def pack_fcst(packed):
             "m": rec["mcap"], "e": rec.get("equity"), "p": rec.get("price"),
             # 나스닥 연간 EPS 컨센서스(미국) — 차기·차차기 순이익에 쓴다.
             "q": [[y[0], y[1]] for y in rec.get("ny") or []],
+            # Business Insider 연간 추정 [결산연도, 매출, 영업이익(EBIT), 순이익] — 차기·차차기.
+            "b": [y[:4] for y in rec.get("by") or []],
             # 현지 통화 1단위가 몇 원인가 — 시총 두 개의 비.
             "k": cap[k] * 1e9 * USD_KRW / rec["mcap"],
             "ts": (rec.get("ts") or "")[:10],
@@ -4935,6 +4937,18 @@ function fcstTable(m, code) {
     const q = (F.q || []).find(x => Math.abs(mo(x[0]) - mo(cols[i].end)) <= 1);
     if (cols[i].eps == null && q) cols[i].eps = q[1];
     cols[i].ni = cols[i].eps != null && shares ? cols[i].eps * shares : null;
+  });
+  // Business Insider 추정이 있으면 그 해 칸을 채운다(차기·차차기는 통째로, 당해는 빈 곳만).
+  (F.b || []).forEach(x => {
+    const c = cols.find(c => c.end && yr(c.end) === x[0]);
+    if (!c || c === cols[0]) return;
+    if (c === cols[1]) {
+      if (c.opi == null) c.opi = x[2];
+      return;
+    }
+    if (x[1] != null) c.rev = x[1];
+    if (x[2] != null) c.opi = x[2];
+    if (x[3] != null) c.ni = x[3];
   });
   const won = v => (v == null || !isFinite(v)) ? null : Math.round(v * F.k / 1e8).toLocaleString();
   const ratio = (num, den) => (!den || den <= 0) ? (den < 0 ? '적자' : null) : (num / den).toFixed(1);
