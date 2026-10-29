@@ -20,7 +20,7 @@ jobs:
       # 96차 — MarketScreener: 검색 → 종목 주소 → finances 의 3년 추정표.
       - name: 🔎 BI 실패 원인 (98차)
         timeout-minutes: 10
-        run: python probe_bi.py jp:3038 jp:5938 jp:4182 jp:2670 jp:3048 jp:3769 jp:2579 jp:4676 jp:4816 us:ABG us:PENG us:STC us:XNDU us:ACLS us:LIND us:HAPN us:BHVN us:BRK.B hk:00700 hk:01810 hk:02285 hk:01860 hk:01133 hk:03858 hk:01164 hk:06055 > /tmp/probe.txt 2>&1 || true
+        run: python scrape_fcst.py --probe jp:3038 jp:3769 jp:2579 us:PENG hk:00700 hk:01810 hk:06055 jp:4816 jp:5938 hk:02285 > /tmp/probe.txt 2>&1 || true
 
       - name: 결과를 probe-out 가지에
         if: always()
