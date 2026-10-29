@@ -625,12 +625,30 @@ def seg_ai_try(ev, b, seg, point=None):
     if not p or not b.get("segs") or not b.get("scale"):
         return None
     basis = b.get("basis") or ""
-    if ev["mkt"] != "us" or re.search(r"누계|9|6개월|반기|연간|12", basis):
-        return None                              # 미국 분기(3개월)만 — 일본은 TDnet 부문이 같은 날 들어온다
+    if ev["mkt"] == "hk" or re.search(r"누계|9|6개월|반기|연간|12", basis):
+        return None                              # 분기 단독(3개월) 값만 — 누계를 분기 칸에 앉히면 막대가 부푼다
+    if seg and seg.get("pts") and seg["pts"][-1][0] == p[0]:
+        return None                              # 그 분기가 이미 있다(공식 자료) — 손대지 않는다
     vals = {x["n"]: x["v"] * b["scale"] for x in b["segs"] if x.get("v") is not None}
     now = seg_names_now(seg)
     if now:
-        hit = [n for n in now if n in vals]
+        # AI 가 이름을 줄이거나 조금 바꿔 쓴다(Waters Analytical and Material). 사이트 이름마다
+        # 가장 닮은 AI 이름을 하나씩 짝짓는다 — 글자 그대로·포함·닮음 0.6 이상.
+        from difflib import SequenceMatcher
+        norm = lambda x: re.sub(r"[\s·,&()\-]|and|부문|사업", "", x.lower())   # noqa: E731
+        left, mapped = dict(vals), {}
+        for n in now:
+            best = max(left, key=lambda a: (norm(a) == norm(n), norm(n) in norm(a) or norm(a) in norm(n),
+                                            SequenceMatcher(None, norm(a), norm(n)).ratio()), default=None)
+            if best is None:
+                continue
+            ok = (norm(best) == norm(n) or (min(len(norm(best)), len(norm(n))) >= 4 and
+                  (norm(n) in norm(best) or norm(best) in norm(n)))
+                  or SequenceMatcher(None, norm(best), norm(n)).ratio() >= 0.6)
+            if ok:
+                mapped[n] = left.pop(best)
+        vals = dict(mapped, **{k: v for k, v in left.items() if k not in mapped})
+        hit = [n for n in now if n in mapped]
         if len(hit) < max(2, round(len(now) * 0.6)):
             log("AI 부문 거절(이름)", ev["key"], list(vals)[:6], "사이트", now[:6])
             return None
@@ -660,7 +678,11 @@ def segfill(n):
     for k, f in fin.items():
         if k.startswith("us:") and f.get("points"):
             newest[k] = f["points"][-1]
-    top = max((p[0] for p in newest.values()), key=lambda l: (l[2:], l[0]), default=None)
+    import collections
+    # 가장 흔한 최신 분기 — 최댓값을 쓰면 라벨이 엉뚱한 한 종목(2Q31)에 끌려간다.
+    cnt = collections.Counter(p[0] for p in newest.values())
+    ok = [lab for lab, c in cnt.items() if c >= 50 and re.match(r"\dQ\d\d$", lab)]
+    top = max(ok, key=lambda l: (l[2:], l[0])) if ok else None   # 50곳 넘게 낸 가장 새 분기 = 이번 시즌
     rev_map = {v: k for k, v in cik_ticker().items()}
     todo = []
     for k, p in newest.items():
@@ -894,6 +916,37 @@ def jp_seg_text(blob):
     return best
 
 
+IR_TITLE = re.compile(r"説明資料|補足資料|プレゼンテーション|決算概要|Presentation|ハイライト")
+
+
+def jp_ir_text(code, day):
+    """같은 날 TDnet 에 올라온 그 회사의 결산 설명자료(IR PDF) 글 — 분기 사업부 표가 대개 여기 있다.
+    회원님(10/30): "IR 자료랑 IR 홈페이지 같은 것도 활용하면 되잖아." """
+    try:
+        rows = []
+        for page in (1, 2, 3, 4):
+            txt = fj.get(fj.LIST_URL.format(page=page, day=day.replace("-", "")))
+            if not txt:
+                break
+            for m in fj.ROW_RE.finditer(txt):
+                d = m.groupdict()
+                if d["code"].strip()[:4] == code:
+                    rows.append(d)
+        for d in rows:
+            title = fj.TAGS.sub("", d["titlecell"]).strip()
+            link = fj.LINK_RE.search(d["titlecell"] or "")
+            if not link or not IR_TITLE.search(title) or not link.group(1).lower().endswith(".pdf"):
+                continue
+            pdf = fj.get("https://www.release.tdnet.info/inbs/" + link.group(1), binary=True)
+            t = brief.hk_text(pdf) if pdf else ""
+            i = t.find("セグメント")
+            log("일본 IR 자료", code, title[:40], len(t))
+            return t[max(0, i - 300):max(0, i - 300) + 9000] if i >= 0 else t[:9000]
+    except Exception as e:                                       # noqa: BLE001
+        log("일본 IR 자료 실패", code, repr(e)[:120])
+    return ""
+
+
 def jp_process(row, day, replay=False):
     code = row["code"]
     if H.skip("jp", code, row["name"]):
@@ -907,7 +960,8 @@ def jp_process(row, day, replay=False):
         blob = fj.get(zurl, binary=True)
         if blob:
             vals = fj.read_summary(blob)
-            ev["_text"] = fj.read_narrative(blob) + "\n\n[세그먼트 정보]\n" + jp_seg_text(blob)
+            ev["_text"] = (fj.read_narrative(blob) + "\n\n[세그먼트 정보]\n" + jp_seg_text(blob)
+                           + "\n\n[결산 설명자료(IR)]\n" + jp_ir_text(code, day))
             if vals:
                 ev["guide"] = GD.add(code, fj.forecast_from(vals), day)
             prior = fj.base_series().get(f"jp:{code}", {})
