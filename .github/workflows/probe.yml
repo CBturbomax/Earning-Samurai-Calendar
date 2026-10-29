@@ -20,7 +20,7 @@ jobs:
       - name: 🔎 Railway 실시간 서버 확인
         run: |
           U=https://earning-samurai-calendar-production.up.railway.app
-          for p in /health /api/stats /api/live; do echo "== $p"; curl -sS -m 20 $U$p | head -c 3000; echo; done > /tmp/probe.txt 2>&1
+          for p in /health /api/log /api/stats /api/live; do echo "== $p"; curl -sS -m 20 $U$p | tail -c 20000; echo; done > /tmp/probe.txt 2>&1
           echo "== stream" >> /tmp/probe.txt; timeout 8 curl -sSN $U/stream | head -c 400 >> /tmp/probe.txt 2>&1 || true
 
       - name: 결과를 probe-out 가지에
