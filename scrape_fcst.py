@@ -40,11 +40,12 @@ from scrape_fin_intl import Throttled, get, unflatten, url_for
 HERE = Path(__file__).parent
 OUT = HERE / "data" / "forecast.json"
 PER_RUN = int(os.environ.get("FCST_PER_RUN", "120"))
+WORKERS = int(os.environ.get("FCST_WORKERS", "1"))
 SECS = int(os.environ.get("FCST_SECS", "240"))
 PAUSE = float(os.environ.get("FCST_PAUSE", "0.6"))
 STALE_DAYS = int(os.environ.get("FCST_STALE_DAYS", "7"))
 NEAR_DAYS = 4                     # 발표일 ±4일은 하루 한 번(컨센서스가 그때 바뀐다)
-MIN_CAP = float(os.environ.get("FCST_MIN_CAP", "0.5"))   # 시총(십억 달러) 이상만
+MIN_CAP = float(os.environ.get("FCST_MIN_CAP", "0"))     # 시총 하한(십억 달러) — 소형주까지 다
 GIVE_UP_AFTER = 6
 FCST_VER = 2
 BI = "https://markets.businessinsider.com"
@@ -198,46 +199,96 @@ def parse_bi(txt):
     return out
 
 
-def bi_candidates(market, code, name):
-    """BI 주소 후보(slug). 미국은 티커, 일본·홍콩은 이름 검색."""
-    if market == "us":
-        return [code.lower().replace(".", "_").replace("-", "_")]
-    if not name:
-        return []
-    q = re.sub(r"(?i)\b(co\.?,? ?ltd\.?|corporation|corp\.?|holdings?|inc\.?|limited|ltd\.?|"
-               r"company|group|kabushiki kaisha|k\.k\.)\b", " ", name)
-    q = re.sub(r"[^A-Za-z0-9&' ]+", " ", q).strip()
-    q = " ".join(q.split()[:3]) or name
+STOP = {"co", "ltd", "corporation", "corp", "holdings", "holding", "inc", "limited",
+        "company", "group", "kabushiki", "kaisha", "kk", "the", "plc", "sa", "ag", "nv",
+        "registered", "shs", "unitary", "reg", "s", "144a", "h", "a", "b", "class"}
+
+
+def _toks(name):
+    return [t for t in re.findall(r"[a-z0-9]+", (name or "").lower().replace("&", " and "))
+            if t not in STOP]
+
+
+def _sim(a, b):
+    """이름 낱말 겹침(0~1) — 짧은 쪽 기준."""
+    x, y = set(_toks(a)), set(_toks(b))
+    if not x or not y:
+        return 0.0
+    return len(x & y) / min(len(x), len(y))
+
+
+def _suggest(q):
     import urllib.parse
     txt = get(BI + "/ajax/SearchController_Suggest?max_results=10&query=" + urllib.parse.quote(q)) or ""
+    time.sleep(PAUSE / 2)
+    return re.findall(r'new Array\("([^"]*)", "Stocks", "([^"]*)", "\d+", "", "([^"]*)"\)', txt)
+
+
+def bi_candidates(market, code, name):
+    """BI 주소 후보(slug), 그럴듯한 순. 미국은 티커가 먼저, 나머지는 이름 검색.
+
+    검색어는 여러 꼴로 넣어 본다(전체 이름 · 군더더기 뗀 이름 · 앞 두 낱말 · 첫 낱말) —
+    BI 검색은 낱말 하나만 어긋나도 엉뚱한 것을 준다(「Coca-Cola Bottlers Japan
+    Holdings」 → 0건). 같은 나라 ISIN 만, ADR 은 뺀다(통화·주식 비율이 다르다).
+    """
     out = []
-    for nm, kw, ids in re.findall(
-            r'new Array\("([^"]*)", "Stocks", "([^"]*)", "\d+", "", "([^"]*)"\)', txt):
-        kws = kw.split("|")
-        isin = kws[1] if len(kws) > 1 else ""
-        slug = ids.split("|")[0]
-        if not slug or not isin.startswith(BI_ISIN[market]):
+    if market == "us":
+        out.append(code.lower().replace(".", "_").replace("-", "_"))
+    if not name:
+        return out
+    tk = _toks(name)
+    qs = [name, " ".join(tk[:4]), " ".join(tk[:2]), " ".join(tk[:1])]
+    seen_q, cands = set(), {}
+    pref = {"us": ("US",), **BI_ISIN}[market]
+    for q in qs:
+        q = q.strip()
+        if len(q) < 3 or q.lower() in seen_q:
             continue
-        if "depositary" in nm.lower() or "deposit" in nm.lower():
-            continue                          # ADR 는 통화·주식 비율이 달라 뺀다
-        hk_hit = market == "hk" and code.lstrip("0").zfill(4) in kws[-1].split(",")
-        out.append((0 if hk_hit else 1, 0 if kws[0] else 1, slug))
-    return [x[2] for x in sorted(out)][:3]
+        seen_q.add(q.lower())
+        for rank, (nm, kw, ids) in enumerate(_suggest(q)):
+            kws = kw.split("|")
+            isin = kws[1] if len(kws) > 1 else ""
+            slug = ids.split("|")[0]
+            if not slug or slug in cands or not isin.startswith(pref):
+                continue
+            if re.search(r"(?i)deposit|\bADR", nm):
+                continue
+            hk_hit = market == "hk" and code.lstrip("0").zfill(4) in kws[-1].split(",")
+            sim = _sim(name, nm)
+            cands[slug] = (0 if hk_hit else 1, -round(sim, 2), 0 if kws[0] else 1, len(cands))
+        best = min(cands.values(), default=None)
+        if best and (best[0] == 0 or best[1] <= -0.99):
+            break                                 # 확실한 것을 찾았으면 검색을 그친다
+    out += [sl for sl, sc in sorted(cands.items(), key=lambda x: x[1]) if sc[0] == 0 or sc[1] < -0.3]
+    return list(dict.fromkeys(out))[:4]
 
 
-def bi_fetch(market, code, name, ref_rev, ref_year, slug=None, next_rev=None):
+def _close(a, b, lo=0.88, hi=1.13):
+    return a is not None and b and b > 0 and a > 0 and lo <= a / b <= hi
+
+
+def bi_ok(ys, ref, next_rev):
+    """BI 표가 같은 회사·같은 통화인가 — stockanalysis 의 당해(또는 차기) 값과 맞춰 본다.
+    매출이 있으면 매출로(±12%), 매출이 비면 순이익(±20%)·EPS(±15%)로."""
+    yr = int(ref["end"][:4])
+    for yy, rv in ((yr, ref.get("rev")), (yr + 1, next_rev)):
+        b = next((y for y in ys if y[0] == yy), None)
+        if b and b[1] and rv:
+            return _close(b[1], rv)
+    b = next((y for y in ys if y[0] == yr), None)
+    if b and (_close(b[3], ref.get("ni"), 0.8, 1.25) or _close(b[4], ref.get("eps"), 0.85, 1.18)):
+        return True
+    return False
+
+
+def bi_fetch(market, code, name, ref, next_rev, slug=None):
     """검증된 BI 추정 [slug, 표]. 못 찾으면 [None, []]."""
     for sl in ([slug] if slug else bi_candidates(market, code, name)):
         txt = get(f"{BI}/stocks/{sl}-stock")
         time.sleep(PAUSE)
         ys = parse_bi(txt or "")
-        # 당해년도 매출(없으면 차기 매출)이 stockanalysis 와 맞아야 같은 회사·통화다.
-        for yy, rv in ((ref_year, ref_rev), (ref_year + 1, next_rev)):
-            ref = next((y for y in ys if y[0] == yy and y[1]), None)
-            if ref and rv:
-                if 0.88 <= ref[1] / rv <= 1.13:
-                    return sl, ys
-                break
+        if ys and bi_ok(ys, ref, next_rev):
+            return sl, ys
     return None, []
 
 
@@ -357,7 +408,52 @@ def queue(old, cand):
     return [k for _, _, k in picks]
 
 
+def fetch_one(k, old, names):
+    """한 종목. 막히면 Throttled 를 그대로 올린다."""
+    market, code = k.split(":", 1)
+    rec = {"v": FCST_VER, "ts": datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M")}
+    o = old.get(k) or {}
+    u = page(market, code, "forecast")
+    txt = get(u) if u else None
+    time.sleep(PAUSE)
+    f = parse_forecast(txt) if txt else None
+    if not (f and f["years"]):
+        return dict(o, ts=rec["ts"]) if o.get("years") else dict(rec, none=1)
+    rec.update(f)
+    s = get(page(market, code, "statistics"))
+    time.sleep(PAUSE)
+    if s:
+        rec.update(parse_stats(s))
+    # Business Insider 추정(차기·차차기 매출·영업이익·순이익).
+    ys = rec["years"]
+    ref = next((y for y in ys if y.get("est")), None) or ys[-1]
+    nrev = (rec.get("next") or {}).get("rev")
+    name = rec.get("name") or names.get(k, "")
+    try:
+        sl, bys = (bi_fetch(market, code, name, ref, nrev, o["bi"]) if o.get("bi")
+                   else (None, []))
+        if not sl:
+            sl, bys = bi_fetch(market, code, name, ref, nrev)
+        rec["bi"], rec["by"] = sl or "", bys
+    except Throttled as e:
+        print(f"  {k} BI 막힘: {e}", file=sys.stderr)
+        for f2 in ("bi", "by"):
+            if f2 in o:
+                rec[f2] = o[f2]
+    if market == "us" and not rec.get("by"):
+        try:
+            rec["ny"] = nasdaq_years(code)
+        except Throttled:
+            if "ny" in o:
+                rec["ny"] = o["ny"]
+        time.sleep(PAUSE)
+    return rec
+
+
 def main():
+    """여러 종목을 나란히 받는다(WORKERS). 한 종목이 3~6 요청이라 하나씩이면
+    전 종목(1만여)에 며칠이 걸린다. 서버는 셋(stockanalysis·BI·나스닥)으로 갈린다."""
+    from concurrent.futures import ThreadPoolExecutor, as_completed
     t0 = time.time()
     try:
         old = json.loads(OUT.read_text(encoding="utf-8")).get("stocks", {})
@@ -366,70 +462,36 @@ def main():
     stocks = dict(old)
     todo = queue(old, universe())[:PER_RUN]
     names = us_names()
-    got = streak = 0
-    for i, k in enumerate(todo):
-        if time.time() - t0 > SECS:
-            print("  시간이 다 됐다 — 다음 실행에서 이어서")
-            break
-        market, code = k.split(":", 1)
-        rec = {"v": FCST_VER,
-               "ts": datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M")}
+    got = done = blocked = 0
+
+    def job(k):
+        if time.time() - t0 > SECS or blocked >= GIVE_UP_AFTER * WORKERS:
+            return k, None
         try:
-            u = page(market, code, "forecast")
-            txt = get(u) if u else None
-            time.sleep(PAUSE)
-            f = parse_forecast(txt) if txt else None
-            if f and f["years"]:
-                rec.update(f)
-                s = get(page(market, code, "statistics"))
-                time.sleep(PAUSE)
-                if s:
-                    rec.update(parse_stats(s))
-                # Business Insider 추정(차기·차차기 영업이익까지).
-                ys = rec["years"]
-                ref = next((y for y in ys if y.get("est")), None) or ys[-1]
-                nrev = (rec.get("next") or {}).get("rev")
-                try:
-                    sl, bys = bi_fetch(market, code, rec.get("name") or names.get(k, ""),
-                                       ref.get("rev"), int(ref["end"][:4]),
-                                       (old.get(k) or {}).get("bi"), nrev)
-                    if not sl and (old.get(k) or {}).get("bi"):
-                        sl, bys = bi_fetch(market, code, rec.get("name") or names.get(k, ""),
-                                           ref.get("rev"), int(ref["end"][:4]), None, nrev)
-                    rec["bi"], rec["by"] = sl or "", bys
-                except Throttled as e:
-                    print(f"  {k} BI 막힘: {e}", file=sys.stderr)
-                    for f2 in ("bi", "by"):
-                        if f2 in (old.get(k) or {}):
-                            rec[f2] = old[k][f2]
-                if market == "us" and not rec.get("by"):
-                    try:
-                        rec["ny"] = nasdaq_years(code)
-                    except Throttled as e:
-                        print(f"  {k} 나스닥 막힘: {e}", file=sys.stderr)
-                        if "ny" in (old.get(k) or {}):
-                            rec["ny"] = old[k]["ny"]
-                    time.sleep(PAUSE)
-                got += 1
-            else:
-                rec["none"] = 1
-            streak = 0
+            return k, fetch_one(k, old, names)
         except Throttled as e:
-            streak += 1
             print(f"  {k} 막힘: {e}", file=sys.stderr, flush=True)
-            if streak >= GIVE_UP_AFTER:
-                print("  연속으로 막혔다. 여기서 접는다.", file=sys.stderr)
-                break
-            continue
-        # 받은 게 없으면 있던 것을 지우지 않는다.
-        if rec.get("none") and (old.get(k) or {}).get("years"):
-            rec = dict(old[k], ts=rec["ts"])
-        stocks[k] = rec
-        if i % 25 == 24:
-            save(stocks)
+            return k, "blocked"
+
+    with ThreadPoolExecutor(WORKERS) as ex:
+        for fu in as_completed([ex.submit(job, k) for k in todo]):
+            k, rec = fu.result()
+            if rec is None:
+                continue
+            if rec == "blocked":
+                blocked += 1
+                continue
+            blocked = 0
+            stocks[k] = rec
+            done += 1
+            got += bool(rec.get("by"))
+            if done % 50 == 0:
+                save(stocks)
+                print(f"  {done}종목 · BI {got} ({time.time() - t0:.0f}초)", flush=True)
     save(stocks)
-    print(f"연간 컨센서스: 대기 {len(todo)} · 확보 {got} ({time.time() - t0:.0f}초) · 누적 "
-          f"{sum(1 for v in stocks.values() if v.get('years'))}종목")
+    have = [v for v in stocks.values() if v.get("years")]
+    print(f"연간 컨센서스: 대기 {len(todo)} · 이번 {done} (BI {got}) · {time.time() - t0:.0f}초 · "
+          f"누적 {len(have)}종목 · BI 누적 {sum(1 for v in have if v.get('by'))}")
 
 
 def save(stocks):
@@ -446,13 +508,14 @@ def probe(args):
     for k in args:
         market, code = k.split(":", 1)
         f = parse_forecast(get(page(market, code, "forecast")) or "")
-        s = parse_stats(get(page(market, code, "statistics")) or "")
-        print(k, json.dumps(f, ensure_ascii=False)[:800], s)
-        if f and f["years"]:
-            ys = f["years"]
-            ref = next((y for y in ys if y.get("est")), None) or ys[-1]
-            print("  bi", bi_fetch(market, code, f.get("name"), ref.get("rev"), int(ref["end"][:4]),
-                                   None, (f.get("next") or {}).get("rev")))
+        if not f or not f["years"]:
+            print(k, "stockanalysis 없음")
+            continue
+        ys = f["years"]
+        ref = next((y for y in ys if y.get("est")), None) or ys[-1]
+        print(k, f.get("name"), "후보", bi_candidates(market, code, f.get("name")))
+        sl, bys = bi_fetch(market, code, f.get("name"), ref, (f.get("next") or {}).get("rev"))
+        print("  ->", sl, [(y[0], y[1], y[2]) for y in bys][:3])
 
 
 if __name__ == "__main__":

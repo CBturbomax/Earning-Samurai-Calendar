@@ -2450,6 +2450,10 @@ def pack_fcst(packed):
     """
     p = HERE / "data" / "forecast.json"
     try:
+        RATES = json.loads((HERE / "data" / "caps.json").read_text(encoding="utf-8")).get("rates", {})
+    except (ValueError, OSError):
+        RATES = {}
+    try:
         stocks = json.loads(p.read_text(encoding="utf-8")).get("stocks", {})
     except (ValueError, OSError):
         return {}
@@ -2463,8 +2467,14 @@ def pack_fcst(packed):
         ys = rec.get("years") or []
         if k not in cap or not ys or not rec.get("mcap") or not cap[k]:
             continue
+        # 주가 통화와 재무 통화가 다르면(위안으로 보고하는 홍콩 회사 등) 시총 비율을
+        # 못 쓴다. 대신 caps.json 의 환율로 재무 통화를 바로 원화로 옮기고, 시총도
+        # 재무 통화로 바꿔 배수를 낸다. 환율이 없는 통화면 표를 안 낸다.
+        fx = None
         if rec.get("curFin") and rec.get("curPrice") and rec["curFin"] != rec["curPrice"]:
-            continue
+            fx = RATES.get(rec["curFin"])
+            if not fx:
+                continue
         # 결산은 끝났지만 아직 발표 전인 해는 소스가 실적(est=0)으로 표시하는데
         # 숫자는 추정 평균이다(애플 2026-09 등). 실적은 천 단위로 떨어지고
         # 평균은 안 떨어진다 — 마지막 실적 해가 넉 달 안에 끝났으면 그걸로 가린다.
@@ -2481,13 +2491,14 @@ def pack_fcst(packed):
             "y": [[y["end"], y.get("rev"), y.get("opi"), y.get("ni"), y.get("eps"), y.get("est", 0)]
                   for y in rows],
             "n": [(rec.get("next") or {}).get("rev"), (rec.get("next") or {}).get("eps")],
-            "m": rec["mcap"], "e": rec.get("equity"), "p": rec.get("price"),
+            "m": cap[k] * 1e9 * fx if fx else rec["mcap"], "e": rec.get("equity"),
+            "p": None if fx else rec.get("price"),
             # 나스닥 연간 EPS 컨센서스(미국) — 차기·차차기 순이익에 쓴다.
             "q": [[y[0], y[1]] for y in rec.get("ny") or []],
             # Business Insider 연간 추정 [결산연도, 매출, 영업이익(EBIT), 순이익] — 차기·차차기.
             "b": [y[:4] for y in rec.get("by") or []],
             # 현지 통화 1단위가 몇 원인가 — 시총 두 개의 비.
-            "k": cap[k] * 1e9 * USD_KRW / rec["mcap"],
+            "k": USD_KRW / fx if fx else cap[k] * 1e9 * USD_KRW / rec["mcap"],
             "ts": (rec.get("ts") or "")[:10],
         }
     return out
