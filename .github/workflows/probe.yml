@@ -18,9 +18,9 @@ jobs:
           python-version: '3.12'
 
       # 96차 — MarketScreener: 검색 → 종목 주소 → finances 의 3년 추정표.
-      - name: 🔎 BI 수집 시험 (97차)
-        timeout-minutes: 8
-        run: python scrape_fcst.py --probe jp:7203 us:AAPL hk:00700 jp:6861 jp:3038 us:MSFT jp:6758 hk:01810 jp:9983 us:BRK.B > /tmp/probe.txt 2>&1 || true
+      - name: 🔎 BI 실패 원인 (98차)
+        timeout-minutes: 10
+        run: python scrape_fcst.py --probe jp:3038 jp:3769 jp:2579 us:PENG hk:00700 hk:01810 hk:06055 jp:4816 jp:5938 hk:02285 > /tmp/probe.txt 2>&1 || true
 
       - name: 결과를 probe-out 가지에
         if: always()
