@@ -58,6 +58,14 @@ US_EVERY = float(os.environ.get("US_EVERY", "2"))
 JP_EVERY = float(os.environ.get("JP_EVERY", "3"))
 HK_EVERY = float(os.environ.get("HK_EVERY", "10"))
 QUIET = os.environ.get("QUIET_START", "1") == "1"   # 켤 때 이미 떠 있던 공시는 알리지 않는다
+# 다만 막 뜬 것(재배포 중에 나온 공시)까지 삼키면 안 된다 — 이 분 안의 것은 그대로 알린다.
+# 같은 공시를 두 번 보내는 것은 events.json(볼륨)의 id 로 막힌다.
+QUIET_MIN = int(os.environ.get("QUIET_MIN", "20"))
+
+
+def stale(t):
+    """켤 때 건너뛸 만큼 오래된 공시인가. t: 시간대가 붙은 datetime."""
+    return QUIET and (datetime.now(timezone.utc) - t).total_seconds() > QUIET_MIN * 60
 
 ET, JST, KST, HKT = (ZoneInfo("America/New_York"), ZoneInfo("Asia/Tokyo"),
                      ZoneInfo("Asia/Seoul"), ZoneInfo("Asia/Hong_Kong"))
@@ -533,7 +541,7 @@ def us_watch():
                     upd = re.search(r"<updated>([^<]+)</updated>", e)
                     if not (m and upd):
                         continue
-                    if first and QUIET:
+                    if first and stale(datetime.fromisoformat(upd.group(1).replace("Z", "+00:00"))):
                         continue
                     POOL.submit(safe, us_process, int(m.group(2)), acc, html.unescape(m.group(1)), upd.group(1))
             first = False
@@ -579,7 +587,7 @@ def jp_watch():
                 seen.add(k)
                 if not (fj.TANSHIN.search(r["title"]) and not fj.NOT_TANSHIN.search(r["title"]) and r["zip"]):
                     continue
-                if first and QUIET:
+                if first and (not r["time"] or stale(datetime.strptime(f"{day} {r['time']}", "%Y-%m-%d %H:%M").replace(tzinfo=JST))):
                     continue
                 POOL.submit(safe, jp_process, r, day)
             first = False
@@ -608,7 +616,7 @@ def hk_watch():
                 if k in seen:
                     continue
                 seen.add(k)
-                if first and QUIET or not r["time"]:
+                if not r["time"] or first and stale(datetime.strptime(f"{r['date']} {r['time']}", "%Y-%m-%d %H:%M").replace(tzinfo=HKT)):
                     sent.add((r["date"], r["code"]))
                     continue
                 if HK_NOT.search(r["fy"] or "") or (r["date"], r["code"]) in sent:
@@ -658,7 +666,8 @@ class Handler(BaseHTTPRequestHandler):
         if path in ("/", "/health"):
             self.head()
             self.wfile.write(json.dumps({"ok": True, "events": len(S.events), "subs": len(TG.subs),
-                                         "history": int(time.time() - H.ts)}).encode())
+                                         "history": int(time.time() - H.ts),
+                                         "volume": os.path.ismount(str(DATA))}).encode())
         elif path == "/api/live":
             self.head()
             cut = (datetime.now(timezone.utc) - timedelta(days=4)).isoformat()
