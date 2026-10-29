@@ -9,11 +9,57 @@ jobs:
   probe:
     runs-on: ubuntu-latest
     timeout-minutes: 20
+    permissions:
+      contents: write
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
         with:
           python-version: '3.12'
+
+      # 96차 — MarketScreener: 검색 → 종목 주소 → finances 의 3년 추정표.
+      - name: 🔎 MarketScreener (96차)
+        timeout-minutes: 12
+        run: |
+          python - > /tmp/probe.txt 2>&1 <<'EOF'
+          import re, urllib.error, urllib.request, html, json
+          UA = {"User-Agent": ("Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
+                               "AppleWebKit/537.36 (KHTML, like Gecko) "
+                               "Chrome/131.0.0.0 Safari/537.36"),
+                "Accept-Language": "ja,en-US;q=0.8"}
+          def get(u, h=None):
+              try:
+                  with urllib.request.urlopen(urllib.request.Request(u, headers=dict(UA, **(h or {}))), timeout=25) as r:
+                      return r.status, r.read(5_000_000).decode("utf-8", "ignore")
+              except urllib.error.HTTPError as e:
+                  return e.code, ""
+              except Exception as e:
+                  return type(e).__name__, str(e)[:200]
+          def dump(lab, u, kws, w=900, h=None):
+              st, t = get(u, h)
+              print("=====", lab, st, len(t))
+              for kw in kws:
+                  for m in list(re.finditer(kw, t))[:3]:
+                      x = re.sub(r"<[^>]+>", " ", t[max(0, m.start()-100):m.start()+w])
+                      print("  ", kw, re.sub(r"\s+", " ", x))
+          dump("kabuyoho", "https://kabuyoho.ifis.co.jp/index.php?action=tp1&sa=report_top&bcode=7203", ["営業利益", "来期"])
+          dump("nikkei", "https://www.nikkei.com/nkd/company/kessan/?scode=7203", ["予", "営業利益"], 600)
+          dump("yjp-cons", "https://finance.yahoo.co.jp/quote/7203.T/performance?styl=analystcons", ["performanceForecastList"], 600)
+          st, t = get("https://api.nasdaq.com/api/analyst/AAPL/earnings-forecast", {"Accept": "application/json"})
+          try:
+              print("nasdaq yearly", json.dumps(json.loads(t)["data"]["yearlyForecast"])[:1500])
+          except Exception as e:
+              print("nasdaq err", e)
+          st, t = get("https://api.nasdaq.com/api/analyst/0700/earnings-forecast", {"Accept": "application/json"})
+          print("nasdaq tsla", st, t[:300])
+          EOF
+
+      - name: 결과를 probe-out 가지에
+        if: always()
+        run: |
+          cd /tmp && rm -rf po && mkdir po && cd po && git init -q
+          cp /tmp/probe.txt . ; git add . && git -c user.name=bot -c user.email=b@b commit -qm probe
+          git push -f "https://x-access-token:${{ github.token }}@github.com/${{ github.repository }}" HEAD:refs/heads/probe-out
 
       # 95차 — eir.js 가 주소를 어떻게 짓는가. 94차에서 `ssl4.eir-parts.net`
       # 과 `/Custom/public/v5parts/` 까지는 봤다. 회사 번호를 어디서 가져오는지,
