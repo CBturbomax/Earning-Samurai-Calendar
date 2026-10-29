@@ -552,11 +552,13 @@ def caption(ev):
             gl = ""
     else:
         gl = ""
+    b = ev.get("brief") or {}
+    if not key and b.get("key"):                     # 우리 숫자가 없을 때 — 자료에 적힌 숫자 그대로
+        key = [b["key"]]
     if key:
         lines.append("<b>" + e(" · ".join(key)) + "</b>")
     if gl:
         lines.append("<b>" + e(gl) + "</b>")
-    b = ev.get("brief") or {}
     if b.get("why"):
         lines += ["", "💡 <b>왜 이렇게 나왔나</b> <i>(회사 설명)</i>"] + [f"• {e(x)}" for x in b["why"]]
     if b.get("guide"):
