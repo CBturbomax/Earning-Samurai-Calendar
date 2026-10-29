@@ -23,7 +23,7 @@ try {
 <script>
 /* GitHub Pages/CDN 이 예전 index.html 을 잡고 있어도, 한 번 최신판을 받은 뒤부터는
    version.txt 를 no-store 로 확인해 새 빌드가 있으면 query string 을 바꿔 강제 갱신한다. */
-const ES_BUILD = "20261029021135";
+const ES_BUILD = "20261029021317";
 setTimeout(() => {
   fetch('./version.txt?t=' + Date.now(), {cache:'no-store'})
     .then(r => r.ok ? r.text() : '')
@@ -620,6 +620,8 @@ td.dim { color:var(--mute); font-size:18px; }
 .fctab tr.gap > * { border-top:2px solid var(--line); }
 .fctab .fcunit { text-align:left; vertical-align:middle; }
 .fcnote { color:var(--mute); font-size:12.5px; margin:6px 0 0; }
+.prnote { color:#e8c46a; }
+.prnote a { color:#e8c46a; }
 .finhead { font-size:18px; font-weight:700; margin-bottom:8px; }
 .finhead .warn { color:var(--a3); font-weight:400; font-size:16px; margin-left:10px; }
 .finhead.sub { margin-top:14px; }
@@ -742,7 +744,7 @@ svg.bars rect.b:hover { fill:var(--a3); }
 <body>
 <div class="wrap">
 
-<div class="topline"><span class="fl fl-us" role="img" aria-label="미국"></span> 미국 <b>12,986</b> · <span class="fl fl-jp" role="img" aria-label="일본"></span> 일본 <b>7,766</b> · <span class="fl fl-hk" role="img" aria-label="홍콩"></span> 홍콩 <b>9,190</b> · 합계 <b>29,942건</b> · 수집 <b>2025-07-09 ~ 2026-12-27</b> · 갱신 2026-10-29 11:11 KST</div>
+<div class="topline"><span class="fl fl-us" role="img" aria-label="미국"></span> 미국 <b>12,986</b> · <span class="fl fl-jp" role="img" aria-label="일본"></span> 일본 <b>7,766</b> · <span class="fl fl-hk" role="img" aria-label="홍콩"></span> 홍콩 <b>9,190</b> · 합계 <b>29,942건</b> · 수집 <b>2025-07-09 ~ 2026-12-27</b> · 갱신 2026-10-29 11:13 KST</div>
 <h1><span class="mark" aria-hidden="true"></span>Earning <span class="jp">Samurai</span>
     <span class="byline">by CB</span></h1>
 <p class="sub">미국 · 일본 · 홍콩 주간 실적발표 일정 — 누가 언제 무엇을 발표했는지</p>
@@ -2191,6 +2193,14 @@ function finBlock(m, code) {
       (u ? '<span class="epsbox next"><b>' + esc(epsQ(u.period)) + '</b>아직 발표 전' +
            (u.consensus ? ' <i>(예상 ' + u.consensus + ')</i>' : '') + '</span>' : '') +
       '</div>';
+  }
+  // 최신 분기를 SEC 10-Q 가 아니라 발표 당일 8-K 보도자료에서 읽었다면 그렇다고 적는다.
+  if (f.prLast) {
+    const p = f.prLast;
+    html += '<p class="finnote prnote">⚡ 최신 분기(' + esc(p.end.slice(0, 7)) + ' 종료)는 ' +
+      '<b>발표 당일 8-K 보도자료</b>에서 읽은 값입니다 · 전년 같은 분기가 SEC 공식 수치와 맞는지 대조함' +
+      (p.eps != null ? ' · GAAP 희석 EPS <b>' + esc(String(p.eps)) + '</b>' : '') +
+      (p.url ? ' · <a target="_blank" rel="noopener" href="' + esc(p.url) + '">원문 ↗</a>' : '') + '</p>';
   }
   // **연간 막대는 그리지 않는다.** 연간으로는 "이번 분기가 작년 같은 분기보다
   // 나아졌나"를 볼 수 없어서 애초에 보려던 그림이 아니다. 분기(또는 홍콩 반기)만 낸다.
