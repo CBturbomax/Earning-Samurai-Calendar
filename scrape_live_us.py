@@ -20,6 +20,7 @@
 이미 본 것은 다시 묻지 않으므로 평소에는 몇십 요청이다.
 """
 import json
+from markets import excluded
 import os
 import re
 import sys
@@ -53,6 +54,25 @@ def et_today():
     return datetime.now(ET).date()
 
 
+def _caps_meta():
+    """caps.json 의 업종·세부 업종 — 은행·리츠를 수집 단계에서부터 뺀다."""
+    try:
+        d = json.loads((HERE / "data" / "caps.json").read_text(encoding="utf-8"))
+        return d.get("sectors", {}), d.get("industries", {})
+    except (ValueError, OSError):
+        return {}, {}
+
+
+def _skip(mkt, code, name, sector=""):
+    sec, ind = _META
+    k = f"{mkt}:{code}"
+    i = ind.get(k, "")
+    return excluded(mkt, name or "", sector or sec.get(k, ""), "" if i == "-" else i)
+
+
+_META = _caps_meta()
+
+
 def targets(today):
     """오늘·어제(미국 동부 날짜) 발표 예정 종목. 시총 큰 순."""
     f = HERE / "data" / "earnings_us.json"
@@ -66,7 +86,7 @@ def targets(today):
         days.add((today - timedelta(days=3)).isoformat())
     best = {}
     for r in rows:
-        if r.get("date") in days and r.get("code"):
+        if r.get("date") in days and r.get("code") and not _skip("us", r["code"], r.get("name")):
             cur = best.get(r["code"])
             if not cur or r["date"] > cur["date"]:
                 best[r["code"]] = r

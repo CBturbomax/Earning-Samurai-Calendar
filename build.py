@@ -27,7 +27,7 @@ from descriptions import DESC_KO
 from markets import (CAP_STEPS, HK_TYPICAL, HKT, HOLIDAYS, JP_TYPICAL, KST,
                      MARKET_KO, MARKET_ORDER, MARKETS, SECTOR_KO, SEG_KO_CJK,
                      SEG_KO_EN, SEG_KO_FULL, TIMING_KO, US_AMC, US_BMO, US_EDT,
-                     US_EST, US_SECTOR_KO, USD_KRW, holiday_ko)
+                     US_EST, US_SECTOR_KO, USD_KRW, holiday_ko, excluded)
 from translit import to_korean
 
 HERE = Path(__file__).parent
@@ -367,6 +367,28 @@ def load_extra():
 
 
 CAPS, SECTORS = load_extra()
+try:
+    INDUSTRIES = json.loads((HERE / "data" / "caps.json").read_text(encoding="utf-8")).get("industries", {})
+except (ValueError, OSError):
+    INDUSTRIES = {}
+
+
+def drop_banks_reits(m, rows):
+    """은행·리츠를 뺀다(회원님 지시, 세 시장 공통). 판별은 markets.excluded.
+
+    **종목 단위로 뺀다.** 일본 TDnet 줄은 업종이 비어 오는 일이 많아서, 같은
+    회사의 닛케이·JPX 줄 하나라도 `銀行業` 이면 그 회사의 모든 줄을 뺀다.
+    """
+    bad = set()
+    for r in rows:
+        c = r.get("code")
+        k = m + ":" + str(c)
+        ind = INDUSTRIES.get(k, "")
+        ind = "" if ind == "-" else ind
+        sec = r.get("sector", "") or SECTORS.get(k, "")
+        if excluded(m, r.get("name", ""), sec, ind):
+            bad.add(c)
+    return [r for r in rows if r.get("code") not in bad], len(bad)
 
 
 def q_label(end, mid="", q=""):
@@ -2470,6 +2492,9 @@ def build():
         raw = data[m]
         cfg = MARKETS[m]
         rows = raw["rows"] if raw else []
+        rows, n_out = drop_banks_reits(m, rows)
+        if n_out:
+            print(f"  {m}: 은행·리츠 {n_out:,}종목 뺌")
         packed += [pack_jp(r) if m == "jp" else pack_en(r, m) for r in rows]
         ok_days[m] = raw["ok_days"] if raw else []
         if raw:
