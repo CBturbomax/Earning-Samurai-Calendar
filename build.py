@@ -485,6 +485,12 @@ def unstack(labels, kind="Q"):
     return out
 
 
+try:
+    RT_URL = (HERE / "realtime" / "URL").read_text(encoding="utf-8").strip().rstrip("/")
+except OSError:
+    RT_URL = ""
+
+
 def pack_fin(rec):
     """화면에 실을 것만 골라 담는다. 점은 [라벨, 매출, 영업이익].
 
@@ -2729,6 +2735,8 @@ def build():
         "ann": pack_fcst(packed),
         # 실적 8-K 가 잡힌 미국 종목 — 나스닥 EPS 를 기다리지 않고 ✓ 를 단다.
         "live": {s: [v["date"], v.get("url", "")] for s, v in LIVE.items() if v.get("acc")},
+        # 실시간 서버(Railway) 주소 — realtime/URL. 있으면 화면이 거기서 새 실적을 직접 받는다.
+        "rt": RT_URL,
         "fin": {s: pack_fin(rec) for s, rec in FIN.items()
                 if (rec.get("points") or rec.get("eps"))
                 and s in {p[9] + ":" + p[1] for p in packed}},
@@ -5336,7 +5344,8 @@ function finChart(f) {
     oy.lo = lo; oy.hi = hi;
   }
   const opmAt = {};
-  opm.forEach(o => { opmAt[o[0]] = oy(o[1]); });
+  // 이익률 점이 하나뿐이면 축(oy)을 안 만든다 — 그때 부르면 화면이 통째로 멈춘다.
+  if (oy) opm.forEach(o => { opmAt[o[0]] = oy(o[1]); });
 
   let bars = '';
   pts.forEach((p, i) => {
@@ -5849,6 +5858,49 @@ setInterval(() => {
       location.replace(u.toString());
     }).catch(() => {});
 }, 120e3);
+
+/* ── 실시간 서버(Railway) ─────────────────────────────────────────
+   공시가 뜨면 몇 초 안에 서버가 숫자를 뽑아 여기로 민다(SSE). 페이지를 다시 만들어
+   배포하는 걸 기다리지 않는다 — 캘린더 줄·「방금 발표」·실적 차트에 바로 얹는다.
+   다음 빌드가 같은 값을 정식으로 실어 오면 그쪽이 이긴다(빌드가 새로 그린다). */
+const RT = D.rt || '';
+function rtApply(ev) {
+  const m = ev.mkt, code = ev.code, key = m + ':' + code;
+  if (!MKT[m]) return false;
+  let r = ROWS.find(x => keyOf(x) === key && Math.abs(Date.parse(x[0]) - Date.parse(ev.date)) <= 4 * 864e5);
+  if (r) { r[0] = ev.date; r[12] = ev.kstDate; r[13] = ev.kstTime; r[14] = 1; }
+  else {
+    r = [ev.date, code, ev.name || code, ev.fy || '', ev.kind || '', ev.sector || '', '',
+         ev.orig || ev.name || code, 2, m, '', ev.cap || 0, ev.kstDate, ev.kstTime, 1];
+    ROWS.push(r);
+  }
+  if (m === 'us') { D.live = D.live || {}; D.live[code] = [ev.date, ev.url || '']; }
+  if (ev.point && ev.point[1] != null) {
+    const f = D.fin[key] = D.fin[key] || { freq: 'Q', cur: ev.cur, points: [] };
+    const pt = [ev.point[0], ev.point[1], ev.point[2]];
+    const i = (f.points || []).findIndex(p => p[0] === pt[0]);
+    if (i >= 0) f.points[i] = pt; else (f.points = f.points || []).push(pt);
+  }
+  return true;
+}
+function rtRepaint(key) {
+  reslice(); renderAll();
+  if (key && mdKey === key) {
+    const r = ROWS.find(x => keyOf(x) === key);
+    if (r) openModal(key, r[0]);
+  }
+}
+if (RT) {
+  fetch(RT + '/api/live', { cache: 'no-store' }).then(r => r.json()).then(j => {
+    let n = 0;
+    for (const e of j.events || []) n += rtApply(e) ? 1 : 0;
+    if (n) rtRepaint();
+  }).catch(() => {});
+  try {
+    const es = new EventSource(RT + '/stream');
+    es.onmessage = m => { try { const e = JSON.parse(m.data); if (rtApply(e)) rtRepaint(e.key); } catch (_) {} };
+  } catch (_) {}
+}
 
 function renderAll() {
   renderFeed();
