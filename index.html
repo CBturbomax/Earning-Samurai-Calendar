@@ -23,7 +23,7 @@ try {
 <script>
 /* GitHub Pages/CDN 이 예전 index.html 을 잡고 있어도, 한 번 최신판을 받은 뒤부터는
    version.txt 를 no-store 로 확인해 새 빌드가 있으면 query string 을 바꿔 강제 갱신한다. */
-const ES_BUILD = "20261029120511";
+const ES_BUILD = "20261029120839";
 setTimeout(() => {
   fetch('./version.txt?t=' + Date.now(), {cache:'no-store'})
     .then(r => r.ok ? r.text() : '')
@@ -798,7 +798,7 @@ svg.bars rect.b:hover { fill:var(--a3); }
 <body>
 <div class="wrap">
 
-<div class="topline"><span class="fl fl-us" role="img" aria-label="미국"></span> 미국 <b>13,063</b> · <span class="fl fl-jp" role="img" aria-label="일본"></span> 일본 <b>7,774</b> · <span class="fl fl-hk" role="img" aria-label="홍콩"></span> 홍콩 <b>9,231</b> · 합계 <b>28,458건</b> · 수집 <b>2025-07-09 ~ 2026-12-28</b> · 갱신 2026-10-29 21:05 KST</div>
+<div class="topline"><span class="fl fl-us" role="img" aria-label="미국"></span> 미국 <b>13,063</b> · <span class="fl fl-jp" role="img" aria-label="일본"></span> 일본 <b>7,774</b> · <span class="fl fl-hk" role="img" aria-label="홍콩"></span> 홍콩 <b>9,231</b> · 합계 <b>28,458건</b> · 수집 <b>2025-07-09 ~ 2026-12-28</b> · 갱신 2026-10-29 21:08 KST</div>
 <div class="hero">
 <aside class="feed" aria-label="방금 실적을 발표한 회사">
   <div class="fdhead"><span class="fddot" aria-hidden="true"></span>방금 발표
