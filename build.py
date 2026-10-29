@@ -1443,7 +1443,9 @@ def load_fcst():
     for code, rec in stocks.items():
         f = rec.get("fcst")
         if f and (f.get("rev") or f.get("opi")):
-            out["jp:" + code] = f
+            # financials_jp.json 의 열쇠는 이미 "jp:코드" 다(예전엔 앞에 또 붙여
+            # "jp:jp:3551" 이 되어 회사 예상이 화면에 한 번도 안 떴다).
+            out[code if code.startswith("jp:") else "jp:" + code] = f
     return out
 
 
@@ -2699,7 +2701,9 @@ def build():
         # 점은 [라벨, 매출, 영업이익] 배열로 눕힌다. 이름표를 종목마다 스무 번씩
         # 되풀이하면 그것만으로 파일이 반 메가 늘어난다. 종료일과 순이익은
         # 화면에서 안 쓰므로 빼고, 자료 파일에는 그대로 남겨 둔다.
-        "fcst": pack_fcst(packed),
+        # 상세창 연간 표. 위의 "fcst"(회사 통기 예상)와 이름이 겹쳐 그걸 덮어쓰고
+        # 있었다 — 따로 "ann" 으로 싣는다.
+        "ann": pack_fcst(packed),
         # 실적 8-K 가 잡힌 미국 종목 — 나스닥 EPS 를 기다리지 않고 ✓ 를 단다.
         "live": {s: [v["date"], v.get("url", "")] for s, v in LIVE.items() if v.get("acc")},
         "fin": {s: pack_fin(rec) for s, rec in FIN.items()
@@ -4926,7 +4930,7 @@ function bizLine(m, code) {
    PER·PSR 은 지금 시총을 그 해 순이익·매출로 나눈 것이고, PBR 은 지금 자본으로
    한 번만 적는다(앞날 자본 추정은 없다). 차기 순이익은 차기 EPS × 올해 주식수. */
 function fcstTable(m, code) {
-  const F = D.fcst && D.fcst[m + ':' + code];
+  const F = D.ann && D.ann[m + ':' + code];
   if (!F) return '';
   const [a, b] = [F.y[0], F.y[1]];
   const yr = d => d ? +d.slice(0, 4) : null;
@@ -4949,6 +4953,13 @@ function fcstTable(m, code) {
     if (cols[i].eps == null && q) cols[i].eps = q[1];
     cols[i].ni = cols[i].eps != null && shares ? cols[i].eps * shares : null;
   });
+  // 일본: 당해 칸이 비면 회사 통기 예상(결산단신 공시)으로 메운다 — 결산기가 같을 때만.
+  const G = m === 'jp' && D.fcst && D.fcst['jp:' + code];
+  if (G && cols[1].end && G.end && G.end.slice(0, 7) === cols[1].end.slice(0, 7)) {
+    if (cols[1].rev == null && G.rev) cols[1].rev = G.rev;
+    if (cols[1].opi == null && G.opi != null) cols[1].opi = G.opi;
+    if (cols[1].ni == null && G.ni != null) cols[1].ni = G.ni;
+  }
   // Business Insider 추정이 있으면 그 해 칸을 채운다(차기·차차기는 통째로, 당해는 빈 곳만).
   (F.b || []).forEach(x => {
     const c = cols.find(c => c.end && yr(c.end) === x[0]);
