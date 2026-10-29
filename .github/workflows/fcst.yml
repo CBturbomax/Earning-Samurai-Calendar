@@ -9,6 +9,10 @@ name: 연간 컨센서스
 
 on:
   workflow_dispatch:
+    inputs:
+      secs:
+        description: '수집 시간(초) — 시험할 때 짧게'
+        default: '1260'
   schedule:
     - cron: '17 * * * *'
 
@@ -43,7 +47,7 @@ jobs:
         continue-on-error: true
         timeout-minutes: 24
         env:
-          FCST_SECS: '1260'
+          FCST_SECS: ${{ inputs.secs || '1260' }}
           FCST_PER_RUN: '99999'
           FCST_WORKERS: '6'
         run: python scrape_fcst.py
