@@ -799,7 +799,7 @@ class Handler(BaseHTTPRequestHandler):
             self.head()
             self.wfile.write(json.dumps({"ok": True, "events": len(S.events), "subs": len(TG.subs),
                                          "history": int(time.time() - H.ts),
-                                         "volume": os.path.ismount(str(DATA))}).encode())
+                                         "volume": os.path.ismount(str(DATA)), "llm": LLM_TEST}).encode())
         elif path == "/api/live":
             self.head()
             cut = (datetime.now(timezone.utc) - timedelta(days=4)).isoformat()
@@ -867,10 +867,26 @@ def stats():
     return out
 
 
+LLM_TEST = {"state": "대기"}
+
+
+def llm_selftest():
+    """켤 때 '왜' 요약을 한 번 돌려 본다 — 토큰이 살아 있는지 /health 로 보인다."""
+    if not brief.enabled():
+        LLM_TEST.update(state="키 없음")
+        return
+    t0 = time.time()
+    r = brief.why("시험회사", "Revenue rose 18% year over year, driven by strong demand for AI data center "
+                  "servers in North America and price increases. Operating margin improved due to lower "
+                  "component costs. The company raised its full-year revenue outlook.")
+    LLM_TEST.update(state="정상" if r else "실패", sec=round(time.time() - t0, 1),
+                    via="claude-max" if brief.CC_TOKEN else "api", sample=(r or {}).get("why", [])[:1])
+
+
 def main():
     log("시작 — 텔레그램", "켜짐" if TG_TOKEN else "꺼짐(TG_BOT_TOKEN 없음)", "· 구독", len(TG.subs))
     H.refresh()
-    for fn in (TG.poll, us_watch, jp_watch, hk_watch, history_loop):
+    for fn in (TG.poll, us_watch, jp_watch, hk_watch, history_loop, llm_selftest):
         threading.Thread(target=fn, daemon=True, name=fn.__name__).start()
     ThreadingHTTPServer(("0.0.0.0", PORT), Handler).serve_forever()
 
