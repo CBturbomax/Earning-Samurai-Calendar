@@ -251,7 +251,25 @@ def load(mkt: str):
     if mkt == "jp":
         merge_jp_past(raw)
         merge_jp_sched(raw)
+    if mkt == "us":
+        merge_us_fpi(raw)
     return raw
+
+
+def merge_us_fpi(raw: dict):
+    """나스닥 캘린더에 없는 미국 상장 외국 회사의 실적 6-K(scrape_us_fpi.py).
+    매그넘(MICC)·유니레버·리오틴토·디아지오처럼 나스닥이 안 싣는 회사들이다.
+    같은 회사가 같은 날 이미 있으면 더하지 않는다."""
+    path = HERE / "data" / "earnings_us_fpi.json"
+    try:
+        rows = json.loads(path.read_text(encoding="utf-8")).get("rows", [])
+    except (ValueError, OSError):
+        return
+    have = {(r["code"], r["date"]) for r in raw["rows"]}
+    add = [r for r in rows if (r["code"], r["date"]) not in have]
+    raw["rows"] += add
+    if add:
+        print(f"  미국 상장 외국 회사(SEC 6-K) {len(add):,}건 더함")
 
 
 # 일본만 소스가 둘이다. 닛케이는 **앞으로의 예정**을 주고 TDnet 은 **이미 나온
@@ -2416,6 +2434,11 @@ def pack_en(r, mkt):
         # 실제 8-K 접수 시각이 있으면 그걸 쓴다. 장전/장후도 거기서 다시 가른다
         # (나스닥이 발표가 끝난 날의 장전/장후 표시를 지우고 주는 일이 있다).
         hhmm = live["accepted"]
+        hm = int(hhmm[11:13]) * 60 + int(hhmm[14:16])
+        timing = "장전" if hm < 9 * 60 + 30 else "장후" if hm >= 16 * 60 else "장중"
+    if not hhmm and mkt == "us" and r.get("accepted"):
+        # 외국 회사 실적 6-K 의 SEC 접수 시각(동부) — 실제로 낸 시각이다.
+        hhmm = r["accepted"]
         hm = int(hhmm[11:13]) * 60 + int(hhmm[14:16])
         timing = "장전" if hm < 9 * 60 + 30 else "장후" if hm >= 16 * 60 else "장중"
     est = None

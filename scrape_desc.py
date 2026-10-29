@@ -190,7 +190,7 @@ def targets():
     out = {}
     # earnings_jp_past.json — 발표를 마쳐 닛케이에서 사라진 일본 종목(TDnet).
     # 캘린더에는 뜨므로 설명도 있어야 한다.
-    for market, fn in (("us", "earnings_us.json"), ("jp", "earnings.json"),
+    for market, fn in (("us", "earnings_us.json"), ("us", "earnings_us_fpi.json"), ("jp", "earnings.json"),
                        ("jp", "earnings_jp_past.json"),
                        ("jp", "earnings_jp_sched.json"), ("hk", "earnings_hk.json")):
         f = HERE / "data" / fn

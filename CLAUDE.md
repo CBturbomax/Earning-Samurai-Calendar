@@ -1164,7 +1164,7 @@ HPE 가 Compute·Storage·Intelligent Edge 를 Cloud&AI·Networking 으로 바�
 | 워크플로 | 주기 | 쓰는 파일 |
 |---|---|---|
 | `fresh.yml` | **3분 루프** | `data/earnings_jp_past.json` · `data/monthly_jp.json` · `data/financials_jp.json` · `data/segments_jp.json` · `data/briefs_jp.json` · `data/briefs_us.json` · `data/live_us.json` |
-| `collect.yml` | **5분**(크론 하한) | `data/earnings.json` · `data/earnings_jp_sched.json` · `data/earnings_us.json` · `data/earnings_hk.json` · `data/caps.json` |
+| `collect.yml` | **5분**(크론 하한) | `data/earnings.json` · `data/earnings_jp_sched.json` · `data/earnings_us.json` · `data/earnings_us_fpi.json` · `data/earnings_hk.json` · `data/caps.json` |
 | `numbers.yml` | **5분**(크론 하한) | `data/financials.json` · `data/financials_intl.json` · `data/segments.json` · `data/segments_hk.json` · `data/desc.json` |
 | `fcst.yml` | 25분 루프 | `data/forecast.json` (연간 표 컨센서스) |
 | `segments.yml` | 30분 | `data/segments_sec.json` · `data/segments_edgar.json` · `data/segments_fpi.json` · `data/financials_fpi.json` |
@@ -1387,6 +1387,16 @@ EPS 만 있다. **없는 값을 다른 항목으로 대신 채우지 말 것** �
   **수치·차트 자동 갱신은 이것과 무관하다.** 번역이 며칠 쉬어도 수집·빌드
   (GitHub Actions 6개 워크플로)는 계속 돈다 — 애초에 LLM 을 안 부르므로
   걸릴 '한도'라는 게 없다.
+
+**나스닥 캘린더에 없는 미국 상장 외국 회사는 SEC 6-K 에서 받는다 — `scrape_us_fpi.py`.**
+회원님이 매그넘 아이스크림(MICC)을 짚으셨다. 나스닥 캘린더는 외국 민간 발행사를 상당수 안 싣는다
+(유니레버·리오틴토·디아지오·BAT·페로비알·IHG… 101차 실측 157종목). 나스닥 스크리너(전 상장 종목)에서
+캘린더에 없는 보통주만 골라 SEC 제출 목록의 6-K 를 가린다 — XBRL 이 붙었거나, 설명·파일명에 실적
+낱말이 있거나(예고·주총·채권·「ahead of」는 뺀다), 설명이 「FORM 6-K」뿐이면 본문 첫머리에서 '기간 +
+results'·trading update 꼴을 찾는다(보도자료 꼬리의 "actual results may differ" 에 안 걸리게). 접수
+시각(UTC→동부)이라 정확도 1, 25일 안에 이어진 실적 6-K 는 첫 장만 남긴다. '앞으로의 예정'은 없다
+(홍콩과 같은 지나간 발표). `build.py` 의 `merge_us_fpi` 가 미국 캘린더에 합치고, 시총·실적·연간 표·
+설명 수집기 우주에도 이 파일을 넣었다.
 
 **오른쪽 위 「방금 발표」 피드**(회원님 요청 10/29: "방금 실적 발표한 회사들 실시간으로 쭈루룩, 알람처럼").
 `build.py` 의 `renderFeed`. **실제 공시 시각이 있는 줄(시각정확도 1)만** 싣는다 — 미국 8-K 접수 시각,
