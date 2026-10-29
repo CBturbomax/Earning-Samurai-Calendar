@@ -43,23 +43,28 @@ jobs:
                   return e.code, u, ""
               except Exception as e:
                   return type(e).__name__, u, ""
-          for q in ["Toyota", "JP3633400001", "US0378331005", "Apple", "Tencent", "KYG875721634", "7203", "AAPL"]:
-              st, fu, t = fin("https://www.finanzen.net/suchergebnis.asp?_search=" + q)
-              links = sorted(set(re.findall(r'href="(/aktien/[a-z0-9_\-]+-aktie)"', t)))[:8]
-              print("search", q, st, fu, len(t), links)
-          for slug in ["toyota", "apple", "tencent", "sony"]:
-              st, fu, t = fin("https://www.finanzen.net/schaetzungen/" + slug)
+          def table(t, kw="EBIT"):
+              i = t.find(">" + kw + "<")
+              if i < 0: i = t.find(kw)
+              if i < 0: return
+              seg = t[t.rfind("<table", 0, i):t.find("</table>", i)]
+              for r in re.findall(r"<tr[^>]*>(.*?)</tr>", seg, re.S)[:16]:
+                  cells = [re.sub(r"\s+", " ", html.unescape(re.sub(r"<[^>]+>", "", c))).strip() for c in re.findall(r"<t[hd][^>]*>(.*?)</t[hd]>", r, re.S)]
+                  print("   ", cells[:8])
+          BI = "https://markets.businessinsider.com"
+          for q in ["Toyota", "JP3633400001", "Tencent", "Sony", "AAPL", "7203"]:
+              st, fu, t = fin(BI + "/ajax/SearchController_Suggest?max_results=5&query=" + q)
+              print("suggest", q, st, t[:400])
+          for slug in ["aapl", "toyota", "toyota_motor", "sony", "tencent", "msft"]:
+              st, fu, t = fin(BI + "/stocks/" + slug + "-stock")
               print("=====", slug, st, fu, len(t))
-              for kw in ["EBIT", "Umsatz"]:
-                  i = t.find(">" + kw)
-                  if i > 0:
-                      seg = t[t.rfind("<table", 0, i):t.find("</table>", i)]
-                      for r in re.findall(r"<tr[^>]*>(.*?)</tr>", seg, re.S)[:14]:
-                          cells = [re.sub(r"\s+", " ", html.unescape(re.sub(r"<[^>]+>", "", c))).strip() for c in re.findall(r"<t[hd][^>]*>(.*?)</t[hd]>", r, re.S)]
-                          print("   ", cells[:8])
-                      break
-          for u in ["https://www.finanzen.ch/schaetzungen/toyota", "https://markets.businessinsider.com/stocks/aapl-stock"]:
-              st, fu, t = fin(u); print("=====", u, st, len(t), "EBIT" in t)
+              if st == 200:
+                  for m in list(re.finditer(r"[Ee]stimates", t))[:2]:
+                      print("  ctx", re.sub(r"\s+", " ", re.sub(r"<[^>]+>", " ", t[m.start()-200:m.start()+300])))
+                  table(t)
+          st, fu, t = fin(BI + "/stocks/aapl-stock")
+          for m in list(re.finditer(r'href="(/[^"]*(estimat|forecast|analyst)[^"]*)"', t))[:10]:
+              print("  link", m.group(1))
           EOF
 
       - name: 결과를 probe-out 가지에
