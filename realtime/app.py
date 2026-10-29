@@ -819,7 +819,7 @@ def replay_run(lines):
                 rows = [r for r in hk.fetch_day(d) if r["time"] and not HK_NOT.search(r["fy"] or "")
                         and not H.skip("hk", r["code"], r["name"])]
                 if rows:
-                    for r in sorted(rows, key=lambda r: -(H.row(f"hk:{r['code']}") or [0] * 12)[11] or 0)[:n]:
+                    for r in sorted(rows, key=lambda r: -((H.row(f"hk:{r['code']}") or [0] * 12)[11] or 0))[:n]:
                         ev = base_event("hk", r["code"], r["name"], f"{r['date']} {r['time']}", HKT,
                                         "HKEXnews 실적 공시", r["link"], r["fy"])
                         ev["replay"] = True
