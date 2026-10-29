@@ -1163,8 +1163,8 @@ HPE 가 Compute·Storage·Intelligent Edge 를 Cloud&AI·Networking 으로 바�
 
 | 워크플로 | 주기 | 쓰는 파일 |
 |---|---|---|
-| `fresh.yml` | **3분 루프** | `data/earnings_jp_past.json` · `data/monthly_jp.json` · `data/financials_jp.json` · `data/segments_jp.json` · `data/briefs_jp.json` · `data/briefs_us.json` · `data/live_us.json` |
-| `collect.yml` | **5분**(크론 하한) | `data/earnings.json` · `data/earnings_jp_sched.json` · `data/earnings_us.json` · `data/earnings_us_fpi.json` · `data/earnings_hk.json` · `data/caps.json` |
+| `fresh.yml` | **3분 루프** | `data/earnings_jp_past.json` · `data/monthly_jp.json` · `data/financials_jp.json` · `data/segments_jp.json` · `data/briefs_jp.json` · `data/briefs_us.json` · `data/live_us.json` · `data/earnings_us_fpi.json`(scrape_live_us 끝에서 남은 시간만큼) |
+| `collect.yml` | **5분**(크론 하한) | `data/earnings.json` · `data/earnings_jp_sched.json` · `data/earnings_us.json` · `data/earnings_hk.json` · `data/caps.json` |
 | `numbers.yml` | **5분**(크론 하한) | `data/financials.json` · `data/financials_intl.json` · `data/segments.json` · `data/segments_hk.json` · `data/desc.json` |
 | `fcst.yml` | 25분 루프 | `data/forecast.json` (연간 표 컨센서스) |
 | `segments.yml` | 30분 | `data/segments_sec.json` · `data/segments_edgar.json` · `data/segments_fpi.json` · `data/financials_fpi.json` |

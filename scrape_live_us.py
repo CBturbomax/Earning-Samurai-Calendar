@@ -398,4 +398,15 @@ def main():
 
 
 if __name__ == "__main__":
+    _t0 = time.time()
     main()
+    # 나스닥 캘린더에 없는 미국 상장 외국 회사(MICC 등)의 실적 6-K — 같은 3분 루프에서,
+    # 이 실행에 남은 시간만큼(워크플로의 timeout 110초 안). 못 본 종목은 다음 바퀴가 잇는다.
+    left = 100 - (time.time() - _t0)
+    if left > 15:
+        os.environ["FPI_SECS"] = str(int(left - 10))
+        try:
+            import scrape_us_fpi
+            scrape_us_fpi.main()
+        except Exception as e:                                # noqa: BLE001
+            print(f"외국 상장사 6-K 실패: {e}", file=sys.stderr)
