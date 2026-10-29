@@ -1409,6 +1409,14 @@ SEC 최신 공시 피드(8-K Item 2.02, 2초)·TDnet 오늘 목록(3초)·HKEXne
 (공개·감지·텔레그램·사이트)을 남기고 `/api/stats` 가 지연을 보여준다. 배포는 루트 `railway.json`
 (Dockerfile = realtime/Dockerfile, `watchPatterns` 로 수집 봇의 잦은 커밋에는 재배포 안 함). 서버 주소는
 `realtime/URL` 한 줄 — 있으면 build.py 가 `D.rt` 로 싣고 화면이 붙는다(`rtApply`/`rtRepaint`).
+**텔레그램 모양(회원님 10/29): 숫자는 차트, 글은 '왜'만.** 앨범 차례는 ① 연간 표(억 원 환산·PER/PBR/PSR —
+`charts.ann_cols` 가 사이트 `fcstTable` 과 같은 셈) ② 분기 매출 막대+영업이익률 선 / 매출 YoY ③ 가이던스 변천
+(일본 — 옛 이력은 `data/guidance_hist_jp.json` 스냅샷, 그 뒤는 서버가 결산단신마다 `/data/guide_jp.json` 에
+쌓는다, 단계는 결산기 끝까지 남은 달 수로 가른다 `stage_of`) ④ 매출 breakdown(부문마다 선) ⑤ 수주(자료 생기면).
+글은 `realtime/brief.py` — 회사 설명 원문(미국 EX-99 · 일본 経営成績に関する説明 · 홍콩 PDF)을 LLM 이 쉬운
+한국어 '왜' 3줄 + 주의 2줄로. 키는 Railway 변수 `OPENROUTER_API_KEY`(기존 봇 것) 또는 `ANTHROPIC_API_KEY`,
+없거나 실패하면 설명 없이 그대로 보낸다(늦추지 않는다). 기존 텔레봇(@EarningSamuraibot, 회원님 PC 의
+`earning-samurai/src/bot.js`)과 같은 토큰을 쓴다 — 그쪽은 보내기만 해서 getUpdates 가 안 부딪힌다.
 
 **오른쪽 위 「방금 발표」 피드**(회원님 요청 10/29: "방금 실적 발표한 회사들 실시간으로 쭈루룩, 알람처럼").
 `build.py` 의 `renderFeed`. **실제 공시 시각이 있는 줄(시각정확도 1)만** 싣는다 — 미국 8-K 접수 시각,
