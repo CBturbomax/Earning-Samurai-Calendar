@@ -570,7 +570,7 @@ def finish(ev, point=None):
         S.update(ev)
     log(f"실적 {ev['mkt']}:{ev['code']} {ev['name']} · 공개 {ev.get('published')} 감지 {ev['detected']} "
         f"텔레그램 {'보냄 ' + ev['t_tg'] if send else '안 보냄'} ({why}) · 그림 {len(pngs)}")
-    th.join(90)                                  # ② '왜'·AI 판독은 받는 대로 답장으로
+    th.join(100)                                 # ② '왜'·AI 판독은 받는 대로 답장으로
     b = box.get("b")
     if not b:
         return
@@ -581,14 +581,18 @@ def finish(ev, point=None):
     if send:
         text = followup(ev)
         segpng = None
-        if b.get("segs") and not seg and H.html:  # 사이트에 사업부별이 없는 회사에만 AI 판독 표를 붙인다
+        # 그림이 하나도 없던 회사(이력 없는 신규 상장 등)는 원문 손익 표의 이번/전년 비교를,
+        # 사이트에 사업부별이 없는 회사는 원문 사업부 표를 그려 붙인다(둘 다 AI 판독, 표에 그렇게 적는다).
+        want = ("fin" if b.get("fin") and not pngs else "") + ("seg" if b.get("segs") and not seg else "")
+        if want and H.html:
             try:
-                segpng = (shot.render(dict({k: v for k, v in ev.items() if not k.startswith("_")}, onlySeg=1)) or [None])[0]
+                segpng = (shot.render(dict({k: v for k, v in ev.items() if not k.startswith("_")}, onlySeg=want)) or [None])[0]
             except Exception:                    # noqa: BLE001
                 segpng = None
         if text or segpng:
             TG.reply(ids, text or f"<b>{html.escape(ev['name'])}</b> 사업부별 매출(공시 원문 AI 판독)", segpng)
-        log("답장", key, "글" if text else "-", "사업부 표" if segpng else "-")
+        log("답장", key, "글" if text else "-", "AI 표" if segpng else "-",
+            "| 숫자:", (b.get("key") or "")[:80], "| 왜:", ((b.get("why") or [""])[0])[:80])
 
 
 def followup(ev):
