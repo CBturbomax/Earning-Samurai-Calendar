@@ -5,18 +5,23 @@
 
 원문은 이미 받는 자리에서 꺼낸다 — 미국 8-K EX-99 보도자료, 일본 결산단신 첨부의
 経営成績に関する説明(scrape_fin_jp.read_narrative), 홍콩 실적 공시 PDF(pdftext).
-옮기는 것은 LLM 이다. 키는 Railway 변수로만 받는다:
-  OPENROUTER_API_KEY (기존 봇이 쓰던 것)  또는  ANTHROPIC_API_KEY.
+옮기는 것은 LLM 이다. 키는 Railway 변수로만 받고, 먼저 있는 것을 쓴다:
+  CLAUDE_CODE_OAUTH_TOKEN (회원님 Claude Max — `claude setup-token`, Claude Code 를 불러 쓴다)
+  ANTHROPIC_API_KEY · OPENROUTER_API_KEY (기존 봇이 쓰던 것).
 키가 없거나 실패하면 None — 알림은 설명 없이 그대로 나간다(늦추지 않는다).
 """
 import html
 import json
 import os
 import re
+import shutil
+import subprocess
 import urllib.request
 
 OR_KEY = os.environ.get("OPENROUTER_API_KEY", "")
 AN_KEY = os.environ.get("ANTHROPIC_API_KEY", "")
+CC_TOKEN = os.environ.get("CLAUDE_CODE_OAUTH_TOKEN", "")
+CC_MODEL = os.environ.get("CLAUDE_MODEL", "haiku")      # Max 안에서 — 빠른 것. sonnet 으로 바꿔도 된다
 OR_MODEL = os.environ.get("LLM_MODEL", "google/gemini-3-flash-preview")
 AN_MODEL = os.environ.get("LLM_MODEL_ANTHROPIC", "claude-haiku-5-5")
 LIMIT = 9000                                       # 원문 글자 수 — 길면 느리고 비싸다
@@ -41,6 +46,13 @@ def _post(url, body, headers, timeout):
 
 
 def _ask(user, timeout):
+    if CC_TOKEN and shutil.which("claude"):
+        r = subprocess.run(["claude", "-p", "--model", CC_MODEL, "--output-format", "text", "--max-turns", "1"],
+                           input=SYSTEM + "\n\n" + user, capture_output=True, text=True, timeout=timeout,
+                           env={**os.environ, "CLAUDE_CODE_OAUTH_TOKEN": CC_TOKEN})
+        if r.returncode == 0 and r.stdout.strip():
+            return r.stdout
+        print("Claude Code 실패:", r.returncode, (r.stderr or r.stdout)[-300:], flush=True)
     if AN_KEY:
         d = _post("https://api.anthropic.com/v1/messages",
                   {"model": AN_MODEL, "max_tokens": 600, "system": SYSTEM,
@@ -59,7 +71,7 @@ def _ask(user, timeout):
 
 
 def enabled():
-    return bool(AN_KEY or OR_KEY)
+    return bool(CC_TOKEN or AN_KEY or OR_KEY)
 
 
 def plain(raw):
@@ -81,7 +93,7 @@ def hk_text(pdf_bytes):
     return t[m.start():] if m else t
 
 
-def why(name, text, timeout=20):
+def why(name, text, timeout=40):
     """-> {"why": [...], "watch": [...], "guide": str} 또는 None."""
     text = (text or "").strip()
     if not enabled() or len(text) < 80:

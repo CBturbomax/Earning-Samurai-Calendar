@@ -472,7 +472,7 @@ def finish(ev, point=None):
         pngs = charts.render(ev, pts, seg, fin.get("freq", "Q"), ann, G, gh)
     except Exception:                                            # noqa: BLE001
         log("차트 실패", key, traceback.format_exc(limit=2))
-    th.join(25)
+    th.join(45)
     if box.get("b"):
         ev["brief"] = box["b"]
     for i, png in enumerate(pngs):
