@@ -163,6 +163,12 @@ jobs:
             # 방금 8-K 가 잡힌 종목의 보도자료(회사가 한 말)도 매 바퀴 조금씩.
             PR_PER_RUN=15 timeout 60 python scrape_pr_us.py || true
             JP_BACK_DAYS=2 timeout 150 python scrape_fin_jp.py || true
+            # 실시간 서버(Railway)가 보도자료 부문 표를 AI 로 읽은 것 — 빌드가 부문 막대에 잇는다.
+            if [ -s realtime/URL ]; then
+              curl -sf -m 20 "$(cat realtime/URL)/api/segs" -o /tmp/segs_ai.json \
+                && python -c "import json;json.load(open('/tmp/segs_ai.json'))" \
+                && cp /tmp/segs_ai.json data/segments_ai.json || true
+            fi
             # 월매출 **숫자**(첨부 PDF)는 monthly.yml 로 옮겼다 — 여기 끼우면
             # 한 바퀴가 길어지고, 무엇보다 이 루프의 로그에 묻혀 안 보인다.
             # 미국 8-K 와 일본 보관창 백필(부문·가이던스·설명 되훑기)은 열 바퀴

@@ -39,7 +39,7 @@ SYSTEM = """너는 실적 발표 자료를 읽고 '실적이 왜 이렇게 나�
   일본어·한자 단위(億·千·百万円)를 남기지 않는다. 퍼센트는 소수 첫째 자리까지.
 - 제품·지역·고객처럼 구체적인 것을 우선한다(예: "AI 서버용 수요 급증으로 데이터센터 매출 2배").
 
-JSON 으로만 답한다: {"key": "자료에 적힌 이번 기간 핵심 숫자 한 줄 — 매출·영업이익(또는 순이익)과 전년 대비 %를 자료 표기 그대로 통화 단위 붙여(예: 매출 120.5억 위안(+35%) · 순이익 18.2억 위안(+52%)). 자료에 없으면 빈 문자열", "why": [최대 3줄 — 실적을 움직인 이유], "watch": [최대 2줄 — 일회성·환율·감익 부문·가이던스 하향 등 주의할 점], "guide": "가이던스·전망에 대한 회사 언급 한 줄(없으면 빈 문자열)", "segs": [자료의 사업부문(세그먼트)별 또는 제품·지역별 매출 표가 있으면 이번 기간 값을 표에서 그대로 — {"n": 부문 이름(쉬운 한국어), "v": 숫자(표에 적힌 그대로, 단위 변환 없이), "y": 전년 같은 기간 대비 %(표의 전년 칸으로 계산하거나 적힌 값, 모르면 null)}. 합계·조정·소거 줄은 빼고 최대 8개. 표가 없으면 []], "unit": "segs 숫자의 단위(예: 백만 엔, 백만 달러, 천 위안)", "basis": "segs 기간(예: 3개월, 9개월 누계, 반기)", "fin": {"period": "이번 실적 기간(예: 2026년 3분기, 9개월 누계, 상반기)", "unit": "단위(예: 백만 위안)", "rev": [이번, 전년 같은 기간], "op": [이번, 전년] 영업이익(없으면 null), "ni": [이번, 전년] 지배주주 순이익(없으면 null)} — 자료의 손익 표에서 그대로, 없으면 null}
+JSON 으로만 답한다: {"key": "자료에 적힌 이번 기간 핵심 숫자 한 줄 — 매출·영업이익(또는 순이익)과 전년 대비 %를 자료 표기 그대로 통화 단위 붙여(예: 매출 120.5억 위안(+35%) · 순이익 18.2억 위안(+52%)). 자료에 없으면 빈 문자열", "why": [최대 3줄 — 실적을 움직인 이유], "watch": [최대 2줄 — 일회성·환율·감익 부문·가이던스 하향 등 주의할 점], "guide": "가이던스·전망에 대한 회사 언급 한 줄(없으면 빈 문자열)", "segs": [자료의 사업부문(세그먼트)별 또는 제품·지역별 매출 표가 있으면 이번 기간 값을 표에서 그대로 — {"n": 부문 이름(쉬운 한국어), "v": 숫자(표에 적힌 그대로, 단위 변환 없이), "y": 전년 같은 기간 대비 %(표의 전년 칸으로 계산하거나 적힌 값, 모르면 null)}. 합계·조정·소거 줄은 빼고 최대 8개. 표가 없으면 []], "unit": "segs 숫자의 단위(예: 백만 엔, 백만 달러, 천 위안)", "scale": segs 숫자에 곱하면 통화 1단위가 되는 수(백만이면 1000000, 천이면 1000, 그대로면 1), "basis": "segs 기간(예: 3개월, 9개월 누계, 반기)", "fin": {"period": "이번 실적 기간(예: 2026년 3분기, 9개월 누계, 상반기)", "unit": "단위(예: 백만 위안)", "rev": [이번, 전년 같은 기간], "op": [이번, 전년] 영업이익(없으면 null), "ni": [이번, 전년] 지배주주 순이익(없으면 null)} — 자료의 손익 표에서 그대로, 없으면 null}
 
 segs 는 표에 적힌 숫자만 옮긴다. 본문 문장 속 숫자를 끌어 모아 표를 지어내지 않는다."""
 
@@ -79,6 +79,17 @@ def enabled():
     return bool(CC_TOKEN or AN_KEY or OR_KEY)
 
 
+def us_text(raw):
+    """보도자료 -> 앞머리(제목·인용·하이라이트) + 사업부 표가 있는 자리. 부문 표는 대개 뒤쪽이다."""
+    t = plain(raw)
+    head = t[:10000]
+    m = re.search(r"(?i)segment|by (product|region|geograph)|revenue by", t[6000:])
+    if not m:
+        return t[:LIMIT]
+    i = 6000 + m.start()
+    return head + "\n…\n" + t[max(10000, i - 500):max(10000, i - 500) + 14000]
+
+
 def plain(raw):
     """HTML -> 글. 표가 길게 늘어진 보도자료라 앞쪽(제목·CEO 인용·하이라이트)만 쓴다."""
     t = re.sub(r"(?is)<(script|style).*?</\1>", " ", raw or "")
@@ -112,14 +123,16 @@ def hk_text(pdf_bytes):
     return (t[:9000] + "\n…\n" + t[m.start():m.start() + 14000]) if m and m.start() > 9000 else t
 
 
-def why(name, text, timeout=85):
+def why(name, text, timeout=85, names=None):
     """-> {"why": [...], "watch": [...], "guide": str} 또는 None."""
     text = (text or "").strip()
     if not enabled() or len(text) < 80:
         LOG("요약 건너뜀:", name, "원문", len(text))
         return None
     try:
-        out = _ask(f"회사: {name}\n\n자료 원문:\n{text[:LIMIT]}", timeout)
+        hint = ("\n\n이 회사 사업부 이름(우리 사이트 표기) — segs 의 n 은 같은 부문이면 **이 중 하나를 글자 그대로** 쓴다: "
+                + json.dumps(names, ensure_ascii=False)) if names else ""
+        out = _ask(f"회사: {name}{hint}\n\n자료 원문:\n{text[:LIMIT]}", timeout)
         m = re.search(r"\{.*\}", out, re.S)
         d = json.loads(m.group(0)) if m else {}
         if not d:
@@ -152,7 +165,12 @@ def why(name, text, timeout=85):
         if fin["rev"] and fin["rev"][0]:
             res["fin"] = dict(fin, period=str(f.get("period") or "")[:30], unit=str(f.get("unit") or "")[:20])
     if len(segs) >= 2:
-        res.update(segs=segs[:8], unit=str(d.get("unit") or "")[:20], basis=str(d.get("basis") or "")[:20])
+        try:
+            scale = float(d.get("scale") or 0)
+        except (TypeError, ValueError):
+            scale = 0
+        res.update(segs=segs[:8], unit=str(d.get("unit") or "")[:20], basis=str(d.get("basis") or "")[:20],
+                   scale=scale if scale in (1, 1e3, 1e4, 1e6, 1e8, 1e9) else 0)
     if not (res["why"] or res["watch"] or res["guide"] or res["key"]):
         LOG("요약 내용 없음:", name, "원문", len(text), repr(text[:120]))
         return None
