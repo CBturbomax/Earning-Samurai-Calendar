@@ -451,7 +451,7 @@ def pack_fin(rec):
     라벨은 받아둔 값을 쓰지 않고 여기서 다시 매긴다 — 종료일만 있으면 되므로
     표기 규칙을 고칠 때 4천 종목을 다시 받지 않아도 된다.
     """
-    out = {k: rec[k] for k in ("freq", "eps", "cur", "src") if rec.get(k)}
+    out = {k: rec[k] for k in ("freq", "eps", "cur", "src", "prLast") if rec.get(k)}
     if rec.get("freq") in ("Q", "H"):
         pts = rec.get("points") or []
         # **반기만 내는 회사는 반기답게 적는다.** 홍콩에 특히 많다. 점 사이가
@@ -613,6 +613,25 @@ def load_last_times():
 
 
 JP_LAST_TIME, US_LAST_TIME = load_last_times()
+# **8-K 보도자료에서 읽은 이번 분기를 차트에 얹는다.** SEC 회사 재무는 10-Q 가
+# 나와야(며칠~몇 주 뒤) 그 분기가 생긴다. 보도자료 표는 발표 그 순간 나오고,
+# 전년 같은 분기 열이 SEC 수치와 맞는 것만 실렸다(pr_table.read). 같은 분기를
+# SEC 가 이미 주면 그쪽이 이긴다 — 여기서는 비어 있을 때만 더한다.
+for _sym, _rec in LIVE.items():
+    _p = _rec.get("pr")
+    _f = FIN.get("us:" + _sym)
+    if not _p or not _f or _f.get("freq") != "Q" or not _p.get("end"):
+        continue
+    _pts = _f.get("points") or []
+    _end = date.fromisoformat(_p["end"])
+    if any(abs((date.fromisoformat(x["end"]) - _end).days) <= 40 for x in _pts if x.get("end")):
+        continue
+    _pts.append({"end": _p["end"], "mid": (_end - timedelta(days=45)).isoformat(),
+                 "rev": _p["rev"], "opi": _p.get("opi"), "ni": _p.get("ni"), "pr": 1})
+    _pts.sort(key=lambda x: x.get("end") or "")
+    _f["points"] = _pts
+    _f["prLast"] = {"eps": _p.get("eps"), "url": _rec.get("url", ""), "end": _p["end"]}
+
 # 방금 나온 실제 EPS 를 실적 수치에 얹는다 — scrape_fin 은 SEC 10-Q 를 기다리느라
 # 늦다. 같은 분기가 이미 있으면 그대로 둔다(나중에 받은 정식 값이 이긴다).
 for _sym, _rec in LIVE.items():
@@ -3329,6 +3348,8 @@ td.dim { color:var(--mute); font-size:18px; }
 .fctab tr.gap > * { border-top:2px solid var(--line); }
 .fctab .fcunit { text-align:left; vertical-align:middle; }
 .fcnote { color:var(--mute); font-size:12.5px; margin:6px 0 0; }
+.prnote { color:#e8c46a; }
+.prnote a { color:#e8c46a; }
 .finhead { font-size:18px; font-weight:700; margin-bottom:8px; }
 .finhead .warn { color:var(--a3); font-weight:400; font-size:16px; margin-left:10px; }
 .finhead.sub { margin-top:14px; }
@@ -4900,6 +4921,14 @@ function finBlock(m, code) {
       (u ? '<span class="epsbox next"><b>' + esc(epsQ(u.period)) + '</b>아직 발표 전' +
            (u.consensus ? ' <i>(예상 ' + u.consensus + ')</i>' : '') + '</span>' : '') +
       '</div>';
+  }
+  // 최신 분기를 SEC 10-Q 가 아니라 발표 당일 8-K 보도자료에서 읽었다면 그렇다고 적는다.
+  if (f.prLast) {
+    const p = f.prLast;
+    html += '<p class="finnote prnote">⚡ 최신 분기(' + esc(p.end.slice(0, 7)) + ' 종료)는 ' +
+      '<b>발표 당일 8-K 보도자료</b>에서 읽은 값입니다 · 전년 같은 분기가 SEC 공식 수치와 맞는지 대조함' +
+      (p.eps != null ? ' · GAAP 희석 EPS <b>' + esc(String(p.eps)) + '</b>' : '') +
+      (p.url ? ' · <a target="_blank" rel="noopener" href="' + esc(p.url) + '">원문 ↗</a>' : '') + '</p>';
   }
   // **연간 막대는 그리지 않는다.** 연간으로는 "이번 분기가 작년 같은 분기보다
   // 나아졌나"를 볼 수 없어서 애초에 보려던 그림이 아니다. 분기(또는 홍콩 반기)만 낸다.
