@@ -1,0 +1,61 @@
+# 표본 받기 — 미국 실적 8-K 보도자료(EX-99) HTML 을 probe-ex99 브랜치에 올린다.
+# 손익 표 읽기(scrape_live_us)를 실제 문서로 맞추려는 것. main 은 건드리지 않는다.
+name: 표본 — 8-K 보도자료
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  probe:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: 받기
+        run: |
+          mkdir -p ex99
+          python - <<'PY'
+          import json, re, time
+          import scrape_seg_sec as ss
+          from scrape_seg_edgar import get
+          live = json.load(open("data/live_us.json"))["stocks"]
+          cikmap = ss.cik_map()
+          done = 0
+          for sym, v in sorted(live.items(), key=lambda kv: kv[0]):
+              if not v.get("acc") or done >= 40:
+                  continue
+              cik = ss.cik_of(cikmap, sym)
+              idx = get(f"https://www.sec.gov/Archives/edgar/data/{cik}/{v['acc']}/index.json", binary=False)
+              time.sleep(0.2)
+              if not idx:
+                  continue
+              items = json.loads(idx)["directory"]["item"]
+              htm = [(it["name"], int(it.get("size") or 0)) for it in items
+                     if it["name"].lower().endswith((".htm", ".html"))
+                     and not re.match(r"index|.*-index", it["name"], re.I)]
+              ex = [t for t in htm if re.search(r"ex[-_]?99|991|992|press|earnings", t[0], re.I)]
+              if not (ex or htm):
+                  continue
+              name = max(ex or htm, key=lambda t: t[1])[0]
+              doc = get(f"https://www.sec.gov/Archives/edgar/data/{cik}/{v['acc']}/{name}")
+              time.sleep(0.2)
+              if doc:
+                  open(f"ex99/{sym}.htm", "wb").write(doc)
+                  done += 1
+                  print(sym, name, len(doc))
+          PY
+      - name: 브랜치에 올리기
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git checkout --orphan probe-ex99
+          git rm -rq --cached . 
+          git add ex99
+          git commit -qm "8-K 보도자료 표본"
+          git push -f origin probe-ex99
