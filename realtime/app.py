@@ -45,6 +45,7 @@ import scrape_hk as hk             # noqa: E402
 import scrape_live_us as lu        # noqa: E402
 from markets import excluded       # noqa: E402
 
+import brief                       # noqa: E402
 import charts                      # noqa: E402
 
 DATA = Path(os.environ.get("DATA_DIR", "/data"))
@@ -93,7 +94,7 @@ class History:
     """사이트가 가진 것 — 종목 이름·시총·지난 분기·사업부. 20분마다 새로."""
 
     FILES = ("financials.json", "financials_intl.json", "financials_jp.json",
-             "caps.json", "earnings_us.json", "earnings_us_fpi.json")
+             "caps.json", "earnings_us.json", "earnings_us_fpi.json", "guidance_hist_jp.json")
 
     def __init__(self):
         self.lock = threading.Lock()
@@ -198,6 +199,64 @@ class Store:
 
 
 S = Store()
+
+
+# ── 일본 가이던스 변천 ───────────────────────────────────────────────────
+STAGES = ("최초", "1Q", "2Q", "3Q")
+
+
+def stage_of(fy_end, published):
+    """결산기 끝(YYYY-MM-DD)과 공시일 사이 달 수로 어느 결산단신의 예상인지 가른다."""
+    m = (int(fy_end[:4]) * 12 + int(fy_end[5:7])) - (int(published[:4]) * 12 + int(published[5:7]))
+    return "최초" if m >= 10 else "1Q" if m >= 7 else "2Q" if m >= 4 else "3Q" if m >= 0 else None
+
+
+class Guide:
+    """회계연도마다 {최초·1Q·2Q·3Q: [매출, 영업이익]}.
+
+    옛 이력은 저장소의 data/guidance_hist_jp.json(InvestingWiki 결산단신 이력에서 뜬 스냅샷),
+    그 뒤로는 서버가 결산단신을 볼 때마다 /data/guide_jp.json 에 쌓는다. 실제(연간 실적)는
+    사이트의 연간 표(D.ann.y)에서 붙인다."""
+
+    def __init__(self):
+        self.path = DATA / "guide_jp.json"
+        self.lock = threading.Lock()
+        try:
+            self.own = json.loads(self.path.read_text())
+        except (OSError, ValueError):
+            self.own = {}
+
+    def add(self, code, fc, published):
+        if not fc or not fc.get("end") or fc.get("rev") is None:
+            return None
+        st = stage_of(fc["end"], published)
+        if not st:
+            return None
+        fy = fc["end"][:7]
+        with self.lock:
+            before = self.get(code).get(fy, {})
+            prev = next((before[s] for s in reversed(STAGES[:STAGES.index(st)]) if s in before), None)
+            self.own.setdefault(code, {}).setdefault(fy, {})[st] = [fc.get("rev"), fc.get("opi")]
+            tmp = self.path.with_suffix(".tmp")
+            tmp.write_text(json.dumps(self.own))
+            tmp.replace(self.path)
+        return {"stage": st, "prev": prev, "now": [fc.get("rev"), fc.get("opi")]}
+
+    def get(self, code, ann=None):
+        try:
+            seed = json.loads((ROOT / "data" / "guidance_hist_jp.json").read_text()).get(code, {})
+        except (OSError, ValueError):
+            seed = {}
+        out = {fy: dict(v) for fy, v in seed.items()}
+        for fy, v in (self.own.get(code) or {}).items():
+            out.setdefault(fy, {}).update(v)
+        for y in (ann or {}).get("y") or []:
+            if not y[5] and y[1]:                       # 확정 실적만
+                out.setdefault(y[0][:7], {}).setdefault("실제", [y[1], y[2]])
+        return out
+
+
+GD = Guide()
 
 
 # ── 텔레그램 ─────────────────────────────────────────────────────────────
@@ -390,12 +449,32 @@ def finish(ev, point=None):
         pts = [p for p in pts if p[0] != lab] + [[lab, point["rev"], point.get("opi")]]
         ev["point"] = [lab, point["rev"], point.get("opi"), point.get("ni"), point.get("eps")]
         ev["yoy"] = yoy_of(pts, lab, point["rev"])
+        m = re.match(r"(\d)([QH])(\d\d)", lab)
+        pv = next((p for p in pts if m and p[0] == f"{m.group(1)}{m.group(2)}{int(m.group(3)) - 1:02d}"), None)
+        o, po = point.get("opi"), pv[2] if pv and len(pv) > 2 else None
+        if o is not None and po is not None:
+            if po > 0:
+                ev["opiYoy"] = (o / po - 1) * 100
+            elif o > 0:
+                ev["turn"] = "흑자 전환"
+            else:
+                ev["turn"] = "적자 지속"
+    text = ev.pop("_text", "")
+    box = {}
+    th = threading.Thread(target=lambda: box.update(b=brief.why(ev["name"], text)), daemon=True)
+    th.start()                                                   # 차트 그리는 동안 요약을 받는다
+    with H.lock:
+        ann = H.D.get("ann", {}).get(key)
+        G = H.D.get("fcst", {}).get(key)
+    gh = GD.get(ev["code"], ann) if ev["mkt"] == "jp" else None
     pngs = []
     try:
-        if pts:
-            pngs = charts.render(ev, pts, seg, fin.get("freq", "Q"))
+        pngs = charts.render(ev, pts, seg, fin.get("freq", "Q"), ann, G, gh)
     except Exception:                                            # noqa: BLE001
         log("차트 실패", key, traceback.format_exc(limit=2))
+    th.join(25)
+    if box.get("b"):
+        ev["brief"] = box["b"]
     for i, png in enumerate(pngs):
         (DATA / "charts").mkdir(exist_ok=True)
         (DATA / "charts" / f"{fname(ev['id'])}_{i}.png").write_bytes(png)
@@ -413,29 +492,68 @@ def finish(ev, point=None):
         f"텔레그램 {'보냄 ' + ev['t_tg'] if send else '안 보냄'} ({why})")
 
 
+def pct(v):
+    return f"{v:+.1f}%".replace("+0.0%", "0%")
+
+
 def caption(ev):
-    p = ev.get("point")
-    head = f"{FLAG[ev['mkt']]} <b>[{html.escape(ev['code'])}] {html.escape(ev['name'])}</b> 실적 발표"
-    lines = [head]
+    """숫자는 차트가 말한다. 글은 한 줄 요점 + '왜' 몇 줄."""
+    e = html.escape
+    lines = [f"{FLAG[ev['mkt']]} <b>{e(ev['name'])} ({e(ev['code'])})</b>"
+             + (f" · {e(ev['point'][0])} 실적" if ev.get("point") else " 실적 발표")]
     if ev.get("kstTime"):
-        lines.append(f"🕒 한국 {ev['kstDate'][5:].replace('-', '/')} {ev['kstTime']} · {ev.get('src', '')}")
+        lines.append(f"🕒 {ev['kstDate'][5:].replace('-', '/')} {ev['kstTime']} · {e(ev.get('src', ''))}")
+    p = ev.get("point")
+    key = []
     if p:
-        cur = ev["cur"]
-        lab, rev, opi, ni, eps = (p + [None] * 5)[:5]
-        y = ev.get("yoy")
-        lines.append(f"기준: {lab}")
-        lines.append(f"매출: {fmt_money(rev, cur)}" + (f" (YoY {y:+.1f}%)" if y is not None else ""))
-        if opi is not None:
-            lines.append(f"영업이익: {fmt_money(opi, cur)}" + (f" (OPM {opi / rev * 100:.1f}%)" if rev else ""))
-        if ni is not None:
-            lines.append(f"순이익: {fmt_money(ni, cur)}")
-        if eps is not None:
-            lines.append(f"EPS: {CUR_SIGN.get(cur, '')}{eps:.2f}")
-    elif ev.get("title"):
-        lines.append(html.escape(ev["title"][:160]))
-    if ev.get("url"):
-        lines.append(f"<a href=\"{html.escape(ev['url'])}\">원문</a> · <a href=\"{SITE}\">어닝사무라이</a>")
-    return "\n".join(lines)
+        lab, rev, opi = p[0], p[1], p[2]
+        if ev.get("yoy") is not None:
+            key.append(f"매출 {pct(ev['yoy'])}")
+        if ev.get("opiYoy") is not None:
+            key.append(f"영업이익 {pct(ev['opiYoy'])}")
+        elif ev.get("turn"):
+            key.append(ev["turn"])
+        if opi is not None and rev:
+            key.append(f"이익률 {opi / rev * 100:.1f}%")
+    g = ev.get("guide")
+    if g and g.get("prev"):
+        d = [f"{n} {pct((b / a - 1) * 100)}" for n, a, b in zip(("매출", "영업이익"), g["prev"], g["now"])
+             if a and b is not None and a > 0]
+        if d:
+            up = all(x.split()[-1].startswith("+") for x in d)
+            dn = all(x.split()[-1].startswith("-") for x in d)
+            gl = ("📈 가이던스 상향 " if up else "📉 가이던스 하향 " if dn else "🔁 가이던스 수정 ") + " · ".join(d)
+        else:
+            gl = ""
+    else:
+        gl = ""
+    if key:
+        lines.append("<b>" + e(" · ".join(key)) + "</b>")
+    if gl:
+        lines.append("<b>" + e(gl) + "</b>")
+    b = ev.get("brief") or {}
+    if b.get("why"):
+        lines += ["", "💡 <b>왜 이렇게 나왔나</b> <i>(회사 설명)</i>"] + [f"• {e(x)}" for x in b["why"]]
+    if b.get("guide"):
+        lines += ["", f"🗓 {e(b['guide'])}"]
+    if b.get("watch"):
+        lines += ["", "⚠️ <b>주의</b>"] + [f"• {e(x)}" for x in b["watch"]]
+    if not b and not p and ev.get("title"):
+        lines.append(e(ev["title"][:160]))
+    links = [f"<a href=\"{e(ev['url'])}\">원문</a>"] if ev.get("url") else []
+    links.append(f"<a href=\"{SITE}\">어닝사무라이</a>")
+    lines += ["", "🔗 " + " · ".join(links)]
+    out = "\n".join(lines)
+    while len(out) > 1024 and b:                    # 사진 설명 한도 — 주의부터 한 줄씩 덜어낸다
+        for k in ("watch", "guide", "why"):
+            if b.get(k):
+                b[k] = b[k][:-1] if isinstance(b[k], list) else ""
+                break
+        else:
+            break
+        ev["brief"] = b
+        return caption(ev)
+    return out
 
 
 def base_event(mkt, code, name, published_local, tz, src, url, title=""):
@@ -509,6 +627,7 @@ def us_process(cik, acc, name, upd):
     point = None
     try:
         raw = lu.ex99_html(cik, acc.replace("-", ""))
+        ev["_text"] = brief.plain(raw)[:brief.LIMIT]
         period = us_period(ev["key"], pub_et[:10])
         prior = lu.sec_prior(code, period)
         got = pr_table.read(raw, prior) if raw and prior else None
@@ -563,6 +682,9 @@ def jp_process(row, day):
         blob = fj.get(row["zip"], binary=True)
         if blob:
             vals = fj.read_summary(blob)
+            ev["_text"] = fj.read_narrative(blob)
+            if vals:
+                ev["guide"] = GD.add(code, fj.forecast_from(vals), day)
             prior = fj.base_series().get(f"jp:{code}", {})
             q = fj.quarter_from(vals, prior) if vals else None
             if q:
@@ -603,6 +725,16 @@ HK_NOT = re.compile(r"CONVEN|PRESENTATION|BRIEFING|BOARD MEETING|DATE OF|NOTICE 
                     r"說明會|業績會|董事會會議", re.I)
 
 
+def hk_process(ev):
+    """홍콩은 숫자를 못 읽지만(PDF) 회사 설명은 PDF 글에서 뽑는다."""
+    if brief.enabled() and ev.get("url", "").lower().endswith(".pdf"):
+        try:
+            ev["_text"] = brief.hk_text(http_get(ev["url"], ua="Mozilla/5.0", timeout=30, binary=True))
+        except Exception as e:                                   # noqa: BLE001
+            log("홍콩 PDF 실패", ev["code"], e)
+    finish(ev, None)
+
+
 def hk_watch():
     seen = set()
     sent = set()
@@ -626,7 +758,7 @@ def hk_watch():
                     continue
                 ev = base_event("hk", r["code"], r["name"], f"{r['date']} {r['time']}", HKT,
                                 "HKEXnews 실적 공시", r["link"], r["fy"])
-                POOL.submit(safe, finish, ev, None)
+                POOL.submit(safe, hk_process, ev)
             first = False
         except Exception as e:                                   # noqa: BLE001
             log("홍콩:", e)
