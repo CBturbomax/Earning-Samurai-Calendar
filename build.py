@@ -3491,6 +3491,19 @@ td.dim { color:var(--mute); font-size:18px; }
 .fcwrap { display:inline-block; max-width:100%; overflow-x:auto; margin:0 0 16px;
           border:1px solid var(--line); border-radius:10px; }
 .fctab { border-collapse:collapse; font-size:16px; font-variant-numeric:tabular-nums; }
+.fcbox { display:inline-block; max-width:100%; }
+.fccap { text-align:right; margin:0 2px 6px; font-size:15px; color:var(--mute); }
+.fccap b { color:#fff; font-size:20px; font-weight:800; margin-left:6px; letter-spacing:-.2px; }
+.fcbox .fcwrap { display:block; }
+.rtseg { margin:14px 0 4px; border:1px solid var(--line); border-radius:10px; overflow:hidden; display:inline-block; }
+.rtseg table { border-collapse:collapse; font-size:16px; font-variant-numeric:tabular-nums; }
+.rtseg th, .rtseg td { padding:7px 16px; text-align:right; white-space:nowrap; }
+.rtseg thead th { background:#22384c; color:#a9bccb; font-weight:600; font-size:13px; }
+.rtseg tbody tr { background:#141c24; }
+.rtseg tbody tr + tr > * { border-top:1px solid #1f2a33; }
+.rtseg tbody th { text-align:left; color:#dfe8ef; font-weight:600; background:#18222b; }
+.rtseg td.up { color:#ff6b6b; font-weight:700; } .rtseg td.dn { color:#5fb3ff; font-weight:700; }
+.rtseg .rtnote { font-size:12px; color:var(--mute); padding:6px 16px 8px; background:#141c24; text-align:left; }
 .fctab tr,.fctab th,.fctab td { background:transparent; }
 .fctab th,.fctab td { padding:7px 16px; text-align:right; white-space:nowrap;
                      font-size:16px; line-height:1.4; height:auto; border:0; }
@@ -5124,7 +5137,13 @@ function fcstTable(m, code) {
   const row = (lab, f, cls) => '<tr' + (cls ? ' class="' + cls + '"' : '') + '><th>' + lab + '</th>' +
     cols.map((c, i) => cell(f(c, i), i)).join('') + '</tr>';
   const ym = d => d ? d.slice(2, 4) + '.' + d.slice(5, 7) : '';
-  return '<div class="fcwrap"><table class="fctab">' +
+  // 시가총액 — 원화로 옮겨 1조 원 밑은 「억 원」, 위는 「조 원」(회원님 10/29: 오른쪽 위, 잘 보이게).
+  const capW = F.m * F.k;
+  const capTxt = !capW ? '' : capW >= 1e12
+    ? (capW / 1e12).toFixed(capW >= 1e14 ? 0 : 1).replace(/\.0$/, '') + '조 원'
+    : Math.round(capW / 1e8).toLocaleString() + '억 원';
+  return '<div class="fcbox">' + (capTxt ? '<div class="fccap">시가총액<b>' + capTxt + '</b></div>' : '') +
+    '<div class="fcwrap"><table class="fctab">' +
     '<thead><tr><th>단위: 억 원 환산</th>' +
       cols.map((c, i) => '<th class="' + (i === 1 ? 'cur' : i ? 'est' : 'pst') + '"><b>' + c.name + '</b><small>' +
         ym(c.end) + '</small></th>').join('') + '</tr></thead><tbody>' +
@@ -5134,7 +5153,7 @@ function fcstTable(m, code) {
     row('PER', c => c.ni == null ? null : ratio(F.m * F.k, c.ni * F.k), 'gap per') +
     row('PBR', (c, i) => i === 0 && F.e ? ratio(F.m, F.e) : null) +
     row('PSR', c => c.rev == null ? null : ratio(F.m, c.rev)) +
-    '</tbody></table></div>';
+    '</tbody></table></div></div>';
 }
 
 function finBlock(m, code) {
@@ -5184,6 +5203,7 @@ function finBlock(m, code) {
   }
   // 사업부별은 매출·성장률 아래에 붙인다. 큰 그림을 먼저 보고 쪼개 보는 순서다.
   if (sg) html += segChart(sg, f.cur || 'USD');
+  html += rtSegBlock(key);
   // 맨 아래 실적 브리핑 — 차트를 못 읽고 지나가도 요점은 남게.
   html += briefBlock(key, f, sg);
   return html || '<p class="finnote">받아둔 수치가 없습니다.</p>';
@@ -5933,6 +5953,19 @@ setInterval(() => {
    배포하는 걸 기다리지 않는다 — 캘린더 줄·「방금 발표」·실적 차트에 바로 얹는다.
    다음 빌드가 같은 값을 정식으로 실어 오면 그쪽이 이긴다(빌드가 새로 그린다). */
 const RT = D.rt || '';
+/* 방금 발표한 실적의 사업부별 매출 — 실시간 서버가 공시 원문 표를 AI 로 읽어 보낸 것.
+   사이트 다시 빌드(부문 막대)보다 몇 분 앞서 보인다. 회사 자료 그대로의 기준(분기/누계)과 단위를 적는다. */
+const RTSEG = {};
+function rtSegBlock(key) {
+  const s = RTSEG[key];
+  if (!s || !(s.segs || []).length) return '';
+  const pc = v => v == null || !isFinite(v) ? '—' : (v > 0 ? '+' : '') + (+v).toFixed(1) + '%';
+  return '<div class="rtseg"><table><thead><tr><th style="text-align:left">방금 발표 · 사업부별 매출' +
+    (s.basis ? ' (' + esc(s.basis) + ')' : '') + '</th><th>' + esc(s.unit || '') + '</th><th>전년비</th></tr></thead><tbody>' +
+    s.segs.map(x => '<tr><th>' + esc(x.n) + '</th><td>' + (x.v == null ? '—' : (+x.v).toLocaleString()) +
+      '</td><td class="' + (x.y > 0 ? 'up' : x.y < 0 ? 'dn' : '') + '">' + pc(x.y) + '</td></tr>').join('') +
+    '</tbody></table><div class="rtnote">회사 공시 원문의 표를 AI 가 읽은 값 · ' + esc(s.src || '') + '</div></div>';
+}
 function rtApply(ev) {
   const m = ev.mkt, code = ev.code, key = m + ':' + code;
   if (!MKT[m]) return false;
@@ -5944,6 +5977,14 @@ function rtApply(ev) {
     ROWS.push(r);
   }
   if (m === 'us') { D.live = D.live || {}; D.live[code] = [ev.date, ev.url || '']; }
+  if (ev.brief && (ev.brief.segs || []).length) RTSEG[key] = Object.assign({ src: ev.src }, ev.brief);
+  // 일본 회사 통기 예상(가이던스) — 연간 표의 당해 칸·브리핑이 곧바로 새 예상을 쓴다.
+  if (m === 'jp' && ev.guide && ev.guide.end && ev.guide.now) {
+    const o = D.fcst[key] || {};
+    D.fcst[key] = Object.assign({}, o, { end: ev.guide.end, rev: ev.guide.now[0], opi: ev.guide.now[1], ts: ev.date,
+      prevRev: o.end === ev.guide.end && o.rev !== ev.guide.now[0] ? o.rev : o.prevRev,
+      prevOpi: o.end === ev.guide.end && o.opi !== ev.guide.now[1] ? o.opi : o.prevOpi });
+  }
   if (ev.point && ev.point[1] != null) {
     const f = D.fin[key] = D.fin[key] || { freq: 'Q', cur: ev.cur, points: [] };
     const pt = [ev.point[0], ev.point[1], ev.point[2]];

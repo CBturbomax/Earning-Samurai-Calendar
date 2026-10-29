@@ -251,7 +251,7 @@ class Guide:
             tmp = self.path.with_suffix(".tmp")
             tmp.write_text(json.dumps(self.own))
             tmp.replace(self.path)
-        return {"stage": st, "prev": prev, "now": [fc.get("rev"), fc.get("opi")]}
+        return {"stage": st, "prev": prev, "now": [fc.get("rev"), fc.get("opi")], "end": fc["end"]}
 
     def get(self, code, ann=None):
         try:
@@ -473,13 +473,16 @@ def finish(ev, point=None):
     text = ev.pop("_text", "")
     box = {}
     th = threading.Thread(target=lambda: box.update(b=brief.why(ev["name"], text)), daemon=True)
-    th.start()                                                   # 차트 그리는 동안 요약을 받는다
+    th.start()
     with H.lock:
         ann = H.D.get("ann", {}).get(key)
         G = H.D.get("fcst", {}).get(key)
     gh = GD.get(ev["code"], ann) if ev["mkt"] == "jp" else None
     if gh and sum(1 for v in gh.values() for s in v if s != "실제") < 3:
         gh = None                                                # 한두 칸짜리 변천은 안 그린다
+    th.join(45)                                                  # 사업부 표(AI 판독)를 그림에 넣으려면 먼저 받아야 한다
+    if box.get("b"):
+        ev["brief"] = box["b"]
     pngs = None
     if H.html:
         try:                                                     # 사이트 화면 그대로 찍는다
@@ -493,9 +496,6 @@ def finish(ev, point=None):
         except Exception:                                        # noqa: BLE001
             log("차트 실패", key, traceback.format_exc(limit=2))
             pngs = []
-    th.join(45)
-    if box.get("b"):
-        ev["brief"] = box["b"]
     for i, png in enumerate(pngs):
         (DATA / "charts").mkdir(exist_ok=True)
         (DATA / "charts" / f"{fname(ev['id'])}_{i}.png").write_bytes(png)
@@ -655,7 +655,7 @@ def us_process(cik, acc, name, upd, replay=False):
     point = None
     try:
         raw = lu.ex99_html(cik, acc.replace("-", ""))
-        ev["_text"] = brief.plain(raw)[:brief.LIMIT]
+        ev["_text"] = brief.plain(raw)[:brief.LIMIT]          # 보도자료 — 부문 표가 뒤쪽에 있다
         period = us_period(ev["key"], pub_et[:10])
         prior = lu.sec_prior(code, period)
         got = pr_table.read(raw, prior) if raw and prior else None
@@ -699,6 +699,26 @@ def us_watch():
 
 
 # ── 일본 ────────────────────────────────────────────────────────────────
+def jp_seg_text(blob):
+    """결산단신 첨부에서 セグメント情報 절의 글(표 포함)만 — AI 가 사업부 표를 읽게."""
+    import zipfile
+    try:
+        z = zipfile.ZipFile(io.BytesIO(blob))
+    except zipfile.BadZipFile:
+        return ""
+    best = ""
+    for n in z.namelist():
+        if "Attachment" not in n or not n.lower().endswith(".htm"):
+            continue
+        t = brief.plain(z.read(n).decode("utf-8", "replace"))
+        i = t.find("報告セグメントごとの売上")
+        if i < 0:
+            i = t.find("セグメント情報")
+        if i >= 0 and len(t) - i > len(best):
+            best = t[i:i + 6000]
+    return best
+
+
 def jp_process(row, day, replay=False):
     code = row["code"]
     if H.skip("jp", code, row["name"]):
@@ -712,7 +732,7 @@ def jp_process(row, day, replay=False):
         blob = fj.get(zurl, binary=True)
         if blob:
             vals = fj.read_summary(blob)
-            ev["_text"] = fj.read_narrative(blob)
+            ev["_text"] = fj.read_narrative(blob) + "\n\n[세그먼트 정보]\n" + jp_seg_text(blob)
             if vals:
                 ev["guide"] = GD.add(code, fj.forecast_from(vals), day)
             prior = fj.base_series().get(f"jp:{code}", {})
@@ -881,9 +901,18 @@ def replay_loop():
 
 
 def history_loop():
+    """사이트가 다시 빌드되면 1분 안에 따라 받는다 — 텔레그램 그림이 늘 최신 사이트와 같게."""
+    last, t0 = None, time.time()
     while True:
-        time.sleep(20 * 60)
-        safe(H.refresh)
+        time.sleep(60)
+        try:
+            v = http_get(SITE + "version.txt?t=" + str(int(time.time())), ua="Mozilla/5.0", timeout=20).strip()
+        except Exception:                                        # noqa: BLE001
+            v = None
+        if (v and last and v != last) or time.time() - t0 > 20 * 60:
+            safe(H.refresh)
+            t0 = time.time()
+        last = v or last
 
 
 # ── HTTP ────────────────────────────────────────────────────────────────
