@@ -528,7 +528,8 @@ def finish(ev, point=None):
                 ev["turn"] = "적자 지속"
     text = ev.pop("_text", "")
     box = {}
-    th = threading.Thread(target=lambda: box.update(b=brief.why(ev["name"], text)), daemon=True)
+    names = seg_names_now(seg)
+    th = threading.Thread(target=lambda: box.update(b=brief.why(ev["name"], text, names=names)), daemon=True)
     th.start()
     with H.lock:
         ann = H.D.get("ann", {}).get(key)
@@ -575,6 +576,9 @@ def finish(ev, point=None):
     if not b:
         return
     ev["brief"] = b
+    sp = seg_ai_try(ev, b, seg)
+    if sp:
+        ev["segPoint"] = sp                     # 사이트 부문 막대에 이번 분기를 곧바로 얹는다
     if not replay:
         S.update(ev)
         S.broadcast(ev)                          # 사이트 상세창에도 '방금 발표 사업부별'
@@ -593,6 +597,99 @@ def finish(ev, point=None):
             TG.reply(ids, text or f"<b>{html.escape(ev['name'])}</b> 사업부별 매출(공시 원문 AI 판독)", segpng)
         log("답장", key, "글" if text else "-", "AI 표" if segpng else "-",
             "| 숫자:", (b.get("key") or "")[:80], "| 왜:", ((b.get("why") or [""])[0])[:80])
+
+
+# ── 사업부별 매출 — 보도자료 표를 AI 가 읽은 것을 사이트 부문 막대에 잇는다 ─────
+# 미국 부문 자료는 10-Q(XBRL)가 나와야 생기는데 그게 며칠~몇 주 늦다. 회원님(10/30): "3분기 실적은
+# 가져오는데 왜 3분기 브레이크다운은 못 가져오냐." 실적 발표 보도자료에 부문 표가 이미 있으므로
+# 그걸 읽어 /data/segs_ai.json 에 담고, 수집 루프가 /api/segs 를 받아 빌드가 잇는다(build.py merge_seg_ai).
+SEGAI_PATH = DATA / "segs_ai.json"
+SEGAI_LOCK = threading.Lock()
+try:
+    SEGAI = json.loads(SEGAI_PATH.read_text())
+except (OSError, ValueError):
+    SEGAI = {}
+
+
+def seg_names_now(seg):
+    """사이트 부문 막대에서 마지막 칸에 값이 있는 이름 — 지금 쓰는 기준."""
+    if not seg or not seg.get("pts"):
+        return None
+    last = seg["pts"][-1]
+    return [n for i, n in enumerate(seg.get("names") or []) if i + 1 < len(last) and last[i + 1] is not None] or None
+
+
+def seg_ai_try(ev, b, seg, point=None):
+    """AI 판독 부문 표를 받아들일지. 이름이 사이트와 맞고, 합이 그 분기 총매출과 아귀가 맞을 때만."""
+    p = point or ev.get("point")
+    if not p or not b.get("segs") or not b.get("scale"):
+        return None
+    basis = b.get("basis") or ""
+    if ev["mkt"] != "us" or re.search(r"누계|9|6개월|반기|연간|12", basis):
+        return None                              # 미국 분기(3개월)만 — 일본은 TDnet 부문이 같은 날 들어온다
+    vals = {x["n"]: x["v"] * b["scale"] for x in b["segs"] if x.get("v") is not None}
+    now = seg_names_now(seg)
+    if now:
+        hit = [n for n in now if n in vals]
+        if len(hit) < max(2, round(len(now) * 0.6)):
+            log("AI 부문 거절(이름)", ev["key"], list(vals)[:6], "사이트", now[:6])
+            return None
+        names, row = now, [vals.get(n) for n in now]
+    else:
+        names, row = list(vals), list(vals.values())
+    tot, rev = sum(v for v in row if v), p[1]
+    if not rev or not (0.85 <= tot / rev <= 1.6):
+        log("AI 부문 거절(합)", ev["key"], round(tot / 1e6), "총매출", rev and round(rev / 1e6))
+        return None
+    rec = {"label": p[0], "names": names, "vals": row, "ts": now_iso(), "src": ev.get("url", "")}
+    with SEGAI_LOCK:
+        SEGAI[ev["key"]] = rec
+        tmp = SEGAI_PATH.with_suffix(".tmp")
+        tmp.write_text(json.dumps(SEGAI, ensure_ascii=False))
+        tmp.replace(SEGAI_PATH)
+    log("AI 부문 받음", ev["key"], p[0], len(names), "개")
+    return rec
+
+
+def segfill(n):
+    """이미 이번 분기를 발표했는데 부문이 뒤처진 미국 회사 — 보도자료를 다시 읽어 메운다."""
+    import scrape_pr_us as pr
+    with H.lock:
+        fin, segs = dict(H.D.get("fin", {})), dict(H.D.get("seg", {}))
+    newest = {}
+    for k, f in fin.items():
+        if k.startswith("us:") and f.get("points"):
+            newest[k] = f["points"][-1]
+    top = max((p[0] for p in newest.values()), key=lambda l: (l[2:], l[0]), default=None)
+    rev_map = {v: k for k, v in cik_ticker().items()}
+    todo = []
+    for k, p in newest.items():
+        s = segs.get(k)
+        if p[0] != top or (s and s["pts"][-1][0] == top) or k in SEGAI:
+            continue
+        cik = rev_map.get(k[3:].replace(".", "-"))
+        if cik:
+            todo.append((k, cik, p))
+    todo = todo[:n]
+    log("부문 메우기 시작", len(todo), "종목", top)
+    got = [0]
+
+    def one(item):
+        k, cik, p = item
+        try:
+            hit = pr.latest_earnings_8k(cik)
+            raw = lu.ex99_html(cik, hit[0]) if hit else None
+            if not raw:
+                return
+            names = seg_names_now(segs.get(k))
+            b = brief.why(k[3:], brief.us_text(raw), names=names)
+            if b and seg_ai_try({"key": k, "mkt": "us", "url": ""}, b, segs.get(k), [p[0], p[1]]):
+                got[0] += 1
+        except Exception as e:                                   # noqa: BLE001
+            log("부문 메우기 실패", k, repr(e)[:120])
+    with ThreadPoolExecutor(3) as ex:
+        list(ex.map(one, todo))
+    log("부문 메우기 끝", got[0], "/", len(todo))
 
 
 def followup(ev):
@@ -733,7 +830,7 @@ def us_process(cik, acc, name, upd, replay=False):
     point = None
     try:
         raw = lu.ex99_html(cik, acc.replace("-", ""))
-        ev["_text"] = brief.plain(raw)[:brief.LIMIT]          # 보도자료 — 부문 표가 뒤쪽에 있다
+        ev["_text"] = brief.us_text(raw)                      # 보도자료 — 부문 표가 뒤쪽에 있다
         period = us_period(ev["key"], pub_et[:10])
         prior = lu.sec_prior(code, period)
         got = pr_table.read(raw, prior) if raw and prior else None
@@ -912,6 +1009,10 @@ REPLAY_URL = "https://api.github.com/repos/CBturbomax/Earning-Samurai-Calendar/c
 
 def replay_run(lines):
     for ln in lines:
+        f = re.match(r"segfill\s+(\d+)", ln.strip())
+        if f:
+            segfill(int(f.group(1)))
+            continue
         m = re.match(r"(us|jp|hk)\s+(\d+)", ln.strip())
         if not m:
             continue
@@ -1026,6 +1127,10 @@ class Handler(BaseHTTPRequestHandler):
             POOL.submit(safe, finish, ev, {"label": "3Q26", "rev": 18085e6, "opi": 5900e6, "ni": 5065e6, "eps": 1.98})
             self.head()
             self.wfile.write(b'{"ok":true}')
+        elif path == "/api/segs":                                # 수집 루프가 받아 data/segments_ai.json 으로
+            self.head()
+            with SEGAI_LOCK:
+                self.wfile.write(json.dumps(SEGAI, ensure_ascii=False).encode())
         elif path == "/api/log":                                 # 진단 — 최근 로그 300줄(토큰 같은 비밀은 안 찍는다)
             self.head(ctype="text/plain; charset=utf-8")
             self.wfile.write("\n".join(LOGS).encode())
