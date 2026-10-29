@@ -18,26 +18,18 @@ jobs:
           python-version: '3.12'
 
       # 96차 — MarketScreener: 검색 → 종목 주소 → finances 의 3년 추정표.
-      - name: 🔎 외국 상장사 6-K 생김새 (100차)
-        timeout-minutes: 10
+      - name: 🔎 외국 상장사 실적 6-K 수집 시험 (101차)
+        timeout-minutes: 12
+        env:
+          FPI_SECS: '420'
         run: |
-          python - > /tmp/probe.txt 2>&1 <<'EOF'
-          import json, urllib.request, time
-          H = {"User-Agent": "Earning Samurai Calendar (cbpark@wisdomasset.co.kr)"}
-          def get(u):
-              with urllib.request.urlopen(urllib.request.Request(u, headers=H), timeout=40) as r: return r.read().decode("utf-8", "ignore")
-          tk = json.loads(get("https://www.sec.gov/files/company_tickers.json"))
-          cik = {v["ticker"]: v["cik_str"] for v in tk.values()}
-          for t in ["MICC", "UL", "RIO", "DEO", "FER", "BTI", "SNN", "WSE"]:
-              c = cik.get(t); print("=====", t, c)
-              if not c: continue
-              d = json.loads(get(f"https://data.sec.gov/submissions/CIK{c:010d}.json")); time.sleep(0.3)
-              r = d["filings"]["recent"]; n = 0
-              for i, f in enumerate(r["form"]):
-                  if f not in ("6-K", "20-F", "10-Q", "8-K"): continue
-                  print("  ", r["filingDate"][i], r["acceptanceDateTime"][i][11:16], f, "X" if r["isXBRL"][i] else "-", r["primaryDocument"][i][:40], "|", r["primaryDocDescription"][i][:60], "|", r.get("items", [""]*999)[i])
-                  n += 1
-                  if n >= 18: break
+          python scrape_us_fpi.py > /tmp/probe.txt 2>&1 || true
+          python - >> /tmp/probe.txt 2>&1 <<'EOF'
+          import json
+          d = json.load(open("data/earnings_us_fpi.json"))
+          print("대상", len(d["screen"]["rows"]), "본 종목", len(d["checked"]), "판정", len(d["seen"]), "실적", sum(d["seen"].values()))
+          for r in sorted(d["rows"], key=lambda r: -r["cap"])[:70]:
+              print(f'{r["date"]} {r["accepted"][11:]} {r["code"]:6} {r["cap"]:7.1f} {r["kind"]:4} {r["name"][:28]:28} | {r["why"][:90]}')
           EOF
 
       - name: 결과를 probe-out 가지에
