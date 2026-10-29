@@ -78,8 +78,15 @@ def now_iso():
     return datetime.now(timezone.utc).isoformat(timespec="seconds")
 
 
+LOGS = []
+brief.LOG = lambda *a: log(*a)
+
+
 def log(*a):
-    print(datetime.now(KST).strftime("%m-%d %H:%M:%S"), *a, flush=True)
+    line = " ".join(str(x) for x in (datetime.now(KST).strftime("%m-%d %H:%M:%S"),) + a)
+    print(line, flush=True)
+    LOGS.append(line[:1500])
+    del LOGS[:-300]
 
 
 def http_get(url, ua=None, timeout=20, binary=False):
@@ -683,7 +690,7 @@ def jp_process(row, day, replay=False):
     ev = base_event("jp", code, row["name"], f"{day} {row['time']}", JST, "TDnet 결산단신",
                     fj.LIST_URL.format(page=1, day=day.replace("-", "")), row["title"])
     ev["replay"] = replay
-    point = None
+    point = blob = None
     try:
         blob = fj.get(row["zip"], binary=True)
         if blob:
@@ -698,6 +705,7 @@ def jp_process(row, day, replay=False):
             ev["url"] = row["zip"]
     except Exception:                                            # noqa: BLE001
         log("일본 결산단신 실패", code, traceback.format_exc(limit=2))
+    log("일본", code, "zip" if blob else "zip 없음", "수치" if point else "수치 없음", "설명", len(ev.get("_text") or ""))
     finish(ev, point)
 
 
@@ -893,6 +901,9 @@ class Handler(BaseHTTPRequestHandler):
             POOL.submit(safe, finish, ev, {"label": "3Q26", "rev": 18085e6, "opi": 5900e6, "ni": 5065e6, "eps": 1.98})
             self.head()
             self.wfile.write(b'{"ok":true}')
+        elif path == "/api/log":                                 # 진단 — 최근 로그 300줄(토큰 같은 비밀은 안 찍는다)
+            self.head(ctype="text/plain; charset=utf-8")
+            self.wfile.write("\n".join(LOGS).encode())
         elif path == "/api/stats":
             self.head()
             self.wfile.write(json.dumps(stats(), ensure_ascii=False).encode())

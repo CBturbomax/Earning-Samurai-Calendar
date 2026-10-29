@@ -24,6 +24,7 @@ CC_TOKEN = os.environ.get("CLAUDE_CODE_OAUTH_TOKEN", "")
 CC_MODEL = os.environ.get("CLAUDE_MODEL", "haiku")      # Max 안에서 — 빠른 것. sonnet 으로 바꿔도 된다
 OR_MODEL = os.environ.get("LLM_MODEL", "google/gemini-3-flash-preview")
 AN_MODEL = os.environ.get("LLM_MODEL_ANTHROPIC", "claude-haiku-5-5")
+LOG = print
 LIMIT = 9000                                       # 원문 글자 수 — 길면 느리고 비싸다
 
 SYSTEM = """너는 실적 발표 자료를 읽고 '실적이 왜 이렇게 나왔는지'를 한국 투자자에게 쉬운 말로 짚어 주는 사람이다.
@@ -52,7 +53,7 @@ def _ask(user, timeout):
                            env={**os.environ, "CLAUDE_CODE_OAUTH_TOKEN": CC_TOKEN})
         if r.returncode == 0 and r.stdout.strip():
             return r.stdout
-        print("Claude Code 실패:", r.returncode, (r.stderr or r.stdout)[-300:], flush=True)
+        LOG("Claude Code 실패:", r.returncode, (r.stderr or r.stdout)[-300:])
     if AN_KEY:
         d = _post("https://api.anthropic.com/v1/messages",
                   {"model": AN_MODEL, "max_tokens": 600, "system": SYSTEM,
@@ -103,7 +104,7 @@ def why(name, text, timeout=40):
         m = re.search(r"\{.*\}", out, re.S)
         d = json.loads(m.group(0)) if m else {}
     except Exception as e:                                       # noqa: BLE001
-        print("요약 실패:", name, e, flush=True)
+        LOG("요약 실패:", name, repr(e)[:300])
         return None
     clean = lambda xs: [str(x).strip() for x in (xs or []) if str(x).strip()]   # noqa: E731
     res = {"why": clean(d.get("why"))[:3], "watch": clean(d.get("watch"))[:2],
