@@ -1409,6 +1409,12 @@ SEC 최신 공시 피드(8-K Item 2.02, 2초)·TDnet 오늘 목록(3초)·HKEXne
 (공개·감지·텔레그램·사이트)을 남기고 `/api/stats` 가 지연을 보여준다. 배포는 루트 `railway.json`
 (Dockerfile = realtime/Dockerfile, `watchPatterns` 로 수집 봇의 잦은 커밋에는 재배포 안 함). 서버 주소는
 `realtime/URL` 한 줄 — 있으면 build.py 가 `D.rt` 로 싣고 화면이 붙는다(`rtApply`/`rtRepaint`).
+**Railway 는 `railway` 가지를 본다 — main 이 아니다.** 수집 봇이 main 에 3~5분마다 커밋하는데, Railway 는
+빌드 중에 새 커밋이 오면 빌드를 버리고 다시 시작한다. 크로미움이 든 이미지는 10분 넘게 걸려 **영영 BUILDING**
+이었다(10/29). 서버 코드를 고치면 main 에 올린 뒤 `git push origin origin/main:railway` 로 그 가지도 밀어 준다.
+데이터(raw main)·`replay.txt`(main)는 그대로 main 에서 읽는다. 진단은 `/api/log`(최근 로그)·`/health`(볼륨·LLM 시험).
+**그림은 사이트 화면 그대로 찍는다** — `realtime/shot.py` 가 사이트 index.html 을 헤드리스 크로미움에 띄워
+fcstTable·finChart·segChart 를 불러 찍는다(가이던스 변천만 같은 class 로 새로). 실패하면 matplotlib(charts.py).
 **텔레그램 모양(회원님 10/29): 숫자는 차트, 글은 '왜'만.** 앨범 차례는 ① 연간 표(억 원 환산·PER/PBR/PSR —
 `charts.ann_cols` 가 사이트 `fcstTable` 과 같은 셈) ② 분기 매출 막대+영업이익률 선 / 매출 YoY ③ 가이던스 변천
 (일본 — 옛 이력은 `data/guidance_hist_jp.json` 스냅샷, 그 뒤는 서버가 결산단신마다 `/data/guide_jp.json` 에
