@@ -759,6 +759,7 @@ def hk_process(ev):
     if brief.enabled() and ev.get("url", "").lower().endswith(".pdf"):
         try:
             ev["_text"] = brief.hk_text(http_get(ev["url"], ua="Mozilla/5.0", timeout=30, binary=True))
+            log("홍콩 PDF", ev["code"], "글", len(ev["_text"]))
         except Exception as e:                                   # noqa: BLE001
             log("홍콩 PDF 실패", ev["code"], e)
     finish(ev, None)

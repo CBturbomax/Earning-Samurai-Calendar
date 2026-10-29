@@ -98,15 +98,21 @@ def why(name, text, timeout=40):
     """-> {"why": [...], "watch": [...], "guide": str} 또는 None."""
     text = (text or "").strip()
     if not enabled() or len(text) < 80:
+        LOG("요약 건너뜀:", name, "원문", len(text))
         return None
     try:
         out = _ask(f"회사: {name}\n\n자료 원문:\n{text[:LIMIT]}", timeout)
         m = re.search(r"\{.*\}", out, re.S)
         d = json.loads(m.group(0)) if m else {}
+        if not d:
+            LOG("요약 빈 응답:", name, repr(out[:300]))
     except Exception as e:                                       # noqa: BLE001
         LOG("요약 실패:", name, repr(e)[:300])
         return None
     clean = lambda xs: [str(x).strip() for x in (xs or []) if str(x).strip()]   # noqa: E731
     res = {"why": clean(d.get("why"))[:3], "watch": clean(d.get("watch"))[:2],
            "guide": str(d.get("guide") or "").strip()}
-    return res if res["why"] or res["watch"] or res["guide"] else None
+    if not (res["why"] or res["watch"] or res["guide"]):
+        LOG("요약 내용 없음:", name, "원문", len(text), repr(text[:120]))
+        return None
+    return res
