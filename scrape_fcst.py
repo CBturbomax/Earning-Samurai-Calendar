@@ -12,6 +12,11 @@
   - 머리 요약: 올해·내년(2FY)의 **매출·EPS** 추정. 내년 영업이익은 없다.
   - statistics: 지금 시총(현지 통화)·PBR.
 
+미국 종목은 나스닥 analyst API(`earnings-forecast`)의 **연간 EPS 컨센서스 4개 연도**를
+덧받는다(`ny`) — stockanalysis 가 가린 차차기년도 순이익·PER 을 그걸로 채운다.
+MarketScreener(3년 영업이익)·IFIS·닛케이·사계보는 GitHub 서버에서 막히거나
+유료라 못 쓴다(실측 2026-10). 그래서 차기 영업이익은 아직 빈칸이다.
+
 없는 칸은 비워 둔다 — 지어 넣지 않는다. 내년 순이익만은 내년 EPS × 올해 주식수
 (올해 순이익 ÷ 올해 EPS)로 옮기고 그렇다고 적는다(`ni2_from_eps`).
 
@@ -38,6 +43,27 @@ NEAR_DAYS = 4                     # 발표일 ±4일은 하루 한 번(컨센서
 MIN_CAP = float(os.environ.get("FCST_MIN_CAP", "0.5"))   # 시총(십억 달러) 이상만
 GIVE_UP_AFTER = 6
 FCST_VER = 1
+NASDAQ_FC = "https://api.nasdaq.com/api/analyst/{}/earnings-forecast"
+MONTHS = {m: i + 1 for i, m in enumerate(
+    "Jan Feb Mar Apr May Jun Jul Aug Sep Oct Nov Dec".split())}
+
+
+def nasdaq_years(code):
+    """나스닥 연간 EPS 컨센서스 [[결산 YYYY-MM, EPS, 추정 수], ...]. 없으면 []."""
+    txt = get(NASDAQ_FC.format(code.replace("-", ".").upper()))
+    try:
+        d = json.loads(txt or "")
+    except ValueError:
+        return []
+    rows = (((d.get("data") or {}).get("yearlyForecast") or {}).get("rows")) or []
+    out = []
+    for r in rows:
+        m = re.fullmatch(r"([A-Z][a-z]{2}) (\d{4})", str(r.get("fiscalEnd") or ""))
+        eps = num(r.get("consensusEPSForecast"))
+        if m and m.group(1) in MONTHS and eps is not None:
+            out.append([f"{m.group(2)}-{MONTHS[m.group(1)]:02d}", eps,
+                        r.get("noOfEstimates") or 0])
+    return out
 
 
 def page(market, code, kind):
@@ -224,6 +250,8 @@ def queue(old, cand):
         ts = (rec or {}).get("ts", "")
         if not rec or rec.get("v") != FCST_VER:
             pri = 0
+        elif k.startswith("us:") and "ny" not in rec:
+            pri = 0                          # 나스닥 연간 EPS 를 아직 안 받은 미국 종목
         elif gap <= NEAR_DAYS and ts[:10] < today:
             pri = 1
         elif ts[:10] < stale:
@@ -262,6 +290,14 @@ def main():
                 time.sleep(PAUSE)
                 if s:
                     rec.update(parse_stats(s))
+                if market == "us":
+                    try:
+                        rec["ny"] = nasdaq_years(code)
+                    except Throttled as e:
+                        print(f"  {k} 나스닥 막힘: {e}", file=sys.stderr)
+                        if "ny" in (old.get(k) or {}):
+                            rec["ny"] = old[k]["ny"]
+                    time.sleep(PAUSE)
                 got += 1
             else:
                 rec["none"] = 1
@@ -300,6 +336,8 @@ def probe(args):
         f = parse_forecast(get(page(market, code, "forecast")) or "")
         s = parse_stats(get(page(market, code, "statistics")) or "")
         print(k, json.dumps(f, ensure_ascii=False)[:800], s)
+        if market == "us":
+            print("  nasdaq", nasdaq_years(code))
 
 
 if __name__ == "__main__":
