@@ -53,24 +53,32 @@ jobs:
       # 첫 실행에서 merge 단계가 8분 멈춰 32분 제한에 걸려 24분치 수집을 통째로
       # 잃었다. git 명령마다 시간 제한을 건다.
       - name: 저장소에 반영
-        timeout-minutes: 4
+        timeout-minutes: 6
         shell: bash
         run: |
           set -u
           git config user.name  "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          ls -la data/forecast.json
           cp data/forecast.json "$RUNNER_TEMP/forecast.json"
+          note() { echo "::warning::$*"; }
           for i in 1 2 3 4 5 6; do
-            timeout 60 git fetch -q origin main || { sleep $((2*i)); continue; }
+            t=$(date +%s)
+            out=$(timeout 40 git fetch origin main 2>&1); rc=$?
+            note "fetch#$i rc=$rc $(( $(date +%s)-t ))s ${out: -200}"
+            [ $rc -eq 0 ] || { sleep 3; continue; }
             git reset -q --hard origin/main
             cp "$RUNNER_TEMP/forecast.json" data/forecast.json
             git add data/forecast.json
-            if git diff --cached --quiet; then echo "달라진 게 없다."; exit 0; fi
+            if git diff --cached --quiet; then note "달라진 게 없다"; exit 0; fi
             git commit -qm "연간 컨센서스 $(date -u +%F' '%H:%M) [skip ci]"
-            timeout 90 git push -q origin HEAD:main && { echo "올렸다"; exit 0; }
-            sleep $((2*i))
+            t=$(date +%s)
+            out=$(timeout 40 git push origin HEAD:main 2>&1); rc=$?
+            note "push#$i rc=$rc $(( $(date +%s)-t ))s ${out: -300}"
+            [ $rc -eq 0 ] && exit 0
+            sleep 3
           done
-          echo "푸시를 끝내 못 했다"; exit 1
+          exit 1
 
       - name: 다음 실행 예약
         if: always()
