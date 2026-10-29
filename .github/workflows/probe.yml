@@ -35,13 +35,23 @@ jobs:
                   return e.code, ""
               except Exception as e:
                   return type(e).__name__, str(e)[:200]
-          st, t = get("https://finance.yahoo.co.jp/quote/7203.T/performance")
-          print("yjp", st, len(t))
-          for kw in ["アナリスト", "コンセンサス", "analyst", "Analyst", "forecast", "Forecast"]:
-              for m in list(re.finditer(kw, t))[:4]:
-                  print(" ", kw, m.start(), re.sub(r"\s+", " ", t[m.start()-150:m.start()+450]))
+          def dump(lab, u, kws, w=900, h=None):
+              st, t = get(u, h)
+              print("=====", lab, st, len(t))
+              for kw in kws:
+                  for m in list(re.finditer(kw, t))[:3]:
+                      x = re.sub(r"<[^>]+>", " ", t[max(0, m.start()-100):m.start()+w])
+                      print("  ", kw, re.sub(r"\s+", " ", x))
+          dump("kabuyoho", "https://kabuyoho.ifis.co.jp/index.php?action=tp1&sa=report_top&bcode=7203", ["営業利益", "来期"])
+          dump("nikkei", "https://www.nikkei.com/nkd/company/kessan/?scode=7203", ["予", "営業利益"], 600)
+          dump("yjp-cons", "https://finance.yahoo.co.jp/quote/7203.T/performance?styl=analystcons", ["performanceForecastList"], 600)
           st, t = get("https://api.nasdaq.com/api/analyst/AAPL/earnings-forecast", {"Accept": "application/json"})
-          print("nasdaq", st, t[:1500])
+          try:
+              print("nasdaq yearly", json.dumps(json.loads(t)["data"]["yearlyForecast"])[:1500])
+          except Exception as e:
+              print("nasdaq err", e)
+          st, t = get("https://api.nasdaq.com/api/analyst/0700/earnings-forecast", {"Accept": "application/json"})
+          print("nasdaq tsla", st, t[:300])
           EOF
 
       - name: 결과를 probe-out 가지에
