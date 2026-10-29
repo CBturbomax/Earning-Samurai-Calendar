@@ -15,6 +15,7 @@ import base64
 import calendar
 import json
 import re
+import urllib.request
 from difflib import SequenceMatcher
 from collections import Counter
 from datetime import date, datetime, timedelta, timezone
@@ -2713,6 +2714,17 @@ def build():
     # 회원님(10/30): "3분기 실적은 가져오는데 왜 3분기 브레이크다운은 못 가져오냐."
     # 서버가 사이트 표기 이름 그대로 받아 오고, 합이 그 분기 총매출과 맞을 때만 담겼다.
     # 이미 그 분기가 있으면(10-Q 가 들어오면) 손대지 않는다 — 공식 자료가 이긴다.
+    # 받는 것도 빌드가 한다 — 3분 루프는 몇 시간짜리 실행이라 워크플로 단계를 고쳐도 다음 실행까지
+    # 안 먹는다(10/30). 빌드는 바퀴마다 새 코드로 돈다. 못 받으면 저장소에 있던 것을 쓴다.
+    if RT_URL:
+        try:
+            req = urllib.request.Request(RT_URL.rstrip("/") + "/api/segs", headers={"User-Agent": "es-build"})
+            with urllib.request.urlopen(req, timeout=15) as r:
+                got = json.loads(r.read())
+            if isinstance(got, dict) and got:
+                (HERE / "data" / "segments_ai.json").write_text(json.dumps(got, ensure_ascii=False), encoding="utf-8")
+        except Exception as e:                                    # noqa: BLE001
+            print(f"  ! 실시간 서버 부문 받기 실패: {e}")
     try:
         AI = json.loads((HERE / "data" / "segments_ai.json").read_text(encoding="utf-8"))
     except (OSError, ValueError):
