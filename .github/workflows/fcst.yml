@@ -41,30 +41,34 @@ jobs:
 
       - name: 📊 연간 컨센서스 (stockanalysis + Business Insider + 나스닥)
         continue-on-error: true
-        timeout-minutes: 27
+        timeout-minutes: 24
         env:
-          FCST_SECS: '1440'
+          FCST_SECS: '1260'
           FCST_PER_RUN: '99999'
           FCST_WORKERS: '6'
         run: python scrape_fcst.py
 
+      # 받은 파일을 옆에 빼 두고, 최신 main 위에 그 파일 하나만 얹어 민다 —
+      # merge 를 안 하므로 부딪힐 일이 없다(이 파일의 주인은 이 워크플로뿐이다).
+      # 첫 실행에서 merge 단계가 8분 멈춰 32분 제한에 걸려 24분치 수집을 통째로
+      # 잃었다. git 명령마다 시간 제한을 건다.
       - name: 저장소에 반영
+        timeout-minutes: 4
         shell: bash
         run: |
-          set -uo pipefail
+          set -u
           git config user.name  "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add data/forecast.json
-          if git diff --cached --quiet; then echo "달라진 게 없다."; exit 0; fi
-          git commit -m "연간 컨센서스 $(date -u +%F' '%H:%M) [skip ci]"
+          cp data/forecast.json "$RUNNER_TEMP/forecast.json"
           for i in 1 2 3 4 5 6; do
-            git fetch origin main || { sleep $((2**i)); continue; }
-            # forecast.json 은 이 워크플로만 쓴다 — 부딪히면 우리 것.
-            if ! git merge --no-edit -X ours origin/main; then
-              git merge --abort 2>/dev/null; sleep $((2**i)); continue
-            fi
-            git push origin HEAD:main && exit 0
-            sleep $((2**i))
+            timeout 60 git fetch -q origin main || { sleep $((2*i)); continue; }
+            git reset -q --hard origin/main
+            cp "$RUNNER_TEMP/forecast.json" data/forecast.json
+            git add data/forecast.json
+            if git diff --cached --quiet; then echo "달라진 게 없다."; exit 0; fi
+            git commit -qm "연간 컨센서스 $(date -u +%F' '%H:%M) [skip ci]"
+            timeout 90 git push -q origin HEAD:main && { echo "올렸다"; exit 0; }
+            sleep $((2*i))
           done
           echo "푸시를 끝내 못 했다"; exit 1
 
