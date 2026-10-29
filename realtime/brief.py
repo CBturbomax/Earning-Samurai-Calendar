@@ -35,9 +35,11 @@ SYSTEM = """너는 실적 발표 자료를 읽고 '실적이 왜 이렇게 나�
 - "매출이 늘어서 이익이 늘었다" 같은 동어반복, 회사의 다짐·방침은 이유가 아니다.
 - 한 줄 40자 안팎, 쉬운 한국어. 한자어를 소리 나는 대로 옮기지 말고 한국에서 쓰는 말로
   (堅調→호조, 価格転嫁→가격 인상 반영, 円安→엔화 약세, 不採算→적자 사업).
+- 숫자는 한국식으로 옮긴다: 76億４千５百万円 -> 76.5억 엔, 107,322,446천 위안 -> 1,073억 위안, $580.8M -> 5.8억 달러.
+  일본어·한자 단위(億·千·百万円)를 남기지 않는다. 퍼센트는 소수 첫째 자리까지.
 - 제품·지역·고객처럼 구체적인 것을 우선한다(예: "AI 서버용 수요 급증으로 데이터센터 매출 2배").
 
-JSON 으로만 답한다: {"key": "자료에 적힌 이번 기간 핵심 숫자 한 줄 — 매출·영업이익(또는 순이익)과 전년 대비 %를 자료 표기 그대로 통화 단위 붙여(예: 매출 120.5억 위안(+35%) · 순이익 18.2억 위안(+52%)). 자료에 없으면 빈 문자열", "why": [최대 3줄 — 실적을 움직인 이유], "watch": [최대 2줄 — 일회성·환율·감익 부문·가이던스 하향 등 주의할 점], "guide": "가이던스·전망에 대한 회사 언급 한 줄(없으면 빈 문자열)", "segs": [자료의 사업부문(세그먼트)별 또는 제품·지역별 매출 표가 있으면 이번 기간 값을 표에서 그대로 — {"n": 부문 이름(쉬운 한국어), "v": 숫자(표에 적힌 그대로, 단위 변환 없이), "y": 전년 같은 기간 대비 %(표의 전년 칸으로 계산하거나 적힌 값, 모르면 null)}. 합계·조정·소거 줄은 빼고 최대 8개. 표가 없으면 []], "unit": "segs 숫자의 단위(예: 백만 엔, 백만 달러, 천 위안)", "basis": "segs 기간(예: 3개월, 9개월 누계, 반기)"}
+JSON 으로만 답한다: {"key": "자료에 적힌 이번 기간 핵심 숫자 한 줄 — 매출·영업이익(또는 순이익)과 전년 대비 %를 자료 표기 그대로 통화 단위 붙여(예: 매출 120.5억 위안(+35%) · 순이익 18.2억 위안(+52%)). 자료에 없으면 빈 문자열", "why": [최대 3줄 — 실적을 움직인 이유], "watch": [최대 2줄 — 일회성·환율·감익 부문·가이던스 하향 등 주의할 점], "guide": "가이던스·전망에 대한 회사 언급 한 줄(없으면 빈 문자열)", "segs": [자료의 사업부문(세그먼트)별 또는 제품·지역별 매출 표가 있으면 이번 기간 값을 표에서 그대로 — {"n": 부문 이름(쉬운 한국어), "v": 숫자(표에 적힌 그대로, 단위 변환 없이), "y": 전년 같은 기간 대비 %(표의 전년 칸으로 계산하거나 적힌 값, 모르면 null)}. 합계·조정·소거 줄은 빼고 최대 8개. 표가 없으면 []], "unit": "segs 숫자의 단위(예: 백만 엔, 백만 달러, 천 위안)", "basis": "segs 기간(예: 3개월, 9개월 누계, 반기)", "fin": {"period": "이번 실적 기간(예: 2026년 3분기, 9개월 누계, 상반기)", "unit": "단위(예: 백만 위안)", "rev": [이번, 전년 같은 기간], "op": [이번, 전년] 영업이익(없으면 null), "ni": [이번, 전년] 지배주주 순이익(없으면 null)} — 자료의 손익 표에서 그대로, 없으면 null}
 
 segs 는 표에 적힌 숫자만 옮긴다. 본문 문장 속 숫자를 끌어 모아 표를 지어내지 않는다."""
 
@@ -90,13 +92,27 @@ HK_SEC = re.compile(r"MANAGEMENT DISCUSSION|BUSINESS REVIEW|OPERATIONAL REVIEW|F
 
 
 def hk_text(pdf_bytes):
-    import pdftext
-    t = re.sub(r"\s+", " ", pdftext.extract_text(pdf_bytes, max_pages=25) or "")
-    m = HK_SEC.search(t)
-    return t[m.start():] if m else t
+    """홍콩 실적 PDF -> 글. poppler 의 pdftotext 가 우리 표준 라이브러리 판독기보다 훨씬 낫다
+    (메이디그룹 PDF 가 우리 것으로는 깨진 기호 1,300자뿐이었다). 없으면 우리 것으로."""
+    t = ""
+    if shutil.which("pdftotext"):
+        try:
+            r = subprocess.run(["pdftotext", "-layout", "-l", "40", "-", "-"], input=pdf_bytes,
+                               capture_output=True, timeout=30)
+            t = r.stdout.decode("utf-8", "replace")
+        except Exception as e:                                   # noqa: BLE001
+            LOG("pdftotext 실패", repr(e)[:200])
+    if len(t.strip()) < 500:
+        import pdftext
+        t = pdftext.extract_text(pdf_bytes, max_pages=25) or ""
+    t = re.sub(r"[ \t]+", " ", t)
+    t = re.sub(r"\n\s*\n+", "\n", t)
+    m = HK_SEC.search(t, 3000)
+    # 앞쪽(실적 요약 표·하이라이트) + 경영진 설명 절 — 숫자와 이유가 둘 다 들어가게.
+    return (t[:9000] + "\n…\n" + t[m.start():m.start() + 14000]) if m and m.start() > 9000 else t
 
 
-def why(name, text, timeout=40):
+def why(name, text, timeout=85):
     """-> {"why": [...], "watch": [...], "guide": str} 또는 None."""
     text = (text or "").strip()
     if not enabled() or len(text) < 80:
@@ -123,6 +139,18 @@ def why(name, text, timeout=40):
             continue
         if x.get("n") and v is not None:
             segs.append({"n": str(x["n"])[:30], "v": v, "y": y})
+    f = d.get("fin") if isinstance(d.get("fin"), dict) else None
+    if f:
+        def pair(v):
+            try:
+                a, b = v
+                return [float(str(a).replace(",", "")) if a is not None else None,
+                        float(str(b).replace(",", "")) if b is not None else None]
+            except (TypeError, ValueError):
+                return None
+        fin = {k: pair(f.get(k)) for k in ("rev", "op", "ni")}
+        if fin["rev"] and fin["rev"][0]:
+            res["fin"] = dict(fin, period=str(f.get("period") or "")[:30], unit=str(f.get("unit") or "")[:20])
     if len(segs) >= 2:
         res.update(segs=segs[:8], unit=str(d.get("unit") or "")[:20], basis=str(d.get("basis") or "")[:20])
     if not (res["why"] or res["watch"] or res["guide"] or res["key"]):

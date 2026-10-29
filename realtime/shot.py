@@ -69,8 +69,9 @@ window.tgGuide = function (gh, title) {
     a + b + '</div>';
 };
 window.tgBuild = function (ev, gh) {
-  try { rtApply(ev); } catch (e) {}
   const m = ev.mkt, code = ev.code, key = m + ':' + code;
+  if (ev.finAll) D.fin[key] = ev.finAll;            // 사이트에 이력이 없던 회사 — 서버가 즉석에서 받은 것
+  try { rtApply(ev); } catch (e) {}
   const f = D.fin[key], sg = D.seg[key];
   const title = '<span style="color:#9cc6ee">[' + code + ']</span> ' + (ev.name || code);
   const out = [];
@@ -85,10 +86,28 @@ window.tgBuild = function (ev, gh) {
     const s = segChart(sg, (f && f.cur) || MC[m] || 'USD');
     if (s) out.push(s.replace(/(<div class="finhead[^"]*">)/, '$1' + title + ' '));
   }
-  try {
-    const r = rtSegBlock(key);                       // 방금 발표 사업부별(AI 판독) — 사이트 상세창과 같은 것
-    if (r) out.push('<div class="finhead">' + title + ' 이번 발표 사업부별 매출</div>' + r);
-  } catch (e) {}
+  if (ev.onlySeg) {                                 // 답장용 — 원문 AI 판독 표
+    out.length = 0;
+    const B = ev.brief || {}, parts = [];
+    if (/fin/.test(ev.onlySeg) && B.fin) {
+      const F = B.fin, pc = (a, b) => (a == null || !b) ? null : (a / b - 1) * 100;
+      const row = (n, v) => !v || v[0] == null ? '' : '<tr><th>' + n + '</th><td>' + (+v[0]).toLocaleString() +
+        '</td><td>' + (v[1] == null ? '—' : (+v[1]).toLocaleString()) + '</td><td class="' +
+        ((pc(v[0], v[1]) || 0) > 0 ? 'up' : (pc(v[0], v[1]) || 0) < 0 ? 'dn' : '') + '">' +
+        (pc(v[0], v[1]) == null ? '—' : (pc(v[0], v[1]) > 0 ? '+' : '') + pc(v[0], v[1]).toFixed(1) + '%') + '</td></tr>';
+      parts.push('<div class="finhead">' + title + ' 이번 실적' + (F.period ? ' · ' + esc(F.period) : '') + '</div>' +
+        '<div class="rtseg"><table><thead><tr><th style="text-align:left">' + esc(F.unit || '') + '</th><th>이번</th><th>전년 같은 기간</th><th>전년비</th></tr></thead><tbody>' +
+        row('매출', F.rev) + row('영업이익', F.op) + row('순이익', F.ni) +
+        '</tbody></table><div class="rtnote">회사 공시 원문의 손익 표를 AI 가 읽은 값 · ' + esc(ev.src || '') + '</div></div>');
+    }
+    if (/seg/.test(ev.onlySeg)) {
+      try {
+        const r = rtSegBlock(key);
+        if (r) parts.push('<div class="finhead" style="margin-top:18px">' + title + ' 이번 발표 사업부별 매출</div>' + r);
+      } catch (e) {}
+    }
+    if (parts.length) out.push(parts.join(''));
+  }
   let host = document.getElementById('tgshot');
   if (!host) {
     host = document.createElement('div');

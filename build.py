@@ -5992,6 +5992,7 @@ function rtApply(ev) {
   }
   if (m === 'us') { D.live = D.live || {}; D.live[code] = [ev.date, ev.url || '']; }
   if (ev.brief && (ev.brief.segs || []).length) RTSEG[key] = Object.assign({ src: ev.src }, ev.brief);
+  if (ev.finAll && !(D.fin[key] && (D.fin[key].points || []).length >= 2)) D.fin[key] = ev.finAll;
   // 일본 회사 통기 예상(가이던스) — 연간 표의 당해 칸·브리핑이 곧바로 새 예상을 쓴다.
   if (m === 'jp' && ev.guide && ev.guide.end && ev.guide.now) {
     const o = D.fcst[key] || {};

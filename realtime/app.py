@@ -43,6 +43,7 @@ import pr_table                    # noqa: E402
 import scrape_fin_jp as fj         # noqa: E402
 import scrape_hk as hk             # noqa: E402
 import scrape_live_us as lu        # noqa: E402
+import scrape_fin_intl as fi       # noqa: E402
 from markets import excluded       # noqa: E402
 
 import brief                       # noqa: E402
@@ -327,20 +328,41 @@ class Telegram:
                 log("텔레그램 폴링:", e)
                 time.sleep(5)
 
-    def send_text(self, cid, text):
+    def send_text(self, cid, text, reply=None):
         try:
-            self.api("sendMessage", {"chat_id": cid, "text": text, "parse_mode": "HTML",
-                                     "disable_web_page_preview": "true"})
+            d = {"chat_id": cid, "text": text, "parse_mode": "HTML", "disable_web_page_preview": "true"}
+            if reply:
+                d.update(reply_to_message_id=reply, allow_sending_without_reply="true")
+            return self.api("sendMessage", d).get("result", {}).get("message_id")
         except Exception as e:                                   # noqa: BLE001
             log("텔레그램 전송 실패", cid, e)
 
-    def send_album(self, caption, pngs):
+    def reply(self, ids, text, png=None):
+        """앞서 보낸 앨범에 답장으로 덧붙인다 — '왜'·AI 판독은 몇십 초 늦게 오므로."""
         if not TG_TOKEN:
             return
         for cid in list(self.subs):
+            r = (ids or {}).get(cid)
+            try:
+                if png:
+                    d = {"chat_id": cid, "caption": text[:1024], "parse_mode": "HTML"}
+                    if r:
+                        d.update(reply_to_message_id=r, allow_sending_without_reply="true")
+                    self.api("sendPhoto", d, files={"photo": ("s.png", png, "image/png")})
+                elif text:
+                    self.send_text(cid, text, r)
+            except Exception as e:                               # noqa: BLE001
+                log("텔레그램 답장 실패", cid, e)
+
+    def send_album(self, caption, pngs):
+        """-> {대화방: 첫 메시지 번호} — 답장을 달 자리."""
+        ids = {}
+        if not TG_TOKEN:
+            return ids
+        for cid in list(self.subs):
             try:
                 if not pngs:
-                    self.send_text(cid, caption)
+                    ids[cid] = self.send_text(cid, caption)
                     continue
                 media, files = [], {}
                 for i, png in enumerate(pngs):
@@ -350,12 +372,15 @@ class Telegram:
                         item.update(caption=caption, parse_mode="HTML")
                     media.append(item)
                 if len(pngs) == 1:
-                    self.api("sendPhoto", {"chat_id": cid, "caption": caption, "parse_mode": "HTML"},
-                             files={"photo": files["p0"]})
+                    r = self.api("sendPhoto", {"chat_id": cid, "caption": caption, "parse_mode": "HTML"},
+                                 files={"photo": files["p0"]}).get("result", {})
+                    ids[cid] = r.get("message_id")
                 else:
-                    self.api("sendMediaGroup", {"chat_id": cid, "media": json.dumps(media)}, files=files)
+                    r = self.api("sendMediaGroup", {"chat_id": cid, "media": json.dumps(media)}, files=files)
+                    ids[cid] = ((r.get("result") or [{}])[0]).get("message_id")
             except Exception as e:                               # noqa: BLE001
                 log("텔레그램 앨범 실패", cid, e)
+        return ids
 
 
 def multipart(fields, files):
@@ -446,12 +471,43 @@ def _prev_year(label):
     return f"{m.group(1)}{m.group(2)}{int(m.group(3)) - 1:02d}" if m else ""
 
 
+def live_hist(mkt, code):
+    """사이트에 분기·반기 이력이 없는 회사(신규 상장 홍콩주 등) — 그 자리에서 stockanalysis 를 받는다.
+    회원님(10/30): "원문을 못 읽으면 실적 사이트에서라도 긁어와서 이번 발표를 붙여라." """
+    url = fi.url_for(mkt, code)
+    if not url:
+        return None
+    try:
+        txt = fi.get(url, timeout=12)
+        rows, cur = fi.parse(txt) if txt else ({}, "")
+    except Exception as e:                                       # noqa: BLE001
+        log("이력 즉석 받기 실패", mkt, code, e)
+        return None
+    ends = sorted(rows)
+    if len(ends) < 2:
+        return None
+    gaps = sorted((date.fromisoformat(b) - date.fromisoformat(a)).days for a, b in zip(ends, ends[1:]))
+    half = 150 <= gaps[len(gaps) // 2] <= 220
+
+    def lab(e):
+        if half:
+            return f"{1 if int(e[5:7]) <= 6 else 2}H{e[2:4]}"
+        return fi.label_of(e)
+    return {"freq": "H" if half else "Q", "cur": cur, "src": "sa",
+            "points": [[lab(e), rows[e][0], rows[e][1]] for e in ends if rows[e][0]]}
+
+
 def finish(ev, point=None):
     """숫자가 있으면 차트를 그리고 · 보관 · 사이트 · 텔레그램."""
     key = ev["key"]
     with H.lock:
         fin = dict(H.D.get("fin", {}).get(key) or {})
         seg = H.D.get("seg", {}).get(key)
+    if len(fin.get("points") or []) < 2 or fin.get("freq") not in ("Q", "H"):
+        got = live_hist(ev["mkt"], ev["code"])
+        if got:
+            fin = got
+            ev["finAll"] = got                                   # 사이트·그림이 이 이력으로 그린다
     pts = [list(p) for p in fin.get("points") or []]
     cur = ev.get("cur") or fin.get("cur") or {"us": "USD", "jp": "JPY", "hk": "HKD"}[ev["mkt"]]
     ev["cur"] = cur
@@ -480,9 +536,6 @@ def finish(ev, point=None):
     gh = GD.get(ev["code"], ann) if ev["mkt"] == "jp" else None
     if gh and sum(1 for v in gh.values() for s in v if s != "실제") < 3:
         gh = None                                                # 한두 칸짜리 변천은 안 그린다
-    th.join(45)                                                  # 사업부 표(AI 판독)를 그림에 넣으려면 먼저 받아야 한다
-    if box.get("b"):
-        ev["brief"] = box["b"]
     pngs = None
     if H.html:
         try:                                                     # 사이트 화면 그대로 찍는다
@@ -502,19 +555,60 @@ def finish(ev, point=None):
     ev["charts"] = [f"/chart/{fname(ev['id'])}_{i}.png" for i in range(len(pngs))]
     if not ev.get("replay") and not S.add(ev):
         return
-    if ev.get("replay"):                         # 시험 — 사이트·보관은 안 건드리고 텔레그램으로만
-        TG.send_album("🧪 <i>지난 공시 다시 보내기(시험)</i>\n" + caption(ev), pngs)
-        log("다시 보내기", ev["key"], "요약" if ev.get("brief") else "요약 없음", len(pngs), "장")
-        return
-    S.broadcast(ev)
-    send, why = tg_pick(ev, pts)
+    replay = ev.get("replay")
+    if replay:                                   # 시험 — 사이트·보관은 안 건드리고 텔레그램으로만
+        send, why = True, "시험"
+    else:
+        S.broadcast(ev)
+        send, why = tg_pick(ev, pts)
     ev["tg"], ev["tgWhy"] = send, why
-    if send:
-        TG.send_album(caption(ev), pngs)
+    ids = {}
+    if send:                                     # ① 그림·핵심 숫자 먼저 — 몇 초 안에
+        ids = TG.send_album(("🧪 <i>지난 공시 다시 보내기(시험)</i>\n" if replay else "") + caption(ev), pngs)
         ev["t_tg"] = now_iso()
-    S.update(ev)
+    if not replay:
+        S.update(ev)
     log(f"실적 {ev['mkt']}:{ev['code']} {ev['name']} · 공개 {ev.get('published')} 감지 {ev['detected']} "
-        f"텔레그램 {'보냄 ' + ev['t_tg'] if send else '안 보냄'} ({why})")
+        f"텔레그램 {'보냄 ' + ev['t_tg'] if send else '안 보냄'} ({why}) · 그림 {len(pngs)}")
+    th.join(100)                                 # ② '왜'·AI 판독은 받는 대로 답장으로
+    b = box.get("b")
+    if not b:
+        return
+    ev["brief"] = b
+    if not replay:
+        S.update(ev)
+        S.broadcast(ev)                          # 사이트 상세창에도 '방금 발표 사업부별'
+    if send:
+        text = followup(ev)
+        segpng = None
+        # 그림이 하나도 없던 회사(이력 없는 신규 상장 등)는 원문 손익 표의 이번/전년 비교를,
+        # 사이트에 사업부별이 없는 회사는 원문 사업부 표를 그려 붙인다(둘 다 AI 판독, 표에 그렇게 적는다).
+        want = ("fin" if b.get("fin") and not pngs else "") + ("seg" if b.get("segs") and not seg else "")
+        if want and H.html:
+            try:
+                segpng = (shot.render(dict({k: v for k, v in ev.items() if not k.startswith("_")}, onlySeg=want)) or [None])[0]
+            except Exception:                    # noqa: BLE001
+                segpng = None
+        if text or segpng:
+            TG.reply(ids, text or f"<b>{html.escape(ev['name'])}</b> 사업부별 매출(공시 원문 AI 판독)", segpng)
+        log("답장", key, "글" if text else "-", "AI 표" if segpng else "-",
+            "| 숫자:", (b.get("key") or "")[:80], "| 왜:", ((b.get("why") or [""])[0])[:80])
+
+
+def followup(ev):
+    """앨범 뒤에 붙는 답장 — 회사가 한 설명을 쉬운 말로."""
+    e = html.escape
+    b = ev.get("brief") or {}
+    lines = []
+    if b.get("key") and not ev.get("point"):
+        lines.append("📊 <b>" + e(b["key"]) + "</b>")
+    if b.get("why"):
+        lines += ["💡 <b>왜 이렇게 나왔나</b> <i>(회사 설명)</i>"] + [f"• {e(x)}" for x in b["why"]]
+    if b.get("guide"):
+        lines += ["", f"🗓 {e(b['guide'])}"]
+    if b.get("watch"):
+        lines += ["", "⚠️ <b>주의</b>"] + [f"• {e(x)}" for x in b["watch"]]
+    return "\n".join(lines).strip()
 
 
 def pct(v):
@@ -552,34 +646,18 @@ def caption(ev):
             gl = ""
     else:
         gl = ""
-    b = ev.get("brief") or {}
-    if not key and b.get("key"):                     # 우리 숫자가 없을 때 — 자료에 적힌 숫자 그대로
-        key = [b["key"]]
     if key:
         lines.append("<b>" + e(" · ".join(key)) + "</b>")
     if gl:
         lines.append("<b>" + e(gl) + "</b>")
-    if b.get("why"):
-        lines += ["", "💡 <b>왜 이렇게 나왔나</b> <i>(회사 설명)</i>"] + [f"• {e(x)}" for x in b["why"]]
-    if b.get("guide"):
-        lines += ["", f"🗓 {e(b['guide'])}"]
-    if b.get("watch"):
-        lines += ["", "⚠️ <b>주의</b>"] + [f"• {e(x)}" for x in b["watch"]]
-    if not b and not p and ev.get("title"):
+    if not p and ev.get("title"):
         lines.append(e(ev["title"][:160]))
     links = [f"<a href=\"{e(ev['url'])}\">원문</a>"] if ev.get("url") else []
     links.append(f"<a href=\"{SITE}\">어닝사무라이</a>")
     lines += ["", "🔗 " + " · ".join(links)]
     out = "\n".join(lines)
-    while len(out) > 1024 and b:                    # 사진 설명 한도 — 주의부터 한 줄씩 덜어낸다
-        for k in ("watch", "guide", "why"):
-            if b.get(k):
-                b[k] = b[k][:-1] if isinstance(b[k], list) else ""
-                break
-        else:
-            break
-        ev["brief"] = b
-        return caption(ev)
+    if len(out) > 1024:
+        out = out[:1000] + "…"
     return out
 
 
