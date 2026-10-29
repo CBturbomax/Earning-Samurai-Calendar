@@ -2535,6 +2535,53 @@ def pack_fcst(packed):
     return out
 
 
+def ann_fallback(ann, packed, fcst):
+    """연간 표 소스(stockanalysis)에 없는 일본 종목 — 우리가 가진 것으로 표를 세운다.
+
+    회원님(10/29): 국제전기(6912)처럼 표가 아예 안 뜨는 회사가 있다. 직전 결산기 실적은
+    **우리 분기 막대 네 개의 합**(결산기 끝 달까지 이어진 네 분기가 다 있을 때만), 당해는
+    **회사 통기 예상**(결산단신 공시)이다. 차기·차차기 컨센서스·순이익은 없으므로 비워 둔다
+    (PER 은 순이익이 없어 안 나온다 — 지어내지 않는다). 원화 환산은 caps.json 환율."""
+    try:
+        RATES = json.loads((HERE / "data" / "caps.json").read_text(encoding="utf-8")).get("rates", {})
+    except (ValueError, OSError):
+        RATES = {}
+    cap = {}
+    for r in packed:
+        k = r[9] + ":" + r[1]
+        cap[k] = max(cap.get(k, 0), r[11] or 0)
+    n = 0
+    for k, G in fcst.items():
+        if k in ann or not cap.get(k) or not G.get("end") or G.get("rev") is None:
+            continue
+        rec = FIN.get(k)
+        if not rec:
+            continue
+        f = pack_fin(rec)
+        rate = RATES.get(f.get("cur") or "JPY")
+        if not rate:
+            continue
+        y, mo = int(G["end"][:4]) - 1, int(G["end"][5:7])
+        prev_end = f"{y}-{mo:02d}"
+        labs = []
+        q, yy = (mo - 1) // 3 + 1, y
+        for _ in range(4):
+            labs.append(f"{q}Q{yy % 100:02d}")
+            q, yy = (q - 1, yy) if q > 1 else (4, yy - 1)
+        pts = {p[0]: p for p in f.get("points") or []}
+        if not all(l in pts and pts[l][1] is not None for l in labs):
+            continue
+        rev = sum(pts[l][1] for l in labs)
+        opi = sum(pts[l][2] for l in labs) if all(pts[l][2] is not None for l in labs) else None
+        ann[k] = {"y": [[prev_end + "-28", rev, opi, None, None, 0],
+                        [G["end"], G["rev"], G.get("opi"), G.get("ni"), None, 1]],
+                  "n": [None, None], "m": cap[k] * 1e9 * rate, "e": None, "p": None, "q": [], "b": [],
+                  "k": USD_KRW / rate, "ts": "", "own": 1}
+        n += 1
+    print(f"  연간 표: 소스 {len(ann) - n:,} + 우리 자료로 세운 것 {n:,}")
+    return ann
+
+
 def build():
     data = {m: load(m) for m in MARKET_ORDER}
     have = [m for m in MARKET_ORDER if data[m]]
@@ -2732,7 +2779,7 @@ def build():
         # 화면에서 안 쓰므로 빼고, 자료 파일에는 그대로 남겨 둔다.
         # 상세창 연간 표. 위의 "fcst"(회사 통기 예상)와 이름이 겹쳐 그걸 덮어쓰고
         # 있었다 — 따로 "ann" 으로 싣는다.
-        "ann": pack_fcst(packed),
+        "ann": ann_fallback(pack_fcst(packed), packed, fcst),
         # 실적 8-K 가 잡힌 미국 종목 — 나스닥 EPS 를 기다리지 않고 ✓ 를 단다.
         "live": {s: [v["date"], v.get("url", "")] for s, v in LIVE.items() if v.get("acc")},
         # 실시간 서버(Railway) 주소 — realtime/URL. 있으면 화면이 거기서 새 실적을 직접 받는다.
