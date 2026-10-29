@@ -23,7 +23,7 @@ try {
 <script>
 /* GitHub Pages/CDN 이 예전 index.html 을 잡고 있어도, 한 번 최신판을 받은 뒤부터는
    version.txt 를 no-store 로 확인해 새 빌드가 있으면 query string 을 바꿔 강제 갱신한다. */
-const ES_BUILD = "20261029073959";
+const ES_BUILD = "20261029074552";
 setTimeout(() => {
   fetch('./version.txt?t=' + Date.now(), {cache:'no-store'})
     .then(r => r.ok ? r.text() : '')
@@ -749,6 +749,43 @@ svg.bars rect.b:hover { fill:var(--a3); }
 .md dd { margin:0; }
 .md .mact { margin-top:18px; padding-top:14px; border-top:1px solid var(--line); display:flex; gap:10px; flex-wrap:wrap; }
 
+/* ── 방금 발표(오른쪽 위 피드) ─────────────────────────────────
+   실제 공시 시각이 있는 줄(시각정확도 1: 미국 8-K 접수 · 일본 TDnet · 홍콩
+   HKEXnews)만 싣는다 — 「경」으로 어림한 시각을 '방금'이라 부르면 거짓말이다.
+   나라는 칩과 같은 규칙(--mk 왼쪽 띠·국기)으로 가른다. */
+.hero { position:relative; }
+.feed { position:absolute; top:0; right:0; bottom:6px; z-index:2;
+        width:clamp(340px, calc(100% - 1030px), 560px);
+        display:flex; flex-direction:column; overflow:hidden;
+        background:var(--panel); border:1px solid var(--line); border-radius:12px; }
+.fdhead { display:flex; align-items:center; gap:9px; padding:11px 16px;
+          font-size:17px; font-weight:800; background:#1b2530; border-bottom:1px solid var(--line); }
+.fddot { width:9px; height:9px; border-radius:50%; background:var(--a1);
+         box-shadow:0 0 0 0 rgba(240,67,90,.7); animation:fdpulse 1.8s infinite; }
+@keyframes fdpulse { 70% { box-shadow:0 0 0 8px rgba(240,67,90,0); } 100% { box-shadow:0 0 0 0 rgba(240,67,90,0); } }
+.fdmeta { margin-left:auto; color:var(--mute); font-size:13px; font-weight:500; }
+.fdlist { flex:1; overflow-y:auto; scrollbar-width:thin; scrollbar-color:#2f4252 transparent; }
+.fd { display:grid; grid-template-columns:62px minmax(0,1fr) auto; align-items:center; gap:12px;
+      padding:9px 14px 9px 11px; border-left:3px solid var(--mk); border-bottom:1px solid #1f2a33;
+      cursor:pointer; }
+.fd:hover { background:#1b2530; }
+.fd .ft { font-variant-numeric:tabular-nums; line-height:1.2; }
+.fd .ft b { display:block; font-size:16px; color:var(--fg); }
+.fd .ft small { font-size:12px; color:var(--mute); }
+.fd .fn { min-width:0; line-height:1.3; }
+.fd .fn b { display:block; font-size:16px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.fd .fn small { display:block; font-size:13px; color:var(--mute); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.fd .fn .fc { color:var(--mk); font-weight:700; }
+.fd .fl { font-size:14px; }
+.fd.new { background:rgba(240,67,90,.07); }
+.fd.new .ft b { color:var(--a1); }
+.fdnew { font-size:11px; font-weight:800; color:#fff; background:var(--a1); border-radius:4px;
+         padding:1px 5px; letter-spacing:.3px; }
+.fdnone { color:var(--mute); font-size:15px; padding:18px 16px; }
+@media (max-width:1330px) {
+  .feed { position:static; width:auto; height:300px; margin:14px 0 6px; }
+}
+
 .foot { color:var(--mute); font-size:17px; margin-top:56px; line-height:1.7;
         border-top:1px solid var(--line); padding-top:18px; }
 .foot a { color:var(--a2); }
@@ -761,7 +798,13 @@ svg.bars rect.b:hover { fill:var(--a3); }
 <body>
 <div class="wrap">
 
-<div class="topline"><span class="fl fl-us" role="img" aria-label="미국"></span> 미국 <b>12,999</b> · <span class="fl fl-jp" role="img" aria-label="일본"></span> 일본 <b>7,772</b> · <span class="fl fl-hk" role="img" aria-label="홍콩"></span> 홍콩 <b>9,192</b> · 합계 <b>28,400건</b> · 수집 <b>2025-07-09 ~ 2026-12-28</b> · 갱신 2026-10-29 16:39 KST</div>
+<div class="topline"><span class="fl fl-us" role="img" aria-label="미국"></span> 미국 <b>12,999</b> · <span class="fl fl-jp" role="img" aria-label="일본"></span> 일본 <b>7,772</b> · <span class="fl fl-hk" role="img" aria-label="홍콩"></span> 홍콩 <b>9,192</b> · 합계 <b>28,400건</b> · 수집 <b>2025-07-09 ~ 2026-12-28</b> · 갱신 2026-10-29 16:45 KST</div>
+<div class="hero">
+<aside class="feed" aria-label="방금 실적을 발표한 회사">
+  <div class="fdhead"><span class="fddot" aria-hidden="true"></span>방금 발표
+    <span class="fdmeta" id="fdMeta"></span></div>
+  <div class="fdlist" id="fdList"></div>
+</aside>
 <h1><span class="mark" aria-hidden="true"></span>Earning <span class="jp">Samurai</span>
     <span class="byline">by CB</span></h1>
 <p class="sub">미국 · 일본 · 홍콩 주간 실적발표 일정 — 누가 언제 무엇을 발표했는지</p>
@@ -784,6 +827,7 @@ svg.bars rect.b:hover { fill:var(--a3); }
 
 <div class="mtabs" id="mtabs"></div>
 <div class="cards" id="cards"></div>
+</div>
 
 <h2><span class="n">1</span>주간 캘린더 <span class="meta" id="calMeta"></span></h2>
 <div class="weeknav">
@@ -2617,6 +2661,8 @@ document.addEventListener('click', e => {
   const tab = e.target.closest('.mtab');
   if (tab) { setMarket(tab.dataset.mkt); return; }
 
+  const fd = e.target.closest('.fd');
+  if (fd) { openModal(fd.dataset.key, fd.dataset.date); return; }
   const chipEl = e.target.closest('.chip');
   if (chipEl) {
     openModal(chipEl.dataset.key, chipEl.dataset.date);
@@ -2944,7 +2990,65 @@ document.addEventListener('keydown', e => {
   }
 });
 
+/* ── 방금 발표 피드 ─────────────────────────────────────────── */
+const FEED_HOURS = 72, FEED_MAX = 80;
+const KIND_SHORT = { '第１': '1Q', '第２': '2Q', '第３': '3Q', '本': '본결산' };
+const capWon = b => { const w = b * 1e9 * D.usdKrw;
+  return w >= 1e12 ? (w / 1e12).toFixed(1) + '조' : Math.round(w / 1e8).toLocaleString() + '억'; };
+function renderFeed() {
+  const list = document.getElementById('fdList');
+  if (!list) return;
+  const now = Date.now(), seen = new Map();
+  for (const r of ROWS) {
+    if (r[14] !== 1 || !r[12] || !r[13]) continue;
+    const t = Date.parse(r[12] + 'T' + r[13] + ':00+09:00');
+    if (!(t <= now + 5 * 60e3) || now - t > FEED_HOURS * 3600e3) continue;
+    const k = keyOf(r), o = seen.get(k);
+    if (!o || o.t < t) seen.set(k, { r, t });
+  }
+  const items = [...seen.values()].sort((a, b) => b.t - a.t || (b.r[11] || 0) - (a.r[11] || 0)).slice(0, FEED_MAX);
+  const hr = items.filter(x => now - x.t < 3600e3).length;
+  document.getElementById('fdMeta').textContent =
+    items.length ? (hr ? '1시간 내 ' + hr + '건 · ' : '') + '최근 ' + FEED_HOURS + '시간 ' + items.length + '건' : '';
+  if (!items.length) { list.innerHTML = '<div class="fdnone">최근 ' + FEED_HOURS + '시간 안에 들어온 발표가 없습니다.</div>'; return; }
+  const ago = t => {
+    const m = Math.floor((now - t) / 60e3);
+    return m < 1 ? '방금' : m < 60 ? m + '분 전' : m < 1440 ? Math.floor(m / 60) + '시간 전'
+         : Math.floor(m / 1440) + '일 전';
+  };
+  list.innerHTML = items.map(({ r, t }) => {
+    const m = r[9], isNew = now - t < 3600e3;
+    const kind = KIND_SHORT[r[4]] || r[4] || '';
+    const sub = ['<span class="fc">' + esc(r[1]) + '</span>', esc(kind),
+                 r[11] ? capWon(r[11]): '']
+                .filter(Boolean).join(' · ');
+    const day = r[12].slice(5).replace('-', '/');
+    return '<div class="fd m-' + m + (isNew ? ' new' : '') + '" data-key="' + esc(keyOf(r)) +
+      '" data-date="' + esc(r[0]) + '" title="' + esc(MKT[m] ? MKT[m].ko : m) + ' · 한국 ' + day + ' ' + r[13] + '">' +
+      '<div class="ft"><b>' + r[13] + '</b><small>' + (isNew ? '<span class="fdnew">NEW</span>' : esc(ago(t))) + '</small></div>' +
+      '<div class="fn"><b>' + FL(m) + ' ' + esc(r[2]) + '</b><small>' + sub + '</small></div>' +
+      '<div class="ft" style="text-align:right"><small>' + (isNew ? esc(ago(t)) : day) + '</small></div></div>';
+  }).join('');
+}
+setInterval(renderFeed, 60e3);
+/* 새 빌드가 올라오면(3분 루프) 화면을 새로 받는다 — 상세창이 열렸거나 입력 중이면 미룬다. */
+setInterval(() => {
+  if (!document.getElementById('mdBack').hidden) return;
+  const a = document.activeElement;
+  if (a && /INPUT|SELECT|TEXTAREA/.test(a.tagName)) return;
+  fetch('./version.txt?t=' + Date.now(), { cache: 'no-store' })
+    .then(r => r.ok ? r.text() : '')
+    .then(v => {
+      v = (v || '').trim();
+      if (!v || v === ES_BUILD) return;
+      const u = new URL(location.href);
+      u.searchParams.set('_v', v);
+      location.replace(u.toString());
+    }).catch(() => {});
+}, 120e3);
+
 function renderAll() {
+  renderFeed();
   renderTabs(); renderCards(); renderCapNote();
   renderCal(); renderMonthly(); renderGroups(); renderBars(); renderTable();
 }
