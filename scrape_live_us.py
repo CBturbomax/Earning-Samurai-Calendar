@@ -21,12 +21,14 @@
 """
 import json
 import os
+import re
 import sys
 import time
 from datetime import date, datetime, timedelta, timezone
 from pathlib import Path
 from zoneinfo import ZoneInfo
 
+import pr_table
 import scrape_seg_sec as ss
 from scrape_seg_edgar import get as sec_get
 from scrape_fin import get as nas_get, NAS_EPS, NAS_UA
@@ -119,6 +121,71 @@ def find_8k(cik, since):
         doc = DOC.format(cik=cik, acc=acc, name=r.get("primaryDocument", [""])[i])
         return acc, at, doc
     return None
+
+
+FILES = "https://www.sec.gov/Archives/edgar/data/{cik}/{acc}/index.json"
+
+
+def ex99_html(cik, acc):
+    """8-K 의 보도자료(EX-99) HTML. 이름이 제각각이라 크기로도 고른다(scrape_pr_us 와 같은 규칙)."""
+    blob = sec_get(FILES.format(cik=cik, acc=acc), timeout=15, binary=False)
+    if not blob:
+        return None
+    try:
+        items = json.loads(blob)["directory"]["item"]
+    except (ValueError, KeyError):
+        return None
+    htm = [(it["name"], int(it.get("size") or 0)) for it in items
+           if it["name"].lower().endswith((".htm", ".html"))
+           and not re.match(r"index|.*-index", it["name"], re.I)]
+    ex = [t for t in htm if re.search(r"ex[-_]?99|991|992|press|earnings", t[0], re.I)]
+    if not (ex or htm):
+        return None
+    name = max(ex or htm, key=lambda t: t[1])[0]
+    raw = sec_get(DOC.format(cik=cik, acc=acc, name=name), timeout=20)
+    return raw.decode("utf-8", "replace") if raw else None
+
+
+_FIN = None
+
+
+def sec_prior(sym, period):
+    """전년 같은 분기 SEC 수치와, 그 사이에 이미 가진 분기 매출들(`known`).
+
+    보도자료 표의 전년 열을 이것과 맞춰 본다 — 맞는 열을 못 찾으면 안 싣는다.
+    `known` 은 표에 직전 분기 열이 끼어 있을 때(BKR·BNL) 그 열을 건너뛰는 데 쓴다.
+    """
+    global _FIN
+    if _FIN is None:
+        try:
+            _FIN = json.loads((HERE / "data" / "financials.json").read_text(encoding="utf-8"))["stocks"]
+        except (ValueError, OSError, KeyError):
+            _FIN = {}
+    m = re.match(r"([A-Za-z]{3})\s+(\d{4})", period or "")
+    if not m:
+        return None
+    mon = "Jan Feb Mar Apr May Jun Jul Aug Sep Oct Nov Dec".split().index(m.group(1)) + 1
+    year = int(m.group(2))
+    pts = (_FIN.get(sym) or {}).get("points") or []
+
+    def near(y):
+        tgt = date(y, mon, 28)
+        best = None
+        for p in pts:
+            try:
+                g = abs((date.fromisoformat(p["end"]) - tgt).days)
+            except (KeyError, ValueError):
+                continue
+            if g <= 40 and (best is None or g < best[0]):
+                best = (g, p)
+        return best[1] if best else None
+    pr, cur = near(year - 1), near(year)
+    if not pr or not pr.get("rev"):
+        return None
+    known = [p["rev"] for p in pts if p.get("rev") and p["end"] > pr["end"]
+             and (not cur or p["end"] < cur["end"])]
+    return {"rev": pr["rev"], "opi": pr.get("opi"), "ni": pr.get("ni"),
+            "known": known, "end": pr["end"]}
 
 
 def eps_actual(sym, want_period):
@@ -227,7 +294,7 @@ def main():
         # 이미 끝난 종목(8-K 와 EPS 가 다 있다)은 맨 뒤로 보낸다.
         def order(r):
             rec = stocks.get(r["code"]) or {}
-            done = bool(rec.get("acc") and (rec.get("eps") or not rec.get("period")))
+            done = bool(rec.get("acc") and (rec.get("eps") or not rec.get("period")) and "pr" in rec)
             return (done, rec.get("chk", ""))
         tg.sort(key=order)
         st["stage"] = "종목 훑기"
@@ -240,7 +307,7 @@ def main():
             rec = stocks.get(sym)
             if not rec or rec.get("date") != day:
                 rec = stocks[sym] = {"date": day, "period": period_of(r.get("fy"))}
-            if rec.get("acc") and (rec.get("eps") or not rec.get("period")):
+            if rec.get("acc") and (rec.get("eps") or not rec.get("period")) and "pr" in rec:
                 continue                         # 다 받았다
             rec["chk"] = now()
             try:
@@ -257,6 +324,23 @@ def main():
                             if rec["accepted"]:
                                 typical[sym] = rec["accepted"][11:16]
                             print(f"  8-K {sym} {rec['accepted'] or '(시각 불명)'}")
+                # 보도자료 손익 표 — 8-K 가 잡힌 뒤 한 번(받기 실패면 다음 바퀴에 다시).
+                if rec.get("acc") and "pr" not in rec and cikmap:
+                    pri = sec_prior(sym, rec.get("period"))
+                    if not pri:
+                        rec["pr"] = None              # 대조할 SEC 전년 수치가 없다 — 안 싣는다
+                    else:
+                        cik = ss.cik_of(cikmap, sym)
+                        raw = ex99_html(cik, rec["acc"]) if cik else None
+                        time.sleep(PAUSE)
+                        if raw is not None:
+                            got = pr_table.read(raw, pri)
+                            if got:
+                                y, m, d = pri["end"].split("-")
+                                got["end"] = f"{int(y) + 1}-{m}-{d}"
+                                st["newPr"] = st.get("newPr", 0) + 1
+                                print(f"  8-K 표 {sym} 매출 {got['rev'] / 1e6:,.0f}M")
+                            rec["pr"] = got
                 if rec.get("acc") and not rec.get("eps") and rec.get("period"):
                     st["checkedEps"] += 1
                     e = eps_actual(sym, rec["period"])
