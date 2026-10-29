@@ -50,6 +50,12 @@ jobs:
                   done += 1
                   print(sym, name, len(doc))
           PY
+      - name: 일본 미국기준 회사 요약 XBRL 항목 이름
+        continue-on-error: true
+        run: |
+          JP_BACK_DAYS=5 timeout 300 python scrape_fin_jp.py --names 7751 8604 6758 > ex99/jp_names.txt 2>&1 || true
+          tail -5 ex99/jp_names.txt
+
       - name: 브랜치에 올리기
         run: |
           git config user.name "github-actions[bot]"
