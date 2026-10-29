@@ -43,6 +43,9 @@ MAX = int(os.environ.get("LIVE_MAX", "250"))          # 한 바퀴에 볼 종목
 SECS = int(os.environ.get("LIVE_SECS", "100"))        # 스스로 끊는 시간
 PAUSE = float(os.environ.get("LIVE_PAUSE", "0.12"))   # SEC 는 초당 10건까지 허용
 KEEP_DAYS = 4
+# 보도자료 표 읽기 규칙 판. 올리면 이미 읽은 종목도 다시 읽는다(pr_table 을 고칠 때).
+# 2: 누계 열 거르기(직전 분기의 0.5~2배) · 영업이익·순이익 전년 대조 0.6%
+PR_V = 2
 
 
 def et_today():
@@ -294,7 +297,7 @@ def main():
         # 이미 끝난 종목(8-K 와 EPS 가 다 있다)은 맨 뒤로 보낸다.
         def order(r):
             rec = stocks.get(r["code"]) or {}
-            done = bool(rec.get("acc") and (rec.get("eps") or not rec.get("period")) and "pr" in rec)
+            done = bool(rec.get("acc") and (rec.get("eps") or not rec.get("period")) and rec.get("prv") == PR_V)
             return (done, rec.get("chk", ""))
         tg.sort(key=order)
         st["stage"] = "종목 훑기"
@@ -307,7 +310,7 @@ def main():
             rec = stocks.get(sym)
             if not rec or rec.get("date") != day:
                 rec = stocks[sym] = {"date": day, "period": period_of(r.get("fy"))}
-            if rec.get("acc") and (rec.get("eps") or not rec.get("period")) and "pr" in rec:
+            if rec.get("acc") and (rec.get("eps") or not rec.get("period")) and rec.get("prv") == PR_V:
                 continue                         # 다 받았다
             rec["chk"] = now()
             try:
@@ -325,10 +328,11 @@ def main():
                                 typical[sym] = rec["accepted"][11:16]
                             print(f"  8-K {sym} {rec['accepted'] or '(시각 불명)'}")
                 # 보도자료 손익 표 — 8-K 가 잡힌 뒤 한 번(받기 실패면 다음 바퀴에 다시).
-                if rec.get("acc") and "pr" not in rec and cikmap:
+                if rec.get("acc") and rec.get("prv") != PR_V and cikmap:
                     pri = sec_prior(sym, rec.get("period"))
                     if not pri:
                         rec["pr"] = None              # 대조할 SEC 전년 수치가 없다 — 안 싣는다
+                        rec["prv"] = PR_V
                     else:
                         cik = ss.cik_of(cikmap, sym)
                         raw = ex99_html(cik, rec["acc"]) if cik else None
@@ -341,6 +345,7 @@ def main():
                                 st["newPr"] = st.get("newPr", 0) + 1
                                 print(f"  8-K 표 {sym} 매출 {got['rev'] / 1e6:,.0f}M")
                             rec["pr"] = got
+                            rec["prv"] = PR_V
                 if rec.get("acc") and not rec.get("eps") and rec.get("period"):
                     st["checkedEps"] += 1
                     e = eps_actual(sym, rec["period"])

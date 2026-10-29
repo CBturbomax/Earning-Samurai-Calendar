@@ -214,6 +214,11 @@ def _read_table(t, prior):
                     cur = nums[i] * sc
                     if _known(cur, known):
                         continue
+                    # **누계 열을 집지 않는다.** SEC 쪽 전년 값이 누계로 잘못 들어 있으면
+                    # 누계 열이 대조를 통과한다(TRU 3,868M · CVLT 626M — 분기는 그 절반·
+                    # 삼분의 일). 바로 앞 분기 값의 0.5~2배를 벗어나면 분기 값이 아니다.
+                    if known and not 0.5 < cur / known[-1] < 2.0:
+                        continue
                     # 전년 값과 크기가 너무 다르면(비율 열·누계 열) 버린다.
                     if 0.3 < cur / (nums[j] * sc) < 3.5:
                         if found is None or err < found[5]:
@@ -257,7 +262,9 @@ def _read_table(t, prior):
                 return None
             ref = prior.get(key)
             if ref is not None and not small:
-                ok = [c for c in cands if _match(c[1], ref) or (abs(ref) > 0 and abs(c[1] - ref) <= abs(ref) * 0.02)]
+                # 매출과 같은 잣대(0.6%)다. 2% 로 두었더니 조정(non-GAAP) 줄이나 비지배
+                # 지분 포함 줄이 걸렸다(WM 영업이익 1,329 vs SEC 1,279).
+                ok = sorted((c for c in cands if _match(c[1], ref)), key=lambda c: abs(c[1] - ref))
                 if not ok:
                     return None                  # SEC 와 안 맞으면 안 싣는다
                 out["check"][key] = [ref, ok[0][1]]
