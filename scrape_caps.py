@@ -172,8 +172,16 @@ def us_sectors():
         sec = (r.get("sector") or "").strip()
         if sym and sec and sec.lower() not in ("", "n/a", "miscellaneous"):
             out["us:" + sym] = sec
-    print(f"  미국 업종 {len(out):,}종목 (전체 {len(rows):,}행)")
+        # 세부 업종 — 은행·리츠를 가르는 데 쓴다(markets.excluded). 'Finance' 로는
+        # 보험·증권까지 섞여 못 가른다.
+        ind = (r.get("industry") or "").strip()
+        if sym and ind:
+            US_INDUSTRIES["us:" + sym] = ind
+    print(f"  미국 업종 {len(out):,}종목 · 세부 업종 {len(US_INDUSTRIES):,} (전체 {len(rows):,}행)")
     return out
+
+
+US_INDUSTRIES = {}
 
 
 PROFILE = ("https://query1.finance.yahoo.com/v10/finance/quoteSummary/"
@@ -205,13 +213,19 @@ def asset_profile(symbol):
 HK_SECTOR_PER_RUN = 250
 
 
-def hk_sectors(codes, known):
+HK_INDUSTRIES = {}
+
+
+def hk_sectors(codes, known, known_ind=None):
     """홍콩 업종. 야후는 종목당 하나씩만 물을 수 있어서 조금씩 채워 나간다.
 
     HKEXnews 도 나스닥 스크리너 같은 목록을 안 준다. 종목당 요청이라 느리지만
     업종은 잘 바뀌지 않으니 이미 받은 건 건너뛰고 새 종목만 받는다.
     """
-    todo = [c for c in codes if "hk:" + c not in known][:HK_SECTOR_PER_RUN]
+    # 업종은 있어도 세부 업종(은행·리츠 가르기용)이 없는 종목도 다시 묻는다.
+    known_ind = known_ind or {}
+    todo = [c for c in codes if "hk:" + c not in known
+            or "hk:" + c not in known_ind][:HK_SECTOR_PER_RUN]
     if not todo:
         print("  홍콩 업종: 새로 받을 종목 없음")
         return {}
@@ -225,9 +239,11 @@ def hk_sectors(codes, known):
             with _opener.open(req, timeout=30) as r:
                 body = json.loads(r.read().decode("utf-8", "replace"))
             res = ((body.get("quoteSummary") or {}).get("result") or [{}])[0]
-            sec = ((res.get("assetProfile") or {}).get("sector") or "").strip()
+            prof = res.get("assetProfile") or {}
+            sec = (prof.get("sector") or "").strip()
             if sec:
                 out["hk:" + code] = sec
+            HK_INDUSTRIES["hk:" + code] = (prof.get("industry") or "").strip() or "-"
         except Exception:
             pass                                   # 한 종목 실패가 전체를 멈추지 않는다
         if i % 50 == 49:
@@ -327,16 +343,20 @@ def main():
         fresh += 1
 
     # 업종은 이미 받아둔 것을 이어 쓴다. 홍콩은 종목당 요청이라 한 번에 다 못 받는다.
-    known = {}
+    known, known_ind = {}, {}
     if OUT.exists():
         try:
-            known = json.loads(OUT.read_text(encoding="utf-8")).get("sectors", {})
+            prev = json.loads(OUT.read_text(encoding="utf-8"))
+            known, known_ind = prev.get("sectors", {}), prev.get("industries", {})
         except (ValueError, OSError):
             pass
     sectors = dict(known)
     sectors.update(us_sectors())
     hk_codes = sorted({c for s, (m, c) in todo.items() if m == "hk"})
-    sectors.update(hk_sectors(hk_codes, sectors))
+    sectors.update(hk_sectors(hk_codes, sectors, known_ind))
+    industries = dict(known_ind)
+    industries.update(US_INDUSTRIES)
+    industries.update(HK_INDUSTRIES)
 
     payload = {
         "source": "Yahoo Finance (시총·홍콩 업종) + Nasdaq screener (미국 업종)",
@@ -345,6 +365,8 @@ def main():
         "count": len(caps),
         "caps": caps,
         "sectors": sectors,
+        # 세부 업종(나스닥 industry · 야후 industry). 은행·리츠를 빼는 데 쓴다.
+        "industries": industries,
     }
     tmp = OUT.with_suffix(".tmp")
     tmp.write_text(json.dumps(payload, ensure_ascii=False), encoding="utf-8")
