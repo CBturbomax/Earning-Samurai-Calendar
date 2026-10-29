@@ -14,8 +14,12 @@
 
 미국 종목은 나스닥 analyst API(`earnings-forecast`)의 **연간 EPS 컨센서스 4개 연도**를
 덧받는다(`ny`) — stockanalysis 가 가린 차차기년도 순이익·PER 을 그걸로 채운다.
-MarketScreener(3년 영업이익)·IFIS·닛케이·사계보는 GitHub 서버에서 막히거나
-유료라 못 쓴다(실측 2026-10). 그래서 차기 영업이익은 아직 빈칸이다.
+차기·차차기의 **매출·영업이익(EBIT)·순이익**은 Business Insider 종목 페이지의
+Estimates 표(5개 연도, 백만 단위)에서 받는다(`bi`). 미국은 티커가 주소고,
+일본·홍콩은 영문 이름으로 BI 검색(SearchController_Suggest)을 해 ISIN 국가가 맞는
+종목을 고른다. 엉뚱한 회사·통화를 막으려고 **당해년도 매출이 stockanalysis 것과
+±25% 안에 들 때만** 쓴다. MarketScreener·finanzen.net·IFIS 는 GitHub 서버에서
+403/503, 닛케이·사계보는 유료라 못 쓴다(실측 2026-10).
 
 없는 칸은 비워 둔다 — 지어 넣지 않는다. 내년 순이익만은 내년 EPS × 올해 주식수
 (올해 순이익 ÷ 올해 EPS)로 옮기고 그렇다고 적는다(`ni2_from_eps`).
@@ -42,7 +46,9 @@ STALE_DAYS = int(os.environ.get("FCST_STALE_DAYS", "7"))
 NEAR_DAYS = 4                     # 발표일 ±4일은 하루 한 번(컨센서스가 그때 바뀐다)
 MIN_CAP = float(os.environ.get("FCST_MIN_CAP", "0.5"))   # 시총(십억 달러) 이상만
 GIVE_UP_AFTER = 6
-FCST_VER = 1
+FCST_VER = 2
+BI = "https://markets.businessinsider.com"
+BI_ISIN = {"jp": ("JP",), "hk": ("HK", "KY", "BM", "CN", "VG", "SG", "US", "GB")}
 NASDAQ_FC = "https://api.nasdaq.com/api/analyst/{}/earnings-forecast"
 MONTHS = {m: i + 1 for i, m in enumerate(
     "Jan Feb Mar Apr May Jun Jul Aug Sep Oct Nov Dec".split())}
@@ -146,11 +152,89 @@ def parse_forecast(txt):
     curr = info.get("curr") or {}
     quote = info.get("quote") or {}
     return {
-        "years": years, "next": nxt,
+        "years": years, "next": nxt, "name": info.get("name") if isinstance(info.get("name"), str) else "",
         "price": num(quote.get("p")),
         "curPrice": curr.get("price") if isinstance(curr.get("price"), str) else "",
         "curFin": curr.get("financial") if isinstance(curr.get("financial"), str) else "",
     }
+
+
+def _bi_num(t):
+    t = t.replace(",", "").strip()
+    try:
+        return float(t)
+    except ValueError:
+        return None
+
+
+def parse_bi(txt):
+    """BI 종목 페이지의 Estimates 표 → [[결산연도, 매출, EBIT, 순이익, EPS], ...] (현지 통화)."""
+    i = txt.find(">EBIT<")
+    if i < 0:
+        return []
+    seg = txt[txt.rfind("<table", 0, i):txt.find("</table>", i)]
+    rows = {}
+    head = []
+    for r in re.findall(r"<tr[^>]*>(.*?)</tr>", seg, re.S):
+        cells = [re.sub(r"\s+", " ", re.sub(r"<[^>]+>", "", c)).replace("&nbsp;", " ").strip()
+                 for c in re.findall(r"<t[hd][^>]*>(.*?)</t[hd]>", r, re.S)]
+        if not cells:
+            continue
+        if not head and all(re.fullmatch(r"\d{4}", c) for c in cells[1:] if c):
+            head = cells[1:]
+            continue
+        rows.setdefault(cells[0], cells[1:])
+    if not head:
+        return []
+    out = []
+    for j, y in enumerate(head):
+        def v(k, mul=1e6):
+            x = rows.get(k) or []
+            n = _bi_num(x[j]) if j < len(x) else None
+            return n * mul if n is not None else None
+        rec = [int(y), v("Revenue"), v("EBIT"), v("Net Profit"), v("EPS", 1)]
+        if any(x is not None for x in rec[1:4]):
+            out.append(rec)
+    return out
+
+
+def bi_candidates(market, code, name):
+    """BI 주소 후보(slug). 미국은 티커, 일본·홍콩은 이름 검색."""
+    if market == "us":
+        return [code.lower().replace(".", "_").replace("-", "_")]
+    if not name:
+        return []
+    q = re.sub(r"(?i)\b(co\.?,? ?ltd\.?|corporation|corp\.?|holdings?|inc\.?|limited|ltd\.?|"
+               r"company|group|kabushiki kaisha|k\.k\.)\b", " ", name)
+    q = re.sub(r"[^A-Za-z0-9&' ]+", " ", q).strip()
+    q = " ".join(q.split()[:3]) or name
+    import urllib.parse
+    txt = get(BI + "/ajax/SearchController_Suggest?max_results=10&query=" + urllib.parse.quote(q)) or ""
+    out = []
+    for nm, kw, ids in re.findall(
+            r'new Array\("([^"]*)", "Stocks", "([^"]*)", "\d+", "", "([^"]*)"\)', txt):
+        kws = kw.split("|")
+        isin = kws[1] if len(kws) > 1 else ""
+        slug = ids.split("|")[0]
+        if not slug or not isin.startswith(BI_ISIN[market]):
+            continue
+        if "depositary" in nm.lower() or "deposit" in nm.lower():
+            continue                          # ADR 는 통화·주식 비율이 달라 뺀다
+        hk_hit = market == "hk" and code.lstrip("0").zfill(4) in kws[-1].split(",")
+        out.append((0 if hk_hit else 1, 0 if kws[0] else 1, slug))
+    return [x[2] for x in sorted(out)][:3]
+
+
+def bi_fetch(market, code, name, ref_rev, ref_year, slug=None):
+    """검증된 BI 추정 [slug, 표]. 못 찾으면 [None, []]."""
+    for sl in ([slug] if slug else bi_candidates(market, code, name)):
+        txt = get(f"{BI}/stocks/{sl}-stock")
+        time.sleep(PAUSE)
+        ys = parse_bi(txt or "")
+        ref = next((y for y in ys if y[0] == ref_year and y[1]), None)
+        if ref and ref_rev and 0.75 <= ref[1] / ref_rev <= 1.33:
+            return sl, ys
+    return None, []
 
 
 def parse_stats(txt):
@@ -241,6 +325,14 @@ def universe():
     return {k: v for k, v in out.items() if v[0] >= MIN_CAP}
 
 
+def us_names():
+    try:
+        rows = json.loads((HERE / "data" / "earnings_us.json").read_text(encoding="utf-8")).get("rows", [])
+    except (ValueError, OSError):
+        return {}
+    return {f"us:{r.get('code')}": r.get("name") or "" for r in rows}
+
+
 def queue(old, cand):
     today = date.today().isoformat()
     stale = (date.today() - timedelta(days=STALE_DAYS)).isoformat()
@@ -250,8 +342,6 @@ def queue(old, cand):
         ts = (rec or {}).get("ts", "")
         if not rec or rec.get("v") != FCST_VER:
             pri = 0
-        elif k.startswith("us:") and "ny" not in rec:
-            pri = 0                          # 나스닥 연간 EPS 를 아직 안 받은 미국 종목
         elif gap <= NEAR_DAYS and ts[:10] < today:
             pri = 1
         elif ts[:10] < stale:
@@ -271,6 +361,7 @@ def main():
         old = {}
     stocks = dict(old)
     todo = queue(old, universe())[:PER_RUN]
+    names = us_names()
     got = streak = 0
     for i, k in enumerate(todo):
         if time.time() - t0 > SECS:
@@ -290,7 +381,23 @@ def main():
                 time.sleep(PAUSE)
                 if s:
                     rec.update(parse_stats(s))
-                if market == "us":
+                # Business Insider 추정(차기·차차기 영업이익까지).
+                ys = rec["years"]
+                ref = next((y for y in ys if y.get("est")), None) or ys[-1]
+                try:
+                    sl, bys = bi_fetch(market, code, rec.get("name") or names.get(k, ""),
+                                       ref.get("rev"), int(ref["end"][:4]),
+                                       (old.get(k) or {}).get("bi"))
+                    if not sl and (old.get(k) or {}).get("bi"):
+                        sl, bys = bi_fetch(market, code, rec.get("name") or names.get(k, ""),
+                                           ref.get("rev"), int(ref["end"][:4]))
+                    rec["bi"], rec["by"] = sl or "", bys
+                except Throttled as e:
+                    print(f"  {k} BI 막힘: {e}", file=sys.stderr)
+                    for f2 in ("bi", "by"):
+                        if f2 in (old.get(k) or {}):
+                            rec[f2] = old[k][f2]
+                if market == "us" and not rec.get("by"):
                     try:
                         rec["ny"] = nasdaq_years(code)
                     except Throttled as e:
@@ -336,8 +443,10 @@ def probe(args):
         f = parse_forecast(get(page(market, code, "forecast")) or "")
         s = parse_stats(get(page(market, code, "statistics")) or "")
         print(k, json.dumps(f, ensure_ascii=False)[:800], s)
-        if market == "us":
-            print("  nasdaq", nasdaq_years(code))
+        if f and f["years"]:
+            ys = f["years"]
+            ref = next((y for y in ys if y.get("est")), None) or ys[-1]
+            print("  bi", bi_fetch(market, code, f.get("name"), ref.get("rev"), int(ref["end"][:4])))
 
 
 if __name__ == "__main__":
