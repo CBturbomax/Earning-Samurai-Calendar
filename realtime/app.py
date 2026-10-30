@@ -1385,6 +1385,12 @@ def caption(ev):
     tail = (f" / {e(pre['what'])}" if pre else f" / {int(mon['period'][5:7])}월 월 매출" if mon
             else f" / {e(ev['point'][0])} 실적" if ev.get("point") else " / 실적 발표")
     head = f"{FLAG[ev['mkt']]} <b>{name}</b>" + tail
+    try:                                          # 늦게 잡은 것은 늦었다고 적는다(놓쳤다 메운 것)
+        late = (datetime.now(timezone.utc) - datetime.fromisoformat(ev["published"])).total_seconds() / 60
+        if late > 30 and not ev.get("replay"):
+            head += f" <i>(⏱ {int(late)}분 늦게 잡음)</i>"
+    except (KeyError, ValueError):
+        pass
     lines = [head]
     bz = biz_of(ev)
     if bz:                                        # 회원님(10/30): 무엇을 파는지 — 시총 위에, 구체적으로
@@ -1816,7 +1822,18 @@ def jp_watch():
         t0 = time.time()
         day = datetime.now(JST).strftime("%Y-%m-%d")
         try:
-            for r in fj.listing(day, 1):
+            # **첫 쪽만 보면 15시에 놓친다.** 결산 공시가 15:00 에 수백 건 한꺼번에 올라와 한 쪽(100건) 밖으로 밀린다 —
+            # TDK(6762, 10/30)가 그렇게 빠졌다. 새 줄이 하나도 없는 쪽이 나올 때까지 넘겨 본다(켤 때는 그날 전부).
+            rows_all = []
+            for page in range(1, 30):
+                got = fj.listing(day, page)
+                if not got:
+                    break
+                fresh = [r for r in got if (day, r["code"], r["time"], r["title"]) not in seen]
+                rows_all += fresh
+                if not fresh and not first:
+                    break
+            for r in rows_all:
                 k = (day, r["code"], r["time"], r["title"])
                 if k in seen:
                     continue
@@ -1949,6 +1966,20 @@ def replay_run(lines):
                 if hit:
                     jp_process(hit[0], day, True)
                     break
+            continue
+        f = re.match(r"jpday$", ln.strip())                    # 오늘 일본 결산단신 중 아직 안 보낸 것 전부 — 놓친 것 메우기
+        if f:
+            day = datetime.now(JST).strftime("%Y-%m-%d")
+            rows = []
+            for page in range(1, 40):
+                got = fj.listing(day, page)
+                if not got:
+                    break
+                rows += got
+            hit = [r for r in rows if fj.TANSHIN.search(r["title"]) and not fj.NOT_TANSHIN.search(r["title"]) and r["zip"]]
+            log("오늘 일본 결산단신 다시 훑기", len(hit), "건")
+            for r in hit:
+                POOL.submit(safe, jp_process, r, day)
             continue
         f = re.match(r"jp(pre|mon)\s+(\w+)", ln.strip())         # 시험 — 최근 닷새 안의 그 종목 적시공시·월차를 다시
         if f:
