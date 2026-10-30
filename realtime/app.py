@@ -239,7 +239,7 @@ class Guide:
             self.own = {}
 
     def add(self, code, fc, published):
-        if not fc or not fc.get("end") or fc.get("rev") is None:
+        if not fc or not fc.get("end") or all(fc.get(k) is None for k in ("rev", "opi", "ni")):
             return None
         st = stage_of(fc["end"], published)
         if not st:
@@ -248,11 +248,12 @@ class Guide:
         with self.lock:
             before = self.get(code).get(fy, {})
             prev = next((before[s] for s in reversed(STAGES[:STAGES.index(st)]) if s in before), None)
-            self.own.setdefault(code, {}).setdefault(fy, {})[st] = [fc.get("rev"), fc.get("opi")]
+            now = [fc.get("rev"), fc.get("opi"), fc.get("ni")]
+            self.own.setdefault(code, {}).setdefault(fy, {})[st] = now
             tmp = self.path.with_suffix(".tmp")
             tmp.write_text(json.dumps(self.own))
             tmp.replace(self.path)
-        return {"stage": st, "prev": prev, "now": [fc.get("rev"), fc.get("opi")], "end": fc["end"]}
+        return {"stage": st, "prev": prev, "now": now, "end": fc["end"]}
 
     def get(self, code, ann=None):
         try:
@@ -996,9 +997,45 @@ def followup(ev):
     sec("🏢 <b>비즈니스</b>", [biz.strip().rstrip(".")] if biz else [])
     sec("💡 <b>실적 배경</b>", b.get("why") or [])
     gd = b.get("guide")
-    sec("🗓 <b>가이던스</b>", gd if isinstance(gd, list) else [gd] if gd else [])
+    gd = gd if isinstance(gd, list) else [gd] if gd else []
+    gl = guide_line(ev)
+    if gl or gd:                                    # 첫 줄은 상향·하향·유지 판정 — 숫자는 그 밑에
+        out.append("\n".join(["🗓 <b>가이던스</b>"] + ([gl] if gl else []) + [f"• {e(x)}" for x in gd]))
     sec("⚠️ <b>주의</b>", b.get("watch") or [])
     return "\n\n".join(out)
+
+
+GSTAT = {"상향": "📈", "하향": "📉", "유지": "➡️", "엇갈림": "🔀", "첫 제시": "🆕", "철회": "⛔"}
+
+
+def guide_status(ev):
+    """가이던스가 직전 예상보다 올랐나·내렸나·그대로인가 — 회원님(10/30): "숫자보다 그게 더 중요."
+    -> (상태, "매출 +3.0% / 영업이익 +5.1%") 또는 (None, "").
+    일본은 결산단신 예상을 직전 예상과 직접 비교하고, 나머지는 AI 가 원문에서 읽은 판정(gstat)을 쓴다."""
+    g = ev.get("guide")
+    if g and g.get("prev"):
+        diff, signs = [], []
+        for n, a, b in zip(("매출", "영업이익", "순이익"), g["prev"], g["now"]):
+            if a and b is not None and a > 0:
+                c = (b / a - 1) * 100
+                signs.append(1 if c > 0.5 else -1 if c < -0.5 else 0)
+                if signs[-1]:
+                    diff.append(f"{n} {pct(c)}")
+        if signs:
+            st = ("유지" if not any(signs) else "상향" if all(x >= 0 for x in signs)
+                  else "하향" if all(x <= 0 for x in signs) else "엇갈림")
+            return st, " / ".join(diff)
+    if g and g.get("stage") == "최초":
+        return "첫 제시", ""
+    st = ((ev.get("brief") or {}).get("gstat") or "").strip()
+    return (st, "") if st in GSTAT else (None, "")
+
+
+def guide_line(ev):
+    st, d = guide_status(ev)
+    if not st:
+        return ""
+    return f"{GSTAT[st]} 가이던스 : <b>{st}</b>" + (f" ({html.escape(d)})" if d else "")
 
 
 def pct(v):
@@ -1051,15 +1088,9 @@ def caption(ev):
             key.append(f"이익률 {opi / rev * 100:.1f}%")
     if key:
         lines += ["", "🔥 숫자 : " + e(" / ".join(key))]
-    g = ev.get("guide")
-    if g and g.get("prev"):
-        d = [f"{n} {pct((b / a - 1) * 100)}" for n, a, b in zip(("매출", "영업이익"), g["prev"], g["now"])
-             if a and b is not None and a > 0]
-        if d:
-            up = all(x.split()[-1].startswith("+") for x in d)
-            dn = all(x.split()[-1].startswith("-") for x in d)
-            lines += ["", ("📈 가이던스 상향 : " if up else "📉 가이던스 하향 : " if dn else "🔁 가이던스 수정 : ")
-                      + e(" / ".join(d))]
+    gl = guide_line(ev)
+    if gl:
+        lines += ["", gl]
     if not p and ev.get("title"):
         lines += ["", e(ev["title"][:160])]
     out = "\n".join(lines)
