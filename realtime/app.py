@@ -1746,6 +1746,86 @@ def jp_seg_now(key, blob, label, seg):
     return {"label": label, "names": names, "vals": [out.get(n) for n in names]}
 
 
+def guide_from_pdf(code, name, url, day):
+    """결산단신 PDF 첫 두 쪽 -> 연간 예상 -> 가이던스 변천에 적는다. 직전 예상의 절반~두 배 밖이면 안 쓴다(단위 오독)."""
+    try:
+        text = pdftext.extract_text(http_get(url, ua=BROWSER_UA, timeout=30, binary=True), 2)
+    except Exception as e:                                       # noqa: BLE001
+        log("결산단신 PDF 실패", code, repr(e)[:100])
+        return None
+    g = brief.fy_from_text(name, text)
+    if not g or not g.get("rev"):
+        log("연간 예상 판독 없음", code)
+        return None
+    st = stage_of(g["fy_end"] + "-28", day)
+    before = GD.get(code).get(g["fy_end"], {})
+    prev = next((before[s] for s in reversed(STAGES[:STAGES.index(st)]) if s in before), None) if st else None
+    if prev and prev[0] and not 0.5 <= g["rev"] / prev[0] <= 2:
+        log("연간 예상 판독 버림(단위?)", code, g)
+        return None
+    out = GD.add(code, {"end": g["fy_end"] + "-28", "rev": g.get("rev"), "opi": g.get("op"), "ni": g.get("eps")}, day)
+    log("연간 예상 AI 판독", code, g["fy_end"], st, "매출", g.get("rev"))
+    return out
+
+
+def guide_audit(days=45, limit=400):
+    """매일 — 최근 실적을 낸 일본 회사 중 그 분기 가이던스가 빈 곳을 원본(JPX 보관소 결산단신)으로 메운다.
+    XBRL 이 먼저, 안 되면 PDF 첫 쪽을 AI 가 읽는다. 회원님(10/30): 일본 가이던스는 반드시 차트에."""
+    today = datetime.now(JST).date()
+    with H.lock:
+        rows = [(k, rs) for k, rs in H.rows_by_key.items() if k.startswith("jp:")]
+    todo = []
+    for k, rs in rows:
+        for r in rs:
+            try:
+                d = date.fromisoformat(r[0])
+            except ValueError:
+                continue
+            m = re.match(r"(\d+)월", r[3] or "")
+            if not m or not (today - timedelta(days=days) <= d <= today):
+                continue
+            fm = int(m.group(1))
+            # 그 결산단신이 싣는 연간 예상 = 발표일 다음에 오는 결산월(분기면 이번 회계연도, 본결산이면 다음 회계연도)
+            fy = f"{d.year if d.month < fm else d.year + 1}-{fm:02d}"
+            st = stage_of(fy + "-28", r[0])
+            if st and st not in GD.get(k[3:]).get(fy, {}):
+                todo.append((k[3:], r[0], r[2] or r[7], max((x[11] or 0) for x in rs)))
+            break
+    todo = sorted(set(todo), key=lambda t: -t[3])[:limit]
+    log("가이던스 빈칸 점검", len(todo), "곳")
+    got = 0
+    for code, day, name, _ in todo:
+        try:
+            with _yano["lock"]:
+                time.sleep(0.4)
+            j = json.loads(http_get(f"https://webapi.yanoshin.jp/webapi/tdnet/list/{code}.json?limit=30", ua=BROWSER_UA, timeout=30))
+            items = [it.get("Tdnet", it) for it in j.get("items") or []]
+            hit = next((it for it in items if (it.get("pubdate") or "")[:10] == day and fj.TANSHIN.search(it.get("title") or "")
+                        and not fj.NOT_TANSHIN.search(it.get("title") or "")), None)
+            if not hit:
+                continue
+            res = None
+            if hit.get("url_xbrl"):
+                fn = hit["url_xbrl"].rsplit("/", 1)[-1]
+                for base in ("https://www.release.tdnet.info/inbs/", f"https://www2.jpx.co.jp/disc/{code}0/"):
+                    try:
+                        vals = fj.read_summary(http_get(base + fn, ua=BROWSER_UA, timeout=40, binary=True))
+                        res = GD.add(code, fj.forecast_from(vals or {}), day)
+                        break
+                    except Exception:                            # noqa: BLE001
+                        continue
+            if not res and hit.get("document_url"):
+                pn = hit["document_url"].rsplit("/", 1)[-1]
+                for base in ("https://www.release.tdnet.info/inbs/", f"https://www2.jpx.co.jp/disc/{code}0/"):
+                    res = guide_from_pdf(code, name, base + pn, day)
+                    if res:
+                        break
+            got += 1 if res else 0
+        except Exception as e:                                   # noqa: BLE001
+            log("가이던스 점검 실패", code, repr(e)[:100])
+    log("가이던스 빈칸 점검 끝", got, "/", len(todo), "곳 메움")
+
+
 def jp_process(row, day, replay=False):
     code = row["code"]
     if H.skip("jp", code, row["name"]):
@@ -1763,6 +1843,8 @@ def jp_process(row, day, replay=False):
             ev["_more"] = lambda: "\n\n[결산 설명자료(IR)]\n" + jp_ir_text(code, day)
             if vals:
                 ev["guide"] = GD.add(code, fj.forecast_from(vals), day)
+            if not ev.get("guide") and row.get("pdf"):          # XBRL 로 못 뽑았다 — 첫 쪽 표를 AI 가 읽는다(후쿠다전자 10/30)
+                ev["guide"] = guide_from_pdf(code, ev["name"], "https://www.release.tdnet.info/inbs/" + row["pdf"], day)
             prior = fj.base_series().get(f"jp:{code}", {})
             q = fj.quarter_from(vals, prior) if vals else None
             if q:
@@ -2057,6 +2139,9 @@ def replay_run(lines):
         if f:
             threading.Thread(target=jphist, args=(int(f.group(1)),), daemon=True, name="jphist").start()   # 몇 시간짜리 — 다음 줄을 막지 않게
             continue
+        if ln.strip() == "guideaudit":
+            guide_audit()
+            continue
         f = re.match(r"guideus\s+(\d+)", ln.strip())
         if f:
             guidefill_us(int(f.group(1)))
@@ -2168,6 +2253,7 @@ def fill_loop():
             threading.Thread(target=safe, args=(jphist, JH["want"]), daemon=True, name="jphist").start()
         safe(segfill, 500)
         safe(segfill_jp, 300)
+        safe(guide_audit)
         time.sleep(2 * 3600)
 
 

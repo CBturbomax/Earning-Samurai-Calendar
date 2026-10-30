@@ -291,6 +291,28 @@ def biz_lines(items, timeout=120):
     return got
 
 
+FY_ASK = ("아래는 일본 결산단신 첫 쪽(サマリー)의 글이다. '連結業績予想'(통기·연간 예상) 표에서 **연간(通期)** 예상만 읽어라 — "
+          "第2四半期(累計)·반기 줄은 쓰지 않는다. 금액 단위가 百万円이면 엔으로 환산(×1,000,000). 범위(〜)면 가운데 값. "
+          'JSON 으로만: {"fy_end": "그 회계연도 끝 YYYY-MM", "rev": 매출(売上高·営業収益), "op": 영업이익, "ni": 親会社株主に帰属する当期純利益} '
+          "— 없는 항목은 null, 예상 자체가 없으면(未定·記載なし) {}.\n\n")
+
+
+def fy_from_text(name, text, timeout=45):
+    """결산단신 첫 쪽 글 -> {"fy_end", "rev", "op", "eps"(=순이익 자리)} 또는 None. XBRL 로 못 뽑았을 때 쓴다."""
+    if not enabled() or len(text or "") < 200:
+        return None
+    try:
+        out = _ask(f"{FY_ASK}회사: {name}\n\n{text[:6000]}", timeout)
+        m = re.search(r"\{.*\}", out, re.S)
+        d = json.loads(m.group(0)) if m else {}
+    except Exception as e:                                       # noqa: BLE001
+        LOG("연간 예상 판독 실패:", name, repr(e)[:200])
+        return None
+    if not d:
+        return None
+    return fy_guide({"fy_end": d.get("fy_end"), "rev": d.get("rev"), "op": d.get("op"), "eps": d.get("ni")})
+
+
 def why(name, text, timeout=85, names=None):
     """-> {"why": [...], "watch": [...], "guide": str} 또는 None."""
     text = (text or "").strip()
