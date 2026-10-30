@@ -230,8 +230,8 @@ class Guide:
     그 뒤로는 서버가 결산단신을 볼 때마다 /data/guide_jp.json 에 쌓는다. 실제(연간 실적)는
     사이트의 연간 표(D.ann.y)에서 붙인다."""
 
-    def __init__(self):
-        self.path = DATA / "guide_jp.json"
+    def __init__(self, name="guide_jp.json", seed="guidance_hist_jp.json"):
+        self.path, self.seed = DATA / name, seed
         self.lock = threading.Lock()
         try:
             self.own = json.loads(self.path.read_text())
@@ -249,20 +249,36 @@ class Guide:
             before = self.get(code).get(fy, {})
             prev = next((before[s] for s in reversed(STAGES[:STAGES.index(st)]) if s in before), None)
             now = [fc.get("rev"), fc.get("opi"), fc.get("ni")]
-            self.own.setdefault(code, {}).setdefault(fy, {})[st] = now
-            tmp = self.path.with_suffix(".tmp")
-            tmp.write_text(json.dumps(self.own))
-            tmp.replace(self.path)
+            self._put(code, fy, st, now)
         return {"stage": st, "prev": prev, "now": now, "end": fc["end"]}
+
+    def _put(self, code, fy, st, vals):
+        self.own.setdefault(code, {}).setdefault(fy, {})[st] = vals
+        tmp = self.path.with_suffix(".tmp")
+        tmp.write_text(json.dumps(self.own))
+        tmp.replace(self.path)
+
+    def put_us(self, code, published, g):
+        """미국 — 보도자료 연간 전망 {fy_end, rev, op, eps} 를 그 단계에 적는다. [매출, 영업이익, EPS]."""
+        st = stage_of(g["fy_end"] + "-28", published)
+        if not st:
+            return None
+        with self.lock:
+            before = self.get(code).get(g["fy_end"], {})
+            prev = next((before[s] for s in reversed(STAGES[:STAGES.index(st)]) if s in before), None)
+            now = [g.get("rev"), g.get("op"), g.get("eps")]
+            self._put(code, g["fy_end"], st, now)
+        return {"stage": st, "prev": prev, "now": now, "end": g["fy_end"]}
 
     def get(self, code, ann=None):
         try:
-            seed = json.loads((ROOT / "data" / "guidance_hist_jp.json").read_text()).get(code, {})
+            seed = json.loads((ROOT / "data" / self.seed).read_text()).get(code, {}) if self.seed else {}
         except (OSError, ValueError):
             seed = {}
         out = {fy: dict(v) for fy, v in seed.items()}
         for fy, v in (self.own.get(code) or {}).items():
-            out.setdefault(fy, {}).update(v)
+            if fy != "none":                            # 연간 전망을 안 내는 회사 표시
+                out.setdefault(fy, {}).update(v)
         for y in (ann or {}).get("y") or []:
             if not y[5] and y[1]:                       # 확정 실적만
                 out.setdefault(y[0][:7], {}).setdefault("실제", [y[1], y[2]])
@@ -270,6 +286,7 @@ class Guide:
 
 
 GD = Guide()
+GU = Guide("guide_us.json", None)                 # 미국 — 실적 보도자료의 연간 전망(AI 판독)
 
 
 # ── 텔레그램 ─────────────────────────────────────────────────────────────
@@ -538,7 +555,7 @@ def finish(ev, point=None):
     with H.lock:
         ann = H.D.get("ann", {}).get(key)
         G = H.D.get("fcst", {}).get(key)
-    gh = GD.get(ev["code"], ann) if ev["mkt"] == "jp" else None
+    gh = GD.get(ev["code"], ann) if ev["mkt"] == "jp" else GU.get(ev["code"], ann) if ev["mkt"] == "us" else None
     if gh and sum(1 for v in gh.values() for s in v if s != "실제") < 3:
         gh = None                                                # 한두 칸짜리 변천은 안 그린다
     pngs = None
@@ -598,6 +615,15 @@ def finish(ev, point=None):
     if not b:
         return
     ev["brief"] = b
+    gpng = None
+    if ev["mkt"] == "us" and b.get("fyg"):            # 이번 보도자료의 연간 전망 — 직전 전망과 견줘 상향·하향을 가른다
+        try:
+            ev["guide"] = GU.put_us(ev["code"], ev["kstDate"], b["fyg"])
+            gh2 = GU.get(ev["code"], ann)
+            if H.html and sum(1 for v in gh2.values() for s in v if s != "실제") >= 3:
+                gpng = (shot.render(dict({k: v for k, v in ev.items() if not k.startswith("_")}, onlySeg="guide"), gh2) or [None])[0]
+        except Exception:                                        # noqa: BLE001
+            log("미국 가이던스 실패", key, traceback.format_exc(limit=2))
     ser_add_q(key, b, ev.get("cur") or "USD")
     sp = None if ev.get("segPoint") else seg_ai_try(ev, b, seg)
     if sp:
@@ -617,6 +643,7 @@ def finish(ev, point=None):
                 segpng = (shot.render(dict({k: v for k, v in ev.items() if not k.startswith("_")}, onlySeg=want)) or [None])[0]
             except Exception:                    # noqa: BLE001
                 segpng = None
+        segpng = segpng or gpng
         if text or segpng:
             TG.reply(ids, text or f"<b>{html.escape(ev['name'])}</b> 사업부별 매출(공시 원문 AI 판독)", segpng)
         log("답장", key, "글" if text else "-", "AI 표" if segpng else "-",
@@ -924,6 +951,54 @@ def serfill(n, back=4):
     log("부문 시계열 만들기 끝", done[0], "/", len(todo))
 
 
+def guidefill_us(n, back=8):
+    """미국 — 지난 실적 보도자료 여덟 장의 연간 전망을 한 번에 읽어 가이던스 변천을 쌓는다(시총 큰 순)."""
+    import scrape_pr_us as pr
+    with H.lock:
+        rows = dict(H.rows_by_key)
+    caps = {}
+    for k, rs in rows.items():
+        if k.startswith("us:") and rs:
+            caps[k] = max((r[11] or 0) for r in rs)
+    rev_map = {v: k for k, v in cik_ticker().items()}
+    todo = [k for k, c in sorted(caps.items(), key=lambda x: -x[1])
+            if c * 1e9 * float(H.D.get("usdKrw") or 1400) >= MIN_KRW and not TG_OUT_IND.search(H.ind.get(k, "") or "")
+            and k[3:] not in GU.own][:n]
+    log("미국 가이던스 이력 시작", len(todo), "종목")
+    done = [0]
+
+    def one(k):
+        cik = rev_map.get(k[3:].replace(".", "-"))
+        if not cik:
+            return
+        try:
+            rec = json.loads(pr.get(pr.SUBS.format(cik=cik), binary=False) or "{}")["filings"]["recent"]
+        except Exception:                                        # noqa: BLE001
+            return
+        hits = [(a.replace("-", ""), d) for a, fm, it, d in zip(rec.get("accessionNumber", []), rec.get("form", []),
+                                                               rec.get("items", []), rec.get("filingDate", []))
+                if fm == "8-K" and "2.02" in (it or "")][:back]
+        docs = []
+        for acc, d in hits:
+            try:
+                t = pr.press_release(cik, acc)
+            except Exception:                                    # noqa: BLE001
+                t = None
+            if t:
+                docs.append((d, t))
+        got = brief.us_guide(k[3:], list(reversed(docs))) if docs else []
+        for d, g in sorted(got, key=lambda x: x[0]):
+            GU.put_us(k[3:], d, g)
+        if not got:                                              # 연간 전망을 안 내는 회사 — 다시 안 본다
+            with GU.lock:
+                GU._put(k[3:], "none", "none", None)
+        else:
+            done[0] += 1
+    with ThreadPoolExecutor(3) as ex:
+        list(ex.map(one, todo))
+    log("미국 가이던스 이력 끝", done[0], "/", len(todo))
+
+
 def segfill_jp(n):
     """이번 시즌 이미 발표했는데 부문이 없는 일본 회사 — TDnet(한 달 보관)의 결산단신·설명자료를 다시 읽는다."""
     with H.lock:
@@ -1015,7 +1090,7 @@ def guide_status(ev):
     g = ev.get("guide")
     if g and g.get("prev"):
         diff, signs = [], []
-        for n, a, b in zip(("매출", "영업이익", "순이익"), g["prev"], g["now"]):
+        for n, a, b in zip(("매출", "영업이익", "EPS" if ev["mkt"] == "us" else "순이익"), g["prev"], g["now"]):
             if a and b is not None and a > 0:
                 c = (b / a - 1) * 100
                 signs.append(1 if c > 0.5 else -1 if c < -0.5 else 0)
@@ -1325,19 +1400,27 @@ def jp_seg_now(key, blob, label, seg):
         return None
     end = max(q)
     cur = q[end]
-    pend = f"{int(end[:4]) - 1}{end[4:]}"
-    prev = q.get(pend) or next((v for k, v in q.items() if k[:7] == pend[:7]), None)
     rows = {p[0]: p for p in seg["pts"]}
-    site_prev = rows.get(prev_year(label))
-    if not prev or not site_prev:
-        return None
     names = seg["names"]
     out = {}
-    for n, v in prev.items():
-        for i, sn in enumerate(names):
-            sv = site_prev[i + 1]
-            if sv and abs(v - sv) <= max(1, abs(sv) * 0.005) and n in cur:
-                out[sn] = cur[n]
+    # 짝짓기 ① 같은 분기 값이 사이트 막대와 원 단위까지 같은 것 — 전년 같은 분기만 보던 시절에는 그 분기가
+    # 사이트에서 비면(일본은 2024년부터 3·4분기 이력이 빈다) 통째로 못 맞췄다(9830, 10/30). 겹치는 분기 전부를 본다.
+    lab = lambda e: f"{(int(e[5:7]) + 2) // 3}Q{e[2:4]}"     # noqa: E731
+    for e, row in q.items():
+        site = rows.get(lab(e)) if e != end else None
+        if not site:
+            continue
+        for n, v in row.items():
+            for i, sn in enumerate(names):
+                sv = site[i + 1]
+                if sn not in out and n in cur and sv and v is not None and abs(v - sv) <= max(1, abs(sv) * 0.005):
+                    out[sn] = cur[n]
+    # ② 이름이 글자 그대로 같은 것(공백·전각만 무시)
+    norm = lambda x: re.sub(r"\s|　", "", str(x))           # noqa: E731
+    for n, v in cur.items():
+        for sn in names:
+            if sn not in out and norm(n) == norm(sn):
+                out[sn] = v
     now = [n for i, n in enumerate(names) if rows[seg["pts"][-1][0]][i + 1] is not None]
     if len(out) < max(2, len(now) - 0):
         log("XBRL 부문 짝 못 맞춤", key, list(cur)[:5], names[:5])
@@ -1492,6 +1575,18 @@ def replay_run(lines):
         f = re.match(r"serfill\s+(\d+)", ln.strip())
         if f:
             serfill(int(f.group(1)))
+            continue
+        f = re.match(r"probe\s+(\S+)", ln.strip())          # 서버에서만 닿는 주소를 떠본다(로그에 상태·앞머리)
+        if f:
+            try:
+                b = http_get(f.group(1), ua="Mozilla/5.0 (Windows NT 10.0; Win64; x64) Chrome/124.0", timeout=30, binary=True)
+                log("떠보기", f.group(1), len(b or b""), repr((b or b"")[:300]))
+            except Exception as e:                               # noqa: BLE001
+                log("떠보기 실패", f.group(1), repr(e)[:200])
+            continue
+        f = re.match(r"guideus\s+(\d+)", ln.strip())
+        if f:
+            guidefill_us(int(f.group(1)))
             continue
         f = re.match(r"segfilljp\s+(\d+)", ln.strip())
         if f:
