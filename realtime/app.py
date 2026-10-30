@@ -1067,6 +1067,32 @@ def jp_fin_spans(vals):
     return out
 
 
+def jp_old_points(key):
+    """옛 결산단신 누계 -> 사이트 차트 점 [이름, 매출, 영업이익] (같은 시작일의 앞 누계를 빼 분기로). build.py 의 jp_old_fin 과 같은 셈."""
+    with JH_LOCK:
+        spans = dict(JH["fin"].get(key) or {})
+    mon = lambda a, b: (int(b[:4]) - int(a[:4])) * 12 + int(b[5:7]) - int(a[5:7]) + 1   # noqa: E731
+    by = {}
+    for span, row in spans.items():
+        st, _, en = span.partition("/")
+        if st and en and row.get("rev"):
+            by.setdefault(st, []).append((en, row))
+    q = {}
+    for st, lst in by.items():
+        lst.sort()
+        prev = None
+        for en, row in lst:
+            m = mon(st, en)
+            if m == 3:
+                q[en] = row
+            elif prev and mon(st, prev[0]) == m - 3:
+                q[en] = {k: (row[k] - prev[1][k]) if row.get(k) is not None and prev[1].get(k) is not None else None
+                         for k in ("rev", "opi")}
+            prev = (en, row)
+    return [[f"{(int(en[5:7]) + 2) // 3}Q{en[2:4]}", q[en]["rev"], q[en].get("opi")]
+            for en in sorted(q) if q[en].get("rev") and q[en]["rev"] > 0]
+
+
 def jphist(n, since="2017-01-01"):
     """일본 옛 결산단신을 통째로 — 가이던스 변천(연간 예상)과 부문 누계(2024년부터 비던 3·4분기)를 같이 채운다.
     목록은 yanoshin TDnet API(2009년치부터, 문서번호·XBRL 이름), 파일은 JPX 공시 보관소(약 5~6년,
@@ -2026,6 +2052,20 @@ class Handler(BaseHTTPRequestHandler):
             self.head()
             with JH_LOCK:
                 self.wfile.write(json.dumps(JH["seg"], ensure_ascii=False).encode())
+        elif path == "/api/co":                                  # 상세창을 열 때 사이트가 바로 묻는다 — 빌드를 기다리지 않게(회원님 10/30)
+            key = (urllib.parse.parse_qs(urllib.parse.urlparse(self.path).query).get("key") or [""])[0]
+            mkt, _, code = key.partition(":")
+            out = {"guide": {}, "fin": []}
+            try:
+                if mkt in ("jp", "us"):
+                    out["guide"] = {fy: {s: v for s, v in st.items() if s != "실제"}
+                                    for fy, st in (GD if mkt == "jp" else GU).get(code).items()}
+                if mkt == "jp":
+                    out["fin"] = jp_old_points(key)
+            except Exception as e:                               # noqa: BLE001
+                out["err"] = repr(e)[:100]
+            self.head()
+            self.wfile.write(json.dumps(out, ensure_ascii=False).encode())
         elif path == "/api/jpfinraw":                            # 옛 결산단신 실적 누계 — 빌드가 1Q18 부터의 분기로 되돌려 잇는다
             self.head()
             with JH_LOCK:
