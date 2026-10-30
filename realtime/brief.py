@@ -277,8 +277,18 @@ def biz_lines(items, timeout=120):
     except Exception as e:                                       # noqa: BLE001
         LOG("비즈니스 한 줄 실패", repr(e)[:200])
         return {}
-    return {k: str(v).strip().rstrip(".")[:40] for k, v in d.items()
-            if k in items and v and not KANA.search(str(v)) and not HAN_ONLY.search(str(v))}
+    if len(items) == 1 and len(d) == 1:          # 한 곳만 물었으면 키를 어떻게 적어 왔든 그 회사 것이다
+        d = {next(iter(items)): next(iter(d.values()))}
+    for k in list(d):                            # 'jp:3648' 대신 '3648' 로 적어 오는 일이 있다
+        if k not in items:
+            hit = [x for x in items if x.split(":")[-1] == k.split(":")[-1]]
+            if hit:
+                d[hit[0]] = d.pop(k)
+    got = {k: str(v).strip().rstrip(".")[:40] for k, v in d.items()
+           if k in items and v and not KANA.search(str(v)) and not HAN_ONLY.search(str(v))}
+    if len(got) < len(items):
+        LOG("비즈니스 한 줄 빠짐", len(items) - len(got), "곳", repr(out[:200]))
+    return got
 
 
 def why(name, text, timeout=85, names=None):
