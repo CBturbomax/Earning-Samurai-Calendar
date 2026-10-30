@@ -1,10 +1,5 @@
-f18
-probe https://webapi.yanoshin.jp/webapi/tdnet/list/9830.json?limit=3
-probe https://www2.jpx.co.jp/disc/98300/140120260807514367.pdf
-probe https://www2.jpx.co.jp/disc/98300/081220260807514367.zip
-probe https://www2.jpx.co.jp/disc/98300/140120260807514367.zip
-probe https://www.release.tdnet.info/inbs/081220260807514367.zip
-probe https://irbank.net/9830/results
-probe https://minkabu.jp/stock/9830/settlement
-probe https://kabutan.jp/stock/finance?code=9830
-guideus 40
+f19
+jphist 4000
+jppre 7867
+jpmon 138A
+guideus 400
