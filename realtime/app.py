@@ -897,8 +897,9 @@ def seg_ai_try(ev, b, seg, point=None):
     return None if alt else rec
 
 
-def segfill(n):
-    """이미 이번 분기를 발표했는데 부문이 뒤처진 미국 회사 — 보도자료를 다시 읽어 메운다."""
+def segfill(n, only=None):
+    """이미 이번 분기를 발표했는데 부문이 뒤처진 미국 회사 — 보도자료를 다시 읽어 메운다. **시총 큰 순**(인텔이 뒤로 밀렸다, 10/30).
+    only: 이 종목들만(예: {"us:INTC"}) — 이미 있어도 다시 읽는다."""
     import scrape_pr_us as pr
     with H.lock:
         fin, segs = dict(H.D.get("fin", {})), dict(H.D.get("seg", {}))
@@ -915,12 +916,17 @@ def segfill(n):
     todo = []
     for k, p in newest.items():
         s = segs.get(k)
-        if p[0] != top or (s and s["pts"][-1][0] == top) or k in SEGAI:
+        if only is not None:
+            if k not in only:
+                continue
+        elif p[0] != top or (s and s["pts"][-1][0] == top) or (k in SEGAI and SEGAI[k].get("label") == top):
             continue
         cik = rev_map.get(k[3:].replace(".", "-"))
         if cik:
             todo.append((k, cik, p))
-    todo = todo[:n]
+    with H.lock:
+        capk = {k: max((r[11] or 0) for r in H.rows_by_key.get(k) or [[0] * 12]) for k, _, _ in todo}
+    todo = sorted(todo, key=lambda t: -capk.get(t[0], 0))[:n]
     log("부문 메우기 시작", len(todo), "종목", top)
     got = [0]
 
@@ -1832,11 +1838,37 @@ def hk_watch():
         time.sleep(max(1, HK_EVERY - (time.time() - t0)))
 
 
+ALERTS = {"n": 0, "lock": threading.Lock()}             # 지금 처리 중인 실적 알림 수 — 끄기 전에 다 보내고 끈다
+
+
 def safe(fn, *a):
+    alert = fn.__name__ in ("us_process", "jp_process", "jp_pre_process", "jp_mon_process", "hk_process")
+    if alert:
+        with ALERTS["lock"]:
+            ALERTS["n"] += 1
     try:
         fn(*a)
     except Exception:                                            # noqa: BLE001
         log("작업 실패", fn.__name__, traceback.format_exc(limit=3))
+    finally:
+        if alert:
+            with ALERTS["lock"]:
+                ALERTS["n"] -= 1
+
+
+def on_term(*_):
+    """새 판으로 바꿀 때(SIGTERM) — 처리 중인 알림을 다 보내고, 쌓던 것을 적어 두고 끈다(회원님 10/30: "교란 없게").
+    새 서버는 켜지자마자 지난 20분 공시를 다시 보고(보내기 전에 끊긴 것은 다시 보낸다), 하던 큰 일은 이어 간다."""
+    log("끄기 요청 — 처리 중 알림", ALERTS["n"], "건을 마치고 끈다")
+    t0 = time.time()
+    while ALERTS["n"] > 0 and time.time() - t0 < 40:
+        time.sleep(0.5)
+    try:
+        with JH_LOCK:
+            JH_PATH.write_text(json.dumps(JH, ensure_ascii=False))
+    except Exception:                                            # noqa: BLE001
+        pass
+    os._exit(0)
 
 
 # ── 다시 보내기(시험) ──────────────────────────────────────────────────
@@ -1851,6 +1883,10 @@ def replay_run(lines):
         f = re.match(r"segfill\s+(\d+)", ln.strip())
         if f:
             segfill(int(f.group(1)))
+            continue
+        f = re.match(r"segfill\s+([A-Z][A-Z.\-,]*)$", ln.strip())    # 종목을 콕 집어 — segfill INTC,AMD
+        if f:
+            segfill(50, {"us:" + t for t in f.group(1).split(",") if t})
             continue
         f = re.match(r"jpcode\s+(\w+)", ln.strip())
         if f:
@@ -2168,6 +2204,8 @@ def llm_selftest():
 
 
 def main():
+    import signal
+    signal.signal(signal.SIGTERM, on_term)
     log("시작 — 텔레그램", "켜짐" if TG_TOKEN else "꺼짐(TG_BOT_TOKEN 없음)", "· 구독", len(TG.subs))
     H.refresh()
     shot.start(lambda: H.html)
