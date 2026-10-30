@@ -36,7 +36,7 @@ window.tgGuide = function (gh, title) {
     const vals = cols.filter(c => c && c.v != null).map(c => c.v / 1e8);
     if (!vals.length) return '';
     const mx = niceMax(Math.max(...vals, 1));
-    const W = Math.max(880, cols.length * 50), L = 66, R = 20, B = 56, T = 30, H = 300, BASE = H - B;
+    const W = Math.max(880, cols.length * 58), L = 66, R = 20, B = 56, T = 30, H = 300, BASE = H - B;
     const step = (W - L - R) / cols.length;
     const cx = i => L + step * i + step / 2, y = v => BASE - (BASE - T) * v / mx;
     let s = [0, mx / 2, mx].map(v => '<line class="fz" x1="' + L + '" y1="' + y(v).toFixed(1) + '" x2="' + (W - R) +
@@ -46,7 +46,19 @@ window.tgGuide = function (gh, title) {
     cols.forEach((c, i) => {
       if (!c) return;
       (groups[c.f] = groups[c.f] || []).push(i);
-      const lab = '<text class="fx" x="' + cx(i).toFixed(1) + '" y="' + (BASE + 16) + '" text-anchor="middle">' + c.s + '</text>';
+      // 위 줄: 그 예상을 낸 결산단신이 다룬 **실제 분기**(달력, 예 3Q26). 아래 줄: 그 회사 회계연도 기준(예 FY2Q27).
+      // 회원님(10/30): "회계연도 말고 실제 분기로, 그 밑에 FY2Q27 처럼."
+      const fy = +c.f.slice(0, 4), fm = +c.f.slice(5, 7);
+      const back = { '최초': 12, '1Q': 9, '2Q': 6, '3Q': 3, '실제': 0 }[c.s];
+      let em = fm - back, ey = fy;
+      while (em <= 0) { em += 12; ey -= 1; }
+      const cal = Math.ceil(em / 3) + 'Q' + String(ey % 100).padStart(2, '0');
+      const fyl = c.s === '최초' ? 'FY' + String(fy % 100).padStart(2, '0') + ' 최초'
+                : c.s === '실제' ? 'FY' + String(fy % 100).padStart(2, '0') + ' 실제'
+                : 'FY' + c.s + String(fy % 100).padStart(2, '0');
+      const lab = '<text class="fx" x="' + cx(i).toFixed(1) + '" y="' + (BASE + 16) + '" text-anchor="middle"' +
+        ((c.f + c.s) === last ? ' style="fill:#fff;font-weight:800"' : '') + '>' + cal + '</text>' +
+        '<text class="fx" x="' + cx(i).toFixed(1) + '" y="' + (BASE + 31) + '" text-anchor="middle" style="font-size:10px;opacity:.75">' + fyl + '</text>';
       if (c.v == null) { s += lab; return; }
       const v = c.v / 1e8, now = (c.f + c.s) === last;
       const fill = c.s === '실제' ? '#d7dde3' : now ? '#FFCB05' : '#5B9BD5';
@@ -55,10 +67,7 @@ window.tgGuide = function (gh, title) {
         '<text class="vn rev" x="' + cx(i).toFixed(1) + '" y="' + (y(v) - 6).toFixed(1) + '" text-anchor="middle" style="font-size:11px' +
         (now ? ';fill:#FFCB05;font-weight:800' : '') + '">' + fmtN(v) + '</text>' + lab;
     });
-    Object.keys(groups).forEach(f => {
-      const g = groups[f], mid = (cx(g[0]) + cx(g[g.length - 1])) / 2;
-      s += '<text class="fx now" x="' + mid.toFixed(1) + '" y="' + (BASE + 40) + '" text-anchor="middle" style="font-size:15px">FY' + f.slice(2, 4) + '</text>';
-    });
+    // 회계연도 묶음 사이는 빈 칸으로만 가른다 — 막대마다 FY 표기가 붙어 있다.
     return '<div class="finhead sub">' + name + ' <span class="dim">(단위: 억엔 · 회사 연간 전망)</span></div>' +
       '<div class="finbox"><svg viewBox="0 0 ' + W + ' ' + H + '" class="finsvg">' + s + '</svg></div>';
   };
