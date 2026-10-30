@@ -1544,10 +1544,13 @@ def segko_loop():
     cjk = re.compile(r"[\u3040-\u30ff\u4e00-\u9fff]")
     time.sleep(120)
     while True:
+        hangul = re.compile(r"[\uac00-\ud7a3]")
         with H.lock:
-            names = {n for v in (H.D.get("seg") or {}).values() for n in v.get("names") or []
-                     if cjk.search(n) and n not in SEGKO}
-        names = sorted(names)[:200]
+            # 일·중 원문, 그리고 일본·홍콩 회사의 영문 부문 이름(Real Estate Lease Business)도 한국어로.
+            names = {n for k, v in (H.D.get("seg") or {}).items() for n in v.get("names") or []
+                     if n not in SEGKO and not hangul.search(n)
+                     and (cjk.search(n) or k.startswith(("jp:", "hk:")))}
+        names = sorted(names)[:400]
         for i in range(0, len(names), 40):
             got = brief.translate_names(names[i:i + 40])
             if got:
