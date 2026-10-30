@@ -5525,7 +5525,7 @@ const fmtN = v => {
   const a = Math.abs(v);
   return a === 0   ? '0'
        : a >= 100  ? Math.round(v).toLocaleString()
-       : a >= 10   ? v.toFixed(1)
+       : a >= 1    ? v.toFixed(1)          // 회원님 규칙(10/30): 3.2 · 13.2 · 103 — 세 자리부터 소수점 없이
                    : v.toFixed(2);
 };
 /* 축 눈금은 딱 떨어지는 수로. 55,518 같은 값이 축에 적혀 있으면 읽는 데 방해만 된다. */
