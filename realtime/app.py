@@ -1034,9 +1034,9 @@ def caption(ev):
     lines = [head]
     cw = cap_won(ev)
     if cw:
-        lines += ["", f"💰 시총 : {cw}"]
+        lines += ["", f"💰 <b><u>시총 : {cw}</u></b>"]          # 회원님(10/30): 굵게 + 밑줄
     if ev.get("kstTime"):
-        lines += ["", f"🕒실적 발표시간 : {ev['kstDate'].replace('-', '.')} / {ev['kstTime']}"]
+        lines += ["", f"🕒 실적발표 시간 : {ev['kstDate'].replace('-', '.')} / {ev['kstTime']}"]
     p = ev.get("point")
     key = []
     if p:
