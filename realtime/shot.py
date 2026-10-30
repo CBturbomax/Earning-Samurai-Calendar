@@ -16,7 +16,7 @@ JOBS = queue.Queue()
 _page = {"html": None, "ver": 0}
 
 GUIDE_JS = r"""
-window.tgGuide = function (gh, title) {
+window.tgGuide = function (gh, title, mkt) {
   const ST = ['최초', '1Q', '2Q', '3Q'];
   const fys = Object.keys(gh).sort().slice(-5);
   let last = null;
@@ -33,8 +33,12 @@ window.tgGuide = function (gh, title) {
       cols.push(null);
     });
     cols.pop();
-    const vals = cols.filter(c => c && c.v != null).map(c => c.v / 1e8);
-    if (!vals.length) return '';
+    const raw = cols.filter(c => c && c.v != null).map(c => c.v);
+    if (!raw.length) return '';
+    // 일본은 억엔 그대로(회원님이 본 모양), 미국은 사이트 차트와 같은 눈금(bil USD…), EPS 는 달러 그대로.
+    const U = k === 2 && mkt === 'us' ? { div: 1, ko: 'USD/주' }
+            : mkt === 'jp' ? { div: 1e8, ko: '억엔' } : unitFor(Math.max(...raw.map(Math.abs)), 'USD');
+    const vals = raw.map(v => v / U.div);
     const mx = niceMax(Math.max(...vals, 1));
     const W = Math.max(880, cols.length * 58), L = 66, R = 20, B = 56, T = 30, H = 300, BASE = H - B;
     const step = (W - L - R) / cols.length;
@@ -60,7 +64,7 @@ window.tgGuide = function (gh, title) {
         ((c.f + c.s) === last ? ' style="fill:#fff;font-weight:800"' : '') + '>' + cal + '</text>' +
         '<text class="fx" x="' + cx(i).toFixed(1) + '" y="' + (BASE + 31) + '" text-anchor="middle" style="font-size:10px;opacity:.75">' + fyl + '</text>';
       if (c.v == null) { s += lab; return; }
-      const v = c.v / 1e8, now = (c.f + c.s) === last;
+      const v = c.v / U.div, now = (c.f + c.s) === last;
       const fill = c.s === '실제' ? '#d7dde3' : now ? '#FFCB05' : '#5B9BD5';
       s += '<rect x="' + (cx(i) - step * 0.36).toFixed(1) + '" y="' + y(v).toFixed(1) + '" width="' + (step * 0.72).toFixed(1) +
         '" height="' + Math.max(BASE - y(v), 1).toFixed(1) + '" style="fill:' + fill + '"/>' +
@@ -68,14 +72,15 @@ window.tgGuide = function (gh, title) {
         (now ? ';fill:#FFCB05;font-weight:800' : '') + '">' + fmtN(v) + '</text>' + lab;
     });
     // 회계연도 묶음 사이는 빈 칸으로만 가른다 — 막대마다 FY 표기가 붙어 있다.
-    return '<div class="finhead sub">' + name + ' <span class="dim">(단위: 억엔 · 회사 연간 전망)</span></div>' +
+    return '<div class="finhead sub">' + name + ' <span class="dim">(단위: ' + U.ko + ' · 회사 연간 전망)</span></div>' +
       '<div class="finbox"><svg viewBox="0 0 ' + W + ' ' + H + '" class="finsvg">' + s + '</svg></div>';
   };
   const a = one(0, '매출 가이던스'), b = one(1, '영업이익 가이던스');
-  if (!a && !b) return '';
+  const c = mkt === 'us' ? one(2, 'EPS 가이던스') : b ? '' : one(2, '순이익 가이던스');
+  if (!a && !b && !c) return '';
   return '<div class="finwrap"><div class="finhead">' + title + ' 가이던스 변천' +
     '<span class="dim"><b style="color:#5B9BD5">■</b> 가이던스 <b style="color:#d7dde3">■</b> 실제 <b style="color:#FFCB05">■</b> 최신</span></div>' +
-    a + b + '</div>';
+    a + b + c + '</div>';
 };
 window.tgBuild = function (ev, gh) {
   const m = ev.mkt, code = ev.code, key = m + ':' + code;
@@ -89,13 +94,16 @@ window.tgBuild = function (ev, gh) {
   if (t) out.push('<div class="finhead">' + title + ' 연간 실적 · 컨센서스</div>' + t);
   if (f && (f.points || []).length >= 2 && (f.freq === 'Q' || f.freq === 'H'))
     out.push(finChart(f).replace(/(<div class="finhead[^"]*">)/, '$1' + title + ' '));
-  if (gh) { const g = tgGuide(gh, title); if (g) out.push(g); }
+  if (gh) { const g = tgGuide(gh, title, m); if (g) out.push(g); }
   if (sg) {
     const MC = { jp: 'JPY', hk: 'HKD' };
     const s = segChart(sg, (f && f.cur) || MC[m] || 'USD');
     if (s) out.push(s.replace(/(<div class="finhead[^"]*">)/, '$1' + title + ' '));
   }
-  if (ev.onlySeg) {                                 // 답장용 — 원문 AI 판독 표
+  if (ev.onlySeg === 'guide') {                     // 답장용 — 가이던스 변천만(미국: 보도자료를 읽은 뒤라 앨범보다 늦다)
+    out.length = 0;
+    if (gh) { const g = tgGuide(gh, title, m); if (g) out.push(g); }
+  } else if (ev.onlySeg) {                          // 답장용 — 원문 AI 판독 표
     out.length = 0;
     const B = ev.brief || {}, parts = [];
     if (/fin/.test(ev.onlySeg) && B.fin) {
