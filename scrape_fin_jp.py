@@ -1263,8 +1263,22 @@ def load_narr_done():
 
 
 def load_seg_raw():
-    """받아둔 누계 점. {종목: {'시작/종료': {부문: 값}}}"""
-    return _seg_file().get("raw", {})
+    """받아둔 누계 점. {종목: {'시작/종료': {부문: 값}}}
+
+    옛 결산단신(2021~) 의 누계 점은 실시간 서버가 JPX 공시 보관소에서 받아 /api/jpsegraw 로 준다 —
+    TDnet 은 한 달치만 남아 2024년부터 3·4분기 부문이 비었다(EDINET 이 四半期報告書를 없앤 뒤). 있는 것은 안 덮는다."""
+    raw = _seg_file().get("raw", {})
+    try:
+        url = (HERE / "realtime" / "URL").read_text(encoding="utf-8").strip().rstrip("/")
+        req = urllib.request.Request(url + "/api/jpsegraw", headers={"User-Agent": "es-build"})
+        with urllib.request.urlopen(req, timeout=30) as r:
+            old = json.loads(r.read())
+        for k, spans in old.items():
+            for span, row in spans.items():
+                raw.setdefault(k, {}).setdefault(span, row)
+    except Exception as e:                                       # noqa: BLE001
+        print(f"  ! 옛 결산단신 부문 받기 실패: {e}")
+    return raw
 
 
 def load_seg_done():
@@ -1275,7 +1289,7 @@ def load_seg_done():
 
 # 부문 이름이 그대로 남아 있는 누계 점은 종목당 이만큼만 들고 있는다. 스무 분기면
 # 화면에 그리는 스물두 칸을 거의 채우고, 그 이상은 파일만 무거워진다.
-SEG_KEEP_RAW = 24
+SEG_KEEP_RAW = 48
 
 
 def save_segments(raw, seg_done=(), quiet=False):
@@ -1293,7 +1307,7 @@ def save_segments(raw, seg_done=(), quiet=False):
         q = drop_totals(seg_quarters(pts))
         if len(q) < 2:
             continue
-        ends = sorted(q)[-20:]
+        ends = sorted(q)[-24:]
         names = {}
         for e in ends:
             for n, v in q[e].items():

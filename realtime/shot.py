@@ -16,7 +16,8 @@ JOBS = queue.Queue()
 _page = {"html": None, "ver": 0}
 
 GUIDE_JS = r"""
-window.tgGuide = function (gh, title, mkt) {
+// 사이트(build.py)에 같은 함수가 있다 — 옛 빌드를 띄웠을 때만 이것을 쓴다.
+if (!window.tgGuide) window.tgGuide = function (gh, title, mkt) {
   const ST = ['최초', '1Q', '2Q', '3Q'];
   const fys = Object.keys(gh).sort().slice(-5);
   let last = null;
@@ -34,7 +35,7 @@ window.tgGuide = function (gh, title, mkt) {
     });
     cols.pop();
     const raw = cols.filter(c => c && c.v != null).map(c => c.v);
-    if (!raw.length) return '';
+    if (cols.filter(c => c && c.v != null && c.s !== '실제').length < 2) return '';   // 실제만 있는 칸은 안 그린다
     // 일본은 억엔 그대로(회원님이 본 모양), 미국은 사이트 차트와 같은 눈금(bil USD…), EPS 는 달러 그대로.
     const U = k === 2 && mkt === 'us' ? { div: 1, ko: 'USD/주' }
             : mkt === 'jp' ? { div: 1e8, ko: '억엔' } : unitFor(Math.max(...raw.map(Math.abs)), 'USD');
@@ -100,7 +101,13 @@ window.tgBuild = function (ev, gh) {
     const s = segChart(sg, (f && f.cur) || MC[m] || 'USD');
     if (s) out.push(s.replace(/(<div class="finhead[^"]*">)/, '$1' + title + ' '));
   }
-  if (ev.onlySeg === 'guide') {                     // 답장용 — 가이던스 변천만(미국: 보도자료를 읽은 뒤라 앨범보다 늦다)
+  if (ev.onlySeg === 'segchart') {                  // 답장용 — 이번 분기를 얹은 사업부 그림만
+    out.length = 0;
+    if (D.seg[key]) {
+      const s2 = segChart(D.seg[key], (f && f.cur) || ({ jp: 'JPY', hk: 'HKD' })[m] || 'USD');
+      if (s2) out.push(s2.replace(/(<div class="finhead[^"]*">)/, '$1' + title + ' '));
+    }
+  } else if (ev.onlySeg === 'guide') {                     // 답장용 — 가이던스 변천만(미국: 보도자료를 읽은 뒤라 앨범보다 늦다)
     out.length = 0;
     if (gh) { const g = tgGuide(gh, title, m); if (g) out.push(g); }
   } else if (ev.onlySeg) {                          // 답장용 — 원문 AI 판독 표
