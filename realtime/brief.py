@@ -297,14 +297,40 @@ FY_ASK = ("아래는 일본 결산단신 첫 쪽(サマリー)의 글이다. '�
           "— 없는 항목은 null, 예상 자체가 없으면(未定·記載なし) {}.\n\n")
 
 
-def fy_from_text(name, text, timeout=45):
+def first_json(out):
+    """모델 답에서 첫 JSON 객체만 — 뒤에 말을 덧붙이면 탐욕 정규식이 깨졌다(일본오라쿠루 10/31)."""
+    i = (out or "").find("{")
+    if i < 0:
+        return {}
+    try:
+        return json.JSONDecoder().raw_decode(out[i:])[0]
+    except ValueError:
+        return {}
+
+
+def pdf_text(pdf_bytes, pages=2):
+    """PDF 앞 몇 쪽 글 — poppler pdftotext 먼저(일본 결산단신의 CID 글꼴도 읽힌다), 안 되면 우리 판독기."""
+    t = ""
+    if shutil.which("pdftotext"):
+        try:
+            r = subprocess.run(["pdftotext", "-layout", "-l", str(pages), "-", "-"], input=pdf_bytes,
+                               capture_output=True, timeout=30)
+            t = r.stdout.decode("utf-8", "replace")
+        except Exception as e:                                   # noqa: BLE001
+            LOG("pdftotext 실패", repr(e)[:200])
+    if len(t.strip()) < 200:
+        import pdftext
+        t = pdftext.extract_text(pdf_bytes, max_pages=pages) or ""
+    return re.sub(r"[ \t]+", " ", t)
+
+
+def fy_from_text(name, text, timeout=90):
     """결산단신 첫 쪽 글 -> {"fy_end", "rev", "op", "eps"(=순이익 자리)} 또는 None. XBRL 로 못 뽑았을 때 쓴다."""
     if not enabled() or len(text or "") < 200:
         return None
     try:
         out = _ask(f"{FY_ASK}회사: {name}\n\n{text[:6000]}", timeout)
-        m = re.search(r"\{.*\}", out, re.S)
-        d = json.loads(m.group(0)) if m else {}
+        d = first_json(out)
     except Exception as e:                                       # noqa: BLE001
         LOG("연간 예상 판독 실패:", name, repr(e)[:200])
         return None
