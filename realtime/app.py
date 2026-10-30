@@ -1104,6 +1104,7 @@ def jphist(n, since="2017-01-01"):
         if k.startswith("jp:") and rs:
             caps[k[3:]] = max((r[11] or 0) for r in rs)
     done = set(JH["done"])
+    JH["want"] = max(JH.get("want") or 0, min(n, len(caps)))
     todo = [c for c, _ in sorted(caps.items(), key=lambda x: -x[1]) if c not in done][:n]
     log("일본 옛 결산단신 시작", len(todo), "종목")
     got = [0, 0, "9999"]                                         # 종목 · 문서 · 받은 가장 옛 공시일
@@ -1958,7 +1959,7 @@ def replay_loop():
                 path.write_text(rid)
                 if last is not None:
                     log("다시 보내기 요청", rid, lines[1:])
-                    replay_run(lines[1:])
+                    threading.Thread(target=safe, args=(replay_run, lines[1:]), daemon=True).start()   # 긴 일이 다음 요청을 막지 않게
                 last = rid
         except Exception as e:                                   # noqa: BLE001
             if "404" not in str(e):
@@ -1983,10 +1984,10 @@ def segko_loop():
         hangul = re.compile(r"[\uac00-\ud7a3]")
         with H.lock:
             # 일·중 원문, 그리고 일본·홍콩 회사의 영문 부문 이름(Real Estate Lease Business)도 한국어로.
+            # 미국 회사의 영어 부문 이름도 한국어로(회원님 10/30: 인텔 'Client Computing' 이 영어로 남았다).
             names = {n for k, v in (H.D.get("seg") or {}).items() for n in v.get("names") or []
-                     if n not in SEGKO and not hangul.search(n)
-                     and (cjk.search(n) or k.startswith(("jp:", "hk:")))}
-        names = sorted(names)[:400]
+                     if n not in SEGKO and not hangul.search(n)}
+        names = sorted(names, key=lambda n: (not cjk.search(n), n))[:1600]
         for i in range(0, len(names), 40):
             got = brief.translate_names(names[i:i + 40])
             if got:
@@ -1994,6 +1995,18 @@ def segko_loop():
                 SEGKO_PATH.write_text(json.dumps(SEGKO, ensure_ascii=False))
                 log("부문 이름 번역", len(got), "개")
         time.sleep(600)
+
+
+def fill_loop():
+    """끊겨도 저절로 이어 간다 — 재배포로 서버가 다시 켜지면 하던 큰 일(옛 결산단신)이 멈췄고, 이번 분기 부문
+    메우기도 사람이 다시 걸어야 했다(인텔 3Q26 이 그래서 빠졌다, 10/30). 켜진 뒤 2분, 그다음 두 시간마다."""
+    time.sleep(120)
+    while True:
+        if JH.get("want") and len(JH["done"]) < JH["want"] and not any(t.name == "jphist" for t in threading.enumerate()):
+            threading.Thread(target=safe, args=(jphist, JH["want"]), daemon=True, name="jphist").start()
+        safe(segfill, 500)
+        safe(segfill_jp, 300)
+        time.sleep(2 * 3600)
 
 
 def history_loop():
@@ -2154,7 +2167,7 @@ def main():
     log("시작 — 텔레그램", "켜짐" if TG_TOKEN else "꺼짐(TG_BOT_TOKEN 없음)", "· 구독", len(TG.subs))
     H.refresh()
     shot.start(lambda: H.html)
-    for fn in (TG.poll, us_watch, jp_watch, hk_watch, history_loop, llm_selftest, replay_loop, segko_loop):
+    for fn in (TG.poll, us_watch, jp_watch, hk_watch, history_loop, llm_selftest, replay_loop, segko_loop, fill_loop):
         threading.Thread(target=fn, daemon=True, name=fn.__name__).start()
     ThreadingHTTPServer(("0.0.0.0", PORT), Handler).serve_forever()
 
