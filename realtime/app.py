@@ -431,39 +431,40 @@ def fname(eid):
 # 회원님 규칙(10/29): 은행·증권·보험·화학·철강(·리츠)은 빼고, 시총 1조 원 이상은
 # 무조건, 그 밑은 「잘 나왔을 때만」 — 매출 +15%↑ · 영업이익 +15%↑ 또는 흑자 전환 ·
 # 분기 매출 역대 최고. 세 시장 같은 규칙. 숫자가 없는 작은 회사(홍콩 PDF 등)는 못 가린다.
-TG_OUT_JP = {"은행", "증권", "증권·선물", "보험", "화학", "철강", "銀行業", "証券、商品先物取引業", "保険業", "化学", "鉄鋼"}
+# 회원님 규칙(10/30 갱신): 리츠·금융(은행·증권·보험·기타 금융)·화학·철강·신약 개발 바이오는 빼고,
+# 시총 1,000억 원 밑도 뺀다. 그 밖은 **전부** 보낸다(앞서 두었던 '작은 회사는 잘 나왔을 때만'은 걷었다).
+# 세 시장 같은 규칙. 사이트에는 여전히 전부 뜬다.
+TG_OUT_JP = {"은행", "증권", "증권·선물", "보험", "기타금융", "기타 금융", "화학", "철강", "리츠", "부동산투자신탁",
+             "銀行業", "証券、商品先物取引業", "保険業", "その他金融業", "化学", "鉄鋼", "REIT"}
 TG_OUT_IND = re.compile(
     r"(?i)\bbanks?\b|savings institutions|insurance|insurers|investment bankers|brokers|capital markets|"
-    r"^chemicals$|major chemicals|specialty chemicals|agricultural chemicals|steel|real estate investment trusts|reit")
-BIG_KRW = float(os.environ.get("TG_BIG_KRW", "1e12"))
-GROW = float(os.environ.get("TG_GROW_PCT", "15"))
+    r"finance|financial|credit services|asset management|investment managers|mortgage|"
+    r"^chemicals$|chemicals|steel|real estate investment trusts|\breit\b|biotechnology")
+BIO_DESC = re.compile(r"創薬|新薬開発|バイオベンチャー|신약|바이오벤처|drug discovery|clinical[- ]stage|biopharmaceutical company",
+                      re.I)
+MIN_KRW = float(os.environ.get("TG_MIN_KRW", "1e11"))      # 1,000억 원
 
 
 def tg_pick(ev, pts):
-    """(보낼까, 왜). pts 는 이번 분기까지 넣은 이력."""
+    """(보낼까, 왜)."""
     if ev["mkt"] == "jp" and (ev.get("sector") or "") in TG_OUT_JP:
         return False, "업종 제외"
-    if ev["mkt"] in ("us", "hk") and TG_OUT_IND.search(H.ind.get(ev["key"], "") or ""):
+    if TG_OUT_IND.search(H.ind.get(ev["key"], "") or ""):
         return False, "업종 제외"
+    # 일본 TDnet 줄은 업종이 비어 오는 일이 많다 — 이름으로 한 번 더(은행·증권·보험·금융·화학·철강).
+    if ev["mkt"] == "jp" and not ev.get("sector") and re.search(
+            r"銀行|証券|保険|ファイナンス|クレジット|リース|信託|化学|化成|鉄鋼|製鉄|製鋼|ＲＥＩＴ|投資法人", ev.get("orig", "")):
+        return False, "업종 제외(이름)"
+    if re.search(r"(?i)\bREIT\b|投資法人|리츠", ev.get("orig", "") + " " + ev.get("name", "")):
+        return False, "리츠 제외"
+    with H.lock:
+        desc = (H.D.get("descKo") or {}).get(ev["key"], "") + " " + (H.D.get("desc") or {}).get(ev["key"], "")
+    if BIO_DESC.search(desc):
+        return False, "신약 개발 바이오 제외"
     krw = (ev.get("cap") or 0) * 1e9 * float(H.D.get("usdKrw") or 1400)
-    if krw >= BIG_KRW:
-        return True, "시총 1조 원 이상"
-    p = ev.get("point")
-    if not p or p[1] is None:
-        return False, "작은 회사 · 숫자 없음"
-    lab, rev, opi = p[0], p[1], p[2]
-    if ev.get("yoy") is not None and ev["yoy"] >= GROW:
-        return True, f"매출 +{ev['yoy']:.0f}%"
-    prev = next((q for q in pts if q[0] == _prev_year(lab)), None)
-    if opi is not None and prev and prev[2] is not None:
-        if prev[2] <= 0 < opi:
-            return True, "흑자 전환"
-        if prev[2] > 0 and (opi / prev[2] - 1) * 100 >= GROW:
-            return True, f"영업이익 +{(opi / prev[2] - 1) * 100:.0f}%"
-    older = [q[1] for q in pts if q[0] != lab and q[1]]
-    if older and rev > max(older):
-        return True, "분기 매출 역대 최고"
-    return False, "작은 회사 · 기준 미달"
+    if krw < MIN_KRW:
+        return False, "시총 1,000억 원 미만" if krw else "시총 모름"
+    return True, cap_won(ev)
 
 
 def _prev_year(label):
