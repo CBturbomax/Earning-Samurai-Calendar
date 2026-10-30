@@ -521,17 +521,21 @@ SEG_KO_CJK = {
 # 쓸려 나간다(회원님이 빼라고 한 것은 은행과 리츠뿐이다).
 import re as _re
 
-_IND_OUT = _re.compile(r"\bbanks?\b|savings institution|real estate investment trust|\breit\b",
-                       _re.I)
+# 회원님 지시(2026-10-30): "부동산 / 도시가스 / 한전 같은 지역전력 / 임대업 — 평생 볼 일 없을 회사는 아예
+# 가져오지 마." 세 시장 공통. 발전(Power Generation·독립발전사)·재생에너지는 남긴다(지역 전력망 회사가 아니다).
+_IND_OUT = _re.compile(r"\bbanks?\b|savings institution|real estate|\breit\b|realty|building operators|"
+                       r"electric utilities|utilities - regulated|natural gas distribution|water supply|"
+                       r"rental|leasing", _re.I)
 _US_NAME_BANK = _re.compile(r"\bbancorp|\bbancshares|\bbankshares|\bbanc\b|\bbank\b", _re.I)
 _US_NAME_REIT = _re.compile(r"\breit\b|real estate investment trust|realty trust", _re.I)
-_HK_NAME_OUT = _re.compile(r"\bbank\b|\bbk\b|銀行|\breit\b|產業信託|置業信託|房託|房地產投資信託", _re.I)
-_JP_SECT_OUT = {"銀行", "銀行業", "REIT"}
-_JP_NAME_OUT = _re.compile(r"投資法人|^[ＲＩRI][－\-]")
+_HK_NAME_OUT = _re.compile(r"\bbank\b|\bbk\b|銀行|\breit\b|產業信託|置業信託|房託|房地產投資信託|"
+                          r"地產|置業|物業|燃氣|煤氣|電力|電能|\bproperties\b|\bestates?\b", _re.I)
+_JP_SECT_OUT = {"銀行", "銀行業", "REIT", "不動産", "不動産業", "電力", "ガス", "電気・ガス業"}
+_JP_NAME_OUT = _re.compile(r"投資法人|^[ＲＩRI][－\-]|不動産|地所|リース|電力|瓦斯|ガス(?!ト)")
 
 
 def excluded(mkt, name="", sector="", industry=""):
-    """은행·리츠인가. 세부 업종(industry)이 있으면 그것만 보고, 없을 때만 이름을 본다."""
+    """은행·리츠·부동산·도시가스·지역전력·임대업인가. 세부 업종(industry)이 있으면 그것만 보고, 없을 때만 이름을 본다."""
     if mkt == "jp":
         return sector in _JP_SECT_OUT or bool(_JP_NAME_OUT.search(name or ""))
     if industry:
