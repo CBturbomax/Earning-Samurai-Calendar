@@ -599,6 +599,7 @@ def finish(ev, point=None):
         if got.get(key):
             BIZ[key] = got[key]
             BIZ_PATH.write_text(json.dumps(BIZ, ensure_ascii=False))
+        log("비즈니스 즉석", key, got.get(key) or "못 만듦")
     # 회원님(10/30): "못 채울 거면 바로 쏘지 말고 다 완성해서 쏴 — 그렇다고 못 채웠다고 안 쏘지는 말고."
     # 이번 분기 가이던스나 사업부가 비면 AI 원문 판독(최대 80초)을 기다려 채운 다음 앨범을 보낸다. 못 채우면 그대로 보낸다.
     seg_missing = bool(seg) and point is not None and not ev.get("segPoint")
@@ -2327,7 +2328,7 @@ def llm_selftest():
 def main():
     import signal
     signal.signal(signal.SIGTERM, on_term)
-    log("시작 — 텔레그램", "켜짐" if TG_TOKEN else "꺼짐(TG_BOT_TOKEN 없음)", "· 구독", len(TG.subs))
+    log("시작 — 판", os.environ.get("RAILWAY_GIT_COMMIT_SHA", "")[:7], "· 텔레그램", "켜짐" if TG_TOKEN else "꺼짐(TG_BOT_TOKEN 없음)", "· 구독", len(TG.subs))
     H.refresh()
     shot.start(lambda: H.html)
     for fn in (TG.poll, us_watch, jp_watch, hk_watch, history_loop, llm_selftest, replay_loop, segko_loop, fill_loop, biz_loop):
