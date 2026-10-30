@@ -66,7 +66,7 @@ HK_EVERY = float(os.environ.get("HK_EVERY", "10"))
 QUIET = os.environ.get("QUIET_START", "1") == "1"   # 켤 때 이미 떠 있던 공시는 알리지 않는다
 # 다만 막 뜬 것(재배포 중에 나온 공시)까지 삼키면 안 된다 — 이 분 안의 것은 그대로 알린다.
 # 같은 공시를 두 번 보내는 것은 events.json(볼륨)의 id 로 막힌다.
-QUIET_MIN = int(os.environ.get("QUIET_MIN", "20"))
+QUIET_MIN = int(os.environ.get("QUIET_MIN", "180"))   # 켤 때 지난 3시간 공시를 다시 본다 — 보낸 것은 S 가 거른다(10/30 누락)
 
 
 def stale(t):
@@ -191,7 +191,7 @@ class Store:
                 return False
             self.seen.add(ev["id"])
             self.events.append(ev)
-            self.events = self.events[-600:]
+            self.events = self.events[-5000:]            # 하루 수백 건 — 켤 때 다시 훑어도 보낸 것을 또 보내지 않게 넉넉히
             self._save()
         return True
 
@@ -554,6 +554,10 @@ def live_hist(mkt, code):
 def finish(ev, point=None):
     """숫자가 있으면 차트를 그리고 · 보관 · 사이트 · 텔레그램."""
     key = ev["key"]
+    if not ev.get("replay"):                     # 이미 보낼지 정한 공시 — 다시 그리지도 않는다(켤 때 다시 훑는 몫)
+        old = S.get(ev["id"]) or {}
+        if old.get("tgWhy") or old.get("t_tg"):
+            return
     with H.lock:
         fin = dict(H.D.get("fin", {}).get(key) or {})
         seg = H.D.get("seg", {}).get(key)
@@ -1564,7 +1568,9 @@ def us_watch():
         t0 = time.time()
         try:
             for form in ("8-K",):
-                xml = http_get(FEED.format(form=form), timeout=15)
+                # 켤 때는 앞 몇 쪽을 넘겨 본다 — 꺼져 있던 사이 올라온 8-K 가 최신 40건 밖으로 밀렸을 수 있다.
+                xml = "".join(http_get(FEED.format(form=form).replace("start=0&count=40", f"start={st}&count=100"), timeout=20)
+                              for st in (range(0, 600, 100) if first else [None])) if first else http_get(FEED.format(form=form), timeout=15)
                 for e in ENTRY.findall(xml):
                     acc = re.search(r"AccNo:\s*</b>\s*([\d-]+)|AccNo:\s*([\d-]+)", html.unescape(e))
                     acc = acc and (acc.group(1) or acc.group(2))
