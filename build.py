@@ -5685,9 +5685,11 @@ function segChart(sg, cur) {
   let pts = (sg.pts || []).filter(p => labFrom18(p[0])).slice(-36);   // 1Q18 부터(회원님 10/30)
   if (pts.length < 2) return '';
   const names = sg.names || [];
-  // **기준이 바뀐 자리에서 앞을 자른다.** 지금 매출의 10% 넘는 큰 부문이 한 분기 만에 4배 넘게 뛰거나 1/4 밑으로
-  // 떨어지면 같은 이름의 다른 사업이다 — 인텔 Foundry 가 2024년 개편 때 2.9억 -> 43.7억 달러로 뛰었고,
-  // 옛 기준과 새 기준을 한 선에 이어 그려 선이 춤췄다(회원님 10/30). 빈 칸은 자르는 근거로 안 쓴다(수집 구멍일 수 있다).
+  // **사업부 기준이 바뀌면 차트를 둘로 — 지금 기준과 옛 기준**(회원님 10/30: "둘 다 보여줘, 옛 기준은 최대한").
+  // 바뀐 자리 ① 지금 매출의 10% 넘는 큰 부문이 한 분기 만에 4배 넘게 뛰거나 1/4 밑으로(인텔 Foundry 2024 개편)
+  //          ② 최근 두 분기에 값이 없는 부문(옛 이름)이 마지막으로 값을 가진 다음 분기.
+  // 빈 칸은 근거로 안 쓴다(수집 구멍일 수 있다).
+  let cut = 0;
   {
     const lastRow = pts[pts.length - 1];
     const tot = lastRow.slice(1).reduce((a, v) => a + (v > 0 ? v : 0), 0);
@@ -5695,14 +5697,27 @@ function segChart(sg, cur) {
     for (let i = pts.length - 1; i > 0; i--) {
       if (big.some(j => { const a = pts[i - 1][j + 1], b = pts[i][j + 1];
                           return a != null && b != null && a > 0 && (b / a > 4 || b / a < 0.25); })) {
-        if (pts.length - i >= 2) pts = pts.slice(i);
+        if (pts.length - i >= 2) cut = i;
         break;
       }
     }
   }
-  // 최근 두 분기에 값이 없는 부문은 옛 기준이다(인텔 Mobileye·Network and Edge — 2024 개편 뒤 사라짐). 그리지 않는다.
   const live = new Set(names.map((_, j) => j).filter(j => pts.slice(-2).some(r => r[j + 1] != null)));
-  if (live.size >= 2) pts = pts.map(r => [r[0]].concat(r.slice(1).map((v, j) => live.has(j) ? v : null)));
+  if (live.size >= 2 && live.size < names.length) {
+    let lastDead = -1;
+    pts.forEach((r, i) => { if (r.slice(1).some((v, j) => v != null && !live.has(j))) lastDead = i; });
+    if (!cut && lastDead >= 0 && pts.length - (lastDead + 1) >= 2) cut = lastDead + 1;
+  }
+  const onlyLive = r => [r[0]].concat(r.slice(1).map((v, j) => live.size >= 2 && !live.has(j) ? null : v));
+  const nowPts = pts.slice(cut).map(onlyLive);
+  const oldPts = pts.slice(0, cut);
+  const span = ps => ps[0][0] + '~' + ps[ps.length - 1][0];
+  let html = segDraw(sg, names, nowPts, cur, cut ? '지금 기준 · ' + span(nowPts) : '');
+  if (cut && oldPts.length >= 2) html += segDraw(sg, names, oldPts, cur, '옛 기준 · ' + span(oldPts));
+  return html;
+}
+
+function segDraw(sg, names, pts, cur, tag) {
   const all = pts.flatMap(r => r.slice(1).filter(v => v != null));
   const maxRaw = Math.max(...all, 1), minRaw = Math.min(...all, 0);
   const U = unitFor(maxRaw, cur);
@@ -5751,6 +5766,7 @@ function segChart(sg, cur) {
   // 사업부문이 없어 제품이나 지역으로 쪼갠 회사가 있다(애플의 영업부문은 지역).
   // 제목을 그대로 '사업부별'이라 쓰면 거짓말이라 축을 그대로 적는다.
   return '<div class="finhead sub">' + esc(sg.ax || '사업부') + '별 매출' +
+    (tag ? ' <span class="now">' + esc(tag) + '</span>' : '') +
     '<span class="dim">(단위: ' + esc(U.ko) +
     (sg.cov ? ' · 총매출의 ' + sg.cov + '%' +
        (sg.cov > 105 ? ' — 부문끼리 주고받은 것 포함' : '') : '') + ')</span></div>' +
