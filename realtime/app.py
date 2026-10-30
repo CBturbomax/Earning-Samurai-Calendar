@@ -103,7 +103,7 @@ class History:
     """사이트가 가진 것 — 종목 이름·시총·지난 분기·사업부. 20분마다 새로."""
 
     FILES = ("financials.json", "financials_intl.json", "financials_jp.json",
-             "caps.json", "earnings_us.json", "earnings_us_fpi.json", "guidance_hist_jp.json")
+             "caps.json", "earnings_us.json", "earnings_us_fpi.json", "guidance_hist_jp.json", "segments_jp.json")
 
     def __init__(self):
         self.lock = threading.Lock()
@@ -597,7 +597,7 @@ def finish(ev, point=None):
         return
     ev["brief"] = b
     ser_add_q(key, b, ev.get("cur") or "USD")
-    sp = seg_ai_try(ev, b, seg)
+    sp = None if ev.get("segPoint") else seg_ai_try(ev, b, seg)
     if sp:
         ev["segPoint"] = sp                     # 사이트 부문 막대에 이번 분기를 곧바로 얹는다
     if not replay:
@@ -1249,6 +1249,49 @@ def _jp_ir_text(code, day):
     return ""
 
 
+def jp_seg_now(key, blob, label, seg):
+    """결산단신 XBRL 의 부문 누계 + 지난 누계(segments_jp.json raw) -> 이번 분기 단독 부문 값을 **AI 없이** 곧바로.
+    이름은 전년 같은 분기 값이 사이트 막대와 원 단위까지 같은 것끼리 짝짓는다(그래서 표기가 달라도 안전하다).
+    회원님(10/30): "실적 방금 쏴준 거 또 3분기 거 안 가져왔잖아." — 알림 그림에 이번 분기 사업부가 들어가게."""
+    if not seg or not seg.get("pts"):
+        return None
+    try:
+        raw = json.loads((ROOT / "data" / "segments_jp.json").read_text()).get("raw", {}).get(key, {})
+    except (OSError, ValueError):
+        raw = {}
+    pts = {}
+    for span, row in raw.items():
+        st, _, en = span.partition("/")
+        if st and en:
+            pts[(st, en)] = fj.seg_clean(row)
+    for st, en, row in fj.read_segments(blob):
+        pts[(st, en)] = fj.seg_clean(row)
+    q = fj.seg_quarters([(st, en, r) for (st, en), r in pts.items() if len(r) >= 2])
+    if not q:
+        return None
+    end = max(q)
+    cur = q[end]
+    pend = f"{int(end[:4]) - 1}{end[4:]}"
+    prev = q.get(pend) or next((v for k, v in q.items() if k[:7] == pend[:7]), None)
+    rows = {p[0]: p for p in seg["pts"]}
+    site_prev = rows.get(prev_year(label))
+    if not prev or not site_prev:
+        return None
+    names = seg["names"]
+    out = {}
+    for n, v in prev.items():
+        for i, sn in enumerate(names):
+            sv = site_prev[i + 1]
+            if sv and abs(v - sv) <= max(1, abs(sv) * 0.005) and n in cur:
+                out[sn] = cur[n]
+    now = [n for i, n in enumerate(names) if rows[seg["pts"][-1][0]][i + 1] is not None]
+    if len(out) < max(2, len(now) - 0):
+        log("XBRL 부문 짝 못 맞춤", key, list(cur)[:5], names[:5])
+        return None
+    log("XBRL 부문 이번 분기", key, label, len(out), "개")
+    return {"label": label, "names": names, "vals": [out.get(n) for n in names]}
+
+
 def jp_process(row, day, replay=False):
     code = row["code"]
     if H.skip("jp", code, row["name"]):
@@ -1270,6 +1313,14 @@ def jp_process(row, day, replay=False):
             q = fj.quarter_from(vals, prior) if vals else None
             if q:
                 point = {"label": q["label"], "rev": q["rev"], "opi": q.get("opi"), "ni": q.get("ni")}
+                with H.lock:
+                    sg = H.D.get("seg", {}).get(f"jp:{code}")
+                try:
+                    sp = jp_seg_now(f"jp:{code}", blob, q["label"], sg)
+                    if sp:
+                        ev["segPoint"] = sp           # 그림(사이트 화면)에 이번 분기 사업부가 바로 들어간다
+                except Exception:                     # noqa: BLE001
+                    log("XBRL 부문 실패", code, traceback.format_exc(limit=2))
             ev["url"] = zurl
     except Exception:                                            # noqa: BLE001
         log("일본 결산단신 실패", code, traceback.format_exc(limit=2))
@@ -1368,6 +1419,21 @@ def replay_run(lines):
         f = re.match(r"segfill\s+(\d+)", ln.strip())
         if f:
             segfill(int(f.group(1)))
+            continue
+        f = re.match(r"jpcode\s+(\w+)", ln.strip())
+        if f:
+            for back in range(0, 5):
+                day = (datetime.now(JST) - timedelta(days=back)).strftime("%Y-%m-%d")
+                rows = []
+                for page in range(1, 8):
+                    got = fj.listing(day, page)
+                    if not got:
+                        break
+                    rows += got
+                hit = [r for r in rows if r["code"] == f.group(1) and fj.TANSHIN.search(r["title"]) and r["zip"]]
+                if hit:
+                    jp_process(hit[0], day, True)
+                    break
             continue
         f = re.match(r"serfill\s+(\d+)", ln.strip())
         if f:
