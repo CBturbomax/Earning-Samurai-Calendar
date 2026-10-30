@@ -75,6 +75,38 @@ def _ask(user, timeout):
     return ""
 
 
+KANA = re.compile(r"[\u3040-\u30ff\uff66-\uff9f]")
+HAN_ONLY = re.compile(r"[\u4e00-\u9fff]{2,}")
+
+
+def translate_names(names, timeout=60):
+    """부문 이름(일·중) -> 쉬운 한국어. 뜻으로 옮긴다(한자음으로 읽지 않는다). 실패하면 {}."""
+    if not names or not enabled():
+        return {}
+    ask = ("다음 사업부문 이름을 한국 애널리스트가 쓰는 자연스러운 한국어로 뜻을 옮겨라. 한자를 한국 한자음으로 읽지 말고, "
+           "가타카나 외래어는 표준 한국어 외래어로(エナジー→에너지), 事業·セグメント 같은 꼬리는 빼거나 '사업'으로, 14자 안팎. "
+           "JSON 객체 {원문: 한국어} 로만 답한다.\n" + json.dumps(names, ensure_ascii=False))
+    try:
+        out = _ask(ask, timeout)
+        m = re.search(r"\{.*\}", out, re.S)
+        d = json.loads(m.group(0)) if m else {}
+    except Exception as e:                                       # noqa: BLE001
+        LOG("이름 번역 실패", repr(e)[:200])
+        return {}
+    return {k: str(v).strip() for k, v in d.items() if k in names and v and not KANA.search(str(v))}
+
+
+def translate_lines(lines, timeout=40):
+    """일본어·한자가 섞인 문장 -> 한국어로만(뜻 그대로, 고유명사도 한국어 표기)."""
+    try:
+        out = _ask("다음 문장들을 뜻 그대로 쉬운 한국어로만 다시 써라. 일본어·한자를 남기지 말고 고유명사도 한국어로 적는다. "
+                   "JSON 객체 {원문: 한국어} 로만 답한다.\n" + json.dumps(lines, ensure_ascii=False), timeout)
+        m = re.search(r"\{.*\}", out, re.S)
+        return {k: str(v) for k, v in (json.loads(m.group(0)) if m else {}).items()}
+    except Exception:                                            # noqa: BLE001
+        return {}
+
+
 def enabled():
     return bool(CC_TOKEN or AN_KEY or OR_KEY)
 
@@ -141,6 +173,22 @@ def why(name, text, timeout=85, names=None):
         LOG("요약 실패:", name, repr(e)[:300])
         return None
     clean = lambda xs: [str(x).strip() for x in (xs or []) if str(x).strip()]   # noqa: E731
+    # 한국어만 — 일본어·한자가 남은 줄은 한 번 더 옮기게 한다(⚠️ 주의 줄에 일본어가 섞여 나갔다, 10/30).
+    def ko(lines):
+        bad = [x for x in lines if KANA.search(x) or HAN_ONLY.search(x)]
+        if not bad:
+            return lines
+        fixed = translate_lines(bad)
+        return [fixed.get(x, x) for x in lines if not (KANA.search(fixed.get(x, x)))]
+    for k in ("why", "watch", "guide"):
+        v = d.get(k)
+        if isinstance(v, list):
+            d[k] = ko([str(x) for x in v])
+        elif isinstance(v, str) and v:
+            d[k] = (ko([v]) or [""])[0]
+    for k in ("key", "biz"):
+        if isinstance(d.get(k), str) and (KANA.search(d[k]) or HAN_ONLY.search(d[k])):
+            d[k] = (ko([d[k]]) or [""])[0]
     g = d.get("guide")
     res = {"why": clean(d.get("why"))[:3], "watch": clean(d.get("watch"))[:2],
            "guide": clean(g if isinstance(g, list) else [g] if g else [])[:2],
