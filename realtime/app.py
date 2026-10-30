@@ -1816,7 +1816,9 @@ def guide_audit(days=45, limit=400):
                     fc = fj.forecast_from(vals or {})
                     res = GD.add(code, fc, day)
                     if not res:
-                        log("XBRL 예상 못 씀", code, "항목", len(vals or {}), "예상", fc, "단계", fc and stage_of(fc.get("end") or "0000-00", day))
+                        ns = next((n for n in fj.NAME_REV if (vals or {}).get(n)), "")
+                        log("XBRL 예상 못 씀", code, "항목", len(vals or {}), "예상", fc, "매출 문맥", ns,
+                            [(c[:70], se) for c, _, se in (vals or {}).get(ns, [])][:5])
                     break
             if not res and hit.get("document_url"):
                 pn = hit["document_url"].rsplit("/", 1)[-1]
