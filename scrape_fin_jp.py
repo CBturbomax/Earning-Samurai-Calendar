@@ -128,7 +128,9 @@ def listing(day, page=1):
     for m in ROW_RE.finditer(txt):
         d = m.groupdict()
         zip_m = ZIP_RE.search(d["xbrlcell"] or "")
+        pdf_m = LINK_RE.search(d["titlecell"] or "")
         out.append({
+            "pdf": pdf_m.group(1) if pdf_m else "",
             "time": d["time"].strip(),
             "code": d["code"].strip()[:4],
             "name": TAGS.sub("", d["name"]).strip(),
@@ -1289,7 +1291,7 @@ def load_seg_done():
 
 # 부문 이름이 그대로 남아 있는 누계 점은 종목당 이만큼만 들고 있는다. 스무 분기면
 # 화면에 그리는 스물두 칸을 거의 채우고, 그 이상은 파일만 무거워진다.
-SEG_KEEP_RAW = 48
+SEG_KEEP_RAW = 80
 
 
 def save_segments(raw, seg_done=(), quiet=False):
@@ -1307,7 +1309,7 @@ def save_segments(raw, seg_done=(), quiet=False):
         q = drop_totals(seg_quarters(pts))
         if len(q) < 2:
             continue
-        ends = sorted(q)[-24:]
+        ends = sorted(q)[-36:]
         names = {}
         for e in ends:
             for n, v in q[e].items():

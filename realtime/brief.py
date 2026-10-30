@@ -217,6 +217,47 @@ def us_guide(name, docs, timeout=150):
     return got
 
 
+PRE_ASK = ("아래는 일본 회사의 적시공시(결산단신보다 먼저 내는 실적 속보·업적 예상 수정·예상과 실적의 차이) 원문이다. "
+           "JSON 으로만 답한다: {\"what\": \"실적 미리보기\"(이미 끝난 기간의 실적을 미리 알림) 또는 \"가이던스 수정\"(앞으로의 예상만 바꿈), "
+           "\"period\": \"숫자가 가리키는 기간을 쉬운 한국어로(예: 2027년 3월기 상반기, 2026년 12월기 연간)\", "
+           "\"rows\": [{\"n\": \"매출\"|\"영업이익\"|\"경상이익\"|\"순이익\", \"prev\": 직전 회사 예상(없으면 null), \"now\": 이번 숫자(실적 또는 새 예상)}], "
+           "\"fy\": 이번 공시로 바뀐 **연간(회계연도) 예상**이 있으면 {\"fy_end\": \"YYYY-MM\", \"rev\": 새 매출 예상, \"op\": 새 영업이익 예상, \"ni\": 새 순이익 예상} 아니면 null, "
+           "\"why\": [바뀐 이유를 쉬운 한국어로 최대 3줄]}. "
+           "금액은 엔 1단위 숫자로(예: 11,500百万円 → 11500000000). 원문 표에 있는 것만, 지어내지 않는다.\n\n")
+
+
+def pre_read(name, title, text, timeout=60):
+    """적시공시(실적 속보·업적 예상 수정) -> {what, period, rows, fy, why} 또는 None."""
+    if not enabled() or len(text or "") < 80:
+        return None
+    try:
+        out = _ask(f"{PRE_ASK}회사: {name}\n제목: {title}\n\n{text[:12000]}", timeout)
+        m = re.search(r"\{.*\}", out, re.S)
+        d = json.loads(m.group(0)) if m else {}
+    except Exception as e:                                       # noqa: BLE001
+        LOG("적시공시 읽기 실패:", name, repr(e)[:200])
+        return None
+    rows = []
+    for r in d.get("rows") or []:
+        try:
+            now = float(str(r.get("now")).replace(",", ""))
+            prev = float(str(r.get("prev")).replace(",", "")) if r.get("prev") not in (None, "") else None
+        except (TypeError, ValueError):
+            continue
+        if r.get("n"):
+            rows.append({"n": str(r["n"])[:8], "now": now, "prev": prev})
+    if not rows:
+        return None
+    why = [str(x).strip() for x in d.get("why") or [] if str(x).strip()]
+    bad = [x for x in why if KANA.search(x) or HAN_ONLY.search(x)]
+    if bad:
+        fx = translate_lines(bad)
+        why = [fx.get(x, x) for x in why if not KANA.search(fx.get(x, x))]
+    return {"what": "가이던스 수정" if "가이던스" in str(d.get("what")) else "실적 미리보기",
+            "period": str(d.get("period") or "")[:30], "rows": rows[:4], "fy": fy_guide(d.get("fy")) if d.get("fy") else None,
+            "why": why[:3]}
+
+
 def why(name, text, timeout=85, names=None):
     """-> {"why": [...], "watch": [...], "guide": str} 또는 None."""
     text = (text or "").strip()

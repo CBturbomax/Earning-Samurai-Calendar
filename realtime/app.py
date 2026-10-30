@@ -44,6 +44,9 @@ import scrape_fin_jp as fj         # noqa: E402
 import scrape_hk as hk             # noqa: E402
 import scrape_live_us as lu        # noqa: E402
 import scrape_fin_intl as fi       # noqa: E402
+import scrape_jp_tdnet as jt       # noqa: E402
+import montable                    # noqa: E402
+import pdftext                     # noqa: E402
 from markets import excluded       # noqa: E402
 
 import brief                       # noqa: E402
@@ -1009,13 +1012,29 @@ JH_PATH = DATA / "jphist.json"
 try:
     JH = json.loads(JH_PATH.read_text())
 except (OSError, ValueError):
-    JH = {"done": [], "seg": {}}
+    JH = {"done": [], "seg": {}, "fin": {}}
+JH.setdefault("fin", {})
 JH_LOCK = threading.Lock()
 BROWSER_UA = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/124.0 Safari/537.36"
 _yano = {"t": 0.0, "lock": threading.Lock()}
 
 
-def jphist(n, since="2021-01-01"):
+def jp_fin_spans(vals):
+    """결산단신 요약 XBRL -> {'시작/종료': {rev, opi, ni}} 누계 실적(예상은 뺀다, 연결 우선). 분기로 되돌리는 건 빌드가 한다."""
+    out = {}
+    for k, names in (("rev", fj.NAME_REV), ("opi", fj.NAME_OPI), ("ni", fj.NAME_NI)):
+        for nm in names:
+            hits = [(cid, v, se) for cid, v, se in vals.get(nm, [])
+                    if not fj.FORECAST_CTX.search(cid) and fj.DUR_CTX.search(cid) and se and se[0] and se[1]
+                    and not fj.NONCONS_CTX.search(cid)]
+            if hits:
+                for cid, v, (st, en) in hits:
+                    out.setdefault(f"{st}/{en}", {})[k] = v
+                break
+    return out
+
+
+def jphist(n, since="2017-01-01"):
     """일본 옛 결산단신을 통째로 — 가이던스 변천(연간 예상)과 부문 누계(2024년부터 비던 3·4분기)를 같이 채운다.
     목록은 yanoshin TDnet API(2009년치부터, 문서번호·XBRL 이름), 파일은 JPX 공시 보관소(약 5~6년,
     www2.jpx.co.jp/disc/{코드}0/{파일}). TDnet 은 한 달만 남기고 InvestingWiki 는 하루 8천 건 한도라 직접 받는다."""
@@ -1028,7 +1047,7 @@ def jphist(n, since="2021-01-01"):
     done = set(JH["done"])
     todo = [c for c, _ in sorted(caps.items(), key=lambda x: -x[1]) if c not in done][:n]
     log("일본 옛 결산단신 시작", len(todo), "종목")
-    got = [0, 0]
+    got = [0, 0, "9999"]                                         # 종목 · 문서 · 받은 가장 옛 공시일
 
     def listing(code):
         with _yano["lock"]:                                      # 한 사람이 돌리는 무료 API — 1초에 한 번
@@ -1049,7 +1068,7 @@ def jphist(n, since="2021-01-01"):
         items = sorted((it for it in items if (it.get("pubdate") or "")[:10] >= since and it.get("url_xbrl")
                         and fj.TANSHIN.search(it.get("title") or "") and not fj.NOT_TANSHIN.search(it.get("title") or "")),
                        key=lambda it: it["pubdate"])
-        seg = {}
+        seg, fin = {}, {}
         for it in items:
             fn = it["url_xbrl"].rsplit("/", 1)[-1]
             try:
@@ -1062,17 +1081,22 @@ def jphist(n, since="2021-01-01"):
                     GD.add(code, fj.forecast_from(vals), it["pubdate"][:10])
                 for st, en, row in fj.read_segments(blob):
                     seg[f"{st}/{en}"] = row
+                for span, row in jp_fin_spans(vals or {}).items():
+                    fin.setdefault(span, row)
                 got[1] += 1
+                got[2] = min(got[2], it["pubdate"][:10])
             except Exception:                                    # noqa: BLE001
                 continue
         with JH_LOCK:
             if seg:
                 JH["seg"].setdefault("jp:" + code, {}).update(seg)
+            if fin:
+                JH["fin"].setdefault("jp:" + code, {}).update(fin)
             JH["done"].append(code)
             got[0] += 1
             if got[0] % 10 == 0:
                 JH_PATH.write_text(json.dumps(JH, ensure_ascii=False))
-                log("옛 결산단신", got[0], "/", len(todo), "종목 · 문서", got[1])
+                log("옛 결산단신", got[0], "/", len(todo), "종목 · 문서", got[1], "· 가장 옛", got[2])
     with ThreadPoolExecutor(3) as ex:
         list(ex.map(one, todo))
     with JH_LOCK:
@@ -1212,6 +1236,27 @@ def cap_won(ev):
     return f"{round(krw / 1e12):,}조 원"
 
 
+def oku(v):
+    """엔 -> '163억 엔' (1억 밑은 '0.5억 엔')."""
+    if v is None:
+        return "—"
+    x = v / 1e8
+    return (f"{x:,.0f}억 엔" if abs(x) >= 100 else f"{x:,.1f}억 엔".replace(".0억", "억"))
+
+
+def mon_line(ev):
+    """월차를 내는 회사 — 결산 카드에 최근 월차 한 줄(회원님 10/30)."""
+    with H.lock:
+        num = (H.D.get("monthlyNum") or {}).get(ev["code"])
+    if not num or not num.get("historyVerified") or not num.get("m"):
+        return ""
+    r = num["m"][-1]
+    if r[2] is None:
+        return ""
+    base = num.get("historyBase") or num.get("base") or ""
+    return f"📅 월차 : {r[0].replace('-', '.')} {html.escape(base + ' ' if base else '')}매출 전년비 {pct(r[2] - 100)}"
+
+
 def caption(ev):
     """회원님이 정한 그대로(10/30):
     🇯🇵 재팬 팃슈엔지니어링 (7774) / 3Q26 실적
@@ -1223,13 +1268,37 @@ def caption(ev):
     name = f"{e(ev['name'])} ({e(ev['code'])})"
     if ev.get("url"):
         name = f"<a href=\"{e(ev['url'])}\">{name}</a>"
-    head = f"{FLAG[ev['mkt']]} <b>{name}</b>" + (f" / {e(ev['point'][0])} 실적" if ev.get("point") else " / 실적 발표")
+    pre, mon = ev.get("preInfo"), ev.get("mon")
+    tail = (f" / {e(pre['what'])}" if pre else f" / {int(mon['period'][5:7])}월 월차" if mon
+            else f" / {e(ev['point'][0])} 실적" if ev.get("point") else " / 실적 발표")
+    head = f"{FLAG[ev['mkt']]} <b>{name}</b>" + tail
     lines = [head]
     cw = cap_won(ev)
     if cw:
         lines += ["", f"💰 <b><u>시총 : {cw}</u></b>"]          # 회원님(10/30): 굵게 + 밑줄
     if ev.get("kstTime"):
-        lines += ["", f"🕒 실적발표 시간 : {ev['kstDate'].replace('-', '.')} / {ev['kstTime']}"]
+        lines += ["", f"🕒 {'공시' if pre or mon else '실적발표'} 시간 : {ev['kstDate'].replace('-', '.')} / {ev['kstTime']}"]
+    if pre:                                       # 결산단신 전 실적 속보·예상 수정 — 직전 회사 예상 → 이번 숫자
+        rs = []
+        for r in pre["rows"]:
+            t = f"{r['n']} {oku(r['prev'])} → {oku(r['now'])}" if r.get("prev") else f"{r['n']} {oku(r['now'])}"
+            if r.get("prev") and r["prev"] > 0:
+                t += f" ({pct((r['now'] / r['prev'] - 1) * 100)})"
+            rs.append(t)
+        lines += ["", f"🔥 {e(pre['period'])}" + (" · 직전 회사 예상 대비" if any(r.get('prev') for r in pre['rows']) else "")]
+        lines += [e(x) for x in rs]
+        gl = guide_line(ev)
+        if gl:
+            lines += ["", gl]
+        out = "\n".join(lines)
+        return out if len(out) <= 1024 else out[:1000] + "…"
+    if mon:
+        lines += ["", f"🔥 {e(mon['base'] + ' ' if mon['base'] else '')}매출 전년비 : <b>{pct(mon['yoy'])}</b>"
+                      + (f" ({e(mon['other'])})" if mon.get("other") else "")]
+        return "\n".join(lines)
+    ml = mon_line(ev) if ev["mkt"] == "jp" else ""
+    if ml:
+        lines += ["", ml]
     p = ev.get("point")
     key = []
     if p:
@@ -1546,6 +1615,83 @@ def jp_process(row, day, replay=False):
     finish(ev, point)
 
 
+# 결산단신보다 먼저 실적을 알리는 공시 — 다카라토미 10/29 「上期業績予想と実績値との差異」(결산단신은 11/10).
+PRE_RE = re.compile(r"業績予想.{0,12}修正|予想.{0,6}実績.{0,6}差異|実績.{0,8}差異|決算速報|業績速報|業績.{0,4}(概要|概況)に関する")
+PRE_SKIP = re.compile(r"決算短信|訂正|取消|中止|延期|配当予想の修正に関するお知らせ$")
+MON_SENT = set()
+
+
+def jp_pre_process(row, day, replay=False):
+    code = row["code"]
+    if H.skip("jp", code, row["name"]):
+        return
+    url = "https://www.release.tdnet.info/inbs/" + row["pdf"]
+    ev = base_event("jp", code, row["name"], f"{day} {row['time']}", JST, "TDnet 적시공시", url, row["title"])
+    ev["replay"] = replay
+    try:
+        text = pdftext.extract_text(http_get(url, ua=BROWSER_UA, timeout=30, binary=True), 6)
+    except Exception as e:                                       # noqa: BLE001
+        log("적시공시 PDF 실패", code, repr(e)[:120])
+        return
+    p = brief.pre_read(ev["name"], row["title"], text)
+    if not p:
+        log("적시공시 숫자 없음", code, row["title"][:40])
+        return
+    ev["preInfo"] = p
+    if p.get("fy"):                                              # 연간 예상이 바뀌었으면 가이던스 변천에도 적는다
+        g = p["fy"]
+        ev["guide"] = GD.add(code, {"end": g["fy_end"] + "-28", "rev": g.get("rev"), "opi": g.get("op"), "ni": g.get("eps")}, day)
+    ev["_text"] = text
+    log("적시공시", code, p["what"], p["period"])
+    finish(ev, None)
+
+
+def jp_mon_process(row, day, replay=False):
+    """월차 — 표를 읽어 최근 달의 전년비. 기존점 우선. +10% 이상이면 알림(회원님 10/30)."""
+    code = row["code"]
+    if H.skip("jp", code, row["name"]):
+        return
+    url = "https://www.release.tdnet.info/inbs/" + row["pdf"]
+    try:
+        got = montable.read(http_get(url, ua=BROWSER_UA, timeout=30, binary=True), day, title=row["title"])
+    except Exception as e:                                       # noqa: BLE001
+        log("월차 PDF 실패", code, repr(e)[:120])
+        return
+    rows = [r for r in (got or {}).get("rows") or []
+            if r.get("yoy") is not None and (not r.get("metric") or re.search(r"売上|営業収益|営業収入|取扱高|販売高|月商|前年|昨対", r["metric"]))]
+    if not rows:
+        log("월차 표 못 읽음", code, row["title"][:40])
+        return
+    last = max(r["period"] for r in rows)
+    now = [r for r in rows if r["period"] == last]
+    lab = lambda r: (r.get("metric") or "") + " " + (got.get("yoy_label") or "")     # noqa: E731
+    pick = next((r for r in now if "既存" in lab(r)), None) or next((r for r in now if "全店" in lab(r)), None) or now[0]
+    base = "기존점" if "既存" in lab(pick) else "전점" if "全店" in lab(pick) else ""
+    other = next((r for r in now if r is not pick and "全店" in lab(r)), None)
+    key = (code, last, base)
+    if key in MON_SENT and not replay:
+        return
+    MON_SENT.add(key)
+    ev = base_event("jp", code, row["name"], f"{day} {row['time']}", JST, "TDnet 월차", url, row["title"])
+    ev["replay"] = replay
+    series = [[r["period"], r.get("rev"), r["yoy"], 0] for r in rows if lab(r) == lab(pick)]
+    ev["mon"] = {"period": last, "base": base, "yoy": pick["yoy"] - 100, "rows": series,
+                 "other": f"전점 {pct(other['yoy'] - 100)}" if other else ""}
+    send, why = tg_pick(ev, [])
+    if send and ev["mon"]["yoy"] < 10 and not replay:
+        send, why = False, f"월차 {pct(ev['mon']['yoy'])} (+10% 미만)"
+    log(f"월차 {code} {ev['name']} {last} {base} {pct(ev['mon']['yoy'])} · 텔레그램 {'보냄' if send or replay else '안 보냄'} ({why})")
+    if not (send or replay):
+        return
+    pngs = []
+    if H.html:
+        try:
+            pngs = shot.render(dict({k: v for k, v in ev.items() if not k.startswith("_")}, onlySeg="mon")) or []
+        except Exception:                                        # noqa: BLE001
+            log("월차 그림 실패", code, traceback.format_exc(limit=2))
+    TG.send_album(("🧪 <i>지난 공시 다시 보내기(시험)</i>\n" if replay else "") + caption(ev), pngs)
+
+
 def jp_watch():
     seen = set()
     first = True
@@ -1558,11 +1704,15 @@ def jp_watch():
                 if k in seen:
                     continue
                 seen.add(k)
-                if not (fj.TANSHIN.search(r["title"]) and not fj.NOT_TANSHIN.search(r["title"]) and r["zip"]):
-                    continue
                 if first and (not r["time"] or stale(datetime.strptime(f"{day} {r['time']}", "%Y-%m-%d %H:%M").replace(tzinfo=JST))):
                     continue
-                POOL.submit(safe, jp_process, r, day)
+                t = r["title"]
+                if fj.TANSHIN.search(t) and not fj.NOT_TANSHIN.search(t) and r["zip"]:
+                    POOL.submit(safe, jp_process, r, day)
+                elif PRE_RE.search(t) and not PRE_SKIP.search(t) and r.get("pdf"):
+                    POOL.submit(safe, jp_pre_process, r, day)         # 결산단신 전 실적 속보·예상 수정(회원님 10/30)
+                elif jt.is_monthly(t) and r.get("pdf"):
+                    POOL.submit(safe, jp_mon_process, r, day)         # 월차
             first = False
         except Exception as e:                                   # noqa: BLE001
             log("일본 목록:", e)
@@ -1651,6 +1801,22 @@ def replay_run(lines):
                 hit = [r for r in rows if r["code"] == f.group(1) and fj.TANSHIN.search(r["title"]) and r["zip"]]
                 if hit:
                     jp_process(hit[0], day, True)
+                    break
+            continue
+        f = re.match(r"jp(pre|mon)\s+(\w+)", ln.strip())         # 시험 — 최근 닷새 안의 그 종목 적시공시·월차를 다시
+        if f:
+            for back in range(0, 6 if f.group(1) == "pre" else 32):
+                day = (datetime.now(JST) - timedelta(days=back)).strftime("%Y-%m-%d")
+                rows = []
+                for page in range(1, 12):
+                    got = fj.listing(day, page)
+                    if not got:
+                        break
+                    rows += got
+                fn = (lambda t: PRE_RE.search(t) and not PRE_SKIP.search(t)) if f.group(1) == "pre" else jt.is_monthly
+                hit = [r for r in rows if r["code"] == f.group(2) and fn(r["title"]) and r.get("pdf")]
+                if hit:
+                    (jp_pre_process if f.group(1) == "pre" else jp_mon_process)(hit[0], day, True)
                     break
             continue
         f = re.match(r"serfill\s+(\d+)", ln.strip())
@@ -1827,6 +1993,10 @@ class Handler(BaseHTTPRequestHandler):
             self.head()
             with JH_LOCK:
                 self.wfile.write(json.dumps(JH["seg"], ensure_ascii=False).encode())
+        elif path == "/api/jpfinraw":                            # 옛 결산단신 실적 누계 — 빌드가 1Q18 부터의 분기로 되돌려 잇는다
+            self.head()
+            with JH_LOCK:
+                self.wfile.write(json.dumps(JH["fin"], ensure_ascii=False).encode())
         elif path == "/api/guide":                               # 빌드가 받아 사이트 상세창의 가이던스 변천으로
             self.head()
             self.wfile.write(json.dumps({"jp": GD.own, "us": GU.own}, ensure_ascii=False).encode())
