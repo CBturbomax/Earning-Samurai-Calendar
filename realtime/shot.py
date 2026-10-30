@@ -101,7 +101,13 @@ window.tgBuild = function (ev, gh) {
     const s = segChart(sg, (f && f.cur) || MC[m] || 'USD');
     if (s) out.push(s.replace(/(<div class="finhead[^"]*">)/, '$1' + title + ' '));
   }
-  if (ev.onlySeg === 'guide') {                     // 답장용 — 가이던스 변천만(미국: 보도자료를 읽은 뒤라 앨범보다 늦다)
+  if (ev.onlySeg === 'segchart') {                  // 답장용 — 이번 분기를 얹은 사업부 그림만
+    out.length = 0;
+    if (D.seg[key]) {
+      const s2 = segChart(D.seg[key], (f && f.cur) || ({ jp: 'JPY', hk: 'HKD' })[m] || 'USD');
+      if (s2) out.push(s2.replace(/(<div class="finhead[^"]*">)/, '$1' + title + ' '));
+    }
+  } else if (ev.onlySeg === 'guide') {                     // 답장용 — 가이던스 변천만(미국: 보도자료를 읽은 뒤라 앨범보다 늦다)
     out.length = 0;
     if (gh) { const g = tgGuide(gh, title, m); if (g) out.push(g); }
   } else if (ev.onlySeg) {                          // 답장용 — 원문 AI 판독 표

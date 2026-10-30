@@ -3679,8 +3679,11 @@ td.dim { color:var(--mute); font-size:18px; }
           border:1px solid var(--line); border-radius:10px; }
 .fctab { border-collapse:collapse; font-size:16px; font-variant-numeric:tabular-nums; }
 .fcbox { display:inline-block; max-width:100%; }
-.fccap { text-align:right; margin:0 2px 6px; font-size:15px; color:var(--mute); }
-.fccap b { color:#fff; font-size:20px; font-weight:800; margin-left:6px; letter-spacing:-.2px; }
+.fccap { text-align:right; margin:0 0 10px; }
+/* 시가총액은 상자로 — 회원님(10/30): "네모라도 쳐서 더 잘 보이게". 색은 PER 줄과 같은 금색. */
+.fccap .capbox { display:inline-flex; align-items:baseline; gap:8px; padding:6px 14px; font-size:14px; font-weight:600;
+  color:#ffd98a; background:rgba(255,176,32,.10); border:1.5px solid rgba(255,176,32,.55); border-radius:10px; }
+.fccap b { color:#fff; font-size:22px; font-weight:800; letter-spacing:-.2px; }
 .fcbox .fcwrap { display:block; }
 .rtseg { margin:14px 0 4px; border:1px solid var(--line); border-radius:10px; overflow:hidden; display:inline-block; }
 .rtseg table { border-collapse:collapse; font-size:16px; font-variant-numeric:tabular-nums; }
@@ -5329,7 +5332,7 @@ function fcstTable(m, code) {
   const capTxt = !capW ? '' : capW >= 1e12
     ? (capW / 1e12).toFixed(capW >= 1e14 ? 0 : 1).replace(/\.0$/, '') + '조 원'
     : Math.round(capW / 1e8).toLocaleString() + '억 원';
-  return '<div class="fcbox">' + (capTxt ? '<div class="fccap">시가총액<b>' + capTxt + '</b></div>' : '') +
+  return '<div class="fcbox">' + (capTxt ? '<div class="fccap"><span class="capbox">시가총액<b>' + capTxt + '</b></span></div>' : '') +
     '<div class="fcwrap"><table class="fctab">' +
     '<thead><tr><th>단위: 억 원 환산</th>' +
       cols.map((c, i) => '<th class="' + (i === 1 ? 'cur' : i ? 'est' : 'pst') + '"><b>' + c.name + '</b><small>' +
