@@ -101,7 +101,25 @@ window.tgBuild = function (ev, gh) {
     const s = segChart(sg, (f && f.cur) || MC[m] || 'USD');
     if (s) out.push(s.replace(/(<div class="finhead[^"]*">)/, '$1' + title + ' '));
   }
-  if (ev.onlySeg === 'segchart') {                  // 답장용 — 이번 분기를 얹은 사업부 그림만
+  // 월차를 내는 일본 회사 — 사이트 월매출 그림(mnChart) 그대로. 방금 읽은 달(ev.mon.rows)을 얹는다.
+  const monPart = () => {
+    if (m !== 'jp' || typeof mnChart !== 'function') return '';
+    const num = (D.monthlyNum || {})[code] || {};
+    const rows = ((ev.mon && ev.mon.rows) || []);
+    if (!rows.length && !(num.historyVerified && (num.m || []).length)) return '';
+    const by = {};
+    (num.historyVerified ? (num.m || []) : []).forEach(r => { by[r[0]] = r; });
+    rows.forEach(r => { by[r[0]] = r; });
+    const mm = Object.keys(by).sort().map(k => by[k]);
+    const base = (ev.mon && ev.mon.base) || num.historyBase || num.base || '';
+    return '<div class="finhead">' + title + ' 월매출 <span class="dim">(月次' + (base ? ' · ' + base : '') +
+      ' · 막대 위 숫자 = 전년비)</span></div><div class="mndetail"><div class="mnmodalchart">' + mnChart(mm) + '</div></div>';
+  };
+  if (!ev.onlySeg) { const mp = monPart(); if (mp) out.push(mp); }
+  if (ev.onlySeg === 'mon') {
+    out.length = 0;
+    const mp = monPart(); if (mp) out.push(mp);
+  } else if (ev.onlySeg === 'segchart') {                  // 답장용 — 이번 분기를 얹은 사업부 그림만
     out.length = 0;
     if (D.seg[key]) {
       const s2 = segChart(D.seg[key], (f && f.cur) || ({ jp: 'JPY', hk: 'HKD' })[m] || 'USD');
