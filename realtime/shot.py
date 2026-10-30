@@ -112,8 +112,8 @@ window.tgBuild = function (ev, gh) {
     rows.forEach(r => { by[r[0]] = r; });
     const mm = Object.keys(by).sort().map(k => by[k]);
     const base = (ev.mon && ev.mon.base) || num.historyBase || num.base || '';
-    return '<div class="finhead">' + title + ' 월매출 <span class="dim">(月次' + (base ? ' · ' + base : '') +
-      ' · 막대 위 숫자 = 전년비)</span></div><div class="mndetail"><div class="mnmodalchart">' + mnChart(mm) + '</div></div>';
+    return '<div class="finhead">' + title + ' 월 매출 <span class="dim">(月次' + (base ? ' · ' + base : '') +
+      ' · 막대 위 숫자 = YoY)</span></div><div class="mndetail"><div class="mnmodalchart">' + mnChart(mm) + '</div></div>';
   };
   if (!ev.onlySeg) { const mp = monPart(); if (mp) out.push(mp); }
   if (ev.onlySeg === 'mon') {
