@@ -5682,9 +5682,24 @@ function segChart(sg, cur) {
   /* 사업부별 매출 — **선 그래프**(회원님 10/30: 누적 막대 말고 부문마다 선으로, 시계열이 보이게).
      축은 부문 하나의 최댓값으로 잡는다(합계가 아니라). 점마다 값을 적되, 같은 칸에서 글자끼리
      부딪히면 아래로 내려 적는다. 색·글꼴·축·범례는 사이트의 다른 차트와 같은 것을 쓴다. */
-  const pts = (sg.pts || []).filter(p => labFrom18(p[0])).slice(-36);   // 1Q18 부터(회원님 10/30)
+  let pts = (sg.pts || []).filter(p => labFrom18(p[0])).slice(-36);   // 1Q18 부터(회원님 10/30)
   if (pts.length < 2) return '';
   const names = sg.names || [];
+  // **기준이 바뀐 자리에서 앞을 자른다.** 지금 매출의 10% 넘는 큰 부문이 한 분기 만에 4배 넘게 뛰거나 1/4 밑으로
+  // 떨어지면 같은 이름의 다른 사업이다 — 인텔 Foundry 가 2024년 개편 때 2.9억 -> 43.7억 달러로 뛰었고,
+  // 옛 기준과 새 기준을 한 선에 이어 그려 선이 춤췄다(회원님 10/30). 빈 칸은 자르는 근거로 안 쓴다(수집 구멍일 수 있다).
+  {
+    const lastRow = pts[pts.length - 1];
+    const tot = lastRow.slice(1).reduce((a, v) => a + (v > 0 ? v : 0), 0);
+    const big = names.map((_, j) => j).filter(j => lastRow[j + 1] != null && lastRow[j + 1] >= tot * 0.1);
+    for (let i = pts.length - 1; i > 0; i--) {
+      if (big.some(j => { const a = pts[i - 1][j + 1], b = pts[i][j + 1];
+                          return a != null && b != null && a > 0 && (b / a > 4 || b / a < 0.25); })) {
+        if (pts.length - i >= 2) pts = pts.slice(i);
+        break;
+      }
+    }
+  }
   const all = pts.flatMap(r => r.slice(1).filter(v => v != null));
   const maxRaw = Math.max(...all, 1), minRaw = Math.min(...all, 0);
   const U = unitFor(maxRaw, cur);
@@ -5738,7 +5753,7 @@ function segChart(sg, cur) {
        (sg.cov > 105 ? ' — 부문끼리 주고받은 것 포함' : '') : '') + ')</span></div>' +
     '<div class="finbox"><svg viewBox="0 0 ' + W + ' ' + H + '" class="finsvg">' +
     axis + body + xlab + '</svg></div>' +
-    '<div class="finlegend">' + names.map((nm, j) =>
+    '<div class="finlegend">' + names.map((nm, j) => !pts.some(r => r[j + 1] != null) ? '' :
       '<span class="lg" style="--c:' + SEG_COLORS[j % SEG_COLORS.length] + '">' +
       esc(nm) + '</span>').join('') + '</div>';
 }
