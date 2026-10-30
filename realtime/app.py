@@ -591,6 +591,14 @@ def finish(ev, point=None):
     # '왜'는 본문만 읽고 바로 — IR 첨부는 따로 읽어 사업부 숫자만 채운다(답장을 늦추지 않게).
     th = threading.Thread(target=lambda: box.update(b=brief.why(ev["name"], text, names=names)), daemon=True)
     th.start()
+    # 🏢 비즈니스 한 줄은 앨범 글 맨 위에 꼭 — 미리 만든 게 없으면 지금 만든다(몇 초).
+    if not biz_of(ev) and brief.enabled():
+        with H.lock:
+            d = (H.D.get("descKo") or {}).get(key) or (H.D.get("desc") or {}).get(key) or ""
+        got = brief.biz_lines({key: f"{ev['name']} ({ev.get('orig', '')}) | {(d or text)[:800]}"}, timeout=40)
+        if got.get(key):
+            BIZ[key] = got[key]
+            BIZ_PATH.write_text(json.dumps(BIZ, ensure_ascii=False))
     # 회원님(10/30): "못 채울 거면 바로 쏘지 말고 다 완성해서 쏴 — 그렇다고 못 채웠다고 안 쏘지는 말고."
     # 이번 분기 가이던스나 사업부가 비면 AI 원문 판독(최대 80초)을 기다려 채운 다음 앨범을 보낸다. 못 채우면 그대로 보낸다.
     seg_missing = bool(seg) and point is not None and not ev.get("segPoint")
