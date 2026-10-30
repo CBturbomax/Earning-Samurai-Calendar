@@ -1003,6 +1003,9 @@ def forecast_from(vals):
             for cid, v, (_st, en) in vals.get(nm, []):
                 if not (FORECAST_CTX.search(cid) and DUR_CTX.search(cid)):
                     continue
+                # 반기·분기 예상은 연간이 아니다 — 연간 예상이 범위로만 나오면 반기 예상이 연간 자리를 차지했다(무라타 10/30)
+                if re.search(r"Quarter|Q2|Half|Interim|AccumulatedQ", cid, re.I):
+                    continue
                 if re.search(r"Upper|Lower", cid, re.I):
                     continue
                 cons = 1 if CONS_CTX.search(cid) and not NONCONS_CTX.search(cid) else 0
