@@ -1026,6 +1026,9 @@ def forecast_from(vals):
         out["rev"] = r[1]
     if o:
         out["opi"] = o[1]
+    n = pick(NAME_NI)
+    if n and n[2] == end:                   # 순이익 예상 — 종합상사처럼 매출·영업이익 예상을 안 내는 회사도 있다
+        out["ni"] = n[1]
     return out
 
 
