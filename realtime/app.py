@@ -607,7 +607,8 @@ def finish(ev, point=None):
         segpng = None
         # 그림이 하나도 없던 회사(이력 없는 신규 상장 등)는 원문 손익 표의 이번/전년 비교를,
         # 사이트에 사업부별이 없는 회사는 원문 사업부 표를 그려 붙인다(둘 다 AI 판독, 표에 그렇게 적는다).
-        want = ("fin" if b.get("fin") and not pngs else "") + ("seg" if b.get("segs") and not seg else "")
+        alt = (SEGAI.get(key) or {}).get("alt") and SEGAI[key].get("label") == (ev.get("point") or [None])[0]
+        want = ("fin" if b.get("fin") and not pngs else "") + ("seg" if b.get("segs") and (not seg or alt) else "")
         if want and H.html:
             try:
                 segpng = (shot.render(dict({k: v for k, v in ev.items() if not k.startswith("_")}, onlySeg=want)) or [None])[0]
@@ -650,6 +651,9 @@ def seg_ai_try(ev, b, seg, point=None):
     if seg and seg.get("pts") and seg["pts"][-1][0] == p[0]:
         return None                              # 그 분기가 이미 있다(공식 자료) — 손대지 않는다
     vals = {x["n"]: x["v"] * b["scale"] for x in b["segs"] if x.get("v") is not None}
+    yoy = {x["n"]: x.get("y") for x in b["segs"]}
+    raw_vals = dict(vals)
+    alt = False                                  # 사이트 막대와 기준이 달라 못 잇는 것 — '이번 분기 표'로 따로 싣는다
     now = seg_names_now(seg)
     if now:
         # AI 가 이름을 줄이거나 조금 바꿔 쓴다(Waters Analytical and Material). 사이트 이름마다
@@ -670,23 +674,30 @@ def seg_ai_try(ev, b, seg, point=None):
         vals = dict(mapped, **{k: v for k, v in left.items() if k not in mapped})
         hit = [n for n in now if n in mapped]
         if len(hit) < max(2, round(len(now) * 0.6)):
-            log("AI 부문 거절(이름)", ev["key"], list(vals)[:6], "사이트", now[:6])
-            return None
-        names, row = now, [vals.get(n) for n in now]
+            log("AI 부문 따로(이름 다름)", ev["key"], list(raw_vals)[:6], "사이트", now[:6])
+            alt = True
+            names, row = list(raw_vals), list(raw_vals.values())
+        else:
+            names, row = now, [vals.get(n) for n in now]
     else:
+        alt = True                               # 사이트에 부문 막대가 없다 — 한 칸짜리 막대는 못 그린다
         names, row = list(vals), list(vals.values())
     tot, rev = sum(v for v in row if v), p[1]
     if not rev or not (0.85 <= tot / rev <= 1.6):
         log("AI 부문 거절(합)", ev["key"], round(tot / 1e6), "총매출", rev and round(rev / 1e6))
         return None
-    rec = {"label": p[0], "names": names, "vals": row, "ts": now_iso(), "src": ev.get("url", "")}
+    rec = {"label": p[0], "names": names, "vals": row, "ts": now_iso(), "src": ev.get("url", ""),
+           "cur": ev.get("cur") or {"us": "USD", "jp": "JPY", "hk": "HKD"}[ev["mkt"]],
+           "y": [yoy.get(n) for n in names] if alt else None}
+    if alt:
+        rec["alt"] = 1
     with SEGAI_LOCK:
         SEGAI[ev["key"]] = rec
         tmp = SEGAI_PATH.with_suffix(".tmp")
         tmp.write_text(json.dumps(SEGAI, ensure_ascii=False))
         tmp.replace(SEGAI_PATH)
-    log("AI 부문 받음", ev["key"], p[0], len(names), "개")
-    return rec
+    log("AI 부문 받음", ev["key"], p[0], len(names), "개", "(따로)" if alt else "")
+    return None if alt else rec
 
 
 def segfill(n):
@@ -725,13 +736,69 @@ def segfill(n):
                 return
             names = seg_names_now(segs.get(k))
             b = brief.why(k[3:], brief.us_text(raw), names=names)
-            if b and seg_ai_try({"key": k, "mkt": "us", "url": ""}, b, segs.get(k), [p[0], p[1]]):
-                got[0] += 1
+            if b:
+                seg_ai_try({"key": k, "mkt": "us", "url": "", "cur": "USD"}, b, segs.get(k), [p[0], p[1]])
+                if k in SEGAI:
+                    got[0] += 1
         except Exception as e:                                   # noqa: BLE001
             log("부문 메우기 실패", k, repr(e)[:120])
     with ThreadPoolExecutor(3) as ex:
         list(ex.map(one, todo))
     log("부문 메우기 끝", got[0], "/", len(todo))
+
+
+def segfill_jp(n):
+    """이번 시즌 이미 발표했는데 부문이 없는 일본 회사 — TDnet(한 달 보관)의 결산단신·설명자료를 다시 읽는다."""
+    with H.lock:
+        fin, segs, rows = dict(H.D.get("fin", {})), dict(H.D.get("seg", {})), dict(H.rows_by_key)
+    import collections
+    newest = {k: f["points"][-1] for k, f in fin.items() if k.startswith("jp:") and f.get("points")}
+    cnt = collections.Counter(p[0] for p in newest.values())
+    ok = [lab for lab, c in cnt.items() if c >= 30 and re.match(r"\dQ\d\d$", lab)]
+    top = max(ok, key=lambda l: (l[2:], l[0])) if ok else None
+    cutoff = (datetime.now(JST) - timedelta(days=30)).strftime("%Y-%m-%d")
+    todo = []
+    for k, p in newest.items():
+        s = segs.get(k)
+        if p[0] != top or (s and s["pts"][-1][0] == top) or k in SEGAI:
+            continue
+        days = sorted({r[0] for r in rows.get(k, []) if cutoff <= r[0] <= datetime.now(JST).strftime("%Y-%m-%d")})
+        if days:
+            todo.append((k, days[-1], p))
+    todo.sort(key=lambda t: -max((r[11] or 0) for r in rows.get(t[0], [[0] * 12])))   # 큰 회사부터
+    todo = todo[:n]
+    log("일본 부문 메우기 시작", len(todo), "종목", top)
+    got = [0]
+
+    def one(item):
+        k, day, p = item
+        code = k[3:]
+        try:
+            lst = []
+            for page in (1, 2, 3, 4, 5, 6):
+                got_rows = fj.listing(day, page)
+                if not got_rows:
+                    break
+                lst += got_rows
+            row = next((r for r in lst if r["code"] == code and r["zip"] and fj.TANSHIN.search(r["title"])), None)
+            text = ""
+            if row:
+                blob = fj.get("https://www.release.tdnet.info/inbs/" + row["zip"], binary=True)
+                if blob:
+                    text = fj.read_narrative(blob) + "\n\n[세그먼트 정보]\n" + jp_seg_text(blob)
+            text += "\n\n[결산 설명자료(IR)]\n" + jp_ir_text(code, day, tries=1)
+            if len(text) < 200:
+                return
+            b = brief.why(code, text, names=seg_names_now(segs.get(k)))
+            if b:
+                seg_ai_try({"key": k, "mkt": "jp", "url": "", "cur": "JPY"}, b, segs.get(k), [p[0], p[1]])
+                if k in SEGAI:
+                    got[0] += 1
+        except Exception as e:                                   # noqa: BLE001
+            log("일본 부문 메우기 실패", k, repr(e)[:120])
+    with ThreadPoolExecutor(3) as ex:
+        list(ex.map(one, todo))
+    log("일본 부문 메우기 끝", got[0], "/", len(todo))
 
 
 def followup(ev):
@@ -1125,6 +1192,10 @@ def replay_run(lines):
         f = re.match(r"segfill\s+(\d+)", ln.strip())
         if f:
             segfill(int(f.group(1)))
+            continue
+        f = re.match(r"segfilljp\s+(\d+)", ln.strip())
+        if f:
+            segfill_jp(int(f.group(1)))
             continue
         m = re.match(r"(us|jp|hk)\s+(\d+)", ln.strip())
         if not m:
