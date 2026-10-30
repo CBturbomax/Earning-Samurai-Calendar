@@ -31,6 +31,8 @@ from pathlib import Path
 
 HERE = Path(__file__).parent
 OUT = HERE / "data" / "financials.json"
+# 한꺼번에 다시 받을 때(backfill_us.yml) 갈래마다 따로 쓴다 — 읽기는 늘 OUT 에서.
+OUT_W = Path(os.environ["FIN_OUT"]) if os.environ.get("FIN_OUT") else OUT
 
 # SEC 는 연락처가 담긴 User-Agent 를 요구한다(그쪽 이용약관).
 SEC_UA = os.environ.get("SEC_UA", "Earning Samurai Calendar (cbpark@wisdomasset.co.kr)")
@@ -702,6 +704,9 @@ def main():
 
     cand = targets()
     pending = queue(old, cand)
+    if os.environ.get("FIN_SHARD"):                 # "i/N" — N 갈래 중 i 번째만
+        i0, n0 = (int(x) for x in os.environ["FIN_SHARD"].split("/"))
+        pending = pending[i0::n0]
     todo = pending[:PER_RUN]
     print(f"  받아야 할 종목 {len(pending):,}개 중 이번에 {len(todo)}개 "
           f"(가진 것 {len(old):,}개 / 후보 {len(cand):,}개)")
@@ -750,8 +755,8 @@ def main():
         stocks[sym] = rec
         if i % 25 == 24:
             print(f"    {i+1}/{len(todo)} (확보 {got})", flush=True)
-            OUT.write_text(json.dumps({"stocks": stocks}, ensure_ascii=False),
-                           encoding="utf-8")
+            OUT_W.write_text(json.dumps({"stocks": stocks}, ensure_ascii=False),
+                             encoding="utf-8")
         time.sleep(0.2)
 
     have = {k: v for k, v in stocks.items() if v.get("points") or v.get("eps")}
@@ -762,9 +767,9 @@ def main():
         "count": len(have),
         "stocks": stocks,
     }
-    tmp = OUT.with_suffix(".tmp")
+    tmp = OUT_W.with_suffix(".tmp")
     tmp.write_text(json.dumps(payload, ensure_ascii=False), encoding="utf-8")
-    tmp.replace(OUT)
+    tmp.replace(OUT_W)
 
     nq = sum(1 for v in have.values() if v.get("freq") == "Q")
     na = sum(1 for v in have.values() if v.get("freq") == "A")
