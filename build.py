@@ -5700,6 +5700,9 @@ function segChart(sg, cur) {
       }
     }
   }
+  // 최근 두 분기에 값이 없는 부문은 옛 기준이다(인텔 Mobileye·Network and Edge — 2024 개편 뒤 사라짐). 그리지 않는다.
+  const live = new Set(names.map((_, j) => j).filter(j => pts.slice(-2).some(r => r[j + 1] != null)));
+  if (live.size >= 2) pts = pts.map(r => [r[0]].concat(r.slice(1).map((v, j) => live.has(j) ? v : null)));
   const all = pts.flatMap(r => r.slice(1).filter(v => v != null));
   const maxRaw = Math.max(...all, 1), minRaw = Math.min(...all, 0);
   const U = unitFor(maxRaw, cur);

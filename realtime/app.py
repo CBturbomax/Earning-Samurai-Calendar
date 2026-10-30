@@ -897,8 +897,9 @@ def seg_ai_try(ev, b, seg, point=None):
     return None if alt else rec
 
 
-def segfill(n):
-    """이미 이번 분기를 발표했는데 부문이 뒤처진 미국 회사 — 보도자료를 다시 읽어 메운다."""
+def segfill(n, only=None):
+    """이미 이번 분기를 발표했는데 부문이 뒤처진 미국 회사 — 보도자료를 다시 읽어 메운다. **시총 큰 순**(인텔이 뒤로 밀렸다, 10/30).
+    only: 이 종목들만(예: {"us:INTC"}) — 이미 있어도 다시 읽는다."""
     import scrape_pr_us as pr
     with H.lock:
         fin, segs = dict(H.D.get("fin", {})), dict(H.D.get("seg", {}))
@@ -915,12 +916,17 @@ def segfill(n):
     todo = []
     for k, p in newest.items():
         s = segs.get(k)
-        if p[0] != top or (s and s["pts"][-1][0] == top) or k in SEGAI:
+        if only is not None:
+            if k not in only:
+                continue
+        elif p[0] != top or (s and s["pts"][-1][0] == top) or (k in SEGAI and SEGAI[k].get("label") == top):
             continue
         cik = rev_map.get(k[3:].replace(".", "-"))
         if cik:
             todo.append((k, cik, p))
-    todo = todo[:n]
+    with H.lock:
+        capk = {k: max((r[11] or 0) for r in H.rows_by_key.get(k) or [[0] * 12]) for k, _, _ in todo}
+    todo = sorted(todo, key=lambda t: -capk.get(t[0], 0))[:n]
     log("부문 메우기 시작", len(todo), "종목", top)
     got = [0]
 
@@ -1877,6 +1883,10 @@ def replay_run(lines):
         f = re.match(r"segfill\s+(\d+)", ln.strip())
         if f:
             segfill(int(f.group(1)))
+            continue
+        f = re.match(r"segfill\s+([A-Z][A-Z.\-,]*)$", ln.strip())    # 종목을 콕 집어 — segfill INTC,AMD
+        if f:
+            segfill(50, {"us:" + t for t in f.group(1).split(",") if t})
             continue
         f = re.match(r"jpcode\s+(\w+)", ln.strip())
         if f:
