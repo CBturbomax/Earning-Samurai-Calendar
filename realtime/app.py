@@ -1805,7 +1805,7 @@ def replay_run(lines):
             continue
         f = re.match(r"jp(pre|mon)\s+(\w+)", ln.strip())         # 시험 — 최근 닷새 안의 그 종목 적시공시·월차를 다시
         if f:
-            for back in range(0, 6):
+            for back in range(0, 6 if f.group(1) == "pre" else 32):
                 day = (datetime.now(JST) - timedelta(days=back)).strftime("%Y-%m-%d")
                 rows = []
                 for page in range(1, 12):
