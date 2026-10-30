@@ -5257,11 +5257,35 @@ function links(m, code) {
           'https://www1.hkexnews.hk/search/titlesearch.xhtml?lang=en'];
 }
 
+/* 상세창을 열면 실시간 서버에 그 회사의 최신 자료(가이던스 변천·옛 분기)를 바로 묻는다 — 빌드(몇 분)를
+   기다리지 않게. 받으면 비어 있던 것만 채우고 창을 다시 그린다. 서버가 안 닿으면 페이지에 실린 것 그대로. */
+const CO = {}, GHS = {};
+const qkey = l => { const m = /^(\d)Q(\d\d)$/.exec(l || ''); return m ? +m[2] * 4 + +m[1] : 0; };
+function coLoad(k) {
+  if (!RT || CO[k]) return;
+  CO[k] = 1;
+  fetch(RT + '/api/co?key=' + encodeURIComponent(k), { cache: 'no-store' }).then(r => r.json()).then(j => {
+    let ch = false;
+    if (j.guide && Object.keys(j.guide).length) { GHS[k] = j.guide; ch = true; }
+    const f = D.fin[k];
+    if ((j.fin || []).length && (!f || f.freq === 'Q')) {
+      const g = D.fin[k] = f || { freq: 'Q', cur: 'JPY', points: [] };
+      const have = new Set((g.points || []).map(p => p[0]));
+      j.fin.forEach(p => { if (!have.has(p[0])) { g.points.push(p); ch = true; } });
+      g.points.sort((a, b) => qkey(a[0]) - qkey(b[0]));
+    }
+    if (ch && mdKey === k) {
+      const r = ROWS.find(x => keyOf(x) === k);
+      if (r) openModal(k, r[0]);
+    }
+  }).catch(() => { CO[k] = 0; });
+}
 function openModal(k, dt) {
   const r = (byDate.get(dt) || []).find(x => keyOf(x) === k) ||
             ROWS.find(x => keyOf(x) === k);
   if (!r) return;
   mdKey = k;
+  try { coLoad(k); } catch (e) {}
   const nt = NOTE[k], m = r[9], code = r[1];
   document.getElementById('mdTitle').innerHTML =
     FL(m) + ' ' + esc(r[2]) + ' (' + esc(code) + ')';
@@ -5636,7 +5660,8 @@ function ghFill() {
   if (!slots.length) return;
   const go = () => slots.forEach(el => {
     el.dataset.done = 1;
-    const key = el.dataset.key, m = key.split(':')[0], g = JSON.parse(JSON.stringify((GH || {})[key] || {}));
+    const key = el.dataset.key, m = key.split(':')[0];
+    const g = JSON.parse(JSON.stringify(Object.assign({}, (GH || {})[key] || {}, GHS[key] || {})));   // 서버에서 방금 받은 것이 이긴다
     const F = D.ann && D.ann[key];
     ((F && F.y) || []).forEach(y => { if (!y[5] && y[1] && g[y[0].slice(0, 7)]) g[y[0].slice(0, 7)]['실제'] = g[y[0].slice(0, 7)]['실제'] || [y[1], y[2]]; });
     if (Object.values(g).reduce((n, v) => n + Object.keys(v).filter(s => s !== '실제').length, 0) < 3) return;
