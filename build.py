@@ -5551,7 +5551,7 @@ const SEG_COLORS = ['#5B9BD5', '#ED7D31', '#C0504D', '#4BA893', '#8E7CC3',
    이 함수를 그대로 찍는다. 일본은 결산단신 예상, 미국은 실적 보도자료의 연간 전망(AI 판독). */
 function tgGuide(gh, title, mkt) {
   const ST = ['최초', '1Q', '2Q', '3Q'];
-  const fys = Object.keys(gh).sort().slice(-5);
+  const fys = Object.keys(gh).sort().slice(-8);         // 가급적 오래전부터(회원님 10/30) — 2017년 결산단신부터 쌓여 있다
   let last = null;
   fys.forEach(f => ST.forEach(s => { if (gh[f][s]) last = f + s; }));
   const one = (k, name) => {
@@ -5573,7 +5573,7 @@ function tgGuide(gh, title, mkt) {
             : mkt === 'jp' ? { div: 1e8, ko: '억엔' } : unitFor(Math.max(...raw.map(Math.abs)), 'USD');
     const vals = raw.map(v => v / U.div);
     const mx = niceMax(Math.max(...vals, 1));
-    const W = Math.max(880, cols.length * 58), L = 66, R = 20, B = 56, T = 30, H = 300, BASE = H - B;
+    const W = Math.max(880, cols.length * 58), L = 66, R = 20, B = 88, T = 30, H = 332, BASE = H - B;
     const step = (W - L - R) / cols.length;
     const cx = i => L + step * i + step / 2, y = v => BASE - (BASE - T) * v / mx;
     let s = [0, mx / 2, mx].map(v => '<line class="fz" x1="' + L + '" y1="' + y(v).toFixed(1) + '" x2="' + (W - R) +
@@ -5604,7 +5604,16 @@ function tgGuide(gh, title, mkt) {
         '<text class="vn rev" x="' + cx(i).toFixed(1) + '" y="' + (y(v) - 6).toFixed(1) + '" text-anchor="middle" style="font-size:11px' +
         (now ? ';fill:#FFCB05;font-weight:800' : '') + '">' + fmtN(v) + '</text>' + lab;
     });
-    // 회계연도 묶음 사이는 빈 칸으로만 가른다 — 막대마다 FY 표기가 붙어 있다.
+    // 회계연도마다 아래에 묶음 이름(FY27 · 26.4~27.3) — 몇 년 어느 기간의 전망인지 한눈에.
+    Object.keys(groups).forEach(f => {
+      const ix = groups[f], x0 = cx(ix[0]) - step * 0.42, x1 = cx(ix[ix.length - 1]) + step * 0.42;
+      const fy = +f.slice(0, 4), fm = +f.slice(5, 7), sm = fm % 12 + 1, sy = fm === 12 ? fy : fy - 1;
+      s += '<line class="fz" x1="' + x0.toFixed(1) + '" y1="' + (BASE + 40) + '" x2="' + x1.toFixed(1) + '" y2="' + (BASE + 40) + '"/>' +
+        '<text class="fx" x="' + ((x0 + x1) / 2).toFixed(1) + '" y="' + (BASE + 58) + '" text-anchor="middle" style="font-weight:800;fill:#e6edf3;font-size:12px">FY' +
+        String(fy % 100).padStart(2, '0') + '</text>' +
+        '<text class="fx" x="' + ((x0 + x1) / 2).toFixed(1) + '" y="' + (BASE + 74) + '" text-anchor="middle" style="font-size:10px;opacity:.7">' +
+        String(sy % 100).padStart(2, '0') + '.' + sm + '~' + String(fy % 100).padStart(2, '0') + '.' + fm + '</text>';
+    });
     return '<div class="finhead sub">' + name + ' <span class="dim">(단위: ' + U.ko + ' · 회사 연간 전망)</span></div>' +
       '<div class="finbox"><svg viewBox="0 0 ' + W + ' ' + H + '" class="finsvg">' + s + '</svg></div>';
   };
@@ -5613,7 +5622,7 @@ function tgGuide(gh, title, mkt) {
   if (!a && !b && !c) return '';
   return '<div class="finwrap"><div class="finhead">' + title + ' 가이던스 변천' +
     '<span class="dim"><b style="color:#5B9BD5">■</b> 가이던스 <b style="color:#d7dde3">■</b> 실제 <b style="color:#FFCB05">■</b> 최신</span></div>' +
-    a + b + c + '</div>';
+    a + b + c + '<p class="finnote" style="text-align:right">자료: ' + (mkt === 'us' ? '회사 실적 보도자료(SEC 8-K, AI 판독)' : '회사 결산단신(TDnet·JPX)') + '</p></div>';
 }
 let GH = null;
 function ghFill() {
