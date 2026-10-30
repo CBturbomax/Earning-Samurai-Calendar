@@ -163,6 +163,10 @@ class History:
         return min(rs, key=lambda r: abs((date.fromisoformat(r[0]) - date.fromisoformat(day)).days))
 
     def skip(self, mkt, code, name):
+        # 일본 TDnet 줄은 업종이 비어 온다 — 사이트 캘린더의 그 회사 업종(한국어)으로 한 번 더(부동산·전력·가스, 10/30).
+        r = self.row(f"{mkt}:{code}") if mkt == "jp" else None
+        if r and r[5] in ("부동산", "전력", "가스", "전기·가스", "은행"):
+            return True
         return excluded(mkt, name or "", "", self.ind.get(f"{mkt}:{code}", "") or "")
 
 
