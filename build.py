@@ -1426,6 +1426,40 @@ try:
     SEG_KO_FILE = json.loads((HERE / "data" / "seg_ko.json").read_text(encoding="utf-8"))
 except (OSError, ValueError):
     SEG_KO_FILE = {}
+def write_guide_site():
+    """상세창 「가이던스 변천」 자료 — data/guide_site.json (상세창을 열 때만 받는다, 페이지를 무겁게 안 하려고).
+    일본: data/guidance_hist_jp.json(결산단신 이력 스냅샷) + 서버가 결산단신마다 쌓은 것.
+    미국: 서버가 실적 보도자료의 연간 전망을 읽어 쌓은 것. 값은 [매출, 영업이익, 순이익(일본)·EPS(미국)]."""
+    out = {}
+    try:
+        seed = json.loads((HERE / "data" / "guidance_hist_jp.json").read_text(encoding="utf-8"))
+    except (OSError, ValueError):
+        seed = {}
+    for code, v in seed.items():
+        out["jp:" + code] = {fy: dict(st) for fy, st in v.items()}
+    srv = {}
+    if RT_URL:
+        try:
+            req = urllib.request.Request(RT_URL + "/api/guide", headers={"User-Agent": "es-build"})
+            with urllib.request.urlopen(req, timeout=20) as r:
+                srv = json.loads(r.read())
+        except Exception as e:                                    # noqa: BLE001
+            print(f"  ! 실시간 서버 가이던스 받기 실패: {e}")
+    for mkt in ("jp", "us"):
+        for code, v in (srv.get(mkt) or {}).items():
+            for fy, st in (v or {}).items():
+                if fy != "none" and isinstance(st, dict):
+                    out.setdefault(f"{mkt}:{code}", {}).setdefault(fy, {}).update(st)
+
+    def rnd(x):
+        return None if x is None else round(x, 2) if abs(x) < 1000 else int(round(x))
+    out = {k: {fy: {s: [rnd(x) for x in (vals or [])] for s, vals in st.items()} for fy, st in v.items()}
+           for k, v in out.items() if v}
+    (HERE / "data" / "guide_site.json").write_text(json.dumps(out, ensure_ascii=False, separators=(",", ":")),
+                                                   encoding="utf-8")
+    print(f"  가이던스 변천: 일본 {sum(k.startswith('jp:') for k in out)} · 미국 {sum(k.startswith('us:') for k in out)}")
+
+
 # 새로 생긴 부문 이름 — 실시간 서버가 AI 로 옮겨 /api/segko 로 준다(研究開発支援事業 같은 새 이름이 원문으로 남지 않게).
 if RT_URL:
     try:
@@ -3010,6 +3044,7 @@ def build():
                    .replace("__BUILDVER__", build_ver) \
                    .replace("__DATA__", json.dumps(payload, ensure_ascii=False,
                                                    separators=(",", ":")))
+    write_guide_site()
     OUT.write_text(html, encoding="utf-8")
     VERSION.write_text(build_ver + "\n", encoding="utf-8")
     kb = OUT.stat().st_size / 1024
@@ -5356,6 +5391,7 @@ function finBlock(m, code) {
   // 사업부별은 매출·성장률 아래에 붙인다. 큰 그림을 먼저 보고 쪼개 보는 순서다.
   if (sg) html += segChart(sg, f.cur || 'USD');
   html += rtSegBlock(key);
+  if (m === 'jp' || m === 'us') { html += '<div class="ghslot" data-key="' + key + '"></div>'; setTimeout(ghFill, 0); }
   // 맨 아래 실적 브리핑 — 차트를 못 읽고 지나가도 요점은 남게.
   html += briefBlock(key, f, sg);
   return html || '<p class="finnote">받아둔 수치가 없습니다.</p>';
@@ -5447,6 +5483,90 @@ const SEG_COLORS = ['#5B9BD5', '#ED7D31', '#C0504D', '#4BA893', '#8E7CC3',
    "매출이 늘었다"보다 "어디서 늘었다"가 중요할 때가 있다. 로켓랩은 발사 서비스와
    우주 시스템이 따로 움직이고, SEA 는 쇼피·가레나·머니가 따로 논다.
    조각마다 숫자를 적되, 조각이 얇으면 글자가 삐져나오므로 생략한다. */
+/* 가이던스 변천 — 회사 연간 전망이 결산단신·보도자료마다 어떻게 바뀌었나. 텔레그램 그림(realtime/shot.py)도
+   이 함수를 그대로 찍는다. 일본은 결산단신 예상, 미국은 실적 보도자료의 연간 전망(AI 판독). */
+function tgGuide(gh, title, mkt) {
+  const ST = ['최초', '1Q', '2Q', '3Q'];
+  const fys = Object.keys(gh).sort().slice(-5);
+  let last = null;
+  fys.forEach(f => ST.forEach(s => { if (gh[f][s]) last = f + s; }));
+  const one = (k, name) => {
+    const cols = [];
+    fys.forEach((f, gi) => {
+      let st = ST;
+      if (gi === fys.length - 1 && !gh[f]['실제']) {
+        const got = ST.filter(s => gh[f][s]);
+        if (got.length) st = ST.slice(0, ST.indexOf(got[got.length - 1]) + 1);
+      }
+      st.concat(gh[f]['실제'] ? ['실제'] : []).forEach(s => cols.push({ f, s, v: gh[f][s] ? gh[f][s][k] : null }));
+      cols.push(null);
+    });
+    cols.pop();
+    const raw = cols.filter(c => c && c.v != null).map(c => c.v);
+    if (cols.filter(c => c && c.v != null && c.s !== '실제').length < 2) return '';   // 실제만 있는 칸은 안 그린다
+    // 일본은 억엔 그대로(회원님이 본 모양), 미국은 사이트 차트와 같은 눈금(bil USD…), EPS 는 달러 그대로.
+    const U = k === 2 && mkt === 'us' ? { div: 1, ko: 'USD/주' }
+            : mkt === 'jp' ? { div: 1e8, ko: '억엔' } : unitFor(Math.max(...raw.map(Math.abs)), 'USD');
+    const vals = raw.map(v => v / U.div);
+    const mx = niceMax(Math.max(...vals, 1));
+    const W = Math.max(880, cols.length * 58), L = 66, R = 20, B = 56, T = 30, H = 300, BASE = H - B;
+    const step = (W - L - R) / cols.length;
+    const cx = i => L + step * i + step / 2, y = v => BASE - (BASE - T) * v / mx;
+    let s = [0, mx / 2, mx].map(v => '<line class="fz" x1="' + L + '" y1="' + y(v).toFixed(1) + '" x2="' + (W - R) +
+      '" y2="' + y(v).toFixed(1) + '"/><text class="fx" x="' + (L - 8) + '" y="' + (y(v) + 4).toFixed(1) +
+      '" text-anchor="end">' + fmtN(v) + '</text>').join('');
+    const groups = {};
+    cols.forEach((c, i) => {
+      if (!c) return;
+      (groups[c.f] = groups[c.f] || []).push(i);
+      // 위 줄: 그 예상을 낸 결산단신이 다룬 **실제 분기**(달력, 예 3Q26). 아래 줄: 그 회사 회계연도 기준(예 FY2Q27).
+      // 회원님(10/30): "회계연도 말고 실제 분기로, 그 밑에 FY2Q27 처럼."
+      const fy = +c.f.slice(0, 4), fm = +c.f.slice(5, 7);
+      const back = { '최초': 12, '1Q': 9, '2Q': 6, '3Q': 3, '실제': 0 }[c.s];
+      let em = fm - back, ey = fy;
+      while (em <= 0) { em += 12; ey -= 1; }
+      const cal = Math.ceil(em / 3) + 'Q' + String(ey % 100).padStart(2, '0');
+      const fyl = c.s === '최초' ? 'FY' + String(fy % 100).padStart(2, '0') + ' 최초'
+                : c.s === '실제' ? 'FY' + String(fy % 100).padStart(2, '0') + ' 실제'
+                : 'FY' + c.s + String(fy % 100).padStart(2, '0');
+      const lab = '<text class="fx" x="' + cx(i).toFixed(1) + '" y="' + (BASE + 16) + '" text-anchor="middle"' +
+        ((c.f + c.s) === last ? ' style="fill:#fff;font-weight:800"' : '') + '>' + cal + '</text>' +
+        '<text class="fx" x="' + cx(i).toFixed(1) + '" y="' + (BASE + 31) + '" text-anchor="middle" style="font-size:10px;opacity:.75">' + fyl + '</text>';
+      if (c.v == null) { s += lab; return; }
+      const v = c.v / U.div, now = (c.f + c.s) === last;
+      const fill = c.s === '실제' ? '#d7dde3' : now ? '#FFCB05' : '#5B9BD5';
+      s += '<rect x="' + (cx(i) - step * 0.36).toFixed(1) + '" y="' + y(v).toFixed(1) + '" width="' + (step * 0.72).toFixed(1) +
+        '" height="' + Math.max(BASE - y(v), 1).toFixed(1) + '" style="fill:' + fill + '"/>' +
+        '<text class="vn rev" x="' + cx(i).toFixed(1) + '" y="' + (y(v) - 6).toFixed(1) + '" text-anchor="middle" style="font-size:11px' +
+        (now ? ';fill:#FFCB05;font-weight:800' : '') + '">' + fmtN(v) + '</text>' + lab;
+    });
+    // 회계연도 묶음 사이는 빈 칸으로만 가른다 — 막대마다 FY 표기가 붙어 있다.
+    return '<div class="finhead sub">' + name + ' <span class="dim">(단위: ' + U.ko + ' · 회사 연간 전망)</span></div>' +
+      '<div class="finbox"><svg viewBox="0 0 ' + W + ' ' + H + '" class="finsvg">' + s + '</svg></div>';
+  };
+  const a = one(0, '매출 가이던스'), b = one(1, '영업이익 가이던스');
+  const c = mkt === 'us' ? one(2, 'EPS 가이던스') : b ? '' : one(2, '순이익 가이던스');
+  if (!a && !b && !c) return '';
+  return '<div class="finwrap"><div class="finhead">' + title + ' 가이던스 변천' +
+    '<span class="dim"><b style="color:#5B9BD5">■</b> 가이던스 <b style="color:#d7dde3">■</b> 실제 <b style="color:#FFCB05">■</b> 최신</span></div>' +
+    a + b + c + '</div>';
+}
+let GH = null;
+function ghFill() {
+  const slots = document.querySelectorAll('.ghslot:not([data-done])');
+  if (!slots.length) return;
+  const go = () => slots.forEach(el => {
+    el.dataset.done = 1;
+    const key = el.dataset.key, m = key.split(':')[0], g = JSON.parse(JSON.stringify((GH || {})[key] || {}));
+    const F = D.ann && D.ann[key];
+    ((F && F.y) || []).forEach(y => { if (!y[5] && y[1] && g[y[0].slice(0, 7)]) g[y[0].slice(0, 7)]['실제'] = g[y[0].slice(0, 7)]['실제'] || [y[1], y[2]]; });
+    if (Object.values(g).reduce((n, v) => n + Object.keys(v).filter(s => s !== '실제').length, 0) < 3) return;
+    try { el.innerHTML = tgGuide(g, '', m); } catch (e) {}
+  });
+  if (GH) return go();
+  fetch('./data/guide_site.json?t=' + Math.floor(Date.now() / 6e5)).then(r => r.json())
+    .then(j => { GH = j; go(); }).catch(() => {});
+}
 function segChart(sg, cur) {
   /* 사업부별 매출 — **선 그래프**(회원님 10/30: 누적 막대 말고 부문마다 선으로, 시계열이 보이게).
      축은 부문 하나의 최댓값으로 잡는다(합계가 아니라). 점마다 값을 적되, 같은 칸에서 글자끼리

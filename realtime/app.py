@@ -1738,6 +1738,9 @@ class Handler(BaseHTTPRequestHandler):
             self.head()
             with SEGAI_LOCK:
                 self.wfile.write(json.dumps(dict(SEGAI, _series=SER), ensure_ascii=False).encode())
+        elif path == "/api/guide":                               # 빌드가 받아 사이트 상세창의 가이던스 변천으로
+            self.head()
+            self.wfile.write(json.dumps({"jp": GD.own, "us": GU.own}, ensure_ascii=False).encode())
         elif path == "/api/segko":
             self.head()
             self.wfile.write(json.dumps(SEGKO, ensure_ascii=False).encode())
