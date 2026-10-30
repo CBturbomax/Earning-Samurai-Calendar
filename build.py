@@ -2624,7 +2624,45 @@ def ann_fallback(ann, packed, fcst):
                   "n": [None, None], "m": cap[k] * 1e9 * rate, "e": None, "p": None, "q": [], "b": [],
                   "k": USD_KRW / rate, "ts": "", "own": 1}
         n += 1
-    print(f"  연간 표: 소스 {len(ann) - n:,} + 우리 자료로 세운 것 {n:,}")
+    # 회사 예상도 컨센서스도 없는 회사(재팬 티슈엔지니어링 7774 등) — 직전 결산기 실적만으로라도 표를 세운다.
+    # 결산 달은 캘린더 줄의 결산기 표기(「3월 결산」)에서. 회원님(10/30): "왜 저 표는 안 그려주는 거야?"
+    fy_mon = {}
+    for r in packed:
+        m = re.search(r"(\d{1,2})\s*월", r[3] or "")
+        if m:
+            fy_mon[r[9] + ":" + r[1]] = int(m.group(1))
+    n2 = 0
+    for k, mo in fy_mon.items():
+        if k in ann or not cap.get(k) or k.startswith("us:"):
+            continue
+        rec = FIN.get(k)
+        if not rec:
+            continue
+        f = pack_fin(rec)
+        if f.get("freq") != "Q":
+            continue
+        rate = RATES.get(f.get("cur") or ("JPY" if k.startswith("jp:") else "HKD"))
+        if not rate:
+            continue
+        pts = {p[0]: p for p in f.get("points") or []}
+        last = (f.get("points") or [[None]])[-1][0]
+        for y in range(date.today().year, date.today().year - 2, -1):
+            q = (mo - 1) // 3 + 1
+            labs, qq, yy = [], q, y
+            for _ in range(4):
+                labs.append(f"{qq}Q{yy % 100:02d}")
+                qq, yy = (qq - 1, yy) if qq > 1 else (4, yy - 1)
+            if all(l in pts and pts[l][1] is not None for l in labs):
+                break
+        else:
+            continue
+        rev = sum(pts[l][1] for l in labs)
+        opi = sum(pts[l][2] for l in labs) if all(pts[l][2] is not None for l in labs) else None
+        ann[k] = {"y": [[f"{y}-{mo:02d}-28", rev, opi, None, None, 0]],
+                  "n": [None, None], "m": cap[k] * 1e9 * rate, "e": None, "p": None, "q": [], "b": [],
+                  "k": USD_KRW / rate, "ts": "", "own": 1}
+        n2 += 1
+    print(f"  연간 표: 소스 {len(ann) - n - n2:,} + 우리 자료(예상 있음) {n:,} + 실적만 {n2:,}")
     return ann
 
 
