@@ -1009,13 +1009,29 @@ JH_PATH = DATA / "jphist.json"
 try:
     JH = json.loads(JH_PATH.read_text())
 except (OSError, ValueError):
-    JH = {"done": [], "seg": {}}
+    JH = {"done": [], "seg": {}, "fin": {}}
+JH.setdefault("fin", {})
 JH_LOCK = threading.Lock()
 BROWSER_UA = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/124.0 Safari/537.36"
 _yano = {"t": 0.0, "lock": threading.Lock()}
 
 
-def jphist(n, since="2021-01-01"):
+def jp_fin_spans(vals):
+    """결산단신 요약 XBRL -> {'시작/종료': {rev, opi, ni}} 누계 실적(예상은 뺀다, 연결 우선). 분기로 되돌리는 건 빌드가 한다."""
+    out = {}
+    for k, names in (("rev", fj.NAME_REV), ("opi", fj.NAME_OPI), ("ni", fj.NAME_NI)):
+        for nm in names:
+            hits = [(cid, v, se) for cid, v, se in vals.get(nm, [])
+                    if not fj.FORECAST_CTX.search(cid) and fj.DUR_CTX.search(cid) and se and se[0] and se[1]
+                    and not fj.NONCONS_CTX.search(cid)]
+            if hits:
+                for cid, v, (st, en) in hits:
+                    out.setdefault(f"{st}/{en}", {})[k] = v
+                break
+    return out
+
+
+def jphist(n, since="2017-01-01"):
     """일본 옛 결산단신을 통째로 — 가이던스 변천(연간 예상)과 부문 누계(2024년부터 비던 3·4분기)를 같이 채운다.
     목록은 yanoshin TDnet API(2009년치부터, 문서번호·XBRL 이름), 파일은 JPX 공시 보관소(약 5~6년,
     www2.jpx.co.jp/disc/{코드}0/{파일}). TDnet 은 한 달만 남기고 InvestingWiki 는 하루 8천 건 한도라 직접 받는다."""
@@ -1028,7 +1044,7 @@ def jphist(n, since="2021-01-01"):
     done = set(JH["done"])
     todo = [c for c, _ in sorted(caps.items(), key=lambda x: -x[1]) if c not in done][:n]
     log("일본 옛 결산단신 시작", len(todo), "종목")
-    got = [0, 0]
+    got = [0, 0, "9999"]                                         # 종목 · 문서 · 받은 가장 옛 공시일
 
     def listing(code):
         with _yano["lock"]:                                      # 한 사람이 돌리는 무료 API — 1초에 한 번
@@ -1049,7 +1065,7 @@ def jphist(n, since="2021-01-01"):
         items = sorted((it for it in items if (it.get("pubdate") or "")[:10] >= since and it.get("url_xbrl")
                         and fj.TANSHIN.search(it.get("title") or "") and not fj.NOT_TANSHIN.search(it.get("title") or "")),
                        key=lambda it: it["pubdate"])
-        seg = {}
+        seg, fin = {}, {}
         for it in items:
             fn = it["url_xbrl"].rsplit("/", 1)[-1]
             try:
@@ -1062,17 +1078,22 @@ def jphist(n, since="2021-01-01"):
                     GD.add(code, fj.forecast_from(vals), it["pubdate"][:10])
                 for st, en, row in fj.read_segments(blob):
                     seg[f"{st}/{en}"] = row
+                for span, row in jp_fin_spans(vals or {}).items():
+                    fin.setdefault(span, row)
                 got[1] += 1
+                got[2] = min(got[2], it["pubdate"][:10])
             except Exception:                                    # noqa: BLE001
                 continue
         with JH_LOCK:
             if seg:
                 JH["seg"].setdefault("jp:" + code, {}).update(seg)
+            if fin:
+                JH["fin"].setdefault("jp:" + code, {}).update(fin)
             JH["done"].append(code)
             got[0] += 1
             if got[0] % 10 == 0:
                 JH_PATH.write_text(json.dumps(JH, ensure_ascii=False))
-                log("옛 결산단신", got[0], "/", len(todo), "종목 · 문서", got[1])
+                log("옛 결산단신", got[0], "/", len(todo), "종목 · 문서", got[1], "· 가장 옛", got[2])
     with ThreadPoolExecutor(3) as ex:
         list(ex.map(one, todo))
     with JH_LOCK:
@@ -1827,6 +1848,10 @@ class Handler(BaseHTTPRequestHandler):
             self.head()
             with JH_LOCK:
                 self.wfile.write(json.dumps(JH["seg"], ensure_ascii=False).encode())
+        elif path == "/api/jpfinraw":                            # 옛 결산단신 실적 누계 — 빌드가 1Q18 부터의 분기로 되돌려 잇는다
+            self.head()
+            with JH_LOCK:
+                self.wfile.write(json.dumps(JH["fin"], ensure_ascii=False).encode())
         elif path == "/api/guide":                               # 빌드가 받아 사이트 상세창의 가이던스 변천으로
             self.head()
             self.wfile.write(json.dumps({"jp": GD.own, "us": GU.own}, ensure_ascii=False).encode())

@@ -565,6 +565,67 @@ def load_fin():
             # 예전 financials.json 은 열쇠가 'AAPL' 이었다. 'us:' 를 붙여 옮긴다.
             key = k if ":" in k else prefix + k
             out[key] = merge_fin(out.get(key), v)
+    for key, v in jp_old_fin().items():          # 1Q18 부터 — 비어 있는 옛 분기만 메운다(rank 가 가장 낮다)
+        out[key] = merge_fin(out.get(key), v)
+    return out
+
+
+def jp_old_fin():
+    """일본 옛 분기(2018~) — 실시간 서버가 JPX 공시 보관소의 옛 결산단신 XBRL 에서 뽑은 **누계**를 분기로 되돌린다.
+    stockanalysis 는 20분기(5년)가 무료 한도라 그 앞이 비었다(회원님 10/30: "1Q18부터 장기로").
+    누계는 같은 시작일의 앞 누계를 빼서 분기로 — 3개월짜리면 그대로. 받은 것은 data/financials_jp_old.json 에 남겨
+    서버가 안 닿을 때도 쓴다."""
+    path = HERE / "data" / "financials_jp_old.json"
+    raw = {}
+    if RT_URL:
+        try:
+            req = urllib.request.Request(RT_URL + "/api/jpfinraw", headers={"User-Agent": "es-build"})
+            with urllib.request.urlopen(req, timeout=30) as r:
+                raw = json.loads(r.read())
+            if raw:
+                path.write_text(json.dumps(raw, ensure_ascii=False, separators=(",", ":")), encoding="utf-8")
+        except Exception as e:                                    # noqa: BLE001
+            print(f"  ! 옛 결산단신 실적 받기 실패: {e}")
+    if not raw:
+        try:
+            raw = json.loads(path.read_text(encoding="utf-8"))
+        except (OSError, ValueError):
+            return {}
+    from datetime import date as _d, timedelta as _td
+
+    def months(a, b):
+        return (int(b[:4]) - int(a[:4])) * 12 + int(b[5:7]) - int(a[5:7]) + 1
+    out = {}
+    for key, spans in raw.items():
+        by_start = {}
+        for span, row in spans.items():
+            st, _, en = span.partition("/")
+            if st and en and row.get("rev"):
+                by_start.setdefault(st, []).append((en, row))
+        q = {}
+        for st, lst in by_start.items():
+            lst.sort()
+            prev = None
+            for en, row in lst:
+                m = months(st, en)
+                if m == 3:
+                    q[en] = dict(row)
+                elif prev and months(st, prev[0]) == m - 3:
+                    q[en] = {k: (row.get(k) - prev[1][k]) if row.get(k) is not None and prev[1].get(k) is not None else None
+                             for k in ("rev", "opi", "ni")}
+                prev = (en, row)
+        pts = []
+        for en in sorted(q):
+            r = q[en]
+            if not r.get("rev") or r["rev"] <= 0:
+                continue
+            mo = int(en[5:7])
+            pts.append({"label": f"{(mo + 2) // 3}Q{en[2:4]}", "end": en,
+                        "mid": (_d.fromisoformat(en) - _td(days=45)).isoformat(),
+                        "rev": r["rev"], "opi": r.get("opi"), "ni": r.get("ni")})
+        if len(pts) >= 2:
+            out[key] = {"v": 1, "freq": "Q", "cur": "JPY", "src": "tdold", "points": pts}
+    print(f"  일본 옛 분기(JPX 보관소): {len(out):,}종목 · {sum(len(v['points']) for v in out.values()):,}분기")
     return out
 
 
@@ -603,7 +664,7 @@ def merge_fin(a, b):
     # 예전에는 'sec 이면 뼈대' 하나로만 갈랐는데, 일본은 sec 이 없어서 그 규칙이
     # 아무 일도 안 했다. 그러면 TDnet 이 방금 받아온 새 분기가 stockanalysis 의
     # 헌 줄에 덮여 사라진다.
-    rank = {"sec": 3, "tdnet": 2, "mix": 1, "sa": 1, "yahoo": 0}
+    rank = {"sec": 3, "tdnet": 2, "mix": 1, "sa": 1, "yahoo": 0, "tdold": -1}
     pa, pb = rank.get(a.get("src"), 0), rank.get(b.get("src"), 0)
     base, extra = (a, b) if len(a.get("points") or []) >= len(b.get("points") or []) else (b, a)
     win = a if pa >= pb else b               # 겹치는 분기를 가져갈 쪽
@@ -5574,7 +5635,7 @@ function segChart(sg, cur) {
   /* 사업부별 매출 — **선 그래프**(회원님 10/30: 누적 막대 말고 부문마다 선으로, 시계열이 보이게).
      축은 부문 하나의 최댓값으로 잡는다(합계가 아니라). 점마다 값을 적되, 같은 칸에서 글자끼리
      부딪히면 아래로 내려 적는다. 색·글꼴·축·범례는 사이트의 다른 차트와 같은 것을 쓴다. */
-  const pts = (sg.pts || []).slice(-22);
+  const pts = (sg.pts || []).slice(-36);          // 1Q18 부터(회원님 10/30)
   if (pts.length < 2) return '';
   const names = sg.names || [];
   const all = pts.flatMap(r => r.slice(1).filter(v => v != null));
@@ -5674,7 +5735,7 @@ function finChart(f) {
     const prev = all[i - back];
     return (prev && prev[1]) ? p[1] / prev[1] - 1 : null;
   });
-  const N = 22;                       // 이보다 촘촘하면 숫자가 서로 겹친다
+  const N = 36;                       // 1Q18 부터 다 보이게(회원님 10/30) — 칸은 46px 그대로, 그림이 넓어진다
   const pts = all.slice(-N), yoy = yoyAll.slice(-N);
   const latest = pts.length ? pts[pts.length - 1][0] : '';
 
