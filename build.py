@@ -5631,11 +5631,18 @@ function ghFill() {
   fetch('./data/guide_site.json?t=' + Math.floor(Date.now() / 6e5)).then(r => r.json())
     .then(j => { GH = j; go(); }).catch(() => {});
 }
+// 분기 이름(3Q26 · 1H25 · 2026-03-31)이 2018년 이후인가 — 차트는 1Q18 부터 그린다.
+function labFrom18(l) {
+  const m = /^\d[QH](\d\d)$/.exec(l || '');
+  if (m) return +m[1] >= 18;
+  const d = /^(\d{4})-/.exec(l || '');
+  return d ? +d[1] >= 2018 : true;
+}
 function segChart(sg, cur) {
   /* 사업부별 매출 — **선 그래프**(회원님 10/30: 누적 막대 말고 부문마다 선으로, 시계열이 보이게).
      축은 부문 하나의 최댓값으로 잡는다(합계가 아니라). 점마다 값을 적되, 같은 칸에서 글자끼리
      부딪히면 아래로 내려 적는다. 색·글꼴·축·범례는 사이트의 다른 차트와 같은 것을 쓴다. */
-  const pts = (sg.pts || []).slice(-36);          // 1Q18 부터(회원님 10/30)
+  const pts = (sg.pts || []).filter(p => labFrom18(p[0])).slice(-36);   // 1Q18 부터(회원님 10/30)
   if (pts.length < 2) return '';
   const names = sg.names || [];
   const all = pts.flatMap(r => r.slice(1).filter(v => v != null));
@@ -5736,7 +5743,9 @@ function finChart(f) {
     return (prev && prev[1]) ? p[1] / prev[1] - 1 : null;
   });
   const N = 36;                       // 1Q18 부터 다 보이게(회원님 10/30) — 칸은 46px 그대로, 그림이 넓어진다
-  const pts = all.slice(-N), yoy = yoyAll.slice(-N);
+  // 1Q18 앞은 그리지 않는다(회원님 10/30: "1Q18 부터 하라니까"). 2017 분기는 1Q18 전년비 계산에만 쓴다.
+  const keep = all.map((p, i) => i).filter(i => labFrom18(all[i][0])).slice(-N);
+  const pts = keep.map(i => all[i]), yoy = keep.map(i => yoyAll[i]);
   const latest = pts.length ? pts[pts.length - 1][0] : '';
 
   const rmaxRaw = Math.max(...pts.map(p => p[1]), 1);
