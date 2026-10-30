@@ -703,14 +703,72 @@ def seg_names_now(seg):
     return [n for i, n in enumerate(seg.get("names") or []) if i + 1 < len(last) and last[i + 1] is not None] or None
 
 
+def ytd_months(basis):
+    """'9개월 누계'·'중간기(6개월)'·'반기'·'연간' -> 누계 개월 수. 분기 단독이면 3, 모르면 0."""
+    m = re.search(r"(\d+)\s*개월", basis or "")
+    if m:
+        return int(m.group(1))
+    if re.search(r"반기|중간|상반기|上期|中間", basis or ""):
+        return 6
+    if re.search(r"연간|통기|通期", basis or ""):
+        return 12
+    return 0 if re.search(r"누계", basis or "") else 3
+
+
+def prev_q(label):
+    m = re.match(r"(\d)Q(\d\d)$", label or "")
+    if not m:
+        return None
+    q, y = int(m.group(1)), int(m.group(2))
+    return f"{q - 1}Q{y:02d}" if q > 1 else f"4Q{y - 1:02d}"
+
+
+def ytd_to_quarter(b, seg, label, months):
+    """누계 부문 값 -> 이번 분기 단독. 앞 분기들(같은 회계연도)의 사이트 부문 값을 이름으로 맞춰 뺀다."""
+    if not seg or not seg.get("pts"):
+        return None
+    from difflib import SequenceMatcher
+    norm = lambda x: re.sub(r"[\s·,&()\-]|및|부문|사업", "", x.lower())   # noqa: E731
+    rows = {p[0]: p for p in seg["pts"]}
+    names = seg.get("names") or []
+    need, lab = [], label
+    for _ in range(months // 3 - 1):
+        lab = prev_q(lab)
+        if lab not in rows:
+            return None
+        need.append(rows[lab])
+    out = []
+    for x in b["segs"]:
+        n = max(names, key=lambda m: SequenceMatcher(None, norm(m), norm(x["n"])).ratio(), default=None)
+        if not n or SequenceMatcher(None, norm(n), norm(x["n"])).ratio() < 0.6:
+            return None
+        i = names.index(n) + 1
+        prior = [r[i] for r in need]
+        if any(v is None for v in prior) or x.get("v") is None:
+            return None
+        q = x["v"] * (b.get("scale") or 0) - sum(prior)
+        if q <= 0:
+            return None
+        out.append({"n": n, "v": q / (b.get("scale") or 1), "y": None, "p": None})
+    return dict(b, segs=out, basis="3개월(누계에서 앞 분기를 빼서)")
+
+
 def seg_ai_try(ev, b, seg, point=None):
     """AI 판독 부문 표를 받아들일지. 이름이 사이트와 맞고, 합이 그 분기 총매출과 아귀가 맞을 때만."""
     p = point or ev.get("point")
     if not p or not b.get("segs") or not b.get("scale"):
         return None
     basis = b.get("basis") or ""
-    if ev["mkt"] == "hk" or re.search(r"누계|9|6개월|반기|연간|12", basis):
-        return None                              # 분기 단독(3개월) 값만 — 누계를 분기 칸에 앉히면 막대가 부푼다
+    if ev["mkt"] == "hk":
+        return None
+    ytd = ytd_months(basis)
+    if ytd and ytd > 3:
+        # 일본 설명자료는 대개 누계(6·9·12개월)다. 같은 회계연도의 앞 분기들을 우리가 갖고 있으면
+        # 빼서 이번 분기 단독으로 되돌린다 — 없으면 못 쓴다(누계를 분기 칸에 앉히면 막대가 부푼다).
+        b = ytd_to_quarter(b, seg, p[0], ytd)
+        if not b:
+            log("AI 부문 누계라 못 씀", ev["key"], basis)
+            return None
     if seg and seg.get("pts") and seg["pts"][-1][0] == p[0]:
         return None                              # 그 분기가 이미 있다(공식 자료) — 손대지 않는다
     vals = {x["n"]: x["v"] * b["scale"] for x in b["segs"] if x.get("v") is not None}
