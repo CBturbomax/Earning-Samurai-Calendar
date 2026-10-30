@@ -1254,7 +1254,7 @@ def mon_line(ev):
     if r[2] is None:
         return ""
     base = num.get("historyBase") or num.get("base") or ""
-    return f"📅 월차 : {r[0].replace('-', '.')} {html.escape(base + ' ' if base else '')}매출 전년비 {pct(r[2] - 100)}"
+    return f"📅 월 매출 : {r[0].replace('-', '.')} {html.escape(base + ' ' if base else '')}매출 YoY {pct(r[2] - 100)}"
 
 
 def caption(ev):
@@ -1269,7 +1269,7 @@ def caption(ev):
     if ev.get("url"):
         name = f"<a href=\"{e(ev['url'])}\">{name}</a>"
     pre, mon = ev.get("preInfo"), ev.get("mon")
-    tail = (f" / {e(pre['what'])}" if pre else f" / {int(mon['period'][5:7])}월 월차" if mon
+    tail = (f" / {e(pre['what'])}" if pre else f" / {int(mon['period'][5:7])}월 월 매출" if mon
             else f" / {e(ev['point'][0])} 실적" if ev.get("point") else " / 실적 발표")
     head = f"{FLAG[ev['mkt']]} <b>{name}</b>" + tail
     lines = [head]
@@ -1293,7 +1293,7 @@ def caption(ev):
         out = "\n".join(lines)
         return out if len(out) <= 1024 else out[:1000] + "…"
     if mon:
-        lines += ["", f"🔥 {e(mon['base'] + ' ' if mon['base'] else '')}매출 전년비 : <b>{pct(mon['yoy'])}</b>"
+        lines += ["", f"🔥 {e(mon['base'] + ' ' if mon['base'] else '')}매출 YoY : <b>{pct(mon['yoy'])}</b>"
                       + (f" ({e(mon['other'])})" if mon.get("other") else "")]
         return "\n".join(lines)
     ml = mon_line(ev) if ev["mkt"] == "jp" else ""
