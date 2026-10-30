@@ -625,7 +625,8 @@ def finish(ev, point=None):
         except Exception:                                        # noqa: BLE001
             log("미국 가이던스 실패", key, traceback.format_exc(limit=2))
     ser_add_q(key, b, ev.get("cur") or "USD")
-    sp = None if ev.get("segPoint") else seg_ai_try(ev, b, seg)
+    had_seg = bool(ev.get("segPoint"))
+    sp = None if had_seg else seg_ai_try(ev, b, seg)
     if sp:
         ev["segPoint"] = sp                     # 사이트 부문 막대에 이번 분기를 곧바로 얹는다
     if not replay:
@@ -641,6 +642,11 @@ def finish(ev, point=None):
         if want and H.html:
             try:
                 segpng = (shot.render(dict({k: v for k, v in ev.items() if not k.startswith("_")}, onlySeg=want)) or [None])[0]
+            except Exception:                    # noqa: BLE001
+                segpng = None
+        if not segpng and sp and not had_seg and H.html:   # 앨범에 이번 분기 사업부가 빠졌었다 — 채운 그림을 답장에(9830, 10/30)
+            try:
+                segpng = (shot.render(dict({k: v for k, v in ev.items() if not k.startswith("_")}, onlySeg="segchart")) or [None])[0]
             except Exception:                    # noqa: BLE001
                 segpng = None
         segpng = segpng or gpng
@@ -997,6 +1003,81 @@ def guidefill_us(n, back=8):
     with ThreadPoolExecutor(3) as ex:
         list(ex.map(one, todo))
     log("미국 가이던스 이력 끝", done[0], "/", len(todo))
+
+
+JH_PATH = DATA / "jphist.json"
+try:
+    JH = json.loads(JH_PATH.read_text())
+except (OSError, ValueError):
+    JH = {"done": [], "seg": {}}
+JH_LOCK = threading.Lock()
+BROWSER_UA = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/124.0 Safari/537.36"
+_yano = {"t": 0.0, "lock": threading.Lock()}
+
+
+def jphist(n, since="2021-01-01"):
+    """일본 옛 결산단신을 통째로 — 가이던스 변천(연간 예상)과 부문 누계(2024년부터 비던 3·4분기)를 같이 채운다.
+    목록은 yanoshin TDnet API(2009년치부터, 문서번호·XBRL 이름), 파일은 JPX 공시 보관소(약 5~6년,
+    www2.jpx.co.jp/disc/{코드}0/{파일}). TDnet 은 한 달만 남기고 InvestingWiki 는 하루 8천 건 한도라 직접 받는다."""
+    with H.lock:
+        rows = dict(H.rows_by_key)
+    caps = {}
+    for k, rs in rows.items():
+        if k.startswith("jp:") and rs:
+            caps[k[3:]] = max((r[11] or 0) for r in rs)
+    done = set(JH["done"])
+    todo = [c for c, _ in sorted(caps.items(), key=lambda x: -x[1]) if c not in done][:n]
+    log("일본 옛 결산단신 시작", len(todo), "종목")
+    got = [0, 0]
+
+    def listing(code):
+        with _yano["lock"]:                                      # 한 사람이 돌리는 무료 API — 1초에 한 번
+            wait = 1.0 - (time.time() - _yano["t"])
+            if wait > 0:
+                time.sleep(wait)
+            _yano["t"] = time.time()
+        j = json.loads(http_get(f"https://webapi.yanoshin.jp/webapi/tdnet/list/{code}.json?limit=300&hasXBRL=1",
+                                ua=BROWSER_UA, timeout=30))
+        return [it.get("Tdnet", it) for it in (j.get("items") or [])]
+
+    def one(code):
+        try:
+            items = listing(code)
+        except Exception as e:                                   # noqa: BLE001
+            log("옛 결산단신 목록 실패", code, repr(e)[:120])
+            return
+        items = sorted((it for it in items if (it.get("pubdate") or "")[:10] >= since and it.get("url_xbrl")
+                        and fj.TANSHIN.search(it.get("title") or "") and not fj.NOT_TANSHIN.search(it.get("title") or "")),
+                       key=lambda it: it["pubdate"])
+        seg = {}
+        for it in items:
+            fn = it["url_xbrl"].rsplit("/", 1)[-1]
+            try:
+                blob = http_get(f"https://www2.jpx.co.jp/disc/{code}0/{fn}", ua=BROWSER_UA, timeout=60, binary=True)
+            except Exception:                                    # noqa: BLE001
+                continue                                         # 보관소에 없는 옛 파일(404)
+            try:
+                vals = fj.read_summary(blob)
+                if vals:
+                    GD.add(code, fj.forecast_from(vals), it["pubdate"][:10])
+                for st, en, row in fj.read_segments(blob):
+                    seg[f"{st}/{en}"] = row
+                got[1] += 1
+            except Exception:                                    # noqa: BLE001
+                continue
+        with JH_LOCK:
+            if seg:
+                JH["seg"].setdefault("jp:" + code, {}).update(seg)
+            JH["done"].append(code)
+            got[0] += 1
+            if got[0] % 10 == 0:
+                JH_PATH.write_text(json.dumps(JH, ensure_ascii=False))
+                log("옛 결산단신", got[0], "/", len(todo), "종목 · 문서", got[1])
+    with ThreadPoolExecutor(3) as ex:
+        list(ex.map(one, todo))
+    with JH_LOCK:
+        JH_PATH.write_text(json.dumps(JH, ensure_ascii=False))
+    log("일본 옛 결산단신 끝", got[0], "종목 · 문서", got[1])
 
 
 def segfill_jp(n):
@@ -1584,6 +1665,10 @@ def replay_run(lines):
             except Exception as e:                               # noqa: BLE001
                 log("떠보기 실패", f.group(1), repr(e)[:200])
             continue
+        f = re.match(r"jphist\s+(\d+)", ln.strip())
+        if f:
+            threading.Thread(target=jphist, args=(int(f.group(1)),), daemon=True, name="jphist").start()   # 몇 시간짜리 — 다음 줄을 막지 않게
+            continue
         f = re.match(r"guideus\s+(\d+)", ln.strip())
         if f:
             guidefill_us(int(f.group(1)))
@@ -1738,6 +1823,10 @@ class Handler(BaseHTTPRequestHandler):
             self.head()
             with SEGAI_LOCK:
                 self.wfile.write(json.dumps(dict(SEGAI, _series=SER), ensure_ascii=False).encode())
+        elif path == "/api/jpsegraw":                            # 옛 결산단신 부문 누계 — numbers 수집기가 segments_jp.json raw 에 합친다
+            self.head()
+            with JH_LOCK:
+                self.wfile.write(json.dumps(JH["seg"], ensure_ascii=False).encode())
         elif path == "/api/guide":                               # 빌드가 받아 사이트 상세창의 가이던스 변천으로
             self.head()
             self.wfile.write(json.dumps({"jp": GD.own, "us": GU.own}, ensure_ascii=False).encode())
