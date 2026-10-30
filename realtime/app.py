@@ -2145,6 +2145,11 @@ def replay_run(lines):
         if f:
             threading.Thread(target=jphist, args=(int(f.group(1)),), daemon=True, name="jphist").start()   # 몇 시간짜리 — 다음 줄을 막지 않게
             continue
+        if ln.strip() == "jphistagain":                 # 판독 규칙을 고쳤다 — 옛 결산단신을 처음부터 다시(가이던스 빈칸)
+            with JH_LOCK:
+                JH["done"] = []
+            threading.Thread(target=safe, args=(jphist, 4000), daemon=True, name="jphist").start()
+            continue
         if ln.strip() == "guideaudit":
             guide_audit()
             continue
