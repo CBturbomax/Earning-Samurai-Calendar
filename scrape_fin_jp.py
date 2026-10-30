@@ -233,9 +233,15 @@ def read_summary(blob):
              if "Summary" in n and n.lower().endswith(("ixbrl.htm", ".xbrl"))]
     if not names:
         return None
-    try:
-        txt = z.read(names[0]).decode("utf-8", "replace")
-    except (KeyError, OSError):
+    # **요약 문서가 여럿이다 — 전부 읽는다.** 실적(…sm…)과 연간 예상(…fr… 등)이 다른 문서에 담기는 공시가 있어
+    # 첫 문서만 읽던 시절에는 예상이 통째로 빠졌다(후쿠다전자·후지전기 10/30 — 가이던스 변천에 빈칸).
+    txt = ""
+    for n in names:
+        try:
+            txt += z.read(n).decode("utf-8", "replace") + "\n"
+        except (KeyError, OSError):
+            continue
+    if not txt:
         return None
 
     periods = {}
