@@ -2730,8 +2730,12 @@ def build():
     except (OSError, ValueError):
         AI = {}
     ai_n = 0
+    seg_now = {}                     # 사이트 막대와 기준이 달라 못 이은 것 — 상세창에 '이번 분기 사업부별' 표로
     for k, r in AI.items():
         if k not in on_screen or not r.get("label"):
+            continue
+        if r.get("alt") or not seg.get(k):
+            seg_now[k] = {x: r.get(x) for x in ("label", "names", "vals", "y", "cur")}
             continue
         lab, vals = r["label"], dict(zip(r.get("names") or [], r.get("vals") or []))
         cur = seg.get(k)
@@ -2880,6 +2884,7 @@ def build():
         # 지금은 미국 종목만 — 일본·홍콩은 소스에 부문 페이지가 없다.
         # 합이 총매출과 안 맞는 종목은 여기서 걸러진다(seg_fit).
         "seg": seg,
+        "segNow": seg_now,
         # 일본 월매출(月次). [날짜, 시각, 코드, 한글명, 원문명, 대상월, 달정확도,
         #                  제목, 첨부, 시총, 업종] — 여기는 '무엇을 언제 냈나'고
         # 숫자는 monthlyNum 에 따로 있다(못 읽은 종목은 거기 없다).
@@ -6019,7 +6024,14 @@ const RT = D.rt || '';
    사이트 다시 빌드(부문 막대)보다 몇 분 앞서 보인다. 회사 자료 그대로의 기준(분기/누계)과 단위를 적는다. */
 const RTSEG = {};
 function rtSegBlock(key) {
-  const s = RTSEG[key];
+  let s = RTSEG[key];
+  const N = !s && D.segNow && D.segNow[key];
+  if (N) {
+    const div = N.cur === 'JPY' ? 1e8 : 1e6;
+    s = { segs: (N.names || []).map((n, i) => ({ n, v: N.vals[i] == null ? null : Math.round(N.vals[i] / div * 10) / 10,
+                                                 y: N.y ? N.y[i] : null })),
+          unit: N.cur === 'JPY' ? '억 엔' : '백만 ' + (N.cur || 'USD'), basis: N.label, src: '실적 보도자료·IR 자료' };
+  }
   if (!s || !(s.segs || []).length) return '';
   const pc = v => v == null || !isFinite(v) ? '—' : (v > 0 ? '+' : '') + (+v).toFixed(1) + '%';
   return '<div class="rtseg"><table><thead><tr><th style="text-align:left">방금 발표 · 사업부별 매출' +
