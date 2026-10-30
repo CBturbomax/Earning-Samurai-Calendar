@@ -577,12 +577,12 @@ def finish(ev, point=None):
     b = box.get("b")
     if more:                                     # ③ IR 자료 — 본문에 사업부 표가 없었을 때만 따로 읽는다
         def ir():
-            if b and b.get("segs"):
-                return
             extra = more()
             if not extra.strip():
                 return
             b2 = brief.why(ev["name"], text + extra, names=names)
+            if b2:
+                ser_add_q(key, b2, ev.get("cur") or "USD")
             if b2 and b2.get("segs"):
                 e2 = dict(ev, brief=dict(ev.get("brief") or b or {}, segs=b2["segs"], unit=b2.get("unit"),
                                          basis=b2.get("basis"), scale=b2.get("scale")))
@@ -596,6 +596,7 @@ def finish(ev, point=None):
     if not b:
         return
     ev["brief"] = b
+    ser_add_q(key, b, ev.get("cur") or "USD")
     sp = seg_ai_try(ev, b, seg)
     if sp:
         ev["segPoint"] = sp                     # 사이트 부문 막대에 이번 분기를 곧바로 얹는다
@@ -630,6 +631,68 @@ try:
     SEGAI = json.loads(SEGAI_PATH.read_text())
 except (OSError, ValueError):
     SEGAI = {}
+
+
+# 회사의 '지금 기준' 부문 시계열. 두 길로 모인다 — (1) 보도자료마다 이번·전년 같은 분기 두 칸,
+# (2) 설명자료·투자자 발표자료의 분기별 사업부 추이 표(여러 열을 통째로). 네 칸이 넘으면 사이트 막대를 대신한다.
+# 회원님(10/30): "이번 분기만 따로 보는 건 의미가 없다. 시계열이 중요하다." · "공시랑 IR 자료에 넘치는 게 자료다."
+SER_PATH = DATA / "segs_series.json"
+try:
+    SER = json.loads(SER_PATH.read_text())
+except (OSError, ValueError):
+    SER = {}
+
+
+def prev_year(label):
+    m = re.match(r"(\d)Q(\d\d)$", label or "")
+    return f"{m.group(1)}Q{int(m.group(2)) - 1:02d}" if m else None
+
+
+def _ser_put(key, cur, items):
+    """items: [(라벨, 이름, 값)] — 닮은 이름은 같은 부문으로 잇는다."""
+    from difflib import SequenceMatcher
+    norm = lambda x: re.sub(r"[\s·,&()\-]|및|부문|사업", "", x.lower())   # noqa: E731
+    with SEGAI_LOCK:
+        r = SER.setdefault(key, {"names": [], "pts": {}, "cur": cur})
+        for lab, n, v in items:
+            if not lab or v is None:
+                continue
+            hit = next((x for x in r["names"] if norm(x) == norm(n)
+                        or SequenceMatcher(None, norm(x), norm(n)).ratio() >= 0.8), None)
+            if not hit:
+                r["names"].append(n)
+                hit = n
+            r["pts"].setdefault(lab, {})[hit] = v
+        tmp = SER_PATH.with_suffix(".tmp")
+        tmp.write_text(json.dumps(SER, ensure_ascii=False))
+        tmp.replace(SER_PATH)
+
+
+def ser_add(key, label, b, cur):
+    """보도자료 한 장 -> 이번 분기·전년 같은 분기 두 칸."""
+    sc = b.get("scale") or 0
+    if not sc or not b.get("segs") or re.search(r"누계|9|6개월|반기|연간|12", b.get("basis") or ""):
+        return
+    items = []
+    for x in b["segs"]:
+        items.append((label, x["n"], x["v"] * sc if x.get("v") is not None else None))
+        items.append((prev_year(label), x["n"], x["p"] * sc if x.get("p") is not None else None))
+    _ser_put(key, cur, items)
+
+
+def ser_add_q(key, b, cur):
+    """설명자료의 분기별 사업부 추이 표(여러 열) -> 그 분기들 전부."""
+    sc = b.get("scale") or 0
+    if not sc or not b.get("segq"):
+        return 0
+    items = []
+    for col in b["segq"]:
+        y, m = int(col["end"][:4]), int(col["end"][5:7])
+        lab = f"{(m - 1) // 3 + 1}Q{y % 100:02d}"
+        items += [(lab, n, v * sc) for n, v in col["vals"].items()]
+    _ser_put(key, cur, items)
+    log("분기 추이 표", key, len(b["segq"]), "분기")
+    return len(b["segq"])
 
 
 def seg_names_now(seg):
@@ -691,6 +754,7 @@ def seg_ai_try(ev, b, seg, point=None):
            "y": [yoy.get(n) for n in names] if alt else None}
     if alt:
         rec["alt"] = 1
+        ser_add(ev["key"], p[0], b, rec["cur"])
     with SEGAI_LOCK:
         SEGAI[ev["key"]] = rec
         tmp = SEGAI_PATH.with_suffix(".tmp")
@@ -737,6 +801,7 @@ def segfill(n):
             names = seg_names_now(segs.get(k))
             b = brief.why(k[3:], brief.us_text(raw), names=names)
             if b:
+                ser_add_q(k, b, "USD")
                 seg_ai_try({"key": k, "mkt": "us", "url": "", "cur": "USD"}, b, segs.get(k), [p[0], p[1]])
                 if k in SEGAI:
                     got[0] += 1
@@ -745,6 +810,58 @@ def segfill(n):
     with ThreadPoolExecutor(3) as ex:
         list(ex.map(one, todo))
     log("부문 메우기 끝", got[0], "/", len(todo))
+
+
+def serfill(n, back=4):
+    """기준이 달라 못 이은 미국 회사 — 지난 실적 보도자료 네 장을 읽어 지금 기준 시계열(8분기)을 만든다."""
+    import scrape_pr_us as pr
+    with H.lock:
+        fin = dict(H.D.get("fin", {}))
+    rev_map = {v: k for k, v in cik_ticker().items()}
+    todo = [k for k, r in list(SEGAI.items()) if k.startswith("us:") and r.get("alt")
+            and len((SER.get(k) or {}).get("pts") or {}) < 8][:n]
+    log("부문 시계열 만들기 시작", len(todo), "종목")
+    done = [0]
+
+    def one(k):
+        cik = rev_map.get(k[3:].replace(".", "-"))
+        f = fin.get(k) or {}
+        labs = [p[0] for p in f.get("points") or []]
+        cur = SEGAI[k].get("label")
+        if not cik or cur not in labs:
+            return
+        try:
+            blob = pr.get(pr.SUBS.format(cik=cik), binary=False)
+            rec = json.loads(blob)["filings"]["recent"] if blob else {}
+        except Exception:                                        # noqa: BLE001
+            return
+        accs = [a.replace("-", "") for a, fm, it in zip(rec.get("accessionNumber", []), rec.get("form", []),
+                                                       rec.get("items", [])) if fm == "8-K" and "2.02" in (it or "")]
+        i0 = labs.index(cur)
+        for j, acc in enumerate(accs[:back]):
+            if i0 - j < 0:
+                break
+            lab, rev = labs[i0 - j], f["points"][i0 - j][1]
+            try:
+                raw = lu.ex99_html(cik, acc)
+                if not raw:
+                    continue
+                b = brief.why(k[3:], brief.us_text(raw) + us_extra_text(cik, acc), names=(SER.get(k) or {}).get("names"))
+            except Exception as e:                               # noqa: BLE001
+                log("시계열 실패", k, repr(e)[:100])
+                continue
+            if not b:
+                continue
+            ser_add_q(k, b, "USD")
+            if b.get("segs") and b.get("scale"):
+                tot = sum((x["v"] or 0) * b["scale"] for x in b["segs"])
+                if rev and 0.85 <= tot / rev <= 1.6:             # 그 분기 총매출과 맞는 장만
+                    ser_add(k, lab, b, "USD")
+        if len((SER.get(k) or {}).get("pts") or {}) >= 4:
+            done[0] += 1
+    with ThreadPoolExecutor(3) as ex:
+        list(ex.map(one, todo))
+    log("부문 시계열 만들기 끝", done[0], "/", len(todo))
 
 
 def segfill_jp(n):
@@ -791,6 +908,7 @@ def segfill_jp(n):
                 return
             b = brief.why(code, text, names=seg_names_now(segs.get(k)))
             if b:
+                ser_add_q(k, b, "JPY")
                 seg_ai_try({"key": k, "mkt": "jp", "url": "", "cur": "JPY"}, b, segs.get(k), [p[0], p[1]])
                 if k in SEGAI:
                     got[0] += 1
@@ -1067,7 +1185,7 @@ def _jp_ir_text(code, day):
             t = brief.hk_text(pdf) if pdf else ""
             i = t.find("セグメント")
             log("일본 IR 자료", code, title[:40], len(t))
-            return t[max(0, i - 300):max(0, i - 300) + 9000] if i >= 0 else t[:9000]
+            return t[:20000]                            # 추이 표가 여러 쪽에 흩어져 있다 — 앞 20,000자 통째로
     except Exception as e:                                       # noqa: BLE001
         log("일본 IR 자료 실패", code, repr(e)[:120])
     return ""
@@ -1193,6 +1311,10 @@ def replay_run(lines):
         if f:
             segfill(int(f.group(1)))
             continue
+        f = re.match(r"serfill\s+(\d+)", ln.strip())
+        if f:
+            serfill(int(f.group(1)))
+            continue
         f = re.match(r"segfilljp\s+(\d+)", ln.strip())
         if f:
             segfill_jp(int(f.group(1)))
@@ -1314,7 +1436,7 @@ class Handler(BaseHTTPRequestHandler):
         elif path == "/api/segs":                                # 수집 루프가 받아 data/segments_ai.json 으로
             self.head()
             with SEGAI_LOCK:
-                self.wfile.write(json.dumps(SEGAI, ensure_ascii=False).encode())
+                self.wfile.write(json.dumps(dict(SEGAI, _series=SER), ensure_ascii=False).encode())
         elif path == "/api/log":                                 # 진단 — 최근 로그 300줄(토큰 같은 비밀은 안 찍는다)
             self.head(ctype="text/plain; charset=utf-8")
             self.wfile.write("\n".join(LOGS).encode())
