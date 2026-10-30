@@ -978,36 +978,60 @@ def segfill_jp(n):
 
 
 def followup(ev):
-    """앨범 뒤에 붙는 답장 — 회사가 한 설명을 쉬운 말로."""
+    """앨범 뒤에 붙는 답장 — 회원님 형식(10/30): 🏢 비즈니스 / 💡 실적 배경 / 🗓 가이던스 / ⚠️ 주의, 사이에 빈 줄."""
     e = html.escape
     b = ev.get("brief") or {}
-    lines = []
+    with H.lock:
+        biz = (H.D.get("descKo") or {}).get(ev["key"]) or ""
+    biz = biz or b.get("biz") or ""
+    out = []
+
+    def sec(title, items):
+        items = [x for x in items if x]
+        if items:
+            out.append("\n".join([title] + [f"• {e(x)}" for x in items]))
     if b.get("key") and not ev.get("point"):
-        lines.append("📊 <b>" + e(b["key"]) + "</b>")
-    if b.get("why"):
-        lines += ["💡 <b>왜 이렇게 나왔나</b> <i>(회사 설명)</i>"] + [f"• {e(x)}" for x in b["why"]]
-    if b.get("guide"):
-        lines += ["", f"🗓 {e(b['guide'])}"]
-    if b.get("watch"):
-        lines += ["", "⚠️ <b>주의</b>"] + [f"• {e(x)}" for x in b["watch"]]
-    return "\n".join(lines).strip()
+        sec("📊 <b>실적</b>", [b["key"]])
+    sec("🏢 <b>비즈니스</b>", [biz.strip().rstrip(".")] if biz else [])
+    sec("💡 <b>실적 배경</b>", b.get("why") or [])
+    gd = b.get("guide")
+    sec("🗓 <b>가이던스</b>", gd if isinstance(gd, list) else [gd] if gd else [])
+    sec("⚠️ <b>주의</b>", b.get("watch") or [])
+    return "\n\n".join(out)
 
 
 def pct(v):
     return f"{v:+.1f}%".replace("+0.0%", "0%")
 
 
+def cap_won(ev):
+    """시총(원화): 1조 밑은 「1,980억 원」, 1조~10조는 「3.5조 원」, 10조부터 「11조 원」."""
+    usd_b = ev.get("cap") or 0
+    if not usd_b:
+        return ""
+    with H.lock:
+        krw = usd_b * 1e9 * (H.D.get("usdKrw") or 1400)
+    if krw < 1e12:
+        return f"{round(krw / 1e8):,}억 원"
+    if krw < 1e13:
+        return f"{krw / 1e12:.1f}조 원".replace(".0조", "조")
+    return f"{round(krw / 1e12):,}조 원"
+
+
 def caption(ev):
-    """숫자는 차트가 말한다. 글은 한 줄 요점 + '왜' 몇 줄."""
+    """회원님 형식(10/30): 이름·분기 / 💰 시총 / 🕒 발표 시각 / 핵심 숫자 — 사이에 빈 줄."""
     e = html.escape
     lines = [f"{FLAG[ev['mkt']]} <b>{e(ev['name'])} ({e(ev['code'])})</b>"
              + (f" · {e(ev['point'][0])} 실적" if ev.get("point") else " 실적 발표")]
+    cw = cap_won(ev)
+    if cw:
+        lines.append(f"💰 시총 : {cw}")
     if ev.get("kstTime"):
-        lines.append(f"🕒 {ev['kstDate'][5:].replace('-', '/')} {ev['kstTime']} · {e(ev.get('src', ''))}")
+        lines += ["", f"🕒 {ev['kstDate'].replace('-', '.')}. {ev['kstTime']}"]
     p = ev.get("point")
     key = []
     if p:
-        lab, rev, opi = p[0], p[1], p[2]
+        rev, opi = p[1], p[2]
         if ev.get("yoy") is not None:
             key.append(f"매출 {pct(ev['yoy'])}")
         if ev.get("opiYoy") is not None:
@@ -1016,6 +1040,7 @@ def caption(ev):
             key.append(ev["turn"])
         if opi is not None and rev:
             key.append(f"이익률 {opi / rev * 100:.1f}%")
+    gl = ""
     g = ev.get("guide")
     if g and g.get("prev"):
         d = [f"{n} {pct((b / a - 1) * 100)}" for n, a, b in zip(("매출", "영업이익"), g["prev"], g["now"])
@@ -1024,23 +1049,19 @@ def caption(ev):
             up = all(x.split()[-1].startswith("+") for x in d)
             dn = all(x.split()[-1].startswith("-") for x in d)
             gl = ("📈 가이던스 상향 " if up else "📉 가이던스 하향 " if dn else "🔁 가이던스 수정 ") + " · ".join(d)
-        else:
-            gl = ""
-    else:
-        gl = ""
+    if key or gl:
+        lines.append("")
     if key:
         lines.append("<b>" + e(" · ".join(key)) + "</b>")
     if gl:
         lines.append("<b>" + e(gl) + "</b>")
     if not p and ev.get("title"):
-        lines.append(e(ev["title"][:160]))
+        lines += ["", e(ev["title"][:160])]
     links = [f"<a href=\"{e(ev['url'])}\">원문</a>"] if ev.get("url") else []
     links.append(f"<a href=\"{SITE}\">어닝사무라이</a>")
     lines += ["", "🔗 " + " · ".join(links)]
     out = "\n".join(lines)
-    if len(out) > 1024:
-        out = out[:1000] + "…"
-    return out
+    return out if len(out) <= 1024 else out[:1000] + "…"
 
 
 def base_event(mkt, code, name, published_local, tz, src, url, title=""):
