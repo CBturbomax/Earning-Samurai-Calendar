@@ -1299,8 +1299,13 @@ def load_seg():
         tail = out.get(k)
         en = base.pop("en", {})
         if tail and en:
-            by_en = {seg_key(e): ja for ja, e in en.items() if seg_key(e)}
-            tail = dict(tail, names=[by_en.get(seg_key(n), n) for n in tail.get("names") or []])
+            # 영문명이 같은 일본어 이름이 둘 이상이면 어느 쪽인지 모른다 — 그런 열쇠는 쓰지 않는다.
+            # 안 그러면 한 값이 여러 부문 칸에 복사된다(7774 3Q26 이 121/121/121 로 섰다, 10/30).
+            cnt = Counter(seg_key(e) for e in en.values() if seg_key(e))
+            by_en = {seg_key(e): ja for ja, e in en.items() if seg_key(e) and cnt[seg_key(e)] == 1}
+            renamed = [by_en.get(seg_key(n), n) for n in tail.get("names") or []]
+            if len(set(renamed)) == len(renamed):
+                tail = dict(tail, names=renamed)
         if tail:
             # 꼬리를 못 붙였으면(이름이 안 맞거나 새로 낼 분기가 없으면) **긴
             # 쪽을 남긴다.** 무턱대고 이력으로 갈아치우면 TDnet 이 방금 받아 온
@@ -1364,8 +1369,13 @@ def splice(base, fresh):
         return 0
     if base.get("axis") != fresh.get("axis"):
         return 0
-    fi = {seg_key(n): i for i, n in enumerate(fresh["names"])}
-    hit = [fi.get(seg_key(n)) for n in base["names"]]
+    # 열쇠는 seg_key 인데, 일본어 이름은 seg_key 가 빈 문자열이 된다 — 빈 열쇠끼리 다 같은 부문으로 묶여
+    # 한 값이 여러 칸에 복사됐다(7774 3Q26 = 121/121/121, 10/30). 이름이 그대로 같으면 먼저 그걸로,
+    # 빈 열쇠로는 짝짓지 않는다.
+    def sk(n):
+        return seg_key(n) or ("\x00" + n)
+    fi = {sk(n): i for i, n in enumerate(fresh["names"])}
+    hit = [fi.get(sk(n)) for n in base["names"]]
     # **잣대는 헌 기록의 이름 전부가 아니라 '지금 쓰는 것'이다.** 벌크 기록에는
     # 옛 이름이 같이 실려 있는 일이 흔해서(아이하트미디어는 같은 부문 셋이 옛
     # 이름으로도 들어 있어 여섯 줄이었다), 전부를 분모로 삼으면 멀쩡한 짝이
@@ -1375,8 +1385,8 @@ def splice(base, fresh):
              if i + 1 < len(last_row) and last_row[i + 1] is not None] or \
             list(range(len(base["names"])))
     cov = sum(hit[i] is not None for i in liveb)
-    bk = {seg_key(n) for n in base["names"]}
-    newborn = any(seg_key(n) not in bk for n in fresh["names"])
+    bk = {sk(n) for n in base["names"]}
+    newborn = any(sk(n) not in bk for n in fresh["names"])
     # **반쪽짜리 꼬리는 붙이지 않는다.** 새 자료가 헌 기록의 부문 일부만 담고
     # 있으면, 이어 붙인 마지막 칸에서 나머지가 사라져 **막대가 뚝 떨어진다** —
     # 매출이 준 것처럼 보인다. 셈프라가 그랬다(넷 중 둘만 잡혔다).
@@ -1416,6 +1426,22 @@ try:
     SEG_KO_FILE = json.loads((HERE / "data" / "seg_ko.json").read_text(encoding="utf-8"))
 except (OSError, ValueError):
     SEG_KO_FILE = {}
+# 새로 생긴 부문 이름 — 실시간 서버가 AI 로 옮겨 /api/segko 로 준다(研究開発支援事業 같은 새 이름이 원문으로 남지 않게).
+if RT_URL:
+    try:
+        with urllib.request.urlopen(urllib.request.Request(RT_URL + "/api/segko", headers={"User-Agent": "es-build"}),
+                                    timeout=15) as _r:
+            _extra = json.loads(_r.read())
+        if isinstance(_extra, dict) and _extra:
+            (HERE / "data" / "seg_ko_extra.json").write_text(json.dumps(_extra, ensure_ascii=False, sort_keys=True),
+                                                            encoding="utf-8")
+    except Exception as _e:                                       # noqa: BLE001
+        print(f"  ! 부문 이름 번역 받기 실패: {_e}")
+try:
+    for _k, _v in json.loads((HERE / "data" / "seg_ko_extra.json").read_text(encoding="utf-8")).items():
+        SEG_KO_FILE.setdefault(_k, _v)
+except (OSError, ValueError):
+    pass
 
 
 def seg_ko(name):
@@ -5422,42 +5448,48 @@ const SEG_COLORS = ['#5B9BD5', '#ED7D31', '#C0504D', '#4BA893', '#8E7CC3',
    우주 시스템이 따로 움직이고, SEA 는 쇼피·가레나·머니가 따로 논다.
    조각마다 숫자를 적되, 조각이 얇으면 글자가 삐져나오므로 생략한다. */
 function segChart(sg, cur) {
+  /* 사업부별 매출 — **선 그래프**(회원님 10/30: 누적 막대 말고 부문마다 선으로, 시계열이 보이게).
+     축은 부문 하나의 최댓값으로 잡는다(합계가 아니라). 점마다 값을 적되, 같은 칸에서 글자끼리
+     부딪히면 아래로 내려 적는다. 색·글꼴·축·범례는 사이트의 다른 차트와 같은 것을 쓴다. */
   const pts = (sg.pts || []).slice(-22);
   if (pts.length < 2) return '';
   const names = sg.names || [];
-  const tot = pts.map(r => r.slice(1).reduce((a, v) => a + (v || 0), 0));
-  const maxRaw = Math.max(...tot, 1);
+  const all = pts.flatMap(r => r.slice(1).filter(v => v != null));
+  const maxRaw = Math.max(...all, 1), minRaw = Math.min(...all, 0);
   const U = unitFor(maxRaw, cur);
   const sc = v => v / U.div;
-  const rmax = niceMax(sc(maxRaw));
+  const rmax = niceMax(sc(maxRaw)), rmin = minRaw < 0 ? -niceMax(-sc(minRaw)) : 0;
 
   const n = pts.length;
-  const W = Math.max(880, n * 46), L = 66, R = 20, B = 42, T = 30, H = 340;
+  const W = Math.max(880, n * 46), L = 66, R = 20, B = 42, T = 30, H = 360;
   const BASE = H - B, step = (W - L - R) / n;
   const cx = i => L + step * i + step / 2;
-  const y = v => BASE - (BASE - T) * v / rmax;
+  const y = v => BASE - (BASE - T) * (v - rmin) / (rmax - rmin);
 
   let body = '';
-  pts.forEach((r, i) => {
-    let acc = 0;
-    names.forEach((nm, j) => {
-      const v = r[j + 1];
-      if (!v) return;
-      const y0 = y(sc(acc)), y1 = y(sc(acc + v)), h = Math.max(y0 - y1, 0.6);
-      const x = cx(i) - step * 0.34;
-      body += '<rect x="' + x.toFixed(1) + '" y="' + y1.toFixed(1) +
-        '" width="' + (step * 0.68).toFixed(1) + '" height="' + h.toFixed(1) +
-        '" fill="' + SEG_COLORS[j % SEG_COLORS.length] + '"><title>' +
-        esc(nm) + ' ' + fmtN(sc(v)) + '</title></rect>';
-      // 조각이 얇으면 숫자가 삐져나온다. 넉넉할 때만 적는다.
-      if (h >= 15)
-        body += '<text class="vn seg" x="' + cx(i).toFixed(1) + '" y="' +
-          (y1 + h / 2 + 4).toFixed(1) + '" text-anchor="middle">' + fmtN(sc(v)) + '</text>';
-      acc += v;
+  const used = pts.map(() => []);                 // 칸마다 이미 쓴 글자 높이 — 겹치면 비켜 적는다
+  names.forEach((nm, j) => {
+    const c = SEG_COLORS[j % SEG_COLORS.length];
+    const ps = pts.map((r, i) => r[j + 1] == null ? null : [i, sc(r[j + 1])]).filter(Boolean);
+    if (!ps.length) return;
+    // 빈 칸에서는 선을 끊는다 — 없는 값을 이어 그리면 거짓말이 된다.
+    let d = '', prev = null;
+    ps.forEach(([i, v]) => { d += (prev !== null && i === prev + 1 ? 'L' : 'M') + cx(i).toFixed(1) + ',' + y(v).toFixed(1); prev = i; });
+    body += '<path d="' + d + '" fill="none" stroke="' + c + '" stroke-width="2.2"/>';
+    ps.forEach(([i, v]) => {
+      const yy = y(v);
+      body += '<circle class="dot" cx="' + cx(i).toFixed(1) + '" cy="' + yy.toFixed(1) + '" r="3" fill="' + c + '"><title>' +
+        esc(nm) + ' ' + pts[i][0] + ' ' + fmtN(v) + '</title></circle>';
+      let ty = yy - 8;
+      if (used[i].some(u => Math.abs(u - ty) < 13)) ty = yy + 16;
+      if (used[i].some(u => Math.abs(u - ty) < 13)) return;      // 그래도 겹치면 숫자는 생략(점·선은 남는다)
+      used[i].push(ty);
+      body += '<text class="vn" x="' + cx(i).toFixed(1) + '" y="' + ty.toFixed(1) + '" text-anchor="middle" style="fill:' + c +
+        (i === n - 1 ? ';font-weight:800' : '') + '">' + fmtN(v) + '</text>';
     });
   });
-  const axis = [0, rmax / 2, rmax].map(v =>
-    '<line class="fz" x1="' + L + '" y1="' + y(v).toFixed(1) + '" x2="' + (W - R) +
+  const axis = (rmin < 0 ? [rmin, 0, rmax] : [0, rmax / 2, rmax]).map(v =>
+    '<line class="' + (v === 0 && rmin < 0 ? 'fzero' : 'fz') + '" x1="' + L + '" y1="' + y(v).toFixed(1) + '" x2="' + (W - R) +
     '" y2="' + y(v).toFixed(1) + '"/>' +
     '<text class="fx" x="' + (L - 8) + '" y="' + (y(v) + 4).toFixed(1) +
     '" text-anchor="end">' + fmtN(v) + '</text>').join('');
