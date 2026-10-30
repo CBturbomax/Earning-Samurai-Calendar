@@ -2735,8 +2735,7 @@ def build():
         if k not in on_screen or not r.get("label"):
             continue
         if r.get("alt") or not seg.get(k):
-            seg_now[k] = {x: r.get(x) for x in ("label", "names", "vals", "y", "cur")}
-            continue
+            continue                 # 기준이 다르면 이어 붙이지 않는다 — 아래 '지금 기준 시계열'이 대신한다
         lab, vals = r["label"], dict(zip(r.get("names") or [], r.get("vals") or []))
         cur = seg.get(k)
         if cur:
@@ -2750,8 +2749,30 @@ def build():
         else:
             seg[k] = {"names": list(vals), "pts": [[lab] + [int(v) if v else None for v in vals.values()]], "ai": lab}
         ai_n += 1
+    # 지금 기준 시계열 — 보도자료(이번·전년 분기)와 설명자료의 분기 추이 표를 AI 로 읽어 모은 것.
+    # 네 칸 이상이고 사이트 막대보다 새면(또는 막대가 없으면) 그 회사의 사업부별 막대를 이걸로 바꾼다.
+    # 옛 기준과 섞지 않는다. 회원님(10/30): "시계열이 중요하다."
+    ser_n = 0
+    for k, r in (AI.get("_series") or {}).items():
+        if k not in on_screen:
+            continue
+        labs = sorted(r.get("pts") or {}, key=lab_key)
+        if len(labs) < 4:
+            continue
+        cur = seg.get(k)
+        if cur and lab_key(cur["pts"][-1][0]) >= lab_key(labs[-1]) and len(cur["pts"]) >= len(labs):
+            continue
+        names = r["names"]
+        pts = [[l] + [r["pts"][l].get(n) for n in names] for l in labs]
+        keep = [i for i, n in enumerate(names) if sum(1 for p in pts if p[i + 1] is not None) >= 2]
+        if len(keep) < 2:
+            continue
+        seg[k] = {"names": [names[i] for i in keep],
+                  "pts": [[p[0]] + [int(p[i + 1]) if p[i + 1] is not None else None for i in keep] for p in pts],
+                  "src": "ai"}
+        ser_n += 1
     if AI:
-        print(f"  사업부별 매출: 보도자료 AI 판독으로 이번 분기를 이은 종목 {ai_n:,}")
+        print(f"  사업부별 매출: 보도자료 AI 판독으로 이번 분기를 이은 종목 {ai_n:,} · 지금 기준 시계열로 바꾼 종목 {ser_n:,}")
     if SEG:
         note = f"  사업부별 매출 {len(seg):,}종목"
         if tossed:
