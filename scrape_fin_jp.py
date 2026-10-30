@@ -128,7 +128,9 @@ def listing(day, page=1):
     for m in ROW_RE.finditer(txt):
         d = m.groupdict()
         zip_m = ZIP_RE.search(d["xbrlcell"] or "")
+        pdf_m = LINK_RE.search(d["titlecell"] or "")
         out.append({
+            "pdf": pdf_m.group(1) if pdf_m else "",
             "time": d["time"].strip(),
             "code": d["code"].strip()[:4],
             "name": TAGS.sub("", d["name"]).strip(),
