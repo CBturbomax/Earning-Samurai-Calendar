@@ -1832,11 +1832,37 @@ def hk_watch():
         time.sleep(max(1, HK_EVERY - (time.time() - t0)))
 
 
+ALERTS = {"n": 0, "lock": threading.Lock()}             # 지금 처리 중인 실적 알림 수 — 끄기 전에 다 보내고 끈다
+
+
 def safe(fn, *a):
+    alert = fn.__name__ in ("us_process", "jp_process", "jp_pre_process", "jp_mon_process", "hk_process")
+    if alert:
+        with ALERTS["lock"]:
+            ALERTS["n"] += 1
     try:
         fn(*a)
     except Exception:                                            # noqa: BLE001
         log("작업 실패", fn.__name__, traceback.format_exc(limit=3))
+    finally:
+        if alert:
+            with ALERTS["lock"]:
+                ALERTS["n"] -= 1
+
+
+def on_term(*_):
+    """새 판으로 바꿀 때(SIGTERM) — 처리 중인 알림을 다 보내고, 쌓던 것을 적어 두고 끈다(회원님 10/30: "교란 없게").
+    새 서버는 켜지자마자 지난 20분 공시를 다시 보고(보내기 전에 끊긴 것은 다시 보낸다), 하던 큰 일은 이어 간다."""
+    log("끄기 요청 — 처리 중 알림", ALERTS["n"], "건을 마치고 끈다")
+    t0 = time.time()
+    while ALERTS["n"] > 0 and time.time() - t0 < 40:
+        time.sleep(0.5)
+    try:
+        with JH_LOCK:
+            JH_PATH.write_text(json.dumps(JH, ensure_ascii=False))
+    except Exception:                                            # noqa: BLE001
+        pass
+    os._exit(0)
 
 
 # ── 다시 보내기(시험) ──────────────────────────────────────────────────
@@ -2168,6 +2194,8 @@ def llm_selftest():
 
 
 def main():
+    import signal
+    signal.signal(signal.SIGTERM, on_term)
     log("시작 — 텔레그램", "켜짐" if TG_TOKEN else "꺼짐(TG_BOT_TOKEN 없음)", "· 구독", len(TG.subs))
     H.refresh()
     shot.start(lambda: H.html)
