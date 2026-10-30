@@ -591,6 +591,31 @@ def finish(ev, point=None):
     # '왜'는 본문만 읽고 바로 — IR 첨부는 따로 읽어 사업부 숫자만 채운다(답장을 늦추지 않게).
     th = threading.Thread(target=lambda: box.update(b=brief.why(ev["name"], text, names=names)), daemon=True)
     th.start()
+    # 회원님(10/30): "못 채울 거면 바로 쏘지 말고 다 완성해서 쏴 — 그렇다고 못 채웠다고 안 쏘지는 말고."
+    # 이번 분기 가이던스나 사업부가 비면 AI 원문 판독(최대 80초)을 기다려 채운 다음 앨범을 보낸다. 못 채우면 그대로 보낸다.
+    seg_missing = bool(seg) and point is not None and not ev.get("segPoint")
+    guide_missing = ev["mkt"] in ("jp", "us") and not ev.get("guide") and not ev.get("preInfo")
+    b_early = None
+    if (seg_missing or guide_missing) and brief.enabled():
+        th.join(80)
+        b_early = box.get("b")
+        if b_early:
+            g = b_early.get("fyg")
+            if guide_missing and g:
+                try:
+                    gd = (GU.put_us(ev["code"], ev["kstDate"], g) if ev["mkt"] == "us" else
+                          GD.add(ev["code"], {"end": g["fy_end"] + "-28", "rev": g.get("rev"), "opi": g.get("op")}, ev["date"]))
+                    # AI 가 단위를 틀리면(백만 엔을 엔으로) 급상향으로 오인한다 — 직전 예상의 절반~두 배 밖이면 안 쓴다
+                    pv, nw = (gd or {}).get("prev"), (gd or {}).get("now")
+                    if gd and not (pv and pv[0] and nw and nw[0] and not 0.5 <= nw[0] / pv[0] <= 2):
+                        ev["guide"] = gd
+                except Exception:                                # noqa: BLE001
+                    log("가이던스 채우기 실패", key, traceback.format_exc(limit=1))
+            if seg_missing:
+                sp0 = seg_ai_try(ev, b_early, seg)
+                if sp0:
+                    ev["segPoint"] = sp0
+        log("완성 기다림", key, "가이던스", "채움" if ev.get("guide") else "없음", "· 사업부", "채움" if ev.get("segPoint") else "없음")
     with H.lock:
         ann = H.D.get("ann", {}).get(key)
         G = H.D.get("fcst", {}).get(key)
@@ -660,7 +685,7 @@ def finish(ev, point=None):
         return
     ev["brief"] = b
     gpng = None
-    if ev["mkt"] == "us" and b.get("fyg"):            # 이번 보도자료의 연간 전망 — 직전 전망과 견줘 상향·하향을 가른다
+    if ev["mkt"] == "us" and b.get("fyg") and not b_early:   # 이번 보도자료의 연간 전망 — 앨범 전에 못 받았을 때만 답장에
         try:
             ev["guide"] = GU.put_us(ev["code"], ev["kstDate"], b["fyg"])
             gh2 = GU.get(ev["code"], ann)
