@@ -1233,9 +1233,11 @@ def followup(ev):
     """앨범 뒤에 붙는 답장 — 회원님 형식(10/30): 🏢 비즈니스 / 💡 실적 배경 / 🗓 가이던스 / ⚠️ 주의, 사이에 빈 줄."""
     e = html.escape
     b = ev.get("brief") or {}
+    if b.get("biz") and not BIZ.get(ev["key"]):
+        BIZ[ev["key"]] = b["biz"]
     with H.lock:
         biz = (H.D.get("descKo") or {}).get(ev["key"]) or ""
-    biz = biz or b.get("biz") or ""
+    biz = "" if ev.get("bizInCap") else (b.get("biz") or biz or "")      # 앨범 글에 이미 실었으면 답장엔 안 쓴다
     out = []
 
     def sec(title, items):
@@ -1327,6 +1329,47 @@ def mon_line(ev):
     return f"📅 월 매출 : {r[0].replace('-', '.')} {html.escape(base + ' ' if base else '')}매출 YoY {pct(r[2] - 100)}"
 
 
+BIZ_PATH = DATA / "biz_ko.json"
+try:
+    BIZ = json.loads(BIZ_PATH.read_text())
+except (OSError, ValueError):
+    BIZ = {}
+
+
+def biz_of(ev):
+    """이 회사가 무엇을 파는지 한 줄 — 미리 만들어 둔 것(biz_loop), 없으면 사이트 설명의 첫 마디."""
+    k = ev["key"]
+    if BIZ.get(k):
+        return BIZ[k]
+    b = (ev.get("brief") or {}).get("biz")
+    if b:
+        return b
+    with H.lock:
+        d = (H.D.get("descKo") or {}).get(k) or ""
+    d = re.split(r"[.。]", d.strip())[0] if d else ""
+    return d[:40]
+
+
+def biz_loop():
+    """알림에 쓸 '무엇을 파는지 한 줄'을 미리 만들어 둔다 — 시총 큰 순, 30분마다 600곳씩(앨범을 늦추지 않게)."""
+    time.sleep(180)
+    while True:
+        with H.lock:
+            desc, dko = dict(H.D.get("desc") or {}), dict(H.D.get("descKo") or {})
+            caps = {k: max((r[11] or 0) for r in rs) for k, rs in H.rows_by_key.items() if rs}
+            names = {k: rs[-1][2] or rs[-1][7] for k, rs in H.rows_by_key.items() if rs}
+        keys = [k for k in sorted(set(desc) | set(dko), key=lambda k: -caps.get(k, 0)) if k not in BIZ][:600]
+        for i in range(0, len(keys), 30):
+            items = {k: f"{names.get(k, k)} | {(dko.get(k) or desc.get(k) or '')[:300]}" for k in keys[i:i + 30]}
+            got = brief.biz_lines(items)
+            if got:
+                BIZ.update(got)
+                BIZ_PATH.write_text(json.dumps(BIZ, ensure_ascii=False))
+        if keys:
+            log("비즈니스 한 줄", len(BIZ), "곳")
+        time.sleep(1800)
+
+
 def caption(ev):
     """회원님이 정한 그대로(10/30):
     🇯🇵 재팬 팃슈엔지니어링 (7774) / 3Q26 실적
@@ -1343,6 +1386,10 @@ def caption(ev):
             else f" / {e(ev['point'][0])} 실적" if ev.get("point") else " / 실적 발표")
     head = f"{FLAG[ev['mkt']]} <b>{name}</b>" + tail
     lines = [head]
+    bz = biz_of(ev)
+    if bz:                                        # 회원님(10/30): 무엇을 파는지 — 시총 위에, 구체적으로
+        lines += ["", "🏢 비즈니스", f"• {e(bz)}"]
+        ev["bizInCap"] = True
     cw = cap_won(ev)
     if cw:
         lines += ["", f"💰 <b><u>시총 : {cw}</u></b>"]          # 회원님(10/30): 굵게 + 밑줄
@@ -2209,7 +2256,7 @@ def main():
     log("시작 — 텔레그램", "켜짐" if TG_TOKEN else "꺼짐(TG_BOT_TOKEN 없음)", "· 구독", len(TG.subs))
     H.refresh()
     shot.start(lambda: H.html)
-    for fn in (TG.poll, us_watch, jp_watch, hk_watch, history_loop, llm_selftest, replay_loop, segko_loop, fill_loop):
+    for fn in (TG.poll, us_watch, jp_watch, hk_watch, history_loop, llm_selftest, replay_loop, segko_loop, fill_loop, biz_loop):
         threading.Thread(target=fn, daemon=True, name=fn.__name__).start()
     ThreadingHTTPServer(("0.0.0.0", PORT), Handler).serve_forever()
 
