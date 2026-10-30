@@ -1532,6 +1532,31 @@ def replay_loop():
         time.sleep(90)
 
 
+SEGKO_PATH = DATA / "seg_ko_extra.json"
+try:
+    SEGKO = json.loads(SEGKO_PATH.read_text())
+except (OSError, ValueError):
+    SEGKO = {}
+
+
+def segko_loop():
+    """사이트 부문 이름 중 아직 일·중 원문으로 남은 것 — AI 로 옮겨 /api/segko 로 내준다(빌드가 받아 쓴다)."""
+    cjk = re.compile(r"[\u3040-\u30ff\u4e00-\u9fff]")
+    time.sleep(120)
+    while True:
+        with H.lock:
+            names = {n for v in (H.D.get("seg") or {}).values() for n in v.get("names") or []
+                     if cjk.search(n) and n not in SEGKO}
+        names = sorted(names)[:200]
+        for i in range(0, len(names), 40):
+            got = brief.translate_names(names[i:i + 40])
+            if got:
+                SEGKO.update(got)
+                SEGKO_PATH.write_text(json.dumps(SEGKO, ensure_ascii=False))
+                log("부문 이름 번역", len(got), "개")
+        time.sleep(600)
+
+
 def history_loop():
     """사이트가 다시 빌드되면 1분 안에 따라 받는다 — 텔레그램 그림이 늘 최신 사이트와 같게."""
     last, t0 = None, time.time()
@@ -1584,6 +1609,9 @@ class Handler(BaseHTTPRequestHandler):
             self.head()
             with SEGAI_LOCK:
                 self.wfile.write(json.dumps(dict(SEGAI, _series=SER), ensure_ascii=False).encode())
+        elif path == "/api/segko":
+            self.head()
+            self.wfile.write(json.dumps(SEGKO, ensure_ascii=False).encode())
         elif path == "/api/log":                                 # 진단 — 최근 로그 300줄(토큰 같은 비밀은 안 찍는다)
             self.head(ctype="text/plain; charset=utf-8")
             self.wfile.write("\n".join(LOGS).encode())
@@ -1662,7 +1690,7 @@ def main():
     log("시작 — 텔레그램", "켜짐" if TG_TOKEN else "꺼짐(TG_BOT_TOKEN 없음)", "· 구독", len(TG.subs))
     H.refresh()
     shot.start(lambda: H.html)
-    for fn in (TG.poll, us_watch, jp_watch, hk_watch, history_loop, llm_selftest, replay_loop):
+    for fn in (TG.poll, us_watch, jp_watch, hk_watch, history_loop, llm_selftest, replay_loop, segko_loop):
         threading.Thread(target=fn, daemon=True, name=fn.__name__).start()
     ThreadingHTTPServer(("0.0.0.0", PORT), Handler).serve_forever()
 
