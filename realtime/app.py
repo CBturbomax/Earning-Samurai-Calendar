@@ -1350,8 +1350,12 @@ def biz_of(ev):
         return b
     with H.lock:
         d = (H.D.get("descKo") or {}).get(k) or ""
-    d = re.split(r"[.。]", d.strip())[0] if d else ""
-    return d[:40]
+    # 사이트 설명은 「TOTO. 위생도기·…」처럼 회사 이름으로 시작하는 것이 있다 — 이름만 덩그러니 나왔다(10/30).
+    # 이름이 아닌 첫 마디를 쓴다. 쓸 게 없으면 비운다(답장에서 AI 가 채운다).
+    names = {ev.get("name", ""), ev.get("orig", ""), ev.get("code", "")}
+    parts = [x.strip() for x in re.split(r"[.。]", d or "") if x.strip()]
+    parts = [x for x in parts if len(x) >= 6 and x not in names and not any(n and x.startswith(n) and len(x) <= len(n) + 4 for n in names)]
+    return parts[0][:40] if parts else ""
 
 
 def biz_loop():
