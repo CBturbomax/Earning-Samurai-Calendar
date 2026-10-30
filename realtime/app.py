@@ -608,7 +608,7 @@ def finish(ev, point=None):
         # 그림이 하나도 없던 회사(이력 없는 신규 상장 등)는 원문 손익 표의 이번/전년 비교를,
         # 사이트에 사업부별이 없는 회사는 원문 사업부 표를 그려 붙인다(둘 다 AI 판독, 표에 그렇게 적는다).
         alt = (SEGAI.get(key) or {}).get("alt") and SEGAI[key].get("label") == (ev.get("point") or [None])[0]
-        want = ("fin" if b.get("fin") and not pngs else "") + ("seg" if b.get("segs") and (not seg or alt) else "")
+        want = "fin" if b.get("fin") and not pngs else ""     # 한 분기짜리 사업부 표는 안 보낸다(시계열이 아니면 의미 없다)
         if want and H.html:
             try:
                 segpng = (shot.render(dict({k: v for k, v in ev.items() if not k.startswith("_")}, onlySeg=want)) or [None])[0]
