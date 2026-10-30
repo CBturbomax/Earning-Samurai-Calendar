@@ -6317,7 +6317,7 @@ document.addEventListener('keydown', e => {
 });
 
 /* ── 방금 발표 피드 ─────────────────────────────────────────── */
-const FEED_HOURS = 72, FEED_MAX = 80;
+const FEED_HOURS = 72, FEED_MAX = 3000;   // 80건으로 자르니 일본 15시 몰림 한 번에 24시간도 못 봤다(회원님 10/30) — 72시간 전부
 const KIND_SHORT = { '第１': '1Q', '第２': '2Q', '第３': '3Q', '本': '본결산' };
 const capWon = b => { const w = b * 1e9 * D.usdKrw;
   return w >= 1e12 ? (w / 1e12).toFixed(1) + '조' : Math.round(w / 1e8).toLocaleString() + '억'; };
