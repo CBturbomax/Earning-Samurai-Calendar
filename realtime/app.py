@@ -1329,7 +1329,7 @@ def mon_line(ev):
     return f"📅 월 매출 : {r[0].replace('-', '.')} {html.escape(base + ' ' if base else '')}매출 YoY {pct(r[2] - 100)}"
 
 
-BIZ_PATH = DATA / "biz_ko.json"
+BIZ_PATH = DATA / "biz_ko2.json"                 # 2: 가장 구체적인 제품 이름까지(회원님 10/30)
 try:
     BIZ = json.loads(BIZ_PATH.read_text())
 except (OSError, ValueError):
