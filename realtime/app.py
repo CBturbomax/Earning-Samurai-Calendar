@@ -1019,15 +1019,23 @@ def cap_won(ev):
 
 
 def caption(ev):
-    """회원님 형식(10/30): 이름·분기 / 💰 시총 / 🕒 발표 시각 / 핵심 숫자 — 사이에 빈 줄."""
+    """회원님이 정한 그대로(10/30):
+    🇯🇵 재팬 팃슈엔지니어링 (7774) / 3Q26 실적
+    (빈 줄) 💰 시총 : 2,772억 원
+    (빈 줄) 🕒실적 발표시간 : 2026.10.30 / 21:30
+    (빈 줄) 🔥 숫자 : 매출 +6.0%  / 영업이익 -1.4% / 이익률 13.2%
+    회사 이름에 원문 링크를 건다(줄을 늘리지 않으려고)."""
     e = html.escape
-    lines = [f"{FLAG[ev['mkt']]} <b>{e(ev['name'])} ({e(ev['code'])})</b>"
-             + (f" · {e(ev['point'][0])} 실적" if ev.get("point") else " 실적 발표")]
+    name = f"{e(ev['name'])} ({e(ev['code'])})"
+    if ev.get("url"):
+        name = f"<a href=\"{e(ev['url'])}\">{name}</a>"
+    head = f"{FLAG[ev['mkt']]} <b>{name}</b>" + (f" / {e(ev['point'][0])} 실적" if ev.get("point") else " / 실적 발표")
+    lines = [head]
     cw = cap_won(ev)
     if cw:
-        lines.append(f"💰 시총 : {cw}")
+        lines += ["", f"💰 시총 : {cw}"]
     if ev.get("kstTime"):
-        lines += ["", f"🕒 {ev['kstDate'].replace('-', '.')}. {ev['kstTime']}"]
+        lines += ["", f"🕒실적 발표시간 : {ev['kstDate'].replace('-', '.')} / {ev['kstTime']}"]
     p = ev.get("point")
     key = []
     if p:
@@ -1040,7 +1048,8 @@ def caption(ev):
             key.append(ev["turn"])
         if opi is not None and rev:
             key.append(f"이익률 {opi / rev * 100:.1f}%")
-    gl = ""
+    if key:
+        lines += ["", "🔥 숫자 : " + e(" / ".join(key))]
     g = ev.get("guide")
     if g and g.get("prev"):
         d = [f"{n} {pct((b / a - 1) * 100)}" for n, a, b in zip(("매출", "영업이익"), g["prev"], g["now"])
@@ -1048,18 +1057,10 @@ def caption(ev):
         if d:
             up = all(x.split()[-1].startswith("+") for x in d)
             dn = all(x.split()[-1].startswith("-") for x in d)
-            gl = ("📈 가이던스 상향 " if up else "📉 가이던스 하향 " if dn else "🔁 가이던스 수정 ") + " · ".join(d)
-    if key or gl:
-        lines.append("")
-    if key:
-        lines.append("<b>" + e(" · ".join(key)) + "</b>")
-    if gl:
-        lines.append("<b>" + e(gl) + "</b>")
+            lines += ["", ("📈 가이던스 상향 : " if up else "📉 가이던스 하향 : " if dn else "🔁 가이던스 수정 : ")
+                      + e(" / ".join(d))]
     if not p and ev.get("title"):
         lines += ["", e(ev["title"][:160])]
-    links = [f"<a href=\"{e(ev['url'])}\">원문</a>"] if ev.get("url") else []
-    links.append(f"<a href=\"{SITE}\">어닝사무라이</a>")
-    lines += ["", "🔗 " + " · ".join(links)]
     out = "\n".join(lines)
     return out if len(out) <= 1024 else out[:1000] + "…"
 
