@@ -1749,13 +1749,13 @@ def jp_seg_now(key, blob, label, seg):
 def guide_from_pdf(code, name, url, day):
     """결산단신 PDF 첫 두 쪽 -> 연간 예상 -> 가이던스 변천에 적는다. 직전 예상의 절반~두 배 밖이면 안 쓴다(단위 오독)."""
     try:
-        text = pdftext.extract_text(http_get(url, ua=BROWSER_UA, timeout=30, binary=True), 2)
+        text = brief.pdf_text(http_get(url, ua=BROWSER_UA, timeout=30, binary=True), 2)
     except Exception as e:                                       # noqa: BLE001
         log("결산단신 PDF 실패", code, repr(e)[:100])
         return None
     g = brief.fy_from_text(name, text)
     if not g or not g.get("rev"):
-        log("연간 예상 판독 없음", code)
+        log("연간 예상 판독 없음", code, "글", len(text or ""), url.rsplit("/", 1)[-1])
         return None
     st = stage_of(g["fy_end"] + "-28", day)
     before = GD.get(code).get(g["fy_end"], {})
@@ -1810,10 +1810,14 @@ def guide_audit(days=45, limit=400):
                 for base in ("https://www.release.tdnet.info/inbs/", f"https://www2.jpx.co.jp/disc/{code}0/"):
                     try:
                         vals = fj.read_summary(http_get(base + fn, ua=BROWSER_UA, timeout=40, binary=True))
-                        res = GD.add(code, fj.forecast_from(vals or {}), day)
-                        break
-                    except Exception:                            # noqa: BLE001
+                    except Exception as e:                       # noqa: BLE001
+                        log("결산단신 zip 실패", code, base[8:30], repr(e)[:80])
                         continue
+                    fc = fj.forecast_from(vals or {})
+                    res = GD.add(code, fc, day)
+                    if not res:
+                        log("XBRL 예상 못 씀", code, "항목", len(vals or {}), "예상", fc, "단계", fc and stage_of(fc.get("end") or "0000-00", day))
+                    break
             if not res and hit.get("document_url"):
                 pn = hit["document_url"].rsplit("/", 1)[-1]
                 for base in ("https://www.release.tdnet.info/inbs/", f"https://www2.jpx.co.jp/disc/{code}0/"):
