@@ -531,7 +531,11 @@ _US_NAME_REIT = _re.compile(r"\breit\b|real estate investment trust|realty trust
 _HK_NAME_OUT = _re.compile(r"\bbank\b|\bbk\b|銀行|\breit\b|產業信託|置業信託|房託|房地產投資信託|"
                           r"地產|置業|物業|燃氣|煤氣|電力|電能|\bproperties\b|\bestates?\b", _re.I)
 _JP_SECT_OUT = {"銀行", "銀行業", "REIT", "不動産", "不動産業", "電力", "ガス", "電気・ガス業"}
-_JP_NAME_OUT = _re.compile(r"投資法人|^[ＲＩRI][－\-]|不動産|地所|リース|電力|瓦斯|ガス(?!ト)")
+# 철도·지하철도 뺀다(회원님 10/30: "일본 철도, 지하철 뭐 이런 회사들은 보내지 마. 어닝사무라이에도 넣지 말고").
+# 업종 '陸運'은 택배·물류(야마토·SG)까지 묶여 있어 이름으로 가른다.
+_JP_NAME_OUT = _re.compile(r"投資法人|^[ＲＩRI][－\-]|不動産|地所|リース|電力|瓦斯|ガス(?!ト)|"
+                           r"鉄道|電鉄|地下鉄|旅客|急行|東急|阪急|近鉄|京成|京阪|相鉄|西武ホールディングス|"
+                           r"^[ＪJ][ＲR]|メトロ|京急|小田急|京王|東武|名鉄|南海電|西鉄")       # TDnet 줄임 이름(ＪＲ東日本·東京メトロ)
 
 
 def excluded(mkt, name="", sector="", industry=""):
