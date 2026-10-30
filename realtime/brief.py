@@ -39,7 +39,7 @@ SYSTEM = """너는 실적 발표 자료를 읽고 '실적이 왜 이렇게 나�
   일본어·한자 단위(億·千·百万円)를 남기지 않는다. 퍼센트는 소수 첫째 자리까지.
 - 제품·지역·고객처럼 구체적인 것을 우선한다(예: "AI 서버용 수요 급증으로 데이터센터 매출 2배").
 
-JSON 으로만 답한다: {"key": "자료에 적힌 이번 기간 핵심 숫자 한 줄 — 매출·영업이익(또는 순이익)과 전년 대비 %를 자료 표기 그대로 통화 단위 붙여(예: 매출 120.5억 위안(+35%) · 순이익 18.2억 위안(+52%)). 자료에 없으면 빈 문자열", "why": [최대 3줄 — 실적을 움직인 이유], "watch": [최대 2줄 — 일회성·환율·감익 부문·가이던스 하향 등 주의할 점], "gstat": "회사 연간 가이던스(실적 전망)가 직전 전망 대비 어떻게 됐는지 한 단어 — 상향 / 하향 / 유지 / 엇갈림(항목마다 방향이 다름) / 첫 제시 / 철회. 원문에 전망 언급이 없으면 빈 문자열", "guide": [가이던스 최대 2줄(없으면 []) — 숫자 나열이 아니라 **무엇이 얼마나 바뀌었는지**(예: 매출 전망 3,800억→4,000억 엔으로 상향, 이익 전망은 그대로). 바뀐 이유가 적혀 있으면 덧붙인다], "biz": "이 회사가 무엇을 파는지 쉬운 한국어 한 줄(25자 안팎, 예: 화장품·의약품용 펌프와 마개)", "segs": [자료의 사업부문(세그먼트)별 또는 제품·지역별 매출 표가 있으면 이번 기간 값을 표에서 그대로 — {"n": 부문 이름(쉬운 한국어), "v": 숫자(표에 적힌 그대로, 단위 변환 없이 — 분기 단독(3개월) 값이 표에 있으면 그것을, 없으면 누계를 쓰고 basis 에 그렇게 적는다), "y": 전년 같은 기간 대비 %(표의 전년 칸으로 계산하거나 적힌 값, 모르면 null), "p": 표에 적힌 전년 같은 기간 값(v 와 같은 단위·같은 길이의 기간, 표에 없으면 null)}. 합계·조정·소거 줄은 빼고 최대 8개. 표가 없으면 []], "unit": "segs 숫자의 단위(예: 백만 엔, 백만 달러, 천 위안)", "scale": segs 숫자에 곱하면 통화 1단위가 되는 수(백만이면 1000000, 천이면 1000, 그대로면 1), "basis": "segs 기간(예: 3개월, 9개월 누계, 반기)", "segq": [자료(특히 설명자료·투자자 발표자료)에 사업부별 **분기 단독(3개월)** 매출이 여러 분기 나란히 실린 표가 있으면 그 열을 전부 — {"end": "그 분기가 끝난 달 YYYY-MM", "vals": {부문 이름: 숫자(segs 와 같은 단위·scale)}}. 누계·연간 열은 넣지 않는다. 없으면 []], "fin": {"period": "이번 실적 기간(예: 2026년 3분기, 9개월 누계, 상반기)", "unit": "단위(예: 백만 위안)", "rev": [이번, 전년 같은 기간], "op": [이번, 전년] 영업이익(없으면 null), "ni": [이번, 전년] 지배주주 순이익(없으면 null)} — 자료의 손익 표에서 그대로, 없으면 null}
+JSON 으로만 답한다: {"key": "자료에 적힌 이번 기간 핵심 숫자 한 줄 — 매출·영업이익(또는 순이익)과 전년 대비 %를 자료 표기 그대로 통화 단위 붙여(예: 매출 120.5억 위안(+35%) · 순이익 18.2억 위안(+52%)). 자료에 없으면 빈 문자열", "why": [최대 3줄 — 실적을 움직인 이유], "watch": [최대 2줄 — 일회성·환율·감익 부문·가이던스 하향 등 주의할 점], "gstat": "회사 연간 가이던스(실적 전망)가 직전 전망 대비 어떻게 됐는지 한 단어 — 상향 / 하향 / 유지 / 엇갈림(항목마다 방향이 다름) / 첫 제시 / 철회. 원문에 전망 언급이 없으면 빈 문자열", "guide": [가이던스 최대 2줄(없으면 []) — 숫자 나열이 아니라 **무엇이 얼마나 바뀌었는지**(예: 매출 전망 3,800억→4,000억 엔으로 상향, 이익 전망은 그대로). 바뀐 이유가 적혀 있으면 덧붙인다], "fyg": 회사가 이번 자료에서 낸 **연간(회계연도) 실적 전망 숫자** — {"fy_end": "그 회계연도가 끝나는 달 YYYY-MM", "rev": [하한, 상한] 매출, "op": [하한, 상한] 영업이익, "eps": [하한, 상한] 주당순이익(회사가 앞세운 기준 — 조정 EPS 를 앞세우면 그것)}. 금액은 통화 1단위로 환산한 숫자(예: $4.2 billion → 4200000000), 점 전망이면 [값, 값], 없는 항목은 null. 분기 전망만 있거나 연간 전망이 없으면 null, "biz": "이 회사가 무엇을 파는지 쉬운 한국어 한 줄(25자 안팎, 예: 화장품·의약품용 펌프와 마개)", "segs": [자료의 사업부문(세그먼트)별 또는 제품·지역별 매출 표가 있으면 이번 기간 값을 표에서 그대로 — {"n": 부문 이름(쉬운 한국어), "v": 숫자(표에 적힌 그대로, 단위 변환 없이 — 분기 단독(3개월) 값이 표에 있으면 그것을, 없으면 누계를 쓰고 basis 에 그렇게 적는다), "y": 전년 같은 기간 대비 %(표의 전년 칸으로 계산하거나 적힌 값, 모르면 null), "p": 표에 적힌 전년 같은 기간 값(v 와 같은 단위·같은 길이의 기간, 표에 없으면 null)}. 합계·조정·소거 줄은 빼고 최대 8개. 표가 없으면 []], "unit": "segs 숫자의 단위(예: 백만 엔, 백만 달러, 천 위안)", "scale": segs 숫자에 곱하면 통화 1단위가 되는 수(백만이면 1000000, 천이면 1000, 그대로면 1), "basis": "segs 기간(예: 3개월, 9개월 누계, 반기)", "segq": [자료(특히 설명자료·투자자 발표자료)에 사업부별 **분기 단독(3개월)** 매출이 여러 분기 나란히 실린 표가 있으면 그 열을 전부 — {"end": "그 분기가 끝난 달 YYYY-MM", "vals": {부문 이름: 숫자(segs 와 같은 단위·scale)}}. 누계·연간 열은 넣지 않는다. 없으면 []], "fin": {"period": "이번 실적 기간(예: 2026년 3분기, 9개월 누계, 상반기)", "unit": "단위(예: 백만 위안)", "rev": [이번, 전년 같은 기간], "op": [이번, 전년] 영업이익(없으면 null), "ni": [이번, 전년] 지배주주 순이익(없으면 null)} — 자료의 손익 표에서 그대로, 없으면 null}
 
 segs 는 표에 적힌 숫자만 옮긴다. 본문 문장 속 숫자를 끌어 모아 표를 지어내지 않는다."""
 
@@ -156,6 +156,67 @@ def hk_text(pdf_bytes):
     return (t[:9000] + "\n…\n" + t[m.start():m.start() + 14000]) if m and m.start() > 9000 else t
 
 
+def fy_guide(g):
+    """{"fy_end", "rev": [lo, hi], …} -> {"fy_end": "YYYY-MM", "rev": 가운데, "op": …, "eps": …} 또는 None."""
+    if not isinstance(g, dict) or not re.match(r"\d{4}-\d{2}$", str(g.get("fy_end") or "")):
+        return None
+    out = {"fy_end": g["fy_end"]}
+    for k in ("rev", "op", "eps"):
+        v = g.get(k)
+        v = v if isinstance(v, list) else [v, v]
+        try:
+            xs = [float(str(x).replace(",", "")) for x in v if x not in (None, "")]
+        except (TypeError, ValueError):
+            xs = []
+        if xs:
+            out[k] = sum(xs) / len(xs)
+    return out if len(out) > 1 else None
+
+
+GUIDE_ASK = ("아래는 한 미국 회사의 실적 보도자료 여러 장에서 전망(Outlook·Guidance) 부분만 떼어 온 것이다. 장마다 [번호 · 날짜] 가 붙어 있다. "
+             "각 장에서 회사가 낸 **연간(회계연도) 전망 숫자**만 읽어라 — 분기 전망은 빼고, 연간 전망이 없는 장은 건너뛴다. "
+             "EPS 는 장마다 같은 기준(회사가 앞세운 것 — 조정 EPS 를 앞세우면 그것)으로. 금액은 통화 1단위 숫자로(예: $4.2 billion → 4200000000). "
+             "점 전망이면 [값, 값], 없는 항목은 null. "
+             'JSON 으로만 답한다: {"g": [{"i": 번호, "fy_end": "YYYY-MM", "rev": [하한, 상한], "op": [하한, 상한], "eps": [하한, 상한]}]}\n\n')
+
+
+def outlook_window(t, n=2500):
+    """보도자료에서 전망 문단만 — 'forward-looking' 면책 문단은 피한다."""
+    t = t or ""
+    for m in re.finditer(r"(?i)\b(outlook|guidance|full[- ]year 20\d\d|fiscal (year )?20\d\d (expectations|outlook))\b", t):
+        w = t[max(0, m.start() - 200):m.start() + n]
+        if re.search(r"(?i)forward[- ]looking statements", w[:400]) or not re.search(r"\$\s?\d", w):
+            continue
+        return w
+    return ""
+
+
+def us_guide(name, docs, timeout=150):
+    """docs: [(날짜, 보도자료 글)] -> [(날짜, {"fy_end", "rev", "op", "eps"})]."""
+    parts = [(d, outlook_window(t)) for d, t in docs]
+    parts = [(i, d, w) for i, (d, w) in enumerate(parts) if w]
+    if not parts or not enabled():
+        return []
+    body = "\n\n".join(f"[{i} · {d}]\n{w}" for i, d, w in parts)
+    try:
+        out = _ask(f"{GUIDE_ASK}회사: {name}\n\n{body[:LIMIT]}", timeout)
+        m = re.search(r"\{.*\}", out, re.S)
+        rows = (json.loads(m.group(0)) if m else {}).get("g") or []
+    except Exception as e:                                       # noqa: BLE001
+        LOG("가이던스 이력 실패:", name, repr(e)[:200])
+        return []
+    got = []
+    for r in rows:
+        try:
+            d = docs[int(r.get("i"))][0]
+        except (TypeError, ValueError, IndexError):
+            continue
+        g = fy_guide(r)
+        if g:
+            got.append((d, g))
+    return got
+
+
 def why(name, text, timeout=85, names=None):
     """-> {"why": [...], "watch": [...], "guide": str} 또는 None."""
     text = (text or "").strip()
@@ -195,6 +256,9 @@ def why(name, text, timeout=85, names=None):
            "guide": clean(g if isinstance(g, list) else [g] if g else [])[:2],
            "key": str(d.get("key") or "").strip()[:160], "biz": str(d.get("biz") or "").strip()[:60],
            "gstat": str(d.get("gstat") or "").strip()[:6]}
+    g2 = fy_guide(d.get("fyg"))
+    if g2:
+        res["fyg"] = g2
     segs = []
     for x in d.get("segs") or []:
         try:
