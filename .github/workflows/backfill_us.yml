@@ -1,0 +1,83 @@
+name: 미국 실적 한꺼번에 다시 받기 (1Q18~)
+
+# 회원님(10/30): "1Q18 부터, 빠릿빠릿하게." numbers.yml 은 한 번에 80종목이라 FIN_VER 를 올리면
+# 전 종목이 바뀌기까지 며칠이 걸린다. 여기서는 여덟 갈래로 나눠 동시에 받고(러너마다 IP 가 달라 SEC
+# 초당 10건 한도를 따로 쓴다) 끝에 financials.json 하나로 합친다. 손으로만 돌린다.
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  shard:
+    runs-on: ubuntu-latest
+    timeout-minutes: 150
+    strategy:
+      fail-fast: false
+      matrix:
+        i: [0, 1, 2, 3, 4, 5, 6, 7]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: 이 갈래 받기
+        env:
+          SEC_UA: 'Earning Samurai Calendar (cbpark@wisdomasset.co.kr)'
+          FIN_SHARD: '${{ matrix.i }}/8'
+          FIN_PER_RUN: '2000'
+          FIN_FACTS_PER_RUN: '2000'
+          FIN_OUT: 'shard_${{ matrix.i }}.json'
+        run: python scrape_fin.py
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: shard_${{ matrix.i }}
+          path: shard_${{ matrix.i }}.json
+          if-no-files-found: ignore
+
+  merge:
+    needs: shard
+    if: always()
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - uses: actions/download-artifact@v4
+        with:
+          path: shards
+      - name: 합쳐서 올리기
+        shell: bash
+        run: |
+          set -uo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          for attempt in 1 2 3 4 5; do
+            git fetch origin main && git reset --hard origin/main
+            python - <<'EOF'
+          import json, glob
+          from scrape_fin import FIN_VER
+          p = "data/financials.json"
+          base = json.load(open(p))
+          st = base.setdefault("stocks", {})
+          n = 0
+          for f in glob.glob("shards/*/*.json"):
+              for k, v in (json.load(open(f)).get("stocks") or {}).items():
+                  if v.get("v") == FIN_VER and (v.get("points") or v.get("eps") or k not in st):
+                      st[k] = v
+                      n += 1
+          base["count"] = sum(1 for v in st.values() if v.get("points") or v.get("eps"))
+          json.dump(base, open(p, "w"), ensure_ascii=False)
+          print("합친 종목", n)
+          EOF
+            git add data/financials.json
+            git diff --cached --quiet && exit 0
+            git commit -m "미국 실적 1Q18~ 한꺼번에 다시 받기 [skip ci]"
+            git push origin HEAD:main && exit 0
+            sleep 10
+          done
+          exit 1

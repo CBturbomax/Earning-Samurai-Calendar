@@ -1084,7 +1084,7 @@ def jphist(n, since="2017-01-01"):
 
     def listing(code):
         with _yano["lock"]:                                      # 한 사람이 돌리는 무료 API — 1초에 한 번
-            wait = 1.0 - (time.time() - _yano["t"])
+            wait = 0.4 - (time.time() - _yano["t"])
             if wait > 0:
                 time.sleep(wait)
             _yano["t"] = time.time()
@@ -1130,7 +1130,7 @@ def jphist(n, since="2017-01-01"):
             if got[0] % 10 == 0:
                 JH_PATH.write_text(json.dumps(JH, ensure_ascii=False))
                 log("옛 결산단신", got[0], "/", len(todo), "종목 · 문서", got[1], "· 가장 옛", got[2])
-    with ThreadPoolExecutor(3) as ex:
+    with ThreadPoolExecutor(10) as ex:                           # 회원님(10/30): "빠릿빠릿하게" — 파일은 JPX, 목록만 yanoshin
         list(ex.map(one, todo))
     with JH_LOCK:
         JH_PATH.write_text(json.dumps(JH, ensure_ascii=False))
