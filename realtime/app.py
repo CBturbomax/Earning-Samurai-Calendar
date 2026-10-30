@@ -191,6 +191,10 @@ class Store:
             self._save()
         return True
 
+    def get(self, eid):
+        with self.lock:
+            return next((e for e in reversed(self.events) if e["id"] == eid), None)
+
     def update(self, ev):
         with self.lock:
             for i, e in enumerate(self.events):
@@ -466,8 +470,32 @@ BIO_DESC = re.compile(r"創薬|新薬開発|バイオベンチャー|신약|바�
 MIN_KRW = float(os.environ.get("TG_MIN_KRW", "1e11"))      # 1,000억 원
 
 
+def guide_boom(ev):
+    """가이던스를 크게 올렸나 — 관심 범위 밖(업종·시총)이어도 보낸다(회원님 10/30).
+    이익(영업·경상·순) +30% 이상, 또는 매출 +15% 이상 올린 것. 직전 회사 예상 대비."""
+    pairs = []
+    g = ev.get("guide")
+    if g and g.get("prev"):
+        names = ("매출", "영업이익", "EPS" if ev["mkt"] == "us" else "순이익")
+        pairs += [(n, a, b) for n, a, b in zip(names, g["prev"], g["now"])]
+    p = ev.get("preInfo")
+    if p and p.get("what") == "가이던스 수정":
+        pairs += [(r["n"], r.get("prev"), r.get("now")) for r in p["rows"]]
+    best = None
+    for n, a, b in pairs:
+        if a and b is not None and a > 0:
+            c = (b / a - 1) * 100
+            if (n == "매출" and c >= 15) or (n != "매출" and c >= 30):
+                if not best or c > best[1]:
+                    best = (n, c)
+    return f"🚀 가이던스 급상향 ({best[0]} {pct(best[1])})" if best else ""
+
+
 def tg_pick(ev, pts):
     """(보낼까, 왜)."""
+    boom = guide_boom(ev)
+    if boom:
+        return True, boom
     if ev["mkt"] == "jp" and (ev.get("sector") or "") in TG_OUT_JP:
         return False, "업종 제외"
     if TG_OUT_IND.search(H.ind.get(ev["key"], "") or ""):
@@ -579,7 +607,12 @@ def finish(ev, point=None):
         (DATA / "charts" / f"{fname(ev['id'])}_{i}.png").write_bytes(png)
     ev["charts"] = [f"/chart/{fname(ev['id'])}_{i}.png" for i in range(len(pngs))]
     if not ev.get("replay") and not S.add(ev):
-        return
+        # 이미 본 공시 — 다만 **텔레그램을 보낼지 정하기 전에** 서버가 꺼졌던 것(재배포)이면 다시 한다.
+        # 아오이전자(6832, 10/30)가 그렇게 빠졌다: 앞 서버가 받아 적고 그리는 사이 재배포로 꺼졌고,
+        # 새 서버는 '본 것'이라 건너뛰었다.
+        old = S.get(ev["id"]) or {}
+        if old.get("tgWhy") or old.get("t_tg"):
+            return
     replay = ev.get("replay")
     if replay:                                   # 시험 — 사이트·보관은 안 건드리고 텔레그램으로만
         send, why = True, "시험"
@@ -1315,7 +1348,7 @@ def caption(ev):
         lines += ["", "🔥 숫자 : " + e(" / ".join(key))]
     gl = guide_line(ev)
     if gl:
-        lines += ["", gl]
+        lines += ["", gl + (" 🚀" if guide_boom(ev) else "")]
     if not p and ev.get("title"):
         lines += ["", e(ev["title"][:160])]
     out = "\n".join(lines)
