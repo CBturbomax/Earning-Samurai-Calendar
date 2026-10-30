@@ -1502,10 +1502,12 @@ def write_guide_site():
     if RT_URL:
         try:
             req = urllib.request.Request(RT_URL + "/api/guide", headers={"User-Agent": "es-build"})
-            with urllib.request.urlopen(req, timeout=20) as r:
+            with urllib.request.urlopen(req, timeout=90) as r:          # 2017년치부터 쌓여 커졌다 — 20초로는 못 받았다
                 srv = json.loads(r.read())
         except Exception as e:                                    # noqa: BLE001
-            print(f"  ! 실시간 서버 가이던스 받기 실패: {e}")
+            print(f"  ! 실시간 서버 가이던스 받기 실패: {e} — 지난번 guide_site.json 을 그대로 둔다")
+            if (HERE / "data" / "guide_site.json").exists():
+                return
     for mkt in ("jp", "us"):
         for code, v in (srv.get(mkt) or {}).items():
             for fy, st in (v or {}).items():
@@ -5255,11 +5257,35 @@ function links(m, code) {
           'https://www1.hkexnews.hk/search/titlesearch.xhtml?lang=en'];
 }
 
+/* 상세창을 열면 실시간 서버에 그 회사의 최신 자료(가이던스 변천·옛 분기)를 바로 묻는다 — 빌드(몇 분)를
+   기다리지 않게. 받으면 비어 있던 것만 채우고 창을 다시 그린다. 서버가 안 닿으면 페이지에 실린 것 그대로. */
+const CO = {}, GHS = {};
+const qkey = l => { const m = /^(\d)Q(\d\d)$/.exec(l || ''); return m ? +m[2] * 4 + +m[1] : 0; };
+function coLoad(k) {
+  if (!RT || CO[k]) return;
+  CO[k] = 1;
+  fetch(RT + '/api/co?key=' + encodeURIComponent(k), { cache: 'no-store' }).then(r => r.json()).then(j => {
+    let ch = false;
+    if (j.guide && Object.keys(j.guide).length) { GHS[k] = j.guide; ch = true; }
+    const f = D.fin[k];
+    if ((j.fin || []).length && (!f || f.freq === 'Q')) {
+      const g = D.fin[k] = f || { freq: 'Q', cur: 'JPY', points: [] };
+      const have = new Set((g.points || []).map(p => p[0]));
+      j.fin.forEach(p => { if (!have.has(p[0])) { g.points.push(p); ch = true; } });
+      g.points.sort((a, b) => qkey(a[0]) - qkey(b[0]));
+    }
+    if (ch && mdKey === k) {
+      const r = ROWS.find(x => keyOf(x) === k);
+      if (r) openModal(k, r[0]);
+    }
+  }).catch(() => { CO[k] = 0; });
+}
 function openModal(k, dt) {
   const r = (byDate.get(dt) || []).find(x => keyOf(x) === k) ||
             ROWS.find(x => keyOf(x) === k);
   if (!r) return;
   mdKey = k;
+  try { coLoad(k); } catch (e) {}
   const nt = NOTE[k], m = r[9], code = r[1];
   document.getElementById('mdTitle').innerHTML =
     FL(m) + ' ' + esc(r[2]) + ' (' + esc(code) + ')';
@@ -5551,7 +5577,11 @@ const SEG_COLORS = ['#5B9BD5', '#ED7D31', '#C0504D', '#4BA893', '#8E7CC3',
    이 함수를 그대로 찍는다. 일본은 결산단신 예상, 미국은 실적 보도자료의 연간 전망(AI 판독). */
 function tgGuide(gh, title, mkt) {
   const ST = ['최초', '1Q', '2Q', '3Q'];
-  const fys = Object.keys(gh).sort().slice(-8);         // 가급적 오래전부터(회원님 10/30) — 2017년 결산단신부터 쌓여 있다
+  // 결산월이 아닌 칸(반기 예상이 연간인 척 들어온 것 — 무라타 2025-09 의 8,300)은 뺀다. 가장 흔한 결산월만.
+  const cnt = {};
+  Object.keys(gh).forEach(f => { cnt[f.slice(5, 7)] = (cnt[f.slice(5, 7)] || 0) + Object.keys(gh[f]).length; });
+  const fmo = Object.keys(cnt).sort((a, b) => cnt[b] - cnt[a])[0];
+  const fys = Object.keys(gh).filter(f => f.slice(5, 7) === fmo).sort().slice(-8);   // 가급적 오래전부터(회원님 10/30)
   let last = null;
   fys.forEach(f => ST.forEach(s => { if (gh[f][s]) last = f + s; }));
   const one = (k, name) => {
@@ -5573,12 +5603,12 @@ function tgGuide(gh, title, mkt) {
             : mkt === 'jp' ? { div: 1e8, ko: '억엔' } : unitFor(Math.max(...raw.map(Math.abs)), 'USD');
     const vals = raw.map(v => v / U.div);
     const mx = niceMax(Math.max(...vals, 1));
-    const W = Math.max(880, cols.length * 58), L = 66, R = 20, B = 88, T = 30, H = 332, BASE = H - B;
+    const W = Math.max(880, cols.length * 66), L = 72, R = 20, B = 100, T = 34, H = 372, BASE = H - B;   // 글씨를 키웠다(회원님 10/30)
     const step = (W - L - R) / cols.length;
     const cx = i => L + step * i + step / 2, y = v => BASE - (BASE - T) * v / mx;
     let s = [0, mx / 2, mx].map(v => '<line class="fz" x1="' + L + '" y1="' + y(v).toFixed(1) + '" x2="' + (W - R) +
-      '" y2="' + y(v).toFixed(1) + '"/><text class="fx" x="' + (L - 8) + '" y="' + (y(v) + 4).toFixed(1) +
-      '" text-anchor="end">' + fmtN(v) + '</text>').join('');
+      '" y2="' + y(v).toFixed(1) + '"/><text class="fx" x="' + (L - 8) + '" y="' + (y(v) + 5).toFixed(1) +
+      '" text-anchor="end" style="font-size:13px">' + fmtN(v) + '</text>').join('');
     const groups = {};
     cols.forEach((c, i) => {
       if (!c) return;
@@ -5593,25 +5623,25 @@ function tgGuide(gh, title, mkt) {
       const fyl = c.s === '최초' ? 'FY' + String(fy % 100).padStart(2, '0') + ' 최초'
                 : c.s === '실제' ? 'FY' + String(fy % 100).padStart(2, '0') + ' 실제'
                 : 'FY' + c.s + String(fy % 100).padStart(2, '0');
-      const lab = '<text class="fx" x="' + cx(i).toFixed(1) + '" y="' + (BASE + 16) + '" text-anchor="middle"' +
-        ((c.f + c.s) === last ? ' style="fill:#fff;font-weight:800"' : '') + '>' + cal + '</text>' +
-        '<text class="fx" x="' + cx(i).toFixed(1) + '" y="' + (BASE + 31) + '" text-anchor="middle" style="font-size:10px;opacity:.75">' + fyl + '</text>';
+      const lab = '<text class="fx" x="' + cx(i).toFixed(1) + '" y="' + (BASE + 20) + '" text-anchor="middle" style="font-size:14px' +
+        ((c.f + c.s) === last ? ';fill:#fff;font-weight:800' : '') + '">' + cal + '</text>' +
+        '<text class="fx" x="' + cx(i).toFixed(1) + '" y="' + (BASE + 38) + '" text-anchor="middle" style="font-size:12px;opacity:.8">' + fyl + '</text>';
       if (c.v == null) { s += lab; return; }
       const v = c.v / U.div, now = (c.f + c.s) === last;
       const fill = c.s === '실제' ? '#d7dde3' : now ? '#FFCB05' : '#5B9BD5';
       s += '<rect x="' + (cx(i) - step * 0.36).toFixed(1) + '" y="' + y(v).toFixed(1) + '" width="' + (step * 0.72).toFixed(1) +
         '" height="' + Math.max(BASE - y(v), 1).toFixed(1) + '" style="fill:' + fill + '"/>' +
-        '<text class="vn rev" x="' + cx(i).toFixed(1) + '" y="' + (y(v) - 6).toFixed(1) + '" text-anchor="middle" style="font-size:11px' +
-        (now ? ';fill:#FFCB05;font-weight:800' : '') + '">' + fmtN(v) + '</text>' + lab;
+        '<text class="vn rev" x="' + cx(i).toFixed(1) + '" y="' + (y(v) - 6).toFixed(1) + '" text-anchor="middle" style="font-size:14px' +
+        (now ? ';fill:#FFCB05;font-weight:800;font-size:15px' : '') + '">' + fmtN(v) + '</text>' + lab;
     });
     // 회계연도마다 아래에 묶음 이름(FY27 · 26.4~27.3) — 몇 년 어느 기간의 전망인지 한눈에.
     Object.keys(groups).forEach(f => {
       const ix = groups[f], x0 = cx(ix[0]) - step * 0.42, x1 = cx(ix[ix.length - 1]) + step * 0.42;
       const fy = +f.slice(0, 4), fm = +f.slice(5, 7), sm = fm % 12 + 1, sy = fm === 12 ? fy : fy - 1;
-      s += '<line class="fz" x1="' + x0.toFixed(1) + '" y1="' + (BASE + 40) + '" x2="' + x1.toFixed(1) + '" y2="' + (BASE + 40) + '"/>' +
-        '<text class="fx" x="' + ((x0 + x1) / 2).toFixed(1) + '" y="' + (BASE + 58) + '" text-anchor="middle" style="font-weight:800;fill:#e6edf3;font-size:12px">FY' +
+      s += '<line class="fz" x1="' + x0.toFixed(1) + '" y1="' + (BASE + 48) + '" x2="' + x1.toFixed(1) + '" y2="' + (BASE + 48) + '"/>' +
+        '<text class="fx" x="' + ((x0 + x1) / 2).toFixed(1) + '" y="' + (BASE + 70) + '" text-anchor="middle" style="font-weight:800;fill:#e6edf3;font-size:16px">FY' +
         String(fy % 100).padStart(2, '0') + '</text>' +
-        '<text class="fx" x="' + ((x0 + x1) / 2).toFixed(1) + '" y="' + (BASE + 74) + '" text-anchor="middle" style="font-size:10px;opacity:.7">' +
+        '<text class="fx" x="' + ((x0 + x1) / 2).toFixed(1) + '" y="' + (BASE + 89) + '" text-anchor="middle" style="font-size:12px;opacity:.75">' +
         String(sy % 100).padStart(2, '0') + '.' + sm + '~' + String(fy % 100).padStart(2, '0') + '.' + fm + '</text>';
     });
     return '<div class="finhead sub">' + name + ' <span class="dim">(단위: ' + U.ko + ' · 회사 연간 전망)</span></div>' +
@@ -5630,7 +5660,8 @@ function ghFill() {
   if (!slots.length) return;
   const go = () => slots.forEach(el => {
     el.dataset.done = 1;
-    const key = el.dataset.key, m = key.split(':')[0], g = JSON.parse(JSON.stringify((GH || {})[key] || {}));
+    const key = el.dataset.key, m = key.split(':')[0];
+    const g = JSON.parse(JSON.stringify(Object.assign({}, (GH || {})[key] || {}, GHS[key] || {})));   // 서버에서 방금 받은 것이 이긴다
     const F = D.ann && D.ann[key];
     ((F && F.y) || []).forEach(y => { if (!y[5] && y[1] && g[y[0].slice(0, 7)]) g[y[0].slice(0, 7)]['실제'] = g[y[0].slice(0, 7)]['실제'] || [y[1], y[2]]; });
     if (Object.values(g).reduce((n, v) => n + Object.keys(v).filter(s => s !== '실제').length, 0) < 3) return;
