@@ -2399,6 +2399,33 @@ def replay_run(lines):
         if f:
             threading.Thread(target=jphist, args=(int(f.group(1)),), daemon=True, name="jphist").start()   # 몇 시간짜리 — 다음 줄을 막지 않게
             continue
+        f = re.match(r"xbrldump\s+(\w+)", ln.strip())         # 진단 — 최신 결산단신 zip 의 요약 파일·예상 문맥을 로그에
+        if f:
+            try:
+                code = f.group(1)
+                j = json.loads(http_get(f"https://webapi.yanoshin.jp/webapi/tdnet/list/{code}.json?limit=10", ua=BROWSER_UA, timeout=30))
+                items = [it.get("Tdnet", it) for it in j.get("items") or []]
+                hit = next((it for it in items if fj.TANSHIN.search(it.get("title") or "") and not fj.NOT_TANSHIN.search(it.get("title") or "") and it.get("url_xbrl")), None)
+                fn = hit["url_xbrl"].rsplit("/", 1)[-1]
+                blob = http_get("https://www.release.tdnet.info/inbs/" + fn, ua=BROWSER_UA, timeout=60, binary=True)
+                import zipfile
+                z = zipfile.ZipFile(io.BytesIO(blob))
+                log("xbrldump", code, fn, [n for n in z.namelist() if "Summary" in n])
+                for n in z.namelist():
+                    if "Summary" not in n or not n.lower().endswith((".htm", ".xbrl")):
+                        continue
+                    t = z.read(n).decode("utf-8", "replace")
+                    ctx = sorted(set(re.findall(r'contextRef="([^"]*Forecast[^"]*)"', t)))
+                    nf = len(re.findall(r"<ix:nonFraction\b", t, re.I))
+                    log("xbrldump", n.rsplit("/", 1)[-1], "nonFraction", nf, "Forecast 문맥", ctx[:12])
+                    i = t.find("Q3Duration_ConsolidatedMember_Forecast")
+                    if i > 0:
+                        log("xbrldump 원문", t[max(0, i - 300):i + 200].replace("\n", " "))
+                vals = fj.read_summary(blob) or {}
+                log("xbrldump 항목", sorted(vals)[:40])
+            except Exception as e:                               # noqa: BLE001
+                log("xbrldump 실패", repr(e)[:200])
+            continue
         if ln.strip() == "jphistagain":                 # 판독 규칙을 고쳤다 — 옛 결산단신을 처음부터 다시(가이던스 빈칸)
             with JH_LOCK:
                 JH["done"] = []
