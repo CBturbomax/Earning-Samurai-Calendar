@@ -291,10 +291,40 @@ def biz_lines(items, timeout=120):
     return got
 
 
-FY_ASK = ("아래는 일본 결산단신 첫 쪽(サマリー)의 글이다. '連結業績予想'(통기·연간 예상) 표에서 **연간(通期)** 예상만 읽어라 — "
-          "第2四半期(累計)·반기 줄은 쓰지 않는다. 금액 단위가 百万円이면 엔으로 환산(×1,000,000). 범위(〜)면 가운데 값. "
-          'JSON 으로만: {"fy_end": "그 회계연도 끝 YYYY-MM", "rev": 매출(売上高·営業収益), "op": 영업이익, "ni": 親会社株主に帰属する当期純利益} '
+FY_ASK = ("아래는 일본 결산단신 첫 쪽(サマリー)의 글이다. '業績予想'(회사 예상) 표를 읽어라. "
+          "① 통기(연간) 예상이 있으면 그것을: fy_end = 그 회계연도 끝 YYYY-MM. "
+          "② 연간은 없고 '第3四半期(累計)'·'第2四半期(累計)' 같은 **누계 예상만** 있으면 그것을: cum_end = 그 누계 기간의 끝 YYYY-MM, cum_months = 누계 개월 수(3·6·9). "
+          "금액 단위가 百万円이면 엔으로 환산(×1,000,000). 범위(〜)면 가운데 값. "
+          'JSON 으로만: {"fy_end": "YYYY-MM" 또는 null, "cum_end": "YYYY-MM" 또는 null, "cum_months": 9, "rev": 매출(売上高·売上収益·営業収益), "op": 영업이익, "ni": 親会社株主に帰属する当期純利益} '
           "— 없는 항목은 null, 예상 자체가 없으면(未定·記載なし) {}.\n\n")
+
+NQ_ASK = ("아래는 일본 회사의 결산 설명자료(IR)의 글이다. **다음 분기**(次四半期·来四半期·第N四半期 見通し·ガイダンス)의 "
+          "회사 예상 매출(売上収益·売上高)과 영업이익(営業利益 — Non-GAAP 을 앞세우면 그것)을 읽어라. 분기 단독 값이어야 한다(누계·연간은 쓰지 않는다). "
+          "금액은 엔 1단위로 환산(百万円 ×1,000,000 · 億円 ×100,000,000). 범위면 가운데 값. "
+          'JSON 으로만: {"end": "그 분기가 끝나는 달 YYYY-MM", "rev": 숫자, "op": 숫자 또는 null} — 다음 분기 예상이 없으면 {}.\n\n')
+
+
+def next_q_from_text(name, text, timeout=60):
+    """IR 설명자료 글 -> {"end": "YYYY-MM", "rev", "op"} 또는 None (르네사스처럼 결산단신엔 없고 설명자료에만 다음 분기 전망)."""
+    if not enabled() or len(text or "") < 300:
+        return None
+    m = re.search(r"(見通し|ガイダンス|予想|Outlook|Guidance)", text)
+    win = text[max(0, (m.start() if m else 0) - 1500):(m.start() if m else 0) + 6000]
+    try:
+        d = first_json(_ask(f"{NQ_ASK}회사: {name}\n\n{win}", timeout))
+    except Exception as e:                                       # noqa: BLE001
+        LOG("다음 분기 예상 판독 실패:", name, repr(e)[:200])
+        return None
+    if not d or not re.match(r"\d{4}-\d{2}$", str(d.get("end") or "")):
+        return None
+    try:
+        rev = float(str(d.get("rev")).replace(",", "")) if d.get("rev") not in (None, "") else None
+        op = float(str(d.get("op")).replace(",", "")) if d.get("op") not in (None, "") else None
+    except (TypeError, ValueError):
+        return None
+    if rev is None and op is None:
+        return None
+    return {"end": d["end"], "rev": rev, "op": op}
 
 
 def first_json(out):
@@ -336,6 +366,15 @@ def fy_from_text(name, text, timeout=90):
         return None
     if not d:
         return None
+    if not d.get("fy_end") and re.match(r"\d{4}-\d{2}$", str(d.get("cum_end") or "")):
+        g = fy_guide({"fy_end": d["cum_end"], "rev": d.get("rev"), "op": d.get("op"), "eps": d.get("ni")})
+        if g:
+            g["cum_end"] = g.pop("fy_end")
+            try:
+                g["cum_months"] = int(d.get("cum_months") or 9)
+            except (TypeError, ValueError):
+                g["cum_months"] = 9
+        return g
     return fy_guide({"fy_end": d.get("fy_end"), "rev": d.get("rev"), "op": d.get("op"), "eps": d.get("ni")})
 
 
