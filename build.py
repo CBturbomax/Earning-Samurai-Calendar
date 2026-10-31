@@ -25,7 +25,7 @@ import companies
 import companies_hk
 import companies_us
 from descriptions import DESC_KO
-from markets import (CAP_STEPS, HK_TYPICAL, HKT, HOLIDAYS, JP_TYPICAL, KST,
+from markets import (CAP_STEPS, HK_TYPICAL, HKT, HOLIDAYS, JP_TYPICAL, KST, ETF_TITLE,
                      MARKET_KO, MARKET_ORDER, MARKETS, SECTOR_KO, SEG_KO_CJK,
                      SEG_KO_EN, SEG_KO_FULL, TIMING_KO, US_AMC, US_BMO, US_EDT,
                      US_EST, US_SECTOR_KO, USD_KRW, holiday_ko, excluded)
@@ -305,7 +305,8 @@ def merge_jp_past(raw: dict):
     done_days = {(r["code"], r["date"]) for r in rows}
     kept = [r for r in raw["rows"]
             if (r["code"], r.get("fy", ""), r.get("kind", "")) not in done
-            and (r["code"], r["date"]) not in done_days]
+            and (r["code"], r["date"]) not in done_days
+            and not ETF_TITLE.search(r.get("title") or "")]        # ETF·ETN 의 결산단신은 회사가 아니다(10/31)
     dropped = len(raw["rows"]) - len(kept)
     # TDnet 목록에는 업종·거래소가 없고, **회사명은 줄임말이다** — 三菱ＵＦＪ,
     # アサヒ, ＯＢＣ. 그대로 두면 같은 회사가 지난주에는 「アサヒ」, 다음주에는
