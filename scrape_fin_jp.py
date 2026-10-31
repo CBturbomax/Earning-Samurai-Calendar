@@ -994,54 +994,79 @@ def read_narrative(blob):
     return best if len(best) >= 60 else ""
 
 
-def forecast_from(vals):
-    """회사의 통기 예상(가이던스)을 뽑는다 — 요약의 ForecastMember 문맥.
+def _months(st, en):
+    try:
+        return (int(en[:4]) - int(st[:4])) * 12 + int(en[5:7]) - int(st[5:7]) + 1
+    except (TypeError, ValueError):
+        return 0
 
-    실적(points)에는 절대 섞지 않는다. 여기 따로 담고 화면이 「회사 통기
-    예상(공시)」이라고 적는다 — 회사가 공시한 수치지 우리의 추정이 아니다.
-    Upper/Lower(범위 예상)는 안 쓴다. 본결산 공시에는 다음 회계연도 예상
-    (NextYearDuration)이 실리므로 **종료일이 가장 늦은 문맥**을 고른다.
-    같은 종료일이면 연결(Consolidated)을 비연결보다 앞세운다.
+
+def forecasts_from(vals):
+    """회사 예상을 **모양 그대로 전부** — [{kind, start, end, rev, opi, ni, lo, hi}].
+
+    kind: FY(연간) · H1(상반기 누계) · Q3(3분기 누계) · Q1. 범위 예상(Upper/Lower)은 가운데 값을 rev 에 두고
+    lo/hi 에 양끝을 남긴다. 연결을 비연결보다 앞세운다. 같은 공시에 실린 **실적 누계**(base)도 같은 모양으로 붙여
+    둔다 — 누계 예상에서 빼면 다음 분기 단독 예상이 된다(키옥시아·디스코: 연간 없이 다음 분기 누계만 낸다, 10/31).
     """
-    def pick(names):
-        best = None
+    def grab(names, want_fc):
+        out = {}
         for nm in names:
-            for cid, v, (_st, en) in vals.get(nm, []):
-                if not (FORECAST_CTX.search(cid) and DUR_CTX.search(cid)):
+            for cid, v, (st, en) in vals.get(nm, []):
+                if not (st and en and DUR_CTX.search(cid)):
                     continue
-                # 반기·분기 예상은 연간이 아니다 — 연간 예상이 범위로만 나오면 반기 예상이 연간 자리를 차지했다(무라타 10/30)
-                if re.search(r"Quarter|Q2|Half|Interim|AccumulatedQ", cid, re.I):
+                is_fc = bool(FORECAST_CTX.search(cid))
+                if is_fc != want_fc:
                     continue
-                if re.search(r"Upper|Lower", cid, re.I):
+                cons = 0 if NONCONS_CTX.search(cid) else 1
+                side = "hi" if re.search(r"Upper", cid, re.I) else "lo" if re.search(r"Lower", cid, re.I) else "mid"
+                key = (st, en)
+                slot = out.setdefault(key, {"cons": -1})
+                if cons < slot["cons"]:
                     continue
-                cons = 1 if CONS_CTX.search(cid) and not NONCONS_CTX.search(cid) else 0
-                rank = (en or "", cons)
-                if best is None or rank > best[0]:
-                    best = (rank, v, en)
-            if best:
-                break               # 실적과 같은 규칙 — 먼저 걸린 항목 이름을 쓴다
-        return best
-    r, o = pick(NAME_REV), pick(NAME_OPI)
-    if not r and not o:
-        return None
-    end = (r or o)[2]
-    if r and o and r[2] != o[2]:
-        # 매출과 영업이익의 회계연도가 다르면 늦은 쪽 하나만 남긴다. 섞으면
-        # 서로 다른 해의 예상을 한 줄에 적는 거짓말이 된다.
-        if r[2] > o[2]:
-            o = None
-        else:
-            r, end = None, o[2]
-    out = {"end": end}
-    if r:
-        out["rev"] = r[1]
-    if o:
-        out["opi"] = o[1]
-    n = pick(NAME_NI)
-    if n and n[2] == end:                   # 순이익 예상 — 종합상사처럼 매출·영업이익 예상을 안 내는 회사도 있다
-        out["ni"] = n[1]
+                if cons > slot["cons"]:
+                    slot.clear(); slot["cons"] = cons
+                slot[side] = v
+            if out:
+                break
+        return out
+    recs = {}
+    for k, names in (("rev", NAME_REV), ("opi", NAME_OPI), ("ni", NAME_NI)):
+        for (st, en), slot in grab(names, True).items():
+            r = recs.setdefault((st, en), {"start": st, "end": en})
+            if "mid" in slot:
+                r[k] = slot["mid"]
+            elif "lo" in slot and "hi" in slot:
+                r[k] = (slot["lo"] + slot["hi"]) / 2
+                r.setdefault("range", {})[k] = [slot["lo"], slot["hi"]]
+            elif "lo" in slot or "hi" in slot:
+                r[k] = slot.get("lo", slot.get("hi"))
+        base = grab(names, False)
+        for (st, en), slot in base.items():
+            if "mid" in slot:
+                recs.setdefault(("base", st, en), {"start": st, "end": en, "base": True})[k] = slot["mid"]
+    out = []
+    for key, r in recs.items():
+        if "rev" not in r and "opi" not in r and "ni" not in r:
+            continue
+        m = _months(r["start"], r["end"])
+        r["months"] = m
+        r["kind"] = "FY" if m >= 11 else "Q3" if m == 9 else "H1" if m == 6 else "Q1" if m == 3 else "?"
+        out.append(r)
     return out
 
+
+def forecast_from(vals):
+    """회사의 **연간** 예상 — {"end", "rev", "opi", "ni"} 또는 None. forecasts_from 의 FY 중 종료일이 가장 늦은 것
+    (본결산 공시에는 다음 회계연도 예상이 실린다). 범위 예상은 가운데 값. 실적(points)에는 절대 섞지 않는다."""
+    fy = [r for r in forecasts_from(vals) if r["kind"] == "FY" and not r.get("base")]
+    if not fy:
+        return None
+    r = max(fy, key=lambda x: x["end"])
+    out = {"end": r["end"]}
+    for k in ("rev", "opi", "ni"):
+        if r.get(k) is not None:
+            out[k] = r[k]
+    return out
 
 def collect():
     """최근 며칠치 결산단신을 훑어 분기 수치를 담는다."""
