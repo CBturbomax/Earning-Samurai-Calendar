@@ -2001,7 +2001,7 @@ def guide_audit(days=45, limit=600):
             # 그 결산단신이 싣는 연간 예상 = 발표일 다음에 오는 결산월(분기면 이번 회계연도, 본결산이면 다음 회계연도)
             fy = f"{d.year if d.month < fm else d.year + 1}-{fm:02d}"
             st = stage_of(fy + "-28", r[0])
-            AUDIT_ROWS[k[3:]] = (r[0], r[2] or r[7], max((x[11] or 0) for x in rs))
+            AUDIT_ROWS[k[3:]] = (r[0], r[2] or r[7], max((x[11] or 0) for x in rs), fy, st)
             if st and st not in GD.get(k[3:]).get(fy, {}) and not any(v.get("pub") == r[0] for v in GQ.get(k[3:]).values()):
                 todo.append((k[3:], r[0], r[2] or r[7], max((x[11] or 0) for x in rs)))
             break
@@ -2038,10 +2038,20 @@ def guide_audit(days=45, limit=600):
                     break
             if not res and hit.get("document_url"):
                 pn = hit["document_url"].rsplit("/", 1)[-1]
-                for base in ("https://www.release.tdnet.info/inbs/", f"https://www2.jpx.co.jp/disc/{code}0/"):
-                    res = guide_from_pdf(code, name, base + pn, day, lastvals) or GQ_LAST.pop(code, None)
+                # 셋째 경로: 야후파이낸스 재팬이 결산단신 PDF 를 그대로 보관한다(1401 접두를 뗀 번호, 10/31 확인)
+                yurl = f"https://finance-frontend-pc-dist.west.edge.storage-yahoo.jp/disclosure/{day.replace('-', '')}/{pn[4:]}"
+                for base in ("https://www.release.tdnet.info/inbs/" + pn, f"https://www2.jpx.co.jp/disc/{code}0/" + pn, yurl):
+                    res = guide_from_pdf(code, name, base, day, lastvals) or GQ_LAST.pop(code, None)
                     if res:
                         break
+            if not res and NOG.get(code) != "none" and day >= (datetime.now(JST) - timedelta(days=28)).strftime("%Y-%m-%d"):
+                ir = jp_ir_text(code, day, tries=1)                 # 결산단신엔 없고 설명자료에만(르네사스형)
+                nq = brief.next_q_from_text(name, ir) if ir else None
+                if nq:
+                    rec = {"start": "", "end": nq["end"] + "-28", "rev": nq.get("rev"), "opi": nq.get("op"), "ni": None, "months": 3, "kind": "Q1"}
+                    res = GQ.add(code, rec, None, day, src="ir")
+                    if res:
+                        log("분기 가이던스(IR 자료)", code, res["label"], res.get("rev"))
             got += 1 if res else 0
             mark_noguide(code, locals().get("lastvals"), res)
             lastvals = None
@@ -2058,9 +2068,8 @@ REPORT = {}
 def guide_report(todo, got):
     """점검 결과를 숫자로 — 회원님(10/31): "내가 짚어주기 전에." 하루 한 번 텔레그램으로, 언제든 /api/audit."""
     n = len(AUDIT_ROWS)
-    still = [(c, d, nm, cap) for c, d, nm, cap in todo
-             if stage_of(f"{d[:4]}-01-28", d) and not any(v.get("pub") == d for v in GQ.get(c).values())
-             and not any(s in GD.get(c).get(fy, {}) for fy in GD.get(c) for s in ("최초", "1Q", "2Q", "3Q") if fy >= d[:7])]
+    still = [(c, d, nm, cap) for c, (d, nm, cap, fy, st) in AUDIT_ROWS.items()
+             if st and st not in GD.get(c).get(fy, {}) and not any(v.get("pub") == d for v in GQ.get(c).values())]
     kinds = collections.Counter(NOG.get(c, "?") for c, *_ in still)
     unknown = sorted([(c, nm, cap) for c, d, nm, cap in still if c not in NOG], key=lambda x: -x[2])
     REPORT.update({"ts": now_iso(), "filers45d": n, "missing_before": len(todo), "filled": got, "missing_after": len(still),
@@ -2071,8 +2080,14 @@ def guide_report(todo, got):
            + (("\n미확인(시총순): " + ", ".join(f"{nm}({c})" for c, nm, _ in unknown[:15])) if unknown else ""))
     REPORT["text"] = msg
     today = datetime.now(KST).strftime("%Y-%m-%d")
+    sent_path = DATA / "audit_sent.txt"
+    try:
+        REPORT.setdefault("sent", sent_path.read_text().strip())
+    except OSError:
+        pass
     if REPORT.get("sent") != today:
         REPORT["sent"] = today
+        sent_path.write_text(today)
         for cid in list(TG.subs):
             try:
                 TG.send_text(cid, msg)
