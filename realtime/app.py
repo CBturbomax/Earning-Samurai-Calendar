@@ -1981,7 +1981,20 @@ def guide_from_pdf(code, name, url, day, vals=None):
     return out
 
 
+AUDIT_LOCK = threading.Lock()
+
+
 def guide_audit(days=45, limit=600):
+    if not AUDIT_LOCK.acquire(blocking=False):
+        log("가이던스 점검 — 이미 도는 중")
+        return
+    try:
+        _guide_audit(days, limit)
+    finally:
+        AUDIT_LOCK.release()
+
+
+def _guide_audit(days=45, limit=600):
     """매일 — 최근 실적을 낸 일본 회사 중 그 분기 가이던스가 빈 곳을 원본(JPX 보관소 결산단신)으로 메운다.
     XBRL 이 먼저, 안 되면 PDF 첫 쪽을 AI 가 읽는다. 회원님(10/30): 일본 가이던스는 반드시 차트에."""
     today = datetime.now(JST).date()
@@ -2009,7 +2022,7 @@ def guide_audit(days=45, limit=600):
     todo = [t for t in todo if NOG.get(t[0]) != "none" or t[1] >= (datetime.now(JST) - timedelta(days=3)).strftime("%Y-%m-%d")]
     log("가이던스 빈칸 점검", len(todo), "곳")
     got = 0
-    for code, day, name, _ in todo:
+    for code, day, name, cap in todo:
         try:
             with _yano["lock"]:
                 time.sleep(0.4)
@@ -2036,15 +2049,25 @@ def guide_audit(days=45, limit=600):
                         log("XBRL 예상 못 씀", code, "항목", len(vals or {}), "예상", fc, "매출 문맥", ns,
                             [(c[:70], se) for c, _, se in (vals or {}).get(ns, [])][:5])
                     break
-            if not res and hit.get("document_url"):
+            # XBRL 에 예상 문맥이 하나도 없으면 PDF 에도 없다(같은 문서다) — AI 로 읽지 않고 '없음'으로 적는다.
+            # 전에는 회사마다 PDF 세 벌 × AI 판독을 돌려 148곳에 몇 시간이 걸렸다(10/31).
+            has_fc = any(fj.FORECAST_CTX.search(cid) for n in fj.NAME_REV + fj.NAME_OPI + fj.NAME_NI
+                         for cid, _, _ in (lastvals or {}).get(n, []))
+            if not res and has_fc and hit.get("document_url"):
                 pn = hit["document_url"].rsplit("/", 1)[-1]
                 # 셋째 경로: 야후파이낸스 재팬이 결산단신 PDF 를 그대로 보관한다(1401 접두를 뗀 번호, 10/31 확인)
                 yurl = f"https://finance-frontend-pc-dist.west.edge.storage-yahoo.jp/disclosure/{day.replace('-', '')}/{pn[4:]}"
                 for base in ("https://www.release.tdnet.info/inbs/" + pn, f"https://www2.jpx.co.jp/disc/{code}0/" + pn, yurl):
+                    try:
+                        http_get(base, ua=BROWSER_UA, timeout=20, binary=True)      # 받아지는 첫 경로에서 **한 번만** 읽는다
+                    except Exception:                                # noqa: BLE001
+                        continue
                     res = guide_from_pdf(code, name, base, day, lastvals) or GQ_LAST.pop(code, None)
-                    if res:
-                        break
-            if not res and NOG.get(code) != "none" and day >= (datetime.now(JST) - timedelta(days=28)).strftime("%Y-%m-%d"):
+                    break
+            big = cap * 1e9 * float(H.D.get("usdKrw") or 1400) >= 1e12
+            if not res and not has_fc and lastvals:
+                mark_noguide(code, lastvals, None)
+            if not res and big and day >= (datetime.now(JST) - timedelta(days=28)).strftime("%Y-%m-%d"):
                 ir = jp_ir_text(code, day, tries=1)                 # 결산단신엔 없고 설명자료에만(르네사스형)
                 nq = brief.next_q_from_text(name, ir) if ir else None
                 if nq:
