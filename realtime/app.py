@@ -18,6 +18,7 @@ Railway 에서 24시간 돌며 원본을 몇 초마다 직접 본다.
 시각은 넷을 남긴다 — 공개(published) · 감지(detected) · 텔레그램(tg) · 사이트(site).
 `/api/stats` 가 소스별 지연을 보여준다.
 """
+import collections
 import html
 import io
 import json
@@ -298,6 +299,91 @@ class Guide:
 
 GD = Guide()
 GU = Guide("guide_us.json", None)                 # 미국 — 실적 보도자료의 연간 전망(AI 판독)
+
+
+class GuideQ:
+    """연간이 아닌 예상 — 다음 분기 누계·반기 누계(키옥시아·디스코는 연간 없이 이것만 낸다, 10/31).
+    {코드: {예상 끝 YYYY-MM: {pub, fc:[매출,영업이익,순이익], months, base_end, base:[…], src}}}.
+    같은 공시의 실적 누계(base)를 빼면 **다음 분기 단독 예상**이 된다."""
+
+    def __init__(self):
+        self.path = DATA / "guide_q.json"
+        self.lock = threading.Lock()
+        try:
+            self.own = json.loads(self.path.read_text())
+        except (OSError, ValueError):
+            self.own = {}
+
+    def add(self, code, rec, base, day, src="xbrl"):
+        if not rec or not rec.get("end") or rec.get("rev") is None and rec.get("opi") is None:
+            return None
+        row = {"pub": day, "fc": [rec.get("rev"), rec.get("opi"), rec.get("ni")], "months": rec.get("months") or 0,
+               "start": rec.get("start") or "", "src": src,
+               "base_end": (base or {}).get("end", "")[:7] if base else "", "base": [base.get("rev"), base.get("opi"), base.get("ni")] if base else None}
+        if rec.get("range"):
+            row["range"] = rec["range"]
+        with self.lock:
+            self.own.setdefault(code, {})[rec["end"][:7]] = row
+            tmp = self.path.with_suffix(".tmp")
+            tmp.write_text(json.dumps(self.own, ensure_ascii=False))
+            tmp.replace(self.path)
+        return self.next_q(code, rec["end"][:7])
+
+    def get(self, code):
+        return dict(self.own.get(code) or {})
+
+    def next_q(self, code, fc_end):
+        """누계 예상 − 실적 누계 = 단독 예상. 3개월 차이면 분기, 6개월이면 하반기. -> {label, fyq, span, rev, opi, ni} 또는 None."""
+        row = (self.own.get(code) or {}).get(fc_end)
+        if not row:
+            return None
+        fc, base = row["fc"], row.get("base")
+        diff = row["months"] - (_months_ym(row.get("start", "")[:7], row["base_end"]) if row.get("base_end") else 0)
+        if row.get("src") == "ir":                               # 설명자료에서 읽은 것은 애초에 단독 값
+            vals, span = fc, "분기"
+        elif base and diff == 3:
+            vals, span = [None if a is None or b is None else a - b for a, b in zip(fc, base)], "분기"
+        elif base and diff == 6:
+            vals, span = [None if a is None or b is None else a - b for a, b in zip(fc, base)], "하반기"
+        elif not row.get("base_end") and row["months"] in (3, 6):
+            vals, span = fc, "분기" if row["months"] == 3 else "상반기"
+        else:
+            return None
+        mo = int(fc_end[5:7])
+        return {"label": f"{(mo + 2) // 3}Q{fc_end[2:4]}", "end": fc_end, "span": span, "pub": row["pub"],
+                "rev": vals[0], "opi": vals[1], "ni": vals[2]}
+
+
+def _months_ym(a, b):
+    try:
+        return (int(b[:4]) - int(a[:4])) * 12 + int(b[5:7]) - int(a[5:7]) + 1
+    except (TypeError, ValueError):
+        return 0
+
+
+GQ = GuideQ()
+
+
+def fmt_jpy(v):
+    """엔 -> '2.50조 엔' / '1,234억 엔'."""
+    if v is None:
+        return "—"
+    if abs(v) >= 1e12:
+        return f"{v / 1e12:,.2f}조 엔"
+    return f"{v / 1e8:,.0f}억 엔"
+
+
+def fyq_label(code, end_ym):
+    """달력 분기(4Q26)에 회사 회계연도 표기(FY3Q27)를 덧붙인다 — 사이트 가이던스 그림과 같은 규칙."""
+    with H.lock:
+        r = H.row(f"jp:{code}")
+    m = re.match(r"(\d+)월", (r[3] if r else "") or "")
+    if not m:
+        return ""
+    fm, y, mo = int(m.group(1)), int(end_ym[:4]), int(end_ym[5:7])
+    fy_end_y = y if mo <= fm else y + 1
+    q = ((mo - fm - 1) % 12) // 3 + 1
+    return f"FY{q}Q{fy_end_y % 100:02d}"
 
 
 # ── 텔레그램 ─────────────────────────────────────────────────────────────
@@ -603,7 +689,7 @@ def finish(ev, point=None):
     # 회원님(10/30): "못 채울 거면 바로 쏘지 말고 다 완성해서 쏴 — 그렇다고 못 채웠다고 안 쏘지는 말고."
     # 이번 분기 가이던스나 사업부가 비면 AI 원문 판독(최대 80초)을 기다려 채운 다음 앨범을 보낸다. 못 채우면 그대로 보낸다.
     seg_missing = bool(seg) and point is not None and not ev.get("segPoint")
-    guide_missing = ev["mkt"] in ("jp", "us") and not ev.get("guide") and not ev.get("preInfo")
+    guide_missing = ev["mkt"] in ("jp", "us") and not ev.get("guide") and not ev.get("guideQ") and not ev.get("preInfo")
     b_early = None
     if (seg_missing or guide_missing) and brief.enabled():
         th.join(80)
@@ -631,6 +717,8 @@ def finish(ev, point=None):
     gh = GD.get(ev["code"], ann) if ev["mkt"] == "jp" else GU.get(ev["code"], ann) if ev["mkt"] == "us" else None
     if gh and sum(1 for v in gh.values() for s in v if s != "실제") < 3:
         gh = None                                                # 한두 칸짜리 변천은 안 그린다
+    if ev["mkt"] == "jp" and GQ.get(ev["code"]):
+        gh = dict(gh or {}, _q=GQ.get(ev["code"]))               # 분기 가이던스 vs 실제 그림(연간을 안 내는 회사)
     pngs = None
     if H.html:
         try:                                                     # 사이트 화면 그대로 찍는다
@@ -677,6 +765,18 @@ def finish(ev, point=None):
             extra = more()
             if not extra.strip():
                 return
+            if ev["mkt"] == "jp" and not ev.get("guide") and not ev.get("guideQ"):
+                nq = brief.next_q_from_text(ev["name"], extra)      # 결산단신엔 없고 설명자료에만 다음 분기 전망(르네사스형)
+                if nq:
+                    rec = {"start": "", "end": nq["end"] + "-28", "rev": nq.get("rev"), "opi": nq.get("op"), "ni": None, "months": 3, "kind": "Q1"}
+                    q = GQ.add(ev["code"], rec, None, ev["date"], src="ir")
+                    if q:
+                        ev["guideQ"] = q
+                        guide_q_compare(ev)
+                        NOG.pop(ev["code"], None)
+                        log("분기 가이던스(IR 자료)", key, q["label"], q.get("rev"))
+                        if ids:
+                            TG.reply(ids, guide_q_line(ev) + " <i>(IR 설명자료)</i>", None)
             b2 = brief.why(ev["name"], text + extra, names=names)
             if b2:
                 ser_add_q(key, b2, ev.get("cur") or "USD")
@@ -1187,6 +1287,7 @@ def jphist(n, since="2017-01-01"):
                 vals = fj.read_summary(blob)
                 if vals:
                     GD.add(code, fj.forecast_from(vals), it["pubdate"][:10])
+                    guide_q_from(code, vals, it["pubdate"][:10], quiet=True)     # 다음 분기(누계) 예상 이력도
                 for st, en, row in fj.read_segments(blob):
                     seg[f"{st}/{en}"] = row
                 for span, row in jp_fin_spans(vals or {}).items():
@@ -1481,6 +1582,8 @@ def caption(ev):
     gl = guide_line(ev)
     if gl:
         lines += ["", gl + (" 🚀" if guide_boom(ev) else "")]
+    elif ev.get("guideQ") and guide_q_line(ev):
+        lines += ["", guide_q_line(ev)]
     elif ev["mkt"] == "jp" and noguide_text(ev["code"]):
         lines += ["", f"🗓 가이던스 : {noguide_text(ev['code'])}"]
     if not p and ev.get("title"):
@@ -1775,7 +1878,73 @@ def noguide_text(code):
     return {"none": "연간 실적 전망을 내지 않는 회사", "quarter": "연간 전망 없이 다음 분기 전망만 내는 회사"}.get(k, "")
 
 
-def guide_from_pdf(code, name, url, day):
+GQ_LAST = {}
+
+
+def guide_q_from(code, vals, day, quiet=False):
+    """결산단신 XBRL 의 누계 예상(연간 아님) -> GQ 에 적고 다음 분기 단독 예상을 돌려준다."""
+    recs = fj.forecasts_from(vals)
+    fcs = [r for r in recs if not r.get("base") and r["kind"] in ("Q1", "H1", "Q3")]
+    if not fcs:
+        return None
+    fc = max(fcs, key=lambda r: r["end"])
+    base = max((r for r in recs if r.get("base") and r["start"] == fc["start"] and r["end"] < fc["end"]),
+               key=lambda r: r["end"], default=None)
+    out = GQ.add(code, fc, base, day)
+    if out and not quiet:
+        log("분기 가이던스", code, out["label"], out["span"], "매출", out.get("rev"), "영업이익", out.get("opi"))
+    return out
+
+
+def guide_q_compare(ev):
+    """다음 분기 단독 예상을 이번 분기 실적(QoQ)·전년 같은 분기(YoY)와 견준다."""
+    q = ev.get("guideQ")
+    if not q:
+        return
+    with H.lock:
+        pts = {p[0]: p for p in ((H.D.get("fin", {}).get(ev["key"]) or {}).get("points") or [])}
+    cur = ev.get("point")
+    if cur and cur[1] and q.get("rev") and q["span"] == "분기":
+        q["qoq"] = (q["rev"] / cur[1] - 1) * 100
+        if cur[2] and q.get("opi") is not None and cur[2] > 0:
+            q["qoqOpi"] = (q["opi"] / cur[2] - 1) * 100
+    py = pts.get(prev_year(q["label"]))
+    if py and py[1] and q.get("rev"):
+        q["yoy"] = (q["rev"] / py[1] - 1) * 100
+    q["fyq"] = fyq_label(ev["code"], q["end"])
+
+
+def guide_q_line(ev):
+    q = ev.get("guideQ")
+    if not q or q.get("rev") is None:
+        return ""
+    parts = [f"매출 {fmt_jpy(q['rev'])}" + (f" (QoQ {pct(q['qoq'])}" + (f" / YoY {pct(q['yoy'])}" if q.get("yoy") is not None else "") + ")"
+                                            if q.get("qoq") is not None else "")]
+    if q.get("opi") is not None:
+        parts.append(f"영업이익 {fmt_jpy(q['opi'])}" + (f" (QoQ {pct(q['qoqOpi'])})" if q.get("qoqOpi") is not None else ""))
+    head = f"다음 {q['span']}({q['label']}" + (f"·{q['fyq']}" if q.get("fyq") else "") + ")"
+    return f"🗓 {html.escape(head)} 가이던스 : " + html.escape(" / ".join(parts))
+
+
+def cum_actual(code, start, end):
+    """사이트 분기 실적을 더해 누계(start~end)를 만든다 — PDF·IR 에서 읽은 누계 예상에서 뺄 밑절미."""
+    with H.lock:
+        pts = ((H.D.get("fin", {}).get(f"jp:{code}") or {}).get("points") or [])
+    tot = [0.0, 0.0, None]
+    n = 0
+    for p in pts:
+        m = re.match(r"(\d)Q(\d\d)", p[0] or "")
+        if not m:
+            continue
+        ym = f"20{m.group(2)}-{int(m.group(1)) * 3:02d}"
+        if start[:7] <= ym <= end[:7]:
+            tot[0] += p[1] or 0
+            tot[1] += p[2] or 0
+            n += 1
+    return {"rev": tot[0], "opi": tot[1], "ni": None, "end": end} if n else None
+
+
+def guide_from_pdf(code, name, url, day, vals=None):
     """결산단신 PDF 첫 두 쪽 -> 연간 예상 -> 가이던스 변천에 적는다. 직전 예상의 절반~두 배 밖이면 안 쓴다(단위 오독)."""
     try:
         text = brief.pdf_text(http_get(url, ua=BROWSER_UA, timeout=30, binary=True), 2)
@@ -1783,6 +1952,21 @@ def guide_from_pdf(code, name, url, day):
         log("결산단신 PDF 실패", code, repr(e)[:100])
         return None
     g = brief.fy_from_text(name, text)
+    if g and g.get("cum_end") and g.get("rev"):             # 연간 없이 누계 예상만 적힌 결산단신 — 분기 가이던스로
+        start = f"{int(g['cum_end'][:4]) - (1 if int(g['cum_end'][5:7]) - g.get('cum_months', 9) + 1 <= 0 else 0)}-" \
+                f"{(int(g['cum_end'][5:7]) - g.get('cum_months', 9)) % 12 + 1:02d}-01"
+        base = None
+        if vals:
+            bs = [r for r in fj.forecasts_from(vals) if r.get("base") and r["end"][:7] < g["cum_end"]]
+            base = max(bs, key=lambda r: r["end"], default=None)
+        base = base or cum_actual(code, start, f"{g['cum_end']}-28")
+        rec = {"start": start, "end": g["cum_end"] + "-28", "rev": g.get("rev"), "opi": g.get("op"), "ni": g.get("eps"),
+               "months": g.get("cum_months", 9), "kind": "Q3"}
+        out = GQ.add(code, rec, base, day, src="pdf")
+        if out:
+            GQ_LAST[code] = out
+            log("분기 가이던스 AI 판독", code, out["label"], out["span"])
+        return None
     if not g or not g.get("rev"):
         log("연간 예상 판독 없음", code, "글", len(text or ""), url.rsplit("/", 1)[-1])
         return None
@@ -1797,7 +1981,7 @@ def guide_from_pdf(code, name, url, day):
     return out
 
 
-def guide_audit(days=45, limit=400):
+def guide_audit(days=45, limit=600):
     """매일 — 최근 실적을 낸 일본 회사 중 그 분기 가이던스가 빈 곳을 원본(JPX 보관소 결산단신)으로 메운다.
     XBRL 이 먼저, 안 되면 PDF 첫 쪽을 AI 가 읽는다. 회원님(10/30): 일본 가이던스는 반드시 차트에."""
     today = datetime.now(JST).date()
@@ -1817,10 +2001,12 @@ def guide_audit(days=45, limit=400):
             # 그 결산단신이 싣는 연간 예상 = 발표일 다음에 오는 결산월(분기면 이번 회계연도, 본결산이면 다음 회계연도)
             fy = f"{d.year if d.month < fm else d.year + 1}-{fm:02d}"
             st = stage_of(fy + "-28", r[0])
-            if st and st not in GD.get(k[3:]).get(fy, {}):
+            AUDIT_ROWS[k[3:]] = (r[0], r[2] or r[7], max((x[11] or 0) for x in rs))
+            if st and st not in GD.get(k[3:]).get(fy, {}) and not any(v.get("pub") == r[0] for v in GQ.get(k[3:]).values()):
                 todo.append((k[3:], r[0], r[2] or r[7], max((x[11] or 0) for x in rs)))
             break
     todo = sorted(set(todo), key=lambda t: -t[3])[:limit]
+    todo = [t for t in todo if NOG.get(t[0]) != "none" or t[1] >= (datetime.now(JST) - timedelta(days=3)).strftime("%Y-%m-%d")]
     log("가이던스 빈칸 점검", len(todo), "곳")
     got = 0
     for code, day, name, _ in todo:
@@ -1843,7 +2029,7 @@ def guide_audit(days=45, limit=400):
                         log("결산단신 zip 실패", code, base[8:30], repr(e)[:80])
                         continue
                     fc = fj.forecast_from(vals or {})
-                    res = GD.add(code, fc, day)
+                    res = GD.add(code, fc, day) or (guide_q_from(code, vals, day) if vals else None)
                     lastvals = vals
                     if not res:
                         ns = next((n for n in fj.NAME_REV if (vals or {}).get(n)), "")
@@ -1853,7 +2039,7 @@ def guide_audit(days=45, limit=400):
             if not res and hit.get("document_url"):
                 pn = hit["document_url"].rsplit("/", 1)[-1]
                 for base in ("https://www.release.tdnet.info/inbs/", f"https://www2.jpx.co.jp/disc/{code}0/"):
-                    res = guide_from_pdf(code, name, base + pn, day)
+                    res = guide_from_pdf(code, name, base + pn, day, lastvals) or GQ_LAST.pop(code, None)
                     if res:
                         break
             got += 1 if res else 0
@@ -1862,6 +2048,37 @@ def guide_audit(days=45, limit=400):
         except Exception as e:                                   # noqa: BLE001
             log("가이던스 점검 실패", code, repr(e)[:100])
     log("가이던스 빈칸 점검 끝", got, "/", len(todo), "곳 메움")
+    guide_report(todo, got)
+
+
+AUDIT_ROWS = {}
+REPORT = {}
+
+
+def guide_report(todo, got):
+    """점검 결과를 숫자로 — 회원님(10/31): "내가 짚어주기 전에." 하루 한 번 텔레그램으로, 언제든 /api/audit."""
+    n = len(AUDIT_ROWS)
+    still = [(c, d, nm, cap) for c, d, nm, cap in todo
+             if stage_of(f"{d[:4]}-01-28", d) and not any(v.get("pub") == d for v in GQ.get(c).values())
+             and not any(s in GD.get(c).get(fy, {}) for fy in GD.get(c) for s in ("최초", "1Q", "2Q", "3Q") if fy >= d[:7])]
+    kinds = collections.Counter(NOG.get(c, "?") for c, *_ in still)
+    unknown = sorted([(c, nm, cap) for c, d, nm, cap in still if c not in NOG], key=lambda x: -x[2])
+    REPORT.update({"ts": now_iso(), "filers45d": n, "missing_before": len(todo), "filled": got, "missing_after": len(still),
+                   "no_annual": kinds.get("none", 0), "quarter_only": kinds.get("quarter", 0), "unknown": [c for c, _, _ in unknown]})
+    msg = (f"🧾 <b>일본 가이던스 점검</b> ({datetime.now(KST).strftime('%m/%d %H:%M')})\n"
+           f"최근 45일 발표 {n}곳 · 기록 있음 {n - len(still)}곳 · 없음 {len(still)}곳\n"
+           f"└ 연간 전망 안 냄 {kinds.get('none', 0)} · 분기 전망만 {kinds.get('quarter', 0)} · 미확인 {len(unknown)}"
+           + (("\n미확인(시총순): " + ", ".join(f"{nm}({c})" for c, nm, _ in unknown[:15])) if unknown else ""))
+    REPORT["text"] = msg
+    today = datetime.now(KST).strftime("%Y-%m-%d")
+    if REPORT.get("sent") != today:
+        REPORT["sent"] = today
+        for cid in list(TG.subs):
+            try:
+                TG.send_text(cid, msg)
+            except Exception:                                    # noqa: BLE001
+                pass
+    log("가이던스 점검 보고", REPORT["filers45d"], "곳 중 없음", REPORT["missing_after"], "미확인", len(unknown))
 
 
 def jp_process(row, day, replay=False):
@@ -1881,9 +2098,13 @@ def jp_process(row, day, replay=False):
             ev["_more"] = lambda: "\n\n[결산 설명자료(IR)]\n" + jp_ir_text(code, day)
             if vals:
                 ev["guide"] = GD.add(code, fj.forecast_from(vals), day)
-            if not ev.get("guide") and row.get("pdf"):          # XBRL 로 못 뽑았다 — 첫 쪽 표를 AI 가 읽는다(후쿠다전자 10/30)
-                ev["guide"] = guide_from_pdf(code, ev["name"], "https://www.release.tdnet.info/inbs/" + row["pdf"], day)
-            mark_noguide(code, vals, ev.get("guide"))
+                ev["guideQ"] = guide_q_from(code, vals, day)      # 연간 없이 다음 분기(누계) 예상만 내는 회사(키옥시아·디스코)
+            if not ev.get("guide") and not ev.get("guideQ") and row.get("pdf"):   # XBRL 로 못 뽑았다 — 첫 쪽 표를 AI 가 읽는다
+                ev["guide"] = guide_from_pdf(code, ev["name"], "https://www.release.tdnet.info/inbs/" + row["pdf"], day, vals)
+                ev["guideQ"] = ev.get("guideQ") or GQ_LAST.pop(code, None)
+            if ev.get("guideQ"):
+                guide_q_compare(ev)
+            mark_noguide(code, vals, ev.get("guide") or ev.get("guideQ"))
             prior = fj.base_series().get(f"jp:{code}", {})
             q = fj.quarter_from(vals, prior) if vals else None
             if q:
@@ -2184,6 +2405,7 @@ def replay_run(lines):
             threading.Thread(target=safe, args=(jphist, 4000), daemon=True, name="jphist").start()
             continue
         if ln.strip() == "guideaudit":
+            REPORT["sent"] = ""
             guide_audit()
             continue
         f = re.match(r"guideus\s+(\d+)", ln.strip())
@@ -2353,6 +2575,16 @@ class Handler(BaseHTTPRequestHandler):
             self.head()
             with SEGAI_LOCK:
                 self.wfile.write(json.dumps(dict(SEGAI, _series=SER), ensure_ascii=False).encode())
+        elif path == "/api/audit":                               # 가이던스 점검 결과(숫자)
+            self.head()
+            self.wfile.write(json.dumps(REPORT, ensure_ascii=False).encode())
+        elif path == "/api/sent":                                # 그날 보낸·안 보낸 알림 한 줄씩 — ?day=YYYY-MM-DD
+            day = (urllib.parse.parse_qs(urllib.parse.urlparse(self.path).query).get("day") or [datetime.now(KST).strftime("%Y-%m-%d")])[0]
+            self.head()
+            with S.lock:
+                rows = [[e["key"], e.get("name"), e.get("kstTime"), bool(e.get("tg")), e.get("tgWhy"), e.get("t_tg"),
+                         bool(e.get("guide")), bool(e.get("guideQ"))] for e in S.events if e.get("kstDate") == day]
+            self.wfile.write(json.dumps({"day": day, "n": len(rows), "rows": rows}, ensure_ascii=False).encode())
         elif path == "/api/jpsegraw":                            # 옛 결산단신 부문 누계 — numbers 수집기가 segments_jp.json raw 에 합친다
             self.head()
             with JH_LOCK:
@@ -2360,7 +2592,8 @@ class Handler(BaseHTTPRequestHandler):
         elif path == "/api/co":                                  # 상세창을 열 때 사이트가 바로 묻는다 — 빌드를 기다리지 않게(회원님 10/30)
             key = (urllib.parse.parse_qs(urllib.parse.urlparse(self.path).query).get("key") or [""])[0]
             mkt, _, code = key.partition(":")
-            out = {"guide": {}, "fin": [], "noGuide": noguide_text(code) if mkt == "jp" else ""}
+            out = {"guide": {}, "fin": [], "noGuide": noguide_text(code) if mkt == "jp" else "",
+                   "gq": GQ.get(code) if mkt == "jp" else {}}
             try:
                 if mkt in ("jp", "us"):
                     out["guide"] = {fy: {s: v for s, v in st.items() if s != "실제"}
@@ -2377,7 +2610,7 @@ class Handler(BaseHTTPRequestHandler):
                 self.wfile.write(json.dumps(JH["fin"], ensure_ascii=False).encode())
         elif path == "/api/guide":                               # 빌드가 받아 사이트 상세창의 가이던스 변천으로
             self.head()
-            self.wfile.write(json.dumps({"jp": GD.own, "us": GU.own}, ensure_ascii=False).encode())
+            self.wfile.write(json.dumps({"jp": GD.own, "us": GU.own, "q": GQ.own}, ensure_ascii=False).encode())
         elif path == "/api/segko":
             self.head()
             self.wfile.write(json.dumps(SEGKO, ensure_ascii=False).encode())

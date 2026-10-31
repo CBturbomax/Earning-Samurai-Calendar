@@ -95,7 +95,7 @@ window.tgBuild = function (ev, gh) {
   if (t) out.push('<div class="finhead">' + title + ' 연간 실적 · 컨센서스</div>' + t);
   if (f && (f.points || []).length >= 2 && (f.freq === 'Q' || f.freq === 'H'))
     out.push(finChart(f).replace(/(<div class="finhead[^"]*">)/, '$1' + title + ' '));
-  if (gh) { const g = tgGuide(gh, title, m); if (g) out.push(g); }
+  if (gh) { const g = tgGuide(gh, title, m, key); if (g) out.push(g); }
   if (sg) {
     const MC = { jp: 'JPY', hk: 'HKD' };
     const s = segChart(sg, (f && f.cur) || MC[m] || 'USD');
@@ -127,7 +127,7 @@ window.tgBuild = function (ev, gh) {
     }
   } else if (ev.onlySeg === 'guide') {                     // 답장용 — 가이던스 변천만(미국: 보도자료를 읽은 뒤라 앨범보다 늦다)
     out.length = 0;
-    if (gh) { const g = tgGuide(gh, title, m); if (g) out.push(g); }
+    if (gh) { const g = tgGuide(gh, title, m, key); if (g) out.push(g); }
   } else if (ev.onlySeg) {                          // 답장용 — 원문 AI 판독 표
     out.length = 0;
     const B = ev.brief || {}, parts = [];
