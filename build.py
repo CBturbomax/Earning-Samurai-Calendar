@@ -5563,7 +5563,7 @@ function briefBlock(key, f, sg) {
 }
 
 const SRC_KO = { sec: 'SEC 공식 재무제표', sa: 'stockanalysis.com', yahoo: 'Yahoo Finance',
-                 tdnet: 'TDnet 결산단신 (공식 공시)',
+                 tdnet: 'TDnet 결산단신 (공식 공시)', tdold: '결산단신 (TDnet·JPX 공시 보관소)',
                  mix: 'SEC 공식 재무제표 + stockanalysis.com' };
 
 /* 부문 색. 여덟이면 웬만한 회사는 덮는다. 그 이상은 되풀이한다. */
@@ -5764,8 +5764,10 @@ function segDraw(sg, names, pts, cur, tag) {
     '<text class="fx" x="' + (L - 8) + '" y="' + (y(v) + 4).toFixed(1) +
     '" text-anchor="end">' + fmtN(v) + '</text>').join('');
   const xlab = pts.map((r, i) =>
+    ((i > 0 && /^1[QH]/.test(r[0])) ? '<line x1="' + (cx(i) - step / 2).toFixed(1) + '" y1="' + (H - B + 3) + '" x2="' +
+      (cx(i) - step / 2).toFixed(1) + '" y2="' + (H - 2) + '" style="stroke:rgba(255,255,255,.22);stroke-width:1"/>' : '') +
     '<text class="fx' + (i === n - 1 ? ' now' : '') + '" x="' + cx(i).toFixed(1) +
-    '" y="' + (H - B + 18) + '" text-anchor="middle">' + r[0] + '</text>').join('');
+    '" y="' + (H - B + 20) + '" text-anchor="middle" style="font-size:13px">' + r[0] + '</text>').join('');
 
   // 부문이 매출 전부를 설명하지 않는 회사가 흔하다(본사 몫·기타·조정). 그럴 때
   // 막대 높이를 총매출로 읽으면 틀린다. 얼마를 덮는지 적어둔다.
@@ -5829,19 +5831,35 @@ function finChart(f) {
   const latest = pts.length ? pts[pts.length - 1][0] : '';
 
   const rmaxRaw = Math.max(...pts.map(p => p[1]), 1);
-  const U = unitFor(rmaxRaw, f.cur);
+  // 막대 숫자는 두~네 자리로 — 5자리(25,908 mil JPY)면 칸이 좁아 겹친다. 10 이상이 되는 가장 큰 단위(25.9 bil JPY).
+  const hitU = SCALES.find(([d]) => rmaxRaw / d >= 10) || SCALES[SCALES.length - 1];
+  const U = { div: hitU[0], ko: (hitU[1] ? hitU[1] + ' ' : '') + (f.cur || 'USD') };
   const sc = v => v / U.div;
 
   const n = pts.length;
-  const W = Math.max(880, n * 46), L = 66, R = 60, B = 42;
+  // 칸을 촘촘히(30px) 두고 글씨를 키운다 — 36칸을 46px 로 넓게 그려 화면에 줄여 넣으니 글씨가 깨알 같았다(회원님 10/31).
+  const W = Math.max(880, n * 30), L = 58, R = 52;
   const step = (W - L - R) / n;
+  const rot = step < 40;                       // 칸이 좁으면 분기 이름을 세워 쓴다(엑셀처럼)
+  const B = rot ? 58 : 44;
   const cx = i => L + step * i + step / 2;
-  const xlab = (H) => pts.map((p, i) =>
-    '<text class="fx' + (i === n - 1 ? ' now' : '') + '" x="' + cx(i).toFixed(1) +
-    '" y="' + (H - B + 18) + '" text-anchor="middle">' + p[0] + '</text>').join('');
+  // 분기 이름 줄에만 해마다 옅은 칸막이(4Q|1Q 사이) — 1234 / 1234 계절성이 눈에 들어오게(회원님 10/31)
+  const xlab = (H) => pts.map((p, i) => {
+    const y0 = H - B;
+    const sep = (i > 0 && /^1[QH]/.test(p[0])) ? '<line x1="' + (cx(i) - step / 2).toFixed(1) + '" y1="' + (y0 + 3) +
+      '" x2="' + (cx(i) - step / 2).toFixed(1) + '" y2="' + (H - 2) + '" style="stroke:rgba(255,255,255,.22);stroke-width:1"/>' : '';
+    const t = rot
+      ? '<text class="fx' + (i === n - 1 ? ' now' : '') + '" transform="translate(' + (cx(i) + 4).toFixed(1) + ',' + (y0 + 8) +
+        ') rotate(-90)" text-anchor="end" style="font-size:13px">' + p[0] + '</text>'
+      : '<text class="fx' + (i === n - 1 ? ' now' : '') + '" x="' + cx(i).toFixed(1) + '" y="' + (y0 + 20) +
+        '" text-anchor="middle" style="font-size:13px">' + p[0] + '</text>';
+    return sep + t;
+  }).join('');
+  // 숫자가 칸보다 넓으면 한 칸 걸러 한 줄 위로 — 옆 숫자와 붙지 않게
+  const wide = txt => String(txt).length * 13 * 0.6 > step * 0.96;
 
   /* ── (1) 매출 + 영업이익률 ───────────────────────────────── */
-  const H1 = 330, T1 = 40, BASE1 = H1 - B;
+  const H1 = 420, T1 = 46, BASE1 = H1 - B;
   const rmax = niceMax(sc(rmaxRaw));
   const ry = v => BASE1 - (BASE1 - T1) * v / rmax;
 
@@ -5859,7 +5877,8 @@ function finChart(f) {
     const vs = inr.length >= 2 ? inr : all;
     const mn = Math.min(...vs), mx = Math.max(...vs);
     const span = (mx - mn) || 0.04;
-    const lo = mn - span * 0.45, hi = mx + span * 0.12;
+    // 이익률 선은 아래쪽 절반쯤을 지나게 — 막대 꼭대기의 매출 숫자와 부딪히지 않게(회원님 10/31 가독성)
+    const lo = mn - span * 0.25, hi = mx + span * 1.15;
     oy = v => BASE1 - (BASE1 - T1) * (Math.max(lo, Math.min(hi, v)) - lo) / (hi - lo);
     oy.lo = lo; oy.hi = hi;
   }
@@ -5874,17 +5893,18 @@ function finChart(f) {
     // 넣어 보려 했더니 막대가 글자보다 좁아 잘렸다. 글자에 바탕색 테두리를 둘러
     // 무엇 위에 놓이든 읽히게 한다(paint-order).
     const oyy = opmAt[i];
-    const ty = (oyy != null && Math.abs(oyy - ry(v)) < 20) ? ry(v) - 17 : ry(v) - 6;
+    let ty = (oyy != null && Math.abs(oyy - ry(v)) < 22) ? ry(v) - 19 : ry(v) - 6;
+    if (wide(fmtN(v)) && i % 2) ty -= 15;
     bars += '<rect class="fb" x="' + x.toFixed(1) + '" y="' + ry(v).toFixed(1) +
       '" width="' + (step * 0.68).toFixed(1) + '" height="' + h.toFixed(1) + '"/>' +
       '<text class="vn rev" x="' + cx(i).toFixed(1) +
-      '" y="' + ty.toFixed(1) + '" text-anchor="middle">' + fmtN(v) + '</text>';
+      '" y="' + ty.toFixed(1) + '" text-anchor="middle" style="font-size:13px;font-weight:700">' + fmtN(v) + '</text>';
   });
   const rAxis = [0, rmax / 2, rmax].map(v =>
     '<line class="fz" x1="' + L + '" y1="' + ry(v).toFixed(1) + '" x2="' + (W - R) +
     '" y2="' + ry(v).toFixed(1) + '"/>' +
-    '<text class="fx" x="' + (L - 8) + '" y="' + (ry(v) + 4).toFixed(1) +
-    '" text-anchor="end">' + fmtN(v) + '</text>').join('');
+    '<text class="fx" x="' + (L - 8) + '" y="' + (ry(v) + 5).toFixed(1) +
+    '" text-anchor="end" style="font-size:13px">' + fmtN(v) + '</text>').join('');
 
   // 영업이익률 — 오른쪽 축. 값 언저리로 좁게 잡아야 등락이 보인다.
   let opmSvg = '', opmAxis = '';
@@ -5893,11 +5913,11 @@ function finChart(f) {
     opmSvg = '<path class="fl opm" d="' +
       opm.map((o, j) => (j ? 'L' : 'M') + cx(o[0]).toFixed(1) + ',' + oy(o[1]).toFixed(1)).join(' ') +
       '"/>' + opm.map(o =>
-      '<circle class="dot opm" cx="' + cx(o[0]).toFixed(1) + '" cy="' + oy(o[1]).toFixed(1) + '" r="3"/>' +
-      '<text class="vn opm" x="' + cx(o[0]).toFixed(1) + '" y="' + (oy(o[1]) - 9).toFixed(1) +
-      '" text-anchor="middle">' + pcN(o[1]) + '</text>').join('');
+      '<circle class="dot opm" cx="' + cx(o[0]).toFixed(1) + '" cy="' + oy(o[1]).toFixed(1) + '" r="3.5"/>' +
+      '<text class="vn opm" x="' + cx(o[0]).toFixed(1) + '" y="' + (oy(o[1]) + (o[0] % 2 ? 19 : -10)).toFixed(1) +
+      '" text-anchor="middle" style="font-size:13px;font-weight:800">' + pcN(o[1]) + '</text>').join('');
     opmAxis = [lo, (lo + hi) / 2, hi].map(v =>
-      '<text class="fx opm" x="' + (W - R + 8) + '" y="' + (oy(v) + 4).toFixed(1) + '">' +
+      '<text class="fx opm" x="' + (W - R + 8) + '" y="' + (oy(v) + 5).toFixed(1) + '" style="font-size:13px">' +
       pcN(v) + '</text>').join('');
   }
 
@@ -5905,7 +5925,7 @@ function finChart(f) {
   const have = yoy.map((v, i) => v == null ? null : [i, v]).filter(Boolean);
   let yoySvg = '';
   if (have.length >= 2) {
-    const H2 = 220, T2 = 32, BASE2 = H2 - B;
+    const H2 = 300, T2 = 36, BASE2 = H2 - B;     // 성장률이 잘 보이게 키웠다(회원님 10/31)
     const vs = have.map(o => o[1]);
     let lo = Math.min(0, ...vs), hi = Math.max(0, ...vs);
     const pad = (hi - lo) * 0.22 || 0.05;
@@ -5915,16 +5935,16 @@ function finChart(f) {
     const axis = ticks.map(v =>
       '<line class="' + (v === 0 ? 'fzero' : 'fz') + '" x1="' + L + '" y1="' + gy(v).toFixed(1) +
       '" x2="' + (W - R) + '" y2="' + gy(v).toFixed(1) + '"/>' +
-      '<text class="fx" x="' + (L - 8) + '" y="' + (gy(v) + 4).toFixed(1) +
-      '" text-anchor="end">' + pcN(v) + '</text>').join('');
+      '<text class="fx" x="' + (L - 8) + '" y="' + (gy(v) + 5).toFixed(1) +
+      '" text-anchor="end" style="font-size:13px">' + pcN(v) + '</text>').join('');
     yoySvg = '<div class="finhead sub">매출 성장률 <span class="dim">(YoY)</span></div>' +
       '<div class="finbox"><svg viewBox="0 0 ' + W + ' ' + H2 + '" class="finsvg">' + axis +
       '<path class="fl yoy" d="' +
       have.map((o, j) => (j ? 'L' : 'M') + cx(o[0]).toFixed(1) + ',' + gy(o[1]).toFixed(1)).join(' ') +
-      '"/>' + have.map(o =>
-        '<circle class="dot yoy" cx="' + cx(o[0]).toFixed(1) + '" cy="' + gy(o[1]).toFixed(1) + '" r="3"/>' +
-        '<text class="vn yoy" x="' + cx(o[0]).toFixed(1) + '" y="' + (gy(o[1]) - 9).toFixed(1) +
-        '" text-anchor="middle">' + pcN(o[1]) + '</text>').join('') +
+      '" style="stroke-width:2.6"/>' + have.map(o =>
+        '<circle class="dot yoy" cx="' + cx(o[0]).toFixed(1) + '" cy="' + gy(o[1]).toFixed(1) + '" r="3.8"/>' +
+        '<text class="vn yoy" x="' + cx(o[0]).toFixed(1) + '" y="' + (gy(o[1]) + (o[1] < 0 ? 19 : -10)).toFixed(1) +
+        '" text-anchor="middle" style="font-size:13px;font-weight:800' + (o[1] < 0 ? ';fill:#5fb3ff' : '') + '">' + pcN(o[1]) + '</text>').join('') +
       xlab(H2) + '</svg></div>';
   }
 
@@ -5945,7 +5965,7 @@ function finChart(f) {
     '<span class="lg opm">영업이익률 (오른쪽)</span></div>' +
     yoySvg +
     '<div class="finlegend"><span class="lg yoy">매출 성장률 (YoY)</span>' +
-    '<span class="src">출처 ' + SRC_KO[f.src || 'sec'] + '</span></div></div>';
+    '<span class="src">출처 ' + (SRC_KO[f.src || 'sec'] || '회사 공시') + '</span></div></div>';
 }
 function closeModal() { document.getElementById('mdBack').hidden = true; mdKey = null; }
 document.getElementById('mdClose').onclick = closeModal;
