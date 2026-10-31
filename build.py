@@ -5259,7 +5259,7 @@ function links(m, code) {
 
 /* 상세창을 열면 실시간 서버에 그 회사의 최신 자료(가이던스 변천·옛 분기)를 바로 묻는다 — 빌드(몇 분)를
    기다리지 않게. 받으면 비어 있던 것만 채우고 창을 다시 그린다. 서버가 안 닿으면 페이지에 실린 것 그대로. */
-const CO = {}, GHS = {};
+const CO = {}, GHS = {}, NOG = {};
 const qkey = l => { const m = /^(\d)Q(\d\d)$/.exec(l || ''); return m ? +m[2] * 4 + +m[1] : 0; };
 function coLoad(k) {
   if (!RT || CO[k]) return;
@@ -5267,6 +5267,7 @@ function coLoad(k) {
   fetch(RT + '/api/co?key=' + encodeURIComponent(k), { cache: 'no-store' }).then(r => r.json()).then(j => {
     let ch = false;
     if (j.guide && Object.keys(j.guide).length) { GHS[k] = j.guide; ch = true; }
+    if (j.noGuide) { NOG[k] = j.noGuide; ch = true; }
     const f = D.fin[k];
     if ((j.fin || []).length && (!f || f.freq === 'Q')) {
       const g = D.fin[k] = f || { freq: 'Q', cur: 'JPY', points: [] };
@@ -5664,7 +5665,12 @@ function ghFill() {
     const g = JSON.parse(JSON.stringify(Object.assign({}, (GH || {})[key] || {}, GHS[key] || {})));   // 서버에서 방금 받은 것이 이긴다
     const F = D.ann && D.ann[key];
     ((F && F.y) || []).forEach(y => { if (!y[5] && y[1] && g[y[0].slice(0, 7)]) g[y[0].slice(0, 7)]['실제'] = g[y[0].slice(0, 7)]['실제'] || [y[1], y[2]]; });
-    if (Object.values(g).reduce((n, v) => n + Object.keys(v).filter(s => s !== '실제').length, 0) < 3) return;
+    if (Object.values(g).reduce((n, v) => n + Object.keys(v).filter(s => s !== '실제').length, 0) < 3) {
+      // 원문을 다 찾아봐도 연간 전망이 없는 회사(키엔스·디스코…) — 비어 보이면 수집 실패로 읽히니 그렇다고 적는다
+      if (NOG[key]) el.innerHTML = '<div class="finwrap"><div class="finhead">가이던스 변천</div><p class="finnote">' +
+        esc(NOG[key]) + '입니다. 결산단신 원문에 연간 실적 전망이 없습니다.</p></div>';
+      return;
+    }
     try { el.innerHTML = tgGuide(g, '', m); } catch (e) {}
   });
   if (GH) return go();
