@@ -1481,6 +1481,8 @@ def caption(ev):
     gl = guide_line(ev)
     if gl:
         lines += ["", gl + (" 🚀" if guide_boom(ev) else "")]
+    elif ev["mkt"] == "jp" and noguide_text(ev["code"]):
+        lines += ["", f"🗓 가이던스 : {noguide_text(ev['code'])}"]
     if not p and ev.get("title"):
         lines += ["", e(ev["title"][:160])]
     out = "\n".join(lines)
@@ -1746,6 +1748,33 @@ def jp_seg_now(key, blob, label, seg):
     return {"label": label, "names": names, "vals": [out.get(n) for n in names]}
 
 
+NOG_PATH = DATA / "noguide.json"
+try:
+    NOG = json.loads(NOG_PATH.read_text())
+except (OSError, ValueError):
+    NOG = {}
+
+
+def mark_noguide(code, vals, got):
+    """원문을 다 찾아봐도 연간 예상이 없는 회사 — 'none'(예상 자체를 안 냄)·'quarter'(다음 분기 예상만). 찾으면 지운다."""
+    if got:
+        if NOG.pop(code, None):
+            NOG_PATH.write_text(json.dumps(NOG))
+        return
+    if not vals:
+        return
+    fc = [cid for n in fj.NAME_REV + fj.NAME_OPI for cid, _, _ in vals.get(n, []) if fj.FORECAST_CTX.search(cid)]
+    kind = "quarter" if any(re.search(r"Quarter|AccumulatedQ|Q[1-4]", c) for c in fc) else "none"
+    if NOG.get(code) != kind:
+        NOG[code] = kind
+        NOG_PATH.write_text(json.dumps(NOG))
+
+
+def noguide_text(code):
+    k = NOG.get(code)
+    return {"none": "연간 실적 전망을 내지 않는 회사", "quarter": "연간 전망 없이 다음 분기 전망만 내는 회사"}.get(k, "")
+
+
 def guide_from_pdf(code, name, url, day):
     """결산단신 PDF 첫 두 쪽 -> 연간 예상 -> 가이던스 변천에 적는다. 직전 예상의 절반~두 배 밖이면 안 쓴다(단위 오독)."""
     try:
@@ -1815,6 +1844,7 @@ def guide_audit(days=45, limit=400):
                         continue
                     fc = fj.forecast_from(vals or {})
                     res = GD.add(code, fc, day)
+                    lastvals = vals
                     if not res:
                         ns = next((n for n in fj.NAME_REV if (vals or {}).get(n)), "")
                         log("XBRL 예상 못 씀", code, "항목", len(vals or {}), "예상", fc, "매출 문맥", ns,
@@ -1827,6 +1857,8 @@ def guide_audit(days=45, limit=400):
                     if res:
                         break
             got += 1 if res else 0
+            mark_noguide(code, locals().get("lastvals"), res)
+            lastvals = None
         except Exception as e:                                   # noqa: BLE001
             log("가이던스 점검 실패", code, repr(e)[:100])
     log("가이던스 빈칸 점검 끝", got, "/", len(todo), "곳 메움")
@@ -1851,6 +1883,7 @@ def jp_process(row, day, replay=False):
                 ev["guide"] = GD.add(code, fj.forecast_from(vals), day)
             if not ev.get("guide") and row.get("pdf"):          # XBRL 로 못 뽑았다 — 첫 쪽 표를 AI 가 읽는다(후쿠다전자 10/30)
                 ev["guide"] = guide_from_pdf(code, ev["name"], "https://www.release.tdnet.info/inbs/" + row["pdf"], day)
+            mark_noguide(code, vals, ev.get("guide"))
             prior = fj.base_series().get(f"jp:{code}", {})
             q = fj.quarter_from(vals, prior) if vals else None
             if q:
@@ -2327,7 +2360,7 @@ class Handler(BaseHTTPRequestHandler):
         elif path == "/api/co":                                  # 상세창을 열 때 사이트가 바로 묻는다 — 빌드를 기다리지 않게(회원님 10/30)
             key = (urllib.parse.parse_qs(urllib.parse.urlparse(self.path).query).get("key") or [""])[0]
             mkt, _, code = key.partition(":")
-            out = {"guide": {}, "fin": []}
+            out = {"guide": {}, "fin": [], "noGuide": noguide_text(code) if mkt == "jp" else ""}
             try:
                 if mkt in ("jp", "us"):
                     out["guide"] = {fy: {s: v for s, v in st.items() if s != "실제"}
