@@ -48,7 +48,7 @@ import scrape_fin_intl as fi       # noqa: E402
 import scrape_jp_tdnet as jt       # noqa: E402
 import montable                    # noqa: E402
 import pdftext                     # noqa: E402
-from markets import excluded       # noqa: E402
+from markets import excluded, ETF_TITLE   # noqa: E402
 
 import brief                       # noqa: E402
 import charts                      # noqa: E402
@@ -2265,6 +2265,8 @@ def jp_watch():
                 if first and (not r["time"] or stale(datetime.strptime(f"{day} {r['time']}", "%Y-%m-%d %H:%M").replace(tzinfo=JST))):
                     continue
                 t = r["title"]
+                if ETF_TITLE.search(t):                           # ETF·ETN 결산단신 — 회사가 아니다
+                    continue
                 if fj.TANSHIN.search(t) and not fj.NOT_TANSHIN.search(t) and r["zip"]:
                     POOL.submit(safe, jp_process, r, day)
                 elif PRE_RE.search(t) and not PRE_SKIP.search(t) and r.get("pdf"):
