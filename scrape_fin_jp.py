@@ -214,6 +214,9 @@ def local(tag):
 # 자릿수는 `scale`, 부호는 `sign` 속성에 따로 적힌다(scale="6" 이면 백만 단위).
 # XML 파서를 그대로 걸면 HTML 실체참조에 걸려 깨지므로 필요한 것만 집어낸다.
 IX_FACT = re.compile(r"<ix:nonFraction\b([^>]*)>(.*?)</ix:nonFraction>", re.S | re.I)
+# **스스로 닫히는 빈 사실**(<ix:nonFraction … xsi:nil="true"/> — 증감률 「－」 칸)을 먼저 지운다. 안 지우면 위 정규식이
+# 그 태그를 연 것으로 보고 다음 진짜 숫자(연간·누계 예상 매출)까지 삼킨다 — 키옥시아·디스코 등 예상이 통째로 빠졌다(10/31).
+IX_EMPTY = re.compile(r"<ix:nonFraction\b[^>]*/\s*>", re.I)
 IX_ATTR = re.compile(r'([\w:-]+)\s*=\s*"([^"]*)"')
 CTX_RE = re.compile(r'<(?:\w+:)?context\b[^>]*\bid="([^"]+)"(.*?)</(?:\w+:)?context>',
                     re.S | re.I)
@@ -255,7 +258,7 @@ def read_summary(blob):
         periods[cid] = (st, en)
 
     vals = {}
-    for attrs, inner in IX_FACT.findall(txt):
+    for attrs, inner in IX_FACT.findall(IX_EMPTY.sub('', txt)):
         a = dict(IX_ATTR.findall(attrs))
         name = (a.get("name") or "").rsplit(":", 1)[-1]
         cid = a.get("contextRef") or ""
@@ -417,7 +420,7 @@ def read_segments(blob):
         if "Attachment" not in n or not SEG_CTX.search(txt):
             continue
 
-        for attrs, inner in IX_FACT.findall(txt):
+        for attrs, inner in IX_FACT.findall(IX_EMPTY.sub('', txt)):
             a = dict(IX_ATTR.findall(attrs))
             name = (a.get("name") or "").rsplit(":", 1)[-1]
             cid = a.get("contextRef") or ""
@@ -765,7 +768,7 @@ def dump_segments(codes):
                 if not n.lower().endswith((".htm", ".html", ".xbrl")):
                     continue
                 txt = z.read(n).decode("utf-8", "replace")
-                facts = IX_FACT.findall(txt)
+                facts = IX_FACT.findall(IX_EMPTY.sub('', txt))
                 seg_ctx, names = set(), {}
                 for attrs, _inner in facts:
                     a = dict(IX_ATTR.findall(attrs))
