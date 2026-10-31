@@ -365,6 +365,7 @@ def fy_from_text(name, text, timeout=90):
         LOG("연간 예상 판독 실패:", name, repr(e)[:200])
         return None
     if not d:
+        LOG("연간 예상 판독 빈 답:", name, repr(out[:200]))
         return None
     if not d.get("fy_end") and re.match(r"\d{4}-\d{2}$", str(d.get("cum_end") or "")):
         g = fy_guide({"fy_end": d["cum_end"], "rev": d.get("rev"), "op": d.get("op"), "eps": d.get("ni")})

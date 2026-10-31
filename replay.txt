@@ -1,6 +1,3 @@
-f30
-probe https://finance.yahoo.co.jp/quote/285A.T
-probe https://finance.yahoo.co.jp/quote/285A.T/performance
-jpcode 285A
-guideaudit
-jphistagain
+f31
+xbrldump 285A
+xbrldump 6146
