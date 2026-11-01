@@ -1315,6 +1315,84 @@ def live_quote(mkt, code):
         return {}
 
 
+_PXC = {}
+
+
+def price_history(key):
+    """상세창 주가 차트(회원님 11/01) — 10년치 일별 종가 + 실적 발표일과 그 시각(장전·장중·장후).
+    주가는 야후 차트 API. 발표일: 미국 SEC 8-K Item 2.02 접수 시각 · 일본 TDnet 결산단신 공시 시각(yanoshin) ·
+    그 밖은 우리 캘린더 줄. 반응은 사이트가 셈한다(장후 = 발표일 종가→다음 날 종가, 장전 = 전날→발표일, 장중 = 전날→다음 날).
+    한 시간 동안은 받아 둔 것을 쓴다."""
+    hit = _PXC.get(key)
+    if hit and time.time() - hit[0] < 3600:
+        return hit[1]
+    import scrape_pr_us as pr
+    mkt, _, code = key.partition(":")
+    sym = {"us": code.replace(".", "-"), "jp": code + ".T", "hk": code.lstrip("0").zfill(4) + ".HK"}.get(mkt)
+    if not sym:
+        return {}
+    j = json.loads(http_get(f"https://query1.finance.yahoo.com/v8/finance/chart/{sym}?range=10y&interval=1d",
+                            ua=BROWSER_UA, timeout=20))
+    r = ((j.get("chart") or {}).get("result") or [{}])[0]
+    tz = ZoneInfo((r.get("meta") or {}).get("exchangeTimezoneName") or "UTC")
+    cl = ((r.get("indicators") or {}).get("quote") or [{}])[0].get("close") or []
+    pts = [[datetime.fromtimestamp(t, tz).strftime("%Y-%m-%d"), round(v, 4)]
+           for t, v in zip(r.get("timestamp") or [], cl) if v is not None]
+    ev = {}
+
+    def put(dt_local):                                   # 거래소 현지 시각 -> (날짜, 장전/장중/장후)
+        hm = dt_local.hour * 60 + dt_local.minute
+        d = dt_local.strftime("%Y-%m-%d")
+        if mkt == "jp":
+            o, c = 9 * 60, (15 * 60 + 30) if d >= "2024-11-05" else 15 * 60     # 도쿄는 2024-11-05 부터 15:30 마감
+        else:
+            o, c = 9 * 60 + 30, 16 * 60
+        ev[d] = "pre" if hm < o else "post" if hm >= c else "intra"
+    try:
+        if mkt == "us":
+            cik = {v: k for k, v in cik_ticker().items()}.get(code.replace(".", "-"))
+            if cik:
+                sub = json.loads(pr.get(pr.SUBS.format(cik=cik), binary=False))
+                recs = [sub["filings"]["recent"]]
+                for f in (sub["filings"].get("files") or [])[:2]:      # 오래된 공시(10년치)
+                    try:
+                        recs.append(json.loads(pr.get("https://data.sec.gov/submissions/" + f["name"], binary=False)))
+                    except Exception:                    # noqa: BLE001
+                        pass
+                for rc in recs:
+                    for fm, it, acc in zip(rc.get("form", []), rc.get("items", []), rc.get("acceptanceDateTime", [])):
+                        if fm == "8-K" and "2.02" in (it or "") and acc:
+                            put(datetime.fromisoformat(acc.replace("Z", "+00:00")).astimezone(ET))
+        elif mkt == "jp":
+            with _yano["lock"]:
+                wait = 0.4 - (time.time() - _yano["t"])
+                if wait > 0:
+                    time.sleep(wait)
+                _yano["t"] = time.time()
+            yj = json.loads(http_get(f"https://webapi.yanoshin.jp/webapi/tdnet/list/{code}.json?limit=300",
+                                     ua=BROWSER_UA, timeout=30))
+            for it in (yj.get("items") or []):
+                t = it.get("Tdnet", it)
+                ttl = t.get("title") or ""
+                if fj.TANSHIN.search(ttl) and not fj.NOT_TANSHIN.search(ttl) and t.get("pubdate"):
+                    put(datetime.fromisoformat(t["pubdate"][:19]).replace(tzinfo=JST))
+    except Exception as e:                               # noqa: BLE001
+        log("주가 차트 발표일 실패", key, repr(e)[:100])
+    with H.lock:
+        rows = list(H.rows_by_key.get(key, []))
+    for row in rows:                                      # 캘린더 줄 — 위에서 못 얻은 날만(홍콩은 이것뿐)
+        if row[0] and row[0] not in ev and row[0] <= datetime.now(tz).strftime("%Y-%m-%d"):
+            tm = row[10] if re.match(r"\d\d:\d\d$", str(row[10] or "")) else ""
+            if tm:
+                put(datetime.fromisoformat(row[0] + "T" + tm).replace(tzinfo=tz))
+            else:
+                ev[row[0]] = {"장전": "pre", "장후": "post", "장중": "intra"}.get(row[10] or "", "post" if mkt == "us" else "intra")
+    out = {"cur": (r.get("meta") or {}).get("currency"), "pts": pts,
+           "ev": [[d, w] for d, w in sorted(ev.items()) if pts and d >= pts[0][0]]}
+    _PXC[key] = (time.time(), out)
+    return out
+
+
 def jphist(n, since="2017-01-01", only_rev=False):
     """일본 옛 결산단신을 통째로 — 가이던스 변천(연간 예상)과 부문 누계(2024년부터 비던 3·4분기)를 같이 채운다.
     목록은 yanoshin TDnet API(2009년치부터, 문서번호·XBRL 이름), 파일은 JPX 공시 보관소(약 5~6년,
@@ -2807,6 +2885,15 @@ class Handler(BaseHTTPRequestHandler):
             self.head()
             with JH_LOCK:
                 self.wfile.write(json.dumps(JH["seg"], ensure_ascii=False).encode())
+        elif path == "/api/px":                                  # 상세창 주가 차트 — 10년 일별 종가 + 실적 발표일(장전·장중·장후)
+            key = (urllib.parse.parse_qs(urllib.parse.urlparse(self.path).query).get("key") or [""])[0]
+            try:
+                out = price_history(key)
+            except Exception as e:                               # noqa: BLE001
+                log("주가 차트 실패", key, repr(e)[:100])
+                out = {}
+            self.head()
+            self.wfile.write(json.dumps(out).encode())
         elif path == "/api/co":                                  # 상세창을 열 때 사이트가 바로 묻는다 — 빌드를 기다리지 않게(회원님 10/30)
             key = (urllib.parse.parse_qs(urllib.parse.urlparse(self.path).query).get("key") or [""])[0]
             mkt, _, code = key.partition(":")
