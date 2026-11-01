@@ -672,11 +672,19 @@ def hk_long_fin(out):
         opi_ok = [abs(p["opi"] / q["opi"] - 1) <= 0.05 for p, q in pairs if p.get("opi") and q.get("opi")]
         opi_same = bool(opi_ok) and sum(opi_ok) / len(opi_ok) >= 0.8
         first = min(sp)
-        add = [dict(p, opi=p["opi"] if opi_same else None) for p in pts
-               if p["end"] < first and not near(p["end"])]
+        add = [p for p in pts if p["end"] < first and not near(p["end"])]
         if not add:
             continue
-        out[key] = dict(sa, points=sorted(add + list(sa["points"]), key=lambda p: p.get("end", "")), src="em")
+        base = list(sa["points"])
+        if not opi_same:
+            # 영업이익 정의가 다르면(텐센트·BYD — stockanalysis opinc ≠ 经营溢利) 한 줄 안에서 섞지 않는다:
+            # 동방재부에 있는 기간은 전부 동방재부 영업이익으로. 동방재부에 아직 없는 최근 기간만 원래 값.
+            ep = {p["end"]: p for p in pts}
+            for i, q in enumerate(base):
+                e = q.get("end") and min(ep, key=lambda x: abs((date.fromisoformat(x) - date.fromisoformat(q["end"])).days))
+                if e and abs((date.fromisoformat(e) - date.fromisoformat(q["end"])).days) <= 10:
+                    base[i] = dict(q, opi=ep[e]["opi"])
+        out[key] = dict(sa, points=sorted(add + base, key=lambda p: p.get("end", "")), src="em")
         used += 1
     print(f"  홍콩 긴 이력(동방재부): {used:,}종목 앞 기간을 채움 · 값이 안 맞아 뺀 {skip:,}종목")
 
