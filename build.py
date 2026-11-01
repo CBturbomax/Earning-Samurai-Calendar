@@ -5608,37 +5608,50 @@ function tgGuideQ(q, title, f, key) {
   });
   if (cols.length < 1) return '';
   const last = cols[cols.length - 1].end;
+  // 연간 가이던스와 같은 모양 — 분기마다 「전망」(직전 실적 발표 때 낸 이 분기 예상)과 「실제」 두 막대를 붙여 세운다
   const one = (k, name) => {
-    const vals = cols.flatMap(c => [c.fc[k], c.act ? c.act[k] : null]).filter(v => v != null).map(v => v / 1e8);
-    if (!vals.length) return '';
-    const mx = niceMax(Math.max(...vals, 1));
-    const W = Math.max(880, cols.length * 110), L = 72, R = 20, B = 60, T = 34, H = 332, BASE = H - B;
-    const step = (W - L - R) / cols.length, bw = step * 0.3;
-    const cx = i => L + step * i + step / 2, y = v => BASE - (BASE - T) * v / mx;
+    const cs = cols.filter(c => c.fc[k] != null);                 // 회사가 전망을 낸 분기만(실제만 있는 칸은 비교가 안 된다)
+    if (cs.length < 2) return '';
+    const raw = cs.flatMap(c => [c.fc[k], c.act ? c.act[k] : null]).filter(v => v != null);
+    const U = unitFor(Math.max(...raw.map(Math.abs)), 'JPY');
+    const n = cs.length * 2;
+    const W = Math.max(880, n * 30), L = 58, R = 20, B = 40, T = 40, H = 360, BASE = H - B;
+    const step = (W - L - R) / n, cx = i => L + step * i + step / 2;
+    const mx = niceMax(Math.max(...raw.map(v => v / U.div), 1));
+    const y = v => BASE - (BASE - T) * Math.max(v, 0) / mx;
+    const wide = t => String(t).length * 13 * 0.6 > step * 0.96;
     let s = [0, mx / 2, mx].map(v => '<line class="fz" x1="' + L + '" y1="' + y(v).toFixed(1) + '" x2="' + (W - R) +
       '" y2="' + y(v).toFixed(1) + '"/><text class="fx" x="' + (L - 8) + '" y="' + (y(v) + 5).toFixed(1) +
       '" text-anchor="end" style="font-size:13px">' + fmtN(v) + '</text>').join('');
-    cols.forEach((c, i) => {
+    cs.forEach((c, ci) => {
       const now = c.end === last;
-      const bar = (x, v, fill, bold) => v == null ? '' :
-        '<rect x="' + x.toFixed(1) + '" y="' + y(v / 1e8).toFixed(1) + '" width="' + bw.toFixed(1) + '" height="' + Math.max(BASE - y(v / 1e8), 1).toFixed(1) +
-        '" style="fill:' + fill + '"/><text class="vn rev" x="' + (x + bw / 2).toFixed(1) + '" y="' + (y(v / 1e8) - 6).toFixed(1) +
-        '" text-anchor="middle" style="font-size:13px' + (bold ? ';fill:#FFCB05;font-weight:800' : '') + '">' + fmtN(v / 1e8) + '</text>';
-      s += bar(cx(i) - bw - 2, c.fc[k], now && !c.act ? '#FFCB05' : '#5B9BD5', now && !c.act) +
-           bar(cx(i) + 2, c.act ? c.act[k] : null, '#d7dde3', false) +
-        '<text class="fx" x="' + cx(i).toFixed(1) + '" y="' + (BASE + 20) + '" text-anchor="middle" style="font-size:14px' +
-        (now ? ';fill:#fff;font-weight:800' : '') + '">' + c.lab + '</text>' +
-        '<text class="fx" x="' + cx(i).toFixed(1) + '" y="' + (BASE + 38) + '" text-anchor="middle" style="font-size:12px;opacity:.8">' +
-        (fyq(c.end) ? fyq(c.end) + ' · ' : '') + (c.pub ? c.pub.slice(2).replace(/-/g, '.') + ' 제시' : '') + '</text>';
+      [[c.fc[k], now && !c.act ? '#FFCB05' : '#5B9BD5', '전망'], [c.act ? c.act[k] : null, '#d7dde3', '실제']].forEach(([raw1, fill, tag], j) => {
+        const i = ci * 2 + j;
+        if (raw1 == null) return;
+        const v = raw1 / U.div, hot = fill === '#FFCB05';
+        let ty = y(v) - 6;
+        if (wide(fmtN(v)) && j) ty -= 15;
+        s += '<rect x="' + (cx(i) - step * 0.36).toFixed(1) + '" y="' + y(v).toFixed(1) + '" width="' + (step * 0.72).toFixed(1) +
+          '" height="' + Math.max(BASE - y(v), 1).toFixed(1) + '" style="fill:' + fill + '"/>' +
+          '<text class="vn rev" x="' + cx(i).toFixed(1) + '" y="' + ty.toFixed(1) + '" text-anchor="middle" style="font-size:13px;font-weight:700' +
+          (hot ? ';fill:#FFCB05' : '') + '">' + fmtN(v) + '</text>';
+      });
+      const x0 = cx(ci * 2) - step / 2;
+      if (ci > 0) s += '<line x1="' + x0.toFixed(1) + '" y1="' + (BASE + 3) + '" x2="' + x0.toFixed(1) + '" y2="' + (H - 2) +
+        '" style="stroke:rgba(255,255,255,.22);stroke-width:1"/>';
+      s += '<text class="fx" x="' + (x0 + step).toFixed(1) + '" y="' + (BASE + 24) + '" text-anchor="middle" style="font-size:13px;font-weight:800;fill:' +
+        (now ? '#FFCB05' : '#e6edf3') + '">' + c.lab + '</text>';
     });
-    return '<div class="finhead sub">' + name + ' <span class="dim">(단위: 억엔 · 회사가 낸 다음 분기 전망 vs 실제)</span></div>' +
+    return '<div class="finhead sub">' + name + ' <span class="dim">(단위: ' + U.ko + ')</span></div>' +
       '<div class="finbox"><svg viewBox="0 0 ' + W + ' ' + H + '" class="finsvg">' + s + '</svg></div>';
   };
-  const a = one(0, '분기 매출 가이던스'), b = one(1, '분기 영업이익 가이던스');
+  const a = one(0, '다음 분기 매출 가이던스'), b = one(1, '다음 분기 영업이익 가이던스');
   if (!a && !b) return '';
-  return '<div class="finwrap"><div class="finhead">' + title + ' 분기 가이던스 vs 실제' +
+  return '<div class="finwrap"><div class="finhead">' + title + ' 다음 분기 가이던스 vs 실제' +
     '<span class="dim"><b style="color:#5B9BD5">■</b> 회사 전망 <b style="color:#d7dde3">■</b> 실제 <b style="color:#FFCB05">■</b> 최신 전망</span></div>' +
-    a + b + '<p class="finnote">이 회사는 연간 전망 대신 다음 분기 전망을 냅니다. 자료: 회사 결산단신·설명자료</p></div>';
+    '<p class="finnote" style="margin:0 0 6px">이 회사는 연간 전망을 안 내고 <b>다음 한 분기(3개월)</b> 전망만 냅니다 · ' +
+    '「4Q26」 묶음 = 직전 실적 발표 때 낸 4Q26 매출 전망(파랑)과 4Q26 실제(회색)</p>' +
+    a + b + '<p class="finnote" style="text-align:right">자료: 회사 결산단신·설명자료</p></div>';
 }
 function tgGuide(gh, title, mkt, key) {
   const q = gh && gh._q, rv = (gh && gh._r) || {};
@@ -5676,70 +5689,64 @@ function tgGuide(gh, title, mkt, key) {
   };
   let last = null;
   fys.forEach((f, gi) => seqOf(f, gi).forEach(c => { if (c.s !== '실제' && c.vals) last = c.id; }));
+  const cols = [];
+  fys.forEach((f, gi) => seqOf(f, gi).forEach((c, j) => cols.push(Object.assign({}, c, { first: j === 0 }))));
+  const n = cols.length;
+  // 실적 차트(finChart)와 같은 모양 — 막대를 붙이고, 분기 이름은 세워 쓰고, 회계연도 칸막이는 이름 줄에만(회원님 11/01 시안 C')
   const one = (k, name) => {
-    const cols = [];
-    fys.forEach((f, gi) => {
-      seqOf(f, gi).forEach(c => cols.push(Object.assign({}, c, { v: c.vals ? c.vals[k] : null })));
-      cols.push(null);
-    });
-    cols.pop();
-    const raw = cols.filter(c => c && c.v != null).map(c => c.v);
-    if (cols.filter(c => c && c.v != null && c.s !== '실제').length < 2) return '';   // 실제만 있는 칸은 안 그린다
-    // 일본은 억엔 그대로(회원님이 본 모양), 미국은 사이트 차트와 같은 눈금(bil USD…), EPS 는 달러 그대로.
+    const raw = cols.map(c => c.vals ? c.vals[k] : null);
+    if (raw.filter((v, i) => v != null && cols[i].s !== '실제').length < 2) return '';   // 실제만 있는 칸은 안 그린다
     const U = k === 2 && mkt === 'us' ? { div: 1, ko: 'USD/주' }
-            : mkt === 'jp' ? { div: 1e8, ko: '억엔' } : unitFor(Math.max(...raw.map(Math.abs)), 'USD');
-    const vals = raw.map(v => v / U.div);
-    const mx = niceMax(Math.max(...vals, 1));
-    const W = Math.max(880, cols.length * 66), L = 72, R = 20, B = 100, T = 34, H = 372, BASE = H - B;   // 글씨를 키웠다(회원님 10/30)
-    const step = (W - L - R) / cols.length;
-    const cx = i => L + step * i + step / 2, y = v => BASE - (BASE - T) * v / mx;
+            : unitFor(Math.max(...raw.filter(v => v != null).map(Math.abs)), mkt === 'jp' ? 'JPY' : 'USD');
+    const W = Math.max(880, n * 30), L = 58, R = 20, B = 80, T = 40, H = 400, BASE = H - B;
+    const step = (W - L - R) / n, cx = i => L + step * i + step / 2;
+    const vals = raw.map(v => v == null ? null : v / U.div);
+    const mx = niceMax(Math.max(...vals.filter(v => v != null), 1));
+    const y = v => BASE - (BASE - T) * Math.max(v, 0) / mx;
+    const wide = t => String(t).length * 13 * 0.6 > step * 0.96;
     let s = [0, mx / 2, mx].map(v => '<line class="fz" x1="' + L + '" y1="' + y(v).toFixed(1) + '" x2="' + (W - R) +
       '" y2="' + y(v).toFixed(1) + '"/><text class="fx" x="' + (L - 8) + '" y="' + (y(v) + 5).toFixed(1) +
       '" text-anchor="end" style="font-size:13px">' + fmtN(v) + '</text>').join('');
-    const groups = {};
+    const grp = {};
     cols.forEach((c, i) => {
-      if (!c) return;
-      (groups[c.f] = groups[c.f] || []).push(i);
-      // 위 줄: 그 예상을 낸 결산단신이 다룬 **실제 분기**(달력, 예 3Q26). 아래 줄: 그 회사 회계연도 기준(예 FY2Q27).
-      // 회원님(10/30): "회계연도 말고 실제 분기로, 그 밑에 FY2Q27 처럼."
+      (grp[c.f] = grp[c.f] || []).push(i);
       const fy = +c.f.slice(0, 4), fm = +c.f.slice(5, 7);
       const back = { '최초': 12, '1Q': 9, '2Q': 6, '3Q': 3, '실제': 0, '수정': 0 }[c.s];
       let em = fm - back, ey = fy;
       while (em <= 0) { em += 12; ey -= 1; }
-      const cal = c.s === '수정' ? '수정' : Math.ceil(em / 3) + 'Q' + String(ey % 100).padStart(2, '0');
-      const fyl = c.s === '수정' ? c.d.slice(2, 4) + '.' + c.d.slice(5, 7) + '.' + c.d.slice(8, 10)
-                : c.s === '최초' ? 'FY' + String(fy % 100).padStart(2, '0') + ' 최초'
-                : c.s === '실제' ? 'FY' + String(fy % 100).padStart(2, '0') + ' 실제'
-                : 'FY' + c.s + String(fy % 100).padStart(2, '0');
-      const lab = '<text class="fx" x="' + cx(i).toFixed(1) + '" y="' + (BASE + 20) + '" text-anchor="middle" style="font-size:14px' +
-        (c.id === last ? ';fill:#fff;font-weight:800' : c.s === '수정' ? ';fill:#F28C28;font-weight:700' : '') + '">' + cal + '</text>' +
-        '<text class="fx" x="' + cx(i).toFixed(1) + '" y="' + (BASE + 38) + '" text-anchor="middle" style="font-size:12px;opacity:.8">' + fyl + '</text>';
-      if (c.v == null) { s += lab; return; }
-      const v = c.v / U.div, now = c.id === last;
+      // 아래 이름: 그 전망을 낸 실적 발표의 분기(1Q24 = 1Q24 실적 발표 때). 실제 결과 막대는 「실제」(회원님 11/01: 1Q23 이라 헷갈렸다)
+      const lab = c.s === '수정' ? '수정 ' + c.d.slice(5, 7) + '/' + c.d.slice(8, 10) : c.s === '실제' ? '실제'
+                : Math.ceil(em / 3) + 'Q' + String(ey % 100).padStart(2, '0');
+      if (c.first && i > 0) s += '<line x1="' + (cx(i) - step / 2).toFixed(1) + '" y1="' + (BASE + 3) + '" x2="' + (cx(i) - step / 2).toFixed(1) +
+        '" y2="' + (H - 2) + '" style="stroke:rgba(255,255,255,.22);stroke-width:1"/>';
+      s += '<text class="fx' + (c.id === last ? ' now' : '') + '" transform="translate(' + (cx(i) + 4).toFixed(1) + ',' + (BASE + 8) +
+        ') rotate(-90)" text-anchor="end" style="font-size:13px' + (c.s === '수정' ? ';fill:#F28C28' : c.s === '실제' ? ';fill:#e6edf3' : '') + '">' + lab + '</text>';
+      const v = vals[i];
+      if (v == null) return;
+      const now = c.id === last;
       const fill = c.s === '실제' ? '#d7dde3' : now ? '#FFCB05' : c.s === '수정' ? '#F28C28' : '#5B9BD5';
-      s += '<rect x="' + (cx(i) - step * 0.36).toFixed(1) + '" y="' + y(v).toFixed(1) + '" width="' + (step * 0.72).toFixed(1) +
+      let ty = y(v) - 6;
+      if (wide(fmtN(v)) && i % 2) ty -= 15;
+      s += '<rect x="' + (cx(i) - step * 0.34).toFixed(1) + '" y="' + y(v).toFixed(1) + '" width="' + (step * 0.68).toFixed(1) +
         '" height="' + Math.max(BASE - y(v), 1).toFixed(1) + '" style="fill:' + fill + '"/>' +
-        '<text class="vn rev" x="' + cx(i).toFixed(1) + '" y="' + (y(v) - 6).toFixed(1) + '" text-anchor="middle" style="font-size:14px' +
-        (now ? ';fill:#FFCB05;font-weight:800;font-size:15px' : '') + '">' + fmtN(v) + '</text>' + lab;
+        '<text class="vn rev" x="' + cx(i).toFixed(1) + '" y="' + ty.toFixed(1) + '" text-anchor="middle" style="font-size:13px;font-weight:700' +
+        (now ? ';fill:#FFCB05' : '') + '">' + fmtN(v) + '</text>';
     });
-    // 회계연도마다 아래에 묶음 이름(FY27 · 26.4~27.3) — 몇 년 어느 기간의 전망인지 한눈에.
-    Object.keys(groups).forEach(f => {
-      const ix = groups[f], x0 = cx(ix[0]) - step * 0.42, x1 = cx(ix[ix.length - 1]) + step * 0.42;
-      const fy = +f.slice(0, 4), fm = +f.slice(5, 7), sm = fm % 12 + 1, sy = fm === 12 ? fy : fy - 1;
-      s += '<line class="fz" x1="' + x0.toFixed(1) + '" y1="' + (BASE + 48) + '" x2="' + x1.toFixed(1) + '" y2="' + (BASE + 48) + '"/>' +
-        '<text class="fx" x="' + ((x0 + x1) / 2).toFixed(1) + '" y="' + (BASE + 70) + '" text-anchor="middle" style="font-weight:800;fill:#e6edf3;font-size:16px">FY' +
-        String(fy % 100).padStart(2, '0') + '</text>' +
-        '<text class="fx" x="' + ((x0 + x1) / 2).toFixed(1) + '" y="' + (BASE + 89) + '" text-anchor="middle" style="font-size:12px;opacity:.75">' +
-        String(sy % 100).padStart(2, '0') + '.' + sm + '~' + String(fy % 100).padStart(2, '0') + '.' + fm + '</text>';
+    Object.keys(grp).forEach(f => {
+      const ix = grp[f], xm = (cx(ix[0]) + cx(ix[ix.length - 1])) / 2;
+      s += '<text class="fx" x="' + xm.toFixed(1) + '" y="' + (H - 8) + '" text-anchor="middle" style="font-size:14px;font-weight:800;fill:#e6edf3">FY' +
+        f.slice(2, 4) + ' 연간</text>';
     });
-    return '<div class="finhead sub">' + name + ' <span class="dim">(단위: ' + U.ko + ' · 회사 연간 전망)</span></div>' +
+    return '<div class="finhead sub">' + name + ' <span class="dim">(단위: ' + U.ko + ')</span></div>' +
       '<div class="finbox"><svg viewBox="0 0 ' + W + ' ' + H + '" class="finsvg">' + s + '</svg></div>';
   };
-  const a = one(0, '매출 가이던스'), b = one(1, '영업이익 가이던스');
-  const c = mkt === 'us' ? one(2, 'EPS 가이던스') : b ? '' : one(2, '순이익 가이던스');
+  const a = one(0, '연간 매출 가이던스'), b = one(1, '연간 영업이익 가이던스');
+  const c = mkt === 'us' ? one(2, '연간 EPS 가이던스') : b ? '' : one(2, '연간 순이익 가이던스');
   if (!a && !b && !c) return '';
   return '<div class="finwrap"><div class="finhead">' + title + ' 가이던스 변천' +
     '<span class="dim"><b style="color:#5B9BD5">■</b> 가이던스 <b style="color:#F28C28">■</b> 수정 공시 <b style="color:#d7dde3">■</b> 실제 <b style="color:#FFCB05">■</b> 최신</span></div>' +
+    '<p class="finnote" style="margin:0 0 6px">막대 하나 = 그 분기 실적 발표 때 회사가 내놓은 <b>회계연도 전체(12개월)</b> 전망 · ' +
+    '아래 「1Q24」 = 1Q24 실적 발표 때 낸 값 · 회색 「실제」 = 그 해 실제 결과</p>' +
     a + b + c + '<p class="finnote" style="text-align:right">자료: ' + (mkt === 'us' ? '회사 실적 보도자료(SEC 8-K, AI 판독)' : '회사 결산단신(TDnet·JPX)') + '</p></div>';
 }
 let GH = null;
