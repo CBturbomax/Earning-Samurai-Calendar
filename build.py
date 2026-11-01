@@ -1850,6 +1850,50 @@ def seg_align(pts, fin_rec):
     return out
 
 
+SEG_FIXED = {"fixed": 0, "dropped": 0, "who": []}
+
+
+def seg_unannual(pts, aligned):
+    """**한 칸만 몇 배로 튄 부문 값을 고친다**(회원님 11/01, 에스티로더 2Q26). 결산 분기 칸에 연간(또는 누계) 값이
+    그대로 들어오는 소스가 있다 — 스킨케어 7,338 = 앞 세 분기 + 4분기. 그 칸의 '부문 합 ÷ 총매출'이 그 회사의
+    평소 비율보다 1.6배 넘게 크면 이상한 칸이다.
+      * 4배 언저리(3.3~4.7) + 바로 앞 세 분기가 있으면 → 연간 − 앞 세 분기
+      * 2배 언저리(1.7~2.3) + 바로 앞 분기가 있으면 → 누계 − 앞 분기
+    고친 값의 합이 평소 비율의 ±25% 안에 들어올 때만 쓰고, 아니면 그 칸을 뺀다(틀린 칸보다 빈칸이 낫다)."""
+    rat = [sum(v or 0 for v in r[1:]) / rev for r, (_l, rev) in zip(pts, aligned) if rev]
+    if len(rat) < 4:
+        return pts, aligned
+    # '평소 비율'은 믿을 만한 칸(부문 합이 총매출의 0.5~3배)으로만 잡는다. 옛 이력에 단위가 어긋난 칸(합이 총매출의
+    # 25배·100배·613배 — 일본 몇몇 회사의 EDINET 이력)이 섞여 있으면 그것이 기준을 끌고 가 멀쩡한 칸을 튄 것으로 봤다.
+    ok = [x for x in rat if 0.5 <= x <= 3.0]
+    base = _median(ok) if len(ok) >= 3 else 1.0
+    out_p, out_a = [], []
+    for i, (r, (lab, rev)) in enumerate(zip(pts, aligned)):
+        if not rev:
+            out_p.append(r); out_a.append((lab, rev)); continue
+        k = sum(v or 0 for v in r[1:]) / rev / base
+        if k < 0.25:                         # 합이 총매출의 4분의 1도 안 되는 칸 — 단위가 어긋난 칸이다
+            SEG_FIXED["dropped"] += 1
+            continue
+        if k <= 1.6:
+            out_p.append(r); out_a.append((lab, rev)); continue
+        back = 3 if 3.3 <= k <= 4.7 else 1 if 1.7 <= k <= 2.3 else 0
+        prev = out_p[-back:] if back and len(out_p) >= back else []
+        fixed = None
+        if prev:
+            fixed = [r[0]] + [(r[j] - sum((q[j] or 0) for q in prev)) if r[j] is not None else None
+                              for j in range(1, len(r))]
+            ks = sum(v or 0 for v in fixed[1:]) / rev / base
+            if not (0.75 <= ks <= 1.25) or any(v is not None and v < 0 for v in fixed[1:]):
+                fixed = None
+        if fixed:
+            out_p.append(fixed); out_a.append((lab, rev)); SEG_FIXED["fixed"] += 1
+        else:
+            SEG_FIXED["dropped"] += 1
+        SEG_FIXED["who"].append(lab)
+    return out_p, out_a
+
+
 def seg_fit(rec, fin_rec):
     """부문 합을 총매출과 대보고, **두 배로 부푼 것만** 걸러낸다.
 
@@ -1879,6 +1923,7 @@ def seg_fit(rec, fin_rec):
         return None
 
     aligned = seg_align(pts, fin_rec)
+    pts, aligned = seg_unannual(pts, aligned)
     shared = [(r, rev) for r, (_lab, rev) in zip(pts, aligned) if rev]
     if len(shared) < 4:
         return names, pts, aligned, None       # 대볼 총매출이 없다. 그대로 싣는다.
@@ -3070,6 +3115,7 @@ def build():
             seg[s] = got
         else:
             tossed.append(s.split(":")[-1])
+    print(f"  부문 한 칸만 몇 배로 튄 것(연간·누계가 분기 칸에): 고침 {SEG_FIXED['fixed']:,} · 뺌 {SEG_FIXED['dropped']:,}")
     # 실시간 서버가 실적 보도자료의 부문 표를 AI 로 읽은 것 — 10-Q 보다 며칠~몇 주 빠르다.
     # 회원님(10/30): "3분기 실적은 가져오는데 왜 3분기 브레이크다운은 못 가져오냐."
     # 서버가 사이트 표기 이름 그대로 받아 오고, 합이 그 분기 총매출과 맞을 때만 담겼다.
@@ -6230,10 +6276,13 @@ function segLines(names, pts, vis, opt) {
     let d = '', prev = null;
     ps.forEach(([i, v]) => { d += (prev !== null && i === prev + 1 ? 'L' : 'M') + cx(i).toFixed(1) + ',' + y(v).toFixed(1); prev = i; });
     body += '<path d="' + d + '" fill="none" stroke="' + c + '" stroke-width="2.2"/>';
+    // 바닥에 깔린 작은 부문(축 높이의 4% 밑)은 숫자를 안 적는다 — 아래 분기 이름과 겹쳐 둘 다 안 읽혔다(에스티로더 '기타').
+    const tiny = !opt.pct && Math.max(...ps.map(q => Math.abs(q[1]))) < (hi - lo) * 0.04;
     ps.forEach(([i, v]) => {
       const yy = y(v);
       body += '<circle class="dot" cx="' + cx(i).toFixed(1) + '" cy="' + yy.toFixed(1) + '" r="3" fill="' + c + '"><title>' +
         esc(nm) + ' ' + pts[i][0] + ' ' + opt.fmt(v) + '</title></circle>';
+      if (tiny) return;
       let ty = v > hi ? yy + 16 : yy - 8;                 // 위로 넘친 점은 숫자를 점 아래에, 아래로 넘친 점은 위에(축 이름과 안 겹치게)
       if (used[i].some(u => Math.abs(u - ty) < 13)) ty = v > hi ? yy + 30 : yy + 16;
       if (used[i].some(u => Math.abs(u - ty) < 13)) return;
