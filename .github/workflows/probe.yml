@@ -26,6 +26,40 @@ jobs:
       - name: 🔎 홍콩 긴 이력 수집기 시험
         continue-on-error: true
         run: python scrape_fin_hk_em.py 00700 03750 09992 01211 02020 00992 >> /tmp/probe.txt 2>&1
+      - name: 🔎 동방재부 원래 통화
+        continue-on-error: true
+        run: |
+          python - >> /tmp/probe.txt 2>&1 <<'EOF2'
+          import json, urllib.request, urllib.parse
+          UA={"User-Agent":"Mozilla/5.0"}
+          def get(u):
+              with urllib.request.urlopen(urllib.request.Request(u,headers=UA),timeout=25) as r: return json.loads(r.read())
+          B="https://datacenter.eastmoney.com/securities/api/data/v1/get?columns=ALL&pageNumber=1&pageSize=20&sortTypes=-1&sortColumns=REPORT_DATE&source=F10&client=PC"
+          for rep in ("RPT_HKF10_FN_INCOME","RPT_HKF10_FN_INCOME_PC","RPT_HKF10_FN_MAININDICATOR","RPT_HKF10_FN_INCOME_PO","RPT_HKF10_FN_INCOMEPC"):
+              for sc in ("00001.HK","00992.HK"):
+                  f='(SECUCODE="%s")(REPORT_DATE=\'2025-12-31\')'%sc if "MAIN" in rep else '(SECUCODE="%s")(REPORT_DATE=\'2025-12-31\')(STD_ITEM_NAME in ("营业额","营运收入"))'%sc
+                  try:
+                      j=get(B+"&reportName="+rep+"&filter="+urllib.parse.quote(f))
+                      d=(j.get("result") or {}).get("data") or []
+                      print("==",rep,sc,j.get("code"),j.get("message"),[{k:r.get(k) for k in ("REPORT_DATE","STD_ITEM_NAME","AMOUNT","OPERATE_INCOME","CURRENCY","CURRENCY_NAME","CURRENCY_CODE") if k in r} for r in d[:3]], sorted(d[0].keys()) if d else "")
+                  except Exception as e: print("==",rep,sc,"ERR",e)
+          EOF2
+      - name: 🔎 홍콩 긴 이력 환율 되돌리기 시험
+        continue-on-error: true
+        run: |
+          python scrape_fin_hk_em.py 00700 00001 00992 00981 00002 00016 09992 01211 03690 00019 06160 01913 09961 01179 00175 02020 01810 03750 > /dev/null 2>&1
+          python - >> /tmp/probe.txt 2>&1 <<'EOF2'
+          import json, io, contextlib, importlib.util
+          spec=importlib.util.spec_from_file_location('b','build.py'); b=importlib.util.module_from_spec(spec)
+          with contextlib.redirect_stdout(io.StringIO()): spec.loader.exec_module(b)
+          j=json.load(open('data/financials_intl.json'))['stocks']
+          out={k:v for k,v in j.items() if k.startswith('hk:')}
+          b.hk_long_fin(out)
+          for k in ('hk:00700','hk:00001','hk:00992','hk:00981','hk:00002','hk:00016','hk:09992','hk:01211','hk:03690','hk:00019','hk:06160','hk:01913','hk:09961','hk:01179','hk:00175','hk:02020','hk:01810','hk:03750'):
+              v=out.get(k)
+              if v:
+                  pk=b.pack_fin(v); print(k, v.get('src'), v.get('cur'), len(v['points']), pk['freq'], [(p[0], round(p[1]/1e9,2), p[2] and round(p[2]/1e9,2)) for p in pk['points'][:2]], [(p[0], round(p[1]/1e9,2)) for p in pk['points'][-2:]])
+          EOF2
       - name: 결과를 probe-out 가지에
         if: always()
         run: |

@@ -8,9 +8,9 @@
 시작일 START_DATE 가 같이 온다). 같은 시작일의 앞 누계를 빼서 기간값으로 되돌린다.
   - 그 회사가 1분기·9개월 누계를 낸 적이 있으면 **분기**로(텐센트·BYD·CATL)
   - 아니면 **반기**로(상반기 = 6개월 누계, 하반기 = 연간 − 상반기)
-통화는 이 표에 없다(MAININDICATOR 의 CURRENCY 는 틀린 값이 온다 — 텐센트 위안 숫자에 HKD).
-그래서 여기서는 숫자만 담고, build.py 가 stockanalysis 기록과 **겹치는 기간 값이 맞을 때만**
-그쪽 통화로 붙인다. 안 맞으면 안 쓴다.
+숫자는 **전부 위안**이다(원래 홍콩달러·달러로 보고하는 회사도 위안으로 바꿔 준다 — CURRENCY 칸의
+'HKD' 는 틀린 값). 그래서 달별 환율(fx)을 같이 담고, build.py 가 stockanalysis 기록의 통화로 되돌려
+**겹치는 기간 값이 맞을 때만** 붙인다. 안 맞으면 안 쓴다.
 
     python scrape_fin_hk_em.py            # 한 바퀴(EM_SECS 초 안에서)
     python scrape_fin_hk_em.py 00700 03750  # 몇 종목만 보고 찍는다
@@ -83,6 +83,24 @@ def periods(rows):
     return ("Q" if quarterly else "H"), [p for p in pts if (p["rev"] or p["rev2"])]
 
 
+def fx_table():
+    """위안 -> 각 통화 달별 환율 {통화: {"YYYY-MM": [달 평균, 달 끝]}} — 유럽중앙은행 기준환율(frankfurter.app).
+    동방재부는 **모든 회사 숫자를 위안으로 바꿔서** 준다(CK허치슨 홍콩달러·레노버 달러도 위안). 원래 통화로
+    되돌리려면 그 기간 환율이 있어야 한다. 어느 환율(기간 평균·기간 끝)을 썼는지는 build.py 가 겹치는
+    기간 값으로 맞춰 본다."""
+    u = "https://api.frankfurter.app/2015-12-01..?from=CNY&to=USD,HKD,SGD,JPY,EUR,GBP,MYR,TWD,AUD,CAD"
+    with urllib.request.urlopen(urllib.request.Request(u, headers=UA), timeout=40) as r:
+        rates = json.loads(r.read()).get("rates") or {}
+    out = {}
+    for d in sorted(rates):
+        for cur, v in rates[d].items():
+            m = out.setdefault(cur, {}).setdefault(d[:7], [0.0, 0, 0.0])
+            m[0] += v
+            m[1] += 1
+            m[2] = v
+    return {c: {ym: [round(a / n, 6), round(e, 6)] for ym, (a, n, e) in ms.items()} for c, ms in out.items()}
+
+
 def universe():
     """캘린더에 뜬 홍콩 종목 — 최근 발표일을 같이 돌려준다(발표 언저리는 빨리 다시 받는다)."""
     try:
@@ -118,7 +136,7 @@ def main():
 
     def stale(c):
         rec = st.get("hk:" + c)
-        if not rec or not rec.get("ts"):
+        if not rec or not rec.get("ts") or "cum" not in rec:
             return True
         age = (now - datetime.fromisoformat(rec["ts"])).total_seconds() / 86400
         near = last.get(c) and (date.fromisoformat(today) - date.fromisoformat(last[c])).days <= NEAR_DAYS
@@ -129,7 +147,8 @@ def main():
         if not only and time.time() - t0 > SECS:
             break
         try:
-            freq, pts = periods(fetch(c))
+            rows = fetch(c)
+            freq, pts = periods(rows)
         except Exception as e:                                   # noqa: BLE001
             fail += 1
             print(f"  ! {c} {e!r}"[:160])
@@ -137,11 +156,22 @@ def main():
                 print("  ! 연속 실패 — 이번 바퀴는 접는다")
                 break
             continue
-        st["hk:" + c] = {"freq": freq, "src": "em", "points": pts, "ts": now.isoformat(timespec="minutes")}
+        cum = {}
+        for r in rows:                                   # 누계 원자료 — 환율을 누계마다 따로 걸어야 해서 남긴다(build.py)
+            stt, en = (r.get("START_DATE") or "")[:10], (r.get("REPORT_DATE") or "")[:10]
+            if stt and en and r.get("AMOUNT") is not None:
+                cum.setdefault(stt + "/" + en, {})[r["STD_ITEM_NAME"]] = float(r["AMOUNT"])
+        st["hk:" + c] = {"freq": freq, "src": "em", "points": pts, "cum": cum, "ts": now.isoformat(timespec="minutes")}
         got += 1
         if only:
             print(c, freq, len(pts), pts[:2], pts[-2:])
         time.sleep(0.25)
+    if db.get("fx_ts", "")[:10] != today:
+        try:
+            db["fx"] = fx_table()
+            db["fx_ts"] = now.isoformat(timespec="minutes")
+        except Exception as e:                                   # noqa: BLE001
+            print(f"  ! 환율 받기 실패 {e!r}"[:160])
     db["count"] = sum(1 for v in st.values() if v.get("points"))
     OUT.write_text(json.dumps(db, ensure_ascii=False, separators=(",", ":")), encoding="utf-8")
     print(f"홍콩 긴 이력(동방재부): 이번 {got}종목 · 남은 {max(len(todo) - got - fail, 0)} · 실패 {fail} · 전체 {db['count']}")
