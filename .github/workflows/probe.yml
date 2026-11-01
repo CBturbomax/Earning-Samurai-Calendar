@@ -47,26 +47,18 @@ jobs:
       - name: 🔎 홍콩 긴 이력 환율 되돌리기 시험
         continue-on-error: true
         run: |
+          python scrape_fin_hk_em.py 00700 00001 00992 00981 00002 00016 09992 01211 03690 00019 06160 01913 09961 01179 00175 02020 01810 03750 > /dev/null 2>&1
           python - >> /tmp/probe.txt 2>&1 <<'EOF2'
           import json, io, contextlib, importlib.util
-          import scrape_fin_hk_em as m
-          d=json.load(open('data/financials_hk_em.json')); d['fx']=m.fx_table(); json.dump(d,open('data/financials_hk_em.json','w'))
-          print("fx", {c: v.get('2018-06') for c, v in d['fx'].items()})
           spec=importlib.util.spec_from_file_location('b','build.py'); b=importlib.util.module_from_spec(spec)
           with contextlib.redirect_stdout(io.StringIO()): spec.loader.exec_module(b)
           j=json.load(open('data/financials_intl.json'))['stocks']
           out={k:v for k,v in j.items() if k.startswith('hk:')}
           b.hk_long_fin(out)
-          em=d['stocks']; caps=json.load(open('data/caps.json'))['caps']
-          rows=[]
-          for k,rec in em.items():
-              sa=j.get(k)
-              if not sa or not sa.get('points') or not rec.get('points') or out.get(k,{}).get('src')=='em': continue
-              sp={p['end']:p for p in sa.get('points') or [] if p.get('rev')}
-              rs=[(p['end'], round(p['rev']/sp[p['end']]['rev'],3) if p.get('rev') else None, round(p['rev2']/sp[p['end']]['rev'],3) if p.get('rev2') else None) for p in rec['points'] if p['end'] in sp]
-              rows.append((caps.get(k) or 0, k, sa.get('cur'), rec['freq'], len(sa['points']), rs[-6:]))
-          rows.sort(reverse=True)
-          for r in rows[:30]: print(r)
+          for k in ('hk:00700','hk:00001','hk:00992','hk:00981','hk:00002','hk:00016','hk:09992','hk:01211','hk:03690','hk:00019','hk:06160','hk:01913','hk:09961','hk:01179','hk:00175','hk:02020','hk:01810','hk:03750'):
+              v=out.get(k)
+              if v:
+                  pk=b.pack_fin(v); print(k, v.get('src'), v.get('cur'), len(v['points']), pk['freq'], [(p[0], round(p[1]/1e9,2), p[2] and round(p[2]/1e9,2)) for p in pk['points'][:2]], [(p[0], round(p[1]/1e9,2)) for p in pk['points'][-2:]])
           EOF2
       - name: 결과를 probe-out 가지에
         if: always()

@@ -136,7 +136,7 @@ def main():
 
     def stale(c):
         rec = st.get("hk:" + c)
-        if not rec or not rec.get("ts"):
+        if not rec or not rec.get("ts") or "cum" not in rec:
             return True
         age = (now - datetime.fromisoformat(rec["ts"])).total_seconds() / 86400
         near = last.get(c) and (date.fromisoformat(today) - date.fromisoformat(last[c])).days <= NEAR_DAYS
@@ -147,7 +147,8 @@ def main():
         if not only and time.time() - t0 > SECS:
             break
         try:
-            freq, pts = periods(fetch(c))
+            rows = fetch(c)
+            freq, pts = periods(rows)
         except Exception as e:                                   # noqa: BLE001
             fail += 1
             print(f"  ! {c} {e!r}"[:160])
@@ -155,12 +156,17 @@ def main():
                 print("  ! 연속 실패 — 이번 바퀴는 접는다")
                 break
             continue
-        st["hk:" + c] = {"freq": freq, "src": "em", "points": pts, "ts": now.isoformat(timespec="minutes")}
+        cum = {}
+        for r in rows:                                   # 누계 원자료 — 환율을 누계마다 따로 걸어야 해서 남긴다(build.py)
+            stt, en = (r.get("START_DATE") or "")[:10], (r.get("REPORT_DATE") or "")[:10]
+            if stt and en and r.get("AMOUNT") is not None:
+                cum.setdefault(stt + "/" + en, {})[r["STD_ITEM_NAME"]] = float(r["AMOUNT"])
+        st["hk:" + c] = {"freq": freq, "src": "em", "points": pts, "cum": cum, "ts": now.isoformat(timespec="minutes")}
         got += 1
         if only:
             print(c, freq, len(pts), pts[:2], pts[-2:])
         time.sleep(0.25)
-    if not only and (db.get("fx_ts", "")[:10] != today):
+    if db.get("fx_ts", "")[:10] != today:
         try:
             db["fx"] = fx_table()
             db["fx_ts"] = now.isoformat(timespec="minutes")
