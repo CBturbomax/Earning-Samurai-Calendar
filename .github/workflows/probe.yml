@@ -57,10 +57,16 @@ jobs:
           j=json.load(open('data/financials_intl.json'))['stocks']
           out={k:v for k,v in j.items() if k.startswith('hk:')}
           b.hk_long_fin(out)
-          for k in ('hk:00700','hk:00001','hk:00992','hk:00981','hk:00002','hk:00016','hk:09992','hk:01211'):
-              v=out.get(k)
-              if v:
-                  pk=b.pack_fin(v); print(k, v.get('src'), v.get('cur'), len(v['points']), pk['freq'], [(p[0], round(p[1]/1e9,2)) for p in pk['points'][:2]], [(p[0], round(p[1]/1e9,2)) for p in pk['points'][-3:]])
+          em=d['stocks']; caps=json.load(open('data/caps.json'))['caps']
+          rows=[]
+          for k,rec in em.items():
+              sa=j.get(k)
+              if not sa or out.get(k,{}).get('src')=='em': continue
+              sp={p['end']:p for p in sa.get('points') or [] if p.get('rev')}
+              rs=[(p['end'], round(p['rev']/sp[p['end']]['rev'],3) if p.get('rev') else None, round(p['rev2']/sp[p['end']]['rev'],3) if p.get('rev2') else None) for p in rec['points'] if p['end'] in sp]
+              rows.append((caps.get(k) or 0, k, sa.get('cur'), rec['freq'], len(sa['points']), rs[-6:]))
+          rows.sort(reverse=True)
+          for r in rows[:30]: print(r)
           EOF2
       - name: 결과를 probe-out 가지에
         if: always()
