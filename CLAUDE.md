@@ -1435,6 +1435,13 @@ fcstTable·finChart·segChart 를 불러 찍는다(가이던스 변천만 같은
 `guide_audit` 가 매일 최근 45일 발표를 전수 점검해 메우고 `/api/audit`·텔레그램으로 보고한다(`/api/sent?day=` 는
 그날 알림 발송 기록). 원문을 못 읽겠으면 **먼저 우리 정규식을 의심할 것** — 소스에는 숫자가 있었다.
 
+**결산단신 사이의 업적예상 수정도 쌓는다(11/01).** 「業績予想の修正」 XBRL 은 새 값이 `…_CurrentMember_ForecastMember`,
+옛 값이 `…_PreviousMember_ForecastMember` 다 — `forecasts_from` 은 Previous 를 버린다. 서버 `GD.add_rev` 가
+`/data/guide_rev_jp.json` 에 {결산기: [[공시일, 값]]} 로 쌓고(2017년치부터 `jphist(only_rev=True)`, 재배포 뒤 `want_rev` 로 이어감),
+사이트는 `guide_site.json` 의 `_r`·`/api/co` 의 `gr` 로 받아 가이던스 변천에 주황 「수정」 막대를 **낸 날짜 차례대로** 끼운다
+(결산단신은 결산기 끝 10·7·4·1달 전에 나온다). 설명자료에만 다음 분기 전망을 싣는 회사(르네사스)는 `irhist` 가 옛 덱과
+「業績予想に関するお知らせ」를 읽어 `GQ`(src ir)에 쌓는다 — 대상은 NOG 중 시총 1조 원 이상, 본 덱은 `JH["done_ir"]`.
+
 **서버를 바꿔 올려도 알림·수집이 끊기지 않게 한다(회원님 10/30: "교란 없게").** 끄라는 신호(SIGTERM)를 받으면
 처리 중인 알림을 다 보내고 끈다(`on_term`, railway.json `drainingSeconds` 45). 새 서버는 지난 20분 공시를 다시 보고,
 '봤지만 보낼지 정하기 전에 끊긴' 공시는 다시 보낸다(`finish` 의 `S.get`). 몇 시간짜리 일(옛 결산단신 `jphist`)과
