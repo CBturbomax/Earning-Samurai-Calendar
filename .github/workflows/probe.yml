@@ -26,22 +26,20 @@ jobs:
       - name: 🔎 홍콩 긴 이력 수집기 시험
         continue-on-error: true
         run: python scrape_fin_hk_em.py 00700 03750 09992 01211 02020 00992 >> /tmp/probe.txt 2>&1
-      - name: 🔎 SEC 3Q21 구멍
+      - name: 🔎 주가 이력
         continue-on-error: true
-        env:
-          SEC_UA: 'Earning Samurai Calendar (cbpark@wisdomasset.co.kr)'
         run: |
-          python - >> /tmp/probe.txt 2>&1 <<'EOF2'
-          import scrape_fin as s
-          cik={v["ticker"].upper(): v["cik_str"] for v in s.get(s.TICKERS, s.SEC_UA).values()}
-          for sym in ("MMM","NVDA","WMT"):
-              c=cik[sym]; print("=====",sym)
-              for tag in s.REV_CORE[:8]:
-                  q,a,cur=s.one(c,"us-gaap",tag)
-                  if q: print("  ",tag,len(q),[e for e in sorted(q) if "2021-06"<=e<="2023-06"])
-              rec=s.series(c)
-              print("  series", [p["end"] for p in rec["points"] if "2021-06"<=p["end"]<="2023-06"])
+          python - > /tmp/px.json 2>&1 <<'EOF2'
+          import json, urllib.request
+          out={}
+          for sym in ("AMZN","6981.T"):
+              u=f"https://query1.finance.yahoo.com/v8/finance/chart/{sym}?range=10y&interval=1d"
+              j=json.loads(urllib.request.urlopen(urllib.request.Request(u,headers={"User-Agent":"Mozilla/5.0"}),timeout=30).read())
+              r=j["chart"]["result"][0]; c=r["indicators"]["quote"][0]["close"]
+              out[sym]=[[t,round(v,2)] for t,v in zip(r["timestamp"],c) if v is not None]
+          print(json.dumps(out))
           EOF2
+          cp /tmp/px.json /tmp/probe.txt
       - name: 결과를 probe-out 가지에
         if: always()
         run: |
