@@ -583,13 +583,34 @@ def hk_long_fin(out):
     겹치는 기간은 동방재부 값을 쓴다(한 줄 안에서 정의가 바뀌지 않게). 영업이익 정의가 다르면
     (BYD 经营溢利 ≠ stockanalysis opinc) 동방재부에 없는 최근 기간의 영업이익은 비운다 — 이익률 선이 꺾여 보이지 않게."""
     try:
-        em = json.loads((HERE / "data" / "financials_hk_em.json").read_text(encoding="utf-8")).get("stocks", {})
+        emf = json.loads((HERE / "data" / "financials_hk_em.json").read_text(encoding="utf-8"))
     except (OSError, ValueError):
         return
+    em, fx = emf.get("stocks", {}), emf.get("fx", {})
+
+    def conv(p, cur, how):
+        """위안 -> cur. how: 'avg'(기간 달 평균) · 'end'(기간 끝 달). 환율이 없으면 None."""
+        if cur == "CNY":
+            return 1.0
+        tab = fx.get(cur) or {}
+        e = p["end"]
+        n = 3 if p.get("q") == "Q" else 6
+        y, m = int(e[:4]), int(e[5:7])
+        yms = []
+        for _ in range(n):
+            yms.append(f"{y}-{m:02d}")
+            m -= 1
+            if m == 0:
+                y, m = y - 1, 12
+        if how == "end":
+            return tab.get(yms[0], [None, None])[1]
+        got = [tab[x][0] for x in yms if x in tab]
+        return sum(got) / len(got) if len(got) == n else None
     used = skip = 0
     for key, rec in em.items():
         sa = out.get(key)
-        epts = [p for p in rec.get("points") or [] if p.get("end", "") >= "2017-01-01"]
+        cur = (sa or {}).get("cur") or ""
+        epts = [dict(p, q=rec.get("freq")) for p in rec.get("points") or [] if p.get("end", "") >= "2017-01-01"]
         if not sa or not sa.get("points") or len(epts) < 2:
             continue
         sp = {p["end"]: p for p in sa["points"] if p.get("end") and p.get("rev")}
@@ -604,16 +625,36 @@ def hk_long_fin(out):
             skip += 1
             continue
 
-        def fit(f):
-            ok = [abs(p[f] / q["rev"] - 1) <= 0.02 for p, q in pairs if p.get(f)]
-            return sum(ok) / len(ok) if ok else 0
-        f = max(("rev", "rev2"), key=fit)
-        if fit(f) < 0.8:
+        def errs(f, how):
+            out_ = []
+            for p, q in pairs:
+                k = conv(p, cur, how)
+                if p.get(f) and k:
+                    out_.append(abs(p[f] * k / q["rev"] - 1))
+            return out_
+
+        def score(c):
+            e = errs(*c)
+            return (sum(x <= 0.02 for x in e) / len(e), -sorted(e)[len(e) // 2]) if e else (0, -9)
+        f, how = max([(f_, h_) for f_ in ("rev", "rev2") for h_ in ("avg", "end")], key=score)   # 맞는 매출 항목·환율 기준
+        if score((f, how))[0] < 0.8:
             skip += 1
             continue
-        opi_ok = [abs(p["opi"] / q["opi"] - 1) <= 0.05 for p, q in pairs if p.get("opi") and q.get("opi")]
+        mine = []
+        for p in epts:
+            k = conv(p, cur, how)
+            if not k:
+                continue                              # 환율이 없는 기간은 안 싣는다(지어내지 않는다)
+            mine.append({"end": p["end"], "mid": p["mid"], "rev": p[f] * k,
+                         "opi": p["opi"] * k if p.get("opi") is not None else None,
+                         "ni": p["ni"] * k if p.get("ni") is not None else None})
+        if len(mine) < 2:
+            skip += 1
+            continue
+        byend = {p["end"]: p for p in mine}
+        opi_ok = [abs(byend[p["end"]]["opi"] / q["opi"] - 1) <= 0.05 for p, q in pairs
+                  if p["end"] in byend and byend[p["end"]].get("opi") and q.get("opi")]
         opi_same = bool(opi_ok) and sum(opi_ok) / len(opi_ok) >= 0.8
-        mine = [{"end": p["end"], "mid": p["mid"], "rev": p[f], "opi": p.get("opi"), "ni": p.get("ni")} for p in epts]
         have = {p["end"] for p in mine}
         last = max(have)
         for e, q in sp.items():                       # 동방재부에 아직 없는 최근 기간은 stockanalysis 로
