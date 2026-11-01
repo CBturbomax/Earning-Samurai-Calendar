@@ -5961,7 +5961,6 @@ function segChart(sg, cur) {
      축은 부문 하나의 최댓값으로 잡는다(합계가 아니라). 점마다 값을 적되, 같은 칸에서 글자끼리
      부딪히면 아래로 내려 적는다. 색·글꼴·축·범례는 사이트의 다른 차트와 같은 것을 쓴다. */
   let pts = (sg.pts || []).filter(p => labFrom18(p[0])).slice(-36);   // 1Q18 부터(회원님 10/30)
-  pts = pts.slice(noGapFrom(pts.map(p => p[0])));
   if (pts.length < 2) return '';
   const names = sg.names || [];
   // **사업부 기준이 바뀌면 차트를 둘로 — 지금 기준과 옛 기준**(회원님 10/30: "둘 다 보여줘, 옛 기준은 최대한").
@@ -6016,15 +6015,16 @@ function segLines(names, pts, vis, opt) {
   if (!all.length) return '';
   let lo, hi;
   if (opt.pct) {
-    const rec = [];                                          // 최근 12칸의 값으로 위 끝을 잡는다(yoyRange)
+    const rec = [];                                          // 최근 12칸의 값으로 가운데 띠를 잡는다(yoyMap)
     names.forEach((nm, j) => { if (vis(j)) for (let i = Math.max(0, n - 12); i < n; i++) { const v = opt.vals(i, j); if (v != null) rec.push(v); } });
-    [lo, hi] = yoyRange(all, rec);
+    var M = yoyMap(all, rec); lo = M.lo; hi = Infinity;
   } else {
     const mx = Math.max(...all, 1), mn = Math.min(...all, 0);
     hi = niceMax(mx); lo = mn < 0 ? -niceMax(-mn) : 0;
   }
-  const y = v => BASE - (BASE - T) * (Math.max(lo, Math.min(hi, v)) - lo) / (hi - lo);
-  let body = '';
+  const y = opt.pct ? (v => BASE - (BASE - T) * M.pos(v)) : (v => BASE - (BASE - T) * (Math.max(lo, Math.min(hi, v)) - lo) / (hi - lo));
+  let body = opt.pct ? M.breaks.map(v => '<line x1="' + L + '" y1="' + y(v).toFixed(1) + '" x2="' + (W - R) + '" y2="' + y(v).toFixed(1) +
+    '" style="stroke:rgba(255,255,255,.35);stroke-dasharray:4 4"/>').join('') : '';
   const used = pts.map(() => []);
   names.forEach((nm, j) => {
     if (!vis(j)) return;
@@ -6046,7 +6046,7 @@ function segLines(names, pts, vis, opt) {
         (i === n - 1 ? ';font-weight:800' : '') + '">' + opt.fmt(v) + '</text>';
     });
   });
-  const ticks = opt.pct ? [lo, 0, hi].filter((v, k, a) => k === 1 || Math.abs(v) > (hi - lo) * 0.15)
+  const ticks = opt.pct ? M.ticks
                         : (lo < 0 ? [lo, 0, hi] : [0, hi / 2, hi]);
   const axis = ticks.map(v =>
     '<line class="' + (v === 0 && (lo < 0) ? 'fzero' : 'fz') + '" x1="' + L + '" y1="' + y(v).toFixed(1) + '" x2="' + (W - R) +
@@ -6126,6 +6126,21 @@ const pcN = v => (v * 100).toFixed(0) + '%';
 /* 성장률 축 — 회원님(11/01): 코로나 전후(20~22년) -50%·+180% 같은 값 때문에 최근이 납작해진다,
    역성장은 -20% 밑으로는 안 봐도 된다. 그래서 아래는 -20% 에서 자르고, 위는 **최근 12기간**의 최댓값으로 잡는다.
    넘치는 점은 축 끝에 붙이되 숫자는 실제 값을 적는다(눌러 담되 속이지 않는다). */
+// 넘치는 값을 **잘라 붙이지 않고 위·아래 띠에 눌러 담는다**(회원님 11/01: "큰 숫자끼리 높낮이가 없이 일자라
+// 무슨 숫자였는지 모르겠다 — 어디가 제일 높았는지는 보여야"). 가운데(-20%~최근 최댓값)는 그대로, 그 위 넘친 값은
+// 맨 위 20% 띠에, -20% 밑은 맨 아래 15% 띠에 차례대로 앉힌다. 경계에는 점선을 긋는다.
+function yoyMap(vals, recent) {
+  const [lo, hi] = yoyRange(vals, recent);
+  const vmax = Math.max(hi, ...vals), vmin = Math.min(lo, ...vals);
+  const top = vmax > hi ? 0.2 : 0, bot = vmin < lo ? 0.15 : 0, core = 1 - top - bot;
+  const pos = v => v > hi ? bot + core + top * (v - hi) / (vmax - hi)
+                 : v < lo ? bot * (v - vmin) / (lo - vmin)
+                 : bot + core * (v - lo) / (hi - lo);
+  const ticks = [lo, 0, hi].filter((v, k) => k === 1 || v !== 0);
+  if (top) ticks.push(vmax);
+  if (bot) ticks.unshift(vmin);
+  return { lo, hi, pos, ticks, breaks: [top ? hi : null, bot ? lo : null].filter(v => v != null) };
+}
 function yoyRange(vals, recent) {
   const r = (recent && recent.length ? recent : vals);
   let lo = Math.max(-0.2, Math.min(0, ...vals)), hi = Math.max(0.05, ...r.filter(v => v > -0.2));
@@ -6154,7 +6169,6 @@ function finChart(f) {
   const N = 36;                       // 1Q18 부터 다 보이게(회원님 10/30) — 칸은 46px 그대로, 그림이 넓어진다
   // 1Q18 앞은 그리지 않는다(회원님 10/30: "1Q18 부터 하라니까"). 2017 분기는 1Q18 전년비 계산에만 쓴다.
   let keep = all.map((p, i) => i).filter(i => labFrom18(all[i][0])).slice(-N);
-  keep = keep.slice(noGapFrom(keep.map(i => all[i][0])));
   const pts = keep.map(i => all[i]), yoy = keep.map(i => yoyAll[i]);
   const latest = pts.length ? pts[pts.length - 1][0] : '';
 
@@ -6255,10 +6269,11 @@ function finChart(f) {
   if (have.length >= 2) {
     const H2 = 300, T2 = 36, BASE2 = H2 - B;     // 성장률이 잘 보이게 키웠다(회원님 10/31)
     const vs = have.map(o => o[1]);
-    const [lo, hi] = yoyRange(vs, vs.slice(-12));
-    const gy = v => BASE2 - (BASE2 - T2) * (Math.max(lo, Math.min(hi, v)) - lo) / (hi - lo);
-    const ticks = (lo < 0 && hi > 0) ? [lo, 0, hi] : [lo, (lo + hi) / 2, hi];
-    const axis = ticks.map(v =>
+    const M = yoyMap(vs, vs.slice(-12)), lo = M.lo, hi = Infinity;
+    const gy = v => BASE2 - (BASE2 - T2) * M.pos(v);
+    const ticks = M.ticks;
+    const axis = M.breaks.map(v => '<line x1="' + L + '" y1="' + gy(v).toFixed(1) + '" x2="' + (W - R) + '" y2="' + gy(v).toFixed(1) +
+      '" style="stroke:rgba(255,255,255,.35);stroke-dasharray:4 4"/>').join('') + ticks.map(v =>
       '<line class="' + (v === 0 ? 'fzero' : 'fz') + '" x1="' + L + '" y1="' + gy(v).toFixed(1) +
       '" x2="' + (W - R) + '" y2="' + gy(v).toFixed(1) + '"/>' +
       '<text class="fx" x="' + (L - 8) + '" y="' + (gy(v) + 5).toFixed(1) +
