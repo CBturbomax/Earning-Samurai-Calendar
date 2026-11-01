@@ -2809,6 +2809,14 @@ def pack_en(r, mkt):
             ] + list(est or to_kst(mkt, r["date"], hhmm, timing))
 
 
+try:
+    RATES_NOW = json.loads((HERE / "data" / "caps.json").read_text(encoding="utf-8")).get("rates", {})
+except (OSError, ValueError):
+    RATES_NOW = {}
+# 원/달러는 그날 환율(caps.json, 하루 한 번 이상 갱신). 못 받았으면 고정값.
+KRW_NOW = float(RATES_NOW.get("KRW") or USD_KRW)
+
+
 def pack_fcst(packed):
     """상세창의 연간 표(직전년도 실적 · 당해 · 차기 · 차차기 + PER·PBR·PSR).
 
@@ -2868,7 +2876,9 @@ def pack_fcst(packed):
             # Business Insider 연간 추정 [결산연도, 매출, 영업이익(EBIT), 순이익] — 차기·차차기.
             "b": [y[:4] for y in rec.get("by") or []],
             # 현지 통화 1단위가 몇 원인가 — 시총 두 개의 비.
-            "k": USD_KRW / fx if fx else cap[k] * 1e9 * USD_KRW / rec["mcap"],
+            # 현지 통화 1단위가 몇 원인가 — 그날 환율로(예전엔 시총 두 개의 비였는데, 그 시총이 줄마다 달라 틀렸다).
+            "k": KRW_NOW / fx if fx else (KRW_NOW / RATES_NOW[rec["curPrice"]] if RATES_NOW.get(rec.get("curPrice"))
+                                         else cap[k] * 1e9 * KRW_NOW / rec["mcap"]),
             "ts": (rec.get("ts") or "")[:10],
         }
     return out
@@ -2915,7 +2925,7 @@ def ann_fallback(ann, packed, fcst):
         ann[k] = {"y": [[prev_end + "-28", rev, opi, None, None, 0],
                         [G["end"], G["rev"], G.get("opi"), G.get("ni"), None, 1]],
                   "n": [None, None], "m": cap[k] * 1e9 * rate, "e": None, "p": None, "q": [], "b": [],
-                  "k": USD_KRW / rate, "ts": "", "own": 1}
+                  "k": KRW_NOW / rate, "ts": "", "own": 1}
         n += 1
     # 회사 예상도 컨센서스도 없는 회사(재팬 티슈엔지니어링 7774 등) — 직전 결산기 실적만으로라도 표를 세운다.
     # 결산 달은 캘린더 줄의 결산기 표기(「3월 결산」)에서. 회원님(10/30): "왜 저 표는 안 그려주는 거야?"
@@ -2953,7 +2963,7 @@ def ann_fallback(ann, packed, fcst):
         opi = sum(pts[l][2] for l in labs) if all(pts[l][2] is not None for l in labs) else None
         ann[k] = {"y": [[f"{y}-{mo:02d}-28", rev, opi, None, None, 0]],
                   "n": [None, None], "m": cap[k] * 1e9 * rate, "e": None, "p": None, "q": [], "b": [],
-                  "k": USD_KRW / rate, "ts": "", "own": 1}
+                  "k": KRW_NOW / rate, "ts": "", "own": 1}
         n2 += 1
     print(f"  연간 표: 소스 {len(ann) - n - n2:,} + 우리 자료(예상 있음) {n:,} + 실적만 {n2:,}")
     return ann
@@ -2990,6 +3000,21 @@ def build():
     # 한 날짜 안에서는 시장 순 -> 시총 큰 순 -> 코드 순.
     # 시총은 미국만 있어서 나머지 시장은 자연히 코드 순으로 남는다.
     # 하루 700건씩 쏟아지는 미국에서 앞 12개만 펼쳐 보일 때 큰 게 먼저 오게 하려는 것.
+    # **한 회사에 시총은 하나.** 미국 시총은 나스닥 캘린더가 줄마다 그 날 받아 온 값이라 분기 줄마다 달랐다 —
+    # 상세창 위(이번 분기 줄)와 연간 표(가장 큰 줄)가 2.63조 달러와 4,145조 원으로 갈렸다(회원님 11/01).
+    # 오늘에 가장 가까운 줄(가장 최근에 받은 값)의 시총으로 그 회사의 모든 줄을 맞춘다.
+    best = {}
+    for p in packed:
+        if not p[11]:
+            continue
+        k = p[9] + ":" + p[1]
+        d = abs((date.fromisoformat(p[0]) - (datetime.now(timezone.utc) + timedelta(hours=9)).date()).days)
+        if k not in best or d < best[k][0]:
+            best[k] = (d, p[11])
+    for p in packed:
+        b = best.get(p[9] + ":" + p[1])
+        if b:
+            p[11] = b[1]
     order = {m: i for i, m in enumerate(MARKET_ORDER)}
     packed.sort(key=lambda p: (p[0], order[p[9]], -p[11], p[1]))
 
@@ -3193,7 +3218,8 @@ def build():
         # 규모 필터 눈금. 원 단위로 매기되 실제 비교는 달러(십억)로 한다.
         "capSteps": [{"jo": j, "usdB": round(j * 1e12 / USD_KRW / 1e9, 2)}
                      for j in CAP_STEPS],
-        "usdKrw": USD_KRW,
+        "usdKrw": KRW_NOW,
+        "rates": RATES_NOW,
         # 시총 데이터가 있는 시장. 없는 시장에는 규모 필터를 적용할 수 없다.
         "capMarkets": sorted({p[9] for p in packed if p[11]}),
         "capCover": cap_cover,
@@ -4004,6 +4030,11 @@ td.dim { color:var(--mute); font-size:18px; }
 .finlegend .yoy::before { color:#5B9BD5; }
 .finlegend .src { margin-left:auto; font-size:14px; }
 .finlegend .seglg { cursor:pointer; user-select:none; }
+.pxret { font-size:15px; font-weight:800; margin-left:8px; }
+.pxbtns { margin-left:auto; display:inline-flex; gap:4px; float:right; }
+.pxb { background:#17202a; color:#9fb0c0; border:1px solid #2a3642; border-radius:6px; padding:3px 10px; font-size:13px; font-weight:700; cursor:pointer; }
+.pxb.on { background:#22374d; color:#e6edf3; border-color:#5B9BD5; }
+.pxsvg { touch-action:none; cursor:crosshair; user-select:none; }
 .finlegend .seglg.off { opacity:.35; text-decoration:line-through; }
 .epsrow { display:flex; gap:8px; flex-wrap:wrap; margin-bottom:12px; }
 .epsbox { background:#141c24; border:1px solid var(--line); border-radius:7px;
@@ -4444,14 +4475,16 @@ const expanded = new Set();
 
 /* 시총은 십억 달러 단위로 들어온다. 한국식으로 억/조 달러로 고쳐 읽는다.
    1 십억 달러 = 10억 달러, 1000 십억 달러 = 1조 달러. */
-function capKo(b) {
-  if (!b) return '';
-  const won = b * 1e9 * D.usdKrw;                      // 원으로도 같이 적는다
+function capKo(b, key) {
+  if (!b && !(key && liveCap(key))) return '';
+  const c = key ? capNow(key, b) : null;
+  if (c) b = c.usdB;
+  const won = c ? c.krw : b * 1e9 * D.usdKrw;          // 원으로도 같이 적는다
   const wonKo = won >= 1e12 ? (won / 1e12).toFixed(1) + '조원'
                             : Math.round(won / 1e8).toLocaleString() + '억원';
   const usd = b >= 1000 ? (b / 1000).toFixed(2) + '조 달러'
                         : Math.round(b * 10).toLocaleString() + '억 달러';
-  return usd + ' (약 ' + wonKo + ')';
+  return usd + ' (약 ' + wonKo + ')' + (c && c.live ? ' <span class="dim">· 실시간 ' + esc(c.live) + '</span>' : '');
 }
 
 /* ── 규모 필터 ────────────────────────────────────────────────
@@ -5431,7 +5464,22 @@ function links(m, code) {
 
 /* 상세창을 열면 실시간 서버에 그 회사의 최신 자료(가이던스 변천·옛 분기)를 바로 묻는다 — 빌드(몇 분)를
    기다리지 않게. 받으면 비어 있던 것만 채우고 창을 다시 그린다. 서버가 안 닿으면 페이지에 실린 것 그대로. */
-const CO = {}, GHS = {}, NOG = {}, GQS = {}, GRS = {};
+const CO = {}, GHS = {}, NOG = {}, GQS = {}, GRS = {}, LQ = {};
+// 실시간 시총 — 상세창을 열 때 서버가 주는 지금 주가 × 주식 수(연간 표 소스의 시총 ÷ 주가), 지금 환율로 원화.
+// 주식 수를 모르면 null — 그때는 빌드 때 시총을 그날 환율로 쓴다(위·아래가 같은 값).
+function liveCap(k) {
+  const q = LQ[k], F = D.ann && D.ann[k];
+  if (!q || !q.px || !F || !F.p || !F.m) return null;
+  const local = F.m / F.p * q.px;
+  if (!q.fx || !q.usd) return null;
+  return { local, krw: local * q.fx, usdB: local * q.fx / q.usd / 1e9, t: q.t };
+}
+function capNow(k, b) {
+  // b: 빌드 때 시총(십억 달러). 반환: {usdB, krw, live}
+  const L = liveCap(k);
+  if (L) return { usdB: L.usdB, krw: L.krw, live: L.t || '실시간' };
+  return b ? { usdB: b, krw: b * 1e9 * D.usdKrw, live: '' } : null;
+}
 const qkey = l => { const m = /^(\d)Q(\d\d)$/.exec(l || ''); return m ? +m[2] * 4 + +m[1] : 0; };
 function coLoad(k) {
   if (!RT || CO[k]) return;
@@ -5442,6 +5490,7 @@ function coLoad(k) {
     if (j.noGuide) { NOG[k] = j.noGuide; ch = true; }
     if (j.gq && Object.keys(j.gq).length) { GQS[k] = j.gq; ch = true; }
     if (j.gr && Object.keys(j.gr).length) { GRS[k] = j.gr; ch = true; }
+    if (j.q && j.q.px) { LQ[k] = j.q; ch = true; }
     const f = D.fin[k];
     if ((j.fin || []).length && (!f || f.freq === 'Q')) {
       const g = D.fin[k] = f || { freq: 'Q', cur: 'JPY', points: [] };
@@ -5484,7 +5533,7 @@ function openModal(k, dt) {
     '<dt>분기</dt><dd>' +
       (dn && dn.period ? '<b>' + esc(epsQ(dn.period)) + '</b> · ' : '') +
       esc([r[4], r[3]].filter(Boolean).join(' · ') || '—') + '</dd>' +
-    (r[11] ? '<dt>시가총액</dt><dd>' + capKo(r[11]) + '</dd>' : '') +
+    (r[11] || liveCap(k) ? '<dt>시가총액</dt><dd>' + capKo(r[11], k) + '</dd>' : '') +
     (r[5] ? '<dt>업종</dt><dd>' + esc(r[5]) + '</dd>' : '') +
     '<dt>시장</dt><dd>' + esc(MKT[m].ko) + (r[6] ? ' · ' + esc(r[6]) : '') + '</dd>' +
     (nt ? '<dt>테마</dt><dd>' + esc(nt[2]) + '</dd>' : '');
@@ -5539,8 +5588,11 @@ function bizLine(m, code) {
    PER·PSR 은 지금 시총을 그 해 순이익·매출로 나눈 것이고, PBR 은 지금 자본으로
    한 번만 적는다(앞날 자본 추정은 없다). 차기 순이익은 차기 EPS × 올해 주식수. */
 function fcstTable(m, code) {
-  const F = D.ann && D.ann[m + ':' + code];
+  let F = D.ann && D.ann[m + ':' + code];
   if (!F) return '';
+  // 실시간 주가가 왔으면 시총(F.m)을 그걸로 — PER·PSR·위 시총 상자가 상세창 위 시총과 같은 값이 된다.
+  const LV = liveCap(m + ':' + code);
+  if (LV) F = Object.assign({}, F, { m: LV.local });
   const [a, b] = [F.y[0], F.y[1]];
   const yr = d => d ? +d.slice(0, 4) : null;
   // 주식 수 = 시총 ÷ 주가(없으면 당해 순이익 ÷ EPS). 앞날 순이익은 EPS × 주식 수.
@@ -5590,7 +5642,9 @@ function fcstTable(m, code) {
     cols.map((c, i) => cell(f(c, i), i)).join('') + '</tr>';
   const ym = d => d ? d.slice(2, 4) + '.' + d.slice(5, 7) : '';
   // 시가총액 — 원화로 옮겨 1조 원 밑은 「억 원」, 위는 「조 원」(회원님 10/29: 오른쪽 위, 잘 보이게).
-  const capW = F.m * F.k;
+  // 실시간이 없으면 상세창 위와 **같은 시총**(캘린더 줄의 것, 그날 환율)을 쓴다 — 두 곳이 다른 숫자를 말하지 않게.
+  const rowCap = (ROWS.find(x => keyOf(x) === m + ':' + code) || [])[11];
+  const capW = LV ? LV.krw : rowCap ? rowCap * 1e9 * D.usdKrw : F.m * F.k;
   const capTxt = !capW ? '' : capW >= 1e12
     ? (capW / 1e12).toFixed(capW >= 1e14 ? 0 : 1).replace(/\.0$/, '') + '조 원'
     : Math.round(capW / 1e8).toLocaleString() + '억 원';
@@ -5608,10 +5662,148 @@ function fcstTable(m, code) {
     '</tbody></table></div></div>';
 }
 
+// ── 주가 차트(회원님 11/01) — 연간 표와 실적 차트 사이. 상세창을 열 때 그 회사 것만 서버(/api/px)에서 받는다.
+// 기간 버튼(YTD~10년) · 실적 발표일 점선과 「실적 발표 후 주가 반응」 · 끌면 그 구간 수익률.
+// 반응 셈: 장후 = 발표일 종가→다음 거래일 종가, 장전 = 전날→발표일, 장중 = 전날→다음 거래일(이틀).
+const PX = {};
+function pxSlot(key) {
+  if (!RT) return '';
+  setTimeout(() => pxFill(key), 0);
+  return '<div class="pxslot finwrap" data-key="' + key + '"></div>';
+}
+function pxFill(key) {
+  const el = document.querySelector('.pxslot[data-key="' + key + '"]');
+  if (!el) return;
+  const go = () => { el.innerHTML = pxRender(key); };
+  if (PX[key] && PX[key].pts) return go();
+  fetch(RT + '/api/px?key=' + encodeURIComponent(key)).then(r => r.json()).then(j => {
+    if (!j || !(j.pts || []).length) { el.remove(); return; }
+    PX[key] = { pts: j.pts, ev: j.ev || [], cur: j.cur || '', range: '1년', sel: null };
+    go();
+  }).catch(() => el.remove());
+}
+const fmtP = v => v === 0 ? '0' : Math.abs(v) >= 1000 ? Math.round(v).toLocaleString() : Math.abs(v) >= 100 ? v.toFixed(0) : v.toFixed(1);
+function niceStep(x) { const p = Math.pow(10, Math.floor(Math.log10(x || 1))); for (const m of [1, 2, 2.5, 5, 10]) if (p * m >= x) return p * m; return p * 10; }
+function pxRender(key) {
+  const S = PX[key], all = S.pts, last = all[all.length - 1][0];
+  const dOf = s => Date.UTC(+s.slice(0, 4), +s.slice(5, 7) - 1, +s.slice(8, 10)) / 864e5;
+  const days = { '1년': 365, '2년': 730, '3년': 1095, '5년': 1826, '10년': 3653 }[S.range];
+  const from = S.range === 'YTD' ? last.slice(0, 4) + '-01-01' : new Date((dOf(last) - days) * 864e5).toISOString().slice(0, 10);
+  let pts = all.filter(p => p[0] >= from);
+  if (days > 1100) pts = pts.filter((p, i) => i % 5 === 0 || i === pts.length - 1);        // 3년 넘으면 주 단위로 솎는다
+  const n = pts.length;
+  if (n < 2) return '';
+  const W = 960, H = 380, L = 62, R = 66, T = 86, B = 34, BASE = H - B;
+  const vs = pts.map(p => p[1]);
+  let lo = Math.min(...vs), hi = Math.max(...vs);
+  const sp = (hi - lo) || hi * 0.1 || 1; lo -= sp * 0.06; hi += sp * 0.04;
+  const st = niceStep((hi - lo) / 4); lo = Math.max(0, Math.floor(lo / st) * st); hi = Math.ceil(hi / st) * st;
+  const d0 = dOf(pts[0][0]), d1 = dOf(pts[n - 1][0]);
+  const tx = s => L + (W - L - R) * (dOf(s) - d0) / ((d1 - d0) || 1);
+  const ty = v => BASE - (BASE - T) * (v - lo) / (hi - lo);
+  let s = '';
+  for (let v = lo; v <= hi + 1e-9; v += st)
+    s += '<line class="fz" x1="' + L + '" y1="' + ty(v).toFixed(1) + '" x2="' + (W - R) + '" y2="' + ty(v).toFixed(1) + '"/>' +
+      '<text class="fx" x="' + (L - 8) + '" y="' + (ty(v) + 5).toFixed(1) + '" text-anchor="end" style="font-size:13px">' + fmtP(v) + '</text>';
+  // 아래 이름 — 1년 남짓이면 달마다(1월은 「26년 1월」), 길면 해마다. 해가 바뀌는 자리에 이름 줄에만 칸막이.
+  const long = d1 - d0 > 400, every = (d1 - d0) > 200 ? 2 : 1;
+  let prev = '';
+  pts.forEach(p => {
+    const y = +p[0].slice(0, 4), m = +p[0].slice(5, 7), k = long ? String(y) : p[0].slice(0, 7);
+    if (k === prev) return;
+    if (prev && (long || (m - 1) % every === 0 || m === 1)) {
+      const x = tx(p[0]);
+      if (m === 1) s += '<line x1="' + x.toFixed(1) + '" y1="' + (BASE + 3) + '" x2="' + x.toFixed(1) + '" y2="' + (H - 2) + '" style="stroke:rgba(255,255,255,.22)"/>';
+      s += '<text class="fx" x="' + (x + (m === 1 ? 4 : 0)).toFixed(1) + '" y="' + (BASE + 22) + '" text-anchor="' + (m === 1 ? 'start' : 'middle') +
+        '" style="font-size:13px' + (m === 1 ? ';font-weight:700' : '') + '">' + (long ? y : (m === 1 ? (y % 100) + '년 ' : '') + m + '월') + '</text>';
+    }
+    prev = k;
+  });
+  // 실적 발표일 — 점선 + 「실적 발표 후 주가 반응」
+  const idx = d => { let a = 0, b = all.length - 1; while (a < b) { const c = (a + b) >> 1; if (all[c][0] < d) a = c + 1; else b = c; } return a; };
+  const ev = S.ev.filter(e => e[0] >= pts[0][0] && e[0] <= last);
+  const many = ev.length > 14;
+  let rlab = '';
+  ev.forEach((e, k) => {
+    const i = idx(e[0]);                                   // 발표일과 같거나 바로 뒤 거래일
+    if (i >= all.length) return;
+    const same = all[i][0] === e[0];
+    let a, b;
+    if (e[1] === 'pre') { b = all[i]; a = all[i - 1]; }
+    else if (e[1] === 'post') { a = same ? all[i] : all[i - 1]; b = same ? all[i + 1] : all[i]; }
+    else { a = all[i - 1]; b = same ? all[i + 1] : all[i]; }
+    if (!a || !b) return;
+    const r = b[1] / a[1] - 1, x = tx(e[0]), lastEv = k === ev.length - 1;
+    s += '<line x1="' + x.toFixed(1) + '" y1="' + (T - 8) + '" x2="' + x.toFixed(1) + '" y2="' + BASE + '" style="stroke:' +
+      (lastEv ? '#ED7D31' : 'rgba(255,255,255,.28)') + ';stroke-dasharray:4 4;stroke-width:' + (lastEv ? 1.8 : 1.2) + '"/>';
+    if (many && !lastEv) return;
+    s += '<text class="fx' + (lastEv ? ' now' : '') + '" x="' + x.toFixed(1) + '" y="' + (T - 34) + '" text-anchor="middle" style="font-size:13px;font-weight:700">' +
+      (+e[0].slice(5, 7)) + '/' + e[0].slice(8, 10) + '</text>' +
+      '<text class="vn" x="' + x.toFixed(1) + '" y="' + (T - 14) + '" text-anchor="middle" style="font-size:15px;font-weight:800;fill:' +
+      (r >= 0 ? '#ff6b6b' : '#5fb3ff') + '">' + (r >= 0 ? '+' : '') + (r * 100).toFixed(1) + '%</text>';
+  });
+  const d = pts.map((p, i) => (i ? 'L' : 'M') + tx(p[0]).toFixed(1) + ',' + ty(p[1]).toFixed(1)).join('');
+  s += '<path d="' + d + 'L' + tx(pts[n - 1][0]).toFixed(1) + ',' + BASE + 'L' + L + ',' + BASE + 'Z" style="fill:rgba(91,155,213,.10)"/>' +
+       '<path d="' + d + '" fill="none" style="stroke:#5B9BD5;stroke-width:2.2"/>';
+  const lp = pts[n - 1];
+  s += '<circle cx="' + tx(lp[0]).toFixed(1) + '" cy="' + ty(lp[1]).toFixed(1) + '" r="4" style="fill:#FFCB05"/>' +
+       '<text class="vn" x="' + (tx(lp[0]) + 8).toFixed(1) + '" y="' + (ty(lp[1]) + 5).toFixed(1) + '" style="font-size:15px;font-weight:800;fill:#FFCB05">' + fmtP(lp[1]) + '</text>';
+  // 끌어서 고른 구간
+  if (S.sel && S.sel[0] !== S.sel[1]) {
+    const [i0, i1] = S.sel[0] < S.sel[1] ? S.sel : [S.sel[1], S.sel[0]];
+    const a = pts[Math.max(0, i0)], b = pts[Math.min(n - 1, i1)], r = b[1] / a[1] - 1, x0 = tx(a[0]), x1 = tx(b[0]);
+    const dd = q => q.slice(2, 4) + '.' + q.slice(5, 7) + '.' + q.slice(8, 10), c = r >= 0 ? '#ff6b6b' : '#5fb3ff';
+    s += '<rect x="' + x0.toFixed(1) + '" y="' + T + '" width="' + (x1 - x0).toFixed(1) + '" height="' + (BASE - T) + '" style="fill:rgba(255,255,255,.07)"/>' +
+      [x0, x1].map(x => '<line x1="' + x.toFixed(1) + '" y1="' + T + '" x2="' + x.toFixed(1) + '" y2="' + BASE + '" style="stroke:rgba(255,255,255,.5);stroke-dasharray:2 3"/>').join('');
+    const mx = Math.min(Math.max((x0 + x1) / 2, L + 120), W - R - 120);
+    s += '<rect x="' + (mx - 118) + '" y="' + (BASE - 34) + '" width="236" height="28" rx="6" style="fill:#1c2530;stroke:' + c + '"/>' +
+      '<text x="' + mx + '" y="' + (BASE - 15) + '" text-anchor="middle" style="font-size:14px;font-weight:800;fill:' + c + '">' +
+      (r >= 0 ? '+' : '') + (r * 100).toFixed(1) + '%  <tspan style="fill:#9fb0c0;font-weight:600;font-size:12px">' + dd(a[0]) + ' → ' + dd(b[0]) + '</tspan></text>';
+  }
+  if (ev.length) s += '<text class="fx now" x="' + L + '" y="18" style="font-size:14px">▼ 점선 = 실적 발표일 · 위 숫자 = 실적 발표 후 주가 반응</text>';
+  S.view = { pts, tx, L, R, W };
+  const r1 = pts[n - 1][1] / pts[0][1] - 1;
+  const btn = ['YTD', '1년', '2년', '3년', '5년', '10년'].map(k => '<button class="pxb' + (k === S.range ? ' on' : '') + '" data-pxk="' + key + '" data-r="' + k + '">' + k + '</button>').join('');
+  return '<div class="finhead">주가 <span class="dim">(' + esc(S.cur) + ')</span><span class="pxret" style="color:' + (r1 >= 0 ? '#ff6b6b' : '#5fb3ff') + '">' +
+    S.range + ' ' + (r1 >= 0 ? '+' : '') + (r1 * 100).toFixed(1) + '%</span><span class="pxbtns">' + btn + '</span></div>' +
+    '<div class="finbox"><svg viewBox="0 0 ' + W + ' ' + H + '" class="finsvg pxsvg" data-pxk="' + key + '">' + s + '</svg></div>' +
+    '<div class="finlegend"><span class="lg" style="--c:#5B9BD5">종가</span><span class="lg" style="--c:rgba(255,255,255,.55)">실적 발표일 — 위 숫자는 발표 후 주가 반응(장후 발표면 다음 날 종가)</span>' +
+    '<span class="src">끌어서 구간 수익률</span></div>';
+}
+document.addEventListener('click', e => {
+  const b = e.target.closest && e.target.closest('.pxb');
+  if (!b) return;
+  const S = PX[b.dataset.pxk]; if (!S) return;
+  S.range = b.dataset.r; S.sel = null;
+  const el = document.querySelector('.pxslot[data-key="' + b.dataset.pxk + '"]'); if (el) el.innerHTML = pxRender(b.dataset.pxk);
+});
+(() => {                                                   // 끌기 — 마우스·손가락 둘 다
+  let drag = null;
+  const at = (svg, ev) => {
+    const S = PX[svg.dataset.pxk], V = S && S.view; if (!V) return null;
+    const r = svg.getBoundingClientRect(), x = (ev.clientX - r.left) * V.W / r.width;
+    let best = 0, bd = 1e9;
+    V.pts.forEach((p, i) => { const dd = Math.abs(V.tx(p[0]) - x); if (dd < bd) { bd = dd; best = i; } });
+    return best;
+  };
+  const redraw = k => { const el = document.querySelector('.pxslot[data-key="' + k + '"]'); if (el) el.innerHTML = pxRender(k); };
+  document.addEventListener('pointerdown', e => {
+    const svg = e.target.closest && e.target.closest('.pxsvg'); if (!svg) return;
+    const i = at(svg, e); if (i == null) return;
+    drag = svg.dataset.pxk; PX[drag].sel = [i, i]; e.preventDefault();
+  });
+  document.addEventListener('pointermove', e => {
+    if (!drag) return;
+    const svg = document.querySelector('.pxsvg[data-pxk="' + drag + '"]'); if (!svg) return;
+    const i = at(svg, e); if (i == null || i === PX[drag].sel[1]) return;
+    PX[drag].sel[1] = i; redraw(drag);
+  });
+  document.addEventListener('pointerup', () => { drag = null; });
+})();
 function finBlock(m, code) {
   const key = m + ':' + code;
   const f = D.fin[key], sg = D.seg[key];
-  const biz = bizLine(m, code) + fcstTable(m, code);
+  const biz = bizLine(m, code) + fcstTable(m, code) + pxSlot(key);
   // 실적 수치가 없어도 부문은 있을 수 있다. 그때 통화를 'USD' 로 박아 두면
   // 일본 회사의 엔화 막대에 '단위: bil USD' 라고 적히는 거짓말이 된다.
   const MKT_CUR = { jp: 'JPY', hk: 'HKD' };
