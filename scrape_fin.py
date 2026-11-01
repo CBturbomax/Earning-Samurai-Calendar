@@ -82,7 +82,8 @@ SINCE = "2017-01-01"                                  # 1Q18 부터(회원님 10
 #           매년 통째로 비었다(자료 있는 1,560종목 중 1,504종목). 분기로 보는
 #           길이도 60~125일로 넓혔다 — 코스트코의 16주 분기가 빠지고 있었다.
 #   7 -> 8  1Q18 부터 받는다(SINCE 2018-10 -> 2017-01). 회원님: "1Q18부터 좀 더 장기로."
-FIN_VER = 8
+#   8 -> 9  대부분 맞는 옛 태그로 빈 분기를 메운다(mostly). 3M 등 929종목의 3Q21~1Q23 구멍.
+FIN_VER = 9
 
 BACKOFF = (0, 5, 20, 60)   # SEC 가 막으면 쉬었다 다시. 없는 태그(404)는 재시도 않는다.
 GIVE_UP_AFTER = 5          # 연속 이만큼 막히면 이번 실행은 접는다
@@ -367,13 +368,26 @@ def merged(cik, ns, tags, into=None, enough=0):
 
     for q, a, c in got:
         cur = cur or c
-        if compatible(mq, q):
+        if compatible(mq, q) or mostly(mq, q):
             for k, v in q.items():
                 mq.setdefault(k, v)
-        if compatible(ma, a):
+        if compatible(ma, a) or mostly(ma, a):
             for k, v in a.items():
                 ma.setdefault(k, v)
     return mq, ma, cur
+
+
+def mostly(base, add):
+    """**대부분 맞으면** 빈 기간만 메우는 데 쓴다(회원님 11/01: "빈 분기가 있으면 안 된다").
+    3M 은 매출 태그를 갈아타면서 옛 태그의 몇 분기를 사업 분할(솔벤텀) 뒤 재작성했다 — 그 몇 칸이 5% 넘게
+    어긋난다고 옛 태그를 통째로 버렸더니 3Q21~1Q23 이 비었다(미국 929종목이 이런 꼴). 겹치는 기간이 셋 이상이고
+    그중 80% 이상이 5% 안에서 맞으면 같은 줄로 본다. 정의가 다른 두 줄(엑슨 '고객 매출' 대 '총수익')은 겹치는
+    곳마다 어긋나므로 여전히 걸러진다. 있는 값은 덮지 않는다(setdefault)."""
+    shared = [k for k in add if k in base and base[k][0]]
+    if len(shared) < 3:
+        return False
+    ok = sum(abs(add[k][0] - base[k][0]) / abs(base[k][0]) <= 0.05 for k in shared)
+    return ok / len(shared) >= 0.8
 
 
 def thin(rev_q, rev_a):

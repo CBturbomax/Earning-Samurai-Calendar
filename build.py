@@ -1930,6 +1930,18 @@ def pack_seg(rec, fin_rec):
     if not fit:
         return None
     names, pts, aligned, med = fit
+    # **부문만 반기·연간으로 내는 회사**(20-F/6-K 의 외국 기업): 반기면 반기 이름(1H25·2H25)으로 — 분기 이름(2Q25·4Q25)을
+    # 빌려 쓰면 사이가 빈 것처럼 보였다. 연간뿐이면(노바티스) 분기 칸에 못 앉히므로 안 그린다(11/01).
+    try:
+        ends = sorted(date.fromisoformat(r[0]) for r in pts if re.match(r"\d{4}-\d\d-\d\d$", str(r[0])))
+        gaps = sorted((b - a).days for a, b in zip(ends, ends[1:]))
+        if len(gaps) >= 2 and gaps[len(gaps) // 2] > 250:
+            return None
+        if len(gaps) >= 2 and 150 <= gaps[len(gaps) // 2] <= 220 and not all(re.search("H", l or "") for l, _ in aligned):
+            aligned = [(h_label(r[0]) if re.match(r"\d{4}-\d\d-\d\d$", str(r[0])) else lab, rev)
+                       for r, (lab, rev) in zip(pts, aligned)]
+    except ValueError:
+        pass
     # 값은 정수로 눕힌다. 부문 수치는 원 단위까지 의미가 없는데 '10863000000.0'
     # 처럼 실으면 종목마다 몇백 바이트씩 늘어난다.
     rows = [[lab] + [int(v) if v else None for v in r[1:]]
@@ -5933,6 +5945,17 @@ function labFrom18(l) {
   const d = /^(\d{4})-/.exec(l || '');
   return d ? +d[1] >= 2018 : true;
 }
+// 빈 분기가 있으면 **마지막 빈칸 뒤부터** 그린다(회원님 11/01 (가): 원본이 끝내 없는 기간은 앞을 잘라 빈칸 없이).
+// 빈칸 뒤가 한 칸뿐이면 자르지 않는다(그림이 안 된다) — 그건 자료를 메워야 할 자리다.
+function noGapFrom(labs) {
+  const ix = l => { const m = /^(\d)([QH])(\d\d)$/.exec(l || ''); return m ? (+m[3]) * (m[2] === 'Q' ? 4 : 2) + (+m[1]) - 1 : null; };
+  let start = 0;
+  for (let a = 1; a < labs.length; a++) {
+    const x = ix(labs[a - 1]), y = ix(labs[a]);
+    if (x != null && y != null && y - x > 1) start = a;
+  }
+  return labs.length - start >= 2 ? start : 0;
+}
 function segChart(sg, cur) {
   /* 사업부별 매출 — **선 그래프**(회원님 10/30: 누적 막대 말고 부문마다 선으로, 시계열이 보이게).
      축은 부문 하나의 최댓값으로 잡는다(합계가 아니라). 점마다 값을 적되, 같은 칸에서 글자끼리
@@ -5992,15 +6015,16 @@ function segLines(names, pts, vis, opt) {
   if (!all.length) return '';
   let lo, hi;
   if (opt.pct) {
-    const rec = [];                                          // 최근 12칸의 값으로 위 끝을 잡는다(yoyRange)
+    const rec = [];                                          // 최근 12칸의 값으로 가운데 띠를 잡는다(yoyMap)
     names.forEach((nm, j) => { if (vis(j)) for (let i = Math.max(0, n - 12); i < n; i++) { const v = opt.vals(i, j); if (v != null) rec.push(v); } });
-    [lo, hi] = yoyRange(all, rec);
+    var M = yoyMap(all, rec); lo = M.lo; hi = Infinity;
   } else {
     const mx = Math.max(...all, 1), mn = Math.min(...all, 0);
     hi = niceMax(mx); lo = mn < 0 ? -niceMax(-mn) : 0;
   }
-  const y = v => BASE - (BASE - T) * (Math.max(lo, Math.min(hi, v)) - lo) / (hi - lo);
-  let body = '';
+  const y = opt.pct ? (v => BASE - (BASE - T) * M.pos(v)) : (v => BASE - (BASE - T) * (Math.max(lo, Math.min(hi, v)) - lo) / (hi - lo));
+  let body = opt.pct ? M.breaks.map(v => '<line x1="' + L + '" y1="' + y(v).toFixed(1) + '" x2="' + (W - R) + '" y2="' + y(v).toFixed(1) +
+    '" style="stroke:rgba(255,255,255,.35);stroke-dasharray:4 4"/>').join('') : '';
   const used = pts.map(() => []);
   names.forEach((nm, j) => {
     if (!vis(j)) return;
@@ -6014,7 +6038,7 @@ function segLines(names, pts, vis, opt) {
       const yy = y(v);
       body += '<circle class="dot" cx="' + cx(i).toFixed(1) + '" cy="' + yy.toFixed(1) + '" r="3" fill="' + c + '"><title>' +
         esc(nm) + ' ' + pts[i][0] + ' ' + opt.fmt(v) + '</title></circle>';
-      let ty = v > hi ? yy + 16 : yy - 8;                 // 위로 넘친 점은 숫자를 점 아래에(축 밖으로 안 나가게)
+      let ty = v > hi ? yy + 16 : yy - 8;                 // 위로 넘친 점은 숫자를 점 아래에, 아래로 넘친 점은 위에(축 이름과 안 겹치게)
       if (used[i].some(u => Math.abs(u - ty) < 13)) ty = v > hi ? yy + 30 : yy + 16;
       if (used[i].some(u => Math.abs(u - ty) < 13)) return;
       used[i].push(ty);
@@ -6022,7 +6046,7 @@ function segLines(names, pts, vis, opt) {
         (i === n - 1 ? ';font-weight:800' : '') + '">' + opt.fmt(v) + '</text>';
     });
   });
-  const ticks = opt.pct ? [lo, 0, hi].filter((v, k, a) => k === 1 || Math.abs(v) > (hi - lo) * 0.15)
+  const ticks = opt.pct ? M.ticks
                         : (lo < 0 ? [lo, 0, hi] : [0, hi / 2, hi]);
   const axis = ticks.map(v =>
     '<line class="' + (v === 0 && (lo < 0) ? 'fzero' : 'fz') + '" x1="' + L + '" y1="' + y(v).toFixed(1) + '" x2="' + (W - R) +
@@ -6102,6 +6126,21 @@ const pcN = v => (v * 100).toFixed(0) + '%';
 /* 성장률 축 — 회원님(11/01): 코로나 전후(20~22년) -50%·+180% 같은 값 때문에 최근이 납작해진다,
    역성장은 -20% 밑으로는 안 봐도 된다. 그래서 아래는 -20% 에서 자르고, 위는 **최근 12기간**의 최댓값으로 잡는다.
    넘치는 점은 축 끝에 붙이되 숫자는 실제 값을 적는다(눌러 담되 속이지 않는다). */
+// 넘치는 값을 **잘라 붙이지 않고 위·아래 띠에 눌러 담는다**(회원님 11/01: "큰 숫자끼리 높낮이가 없이 일자라
+// 무슨 숫자였는지 모르겠다 — 어디가 제일 높았는지는 보여야"). 가운데(-20%~최근 최댓값)는 그대로, 그 위 넘친 값은
+// 맨 위 20% 띠에, -20% 밑은 맨 아래 15% 띠에 차례대로 앉힌다. 경계에는 점선을 긋는다.
+function yoyMap(vals, recent) {
+  const [lo, hi] = yoyRange(vals, recent);
+  const vmax = Math.max(hi, ...vals), vmin = Math.min(lo, ...vals);
+  const top = vmax > hi ? 0.2 : 0, bot = vmin < lo ? 0.15 : 0, core = 1 - top - bot;
+  const pos = v => v > hi ? bot + core + top * (v - hi) / (vmax - hi)
+                 : v < lo ? bot * (v - vmin) / (lo - vmin)
+                 : bot + core * (v - lo) / (hi - lo);
+  const ticks = [lo, 0, hi].filter((v, k) => k === 1 || v !== 0);
+  if (top) ticks.push(vmax);
+  if (bot) ticks.unshift(vmin);
+  return { lo, hi, pos, ticks, breaks: [top ? hi : null, bot ? lo : null].filter(v => v != null) };
+}
 function yoyRange(vals, recent) {
   const r = (recent && recent.length ? recent : vals);
   let lo = Math.max(-0.2, Math.min(0, ...vals)), hi = Math.max(0.05, ...r.filter(v => v > -0.2));
@@ -6129,7 +6168,7 @@ function finChart(f) {
   });
   const N = 36;                       // 1Q18 부터 다 보이게(회원님 10/30) — 칸은 46px 그대로, 그림이 넓어진다
   // 1Q18 앞은 그리지 않는다(회원님 10/30: "1Q18 부터 하라니까"). 2017 분기는 1Q18 전년비 계산에만 쓴다.
-  const keep = all.map((p, i) => i).filter(i => labFrom18(all[i][0])).slice(-N);
+  let keep = all.map((p, i) => i).filter(i => labFrom18(all[i][0])).slice(-N);
   const pts = keep.map(i => all[i]), yoy = keep.map(i => yoyAll[i]);
   const latest = pts.length ? pts[pts.length - 1][0] : '';
 
@@ -6230,10 +6269,11 @@ function finChart(f) {
   if (have.length >= 2) {
     const H2 = 300, T2 = 36, BASE2 = H2 - B;     // 성장률이 잘 보이게 키웠다(회원님 10/31)
     const vs = have.map(o => o[1]);
-    const [lo, hi] = yoyRange(vs, vs.slice(-12));
-    const gy = v => BASE2 - (BASE2 - T2) * (Math.max(lo, Math.min(hi, v)) - lo) / (hi - lo);
-    const ticks = (lo < 0 && hi > 0) ? [lo, 0, hi] : [lo, (lo + hi) / 2, hi];
-    const axis = ticks.map(v =>
+    const M = yoyMap(vs, vs.slice(-12)), lo = M.lo, hi = Infinity;
+    const gy = v => BASE2 - (BASE2 - T2) * M.pos(v);
+    const ticks = M.ticks;
+    const axis = M.breaks.map(v => '<line x1="' + L + '" y1="' + gy(v).toFixed(1) + '" x2="' + (W - R) + '" y2="' + gy(v).toFixed(1) +
+      '" style="stroke:rgba(255,255,255,.35);stroke-dasharray:4 4"/>').join('') + ticks.map(v =>
       '<line class="' + (v === 0 ? 'fzero' : 'fz') + '" x1="' + L + '" y1="' + gy(v).toFixed(1) +
       '" x2="' + (W - R) + '" y2="' + gy(v).toFixed(1) + '"/>' +
       '<text class="fx" x="' + (L - 8) + '" y="' + (gy(v) + 5).toFixed(1) +
@@ -6244,7 +6284,7 @@ function finChart(f) {
       have.map((o, j) => (j ? 'L' : 'M') + cx(o[0]).toFixed(1) + ',' + gy(o[1]).toFixed(1)).join(' ') +
       '" style="stroke-width:2.6"/>' + have.map(o =>
         '<circle class="dot yoy" cx="' + cx(o[0]).toFixed(1) + '" cy="' + gy(o[1]).toFixed(1) + '" r="3.8"/>' +
-        '<text class="vn yoy" x="' + cx(o[0]).toFixed(1) + '" y="' + (gy(o[1]) + (o[1] < 0 || o[1] > hi ? 19 : -10)).toFixed(1) +
+        '<text class="vn yoy" x="' + cx(o[0]).toFixed(1) + '" y="' + (gy(o[1]) + ((o[1] < 0 && o[1] >= lo) || o[1] > hi ? 19 : -10)).toFixed(1) +
         '" text-anchor="middle" style="font-size:13px;font-weight:800' + (o[1] < 0 ? ';fill:#5fb3ff' : '') + '">' + pcN(o[1]) + '</text>').join('') +
       xlab(H2) + '</svg></div>';
   }

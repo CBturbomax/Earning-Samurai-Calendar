@@ -508,6 +508,26 @@ def seg_quarters(points):
                    if ends[en][k] - prev.get(k, 0) > 0}
             if len(cut) >= 2:
                 out[en] = cut
+    # **상반기 누계 − 2분기 단독 = 1분기.** 소니처럼 결산단신에 상반기 누계(4~9월)와 7~9월 단독을 같이 싣고
+    # 1분기 공시는 우리 손에 없는 회사가 있다 — 그러면 1분기(4~6월) 칸이 비어 차트가 거기서 잘렸다(11/01).
+    # 반대로 상반기 누계가 2분기 칸에 앉아 있으면 단독 값으로 바로잡는다.
+    for st, ends in by_start.items():
+        for en, cum in ends.items():
+            days = (date.fromisoformat(en) - date.fromisoformat(st)).days
+            if not 150 <= days <= 220:
+                continue
+            for st2, ends2 in by_start.items():
+                if st2 <= st or en not in ends2:
+                    continue
+                if not (80 <= (date.fromisoformat(st2) - date.fromisoformat(st)).days <= 100
+                        and (date.fromisoformat(en) - date.fromisoformat(st2)).days <= 100):
+                    continue
+                q2 = ends2[en]
+                q1_end = (date.fromisoformat(st2) - timedelta(days=1)).isoformat()
+                q1 = {k: cum[k] - q2.get(k, 0) for k in cum if k in q2 and cum[k] - q2[k] > 0}
+                if q1_end not in out and len(q1) >= 2:
+                    out[q1_end] = q1
+                out[en] = dict(q2)
     return out
 
 
