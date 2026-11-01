@@ -1930,6 +1930,18 @@ def pack_seg(rec, fin_rec):
     if not fit:
         return None
     names, pts, aligned, med = fit
+    # **부문만 반기·연간으로 내는 회사**(20-F/6-K 의 외국 기업): 반기면 반기 이름(1H25·2H25)으로 — 분기 이름(2Q25·4Q25)을
+    # 빌려 쓰면 사이가 빈 것처럼 보였다. 연간뿐이면(노바티스) 분기 칸에 못 앉히므로 안 그린다(11/01).
+    try:
+        ends = sorted(date.fromisoformat(r[0]) for r in pts if re.match(r"\d{4}-\d\d-\d\d$", str(r[0])))
+        gaps = sorted((b - a).days for a, b in zip(ends, ends[1:]))
+        if len(gaps) >= 2 and gaps[len(gaps) // 2] > 250:
+            return None
+        if len(gaps) >= 2 and 150 <= gaps[len(gaps) // 2] <= 220 and not all(re.search("H", l or "") for l, _ in aligned):
+            aligned = [(h_label(r[0]) if re.match(r"\d{4}-\d\d-\d\d$", str(r[0])) else lab, rev)
+                       for r, (lab, rev) in zip(pts, aligned)]
+    except ValueError:
+        pass
     # 값은 정수로 눕힌다. 부문 수치는 원 단위까지 의미가 없는데 '10863000000.0'
     # 처럼 실으면 종목마다 몇백 바이트씩 늘어난다.
     rows = [[lab] + [int(v) if v else None for v in r[1:]]
@@ -5933,11 +5945,23 @@ function labFrom18(l) {
   const d = /^(\d{4})-/.exec(l || '');
   return d ? +d[1] >= 2018 : true;
 }
+// 빈 분기가 있으면 **마지막 빈칸 뒤부터** 그린다(회원님 11/01 (가): 원본이 끝내 없는 기간은 앞을 잘라 빈칸 없이).
+// 빈칸 뒤가 한 칸뿐이면 자르지 않는다(그림이 안 된다) — 그건 자료를 메워야 할 자리다.
+function noGapFrom(labs) {
+  const ix = l => { const m = /^(\d)([QH])(\d\d)$/.exec(l || ''); return m ? (+m[3]) * (m[2] === 'Q' ? 4 : 2) + (+m[1]) - 1 : null; };
+  let start = 0;
+  for (let a = 1; a < labs.length; a++) {
+    const x = ix(labs[a - 1]), y = ix(labs[a]);
+    if (x != null && y != null && y - x > 1) start = a;
+  }
+  return labs.length - start >= 2 ? start : 0;
+}
 function segChart(sg, cur) {
   /* 사업부별 매출 — **선 그래프**(회원님 10/30: 누적 막대 말고 부문마다 선으로, 시계열이 보이게).
      축은 부문 하나의 최댓값으로 잡는다(합계가 아니라). 점마다 값을 적되, 같은 칸에서 글자끼리
      부딪히면 아래로 내려 적는다. 색·글꼴·축·범례는 사이트의 다른 차트와 같은 것을 쓴다. */
   let pts = (sg.pts || []).filter(p => labFrom18(p[0])).slice(-36);   // 1Q18 부터(회원님 10/30)
+  pts = pts.slice(noGapFrom(pts.map(p => p[0])));
   if (pts.length < 2) return '';
   const names = sg.names || [];
   // **사업부 기준이 바뀌면 차트를 둘로 — 지금 기준과 옛 기준**(회원님 10/30: "둘 다 보여줘, 옛 기준은 최대한").
@@ -6129,7 +6153,8 @@ function finChart(f) {
   });
   const N = 36;                       // 1Q18 부터 다 보이게(회원님 10/30) — 칸은 46px 그대로, 그림이 넓어진다
   // 1Q18 앞은 그리지 않는다(회원님 10/30: "1Q18 부터 하라니까"). 2017 분기는 1Q18 전년비 계산에만 쓴다.
-  const keep = all.map((p, i) => i).filter(i => labFrom18(all[i][0])).slice(-N);
+  let keep = all.map((p, i) => i).filter(i => labFrom18(all[i][0])).slice(-N);
+  keep = keep.slice(noGapFrom(keep.map(i => all[i][0])));
   const pts = keep.map(i => all[i]), yoy = keep.map(i => yoyAll[i]);
   const latest = pts.length ? pts[pts.length - 1][0] : '';
 
