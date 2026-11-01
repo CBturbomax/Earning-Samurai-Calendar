@@ -44,6 +44,24 @@ jobs:
                       print("==",rep,sc,j.get("code"),j.get("message"),[{k:r.get(k) for k in ("REPORT_DATE","STD_ITEM_NAME","AMOUNT","OPERATE_INCOME","CURRENCY","CURRENCY_NAME","CURRENCY_CODE") if k in r} for r in d[:3]], sorted(d[0].keys()) if d else "")
                   except Exception as e: print("==",rep,sc,"ERR",e)
           EOF2
+      - name: 🔎 홍콩 긴 이력 환율 되돌리기 시험
+        continue-on-error: true
+        run: |
+          python - >> /tmp/probe.txt 2>&1 <<'EOF2'
+          import json, io, contextlib, importlib.util
+          import scrape_fin_hk_em as m
+          d=json.load(open('data/financials_hk_em.json')); d['fx']=m.fx_table(); json.dump(d,open('data/financials_hk_em.json','w'))
+          print("fx", {c: v.get('2018-06') for c, v in d['fx'].items()})
+          spec=importlib.util.spec_from_file_location('b','build.py'); b=importlib.util.module_from_spec(spec)
+          with contextlib.redirect_stdout(io.StringIO()): spec.loader.exec_module(b)
+          j=json.load(open('data/financials_intl.json'))['stocks']
+          out={k:v for k,v in j.items() if k.startswith('hk:')}
+          b.hk_long_fin(out)
+          for k in ('hk:00700','hk:00001','hk:00992','hk:00981','hk:00002','hk:00016','hk:09992','hk:01211'):
+              v=out.get(k)
+              if v:
+                  pk=b.pack_fin(v); print(k, v.get('src'), v.get('cur'), len(v['points']), pk['freq'], [(p[0], round(p[1]/1e9,2)) for p in pk['points'][:2]], [(p[0], round(p[1]/1e9,2)) for p in pk['points'][-3:]])
+          EOF2
       - name: 결과를 probe-out 가지에
         if: always()
         run: |
