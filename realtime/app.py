@@ -2689,6 +2689,8 @@ def replay_run(lines):
             except Exception as e:                               # noqa: BLE001
                 log("xbrldump 실패", repr(e)[:200])
             continue
+        if ln.strip() == "auditfill":                   # 빌드가 찾은 빈칸 — 사업부 뒤처진 미국 회사 다시 읽기
+            threading.Thread(target=safe, args=(audit_fill,), daemon=True, name="auditfill").start()
         if ln.strip() == "irhist":
             threading.Thread(target=safe, args=(irhist,), daemon=True, name="irhist").start()
         if ln.strip() == "jphistrev":                   # 업적예상 수정 공시만 2017년치부터(가이던스 변천의 '수정' 막대)
@@ -2805,6 +2807,20 @@ def segko_loop():
         time.sleep(600)
 
 
+def audit_fill():
+    """빌드가 적은 빈칸 점검(data/audit_gaps.json)의 '사업부가 실적보다 뒤처진' 미국 회사를 보도자료로 다시 읽는다.
+    회원님(11/01): "내가 일일이 말하지 않아도 빠진 회사를 다 잡아내게." 시총 5천억 원 이상, 한 번에 80곳."""
+    try:
+        j = json.loads(http_get(RAW + "audit_gaps.json", timeout=30))
+    except Exception as e:                                       # noqa: BLE001
+        log("빈칸 점검 받기 실패", repr(e)[:80])
+        return
+    keys = [r[0] for r in (j.get("items") or {}).get("seg", []) if r[0].startswith("us:") and r[1] >= 0.5][:80]
+    log("빈칸 점검: 사업부 뒤처진 미국 회사", len(keys), "곳 다시 읽기", " ".join(k[3:] for k in keys[:12]))
+    if keys:
+        segfill(len(keys), set(keys))
+
+
 def fill_loop():
     """끊겨도 저절로 이어 간다 — 재배포로 서버가 다시 켜지면 하던 큰 일(옛 결산단신)이 멈췄고, 이번 분기 부문
     메우기도 사람이 다시 걸어야 했다(인텔 3Q26 이 그래서 빠졌다, 10/30). 켜진 뒤 2분, 그다음 두 시간마다."""
@@ -2815,6 +2831,7 @@ def fill_loop():
         if JH.get("want_rev") and len(JH.get("done_rev") or []) < JH["want_rev"] and not any(t.name == "jphistrev" for t in threading.enumerate()):
             threading.Thread(target=safe, args=(jphist, JH["want_rev"], "2017-01-01", True), daemon=True, name="jphistrev").start()
         safe(segfill, 500)
+        safe(audit_fill)                                         # 빌드가 찾은 빈칸(사업부 뒤처짐) — 시총 큰 순으로 다시 읽는다
         safe(segfill_jp, 300)
         safe(guide_audit)
         if not any(t.name == "irhist" for t in threading.enumerate()):   # 본 덱은 건너뛰므로 평소엔 새 덱만 읽는다
