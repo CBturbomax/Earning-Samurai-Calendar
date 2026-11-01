@@ -615,6 +615,15 @@ def targets():
     return out
 
 
+def audit_keys(cats=("stale", "gap", "opi")):
+    """빌드가 적은 빈칸 점검(data/audit_gaps.json) — 이 종목들은 앞줄에 세워 다시 받는다(회원님 11/01)."""
+    try:
+        j = json.loads((Path(__file__).parent / "data" / "audit_gaps.json").read_text(encoding="utf-8"))
+    except (OSError, ValueError):
+        return set()
+    return {r[0] for c in cats for r in (j.get("items") or {}).get(c, []) if r[1] >= 0.1}   # 시총 1천억 원 이상만(대기줄을 안 막게)
+
+
 def queue(old, cand):
     """이번 실행에서 받을 종목을 순서대로 고른다.
 
@@ -629,8 +638,13 @@ def queue(old, cand):
     cold = (date.today() - timedelta(days=STALE_DAYS * 4)).isoformat()
     recent = (datetime.now(timezone.utc) - timedelta(hours=NEAR_REFRESH_H)).strftime("%Y-%m-%dT%H:%M")
     picks = []
+    hot = {k[3:] for k in audit_keys() if k.startswith("us:")}
     for sym, (cap, gap) in cand.items():
         rec = old.get(sym)
+        # **빈칸 점검에 걸린 종목은 앞줄로**(두 시간에 한 번까지) — 발표했는데 그 분기가 없거나 가운데가 빈 회사.
+        if sym in hot and rec and (rec.get("ts") or "") < recent:
+            picks.append((0.5, -cap, sym))
+            continue
         empty = bool(rec) and not rec.get("points") and not rec.get("eps")
         if not rec or rec.get("v") != FIN_VER:
             pri = 0

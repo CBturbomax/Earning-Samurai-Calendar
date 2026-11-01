@@ -476,9 +476,17 @@ def queue(old, cand, ann):
     # 당긴다 — 세 시간이면 크론을 아무리 당겨도 소용이 없다.
     retry = (datetime.now(timezone.utc) - timedelta(minutes=20)).strftime("%Y-%m-%dT%H:%M")
     picks = []
+    try:                                       # 빌드가 적은 빈칸 점검 — 발표했는데 그 분기가 없는·가운데가 빈·영업이익 빈 회사
+        aj = json.loads((Path(__file__).parent / "data" / "audit_gaps.json").read_text(encoding="utf-8"))
+        hot = {r[0] for c in ("stale", "gap", "opi") for r in (aj.get("items") or {}).get(c, []) if r[1] >= 0.1}
+    except (OSError, ValueError):
+        hot = set()
     for k, cap in cand.items():
         rec = old.get(k)
         gap, last_ann = ann.get(k, (9999, ""))
+        if k in hot and rec and (rec.get("ts") or "") < retry:
+            picks.append((-0.5, -cap, k))
+            continue
         if (last_ann >= recent and missing_announced(rec, last_ann)
                 and (rec.get("ts") if rec else "") < retry):
             picks.append((-1, -cap, k))

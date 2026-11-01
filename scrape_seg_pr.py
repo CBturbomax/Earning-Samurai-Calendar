@@ -98,8 +98,11 @@ def read(raw, names, prior, tot_now, tot_prior):
         want = [n for n in names if prior.get(n)]                # 전년 값이 있는 이름만 센다(상계·0 줄은 빼고)
         loc = {n: find(n) for n in want}
         hit = [n for n in want if loc[n]]
-        if not want or len(hit) < max(2, int(len(want) * 0.6 + 0.5)):
+        if not want or len(hit) < 2:
             continue
+        big = sum(abs(prior[n]) for n in want)
+        if sum(abs(prior[n]) for n in hit) < big * 0.95:
+            continue                                             # 큰 부문이 빠진 표 — 반쪽 막대가 된다
         for scale in (1e6, 1e3, 1, 1e9):
             cols = None
             for n in hit:
@@ -192,6 +195,7 @@ def main():
         old = st.get(sym) if st.get(sym, {}).get("names") == names else {"names": names, "pts": []}
         old["pts"] = [p for p in old.get("pts", []) if p[0] != last["end"]] + [[last["end"]] + [vals[n] for n in names]]
         old["acc"] = hit[0]
+        old["axis"] = rec.get("axis")
         st[sym] = old
         got += 1
         print(f"  {sym} {last['end']} " + " · ".join(f"{n} {vals[n]/1e9:.1f}B" for n in names))
