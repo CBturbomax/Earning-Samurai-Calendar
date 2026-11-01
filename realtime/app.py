@@ -1383,7 +1383,10 @@ def price_history(key):
     for row in rows:                                      # 캘린더 줄 — 위에서 못 얻은 날만(홍콩은 이것뿐)
         if row[0] and row[0] not in ev and row[0] <= datetime.now(tz).strftime("%Y-%m-%d"):
             tm = row[10] if re.match(r"\d\d:\d\d$", str(row[10] or "")) else ""
-            if tm:
+            if len(row) > 14 and row[14] and row[12] and re.match(r"\d\d:\d\d$", str(row[13] or "")):
+                # 실제 공시 시각(한국 시각으로 실려 있다 — 홍콩 HKEXnews·일본 TDnet·미국 8-K) -> 거래소 현지 시각
+                put(datetime.fromisoformat(row[12] + "T" + row[13]).replace(tzinfo=KST).astimezone(tz))
+            elif tm:
                 put(datetime.fromisoformat(row[0] + "T" + tm).replace(tzinfo=tz))
             else:
                 ev[row[0]] = {"장전": "pre", "장후": "post", "장중": "intra"}.get(row[10] or "", "post" if mkt == "us" else "intra")
