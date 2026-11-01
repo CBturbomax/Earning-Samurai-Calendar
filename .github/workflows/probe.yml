@@ -23,6 +23,25 @@ jobs:
           for p in "/api/co?key=jp:9507" "/api/co?key=jp:6723" /health /api/log /api/stats /api/audit "/api/sent?day=$(TZ=Asia/Seoul date +%F)" /api/live; do echo "== $p"; curl -sS -m 20 $U$p | tail -c 20000; echo; done > /tmp/probe.txt 2>&1
           echo "== stream" >> /tmp/probe.txt; timeout 8 curl -sSN $U/stream | head -c 400 >> /tmp/probe.txt 2>&1 || true
 
+      - name: 🔎 홍콩 실적 긴 이력(동방재부 F10)
+        continue-on-error: true
+        run: |
+          python - >> /tmp/probe.txt 2>&1 <<'EOF2'
+          import json, urllib.request, urllib.parse, collections
+          UA={"User-Agent":"Mozilla/5.0"}
+          def get(u):
+              with urllib.request.urlopen(urllib.request.Request(u,headers=UA),timeout=25) as r: return json.loads(r.read())
+          B="https://datacenter.eastmoney.com/securities/api/data/v1/get?columns=ALL&pageNumber=1&pageSize=500&sortTypes=-1&sortColumns=REPORT_DATE&source=F10&client=PC&reportName=RPT_HKF10_FN_INCOME_PC&filter="
+          for sc in ("00700.HK","01211.HK","03750.HK","09992.HK","02318.HK","00941.HK","01810.HK","09988.HK","00883.HK","02020.HK"):
+              try:
+                  j=get(B+urllib.parse.quote('(SECUCODE="%s")(REPORT_DATE>=\'2025-01-01\')'%sc))
+                  d=(j.get("result") or {}).get("data") or []
+                  names=collections.OrderedDict()
+                  for r in d:
+                      if r["REPORT_DATE"].startswith("2025-12"): names[r["STD_ITEM_NAME"]]=r["AMOUNT"]
+                  print("==",sc,len(d), {k:(round(v/1e9,1) if abs(v or 0)>1e6 else v) for k,v in names.items()})
+              except Exception as e: print("==",sc,"ERR",e)
+          EOF2
       - name: 결과를 probe-out 가지에
         if: always()
         run: |
