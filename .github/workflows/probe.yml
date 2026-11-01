@@ -20,7 +20,7 @@ jobs:
       - name: 🔎 Railway 실시간 서버 확인
         run: |
           U=https://earning-samurai-calendar-production.up.railway.app
-          for p in "/api/co?key=jp:9507" "/api/co?key=jp:6723" /health /api/log /api/stats /api/audit "/api/sent?day=$(TZ=Asia/Seoul date +%F)" /api/live; do echo "== $p"; curl -sS -m 20 $U$p | tail -c 20000; echo; done > /tmp/probe.txt 2>&1
+          for p in "/api/co?key=us:AMZN" "/api/co?key=jp:6981" "/api/co?key=hk:00700" /health /api/log /api/stats /api/audit "/api/sent?day=$(TZ=Asia/Seoul date +%F)" /api/live; do echo "== $p"; curl -sS -m 20 $U$p | tail -c 20000; echo; done > /tmp/probe.txt 2>&1
           echo "== stream" >> /tmp/probe.txt; timeout 8 curl -sSN $U/stream | head -c 400 >> /tmp/probe.txt 2>&1 || true
 
       - name: 🔎 홍콩 긴 이력 수집기 시험
