@@ -672,7 +672,7 @@ def hk_long_fin(out):
         opi_ok = [abs(p["opi"] / q["opi"] - 1) <= 0.05 for p, q in pairs if p.get("opi") and q.get("opi")]
         opi_same = bool(opi_ok) and sum(opi_ok) / len(opi_ok) >= 0.8
         first = min(sp)
-        add = [p for p in pts if p["end"] < first and not near(p["end"])]
+        add = [dict(p, label=q_label(p["end"])) for p in pts if p["end"] < first and not near(p["end"])]
         if not add:
             continue
         base = list(sa["points"])
@@ -1575,17 +1575,24 @@ def splice(base, fresh):
     # 정리한다. 하나도 안 겹치면 그건 이름 변경이 아니라 **다른 축**이다.
     if not (cov == len(liveb) or (cov and newborn)):
         return 0
-    last = max(p[0] for p in base["pts"])
+    # 뒤만이 아니라 **가운데 빈 분기도** 채운다(회원님 11/01: "비어 있으면 안 된다"). 도요타는 EDINET 이력이
+    # 2024-03 · 2024-12 를 갖고 2024-06 · 2024-09 가 비어 있었는데, '마지막 뒤만' 이으니 TDnet 이 가진 두 분기가
+    # 영영 안 들어갔다. 종료일이 열흘 안이면 같은 분기로 본다(있는 칸은 건드리지 않는다).
+    have = [date.fromisoformat(p[0]) for p in base["pts"] if re.match(r"\d{4}-\d\d-\d\d$", str(p[0]))]
     add = []
     for p in sorted(fresh["pts"]):
-        if p[0] <= last:
+        try:
+            d = date.fromisoformat(p[0])
+        except (ValueError, TypeError):
+            continue
+        if any(abs((d - h).days) <= 10 for h in have):
             continue
         # 열은 늘 **헌 기록의 이름 차례**를 따른다. 새 기록에 없는 부문은 빈칸이다.
         add.append([p[0]] + [(p[i + 1] if i is not None and i + 1 < len(p) else None)
                              for i in hit])
     if not add:
         return 0
-    base["pts"] = base["pts"] + add
+    base["pts"] = sorted(base["pts"] + add, key=lambda r: str(r[0]))
     return len(add)
 
 
@@ -1787,15 +1794,19 @@ def seg_align(pts, fin_rec):
     그대로 쓴다.** 그 이름은 SEC 프레임과 unstack 까지 거친 것이라 여기서 다시
     어림하는 것보다 옳다. 맞는 점이 없으면 종료일에서 어림해 매긴다.
     """
+    # 이름은 **화면 실적 차트가 쓰는 이름**(pack_fin)으로 — 반기 회사는 1H25·2H25 다. 소스의 원래 이름(2Q25·4Q25)을
+    # 쓰면 부문 차트만 분기 이름이 되어 사이가 빈 것처럼 보이고 YoY 도 못 짝짓는다(홍콩 1,248곳, 11/01).
+    raw = (fin_rec or {}).get("points") or []
+    packed = [x[0] for x in (pack_fin(fin_rec).get("points") or [])] if fin_rec else []
     fp = []
-    for p in (fin_rec or {}).get("points") or []:
+    for k, p in enumerate(raw):
         if not p.get("end"):
             continue
         try:
-            fp.append((date.fromisoformat(p["end"]), p))
+            fp.append((date.fromisoformat(p["end"]), dict(p, label=packed[k] if k < len(packed) else p.get("label"))))
         except ValueError:
             pass
-    fp.sort()
+    fp.sort(key=lambda x: x[0])
 
     out = []
     for r in pts:
