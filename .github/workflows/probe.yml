@@ -37,6 +37,8 @@ jobs:
               j=json.loads(urllib.request.urlopen(urllib.request.Request(u,headers={"User-Agent":"Mozilla/5.0"}),timeout=30).read())
               r=j["chart"]["result"][0]; c=r["indicators"]["quote"][0]["close"]
               out[sym]=[[t,round(v,2)] for t,v in zip(r["timestamp"],c) if v is not None]
+          sub=json.loads(urllib.request.urlopen(urllib.request.Request("https://data.sec.gov/submissions/CIK0001018724.json",headers={"User-Agent":"Earning Samurai Calendar (cbpark@wisdomasset.co.kr)"}),timeout=30).read())["filings"]["recent"]
+          out["ev"]=[[d,a] for f,d,a,it in zip(sub["form"],sub["filingDate"],sub["acceptanceDateTime"],sub["items"]) if f=="8-K" and "2.02" in it]
           print(json.dumps(out))
           EOF2
           cp /tmp/px.json /tmp/probe.txt
