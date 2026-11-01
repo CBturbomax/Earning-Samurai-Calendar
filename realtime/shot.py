@@ -188,7 +188,7 @@ def _worker(get_html):
                     ver = _page["ver"]
                 if ev is None:                                   # 미리 띄워 두기만
                     continue
-                n = page.evaluate("([ev, gh]) => { window.TGSHOT = 1; return tgBuild(ev, gh); }", [ev, gh])
+                n = page.evaluate("([ev, gh]) => tgBuild(ev, gh)", [ev, gh])
                 page.add_style_tag(content=".finbox{overflow:visible!important}.finsvg{min-width:0!important;width:100%!important}")
                 box["pngs"] = [el.screenshot(type="png") for el in page.query_selector_all("#tgshot .tgpart")][:n]
             except Exception:                                    # noqa: BLE001
