@@ -1291,8 +1291,7 @@ def jphist(n, since="2017-01-01", only_rev=False):
         if k.startswith("jp:") and rs:
             caps[k[3:]] = max((r[11] or 0) for r in rs)
     done = set(JH.get("done_rev" if only_rev else "done") or [])
-    if not only_rev:
-        JH["want"] = max(JH.get("want") or 0, min(n, len(caps)))
+    JH["want_rev" if only_rev else "want"] = max(JH.get("want_rev" if only_rev else "want") or 0, min(n, len(caps)))
     todo = [c for c, _ in sorted(caps.items(), key=lambda x: -x[1]) if c not in done][:n]
     log("일본 옛 결산단신 시작", len(todo), "종목")
     got = [0, 0, "9999"]                                         # 종목 · 문서 · 받은 가장 옛 공시일
@@ -1358,6 +1357,65 @@ def jphist(n, since="2017-01-01", only_rev=False):
     with JH_LOCK:
         JH_PATH.write_text(json.dumps(JH, ensure_ascii=False))
     log("일본 옛 결산단신 끝", got[0], "종목 · 문서", got[1])
+
+
+def irhist(since="2018-01-01"):
+    """결산단신엔 전망이 없고 설명자료(IR 덱)에만 다음 분기 전망을 싣는 회사(르네사스형) — 옛 덱까지 읽어 분기 가이던스 이력을.
+    대상은 'NOG'(연간 전망 없음)이면서 시총 1조 원 이상. 덱 한 장에 AI 한 번이라 대상은 좁게, 본 덱은 JH["done_ir"] 로 건너뛴다."""
+    with H.lock:
+        rows = dict(H.rows_by_key)
+    fx = float(H.D.get("usdKrw") or 1400)
+    caps = {k[3:]: max((r[11] or 0) for r in rs) for k, rs in rows.items() if k.startswith("jp:") and rs}
+    todo = sorted((c for c in NOG if caps.get(c, 0) * 1e9 * fx >= 1e12), key=lambda c: -caps.get(c, 0))
+    done = set(JH.get("done_ir") or [])
+    log("IR 덱 옛 전망 시작", len(todo), "종목")
+    n_doc = n_got = 0
+    for code in todo:
+        try:
+            j = json.loads(http_get(f"https://webapi.yanoshin.jp/webapi/tdnet/list/{code}.json?limit=300",
+                                    ua=BROWSER_UA, timeout=30))
+        except Exception as e:                                   # noqa: BLE001
+            log("IR 덱 목록 실패", code, repr(e)[:100])
+            continue
+        items = [it.get("Tdnet", it) for it in (j.get("items") or [])]
+        items = sorted((it for it in items if (it.get("pubdate") or "")[:10] >= since and IR_TITLE.search(it.get("title") or "")
+                        and re.search(r"決算|四半期|Results|Earnings", it.get("title") or "")
+                        and (it.get("document_url") or "").lower().endswith(".pdf")), key=lambda it: it["pubdate"])
+        name = next((r[2] for r in rows.get("jp:" + code, []) if r[2]), code)
+        for it in items:
+            pn = it["document_url"].rsplit("/", 1)[-1]
+            if pn in done:
+                continue
+            day = it["pubdate"][:10]
+            pdf = None
+            for url in (f"https://www2.jpx.co.jp/disc/{code}0/" + pn,
+                        f"https://finance-frontend-pc-dist.west.edge.storage-yahoo.jp/disclosure/{day.replace('-', '')}/{pn[4:]}",
+                        "https://www.release.tdnet.info/inbs/" + pn):
+                try:
+                    pdf = http_get(url, ua=BROWSER_UA, timeout=40, binary=True)
+                    break
+                except Exception:                                # noqa: BLE001
+                    continue
+            n_doc += 1
+            nq = None
+            if pdf:
+                try:
+                    nq = brief.next_q_from_text(name, brief.hk_text(pdf)[:20000])
+                except Exception as e:                           # noqa: BLE001
+                    log("IR 덱 읽기 실패", code, repr(e)[:100])
+            if nq:
+                rec = {"start": "", "end": nq["end"] + "-28", "rev": nq.get("rev"), "opi": nq.get("op"), "ni": None, "months": 3, "kind": "Q1"}
+                if GQ.add(code, rec, None, day, src="ir"):
+                    n_got += 1
+            with JH_LOCK:
+                JH.setdefault("done_ir", []).append(pn)
+                done.add(pn)
+                if n_doc % 10 == 0:
+                    JH_PATH.write_text(json.dumps(JH, ensure_ascii=False))
+        log("IR 덱 옛 전망", code, name, "덱", len(items))
+    with JH_LOCK:
+        JH_PATH.write_text(json.dumps(JH, ensure_ascii=False))
+    log("IR 덱 옛 전망 끝", len(todo), "종목 · 덱", n_doc, "· 분기 전망", n_got)
 
 
 def segfill_jp(n):
@@ -2514,6 +2572,8 @@ def replay_run(lines):
             except Exception as e:                               # noqa: BLE001
                 log("xbrldump 실패", repr(e)[:200])
             continue
+        if ln.strip() == "irhist":
+            threading.Thread(target=safe, args=(irhist,), daemon=True, name="irhist").start()
         if ln.strip() == "jphistrev":                   # 업적예상 수정 공시만 2017년치부터(가이던스 변천의 '수정' 막대)
             threading.Thread(target=safe, args=(jphist, 4000, "2017-01-01", True), daemon=True, name="jphistrev").start()
             continue
@@ -2635,9 +2695,13 @@ def fill_loop():
     while True:
         if JH.get("want") and len(JH["done"]) < JH["want"] and not any(t.name == "jphist" for t in threading.enumerate()):
             threading.Thread(target=safe, args=(jphist, JH["want"]), daemon=True, name="jphist").start()
+        if JH.get("want_rev") and len(JH.get("done_rev") or []) < JH["want_rev"] and not any(t.name == "jphistrev" for t in threading.enumerate()):
+            threading.Thread(target=safe, args=(jphist, JH["want_rev"], "2017-01-01", True), daemon=True, name="jphistrev").start()
         safe(segfill, 500)
         safe(segfill_jp, 300)
         safe(guide_audit)
+        if not any(t.name == "irhist" for t in threading.enumerate()):   # 본 덱은 건너뛰므로 평소엔 새 덱만 읽는다
+            threading.Thread(target=safe, args=(irhist,), daemon=True, name="irhist").start()
         time.sleep(2 * 3600)
 
 
