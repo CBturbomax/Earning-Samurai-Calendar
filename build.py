@@ -3958,6 +3958,8 @@ td.dim { color:var(--mute); font-size:18px; }
 .finlegend .opm::before { color:#ED7D31; }
 .finlegend .yoy::before { color:#5B9BD5; }
 .finlegend .src { margin-left:auto; font-size:14px; }
+.finlegend .seglg { cursor:pointer; user-select:none; }
+.finlegend .seglg.off { opacity:.35; text-decoration:line-through; }
 .epsrow { display:flex; gap:8px; flex-wrap:wrap; margin-bottom:12px; }
 .epsbox { background:#141c24; border:1px solid var(--line); border-radius:7px;
           padding:7px 11px; font-size:15px; }
@@ -5937,67 +5939,109 @@ function segChart(sg, cur) {
   return html;
 }
 
+// 사업부별 매출 + 사업부별 YoY — 범례를 누르면 그 선을 끄고 켠다(회원님 11/01: "보기 싫은 건 지우고 보고 싶은 것만").
+// 두 그림이 같은 범례를 쓴다. 끈 선은 축 계산에서도 빠져 남은 것들이 크게 보인다.
+const SEGR = {};
+let SEGN = 0;
 function segDraw(sg, names, pts, cur, tag) {
-  const all = pts.flatMap(r => r.slice(1).filter(v => v != null));
-  const maxRaw = Math.max(...all, 1), minRaw = Math.min(...all, 0);
-  const U = unitFor(maxRaw, cur);
-  const sc = v => v / U.div;
-  const rmax = niceMax(sc(maxRaw)), rmin = minRaw < 0 ? -niceMax(-sc(minRaw)) : 0;
-
+  const id = 'sg' + (++SEGN);
+  SEGR[id] = { sg, names, pts, cur, tag, off: new Set() };
+  return '<div class="segwrap" data-sid="' + id + '">' + segRender(id) + '</div>';
+}
+function segLines(names, pts, vis, opt) {
+  // 선 그림 하나 — opt: { vals(i,j) -> 값|null, fmt, unitLab, clip:[lo,hi] }
   const n = pts.length;
-  const W = Math.max(880, n * 46), L = 66, R = 20, B = 42, T = 30, H = 360;
+  const W = Math.max(880, n * 46), L = 66, R = 20, B = 42, T = 30, H = opt.H || 360;
   const BASE = H - B, step = (W - L - R) / n;
   const cx = i => L + step * i + step / 2;
-  const y = v => BASE - (BASE - T) * (v - rmin) / (rmax - rmin);
-
+  const all = [];
+  names.forEach((nm, j) => { if (vis(j)) pts.forEach((r, i) => { const v = opt.vals(i, j); if (v != null) all.push(v); }); });
+  if (!all.length) return '';
+  let lo, hi;
+  if (opt.pct) {
+    const rec = [];                                          // 최근 12칸의 값으로 위 끝을 잡는다(yoyRange)
+    names.forEach((nm, j) => { if (vis(j)) for (let i = Math.max(0, n - 12); i < n; i++) { const v = opt.vals(i, j); if (v != null) rec.push(v); } });
+    [lo, hi] = yoyRange(all, rec);
+  } else {
+    const mx = Math.max(...all, 1), mn = Math.min(...all, 0);
+    hi = niceMax(mx); lo = mn < 0 ? -niceMax(-mn) : 0;
+  }
+  const y = v => BASE - (BASE - T) * (Math.max(lo, Math.min(hi, v)) - lo) / (hi - lo);
   let body = '';
-  const used = pts.map(() => []);                 // 칸마다 이미 쓴 글자 높이 — 겹치면 비켜 적는다
+  const used = pts.map(() => []);
   names.forEach((nm, j) => {
+    if (!vis(j)) return;
     const c = SEG_COLORS[j % SEG_COLORS.length];
-    const ps = pts.map((r, i) => r[j + 1] == null ? null : [i, sc(r[j + 1])]).filter(Boolean);
+    const ps = pts.map((r, i) => { const v = opt.vals(i, j); return v == null ? null : [i, v]; }).filter(Boolean);
     if (!ps.length) return;
-    // 빈 칸에서는 선을 끊는다 — 없는 값을 이어 그리면 거짓말이 된다.
     let d = '', prev = null;
     ps.forEach(([i, v]) => { d += (prev !== null && i === prev + 1 ? 'L' : 'M') + cx(i).toFixed(1) + ',' + y(v).toFixed(1); prev = i; });
     body += '<path d="' + d + '" fill="none" stroke="' + c + '" stroke-width="2.2"/>';
     ps.forEach(([i, v]) => {
       const yy = y(v);
       body += '<circle class="dot" cx="' + cx(i).toFixed(1) + '" cy="' + yy.toFixed(1) + '" r="3" fill="' + c + '"><title>' +
-        esc(nm) + ' ' + pts[i][0] + ' ' + fmtN(v) + '</title></circle>';
-      let ty = yy - 8;
-      if (used[i].some(u => Math.abs(u - ty) < 13)) ty = yy + 16;
-      if (used[i].some(u => Math.abs(u - ty) < 13)) return;      // 그래도 겹치면 숫자는 생략(점·선은 남는다)
+        esc(nm) + ' ' + pts[i][0] + ' ' + opt.fmt(v) + '</title></circle>';
+      let ty = v > hi ? yy + 16 : yy - 8;                 // 위로 넘친 점은 숫자를 점 아래에(축 밖으로 안 나가게)
+      if (used[i].some(u => Math.abs(u - ty) < 13)) ty = v > hi ? yy + 30 : yy + 16;
+      if (used[i].some(u => Math.abs(u - ty) < 13)) return;
       used[i].push(ty);
       body += '<text class="vn" x="' + cx(i).toFixed(1) + '" y="' + ty.toFixed(1) + '" text-anchor="middle" style="fill:' + c +
-        (i === n - 1 ? ';font-weight:800' : '') + '">' + fmtN(v) + '</text>';
+        (i === n - 1 ? ';font-weight:800' : '') + '">' + opt.fmt(v) + '</text>';
     });
   });
-  const axis = (rmin < 0 ? [rmin, 0, rmax] : [0, rmax / 2, rmax]).map(v =>
-    '<line class="' + (v === 0 && rmin < 0 ? 'fzero' : 'fz') + '" x1="' + L + '" y1="' + y(v).toFixed(1) + '" x2="' + (W - R) +
-    '" y2="' + y(v).toFixed(1) + '"/>' +
-    '<text class="fx" x="' + (L - 8) + '" y="' + (y(v) + 4).toFixed(1) +
-    '" text-anchor="end">' + fmtN(v) + '</text>').join('');
+  const ticks = opt.pct ? [lo, 0, hi].filter((v, k, a) => k === 1 || Math.abs(v) > (hi - lo) * 0.15)
+                        : (lo < 0 ? [lo, 0, hi] : [0, hi / 2, hi]);
+  const axis = ticks.map(v =>
+    '<line class="' + (v === 0 && (lo < 0) ? 'fzero' : 'fz') + '" x1="' + L + '" y1="' + y(v).toFixed(1) + '" x2="' + (W - R) +
+    '" y2="' + y(v).toFixed(1) + '"/><text class="fx" x="' + (L - 8) + '" y="' + (y(v) + 4).toFixed(1) +
+    '" text-anchor="end">' + (opt.pct ? pcN(v) : fmtN(v)) + '</text>').join('');
   const xlab = pts.map((r, i) =>
     ((i > 0 && /^1[QH]/.test(r[0])) ? '<line x1="' + (cx(i) - step / 2).toFixed(1) + '" y1="' + (H - B + 3) + '" x2="' +
       (cx(i) - step / 2).toFixed(1) + '" y2="' + (H - 2) + '" style="stroke:rgba(255,255,255,.22);stroke-width:1"/>' : '') +
     '<text class="fx' + (i === n - 1 ? ' now' : '') + '" x="' + cx(i).toFixed(1) +
     '" y="' + (H - B + 20) + '" text-anchor="middle" style="font-size:13px">' + r[0] + '</text>').join('');
-
-  // 부문이 매출 전부를 설명하지 않는 회사가 흔하다(본사 몫·기타·조정). 그럴 때
-  // 막대 높이를 총매출로 읽으면 틀린다. 얼마를 덮는지 적어둔다.
-  // 사업부문이 없어 제품이나 지역으로 쪼갠 회사가 있다(애플의 영업부문은 지역).
-  // 제목을 그대로 '사업부별'이라 쓰면 거짓말이라 축을 그대로 적는다.
-  return '<div class="finhead sub">' + esc(sg.ax || '사업부') + '별 매출' +
-    (tag ? ' <span class="now">' + esc(tag) + '</span>' : '') +
-    '<span class="dim">(단위: ' + esc(U.ko) +
-    (sg.cov ? ' · 총매출의 ' + sg.cov + '%' +
-       (sg.cov > 105 ? ' — 부문끼리 주고받은 것 포함' : '') : '') + ')</span></div>' +
-    '<div class="finbox"><svg viewBox="0 0 ' + W + ' ' + H + '" class="finsvg">' +
-    axis + body + xlab + '</svg></div>' +
-    '<div class="finlegend">' + names.map((nm, j) => !pts.some(r => r[j + 1] != null) ? '' :
-      '<span class="lg" style="--c:' + SEG_COLORS[j % SEG_COLORS.length] + '">' +
-      esc(nm) + '</span>').join('') + '</div>';
+  return '<div class="finbox"><svg viewBox="0 0 ' + W + ' ' + H + '" class="finsvg">' + axis + body + xlab + '</svg></div>';
 }
+function segRender(id) {
+  const { sg, names, pts, cur, tag, off } = SEGR[id];
+  const has = j => pts.some(r => r[j + 1] != null);
+  const vis = j => has(j) && !off.has(j);
+  const allV = pts.flatMap(r => r.slice(1).filter(v => v != null));
+  const U = unitFor(Math.max(...allV.filter((v, k) => true), 1), cur);
+  const top = segLines(names, pts, vis, { vals: (i, j) => pts[i][j + 1] == null ? null : pts[i][j + 1] / U.div, fmt: fmtN });
+  // 전년 같은 기간과 견준 성장률 — 분기 회사는 4칸, 반기 회사는 2칸 전. 앞 기간이 없거나 0 이하면 비운다.
+  // 전년 같은 분기·반기를 **이름으로** 찾는다(3Q26 -> 3Q25). 칸 수로 세면 빈 분기가 있는 회사에서 엉뚱한 칸과 견준다.
+  // 그림은 1Q18 부터지만 2017년 값(sg.pts 전체)으로 1Q18 의 YoY 도 낸다.
+  const back = pts.some(r => /H/.test(r[0])) ? 2 : 4;
+  const byLab = {};
+  (sg.names === names ? (sg.pts || []) : []).concat(pts).forEach(r => { byLab[r[0]] = r; });
+  const prevLab = l => { const m = /^(\d)([QH])(\d\d)$/.exec(l); return m ? m[1] + m[2] + String(+m[3] - 1).padStart(2, '0') : null; };
+  const yoy = (i, j) => { const a = pts[i][j + 1], pr = byLab[prevLab(pts[i][0])], b = pr ? pr[j + 1] : null;
+    return (a != null && b != null && b > 0) ? a / b - 1 : null; };
+  const pcS = v => (v > 0 ? '+' : '') + (v * 100).toFixed(0) + '%';
+  const bot = segLines(names, pts, vis, { vals: yoy, fmt: pcS, pct: true, H: 320 });
+  const ax = esc(sg.ax || '사업부');
+  return '<div class="finhead sub">' + ax + '별 매출' + (tag ? ' <span class="now">' + esc(tag) + '</span>' : '') +
+    '<span class="dim">(단위: ' + esc(U.ko) +
+    (sg.cov ? ' · 총매출의 ' + sg.cov + '%' + (sg.cov > 105 ? ' — 부문끼리 주고받은 것 포함' : '') : '') + ')</span></div>' +
+    top +
+    (bot ? '<div class="finhead sub">' + ax + '별 매출 성장률 (YoY)<span class="dim">(전년 같은 ' + (back === 2 ? '반기' : '분기') + ' 대비)</span></div>' + bot : '') +
+    '<div class="finlegend">' + names.map((nm, j) => !has(j) ? '' :
+      '<span class="lg seglg' + (off.has(j) ? ' off' : '') + '" data-sid="' + id + '" data-j="' + j + '" style="--c:' +
+      SEG_COLORS[j % SEG_COLORS.length] + '">' + esc(nm) + '</span>').join('') +
+    '<span class="src" style="font-size:13px">범례를 누르면 끄고 켭니다</span></div>';
+}
+document.addEventListener('click', e => {
+  const t = e.target.closest && e.target.closest('.seglg');
+  if (!t) return;
+  const R = SEGR[t.dataset.sid]; if (!R) return;
+  const j = +t.dataset.j;
+  R.off.has(j) ? R.off.delete(j) : R.off.add(j);
+  const vis = R.names.filter((_, k) => R.pts.some(r => r[k + 1] != null) && !R.off.has(k));
+  if (!vis.length) R.off.delete(j);                    // 다 끄면 빈 그림이 된다 — 마지막 하나는 안 꺼진다
+  const w = document.querySelector('.segwrap[data-sid="' + t.dataset.sid + '"]');
+  if (w) w.innerHTML = segRender(t.dataset.sid);
+});
 
 /* 숫자에서 단위를 뗀다. 막대마다 '억'·'B' 를 붙이면 자릿수가 눈에 안 들어온다.
    대신 눈금 하나를 골라 제목에 '(단위: bil JPY)' 로 한 번만 적는다.
@@ -6022,6 +6066,18 @@ function niceMax(v) {
   return p * 10;
 }
 const pcN = v => (v * 100).toFixed(0) + '%';
+/* 성장률 축 — 회원님(11/01): 코로나 전후(20~22년) -50%·+180% 같은 값 때문에 최근이 납작해진다,
+   역성장은 -20% 밑으로는 안 봐도 된다. 그래서 아래는 -20% 에서 자르고, 위는 **최근 12기간**의 최댓값으로 잡는다.
+   넘치는 점은 축 끝에 붙이되 숫자는 실제 값을 적는다(눌러 담되 속이지 않는다). */
+function yoyRange(vals, recent) {
+  const r = (recent && recent.length ? recent : vals);
+  let lo = Math.max(-0.2, Math.min(0, ...vals)), hi = Math.max(0.05, ...r.filter(v => v > -0.2));
+  const stp = (hi - lo) > 0.8 ? 0.2 : (hi - lo) > 0.3 ? 0.1 : 0.05;
+  lo = lo < 0 ? Math.max(-0.2, Math.floor(lo / stp) * stp) : 0;
+  hi = Math.ceil(hi / stp + 0.25) * stp;
+  return [lo, hi];
+}
+
 
 function finChart(f) {
   /* 그림 둘.
@@ -6141,10 +6197,8 @@ function finChart(f) {
   if (have.length >= 2) {
     const H2 = 300, T2 = 36, BASE2 = H2 - B;     // 성장률이 잘 보이게 키웠다(회원님 10/31)
     const vs = have.map(o => o[1]);
-    let lo = Math.min(0, ...vs), hi = Math.max(0, ...vs);
-    const pad = (hi - lo) * 0.22 || 0.05;
-    lo -= pad; hi += pad;
-    const gy = v => BASE2 - (BASE2 - T2) * (v - lo) / (hi - lo);
+    const [lo, hi] = yoyRange(vs, vs.slice(-12));
+    const gy = v => BASE2 - (BASE2 - T2) * (Math.max(lo, Math.min(hi, v)) - lo) / (hi - lo);
     const ticks = (lo < 0 && hi > 0) ? [lo, 0, hi] : [lo, (lo + hi) / 2, hi];
     const axis = ticks.map(v =>
       '<line class="' + (v === 0 ? 'fzero' : 'fz') + '" x1="' + L + '" y1="' + gy(v).toFixed(1) +
@@ -6157,7 +6211,7 @@ function finChart(f) {
       have.map((o, j) => (j ? 'L' : 'M') + cx(o[0]).toFixed(1) + ',' + gy(o[1]).toFixed(1)).join(' ') +
       '" style="stroke-width:2.6"/>' + have.map(o =>
         '<circle class="dot yoy" cx="' + cx(o[0]).toFixed(1) + '" cy="' + gy(o[1]).toFixed(1) + '" r="3.8"/>' +
-        '<text class="vn yoy" x="' + cx(o[0]).toFixed(1) + '" y="' + (gy(o[1]) + (o[1] < 0 ? 19 : -10)).toFixed(1) +
+        '<text class="vn yoy" x="' + cx(o[0]).toFixed(1) + '" y="' + (gy(o[1]) + (o[1] < 0 || o[1] > hi ? 19 : -10)).toFixed(1) +
         '" text-anchor="middle" style="font-size:13px;font-weight:800' + (o[1] < 0 ? ';fill:#5fb3ff' : '') + '">' + pcN(o[1]) + '</text>').join('') +
       xlab(H2) + '</svg></div>';
   }
