@@ -2741,7 +2741,7 @@ class Handler(BaseHTTPRequestHandler):
             self.head()
             self.wfile.write(json.dumps({"ok": True, "events": len(S.events), "subs": len(TG.subs),
                                          "history": int(time.time() - H.ts),
-                                         "volume": os.path.ismount(str(DATA)), "llm": LLM_TEST}).encode())
+                                         "volume": os.path.ismount(str(DATA)), "guideRev": [len(getattr(GD, "rev", {})), sum(len(x) for v in getattr(GD, "rev", {}).values() for x in v.values())], "doneRev": len(JH.get("done_rev") or []), "doneIr": len(JH.get("done_ir") or []), "llm": LLM_TEST}).encode())
         elif path == "/api/live":
             self.head()
             cut = (datetime.now(timezone.utc) - timedelta(days=4)).isoformat()
