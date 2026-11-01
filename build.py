@@ -584,7 +584,7 @@ def hk_long_fin(out):
       2. 같은 시작일의 앞 누계를 빼서 분기(1분기·9개월 누계를 낸 회사)·반기로 만든 뒤
       3. stockanalysis 와 겹치는 기간의 매출이 2% 안에서 맞을 때만(80% 이상) 쓴다 — 매출 항목(营业额·营运收入)과
          환율 기준도 여기서 맞는 쪽을 고른다. 안 맞으면 안 쓴다(레노버처럼).
-    stockanalysis 에 있는 기간은 그대로 두고 **그 앞 기간만** 채운다. 영업이익 정의가 다르면(BYD 经营溢利 ≠ opinc)
+    stockanalysis 에 있는 기간은 그대로 두고 **없는 기간만**(앞·가운데·최근) 채운다. 영업이익 정의가 다르면(BYD 经营溢利 ≠ opinc)
     채운 기간의 영업이익은 비운다 — 이익률 선이 꺾여 거짓말을 하지 않게."""
     try:
         emf = json.loads((HERE / "data" / "financials_hk_em.json").read_text(encoding="utf-8"))
@@ -671,8 +671,8 @@ def hk_long_fin(out):
         _, pts, pairs = best
         opi_ok = [abs(p["opi"] / q["opi"] - 1) <= 0.05 for p, q in pairs if p.get("opi") and q.get("opi")]
         opi_same = bool(opi_ok) and sum(opi_ok) / len(opi_ok) >= 0.8
-        first = min(sp)
-        add = [dict(p, label=q_label(p["end"])) for p in pts if p["end"] < first and not near(p["end"])]
+        # stockanalysis 에 없는 기간은 **앞·가운데·뒤 어디든** 채운다(CATL 3Q25 처럼 가운데가 빈 회사, 11/01).
+        add = [dict(p, label=q_label(p["end"])) for p in pts if not near(p["end"])]
         if not add:
             continue
         base = list(sa["points"])
