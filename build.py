@@ -6038,7 +6038,7 @@ function segLines(names, pts, vis, opt) {
       const yy = y(v);
       body += '<circle class="dot" cx="' + cx(i).toFixed(1) + '" cy="' + yy.toFixed(1) + '" r="3" fill="' + c + '"><title>' +
         esc(nm) + ' ' + pts[i][0] + ' ' + opt.fmt(v) + '</title></circle>';
-      let ty = v > hi ? yy + 16 : yy - 8;                 // 위로 넘친 점은 숫자를 점 아래에(축 밖으로 안 나가게)
+      let ty = v > hi ? yy + 16 : yy - 8;                 // 위로 넘친 점은 숫자를 점 아래에, 아래로 넘친 점은 위에(축 이름과 안 겹치게)
       if (used[i].some(u => Math.abs(u - ty) < 13)) ty = v > hi ? yy + 30 : yy + 16;
       if (used[i].some(u => Math.abs(u - ty) < 13)) return;
       used[i].push(ty);
@@ -6269,7 +6269,7 @@ function finChart(f) {
       have.map((o, j) => (j ? 'L' : 'M') + cx(o[0]).toFixed(1) + ',' + gy(o[1]).toFixed(1)).join(' ') +
       '" style="stroke-width:2.6"/>' + have.map(o =>
         '<circle class="dot yoy" cx="' + cx(o[0]).toFixed(1) + '" cy="' + gy(o[1]).toFixed(1) + '" r="3.8"/>' +
-        '<text class="vn yoy" x="' + cx(o[0]).toFixed(1) + '" y="' + (gy(o[1]) + (o[1] < 0 || o[1] > hi ? 19 : -10)).toFixed(1) +
+        '<text class="vn yoy" x="' + cx(o[0]).toFixed(1) + '" y="' + (gy(o[1]) + ((o[1] < 0 && o[1] >= lo) || o[1] > hi ? 19 : -10)).toFixed(1) +
         '" text-anchor="middle" style="font-size:13px;font-weight:800' + (o[1] < 0 ? ';fill:#5fb3ff' : '') + '">' + pcN(o[1]) + '</text>').join('') +
       xlab(H2) + '</svg></div>';
   }
