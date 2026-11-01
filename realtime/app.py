@@ -270,6 +270,40 @@ class Guide:
         tmp.write_text(json.dumps(self.own))
         tmp.replace(self.path)
 
+    def add_rev(self, code, fc, published):
+        """업적예상 수정 공시 — 결산단신 사이에 바뀐 연간 예상(연결만). {코드: {결산기: [[공시일, [매출, 영업이익, 순이익]], …]}}.
+        같은 날 결산단신과 함께 낸 수정은 그 결산단신 단계 값과 같으면 적지 않는다(같은 숫자 두 번)."""
+        if not fc or not fc.get("end") or all(fc.get(k) is None for k in ("rev", "opi", "ni")):
+            return None
+        fy = fc["end"][:7]
+        now = [fc.get("rev"), fc.get("opi"), fc.get("ni")]
+        with self.lock:
+            if not hasattr(self, "rev"):
+                try:
+                    self.rev = json.loads((DATA / "guide_rev_jp.json").read_text())
+                except (OSError, ValueError):
+                    self.rev = {}
+            known = list(self.get(code).get(fy, {}).values()) + [v for _, v in self.rev.get(code, {}).get(fy, [])]
+            same = lambda a, b: a and b and all((x is None or y is None or abs(x - y) <= max(1, abs(y) * 1e-4)) for x, y in zip(a, b))   # noqa: E731
+            lst = self.rev.setdefault(code, {}).setdefault(fy, [])
+            if any(d == published for d, _ in lst) or any(same(now, k) for k in known[-2:]):
+                return None
+            prev = (lst[-1][1] if lst else None) or next((v for v in reversed(list(self.get(code).get(fy, {}).values())) if v), None)
+            lst.append([published, now])
+            lst.sort()
+            tmp = (DATA / "guide_rev_jp.json").with_suffix(".tmp")
+            tmp.write_text(json.dumps(self.rev))
+            tmp.replace(DATA / "guide_rev_jp.json")
+        return {"stage": "수정", "prev": prev, "now": now, "end": fc["end"]}
+
+    def revs(self, code):
+        if not hasattr(self, "rev"):
+            try:
+                self.rev = json.loads((DATA / "guide_rev_jp.json").read_text())
+            except (OSError, ValueError):
+                self.rev = {}
+        return self.rev.get(code) or {}
+
     def put_us(self, code, published, g):
         """미국 — 보도자료 연간 전망 {fy_end, rev, op, eps} 를 그 단계에 적는다. [매출, 영업이익, EPS]."""
         st = stage_of(g["fy_end"] + "-28", published)
@@ -719,6 +753,8 @@ def finish(ev, point=None):
         gh = None                                                # 한두 칸짜리 변천은 안 그린다
     if ev["mkt"] == "jp" and GQ.get(ev["code"]):
         gh = dict(gh or {}, _q=GQ.get(ev["code"]))               # 분기 가이던스 vs 실제 그림(연간을 안 내는 회사)
+    if ev["mkt"] == "jp" and gh and GD.revs(ev["code"]):
+        gh = dict(gh, _r=GD.revs(ev["code"]))                    # 결산단신 사이의 업적예상 수정
     pngs = None
     if H.html:
         try:                                                     # 사이트 화면 그대로 찍는다
@@ -1241,7 +1277,10 @@ def jp_old_points(key):
             for en in sorted(q) if q[en].get("rev") and q[en]["rev"] > 0]
 
 
-def jphist(n, since="2017-01-01"):
+REV_TITLE = re.compile(r"業績予想.{0,12}修正|業績予想値.{0,6}修正")
+
+
+def jphist(n, since="2017-01-01", only_rev=False):
     """일본 옛 결산단신을 통째로 — 가이던스 변천(연간 예상)과 부문 누계(2024년부터 비던 3·4분기)를 같이 채운다.
     목록은 yanoshin TDnet API(2009년치부터, 문서번호·XBRL 이름), 파일은 JPX 공시 보관소(약 5~6년,
     www2.jpx.co.jp/disc/{코드}0/{파일}). TDnet 은 한 달만 남기고 InvestingWiki 는 하루 8천 건 한도라 직접 받는다."""
@@ -1251,8 +1290,8 @@ def jphist(n, since="2017-01-01"):
     for k, rs in rows.items():
         if k.startswith("jp:") and rs:
             caps[k[3:]] = max((r[11] or 0) for r in rs)
-    done = set(JH["done"])
-    JH["want"] = max(JH.get("want") or 0, min(n, len(caps)))
+    done = set(JH.get("done_rev" if only_rev else "done") or [])
+    JH["want_rev" if only_rev else "want"] = max(JH.get("want_rev" if only_rev else "want") or 0, min(n, len(caps)))
     todo = [c for c, _ in sorted(caps.items(), key=lambda x: -x[1]) if c not in done][:n]
     log("일본 옛 결산단신 시작", len(todo), "종목")
     got = [0, 0, "9999"]                                         # 종목 · 문서 · 받은 가장 옛 공시일
@@ -1273,8 +1312,9 @@ def jphist(n, since="2017-01-01"):
         except Exception as e:                                   # noqa: BLE001
             log("옛 결산단신 목록 실패", code, repr(e)[:120])
             return
+        ok = lambda t: (fj.TANSHIN.search(t) and not fj.NOT_TANSHIN.search(t)) or REV_TITLE.search(t)   # noqa: E731
         items = sorted((it for it in items if (it.get("pubdate") or "")[:10] >= since and it.get("url_xbrl")
-                        and fj.TANSHIN.search(it.get("title") or "") and not fj.NOT_TANSHIN.search(it.get("title") or "")),
+                        and ok(it.get("title") or "") and (not only_rev or REV_TITLE.search(it.get("title") or ""))),
                        key=lambda it: it["pubdate"])
         seg, fin = {}, {}
         for it in items:
@@ -1285,6 +1325,12 @@ def jphist(n, since="2017-01-01"):
                 continue                                         # 보관소에 없는 옛 파일(404)
             try:
                 vals = fj.read_summary(blob)
+                if vals and REV_TITLE.search(it.get("title") or ""):      # 업적예상 수정 — 결산단신 사이의 가이던스 변화
+                    fc = [r for r in fj.forecasts_from(vals) if r["kind"] == "FY" and r.get("cons") and not r.get("base")]
+                    if fc:
+                        GD.add_rev(code, max(fc, key=lambda r: r["end"]), it["pubdate"][:10])
+                    got[1] += 1
+                    continue
                 if vals:
                     GD.add(code, fj.forecast_from(vals), it["pubdate"][:10])
                     guide_q_from(code, vals, it["pubdate"][:10], quiet=True)     # 다음 분기(누계) 예상 이력도
@@ -1301,7 +1347,7 @@ def jphist(n, since="2017-01-01"):
                 JH["seg"].setdefault("jp:" + code, {}).update(seg)
             if fin:
                 JH["fin"].setdefault("jp:" + code, {}).update(fin)
-            JH["done"].append(code)
+            JH.setdefault("done_rev" if only_rev else "done", []).append(code)
             got[0] += 1
             if got[0] % 10 == 0:
                 JH_PATH.write_text(json.dumps(JH, ensure_ascii=False))
@@ -1311,6 +1357,66 @@ def jphist(n, since="2017-01-01"):
     with JH_LOCK:
         JH_PATH.write_text(json.dumps(JH, ensure_ascii=False))
     log("일본 옛 결산단신 끝", got[0], "종목 · 문서", got[1])
+
+
+def irhist(since="2018-01-01"):
+    """결산단신엔 전망이 없고 설명자료(IR 덱)에만 다음 분기 전망을 싣는 회사(르네사스형) — 옛 덱까지 읽어 분기 가이던스 이력을.
+    대상은 'NOG'(연간 전망 없음)이면서 시총 1조 원 이상. 덱 한 장에 AI 한 번이라 대상은 좁게, 본 덱은 JH["done_ir"] 로 건너뛴다."""
+    with H.lock:
+        rows = dict(H.rows_by_key)
+    fx = float(H.D.get("usdKrw") or 1400)
+    caps = {k[3:]: max((r[11] or 0) for r in rs) for k, rs in rows.items() if k.startswith("jp:") and rs}
+    todo = sorted((c for c in NOG if caps.get(c, 0) * 1e9 * fx >= 1e12), key=lambda c: -caps.get(c, 0))
+    done = set(JH.get("done_ir") or [])
+    log("IR 덱 옛 전망 시작", len(todo), "종목")
+    n_doc = n_got = 0
+    for code in todo:
+        try:
+            j = json.loads(http_get(f"https://webapi.yanoshin.jp/webapi/tdnet/list/{code}.json?limit=300",
+                                    ua=BROWSER_UA, timeout=30))
+        except Exception as e:                                   # noqa: BLE001
+            log("IR 덱 목록 실패", code, repr(e)[:100])
+            continue
+        items = [it.get("Tdnet", it) for it in (j.get("items") or [])]
+        t_ok = lambda t: ((IR_TITLE.search(t) and re.search(r"決算|四半期|Results|Earnings", t))   # noqa: E731
+                          or re.match(r"\s*業績予想に関するお知らせ", t))       # 르네사스는 다음 분기 전망을 이 공시로 따로 낸다
+        items = sorted((it for it in items if (it.get("pubdate") or "")[:10] >= since and t_ok(it.get("title") or "")
+                        and (it.get("document_url") or "").lower().endswith(".pdf")), key=lambda it: it["pubdate"])
+        name = next((r[2] for r in rows.get("jp:" + code, []) if r[2]), code)
+        for it in items:
+            pn = it["document_url"].rsplit("/", 1)[-1]
+            if pn in done:
+                continue
+            day = it["pubdate"][:10]
+            pdf = None
+            for url in (f"https://www2.jpx.co.jp/disc/{code}0/" + pn,
+                        f"https://finance-frontend-pc-dist.west.edge.storage-yahoo.jp/disclosure/{day.replace('-', '')}/{pn[4:]}",
+                        "https://www.release.tdnet.info/inbs/" + pn):
+                try:
+                    pdf = http_get(url, ua=BROWSER_UA, timeout=40, binary=True)
+                    break
+                except Exception:                                # noqa: BLE001
+                    continue
+            n_doc += 1
+            nq = None
+            if pdf:
+                try:
+                    nq = brief.next_q_from_text(name, brief.hk_text(pdf)[:20000])
+                except Exception as e:                           # noqa: BLE001
+                    log("IR 덱 읽기 실패", code, repr(e)[:100])
+            if nq:
+                rec = {"start": "", "end": nq["end"] + "-28", "rev": nq.get("rev"), "opi": nq.get("op"), "ni": None, "months": 3, "kind": "Q1"}
+                if GQ.add(code, rec, None, day, src="ir"):
+                    n_got += 1
+            with JH_LOCK:
+                JH.setdefault("done_ir", []).append(pn)
+                done.add(pn)
+                if n_doc % 10 == 0:
+                    JH_PATH.write_text(json.dumps(JH, ensure_ascii=False))
+        log("IR 덱 옛 전망", code, name, "덱", len(items))
+    with JH_LOCK:
+        JH_PATH.write_text(json.dumps(JH, ensure_ascii=False))
+    log("IR 덱 옛 전망 끝", len(todo), "종목 · 덱", n_doc, "· 분기 전망", n_got)
 
 
 def segfill_jp(n):
@@ -1758,7 +1864,7 @@ def jp_seg_text(blob):
     return best
 
 
-IR_TITLE = re.compile(r"説明資料|補足資料|プレゼンテーション|決算概要|Presentation|ハイライト")
+IR_TITLE = re.compile(r"説明資料|説明会資料|補足資料|プレゼンテーション|決算概要|Presentation|ハイライト")
 
 
 def jp_ir_text(code, day, tries=3):
@@ -2173,14 +2279,22 @@ def jp_pre_process(row, day, replay=False):
     except Exception as e:                                       # noqa: BLE001
         log("적시공시 PDF 실패", code, repr(e)[:120])
         return
+    if row.get("zip") and REV_TITLE.search(row["title"]):      # 업적예상 수정 XBRL — 직전·새 예상이 칸으로 다 있다(AI 보다 먼저)
+        try:
+            vals = fj.read_summary(http_get("https://www.release.tdnet.info/inbs/" + row["zip"], ua=BROWSER_UA, timeout=30, binary=True))
+            fc = [r for r in fj.forecasts_from(vals or {}) if r["kind"] == "FY" and r.get("cons") and not r.get("base")]
+            if fc:
+                ev["guide"] = GD.add_rev(code, max(fc, key=lambda r: r["end"]), day)
+        except Exception as e:                                   # noqa: BLE001
+            log("업적예상 수정 XBRL 실패", code, repr(e)[:100])
     p = brief.pre_read(ev["name"], row["title"], text)
     if not p:
         log("적시공시 숫자 없음", code, row["title"][:40])
         return
     ev["preInfo"] = p
-    if p.get("fy"):                                              # 연간 예상이 바뀌었으면 가이던스 변천에도 적는다
+    if p.get("fy") and not ev.get("guide"):                      # 연간 예상이 바뀌었으면 가이던스 변천에도 적는다
         g = p["fy"]
-        ev["guide"] = GD.add(code, {"end": g["fy_end"] + "-28", "rev": g.get("rev"), "opi": g.get("op"), "ni": g.get("eps")}, day)
+        ev["guide"] = GD.add_rev(code, {"end": g["fy_end"] + "-28", "rev": g.get("rev"), "opi": g.get("op"), "ni": g.get("eps")}, day)
     ev["_text"] = text
     log("적시공시", code, p["what"], p["period"])
     finish(ev, None)
@@ -2459,6 +2573,11 @@ def replay_run(lines):
             except Exception as e:                               # noqa: BLE001
                 log("xbrldump 실패", repr(e)[:200])
             continue
+        if ln.strip() == "irhist":
+            threading.Thread(target=safe, args=(irhist,), daemon=True, name="irhist").start()
+        if ln.strip() == "jphistrev":                   # 업적예상 수정 공시만 2017년치부터(가이던스 변천의 '수정' 막대)
+            threading.Thread(target=safe, args=(jphist, 4000, "2017-01-01", True), daemon=True, name="jphistrev").start()
+            continue
         if ln.strip() == "jphistagain":                 # 판독 규칙을 고쳤다 — 옛 결산단신을 처음부터 다시(가이던스 빈칸)
             with JH_LOCK:
                 JH["done"] = []
@@ -2577,9 +2696,13 @@ def fill_loop():
     while True:
         if JH.get("want") and len(JH["done"]) < JH["want"] and not any(t.name == "jphist" for t in threading.enumerate()):
             threading.Thread(target=safe, args=(jphist, JH["want"]), daemon=True, name="jphist").start()
+        if JH.get("want_rev") and len(JH.get("done_rev") or []) < JH["want_rev"] and not any(t.name == "jphistrev" for t in threading.enumerate()):
+            threading.Thread(target=safe, args=(jphist, JH["want_rev"], "2017-01-01", True), daemon=True, name="jphistrev").start()
         safe(segfill, 500)
         safe(segfill_jp, 300)
         safe(guide_audit)
+        if not any(t.name == "irhist" for t in threading.enumerate()):   # 본 덱은 건너뛰므로 평소엔 새 덱만 읽는다
+            threading.Thread(target=safe, args=(irhist,), daemon=True, name="irhist").start()
         time.sleep(2 * 3600)
 
 
@@ -2653,7 +2776,7 @@ class Handler(BaseHTTPRequestHandler):
             key = (urllib.parse.parse_qs(urllib.parse.urlparse(self.path).query).get("key") or [""])[0]
             mkt, _, code = key.partition(":")
             out = {"guide": {}, "fin": [], "noGuide": noguide_text(code) if mkt == "jp" else "",
-                   "gq": GQ.get(code) if mkt == "jp" else {}}
+                   "gq": GQ.get(code) if mkt == "jp" else {}, "gr": GD.revs(code) if mkt == "jp" else {}}
             try:
                 if mkt in ("jp", "us"):
                     out["guide"] = {fy: {s: v for s, v in st.items() if s != "실제"}
@@ -2670,7 +2793,8 @@ class Handler(BaseHTTPRequestHandler):
                 self.wfile.write(json.dumps(JH["fin"], ensure_ascii=False).encode())
         elif path == "/api/guide":                               # 빌드가 받아 사이트 상세창의 가이던스 변천으로
             self.head()
-            self.wfile.write(json.dumps({"jp": GD.own, "us": GU.own, "q": GQ.own}, ensure_ascii=False).encode())
+            GD.revs("")
+            self.wfile.write(json.dumps({"jp": GD.own, "us": GU.own, "q": GQ.own, "r": GD.rev}, ensure_ascii=False).encode())
         elif path == "/api/segko":
             self.head()
             self.wfile.write(json.dumps(SEGKO, ensure_ascii=False).encode())

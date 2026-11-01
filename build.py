@@ -1517,10 +1517,13 @@ def write_guide_site():
     for code, v in (srv.get("q") or {}).items():               # 연간 대신 다음 분기(누계) 예상만 내는 회사 — 분기 가이던스 vs 실제
         if v:
             out.setdefault(f"jp:{code}", {})["_q"] = v
+    for code, v in (srv.get("r") or {}).items():               # 결산단신 사이의 업적예상 수정 공시 — {결산기: [[공시일, 값]]}
+        if v:
+            out.setdefault(f"jp:{code}", {})["_r"] = v
 
     def rnd(x):
         return None if x is None else round(x, 2) if abs(x) < 1000 else int(round(x))
-    out = {k: {fy: (st if fy == "_q" else {s: [rnd(x) for x in (vals or [])] for s, vals in st.items()}) for fy, st in v.items()}
+    out = {k: {fy: (st if fy in ("_q", "_r") else {s: [rnd(x) for x in (vals or [])] for s, vals in st.items()}) for fy, st in v.items()}
            for k, v in out.items() if v}
     (HERE / "data" / "guide_site.json").write_text(json.dumps(out, ensure_ascii=False, separators=(",", ":")),
                                                    encoding="utf-8")
@@ -5263,7 +5266,7 @@ function links(m, code) {
 
 /* 상세창을 열면 실시간 서버에 그 회사의 최신 자료(가이던스 변천·옛 분기)를 바로 묻는다 — 빌드(몇 분)를
    기다리지 않게. 받으면 비어 있던 것만 채우고 창을 다시 그린다. 서버가 안 닿으면 페이지에 실린 것 그대로. */
-const CO = {}, GHS = {}, NOG = {}, GQS = {};
+const CO = {}, GHS = {}, NOG = {}, GQS = {}, GRS = {};
 const qkey = l => { const m = /^(\d)Q(\d\d)$/.exec(l || ''); return m ? +m[2] * 4 + +m[1] : 0; };
 function coLoad(k) {
   if (!RT || CO[k]) return;
@@ -5273,6 +5276,7 @@ function coLoad(k) {
     if (j.guide && Object.keys(j.guide).length) { GHS[k] = j.guide; ch = true; }
     if (j.noGuide) { NOG[k] = j.noGuide; ch = true; }
     if (j.gq && Object.keys(j.gq).length) { GQS[k] = j.gq; ch = true; }
+    if (j.gr && Object.keys(j.gr).length) { GRS[k] = j.gr; ch = true; }
     const f = D.fin[k];
     if ((j.fin || []).length && (!f || f.freq === 'Q')) {
       const g = D.fin[k] = f || { freq: 'Q', cur: 'JPY', points: [] };
@@ -5637,8 +5641,8 @@ function tgGuideQ(q, title, f, key) {
     a + b + '<p class="finnote">이 회사는 연간 전망 대신 다음 분기 전망을 냅니다. 자료: 회사 결산단신·설명자료</p></div>';
 }
 function tgGuide(gh, title, mkt, key) {
-  const q = gh && gh._q;
-  if (q) { gh = Object.assign({}, gh); delete gh._q; }
+  const q = gh && gh._q, rv = (gh && gh._r) || {};
+  if (q || (gh && gh._r)) { gh = Object.assign({}, gh); delete gh._q; delete gh._r; }
   const fyN = Object.values(gh || {}).reduce((n, v) => n + Object.keys(v).filter(s => s !== '실제').length, 0);
   if (q && fyN < 3) return tgGuideQ(q, title, key ? D.fin[key] : null, key);
   const ST = ['최초', '1Q', '2Q', '3Q'];
@@ -5647,17 +5651,35 @@ function tgGuide(gh, title, mkt, key) {
   Object.keys(gh).forEach(f => { cnt[f.slice(5, 7)] = (cnt[f.slice(5, 7)] || 0) + Object.keys(gh[f]).length; });
   const fmo = Object.keys(cnt).sort((a, b) => cnt[b] - cnt[a])[0];
   const fys = Object.keys(gh).filter(f => f.slice(5, 7) === fmo).sort().slice(-8);   // 가급적 오래전부터(회원님 10/30)
+  // 업적예상 수정(결산단신 사이에 낸 것)은 낸 날짜 차례대로 단계 사이에 끼운다. 결산단신은 결산기 끝 10·7·4·1달 전에 나온다.
+  const PUB = { '최초': 10, '1Q': 7, '2Q': 4, '3Q': 1 };
+  const seqOf = (f, gi) => {
+    let st = ST;
+    const rs = (rv[f] || []).filter(r => r && r[0] && r[1]);
+    if (gi === fys.length - 1 && !gh[f]['실제']) {
+      const got = ST.filter(s => gh[f][s]);
+      if (got.length) st = ST.slice(0, ST.indexOf(got[got.length - 1]) + 1);
+      else if (rs.length) st = [];
+    }
+    const fy = +f.slice(0, 4), fm = +f.slice(5, 7);
+    const it = st.map((s, i) => ({ f, s, o: i * 2, vals: gh[f][s] }));
+    rs.forEach(r => {
+      const m = fy * 12 + fm - (+r[0].slice(0, 4) * 12 + +r[0].slice(5, 7));
+      let after = -1;
+      ST.forEach((s, i) => { if (PUB[s] >= m) after = i; });
+      it.push({ f, s: '수정', d: r[0], o: after * 2 + 1, vals: r[1] });
+    });
+    it.sort((a, b) => a.o - b.o || (a.d || '').localeCompare(b.d || ''));
+    if (gh[f]['실제']) it.push({ f, s: '실제', o: 99, vals: gh[f]['실제'] });
+    it.forEach((c, i) => { c.id = f + ':' + i; });
+    return it;
+  };
   let last = null;
-  fys.forEach(f => ST.forEach(s => { if (gh[f][s]) last = f + s; }));
+  fys.forEach((f, gi) => seqOf(f, gi).forEach(c => { if (c.s !== '실제' && c.vals) last = c.id; }));
   const one = (k, name) => {
     const cols = [];
     fys.forEach((f, gi) => {
-      let st = ST;
-      if (gi === fys.length - 1 && !gh[f]['실제']) {
-        const got = ST.filter(s => gh[f][s]);
-        if (got.length) st = ST.slice(0, ST.indexOf(got[got.length - 1]) + 1);
-      }
-      st.concat(gh[f]['실제'] ? ['실제'] : []).forEach(s => cols.push({ f, s, v: gh[f][s] ? gh[f][s][k] : null }));
+      seqOf(f, gi).forEach(c => cols.push(Object.assign({}, c, { v: c.vals ? c.vals[k] : null })));
       cols.push(null);
     });
     cols.pop();
@@ -5681,19 +5703,20 @@ function tgGuide(gh, title, mkt, key) {
       // 위 줄: 그 예상을 낸 결산단신이 다룬 **실제 분기**(달력, 예 3Q26). 아래 줄: 그 회사 회계연도 기준(예 FY2Q27).
       // 회원님(10/30): "회계연도 말고 실제 분기로, 그 밑에 FY2Q27 처럼."
       const fy = +c.f.slice(0, 4), fm = +c.f.slice(5, 7);
-      const back = { '최초': 12, '1Q': 9, '2Q': 6, '3Q': 3, '실제': 0 }[c.s];
+      const back = { '최초': 12, '1Q': 9, '2Q': 6, '3Q': 3, '실제': 0, '수정': 0 }[c.s];
       let em = fm - back, ey = fy;
       while (em <= 0) { em += 12; ey -= 1; }
-      const cal = Math.ceil(em / 3) + 'Q' + String(ey % 100).padStart(2, '0');
-      const fyl = c.s === '최초' ? 'FY' + String(fy % 100).padStart(2, '0') + ' 최초'
+      const cal = c.s === '수정' ? '수정' : Math.ceil(em / 3) + 'Q' + String(ey % 100).padStart(2, '0');
+      const fyl = c.s === '수정' ? c.d.slice(2, 4) + '.' + c.d.slice(5, 7) + '.' + c.d.slice(8, 10)
+                : c.s === '최초' ? 'FY' + String(fy % 100).padStart(2, '0') + ' 최초'
                 : c.s === '실제' ? 'FY' + String(fy % 100).padStart(2, '0') + ' 실제'
                 : 'FY' + c.s + String(fy % 100).padStart(2, '0');
       const lab = '<text class="fx" x="' + cx(i).toFixed(1) + '" y="' + (BASE + 20) + '" text-anchor="middle" style="font-size:14px' +
-        ((c.f + c.s) === last ? ';fill:#fff;font-weight:800' : '') + '">' + cal + '</text>' +
+        (c.id === last ? ';fill:#fff;font-weight:800' : c.s === '수정' ? ';fill:#F28C28;font-weight:700' : '') + '">' + cal + '</text>' +
         '<text class="fx" x="' + cx(i).toFixed(1) + '" y="' + (BASE + 38) + '" text-anchor="middle" style="font-size:12px;opacity:.8">' + fyl + '</text>';
       if (c.v == null) { s += lab; return; }
-      const v = c.v / U.div, now = (c.f + c.s) === last;
-      const fill = c.s === '실제' ? '#d7dde3' : now ? '#FFCB05' : '#5B9BD5';
+      const v = c.v / U.div, now = c.id === last;
+      const fill = c.s === '실제' ? '#d7dde3' : now ? '#FFCB05' : c.s === '수정' ? '#F28C28' : '#5B9BD5';
       s += '<rect x="' + (cx(i) - step * 0.36).toFixed(1) + '" y="' + y(v).toFixed(1) + '" width="' + (step * 0.72).toFixed(1) +
         '" height="' + Math.max(BASE - y(v), 1).toFixed(1) + '" style="fill:' + fill + '"/>' +
         '<text class="vn rev" x="' + cx(i).toFixed(1) + '" y="' + (y(v) - 6).toFixed(1) + '" text-anchor="middle" style="font-size:14px' +
@@ -5716,7 +5739,7 @@ function tgGuide(gh, title, mkt, key) {
   const c = mkt === 'us' ? one(2, 'EPS 가이던스') : b ? '' : one(2, '순이익 가이던스');
   if (!a && !b && !c) return '';
   return '<div class="finwrap"><div class="finhead">' + title + ' 가이던스 변천' +
-    '<span class="dim"><b style="color:#5B9BD5">■</b> 가이던스 <b style="color:#d7dde3">■</b> 실제 <b style="color:#FFCB05">■</b> 최신</span></div>' +
+    '<span class="dim"><b style="color:#5B9BD5">■</b> 가이던스 <b style="color:#F28C28">■</b> 수정 공시 <b style="color:#d7dde3">■</b> 실제 <b style="color:#FFCB05">■</b> 최신</span></div>' +
     a + b + c + '<p class="finnote" style="text-align:right">자료: ' + (mkt === 'us' ? '회사 실적 보도자료(SEC 8-K, AI 판독)' : '회사 결산단신(TDnet·JPX)') + '</p></div>';
 }
 let GH = null;
@@ -5728,9 +5751,10 @@ function ghFill() {
     const key = el.dataset.key, m = key.split(':')[0];
     const g = JSON.parse(JSON.stringify(Object.assign({}, (GH || {})[key] || {}, GHS[key] || {})));   // 서버에서 방금 받은 것이 이긴다
     if (GQS[key]) g._q = GQS[key];
+    if (GRS[key]) g._r = GRS[key];
     const F = D.ann && D.ann[key];
     ((F && F.y) || []).forEach(y => { if (!y[5] && y[1] && g[y[0].slice(0, 7)]) g[y[0].slice(0, 7)]['실제'] = g[y[0].slice(0, 7)]['실제'] || [y[1], y[2]]; });
-    if (!g._q && Object.entries(g).filter(([k]) => k !== '_q').reduce((n, [, v]) => n + Object.keys(v).filter(s => s !== '실제').length, 0) < 3) {
+    if (!g._q && Object.entries(g).filter(([k]) => k !== '_q' && k !== '_r').reduce((n, [, v]) => n + Object.keys(v).filter(s => s !== '실제').length, 0) < 3) {
       // 원문을 다 찾아봐도 연간 전망이 없는 회사(키엔스·디스코…) — 비어 보이면 수집 실패로 읽히니 그렇다고 적는다
       if (NOG[key]) el.innerHTML = '<div class="finwrap"><div class="finhead">가이던스 변천</div><p class="finnote">' +
         esc(NOG[key]) + '입니다. 결산단신 원문에 연간 실적 전망이 없습니다.</p></div>';
