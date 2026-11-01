@@ -26,16 +26,21 @@ jobs:
       - name: 🔎 홍콩 긴 이력 수집기 시험
         continue-on-error: true
         run: python scrape_fin_hk_em.py 00700 03750 09992 01211 02020 00992 >> /tmp/probe.txt 2>&1
-      - name: 🔎 서버 옛 부문 누계
+      - name: 🔎 SEC 3Q21 구멍
         continue-on-error: true
+        env:
+          SEC_UA: 'Earning Samurai Calendar (cbpark@wisdomasset.co.kr)'
         run: |
-          curl -sS -m 120 https://earning-samurai-calendar-production.up.railway.app/api/jpsegraw -o /tmp/seg.json; ls -la /tmp/seg.json >> /tmp/probe.txt
           python - >> /tmp/probe.txt 2>&1 <<'EOF2'
-          import json, collections
-          d=json.load(open('/tmp/seg.json')); c=collections.Counter()
-          for k,v in d.items(): c[min(x.split('/')[1] for x in v)[:4] if v else 'none']+=1
-          print('jpsegraw', len(d), sorted(c.items()))
-          for k in ('jp:7203','jp:8001','jp:4063','jp:9434','jp:6758','jp:8035'): print(k, sorted(d.get(k,{}))[:4], len(d.get(k,{})))
+          import scrape_fin as s
+          cik={v["ticker"].upper(): v["cik_str"] for v in s.get(s.TICKERS, s.SEC_UA).values()}
+          for sym in ("MMM","NVDA","WMT"):
+              c=cik[sym]; print("=====",sym)
+              for tag in s.REV_CORE[:8]:
+                  q,a,cur=s.one(c,"us-gaap",tag)
+                  if q: print("  ",tag,len(q),[e for e in sorted(q) if "2021-06"<=e<="2023-06"])
+              rec=s.series(c)
+              print("  series", [p["end"] for p in rec["points"] if "2021-06"<=p["end"]<="2023-06"])
           EOF2
       - name: 결과를 probe-out 가지에
         if: always()
