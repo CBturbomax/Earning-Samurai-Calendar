@@ -2869,10 +2869,14 @@ def pack_fcst(packed):
             "y": [[y["end"], y.get("rev"), y.get("opi"), y.get("ni"), y.get("eps"), y.get("est", 0)]
                   for y in rows],
             "n": [(rec.get("next") or {}).get("rev"), (rec.get("next") or {}).get("eps")],
-            "m": cap[k] * 1e9 * fx if fx else rec["mcap"], "e": rec.get("equity"),
+            # 자본(equity)은 소스가 **주가 통화**로 준다(도요타 ADR: 시총÷자본 = pb 0.976, 둘 다 달러). 재무 통화로 따로 셀 때는
+            # 같이 옮겨야 PBR 이 맞는다 — 안 옮겨 도요타 PBR 이 171.7 로 떴다(11/01).
+            "m": cap[k] * 1e9 * fx if fx else rec["mcap"],
+            "e": (rec["equity"] * fx / RATES.get(rec["curPrice"], 1.0)) if fx and rec.get("equity") else rec.get("equity"),
             "p": None if fx else rec.get("price"),
             # 나스닥 연간 EPS 컨센서스(미국) — 차기·차차기 순이익에 쓴다.
-            "q": [[y[0], y[1]] for y in rec.get("ny") or []],
+            # 통화가 갈리는 종목(ADR)은 나스닥 EPS 가 'ADR 한 주당 달러'라 재무 통화 주식 수에 곱하면 틀린다 — 안 쓴다.
+            "q": [] if fx else [[y[0], y[1]] for y in rec.get("ny") or []],
             # Business Insider 연간 추정 [결산연도, 매출, 영업이익(EBIT), 순이익] — 차기·차차기.
             "b": [y[:4] for y in rec.get("by") or []],
             # 현지 통화 1단위가 몇 원인가 — 시총 두 개의 비.
