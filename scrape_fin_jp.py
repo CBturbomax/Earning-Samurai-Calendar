@@ -234,6 +234,8 @@ def read_summary(blob):
         return None
     names = [n for n in z.namelist()
              if "Summary" in n and n.lower().endswith(("ixbrl.htm", ".xbrl"))]
+    if not names:                       # 업적예상 수정(tse-rvfc) 같은 공시는 Summary 폴더가 없을 수 있다
+        names = [n for n in z.namelist() if n.lower().endswith("ixbrl.htm")]
     if not names:
         return None
     # **요약 문서가 여럿이다 — 전부 읽는다.** 실적(…sm…)과 연간 예상(…fr… 등)이 다른 문서에 담기는 공시가 있어
@@ -1020,6 +1022,8 @@ def forecasts_from(vals):
                 is_fc = bool(FORECAST_CTX.search(cid))
                 if is_fc != want_fc:
                     continue
+                if re.search(r"PreviousMember", cid):     # 업적예상 수정 공시의 '직전(폐기) 예상' — 지금 예상이 아니다
+                    continue
                 cons = 0 if NONCONS_CTX.search(cid) else 1
                 side = "hi" if re.search(r"Upper", cid, re.I) else "lo" if re.search(r"Lower", cid, re.I) else "mid"
                 key = (st, en)
@@ -1036,6 +1040,7 @@ def forecasts_from(vals):
     for k, names in (("rev", NAME_REV), ("opi", NAME_OPI), ("ni", NAME_NI)):
         for (st, en), slot in grab(names, True).items():
             r = recs.setdefault((st, en), {"start": st, "end": en})
+            r["cons"] = min(r.get("cons", 1), slot.get("cons", 1))
             if "mid" in slot:
                 r[k] = slot["mid"]
             elif "lo" in slot and "hi" in slot:
