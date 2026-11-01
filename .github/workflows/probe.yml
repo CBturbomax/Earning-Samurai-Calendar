@@ -23,6 +23,9 @@ jobs:
           for p in "/api/co?key=jp:9507" "/api/co?key=jp:6723" /health /api/log /api/stats /api/audit "/api/sent?day=$(TZ=Asia/Seoul date +%F)" /api/live; do echo "== $p"; curl -sS -m 20 $U$p | tail -c 20000; echo; done > /tmp/probe.txt 2>&1
           echo "== stream" >> /tmp/probe.txt; timeout 8 curl -sSN $U/stream | head -c 400 >> /tmp/probe.txt 2>&1 || true
 
+      - name: 🔎 홍콩 긴 이력 수집기 시험
+        continue-on-error: true
+        run: python scrape_fin_hk_em.py 00700 03750 09992 01211 02020 00992 >> /tmp/probe.txt 2>&1
       - name: 결과를 probe-out 가지에
         if: always()
         run: |
