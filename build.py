@@ -576,99 +576,109 @@ def load_fin():
 
 
 def hk_long_fin(out):
-    """홍콩 옛 분기·반기(2017~) — 동방재부 F10 누계를 되돌린 것(scrape_fin_hk_em.py).
-    회원님(11/01): "홍콩 회사들이 너무 엉망 — 분기 회사는 1Q18 부터, 아니면 반기로라도."
-    stockanalysis 는 20기간뿐이라 반기 회사는 2021년부터였다.
+    """홍콩 옛 분기·반기(2017~) — 동방재부 F10 누계(scrape_fin_hk_em.py). 회원님(11/01): "홍콩 회사들이 너무
+    엉망 — 분기 회사는 1Q18 부터, 아니면 반기로라도." stockanalysis 는 20기간뿐이라 반기 회사는 2021년부터였다.
 
-    그 표에는 통화가 없다(위안 숫자에 HKD 라 적혀 온다). 그래서 **stockanalysis 기록과 겹치는 기간의
-    매출이 맞을 때만** 그 통화로 싣는다. 매출 항목도 둘(营业额·营运收入) 중 맞는 쪽을 고른다 —
-    텐센트는 营运收入 이 맞고 BYD 는 둘이 같다. 레노버처럼 환산된 값이 오면 안 맞아서 안 쓴다.
-    겹치는 기간은 동방재부 값을 쓴다(한 줄 안에서 정의가 바뀌지 않게). 영업이익 정의가 다르면
-    (BYD 经营溢利 ≠ stockanalysis opinc) 동방재부에 없는 최근 기간의 영업이익은 비운다 — 이익률 선이 꺾여 보이지 않게."""
+    동방재부는 **모든 숫자를 위안으로** 준다(CK허치슨 홍콩달러·레노버 달러도). 그래서
+      1. 누계마다 그 누계 기간의 환율(달 평균 또는 끝 달, ECB)로 stockanalysis 통화에 되돌리고
+      2. 같은 시작일의 앞 누계를 빼서 분기(1분기·9개월 누계를 낸 회사)·반기로 만든 뒤
+      3. stockanalysis 와 겹치는 기간의 매출이 2% 안에서 맞을 때만(80% 이상) 쓴다 — 매출 항목(营业额·营运收入)과
+         환율 기준도 여기서 맞는 쪽을 고른다. 안 맞으면 안 쓴다(레노버처럼).
+    stockanalysis 에 있는 기간은 그대로 두고 **그 앞 기간만** 채운다. 영업이익 정의가 다르면(BYD 经营溢利 ≠ opinc)
+    채운 기간의 영업이익은 비운다 — 이익률 선이 꺾여 거짓말을 하지 않게."""
     try:
         emf = json.loads((HERE / "data" / "financials_hk_em.json").read_text(encoding="utf-8"))
     except (OSError, ValueError):
         return
     em, fx = emf.get("stocks", {}), emf.get("fx", {})
 
-    def conv(p, cur, how):
-        """위안 -> cur. how: 'avg'(기간 달 평균) · 'end'(기간 끝 달). 환율이 없으면 None."""
-        if cur == "CNY":
-            return 1.0
-        tab = fx.get(cur) or {}
-        e = p["end"]
-        n = 3 if p.get("q") == "Q" else 6
-        y, m = int(e[:4]), int(e[5:7])
-        yms = []
+    def mlist(st, en):
+        y, m = int(en[:4]), int(en[5:7])
+        n = (int(en[:4]) - int(st[:4])) * 12 + int(en[5:7]) - int(st[5:7]) + 1
+        out_ = []
         for _ in range(n):
-            yms.append(f"{y}-{m:02d}")
+            out_.append(f"{y}-{m:02d}")
             m -= 1
             if m == 0:
                 y, m = y - 1, 12
+        return n, out_
+
+    def rate(cur, st, en, how):
+        if cur == "CNY":
+            return 1.0
+        tab = fx.get(cur) or {}
+        n, yms = mlist(st, en)
         if how == "end":
-            return tab.get(yms[0], [None, None])[1]
+            return (tab.get(yms[0]) or [None, None])[1]
         got = [tab[x][0] for x in yms if x in tab]
         return sum(got) / len(got) if len(got) == n else None
+
+    def derive(cum, cur, how, item):
+        """누계 {"시작/끝": {항목: 위안}} -> [{end, rev, opi, ni}] (환율을 누계마다 걸고 나서 뺀다)."""
+        c = {}
+        for k, v in cum.items():
+            st, en = k.split("/")
+            r = rate(cur, st, en, how)
+            n, _ = mlist(st, en)
+            if r and v.get(item) is not None:
+                c[(st, en)] = (n, {"rev": v[item] * r,
+                                   "opi": v["经营溢利"] * r if v.get("经营溢利") is not None else None,
+                                   "ni": v["股东应占溢利"] * r if v.get("股东应占溢利") is not None else None})
+        q = any(n in (3, 9) for n, _ in c.values())
+        step = 3 if q else 6
+        pts = []
+        for (st, en), (n, v) in c.items():
+            if n % step or n > 12 or en < "2017-01-01":
+                continue
+            if n != step:
+                prev = next((pv for (s2, _), (n2, pv) in c.items() if s2 == st and n2 == n - step), None)
+                if not prev:
+                    continue
+                v = {k: (v[k] - prev[k]) if v[k] is not None and prev[k] is not None else None for k in v}
+            if v["rev"]:
+                e = date.fromisoformat(en)
+                pts.append(dict(v, end=en, mid=(e - timedelta(days=45 if q else 90)).isoformat()))
+        return ("Q" if q else "H"), sorted(pts, key=lambda p: p["end"])
+
     used = skip = 0
     for key, rec in em.items():
         sa = out.get(key)
-        cur = (sa or {}).get("cur") or ""
-        epts = [dict(p, q=rec.get("freq")) for p in rec.get("points") or [] if p.get("end", "") >= "2017-01-01"]
-        if not sa or not sa.get("points") or len(epts) < 2:
+        if not sa or not sa.get("points") or not rec.get("cum"):
             continue
+        cur = sa.get("cur") or ""
         sp = {p["end"]: p for p in sa["points"] if p.get("end") and p.get("rev")}
+        sa_h = half_yearly(sa["points"]) if len(sp) >= 3 else None
 
         def near(e):
             d = date.fromisoformat(e)
             best = min(sp, key=lambda x: abs((date.fromisoformat(x) - d).days), default=None)
             return sp[best] if best and abs((date.fromisoformat(best) - d).days) <= 10 else None
-        pairs = [(p, near(p["end"])) for p in epts]
-        pairs = [(p, q) for p, q in pairs if q]
-        if len(pairs) < 2:
+        best = None
+        for item in ("营业额", "营运收入"):
+            for how in ("avg", "end"):
+                fq, pts = derive(rec["cum"], cur, how, item)
+                pairs = [(p, near(p["end"])) for p in pts]
+                pairs = [(p, q) for p, q in pairs if q]
+                if len(pairs) < 2 or (sa_h is not None and sa_h != (fq == "H")):
+                    continue
+                errs = sorted(abs(p["rev"] / q["rev"] - 1) for p, q in pairs)
+                sc = (sum(x <= 0.02 for x in errs) / len(errs), -errs[len(errs) // 2])
+                if not best or sc > best[0]:
+                    best = (sc, pts, pairs)
+        if not best or best[0][0] < 0.8:
             skip += 1
             continue
-
-        def errs(f, how):
-            out_ = []
-            for p, q in pairs:
-                k = conv(p, cur, how)
-                if p.get(f) and k:
-                    out_.append(abs(p[f] * k / q["rev"] - 1))
-            return out_
-
-        def score(c):
-            e = errs(*c)
-            return (sum(x <= 0.02 for x in e) / len(e), -sorted(e)[len(e) // 2]) if e else (0, -9)
-        f, how = max([(f_, h_) for f_ in ("rev", "rev2") for h_ in ("avg", "end")], key=score)   # 맞는 매출 항목·환율 기준
-        if score((f, how))[0] < 0.8:
-            skip += 1
-            continue
-        mine = []
-        for p in epts:
-            k = conv(p, cur, how)
-            if not k or not p.get(f):
-                continue                              # 환율·매출이 없는 기간은 안 싣는다(지어내지 않는다)
-            mine.append({"end": p["end"], "mid": p["mid"], "rev": p[f] * k,
-                         "opi": p["opi"] * k if p.get("opi") is not None else None,
-                         "ni": p["ni"] * k if p.get("ni") is not None else None})
-        if len(mine) < 2:
-            skip += 1
-            continue
-        byend = {p["end"]: p for p in mine}
-        opi_ok = [abs(byend[p["end"]]["opi"] / q["opi"] - 1) <= 0.05 for p, q in pairs
-                  if p["end"] in byend and byend[p["end"]].get("opi") and q.get("opi")]
+        _, pts, pairs = best
+        opi_ok = [abs(p["opi"] / q["opi"] - 1) <= 0.05 for p, q in pairs if p.get("opi") and q.get("opi")]
         opi_same = bool(opi_ok) and sum(opi_ok) / len(opi_ok) >= 0.8
-        have = {p["end"] for p in mine}
-        last = max(have)
-        for e, q in sp.items():                       # 동방재부에 아직 없는 최근 기간은 stockanalysis 로
-            if e > last and not any(abs((date.fromisoformat(e) - date.fromisoformat(h)).days) <= 10 for h in have):
-                mine.append(dict(q, opi=q.get("opi") if opi_same else None))
-        mine.sort(key=lambda p: p["end"])
-        if len(mine) <= len(sa["points"]):
+        first = min(sp)
+        add = [dict(p, opi=p["opi"] if opi_same else None) for p in pts
+               if p["end"] < first and not near(p["end"])]
+        if not add:
             continue
-        out[key] = dict(sa, points=mine, src="em")
+        out[key] = dict(sa, points=sorted(add + list(sa["points"]), key=lambda p: p.get("end", "")), src="em")
         used += 1
-    print(f"  홍콩 긴 이력(동방재부): {used:,}종목 붙임 · 통화·값이 안 맞아 뺀 {skip:,}종목")
+    print(f"  홍콩 긴 이력(동방재부): {used:,}종목 앞 기간을 채움 · 값이 안 맞아 뺀 {skip:,}종목")
 
 
 def jp_old_fin():
