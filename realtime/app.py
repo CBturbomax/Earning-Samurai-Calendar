@@ -1280,6 +1280,41 @@ def jp_old_points(key):
 REV_TITLE = re.compile(r"業績予想.{0,12}修正|業績予想値.{0,6}修正")
 
 
+_LQ = {}
+
+
+def _yq(sym):
+    """야후 차트 API 한 번 — (가격, 통화, 시각). 1분 동안은 받아 둔 값을 쓴다."""
+    hit = _LQ.get(sym)
+    if hit and time.time() - hit[0] < 60:
+        return hit[1]
+    j = json.loads(http_get(f"https://query1.finance.yahoo.com/v8/finance/chart/{sym}?range=1d&interval=1d",
+                            ua=BROWSER_UA, timeout=10))
+    m = ((j.get("chart") or {}).get("result") or [{}])[0].get("meta") or {}
+    val = (m.get("regularMarketPrice"), m.get("currency"), m.get("regularMarketTime"))
+    _LQ[sym] = (time.time(), val)
+    return val
+
+
+def live_quote(mkt, code):
+    """상세창 시총을 **지금** 값으로(회원님 11/01: "시총 최대한 실시간으로, 모든 국가"). 지금 주가와 원화 환율만 준다 —
+    주식 수는 사이트가 연간 표 소스(시총÷주가)에서 꺼내 곱한다. 못 받으면 빈 것(사이트는 빌드 때 시총을 쓴다)."""
+    sym = {"us": code.replace(".", "-"), "jp": code + ".T", "hk": code.lstrip("0").zfill(4) + ".HK"}.get(mkt)
+    if not sym:
+        return {}
+    try:
+        px, cur, t = _yq(sym)
+        usd = _yq("KRW=X")[0]
+        fx = usd if cur == "USD" else _yq(f"{cur}KRW=X")[0]
+        if not (px and usd and fx):
+            return {}
+        hm = datetime.fromtimestamp(t, KST).strftime("%m/%d %H:%M") if t else ""
+        return {"px": px, "cur": cur, "fx": fx, "usd": usd, "t": hm}
+    except Exception as e:                                       # noqa: BLE001
+        log("실시간 주가 실패", mkt, code, repr(e)[:80])
+        return {}
+
+
 def jphist(n, since="2017-01-01", only_rev=False):
     """일본 옛 결산단신을 통째로 — 가이던스 변천(연간 예상)과 부문 누계(2024년부터 비던 3·4분기)를 같이 채운다.
     목록은 yanoshin TDnet API(2009년치부터, 문서번호·XBRL 이름), 파일은 JPX 공시 보관소(약 5~6년,
@@ -2775,7 +2810,7 @@ class Handler(BaseHTTPRequestHandler):
         elif path == "/api/co":                                  # 상세창을 열 때 사이트가 바로 묻는다 — 빌드를 기다리지 않게(회원님 10/30)
             key = (urllib.parse.parse_qs(urllib.parse.urlparse(self.path).query).get("key") or [""])[0]
             mkt, _, code = key.partition(":")
-            out = {"guide": {}, "fin": [], "noGuide": noguide_text(code) if mkt == "jp" else "",
+            out = {"q": live_quote(mkt, code), "guide": {}, "fin": [], "noGuide": noguide_text(code) if mkt == "jp" else "",
                    "gq": GQ.get(code) if mkt == "jp" else {}, "gr": GD.revs(code) if mkt == "jp" else {}}
             try:
                 if mkt in ("jp", "us"):

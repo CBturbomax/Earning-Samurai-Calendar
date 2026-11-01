@@ -2809,6 +2809,14 @@ def pack_en(r, mkt):
             ] + list(est or to_kst(mkt, r["date"], hhmm, timing))
 
 
+try:
+    RATES_NOW = json.loads((HERE / "data" / "caps.json").read_text(encoding="utf-8")).get("rates", {})
+except (OSError, ValueError):
+    RATES_NOW = {}
+# 원/달러는 그날 환율(caps.json, 하루 한 번 이상 갱신). 못 받았으면 고정값.
+KRW_NOW = float(RATES_NOW.get("KRW") or USD_KRW)
+
+
 def pack_fcst(packed):
     """상세창의 연간 표(직전년도 실적 · 당해 · 차기 · 차차기 + PER·PBR·PSR).
 
@@ -2868,7 +2876,9 @@ def pack_fcst(packed):
             # Business Insider 연간 추정 [결산연도, 매출, 영업이익(EBIT), 순이익] — 차기·차차기.
             "b": [y[:4] for y in rec.get("by") or []],
             # 현지 통화 1단위가 몇 원인가 — 시총 두 개의 비.
-            "k": USD_KRW / fx if fx else cap[k] * 1e9 * USD_KRW / rec["mcap"],
+            # 현지 통화 1단위가 몇 원인가 — 그날 환율로(예전엔 시총 두 개의 비였는데, 그 시총이 줄마다 달라 틀렸다).
+            "k": KRW_NOW / fx if fx else (KRW_NOW / RATES_NOW[rec["curPrice"]] if RATES_NOW.get(rec.get("curPrice"))
+                                         else cap[k] * 1e9 * KRW_NOW / rec["mcap"]),
             "ts": (rec.get("ts") or "")[:10],
         }
     return out
@@ -2915,7 +2925,7 @@ def ann_fallback(ann, packed, fcst):
         ann[k] = {"y": [[prev_end + "-28", rev, opi, None, None, 0],
                         [G["end"], G["rev"], G.get("opi"), G.get("ni"), None, 1]],
                   "n": [None, None], "m": cap[k] * 1e9 * rate, "e": None, "p": None, "q": [], "b": [],
-                  "k": USD_KRW / rate, "ts": "", "own": 1}
+                  "k": KRW_NOW / rate, "ts": "", "own": 1}
         n += 1
     # 회사 예상도 컨센서스도 없는 회사(재팬 티슈엔지니어링 7774 등) — 직전 결산기 실적만으로라도 표를 세운다.
     # 결산 달은 캘린더 줄의 결산기 표기(「3월 결산」)에서. 회원님(10/30): "왜 저 표는 안 그려주는 거야?"
@@ -2953,7 +2963,7 @@ def ann_fallback(ann, packed, fcst):
         opi = sum(pts[l][2] for l in labs) if all(pts[l][2] is not None for l in labs) else None
         ann[k] = {"y": [[f"{y}-{mo:02d}-28", rev, opi, None, None, 0]],
                   "n": [None, None], "m": cap[k] * 1e9 * rate, "e": None, "p": None, "q": [], "b": [],
-                  "k": USD_KRW / rate, "ts": "", "own": 1}
+                  "k": KRW_NOW / rate, "ts": "", "own": 1}
         n2 += 1
     print(f"  연간 표: 소스 {len(ann) - n - n2:,} + 우리 자료(예상 있음) {n:,} + 실적만 {n2:,}")
     return ann
@@ -2990,6 +3000,21 @@ def build():
     # 한 날짜 안에서는 시장 순 -> 시총 큰 순 -> 코드 순.
     # 시총은 미국만 있어서 나머지 시장은 자연히 코드 순으로 남는다.
     # 하루 700건씩 쏟아지는 미국에서 앞 12개만 펼쳐 보일 때 큰 게 먼저 오게 하려는 것.
+    # **한 회사에 시총은 하나.** 미국 시총은 나스닥 캘린더가 줄마다 그 날 받아 온 값이라 분기 줄마다 달랐다 —
+    # 상세창 위(이번 분기 줄)와 연간 표(가장 큰 줄)가 2.63조 달러와 4,145조 원으로 갈렸다(회원님 11/01).
+    # 오늘에 가장 가까운 줄(가장 최근에 받은 값)의 시총으로 그 회사의 모든 줄을 맞춘다.
+    best = {}
+    for p in packed:
+        if not p[11]:
+            continue
+        k = p[9] + ":" + p[1]
+        d = abs((date.fromisoformat(p[0]) - (datetime.now(timezone.utc) + timedelta(hours=9)).date()).days)
+        if k not in best or d < best[k][0]:
+            best[k] = (d, p[11])
+    for p in packed:
+        b = best.get(p[9] + ":" + p[1])
+        if b:
+            p[11] = b[1]
     order = {m: i for i, m in enumerate(MARKET_ORDER)}
     packed.sort(key=lambda p: (p[0], order[p[9]], -p[11], p[1]))
 
@@ -3193,7 +3218,8 @@ def build():
         # 규모 필터 눈금. 원 단위로 매기되 실제 비교는 달러(십억)로 한다.
         "capSteps": [{"jo": j, "usdB": round(j * 1e12 / USD_KRW / 1e9, 2)}
                      for j in CAP_STEPS],
-        "usdKrw": USD_KRW,
+        "usdKrw": KRW_NOW,
+        "rates": RATES_NOW,
         # 시총 데이터가 있는 시장. 없는 시장에는 규모 필터를 적용할 수 없다.
         "capMarkets": sorted({p[9] for p in packed if p[11]}),
         "capCover": cap_cover,
@@ -4444,14 +4470,16 @@ const expanded = new Set();
 
 /* 시총은 십억 달러 단위로 들어온다. 한국식으로 억/조 달러로 고쳐 읽는다.
    1 십억 달러 = 10억 달러, 1000 십억 달러 = 1조 달러. */
-function capKo(b) {
-  if (!b) return '';
-  const won = b * 1e9 * D.usdKrw;                      // 원으로도 같이 적는다
+function capKo(b, key) {
+  if (!b && !(key && liveCap(key))) return '';
+  const c = key ? capNow(key, b) : null;
+  if (c) b = c.usdB;
+  const won = c ? c.krw : b * 1e9 * D.usdKrw;          // 원으로도 같이 적는다
   const wonKo = won >= 1e12 ? (won / 1e12).toFixed(1) + '조원'
                             : Math.round(won / 1e8).toLocaleString() + '억원';
   const usd = b >= 1000 ? (b / 1000).toFixed(2) + '조 달러'
                         : Math.round(b * 10).toLocaleString() + '억 달러';
-  return usd + ' (약 ' + wonKo + ')';
+  return usd + ' (약 ' + wonKo + ')' + (c && c.live ? ' <span class="dim">· 실시간 ' + esc(c.live) + '</span>' : '');
 }
 
 /* ── 규모 필터 ────────────────────────────────────────────────
@@ -5431,7 +5459,22 @@ function links(m, code) {
 
 /* 상세창을 열면 실시간 서버에 그 회사의 최신 자료(가이던스 변천·옛 분기)를 바로 묻는다 — 빌드(몇 분)를
    기다리지 않게. 받으면 비어 있던 것만 채우고 창을 다시 그린다. 서버가 안 닿으면 페이지에 실린 것 그대로. */
-const CO = {}, GHS = {}, NOG = {}, GQS = {}, GRS = {};
+const CO = {}, GHS = {}, NOG = {}, GQS = {}, GRS = {}, LQ = {};
+// 실시간 시총 — 상세창을 열 때 서버가 주는 지금 주가 × 주식 수(연간 표 소스의 시총 ÷ 주가), 지금 환율로 원화.
+// 주식 수를 모르면 null — 그때는 빌드 때 시총을 그날 환율로 쓴다(위·아래가 같은 값).
+function liveCap(k) {
+  const q = LQ[k], F = D.ann && D.ann[k];
+  if (!q || !q.px || !F || !F.p || !F.m) return null;
+  const local = F.m / F.p * q.px;
+  if (!q.fx || !q.usd) return null;
+  return { local, krw: local * q.fx, usdB: local * q.fx / q.usd / 1e9, t: q.t };
+}
+function capNow(k, b) {
+  // b: 빌드 때 시총(십억 달러). 반환: {usdB, krw, live}
+  const L = liveCap(k);
+  if (L) return { usdB: L.usdB, krw: L.krw, live: L.t || '실시간' };
+  return b ? { usdB: b, krw: b * 1e9 * D.usdKrw, live: '' } : null;
+}
 const qkey = l => { const m = /^(\d)Q(\d\d)$/.exec(l || ''); return m ? +m[2] * 4 + +m[1] : 0; };
 function coLoad(k) {
   if (!RT || CO[k]) return;
@@ -5442,6 +5485,7 @@ function coLoad(k) {
     if (j.noGuide) { NOG[k] = j.noGuide; ch = true; }
     if (j.gq && Object.keys(j.gq).length) { GQS[k] = j.gq; ch = true; }
     if (j.gr && Object.keys(j.gr).length) { GRS[k] = j.gr; ch = true; }
+    if (j.q && j.q.px) { LQ[k] = j.q; ch = true; }
     const f = D.fin[k];
     if ((j.fin || []).length && (!f || f.freq === 'Q')) {
       const g = D.fin[k] = f || { freq: 'Q', cur: 'JPY', points: [] };
@@ -5484,7 +5528,7 @@ function openModal(k, dt) {
     '<dt>분기</dt><dd>' +
       (dn && dn.period ? '<b>' + esc(epsQ(dn.period)) + '</b> · ' : '') +
       esc([r[4], r[3]].filter(Boolean).join(' · ') || '—') + '</dd>' +
-    (r[11] ? '<dt>시가총액</dt><dd>' + capKo(r[11]) + '</dd>' : '') +
+    (r[11] || liveCap(k) ? '<dt>시가총액</dt><dd>' + capKo(r[11], k) + '</dd>' : '') +
     (r[5] ? '<dt>업종</dt><dd>' + esc(r[5]) + '</dd>' : '') +
     '<dt>시장</dt><dd>' + esc(MKT[m].ko) + (r[6] ? ' · ' + esc(r[6]) : '') + '</dd>' +
     (nt ? '<dt>테마</dt><dd>' + esc(nt[2]) + '</dd>' : '');
@@ -5539,8 +5583,11 @@ function bizLine(m, code) {
    PER·PSR 은 지금 시총을 그 해 순이익·매출로 나눈 것이고, PBR 은 지금 자본으로
    한 번만 적는다(앞날 자본 추정은 없다). 차기 순이익은 차기 EPS × 올해 주식수. */
 function fcstTable(m, code) {
-  const F = D.ann && D.ann[m + ':' + code];
+  let F = D.ann && D.ann[m + ':' + code];
   if (!F) return '';
+  // 실시간 주가가 왔으면 시총(F.m)을 그걸로 — PER·PSR·위 시총 상자가 상세창 위 시총과 같은 값이 된다.
+  const LV = liveCap(m + ':' + code);
+  if (LV) F = Object.assign({}, F, { m: LV.local });
   const [a, b] = [F.y[0], F.y[1]];
   const yr = d => d ? +d.slice(0, 4) : null;
   // 주식 수 = 시총 ÷ 주가(없으면 당해 순이익 ÷ EPS). 앞날 순이익은 EPS × 주식 수.
@@ -5590,7 +5637,9 @@ function fcstTable(m, code) {
     cols.map((c, i) => cell(f(c, i), i)).join('') + '</tr>';
   const ym = d => d ? d.slice(2, 4) + '.' + d.slice(5, 7) : '';
   // 시가총액 — 원화로 옮겨 1조 원 밑은 「억 원」, 위는 「조 원」(회원님 10/29: 오른쪽 위, 잘 보이게).
-  const capW = F.m * F.k;
+  // 실시간이 없으면 상세창 위와 **같은 시총**(캘린더 줄의 것, 그날 환율)을 쓴다 — 두 곳이 다른 숫자를 말하지 않게.
+  const rowCap = (ROWS.find(x => keyOf(x) === m + ':' + code) || [])[11];
+  const capW = LV ? LV.krw : rowCap ? rowCap * 1e9 * D.usdKrw : F.m * F.k;
   const capTxt = !capW ? '' : capW >= 1e12
     ? (capW / 1e12).toFixed(capW >= 1e14 ? 0 : 1).replace(/\.0$/, '') + '조 원'
     : Math.round(capW / 1e8).toLocaleString() + '억 원';
