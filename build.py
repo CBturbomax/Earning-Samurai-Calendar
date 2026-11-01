@@ -568,7 +568,10 @@ def load_fin():
             out[key] = merge_fin(out.get(key), v)
     for key, v in jp_old_fin().items():          # 1Q18 부터 — 비어 있는 옛 분기만 메운다(rank 가 가장 낮다)
         out[key] = merge_fin(out.get(key), v)
-    hk_long_fin(out)
+    try:
+        hk_long_fin(out)
+    except Exception as e:                        # noqa: BLE001  — 이것 때문에 페이지가 안 만들어지면 안 된다
+        print(f"  ! 홍콩 긴 이력 붙이기 실패: {e!r}")
     return out
 
 
@@ -643,8 +646,8 @@ def hk_long_fin(out):
         mine = []
         for p in epts:
             k = conv(p, cur, how)
-            if not k:
-                continue                              # 환율이 없는 기간은 안 싣는다(지어내지 않는다)
+            if not k or not p.get(f):
+                continue                              # 환율·매출이 없는 기간은 안 싣는다(지어내지 않는다)
             mine.append({"end": p["end"], "mid": p["mid"], "rev": p[f] * k,
                          "opi": p["opi"] * k if p.get("opi") is not None else None,
                          "ni": p["ni"] * k if p.get("ni") is not None else None})
