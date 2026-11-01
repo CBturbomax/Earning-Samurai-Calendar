@@ -1,6 +1,6 @@
 {
  "v": 1,
- "ts": "2026-11-01T00:13:44+00:00",
+ "ts": "2026-11-01T00:36:23+00:00",
  "seed": 362,
  "homes": 353,
  "official_ir_data": 178,
@@ -464,11 +464,11 @@
    "home": "https://www.24028.jp/",
    "source_url": "https://www.24028.jp/ir/library",
    "latest_month": "2026-09",
-   "months": 71,
+   "months": 73,
    "tdnet": true,
    "web": true,
    "ir": true,
-   "last_attempt": "2026-10-31T18:13:06+00:00",
+   "last_attempt": "2026-11-01T00:30:08+00:00",
    "last_parse_failure": "",
    "reason": ""
   },
@@ -962,7 +962,7 @@
    "tdnet": true,
    "web": false,
    "ir": true,
-   "last_attempt": "2026-10-31T18:13:06+00:00",
+   "last_attempt": "2026-11-01T00:30:08+00:00",
    "last_parse_failure": "",
    "reason": ""
   },
