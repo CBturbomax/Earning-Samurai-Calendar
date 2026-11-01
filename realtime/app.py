@@ -2108,14 +2108,7 @@ def guide_report(todo, got):
         REPORT.setdefault("sent", sent_path.read_text().strip())
     except OSError:
         pass
-    if REPORT.get("sent") != today:
-        REPORT["sent"] = today
-        sent_path.write_text(today)
-        for cid in list(TG.subs):
-            try:
-                TG.send_text(cid, msg)
-            except Exception:                                    # noqa: BLE001
-                pass
+    # 텔레그램으로는 안 보낸다(회원님 11/01: "하지 마"). 숫자는 /api/audit 로만 본다.
     log("가이던스 점검 보고", REPORT["filers45d"], "곳 중 없음", REPORT["missing_after"], "미확인", len(unknown))
 
 
