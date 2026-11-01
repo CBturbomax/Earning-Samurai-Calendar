@@ -1378,8 +1378,9 @@ def irhist(since="2018-01-01"):
             log("IR 덱 목록 실패", code, repr(e)[:100])
             continue
         items = [it.get("Tdnet", it) for it in (j.get("items") or [])]
-        items = sorted((it for it in items if (it.get("pubdate") or "")[:10] >= since and IR_TITLE.search(it.get("title") or "")
-                        and re.search(r"決算|四半期|Results|Earnings", it.get("title") or "")
+        t_ok = lambda t: ((IR_TITLE.search(t) and re.search(r"決算|四半期|Results|Earnings", t))   # noqa: E731
+                          or re.match(r"\s*業績予想に関するお知らせ", t))       # 르네사스는 다음 분기 전망을 이 공시로 따로 낸다
+        items = sorted((it for it in items if (it.get("pubdate") or "")[:10] >= since and t_ok(it.get("title") or "")
                         and (it.get("document_url") or "").lower().endswith(".pdf")), key=lambda it: it["pubdate"])
         name = next((r[2] for r in rows.get("jp:" + code, []) if r[2]), code)
         for it in items:
@@ -1863,7 +1864,7 @@ def jp_seg_text(blob):
     return best
 
 
-IR_TITLE = re.compile(r"説明資料|補足資料|プレゼンテーション|決算概要|Presentation|ハイライト")
+IR_TITLE = re.compile(r"説明資料|説明会資料|補足資料|プレゼンテーション|決算概要|Presentation|ハイライト")
 
 
 def jp_ir_text(code, day, tries=3):
