@@ -1,5 +1,7 @@
 # Earning Samurai Calendar
 
+> **이어받는 AI 는 먼저 `docs/AI_HANDOFF.md` 를 읽을 것** — 사용자와의 약속·작업 요령·최근 결정·남은 일. (GPT/Codex 는 `AGENTS.md` 로 들어온다.)
+
 미국·일본·홍콩 상장사 실적발표 주간 캘린더. 정적 단일 HTML 하나가 산출물이고,
 GitHub Pages로 그대로 서비스한다. 서버·빌드툴·의존 패키지가 없다.
 
