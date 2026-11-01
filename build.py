@@ -568,7 +568,63 @@ def load_fin():
             out[key] = merge_fin(out.get(key), v)
     for key, v in jp_old_fin().items():          # 1Q18 부터 — 비어 있는 옛 분기만 메운다(rank 가 가장 낮다)
         out[key] = merge_fin(out.get(key), v)
+    hk_long_fin(out)
     return out
+
+
+def hk_long_fin(out):
+    """홍콩 옛 분기·반기(2017~) — 동방재부 F10 누계를 되돌린 것(scrape_fin_hk_em.py).
+    회원님(11/01): "홍콩 회사들이 너무 엉망 — 분기 회사는 1Q18 부터, 아니면 반기로라도."
+    stockanalysis 는 20기간뿐이라 반기 회사는 2021년부터였다.
+
+    그 표에는 통화가 없다(위안 숫자에 HKD 라 적혀 온다). 그래서 **stockanalysis 기록과 겹치는 기간의
+    매출이 맞을 때만** 그 통화로 싣는다. 매출 항목도 둘(营业额·营运收入) 중 맞는 쪽을 고른다 —
+    텐센트는 营运收入 이 맞고 BYD 는 둘이 같다. 레노버처럼 환산된 값이 오면 안 맞아서 안 쓴다.
+    겹치는 기간은 동방재부 값을 쓴다(한 줄 안에서 정의가 바뀌지 않게). 영업이익 정의가 다르면
+    (BYD 经营溢利 ≠ stockanalysis opinc) 동방재부에 없는 최근 기간의 영업이익은 비운다 — 이익률 선이 꺾여 보이지 않게."""
+    try:
+        em = json.loads((HERE / "data" / "financials_hk_em.json").read_text(encoding="utf-8")).get("stocks", {})
+    except (OSError, ValueError):
+        return
+    used = skip = 0
+    for key, rec in em.items():
+        sa = out.get(key)
+        epts = [p for p in rec.get("points") or [] if p.get("end", "") >= "2017-01-01"]
+        if not sa or not sa.get("points") or len(epts) < 2:
+            continue
+        sp = {p["end"]: p for p in sa["points"] if p.get("end") and p.get("rev")}
+
+        def near(e):
+            d = date.fromisoformat(e)
+            best = min(sp, key=lambda x: abs((date.fromisoformat(x) - d).days), default=None)
+            return sp[best] if best and abs((date.fromisoformat(best) - d).days) <= 10 else None
+        pairs = [(p, near(p["end"])) for p in epts]
+        pairs = [(p, q) for p, q in pairs if q]
+        if len(pairs) < 2:
+            skip += 1
+            continue
+
+        def fit(f):
+            ok = [abs(p[f] / q["rev"] - 1) <= 0.02 for p, q in pairs if p.get(f)]
+            return sum(ok) / len(ok) if ok else 0
+        f = max(("rev", "rev2"), key=fit)
+        if fit(f) < 0.8:
+            skip += 1
+            continue
+        opi_ok = [abs(p["opi"] / q["opi"] - 1) <= 0.05 for p, q in pairs if p.get("opi") and q.get("opi")]
+        opi_same = bool(opi_ok) and sum(opi_ok) / len(opi_ok) >= 0.8
+        mine = [{"end": p["end"], "mid": p["mid"], "rev": p[f], "opi": p.get("opi"), "ni": p.get("ni")} for p in epts]
+        have = {p["end"] for p in mine}
+        last = max(have)
+        for e, q in sp.items():                       # 동방재부에 아직 없는 최근 기간은 stockanalysis 로
+            if e > last and not any(abs((date.fromisoformat(e) - date.fromisoformat(h)).days) <= 10 for h in have):
+                mine.append(dict(q, opi=q.get("opi") if opi_same else None))
+        mine.sort(key=lambda p: p["end"])
+        if len(mine) <= len(sa["points"]):
+            continue
+        out[key] = dict(sa, points=mine, src="em")
+        used += 1
+    print(f"  홍콩 긴 이력(동방재부): {used:,}종목 붙임 · 통화·값이 안 맞아 뺀 {skip:,}종목")
 
 
 def jp_old_fin():
