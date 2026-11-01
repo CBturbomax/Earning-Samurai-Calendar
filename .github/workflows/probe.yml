@@ -61,7 +61,7 @@ jobs:
           rows=[]
           for k,rec in em.items():
               sa=j.get(k)
-              if not sa or out.get(k,{}).get('src')=='em': continue
+              if not sa or not sa.get('points') or not rec.get('points') or out.get(k,{}).get('src')=='em': continue
               sp={p['end']:p for p in sa.get('points') or [] if p.get('rev')}
               rs=[(p['end'], round(p['rev']/sp[p['end']]['rev'],3) if p.get('rev') else None, round(p['rev2']/sp[p['end']]['rev'],3) if p.get('rev2') else None) for p in rec['points'] if p['end'] in sp]
               rows.append((caps.get(k) or 0, k, sa.get('cur'), rec['freq'], len(sa['points']), rs[-6:]))
