@@ -1240,6 +1240,28 @@ def jp_hist_quarters(rows, annual):
                 out.setdefault((fy, 4), {})[show] = tot - d[3]
                 need.setdefault(fy, set()).add(show)
 
+    # **이름으로 못 짝지은 부문은 값으로 짝짓는다**(회원님 11/01: "비어 있으면 안 된다"). 연간 표와 분기 표의 이름이
+    # 다른 회사가 흔하다(일본어/영어·표기 차이). 그 해에 아직 짝이 없는 연간 줄 가운데 '연간 ÷ 9개월 누계'가
+    # 1.15~1.6 (결산 분기가 앞 세 분기 평균의 0.45~1.8배)인 것이 **딱 하나**이고, 그 연간 줄도 이 부문 하나에만
+    # 맞을 때만 쓴다. 둘 이상이 맞으면 어느 것인지 모르므로 안 쓴다.
+    for fy, cum in per_year.items():
+        ann_y = ann.get(fy, {})
+        if not ann_y:
+            continue
+        done4 = out.get((fy, 4), {})
+        used = set()
+        for nm, d in cum.items():
+            mine = members.get((fy, nm), {nm})
+            used |= {x for x in ann_y if x in mine or (seg_key(x) and seg_key(x) in {seg_key(m) for m in mine})}
+        left = {k: v for k, v in ann_y.items() if k not in used}
+        miss = {link.get((fy, nm), nm): d[3] for nm, d in cum.items()
+                if 3 in d and 4 not in d and link.get((fy, nm), nm) not in done4 and d[3] > 0}
+        cand = {m: [k for k, v in left.items() if 1.15 <= v / d3 <= 1.6] for m, d3 in miss.items()}
+        for m, ks in cand.items():
+            if len(ks) == 1 and sum(ks[0] in o for o in cand.values()) == 1:
+                out.setdefault((fy, 4), {})[m] = left[ks[0]] - miss[m]
+                need.setdefault(fy, set()).add(m)
+
     # **반쪽짜리 결산 분기는 통째로 뺀다.** 연간 쪽 부문 이름이 분기 쪽과
     # 달라 몇 개만 짝이 맞는 일이 흔한데(아식스는 여섯 중 셋이었다), 그대로
     # 두면 그 칸만 막대가 반토막 나 매출이 준 것처럼 보인다. 3분기에 값이
