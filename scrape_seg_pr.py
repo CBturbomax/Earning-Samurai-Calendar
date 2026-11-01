@@ -86,13 +86,24 @@ def read(raw, names, prior, tot_now, tot_prior):
             k = key(lab)
             if k and nums and k not in rows:
                 rows[k] = nums
-        hit = [n for n in names if key(n) in rows and prior.get(n)]
-        if len(hit) < max(2, int(len(names) * 0.6)):
+
+        def find(n):
+            """이름 줄 찾기 — 그대로 같으면 그것, 아니면 한쪽이 다른 쪽으로 시작하는 줄(「Online stores (1)」·
+            「Productivity and Business Processes segment」). 넷 글자 밑은 안 본다(엉뚱한 줄을 잡는다)."""
+            k = key(n)
+            if k in rows:
+                return k
+            c = [r for r in rows if len(k) >= 4 and len(r) >= 4 and (r.startswith(k) or k.startswith(r))]
+            return c[0] if len(c) == 1 else None
+        want = [n for n in names if prior.get(n)]                # 전년 값이 있는 이름만 센다(상계·0 줄은 빼고)
+        loc = {n: find(n) for n in want}
+        hit = [n for n in want if loc[n]]
+        if not want or len(hit) < max(2, int(len(want) * 0.6 + 0.5)):
             continue
         for scale in (1e6, 1e3, 1, 1e9):
             cols = None
             for n in hit:
-                c = {i for i, v in enumerate(rows[key(n)]) if abs(v * scale - prior[n]) <= abs(prior[n]) * 0.006}
+                c = {i for i, v in enumerate(rows[loc[n]]) if abs(v * scale - prior[n]) <= abs(prior[n]) * 0.006}
                 cols = c if cols is None else cols & c
                 if not cols:
                     break
@@ -104,14 +115,14 @@ def read(raw, names, prior, tot_now, tot_prior):
                         continue
                     vals = {}
                     for n in hit:
-                        nums = rows[key(n)]
+                        nums = rows[loc[n]]
                         if cur < len(nums):
                             vals[n] = nums[cur] * scale
                     if len(vals) != len(hit):
                         continue
                     r_now = sum(vals.values()) / tot_now
                     r_pri = sum(prior[n] for n in hit) / tot_prior
-                    if abs(r_now / r_pri - 1) <= 0.03 and all(v >= 0 for v in vals.values()):
+                    if abs(r_now / r_pri - 1) <= 0.03:
                         cand = (len(hit), -abs(r_now / r_pri - 1), vals)
                         if best is None or cand[:2] > best[:2]:      # 많이 맞은 표, 그다음 비가 더 맞는 쪽
                             best = cand
