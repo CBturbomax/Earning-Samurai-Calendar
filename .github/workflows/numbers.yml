@@ -119,9 +119,9 @@ jobs:
       # 홍콩 옛 분기·반기(2016~) — 동방재부 F10 누계. stockanalysis 는 20기간뿐이다(회원님 11/01).
       - name: 🇭🇰 홍콩 실적 긴 이력 (동방재부)
         continue-on-error: true
-        timeout-minutes: 6
+        timeout-minutes: 9
         env:
-          EM_SECS: '270'
+          EM_SECS: '450'
         run: python scrape_fin_hk_em.py
 
       - name: 🇭🇰 홍콩 부문별 매출 (동화순)
