@@ -26,10 +26,11 @@ jobs:
       - name: 🔎 홍콩 긴 이력 수집기 시험
         continue-on-error: true
         run: python scrape_fin_hk_em.py 00700 03750 09992 01211 02020 00992 >> /tmp/probe.txt 2>&1
-      - name: 🔎 서버 주가 차트
+      - name: 🔎 보도자료 부문 시험
         continue-on-error: true
-        run: |
-          for k in us:AMZN jp:6981 hk:00700 us:TM; do echo "== $k" >> /tmp/probe.txt; curl -sS -m 90 "https://earning-samurai-calendar-production.up.railway.app/api/px?key=$k" | python3 -c "import json,sys;j=json.load(sys.stdin);print(j.get('cur'),len(j.get('pts',[])),j.get('pts',[[0]])[-1],len(j.get('ev',[])),j.get('ev',[])[-6:])" >> /tmp/probe.txt 2>&1; done
+        env:
+          SEC_UA: 'Earning Samurai Calendar (cbpark@wisdomasset.co.kr)'
+        run: python scrape_seg_pr.py GOOGL MSFT AMZN META NVDA AAPL TSLA V MA KO > /tmp/probe.txt 2>&1
       - name: 결과를 probe-out 가지에
         if: always()
         run: |
