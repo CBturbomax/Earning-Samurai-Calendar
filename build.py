@@ -1491,6 +1491,21 @@ def load_seg():
         print(f"  segments_edgar.json: 최근 분기를 이어 붙인 종목 {added:,}"
               f" · 새로 생긴 종목 {new:,}")
 
+    # **발표 당일의 보도자료(8-K) 사업부 표**(scrape_seg_pr.py) — 10-Q 가 나오기 전 며칠~몇 주의 빈 칸을 메운다
+    # (회원님 11/01: "구글 3분기 실적 나왔는데 브레이크다운이 없다"). 전년 같은 분기 값과 맞는 열만 읽었다.
+    # 같은 분기가 이미 있으면(10-Q·벌크) 손대지 않는다 — splice 가 없는 칸만 채운다.
+    try:
+        prs = json.loads((HERE / "data" / "segments_pr.json").read_text(encoding="utf-8")).get("stocks", {})
+    except (OSError, ValueError):
+        prs = {}
+    pr_add = 0
+    for k, v in prs.items():
+        key = "us:" + k
+        if out.get(key) and v.get("pts"):
+            pr_add += bool(splice(out[key], v))
+    if prs:
+        print(f"  segments_pr.json(보도자료): 발표 분기를 채운 종목 {pr_add:,} / {len(prs):,}")
+
     # 일본 옛 분기 — EDINET DB. **이력이 뼈대고 TDnet 이 꼬리다.** TDnet 목록은
     # 한 달치뿐이라 부문 막대가 한두 칸이던 종목이 수십 칸이 된다(아식스 2 -> 42).
     # 이어 붙이기는 미국 쪽과 같은 `splice` 를 쓴다 — 같은 판단을 두 군데 적어
@@ -2862,6 +2877,85 @@ except (OSError, ValueError):
 KRW_NOW = float(RATES_NOW.get("KRW") or USD_KRW)
 
 
+def audit_gaps(packed, fin, seg):
+    """**빈칸·누락을 스스로 찾는다**(회원님 11/01: "내가 일일이 말하지 않아도 빈칸 있는 회사, 3분기 발표했는데 빠진 회사,
+    영업이익 빠진 회사, 2018년부터 있는데 못 잡은 회사를 전부 싹 잡아내게"). 빌드마다 data/audit_gaps.json 에 시총 큰 순으로 적고
+    로그에 센다. 수집기들(scrape_fin·scrape_fin_intl·scrape_seg_pr)과 실시간 서버가 이 목록을 **먼저** 다시 받는다.
+      gap      1Q18 이후 실적 차트 가운데가 빈 회사(빈 분기 이름)
+      stale    실적을 발표했는데(캘린더 날짜가 지났는데) 그 분기 숫자가 없는 회사
+      seg      실적 차트 마지막 분기는 있는데 사업부 차트 마지막 분기가 뒤처진 회사
+      opi      최근 12분기 중 영업이익이 빈 분기가 있는 회사
+      short    시총 1조 원 이상인데 실적이 2019년 뒤에야 시작하는 회사(옛 이력을 못 잡았을 수 있다)"""
+    fx = KRW_NOW
+    cap, last_ann = {}, {}
+    today = (datetime.now(timezone.utc) + timedelta(hours=9)).date()
+    for p in packed:
+        k = p[9] + ":" + p[1]
+        cap[k] = max(cap.get(k, 0), p[11] or 0)
+        try:
+            d = date.fromisoformat(p[0])
+        except ValueError:
+            continue
+        if 2 <= (today - d).days <= 60 and str(p[1]) and (k not in last_ann or d > last_ann[k]):
+            last_ann[k] = d
+
+    def idx(l):
+        m = re.match(r"^(\d)([QH])(\d\d)$", l or "")
+        return (int(m.group(3)) * (4 if m.group(2) == "Q" else 2) + int(m.group(1)) - 1, m.group(2)) if m else (None, None)
+
+    def lab_end(l):                            # 분기 이름 -> 그 분기가 끝나는 날(달력 기준 어림)
+        m = re.match(r"^(\d)([QH])(\d\d)$", l or "")
+        if not m:
+            return None
+        n, kind, y = int(m.group(1)), m.group(2), 2000 + int(m.group(3))
+        mo = n * 3 if kind == "Q" else n * 6
+        return date(y, mo, 28)
+    out = {c: [] for c in ("gap", "stale", "seg", "opi", "short")}
+    for k, f in fin.items():
+        pts = [q for q in (f.get("points") or []) if labFrom18_py(q[0])]
+        if len(pts) < 2 or f.get("freq") not in ("Q", "H"):
+            continue
+        won = cap.get(k, 0) * 1e9 * fx
+        ii = [idx(q[0]) for q in pts]
+        miss = [pts[a - 1][0] + "→" + pts[a][0] for a in range(1, len(pts))
+                if ii[a][0] is not None and ii[a - 1][0] is not None and ii[a][0] - ii[a - 1][0] > 1]
+        if miss:
+            out["gap"].append([k, won, ", ".join(miss[:4])])
+        la = last_ann.get(k)
+        le = lab_end(pts[-1][0])
+        if la and le and (la - le).days > 75:
+            out["stale"].append([k, won, f"발표 {la.isoformat()} · 우리 마지막 {pts[-1][0]}"])
+        s = seg.get(k)
+        if s and s.get("pts"):
+            sl = s["pts"][-1][0]
+            if idx(sl)[0] is not None and idx(pts[-1][0])[0] is not None and idx(sl)[1] == idx(pts[-1][0])[1] \
+                    and idx(sl)[0] < idx(pts[-1][0])[0]:
+                out["seg"].append([k, won, f"사업부 {sl} · 실적 {pts[-1][0]}"])
+        no_opi = [q[0] for q in pts[-12:] if q[2] is None]
+        if no_opi and len(no_opi) < len(pts[-12:]):
+            out["opi"].append([k, won, ", ".join(no_opi[:6])])
+        if won >= 1e12 and idx(pts[0][0])[0] is not None and idx(pts[0][0])[0] > idx("4Q19")[0]:
+            out["short"].append([k, won, f"첫 분기 {pts[0][0]}"])
+    for c in out:
+        out[c].sort(key=lambda r: -r[1])
+    big = {c: sum(1 for r in out[c] if r[1] >= 1e12) for c in out}
+    payload = {"ts": datetime.now(timezone.utc).isoformat(timespec="minutes"),
+               "counts": {c: len(v) for c, v in out.items()}, "big": big,
+               "items": {c: [[r[0], round(r[1] / 1e12, 2), r[2]] for r in v[:600]] for c, v in out.items()}}
+    (HERE / "data" / "audit_gaps.json").write_text(json.dumps(payload, ensure_ascii=False, separators=(",", ":")),
+                                                   encoding="utf-8")
+    print("  빈칸 점검(전체 · 시총 1조↑): " + " · ".join(f"{c} {len(out[c]):,}({big[c]:,})" for c in out))
+    for c in ("stale", "seg", "gap"):
+        top = [f"{r[0]} {r[2]}" for r in out[c][:5]]
+        if top:
+            print(f"    {c} 큰 회사: " + " / ".join(top))
+
+
+def labFrom18_py(l):
+    m = re.match(r"^\d[QH](\d\d)$", l or "")
+    return int(m.group(1)) >= 18 if m else True
+
+
 def pack_fcst(packed):
     """상세창의 연간 표(직전년도 실적 · 당해 · 차기 · 차차기 + PER·PBR·PSR).
 
@@ -3319,6 +3413,11 @@ def build():
         "monthly": monthly,
         "monthlyNum": monthly_nums,
     }
+
+    try:
+        audit_gaps(packed, payload["fin"], payload["seg"])
+    except Exception as e:                        # noqa: BLE001 — 점검이 실패해도 페이지는 만든다
+        print(f"  ! 빈칸 점검 실패: {e!r}")
 
     # **러너는 UTC 로 돈다.** 예전에는 datetime.now() 에 "KST" 만 붙였는데,
     # 그러면 화면에 늘 아홉 시간 뒤처진 시각이 뜬다 — 오후 5시에 봤는데
