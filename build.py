@@ -5650,7 +5650,7 @@ function tgGuide(gh, title, mkt, key) {
   const cnt = {};
   Object.keys(gh).forEach(f => { cnt[f.slice(5, 7)] = (cnt[f.slice(5, 7)] || 0) + Object.keys(gh[f]).length; });
   const fmo = Object.keys(cnt).sort((a, b) => cnt[b] - cnt[a])[0];
-  const fys = Object.keys(gh).filter(f => f.slice(5, 7) === fmo).sort().slice(-8);   // 가급적 오래전부터(회원님 10/30)
+  const fys = Object.keys(gh).filter(f => f.slice(5, 7) === fmo).sort().slice(window.TGSHOT ? -4 : -8);   // 가급적 오래전부터(회원님 10/30)
   // 업적예상 수정(결산단신 사이에 낸 것)은 낸 날짜 차례대로 단계 사이에 끼운다. 결산단신은 결산기 끝 10·7·4·1달 전에 나온다.
   const PUB = { '최초': 10, '1Q': 7, '2Q': 4, '3Q': 1 };
   const seqOf = (f, gi) => {
@@ -5733,8 +5733,10 @@ function tgGuide(gh, title, mkt, key) {
         String(sy % 100).padStart(2, '0') + '.' + sm + '~' + String(fy % 100).padStart(2, '0') + '.' + fm + '</text>';
     });
     return '<div class="finhead sub">' + name + ' <span class="dim">(단위: ' + U.ko + ' · 회사 연간 전망)</span></div>' +
-      '<div class="finbox"><svg viewBox="0 0 ' + W + ' ' + H + '" class="finsvg">' + s + '</svg></div>';
+      '<div class="finbox gbox"><svg viewBox="0 0 ' + W + ' ' + H + '" class="finsvg"' +
+      (window.TGSHOT ? '' : ' style="width:' + W + 'px;min-width:' + W + 'px"') + '>' + s + '</svg></div>';
   };
+  // 사이트에서는 줄이지 않고 제 크기로 그린 뒤 옆으로 넘겨 본다(회원님 11/01: "너무 작게 보인다") — 최신이 보이게 오른쪽 끝에서 연다.
   const a = one(0, '매출 가이던스'), b = one(1, '영업이익 가이던스');
   const c = mkt === 'us' ? one(2, 'EPS 가이던스') : b ? '' : one(2, '순이익 가이던스');
   if (!a && !b && !c) return '';
@@ -5760,7 +5762,15 @@ function ghFill() {
         esc(NOG[key]) + '입니다. 결산단신 원문에 연간 실적 전망이 없습니다.</p></div>';
       return;
     }
-    try { el.innerHTML = tgGuide(g, '', m, key); } catch (e) {}
+    try {
+      el.innerHTML = tgGuide(g, '', m, key);
+      const bx = [...el.querySelectorAll('.gbox')];
+      bx.forEach(b => {
+        b.scrollLeft = b.scrollWidth;
+        setTimeout(() => { b.scrollLeft = b.scrollWidth; }, 120);
+        b.addEventListener('scroll', () => bx.forEach(o => { if (o !== b && Math.abs(o.scrollLeft - b.scrollLeft) > 1) o.scrollLeft = b.scrollLeft; }));
+      });
+    } catch (e) {}
   });
   if (GH) return go();
   fetch('./data/guide_site.json?t=' + Math.floor(Date.now() / 6e5)).then(r => r.json())
