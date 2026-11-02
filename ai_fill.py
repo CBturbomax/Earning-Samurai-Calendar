@@ -159,7 +159,8 @@ def targets(B, only):
         if only and key not in only:
             continue
         m = key.split(":")[0]
-        if excluded(m, "", B.SECTORS.get(key, ""), (B.INDUSTRIES.get(key, "") or "").replace("-", "")):
+        sect = B.SECTORS.get(key, "") or (jp_sector(key[3:]) if m == "jp" else "")
+        if excluded(m, "", sect, (B.INDUSTRIES.get(key, "") or "").replace("-", "")) or (m == "jp" and "銀行" in sect):
             continue                                  # 은행·리츠는 화면에 안 싣는다
         sig = tuple(p.get("rev") for p in (B.FIN[key].get("points") or [])[-6:])
         if m == "us" and sig in seen:
