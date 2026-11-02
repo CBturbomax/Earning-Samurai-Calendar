@@ -171,3 +171,6 @@
   보고(`seg_quarters` — 안 그러면 상반기 누계가 2분기 칸에 그대로 앉았다), 같은 분기에 같이 안 나오고 크기가 비슷하며 낱말을 공유하는 두 이름은
   최근 이름으로 잇는다(`merge_renamed`, 2,664곳 중 448곳). 원자료는 그대로라 다시 받을 것 없다.
 - 11/02 AI 빈칸: 사업부 기록이 아예 없는 회사(단일 부문 — 키엔스·닌텐도·다케다·추가이·디스코)는 묻지 않는다(AIFILL_BIG 기본 0).
+- 11/02 **일본 옛 분기 이력도 한 번에**(`scrape_seg_hist_jp.py` · `segments_hist_jp.yml` 두 갈래). JPX 보관소 결산단신 zip 을 read_segments 로 읽어
+  `data/segments_hist_jp_s{n}.json`(raw + stocks). build 는 `segments_hist_*_s*.json` 을 load_seg 맨 앞에 싣는다. 종합상사 부문 매출 태그
+  `Revenue2IFRS` 를 SEG_REV 에 더했다(MCP jp_financials items='セグメント' 로 확인 — 그동안 미쓰비시상사·미쓰이물산·스미토모상사 부문이 통째로 없었다).
