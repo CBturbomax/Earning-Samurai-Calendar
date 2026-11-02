@@ -1,0 +1,87 @@
+# 일본 사업부 옛 분기 이력 — 사업부 빈칸 있는 회사의 JPX 보관소 결산단신(2016~)을 **한 번만** 전부 읽는다(scrape_seg_hist_jp.py).
+# AI 없음 · 돈 안 듦. 두 갈래가 각자 제 파일(data/segments_hist_jp_s{0,1}.json)의 주인. 다 읽은 회사는 다시 안 본다.
+# 남은 회사가 있으면 끝날 때 다음 실행을 건다(이어달리기). 다 읽으면 "남은 회사 0" 으로 저절로 멈춘다.
+name: 일본 사업부 옛 이력 (JPX 보관소 한 번에)
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - 'scrape_seg_hist_jp.py'
+      - '.github/workflows/segments_hist_jp.yml'
+
+permissions:
+  contents: write
+  actions: write
+
+concurrency:
+  group: seghistjp-${{ github.ref_name }}
+  cancel-in-progress: false
+
+jobs:
+  hist:
+    runs-on: ubuntu-latest
+    if: github.ref_name == 'main'
+    timeout-minutes: 40
+    strategy:
+      fail-fast: false
+      matrix:
+        shard: [0, 1]
+    env:
+      HIST_SHARD: '${{ matrix.shard }}/2'
+      HIST_SECS: '1500'
+    outputs:
+      left: ${{ steps.run.outputs.left }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: 최신 main 으로 맞춘다
+        run: |
+          git fetch origin main
+          git reset --hard origin/main
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: 🧾 옛 분기 XBRL 읽기
+        id: run
+        continue-on-error: true
+        timeout-minutes: 30
+        run: |
+          set -o pipefail
+          python scrape_seg_hist_jp.py | tee hist.log
+          L=$(grep -o '남은 회사 [0-9]*' hist.log | tail -1 | grep -o '[0-9]*$' || echo 0)
+          echo "left=$L" >> "$GITHUB_OUTPUT"
+          { echo "### 갈래 ${{ matrix.shard }}"; echo '```'; tail -30 hist.log; echo '```'; } >> "$GITHUB_STEP_SUMMARY"
+      - name: 저장소에 반영
+        run: |
+          set -u
+          git config user.name  "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          rm -f hist.log
+          F=data/segments_hist_jp_s${{ matrix.shard }}.json
+          [ -f "$F" ] || { echo "파일이 없다."; exit 0; }
+          git add "$F"
+          git diff --cached --quiet && { echo "달라진 게 없다."; exit 0; }
+          git commit -m "일본 사업부 옛 이력 갈래 ${{ matrix.shard }} $(date -u +%F' '%H:%M) [skip ci]"
+          for i in 1 2 3 4 5 6; do
+            git fetch origin main || { sleep $((2**i)); continue; }
+            git merge --no-edit -X ours origin/main || { git merge --abort; sleep $((2**i)); continue; }
+            git push origin HEAD:main && exit 0
+            sleep $((2**i + RANDOM % 5))
+          done
+          echo "푸시를 끝내 못 했다"; exit 1
+
+  relay:
+    needs: hist
+    if: always() && github.ref_name == 'main'
+    runs-on: ubuntu-latest
+    steps:
+      - name: 남은 회사가 있으면 다음 실행을 건다(이어달리기)
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          # 갈래 셋 중 하나라도 남았으면 건다(matrix outputs 는 마지막 갈래 값이라 0 이 아니면 건다 — 다 끝나면 저절로 멈춘다)
+          L='${{ needs.hist.outputs.left }}'
+          echo "남은 회사(마지막 갈래): ${L:-?}"
+          [ "${L:-1}" = "0" ] && { echo "다 읽었다."; exit 0; }
+          gh workflow run segments_hist_jp.yml --repo "${{ github.repository }}" --ref main || true
