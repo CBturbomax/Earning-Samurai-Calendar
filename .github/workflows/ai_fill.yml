@@ -11,8 +11,6 @@ on:
         description: '몇 종목만 (예: us:KO jp:6501) — 비우면 전부'
         required: false
         default: ''
-  schedule:
-    - cron: '7,37 * * * *'
 
 permissions:
   contents: write
@@ -25,7 +23,7 @@ concurrency:
 jobs:
   fill:
     runs-on: ubuntu-latest
-    if: github.ref_name == 'main'
+    if: false   # 멈춤(11/02 회원님): 구독 한도를 넘으면 추가 크레딧(돈)이 나간다 — 다시 켜려면 이 줄을 github.ref_name == 'main' 으로
     timeout-minutes: 58
     strategy:
       fail-fast: false
@@ -80,7 +78,7 @@ jobs:
 
   relay:
     needs: fill
-    if: always() && github.ref_name == 'main' && github.event.inputs.only == ''
+    if: false
     runs-on: ubuntu-latest
     steps:
       - name: 다음 실행을 건다(이어달리기)
