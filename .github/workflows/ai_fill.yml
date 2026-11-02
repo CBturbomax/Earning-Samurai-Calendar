@@ -46,8 +46,8 @@ jobs:
           # tok = 이번 실행 토큰 상한. claude2(회원님이 지금 채팅하는 계정)는 작게 — 채팅까지 막히면 안 된다
           - {shard: 0, want: claude1, tok: '150000'}
           - {shard: 1, want: claude2, tok: '60000'}
-          - {shard: 2, want: codex, tok: '300000'}
-          - {shard: 3, want: codex, tok: '300000'}
+          - {shard: 2, want: codex, tok: '300000', w: '2'}
+          - {shard: 3, want: codex, tok: '300000', w: '2'}
     env:
       TOK1: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
       TOK2: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN_2 }}
@@ -61,7 +61,7 @@ jobs:
       CODEX_EFFORT: low
       AIFILL_SHARD: '${{ matrix.shard }}/4'
       AIFILL_SECS: '2700'
-      AIFILL_WORKERS: '1'
+      AIFILL_WORKERS: "${{ matrix.w || '1' }}"   # Codex 갈래는 두 줄
       SEC_UA: 'Earning Samurai Calendar (cbpark@wisdomasset.co.kr)'
     steps:
       - uses: actions/checkout@v4
