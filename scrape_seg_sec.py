@@ -93,7 +93,7 @@ TICKERS = "https://www.sec.gov/files/company_tickers.json"
 # 3: 한 축짜리 행이 몇 줄 섞여 있어도 두 축 행을 버리지 않는다(엑슨)
 # 4: 더 잘게 쪼갠 쪽을 쓴다 · '부문 합계' 줄을 뺀다(셰브런)
 # 5: 지주회사로 갈아탄 티커를 옛 CIK 에 이어 붙인다(엑슨)
-SEG_SEC_VER = 5
+SEG_SEC_VER = 6
 # 열두 분기(3년)면 화면에 그리는 스물두 칸의 절반을 넘고, 큰 종목은
 # stockanalysis 가 스무 분기를 채워 준다. 한 분기 zip 이 85MB 라 열여섯으로
 # 늘리면 한 번에 1.4GB 다 — 남의 서버에서 그만큼 받을 이유가 없다.
@@ -302,7 +302,13 @@ def iso(ds):
 
 # ── zip 하나 훑기 ────────────────────────────────────────────────────────
 
-def scan(blob, want_cik, facts, pairs):
+# **수주잔고(RPO)** — 회계기준(ASC 606) 표준 항목이라 회사가 따로 이름을 짓지
+# 않는다. 시점값(qtrs=0)이고 부문 칸이 빈 줄이 회사 전체다. 소프트웨어·반도체
+# 장비·방산이 주로 낸다. 'backlog' 는 표준 항목이 없어 여기서는 안 잡힌다.
+RPO_TAGS = {"RevenueRemainingPerformanceObligation"}
+
+
+def scan(blob, want_cik, facts, pairs, rpo=None):
     """zip 한 덩이에서 부문별 매출 행을 뽑아 쌓는다.
 
     facts[cik][axis][member][tag][(ddate, qtrs)] = (value, filed)
@@ -349,6 +355,19 @@ def scan(blob, want_cik, facts, pairs):
             if len(p) <= iv:
                 continue
             seg = p[isg]
+            if (rpo is not None and not seg and not p[icg] and p[iu] == "USD"
+                    and p[it] in RPO_TAGS and p[iq] == "0"):
+                sub = subs.get(p[ia])
+                try:
+                    val = float(p[iv])
+                except ValueError:
+                    val = 0
+                if sub and val > 0:
+                    slot = rpo.setdefault(sub[0], {})
+                    old = slot.get(p[idd])
+                    if old is None or sub[1] > old[1]:
+                        slot[p[idd]] = (val, sub[1])
+                continue
             if not seg or p[icg] or p[iu] != "USD":
                 continue
             rank = REV_RANK.get(p[it])
@@ -609,21 +628,57 @@ def candidates(by_axis, by_pair):
     return out
 
 
+# 사업부문 이름이 전부 지역인 회사(애플: Americas·Europe·Greater China…)는
+# 사업부문이 곧 지역이다. 그런 회사에 제품 축이 따로 있으면 **제품을 사업부
+# 차트에, 사업부문(=지역)을 지역 차트에** 싣는다 — 같은 지역 그림이 두 번
+# 서지 않고, 아이폰·맥 같은 제품 나눔이 살아난다.
+GEO_WORD = re.compile(
+    r"America|Europe|EMEA|Asia|Pacific|APAC|APJ|China|Japan|Korea|Taiwan|India|"
+    r"Canada|Mexico|Latin|Brazil|Africa|MiddleEast|Germany|France|Kingdom|UK$|"
+    r"^U\.?S\.?$|^US|UnitedStates|NonUs|International|Domestic|Foreign|Country|"
+    r"Region|Rest|Oceania|Australia|Singapore|Ireland|Netherlands|Switzerland|"
+    r"^[A-Z]{2}$", re.I)
+
+
+def geo_like(members):
+    hit = sum(1 for m in members if GEO_WORD.search(m))
+    return len(members) >= 2 and hit >= 0.75 * len(members)
+
+
+def pack(series, ends):
+    last = ends[-1]
+    names = sorted(series, key=lambda m: (-(series[m].get(last) or 0), m))
+    return ([pretty(m) for m in names],
+            [[iso(e)] + [series[m].get(e) for m in names] for e in ends])
+
+
 def build_stock(by_axis, by_pair):
-    """축 하나를 고른다. 사업부문 > 제품 > 지역, 같은 등급이면 분기가 많은 쪽."""
+    """축 하나를 고른다. 사업부문 > 제품 > 지역, 같은 등급이면 분기가 많은 쪽.
+
+    **지역은 따로 한 벌 더 싣는다(`geo`).** 축을 섞지 않는다는 규칙은 그대로다 —
+    사업부 그림과 지역 그림이 각자 축 하나씩이다.
+    """
     cand = candidates(by_axis, by_pair)
     if not cand:
         return None
-    axis = max(cand, key=lambda a: (axis_rank(a), cand[a][1][0], cand[a][1][1]))
+    key = lambda a: (axis_rank(a), cand[a][1][0], cand[a][1][1])
+    axis = max(cand, key=key)
+    geos = [a for a in cand if axis_rank(a) == 1]
+    geo = max(geos, key=key) if geos else None
+    prods = [a for a in cand if axis_rank(a) == 2]
+    if axis_rank(axis) == 3 and prods and geo_like(cand[axis][0]):
+        geo, axis = axis, max(prods, key=key)
+    elif axis_rank(axis) == 1:
+        geo = None                     # 지역뿐인 회사 — 사업부 자리에 이미 지역이 선다
     series, (_n, _m, ends) = cand[axis]
     rank = axis_rank(axis)
-
-    # 마지막 분기의 값이 큰 순으로 놓는다 — 쌓은 막대의 아래쪽이 큰 부문이 된다.
-    last = ends[-1]
-    names = sorted(series, key=lambda m: (-(series[m].get(last) or 0), m))
-    pts = [[iso(e)] + [series[m].get(e) for m in names] for e in ends]
-    return {"v": SEG_SEC_VER, "axis": AXIS_KO.get(rank, "사업부문"),
-            "names": [pretty(m) for m in names], "pts": pts}
+    names, pts = pack(series, ends)
+    rec = {"v": SEG_SEC_VER, "axis": AXIS_KO.get(rank, "사업부문"),
+           "names": names, "pts": pts}
+    if geo and geo != axis:
+        gs, (_n, _m, gends) = cand[geo]
+        rec["geo"] = dict(zip(("names", "pts"), pack(gs, gends)))
+    return rec
 
 
 def dedupe_names(rec):
@@ -737,7 +792,7 @@ def main():
         print("  새로 나온 분기가 없다. 아무것도 안 한다.")
         return
 
-    facts, pairs = {}, {}
+    facts, pairs, rpo = {}, {}, {}
     for i, q in enumerate(quarters):
         blob = None
         if i:
@@ -750,7 +805,7 @@ def main():
                 break
         if not blob:
             raise SystemExit(f"  {q} 를 못 받았다. 이번 실행은 접는다.")
-        n = scan(blob, set(by_cik), facts, pairs)
+        n = scan(blob, set(by_cik), facts, pairs, rpo)
         print(f"    {q}  {len(blob)/1e6:,.0f}MB  부문 행 {n:,}", flush=True)
         del blob
 
@@ -760,6 +815,8 @@ def main():
         if not rec:
             continue
         rec = dedupe_names(rec)
+        if rec.get("geo"):
+            rec["geo"] = dedupe_names(rec["geo"])
         for sym in by_cik.get(cik, []):
             stocks[sym] = rec
 
@@ -788,6 +845,9 @@ def main():
         "ts": date.today().isoformat(),
         "count": len(stocks),
         "stocks": stocks,
+        # 수주잔고(RPO) — {티커: [[종료일, 값], …]}. 부문이 없는 회사도 싣는다.
+        "rpo": {sym: [[iso(d), v[0]] for d, v in sorted(rpo[cik].items())]
+                for cik in rpo for sym in by_cik.get(cik, [])},
     }
     tmp = OUT.with_suffix(".tmp")
     tmp.write_text(json.dumps(payload, ensure_ascii=False), encoding="utf-8")
