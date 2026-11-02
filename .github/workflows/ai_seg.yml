@@ -4,6 +4,8 @@
 name: AI 사업부 판독
 
 on:
+  schedule:
+    - cron: '9,29,49 * * * *'   # 실적 시즌 — 20분마다(Codex 만)
   workflow_dispatch:
     inputs:
       only:
@@ -21,11 +23,12 @@ concurrency:
 jobs:
   ai:
     runs-on: ubuntu-latest
-    if: false   # 멈춤(11/02 회원님): 구독 한도를 넘으면 추가 크레딧(돈)이 나간다 — 다시 켜려면 이 줄을 github.ref_name == 'main' 으로
+    if: github.ref_name == 'main'   # 11/02 다시 켬 — Codex(ChatGPT 구독)로만 돈다. Claude 계정은 안 쓴다(추가 결제 걱정)
     timeout-minutes: 20
     env:
-      CLAUDE_CODE_OAUTH_TOKEN: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
-      AI_MODEL: sonnet
+      CODEX_AUTH_JSON: ${{ secrets.CODEX_AUTH_JSON }}
+      AI_ENGINE: codex
+      CODEX_EFFORT: low
       SEC_UA: 'Earning Samurai Calendar (cbpark@wisdomasset.co.kr)'
     steps:
       - uses: actions/checkout@v4
@@ -36,21 +39,23 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: '3.12'
-      - name: Claude Code CLI
-        if: env.CLAUDE_CODE_OAUTH_TOKEN != ''
-        run: npm install -g @anthropic-ai/claude-code >/dev/null 2>&1 && claude --version
+      - name: Codex CLI
+        if: env.CODEX_AUTH_JSON != ''
+        run: |
+          mkdir -p ~/.codex && printf '%s' "$CODEX_AUTH_JSON" > ~/.codex/auth.json && chmod 600 ~/.codex/auth.json
+          npm install -g @openai/codex >/dev/null 2>&1 && codex --version
       - name: 🤖 AI 사업부 판독
-        if: env.CLAUDE_CODE_OAUTH_TOKEN != ''
+        if: env.CODEX_AUTH_JSON != ''
         continue-on-error: true
         timeout-minutes: 12
         env:
           AISEG_SECS: '540'
         run: |
           set -o pipefail
-          python ai_seg.py | tee ai.log
+          W=$PWD; (cd /tmp && python "$W/ai_seg.py") | tee ai.log     # 저장소 밖에서 — AGENTS.md·CLAUDE.md 가 프롬프트에 붙지 않게
           { echo '### AI 사업부 판독'; echo '```'; tail -40 ai.log; echo '```'; } >> "$GITHUB_STEP_SUMMARY"
       - name: 저장소에 반영
-        if: env.CLAUDE_CODE_OAUTH_TOKEN != ''
+        if: env.CODEX_AUTH_JSON != ''
         run: |
           set -u
           git config user.name  "github-actions[bot]"
