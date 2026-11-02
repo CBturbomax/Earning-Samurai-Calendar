@@ -167,3 +167,10 @@
   breakdown)로 테슬라 2024 10-Q 를 열어 보니 부문 매출이 XBRL 에 그대로 있었다 — 벌크는 2Q23 에서 끊기고 1분기 두 부문이 뒤바뀌어 있었고,
   edgar 는 최근 두 장만 읽어 옛 구멍을 못 메웠다. 빈칸 있는 회사부터 2017 이후 10-Q·10-K 전부를 읽어 `data/segments_hist_us_s{n}.json`
   에 영구 저장(`done_co` 는 다시 안 봄). build 의 load_seg·load_geo 가 '긴 쪽이 뼈대'로 맨 앞에 싣는다. AI 빈칸 메우기는 이게 끝난 뒤에 남는 칸만.
+- 11/02 일본 부문 이름: 문맥 이름이 잘린 꼬리(「…Reportable Segment Membe」)를 떼고(`seg_name`), 누계를 뺄 때 이름만 바뀐 한 짝을 같은 부문으로
+  보고(`seg_quarters` — 안 그러면 상반기 누계가 2분기 칸에 그대로 앉았다), 같은 분기에 같이 안 나오고 크기가 비슷하며 낱말을 공유하는 두 이름은
+  최근 이름으로 잇는다(`merge_renamed`, 2,664곳 중 448곳). 원자료는 그대로라 다시 받을 것 없다.
+- 11/02 AI 빈칸: 사업부 기록이 아예 없는 회사(단일 부문 — 키엔스·닌텐도·다케다·추가이·디스코)는 묻지 않는다(AIFILL_BIG 기본 0).
+- 11/02 **일본 옛 분기 이력도 한 번에**(`scrape_seg_hist_jp.py` · `segments_hist_jp.yml` 두 갈래). JPX 보관소 결산단신 zip 을 read_segments 로 읽어
+  `data/segments_hist_jp_s{n}.json`(raw + stocks). build 는 `segments_hist_*_s*.json` 을 load_seg 맨 앞에 싣는다. 종합상사 부문 매출 태그
+  `Revenue2IFRS` 를 SEG_REV 에 더했다(MCP jp_financials items='セグメント' 로 확인 — 그동안 미쓰비시상사·미쓰이물산·스미토모상사 부문이 통째로 없었다).
