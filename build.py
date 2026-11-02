@@ -1635,6 +1635,84 @@ def splice(base, fresh):
 
 SEG = load_seg()
 
+
+# ── 지역별 매출 · 수주(수주고·수주잔고·RPO) ─────────────────────────────
+# 회원님(11/02): "품목별 매출 Breakdown 처럼 지역별 매출, 그리고 수주·수주잔고·RPO 같은
+# 지표도 — 숫자와 YoY 차트 둘 다." 사업부 그림과 **같은 그림·같은 규칙**을 쓴다
+# (총매출과 대 보기 seg_fit, 기준 바뀜 current_basis, 이름 한글 seg_ko).
+# 축을 섞지 않는다는 규칙은 그대로다 — 사업부 그림과 지역 그림이 각자 축 하나씩이다.
+def _read_stocks(name):
+    p = HERE / "data" / name
+    if not p.exists():
+        return {}
+    try:
+        return json.loads(p.read_text(encoding="utf-8"))
+    except (ValueError, OSError) as e:
+        print(f"  ! {name} 읽기 실패: {e}")
+        return {}
+
+
+def load_geo():
+    """지역별 매출. 미국은 SEC 벌크·제출 서류의 지역 축(geo), 일본은 결산단신의 지역 표."""
+    out = {}
+    for name in ("segments_sec.json", "segments_fpi.json"):
+        n = 0
+        for k, v in (_read_stocks(name).get("stocks") or {}).items():
+            g = v.get("geo")
+            if g and g.get("names") and g.get("pts"):
+                out[k if ":" in k else "us:" + k] = dict(g, axis="지역")
+                n += 1
+        if n:
+            print(f"  {name}: 지역 {n:,}종목")
+    added = 0
+    for k, v in (_read_stocks("segments_edgar.json").get("stocks") or {}).items():
+        g = v.get("geo")
+        if not (g and g.get("names")):
+            continue
+        key = k if ":" in k else "us:" + k
+        g = dict(g, axis="지역")
+        if key not in out:
+            out[key] = g
+        else:
+            added += bool(splice(out[key], g))
+    jp = load_geo_jp()
+    for k, v in jp.items():
+        out.setdefault(k, v)
+    print(f"  지역: 미국 서류로 최근 분기를 이은 종목 {added:,} · 일본 {len(jp):,}")
+    for k in list(out):
+        got = current_basis(out[k])
+        if got is None:
+            del out[k]
+        else:
+            out[k] = got
+    return out
+
+
+def load_ord():
+    """수주 지표 — {열쇠: {"names": [...], "pts": [[종료일, 값…]]}}.
+
+    미국은 수주잔고(RPO, 회계기준 표준 항목)를 SEC 벌크와 제출 서류에서, 일본은 결산단신의
+    수주 표(수주고·수주잔고)에서 받는다. 시점값이라 총매출과 대 보지 않는다.
+    """
+    out = {}
+    rp = {}
+    for name in ("segments_sec.json", "segments_edgar.json"):
+        for t, rows in (_read_stocks(name).get("rpo") or {}).items():
+            have = rp.setdefault("us:" + t, {})
+            for d, v in rows:
+                have[d] = v
+    for k, by_d in rp.items():
+        if len(by_d) >= 2:
+            out[k] = {"names": ["수주잔고(RPO)"], "pts": [[d, v] for d, v in sorted(by_d.items())]}
+    jp = load_ord_jp()
+    out.update(jp)
+    print(f"  수주: 미국 RPO {len(rp):,}종목 · 일본 {len(jp):,}")
+    return out
+
+
+GEO = load_geo()
+ORD = load_ord()
+
 # ── 부문 이름 한글 표기 ──────────────────────────────────────────
 # 사전은 markets.py 에 있다(SEG_KO_*). **낱말 단위로 전부 아는 이름만** 옮기고
 # 한 낱말이라도 모르면 원문을 그대로 둔다 — 반쪽 번역이 원문보다 더 헷갈리고,

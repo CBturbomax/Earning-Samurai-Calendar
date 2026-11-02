@@ -20,11 +20,11 @@ jobs:
       - name: 🔎 일본 지역별 매출·수주 (결산단신 zip + 보충자료 PDF)
         continue-on-error: true
         timeout-minutes: 20
-        run: python tools/ai/probe_jp_tables.py > /tmp/probe.txt 2>&1
+        run: mkdir -p /tmp/po && python tools/ai/probe_jp_zips.py > /tmp/probe.txt 2>&1
 
       - name: 결과를 probe-out 가지에
         if: always()
         run: |
-          cd /tmp && rm -rf po && mkdir po && cd po && git init -q
+          mkdir -p /tmp/po && cd /tmp/po && rm -rf .git && git init -q
           cp /tmp/probe.txt . ; git add . && git -c user.name=bot -c user.email=b@b commit -qm probe
           git push -f "https://x-access-token:${{ github.token }}@github.com/${{ github.repository }}" HEAD:refs/heads/probe-out
