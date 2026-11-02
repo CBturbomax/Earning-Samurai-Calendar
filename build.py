@@ -1461,7 +1461,17 @@ def load_seg():
         for k, v in got.items():
             if not v.get("names"):
                 continue
-            out[k if ":" in k else "us:" + k] = v
+            key = k if ":" in k else "us:" + k
+            old = out.get(key)
+            # **긴 쪽이 뼈대다.** stockanalysis(segments.json)가 뒤에 와서 SEC 벌크를 통째로 갈아치우면
+            # 1Q18 부터 받아 둔 이력이 그쪽 길이(몇 분기)로 줄어든다. 더 긴 쪽에 짧은 쪽의 빈 분기만 잇는다.
+            if old and len(old.get("pts") or []) > len(v.get("pts") or []):
+                splice(old, dict(v, axis=old.get("axis")))
+                n += 1
+                continue
+            if old:
+                splice(v, dict(old, axis=v.get("axis")))
+            out[key] = v
             n += 1
         print(f"  {name}: {n:,}종목")
 
@@ -1634,6 +1644,181 @@ def splice(base, fresh):
 
 
 SEG = load_seg()
+
+
+# ── 지역별 매출 · 수주(수주고·수주잔고·RPO) ─────────────────────────────
+# 회원님(11/02): "품목별 매출 Breakdown 처럼 지역별 매출, 그리고 수주·수주잔고·RPO 같은
+# 지표도 — 숫자와 YoY 차트 둘 다." 사업부 그림과 **같은 그림·같은 규칙**을 쓴다
+# (총매출과 대 보기 seg_fit, 기준 바뀜 current_basis, 이름 한글 seg_ko).
+# 축을 섞지 않는다는 규칙은 그대로다 — 사업부 그림과 지역 그림이 각자 축 하나씩이다.
+def _read_stocks(name):
+    p = HERE / "data" / name
+    if not p.exists():
+        return {}
+    try:
+        return json.loads(p.read_text(encoding="utf-8"))
+    except (ValueError, OSError) as e:
+        print(f"  ! {name} 읽기 실패: {e}")
+        return {}
+
+
+def load_geo():
+    """지역별 매출. 미국은 SEC 벌크·제출 서류의 지역 축(geo), 일본은 결산단신의 지역 표."""
+    out = {}
+    for name in ("segments_sec.json", "segments_fpi.json"):
+        n = 0
+        for k, v in (_read_stocks(name).get("stocks") or {}).items():
+            g = v.get("geo")
+            if g and g.get("names") and g.get("pts"):
+                out[k if ":" in k else "us:" + k] = dict(g, axis="지역")
+                n += 1
+        if n:
+            print(f"  {name}: 지역 {n:,}종목")
+    added = 0
+    for k, v in (_read_stocks("segments_edgar.json").get("stocks") or {}).items():
+        g = v.get("geo")
+        if not (g and g.get("names")):
+            continue
+        key = k if ":" in k else "us:" + k
+        g = dict(g, axis="지역")
+        if key not in out:
+            out[key] = g
+        else:
+            added += bool(splice(out[key], g))
+    jp = load_geo_jp()
+    for k, v in jp.items():
+        out.setdefault(k, v)
+    print(f"  지역: 미국 서류로 최근 분기를 이은 종목 {added:,} · 일본 {len(jp):,}")
+    for k in list(out):
+        got = current_basis(out[k])
+        if got is None:
+            del out[k]
+        else:
+            out[k] = got
+    return out
+
+
+def load_ord():
+    """수주 지표 — {열쇠: {"names": [...], "pts": [[종료일, 값…]]}}.
+
+    미국은 수주잔고(RPO, 회계기준 표준 항목)를 SEC 벌크와 제출 서류에서, 일본은 결산단신의
+    수주 표(수주고·수주잔고)에서 받는다. 시점값이라 총매출과 대 보지 않는다.
+    """
+    out = {}
+    rp = {}
+    for name in ("segments_sec.json", "segments_edgar.json"):
+        for t, rows in (_read_stocks(name).get("rpo") or {}).items():
+            have = rp.setdefault("us:" + t, {})
+            for d, v in rows:
+                have[d] = v
+    for k, by_d in rp.items():
+        if len(by_d) >= 2:
+            out[k] = {"names": ["수주잔고(RPO)"], "pts": [[d, v] for d, v in sorted(by_d.items())]}
+    jp = load_ord_jp()
+    out.update(jp)
+    print(f"  수주: 미국 RPO {len(rp):,}종목 · 일본 {len(jp):,}")
+    return out
+
+
+def _jp_spans(by_span):
+    """{"시작/종료": 값|{이름: 값}} -> [(시작, 종료, {이름: 값})]."""
+    out = []
+    for k, row in (by_span or {}).items():
+        st, _, en = k.partition("/")
+        if st and en:
+            out.append((st, en, row if isinstance(row, dict) else {"v": row}))
+    return out
+
+
+def _decum(spans):
+    """누계 -> {종료일: {이름: 값}}. 같은 시작일의 바로 앞 누계를 뺀다(결산단신 부문과 같은 셈).
+    첫 누계는 한 분기(~125일) 또는 반기일 때만 그대로 쓴다. 사이가 한 분기·한 반기가 아니면 버린다."""
+    by = {}
+    for st, en, row in spans:
+        by.setdefault(st, {})[en] = row
+    # 분기 공시가 하나라도 있는 회사는 반기 누계를 첫 칸으로 안 쓴다 — 1분기 공시를 못 받은 해의 상반기 합이
+    # 분기 칸 하나에 앉으면 막대가 두 배로 솟는다. 반기만 내는 회사만 반기 칸을 쓴다.
+    quarterly = any((date.fromisoformat(en) - date.fromisoformat(st)).days <= 125 for st, en, _ in spans)
+    out = {}
+    for st, ends in by.items():
+        order = sorted(ends)
+        for i, en in enumerate(order):
+            if i == 0:
+                d = (date.fromisoformat(en) - date.fromisoformat(st)).days
+                if d <= 125 or (not quarterly and 150 <= d <= 220):
+                    out[en] = dict(ends[en])
+                continue
+            gap = (date.fromisoformat(en) - date.fromisoformat(order[i - 1])).days
+            if not (60 <= gap <= 125 or 150 <= gap <= 220):
+                continue
+            prev = ends[order[i - 1]]
+            cut = {n: v - prev[n] for n, v in ends[en].items() if n in prev and v - prev[n] > 0}
+            # 이름이 반 넘게 안 맞으면(지역 구분을 바꾼 해) 그 칸은 버린다 — 반쪽 막대가 매출이 준 것처럼 보인다
+            if len(cut) >= max(1, (len(ends[en]) + 1) // 2) and len(cut) == len(ends[en]):
+                out[en] = cut
+    return out
+
+
+GEO_SAME = {"国内": "日本", "国内売上収益": "日本", "国内売上高": "日本", "日本国内": "日本",
+            "その他の地域": "その他", "その他地域": "その他", "その他の国": "その他"}
+
+
+def _as_rec(qs, axis):
+    """{종료일: {이름: 값}} -> 사업부 기록 꼴 {names, pts, axis}. 이름은 마지막 칸 값이 큰 순.
+    해마다 표기가 바뀌는 같은 지역(히타치 「国内売上収益」 -> 「日本」)은 한 줄로 잇는다(GEO_SAME)."""
+    if axis == "지역":
+        qs = {e: {GEO_SAME.get(n, n): v for n, v in r.items()} for e, r in qs.items()}
+    if len(qs) < 2:
+        return None
+    ends = sorted(qs)
+    last = qs[ends[-1]]
+    names = sorted({n for r in qs.values() for n in r}, key=lambda n: (-(last.get(n) or 0), n))
+    return {"names": names, "pts": [[e] + [qs[e].get(n) for n in names] for e in ends], "axis": axis}
+
+
+GEO_EN = re.compile(r"Japan|America|Europe|Asia|China|Oceania|Overseas|Domestic|EMEA|Region|Area", re.I)
+
+
+def load_geo_jp():
+    """일본 지역별 매출 — data/geo_jp.json(scrape_geo_jp.py) 의 누계를 분기로.
+
+    **사업부가 곧 지역인 회사는 안 싣는다**(마키타·덴소·아식스 — 세그먼트 장에 Japan·Europe… 로 태그).
+    같은 그림이 두 번 선다."""
+    raw = (_read_stocks("geo_jp.json").get("raw") or {})
+    out = {}
+    for k, v in raw.items():
+        if not v.get("geo"):
+            continue
+        sg = SEG.get(k) or {}
+        nm = sg.get("names") or []
+        if nm and sum(1 for n in nm if GEO_EN.search(n)) >= max(2, len(nm) * 0.6):
+            continue
+        rec = _as_rec(_decum(_jp_spans(v["geo"])), "지역")
+        if rec:
+            out[k] = rec
+    return out
+
+
+def load_ord_jp():
+    """일본 수주 — 受注高(누계 -> 분기) · 受注残高(그날 잔액)."""
+    raw = (_read_stocks("geo_jp.json").get("raw") or {})
+    out = {}
+    for k, v in raw.items():
+        oh = {e: r["v"] for e, r in _decum(_jp_spans(v.get("oh"))).items() if r.get("v")}
+        ob = {e: x for e, x in (v.get("ob") or {}).items() if x}
+        ends = sorted(set(oh) | set(ob))
+        if len(ends) < 2:
+            continue
+        names = [n for n, d in (("수주고", oh), ("수주잔고", ob)) if len(d) >= 2]
+        if not names:
+            continue
+        src = {"수주고": oh, "수주잔고": ob}
+        out[k] = {"names": names, "pts": [[e] + [src[n].get(e) for n in names] for e in ends]}
+    return out
+
+
+GEO = load_geo()
+ORD = load_ord()
 
 # ── 부문 이름 한글 표기 ──────────────────────────────────────────
 # 사전은 markets.py 에 있다(SEG_KO_*). **낱말 단위로 전부 아는 이름만** 옮기고
@@ -1972,7 +2157,7 @@ def seg_fit(rec, fin_rec):
     return names, pts, aligned, (med if hi - lo < 0.10 else None)
 
 
-SEG_KEEP = 20        # 화면에 그리는 것이 스물두 분기라 그만큼만 싣는다
+SEG_KEEP = 40        # 1Q18 부터(회원님 11/02: "제품별 지역별도 1Q18 부터 쭉") — 스무 분기로 잘라 2021년부터였다
 
 
 def lab_key(lab):
@@ -2021,6 +2206,26 @@ def pack_seg(rec, fin_rec):
     if med is not None and (med < 0.95 or med > 1.05):
         out["cov"] = round(med * 100)
     return out
+
+
+def pack_ord(rec, fin_rec):
+    """수주 지표 -> {"names", "pts": [[분기 이름, 값…]], "ax": "수주"}. 이름은 실적 차트 것을 빌린다(seg_align).
+    시점값(잔고)·흐름값(수주고)이 섞이므로 총매출과 대 보지 않는다. 1Q18 앞은 YoY 계산용으로만 남긴다."""
+    pts = [r for r in rec.get("pts") or [] if re.match(r"\d{4}-\d\d-\d\d$", str(r[0]))]
+    if len(pts) < 2:
+        return None
+    lab = seg_align(pts, fin_rec)
+    rows, seen = [], set()
+    for r, (l, _rev) in zip(pts, lab):
+        if l in seen:
+            continue
+        seen.add(l)
+        rows.append([l] + [int(v) if v else None for v in r[1:]])
+    rows.sort(key=lambda r: lab_key(r[0]))
+    rows = rows[-SEG_KEEP - 4:]
+    if len(rows) < 2:
+        return None
+    return {"names": list(rec["names"]), "pts": rows, "ax": "수주"}
 
 
 def load_monthly_web():
@@ -3210,6 +3415,21 @@ def build():
         else:
             tossed.append(s.split(":")[-1])
     print(f"  부문 한 칸만 몇 배로 튄 것(연간·누계가 분기 칸에): 고침 {SEG_FIXED['fixed']:,} · 뺌 {SEG_FIXED['dropped']:,}")
+    geo_out, ord_out = {}, {}
+    for s_, rec in GEO.items():
+        if s_ in on_screen:
+            got = pack_seg(rec, FIN.get(s_))
+            if got:
+                got["ax"] = "지역"
+                geo_out[s_] = got
+    for s_, rec in ORD.items():
+        if s_ in on_screen:
+            got = pack_ord(rec, FIN.get(s_))
+            if got:
+                ord_out[s_] = got
+    by_m = Counter(k.split(":")[0] for k in geo_out)
+    by_o = Counter(k.split(":")[0] for k in ord_out)
+    print(f"  지역별 매출 {len(geo_out):,}종목 {dict(by_m)} · 수주 {len(ord_out):,}종목 {dict(by_o)}")
     # 실시간 서버가 실적 보도자료의 부문 표를 AI 로 읽은 것 — 10-Q 보다 며칠~몇 주 빠르다.
     # 회원님(10/30): "3분기 실적은 가져오는데 왜 3분기 브레이크다운은 못 가져오냐."
     # 서버가 사이트 표기 이름 그대로 받아 오고, 합이 그 분기 총매출과 맞을 때만 담겼다.
@@ -3407,6 +3627,9 @@ def build():
         # 합이 총매출과 안 맞는 종목은 여기서 걸러진다(seg_fit).
         "seg": seg,
         "segNow": seg_now,
+        # 지역별 매출 · 수주(수주고·수주잔고·RPO) — 사업부 그림과 같은 꼴로 그린다(회원님 11/02).
+        "geo": geo_out,
+        "ord": ord_out,
         # 일본 월매출(月次). [날짜, 시각, 코드, 한글명, 원문명, 대상월, 달정확도,
         #                  제목, 첨부, 시총, 업종] — 여기는 '무엇을 언제 냈나'고
         # 숫자는 monthlyNum 에 따로 있다(못 읽은 종목은 거기 없다).
@@ -5996,6 +6219,10 @@ function finBlock(m, code) {
   }
   // 사업부별은 매출·성장률 아래에 붙인다. 큰 그림을 먼저 보고 쪼개 보는 순서다.
   if (sg) html += segChart(sg, f.cur || 'USD');
+  // 지역별 매출 · 수주 — 사업부 그림과 같은 꼴(숫자 + YoY, 범례로 끄고 켬). 회원님 11/02.
+  const gg = D.geo && D.geo[key], og = D.ord && D.ord[key];
+  if (gg) html += segChart(gg, f.cur || 'USD');
+  if (og) html += segChart(og, f.cur || 'USD');
   html += rtSegBlock(key);
   if (m === 'jp' || m === 'us') { html += '<div class="ghslot" data-key="' + key + '"></div>'; setTimeout(ghFill, 0); }
   // 맨 아래 실적 브리핑 — 차트를 못 읽고 지나가도 요점은 남게.
@@ -6301,7 +6528,7 @@ function segChart(sg, cur) {
   /* 사업부별 매출 — **선 그래프**(회원님 10/30: 누적 막대 말고 부문마다 선으로, 시계열이 보이게).
      축은 부문 하나의 최댓값으로 잡는다(합계가 아니라). 점마다 값을 적되, 같은 칸에서 글자끼리
      부딪히면 아래로 내려 적는다. 색·글꼴·축·범례는 사이트의 다른 차트와 같은 것을 쓴다. */
-  let pts = (sg.pts || []).filter(p => labFrom18(p[0])).slice(-36);   // 1Q18 부터(회원님 10/30)
+  let pts = (sg.pts || []).filter(p => labFrom18(p[0])).slice(-40);   // 1Q18 부터(회원님 10/30·11/02)
   if (pts.length < 2) return '';
   const names = sg.names || [];
   // **사업부 기준이 바뀌면 차트를 둘로 — 지금 기준과 옛 기준**(회원님 10/30: "둘 다 보여줘, 옛 기준은 최대한").
@@ -6422,11 +6649,14 @@ function segRender(id) {
   const pcS = v => (v > 0 ? '+' : '') + (v * 100).toFixed(0) + '%';
   const bot = segLines(names, pts, vis, { vals: yoy, fmt: pcS, pct: true, H: 320 });
   const ax = esc(sg.ax || '사업부');
-  return '<div class="finhead sub">' + ax + '별 매출' + (tag ? ' <span class="now">' + esc(tag) + '</span>' : '') +
+  // 수주 지표(수주고·수주잔고·RPO)는 '…별 매출'이 아니다 — 제목을 따로 단다.
+  const ttl = sg.ax === '수주' ? '수주 · 수주잔고' : ax + '별 매출';
+  const ttlY = sg.ax === '수주' ? '수주 · 수주잔고 성장률 (YoY)' : ax + '별 매출 성장률 (YoY)';
+  return '<div class="finhead sub">' + ttl + (tag ? ' <span class="now">' + esc(tag) + '</span>' : '') +
     '<span class="dim">(단위: ' + esc(U.ko) +
     (sg.cov ? ' · 총매출의 ' + sg.cov + '%' + (sg.cov > 105 ? ' — 부문끼리 주고받은 것 포함' : '') : '') + ')</span></div>' +
     top +
-    (bot ? '<div class="finhead sub">' + ax + '별 매출 성장률 (YoY)<span class="dim">(전년 같은 ' + (back === 2 ? '반기' : '분기') + ' 대비)</span></div>' + bot : '') +
+    (bot ? '<div class="finhead sub">' + ttlY + '<span class="dim">(전년 같은 ' + (back === 2 ? '반기' : '분기') + ' 대비)</span></div>' + bot : '') +
     '<div class="finlegend">' + names.map((nm, j) => !has(j) ? '' :
       '<span class="lg seglg' + (off.has(j) ? ' off' : '') + '" data-sid="' + id + '" data-j="' + j + '" style="--c:' +
       SEG_COLORS[j % SEG_COLORS.length] + '">' + esc(nm) + '</span>').join('') +
