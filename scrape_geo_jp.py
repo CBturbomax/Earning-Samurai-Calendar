@@ -41,7 +41,7 @@ from markets import excluded
 
 HERE = Path(__file__).parent
 OUT = HERE / "data" / "geo_jp.json"
-RULE_VER = 4      # 2: 옛 공시는 PDF 에서 지역 · 3: PDF 수주(확인 전 칸) · 4: 3개월치 표(우리 분기 매출로 맞춤)
+RULE_VER = 5      # 5: PDF 를 전체 목록에서 짝지음(미국 기준 회사) · 2: 옛 공시는 PDF 에서 지역 · 3: PDF 수주(확인 전 칸) · 4: 3개월치 표(우리 분기 매출로 맞춤)
 SECS = float(os.environ.get("GEO_SECS", "1500"))
 BACK_DAYS = int(os.environ.get("GEO_BACK_DAYS", "4"))
 SINCE = "2016-10-01"            # 1Q18(1~3월)의 전년 같은 분기까지 — 2017년 연간·9개월 누계가 필요하다. JPX 보관소는 2016년치까지 있다(떠보기 11/02)
@@ -327,11 +327,32 @@ def listing(code):
     j = json.loads(get(f"https://webapi.yanoshin.jp/webapi/tdnet/list/{code}.json?limit=300&hasXBRL=1",
                        binary=False, timeout=30) or "{}")
     items = [it.get("Tdnet", it) for it in (j.get("items") or [])]
-    return sorted((it for it in items
-                   if (it.get("pubdate") or "")[:10] >= SINCE and it.get("url_xbrl")
-                   and F.TANSHIN.search(it.get("title") or "")
-                   and not F.NOT_TANSHIN.search(it.get("title") or "")),
-                  key=lambda it: it["pubdate"])
+    out = sorted((it for it in items
+                  if (it.get("pubdate") or "")[:10] >= SINCE and it.get("url_xbrl")
+                  and F.TANSHIN.search(it.get("title") or "")
+                  and not F.NOT_TANSHIN.search(it.get("title") or "")),
+                 key=lambda it: it["pubdate"])
+    # XBRL 목록의 document_url 은 zip 이다 — PDF 는 전체 목록에서 같은 날 결산단신 줄을 짝짓는다(11/02).
+    # 미국 기준 회사(도요타·고마쓰)는 zip 에 첨부가 없고 PDF 번호도 zip 과 달라, 2018~2022 지역 표를 통째로 못 읽었다.
+    try:
+        with _YANO:
+            wait = 0.4 - (time.time() - _yano_t[0])
+            if wait > 0:
+                time.sleep(wait)
+            _yano_t[0] = time.time()
+        a = json.loads(get(f"https://webapi.yanoshin.jp/webapi/tdnet/list/{code}.json?limit=600",
+                           binary=False, timeout=30) or "{}")
+        pdfs = {}
+        for it in (x.get("Tdnet", x) for x in (a.get("items") or [])):
+            du = it.get("document_url") or ""
+            if du.lower().endswith(".pdf") and F.TANSHIN.search(it.get("title") or "") \
+                    and not F.NOT_TANSHIN.search(it.get("title") or ""):
+                pdfs.setdefault((it.get("pubdate") or "")[:10], du.rsplit("/", 1)[-1])
+        for it in out:
+            it["pdf_name"] = pdfs.get(it["pubdate"][:10], "")
+    except (F.Throttled, ValueError):
+        pass
+    return out
 
 
 def one_code(code, done):
@@ -351,7 +372,7 @@ def one_code(code, done):
             print(f"  {code} {fn} 실패: {e}")
             complete = False
             continue
-        pn = (it.get("document_url") or "").rsplit("/", 1)[-1]      # 미국 기준 회사(도요타·고마쓰)는 zip 과 PDF 번호가 다르다
+        pn = it.get("pdf_name") or ""                                # 미국 기준 회사(도요타·고마쓰)는 zip 과 PDF 번호가 다르다
         if not pn.lower().endswith(".pdf"):
             pn = fn.replace("0812", "1401", 1) if fn.startswith("0812") else ""
         pdf = f"https://www2.jpx.co.jp/disc/{code}0/{pn}" if pn else None
