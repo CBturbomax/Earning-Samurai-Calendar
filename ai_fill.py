@@ -1,0 +1,520 @@
+# -*- coding: utf-8 -*-
+"""AI(Claude Code `claude -p`)로 **1Q18 부터의 빈칸**을 메운다 — 사업부·지역·수주를 공시 원문에서 직접 읽는다.
+
+회원님(11/02): "이제 AI 를 붙였으니 1Q18~3Q26 지역별 매출·수주까지 빠지는 것 없이 다 받아와라."
+규칙 수집기(SEC 벌크·제출 서류 XBRL, 일본 결산단신 표 읽기)가 먼저 돌고, **그래도 빈 분기**가 있는 회사만 여기로 온다.
+
+어디가 비었나 — build.py 를 불러 화면에 실리는 그대로(FIN · SEG · GEO · ORD)를 보고, 1Q18 부터 총매출이 있는 분기 중
+사업부나 지역이 빈 분기를 센다. 시총 큰 순(미국·일본 번갈아).
+
+무엇을 읽나 — 그 분기를 담은 공시 한 장.
+  미국  SEC 제출 목록(submissions)의 10-Q·10-K 본문. 10-Q 한 장에 이번 분기·전년 같은 분기·누계가 같이 실려
+        두 해가 한 번에 찬다. 결산 분기는 10-K 의 연간 − 3분기 10-Q 의 9개월 누계(빌드가 뺀다).
+  일본  결산단신(JPX 보관소, 2016~). zip 첨부 표가 없던 해는 PDF 글자를 편다.
+  홍콩  아직 안 한다(반기·연간 보고서 PDF — 다음 차례).
+
+**AI 가 준 숫자를 믿지 않는다 — 총매출과 맞을 때만 싣는다.**
+  · 사업부·지역은 한 기간의 합이 우리가 이미 가진 그 기간 총매출과 2% 안(또는 공시가 적은 상계 줄을 더해 2% 안)일 때만.
+  · 수주·수주잔고는 맞춰 볼 총계가 없어서 **두 공시가 같은 기간에 같은 값**(1% 안)을 줄 때만 화면에 싣는다
+    (그해 공시의 당기 칸 = 이듬해 공시의 전기 칸). 일본 PDF 수주와 같은 규칙이다(build.py 의 confirmed).
+  · 한 번 물은 공시는 다시 묻지 않는다(`asked`). 구독 한도에 걸리면 그 자리에서 멈추고 적는다.
+
+data/ai_fill.json
+  stocks[시장:코드] = {"seg": {"시작/종료": {이름: 값}}, "geo": {...}, "oc": {"oh|시작/종료": [값…], "ob|종료": [값…]}}
+  asked[시장:코드] = [공시 id…]
+build.py 의 load_ai_fill 이 누계를 분기로 되돌려(_decum) **빈 분기만** 채운다 — 있는 값은 안 덮는다.
+
+    python ai_fill.py                 # 시간 예산 안에서
+    python ai_fill.py us:KO jp:6501   # 몇 종목만(무엇을 물었고 무엇이 돌아왔는지 찍는다)
+"""
+import json
+import os
+import re
+import shutil
+import sys
+import threading
+import time
+from concurrent.futures import ThreadPoolExecutor, as_completed
+from datetime import date, datetime, timedelta, timezone
+from pathlib import Path
+
+import ai_seg
+import pr_table as pt
+
+HERE = Path(__file__).parent
+OUT = HERE / "data" / "ai_fill.json"
+SECS = int(os.environ.get("AIFILL_SECS", "2100"))
+MAX_CALLS = int(os.environ.get("AIFILL_MAX", "150"))
+WORKERS = int(os.environ.get("AIFILL_WORKERS", "3"))
+SINCE = "2018-01-01"
+DOC_LIMIT = 42000
+DRY_N = 4                       # 연달아 이만큼 읽어 맞은 것이 없으면 그 회사는 넉 달 쉰다
+KEYS = re.compile(r"segment|geograph|region|countr|americas|europe|asia|china|japan|emea|international|domestic|"
+                  r"backlog|remaining performance|bookings|new orders|order intake|orders received|disaggregat|"
+                  r"revenue by|revenues by|net sales by|sales by", re.I)
+KEYS_JP = re.compile(r"地域|所在地|仕向|国別|エリア|海外|国内|受注|セグメント|部門|事業別|品目|製品別|売上高明細")
+
+
+# ── 어디가 비었나 ────────────────────────────────────────────────────────
+
+def _d(s):
+    return date.fromisoformat(s)
+
+
+def covered(rec, end, tol=20):
+    if not rec:
+        return False
+    e = _d(end)
+    for r in rec.get("pts") or []:
+        if re.match(r"\d{4}-\d\d-\d\d$", str(r[0])) and abs((_d(r[0]) - e).days) <= tol and any(v for v in r[1:]):
+            return True
+    return False
+
+
+def gaps(B, key):
+    """총매출이 있는 1Q18 이후 분기 중 사업부·지역이 빈 종료일들."""
+    f = B.FIN.get(key) or {}
+    if f.get("freq") not in ("Q", "H"):
+        return []
+    out = []
+    for p in f.get("points") or []:
+        e = p.get("end")
+        if not e or e < SINCE or not p.get("rev"):
+            continue
+        if not covered(B.SEG.get(key), e) or not covered(B.GEO.get(key), e):
+            out.append(e)
+    return out
+
+
+def targets(B, only):
+    us, jp = [], []
+    try:
+        rows = json.loads((HERE / "data" / "earnings_us.json").read_text(encoding="utf-8")).get("rows", [])
+    except (OSError, ValueError):
+        rows = []
+    ucap = {}
+    for r in rows:
+        ucap["us:" + r["code"]] = max(ucap.get("us:" + r["code"], 0), r.get("cap") or 0)
+    from markets import excluded
+    seen = set()
+    for key in B.FIN:
+        if only and key not in only:
+            continue
+        m = key.split(":")[0]
+        if excluded(m, "", B.SECTORS.get(key, ""), (B.INDUSTRIES.get(key, "") or "").replace("-", "")):
+            continue                                  # 은행·리츠는 화면에 안 싣는다
+        sig = tuple(p.get("rev") for p in (B.FIN[key].get("points") or [])[-6:])
+        if m == "us" and sig in seen:
+            continue                                  # GOOG/GOOGL 처럼 같은 회사의 두 종목
+        seen.add(sig)
+        if m == "us":
+            us.append((-(ucap.get(key) or 0), key))
+        elif m == "jp":
+            jp.append((-(B.CAPS.get(key) or 0), key))
+    us.sort()
+    jp.sort()
+    out = []
+    for i in range(max(len(us), len(jp))):           # 미국·일본 번갈아 — 한 시장이 대기줄을 다 먹지 않게
+        for lst in (us, jp):
+            if i < len(lst):
+                out.append(lst[i][1])
+    return out
+
+
+# ── 미국: SEC 10-Q·10-K ──────────────────────────────────────────────────
+
+SUBS = "https://data.sec.gov/submissions/CIK{cik:010d}.json"
+SUBS_OLD = "https://data.sec.gov/submissions/{name}"
+DOC = "https://www.sec.gov/Archives/edgar/data/{cik}/{acc}/{name}"
+_SEC_LOCK = threading.Lock()
+_sec_t = [0.0]
+
+
+def sec(url, binary=False):
+    import scrape_seg_edgar as se
+    with _SEC_LOCK:                                   # SEC 는 초당 10건 — 갈래가 여럿이어도 넉넉히
+        w = 0.15 - (time.time() - _sec_t[0])
+        if w > 0:
+            time.sleep(w)
+        _sec_t[0] = time.time()
+    return se.get(url, timeout=60, binary=binary)
+
+
+def us_filings(cik):
+    """[(보고 기준일, 서식, 접수번호, 본문 파일)] — 10-Q·10-K(정정 제외), 2017-06 이후."""
+    j = json.loads(sec(SUBS.format(cik=cik)) or "{}")
+    blocks = [j.get("filings", {}).get("recent", {})]
+    for f in j.get("filings", {}).get("files", []) or []:
+        if (f.get("filingTo") or "") >= "2017-06-01":
+            try:
+                blocks.append(json.loads(sec(SUBS_OLD.format(name=f["name"])) or "{}"))
+            except ValueError:
+                pass
+    out = []
+    for r in blocks:
+        for i, form in enumerate(r.get("form", [])):
+            if form not in ("10-Q", "10-K"):
+                continue
+            rd = (r.get("reportDate") or [""] * (i + 1))[i]
+            if not rd or rd < "2017-06-01":
+                continue
+            out.append((rd, form, r["accessionNumber"][i].replace("-", ""), r["primaryDocument"][i]))
+    return sorted(set(out))
+
+
+def us_pick(files, miss):
+    """빈 종료일을 덮는 서류 — 그 날 끝난 서류가 먼저, 없으면 한 해 뒤 서류(전년 칸). 결산 분기면 9개월 누계를 줄 3분기 10-Q 도."""
+    want = []
+    for e in miss:
+        ed = _d(e)
+        hit = [f for f in files if abs((_d(f[0]) - ed).days) <= 12]
+        nxt = [f for f in files if abs((_d(f[0]) - ed - timedelta(days=365)).days) <= 15]
+        for f in hit or nxt:
+            if f not in want:
+                want.append(f)
+            if f[1] == "10-K":                       # 연간 − 9개월
+                q3 = [g for g in files if g[1] == "10-Q" and 80 <= (_d(f[0]) - _d(g[0])).days <= 100]
+                for g in q3:
+                    if g not in want:
+                        want.append(g)
+            break
+    return want
+
+
+def tables_text(raw, kw):
+    out = []
+    for t in pt.tables(raw):
+        rows = [" | ".join(c for c in r if c and c.strip() and c.strip() != "$") for r in t]
+        rows = [r for r in rows if r.strip()]
+        if len(rows) < 2:
+            continue
+        blob = "\n".join(rows)
+        if kw.search(blob) and re.search(r"\d{2,}", blob):
+            out.append(blob)
+    txt = "\n\n=== TABLE ===\n".join(out)
+    return txt[:DOC_LIMIT]
+
+
+# ── 일본: 결산단신 ────────────────────────────────────────────────────────
+
+def jp_docs(code):
+    import scrape_geo_jp as G
+    return [(it["pubdate"][:10], it["url_xbrl"].rsplit("/", 1)[-1]) for it in G.listing(code)]
+
+
+def jp_text(code, fn):
+    """(글, {(시작, 종료): 누계 매출}) — zip 첨부 표, 없으면 PDF 글자."""
+    import geojp
+    import scrape_fin_jp as F
+    import scrape_geo_jp as G
+    blob = G.get(f"https://www2.jpx.co.jp/disc/{code}0/{fn}", timeout=60)
+    if not blob:
+        return "", {}
+    spans = G.spans_of(F.read_summary(blob))
+    parts = []
+    if G.has_body(blob):
+        for before, rows in geojp.tables(blob):
+            body = "\n".join(" | ".join(c for c in r if c) for r in rows)
+            if KEYS_JP.search(before + body):
+                parts.append("[" + before[-120:] + "]\n" + body)
+    elif fn.startswith("0812"):
+        try:
+            import pdftext
+            pdf = G.get(f"https://www2.jpx.co.jp/disc/{code}0/{fn.replace('0812', '1401', 1)}", timeout=60)
+            lines = pdftext.extract_cells(pdf, max_pages=40) if pdf else []
+        except Exception:                              # noqa: BLE001 — 암호·깨진 PDF
+            lines = []
+        rows = [" | ".join(re.sub(r"\s+", " ", t).strip() for _x, t in sorted(c) if t.strip()) for c in lines]
+        keep = set()
+        for i, r in enumerate(rows):
+            if KEYS_JP.search(r) and len(r) < 90:
+                keep.update(range(i, min(len(rows), i + 30)))
+        parts.append("\n".join(rows[i] for i in sorted(keep)))
+    return "\n\n=== TABLE ===\n".join(p for p in parts if p)[:DOC_LIMIT], spans
+
+
+# ── 묻기 ──────────────────────────────────────────────────────────────────
+
+PROMPT = """You are extracting numbers from a listed company's financial filing. Read ONLY the tables below.
+
+Company: {name} ({key}). Filing: {doc}. Reporting currency: {cur}.
+Names we already use — segments: {segs}; regions: {geos}. Reuse these names when the row is the same thing.
+
+Extract:
+- "seg": revenue (sales to external customers if both are printed) by business segment or by product/service line — the company's main revenue breakdown.
+- "geo": revenue by geographic region or country.
+- "oh": order intake / new orders / bookings / 受注高 (company total only).
+- "ob": order backlog / 受注残高 (company total only).
+- "rpo": remaining performance obligations (company total only).
+
+For every printed period column (current AND prior year, three-month AND year-to-date) give one item:
+  k (seg|geo|oh|ob|rpo), name (as printed, or our name if it is the same row), end (period end date YYYY-MM-DD),
+  m (months covered: 3, 6, 9 or 12; 0 for balances at a date such as backlog or RPO), v (the number exactly as printed),
+  u (unit multiplier stated for the table: 1000000 for "in millions"/百万円, 1000 for "in thousands"/千円, 100000000 for 億円, 1 if none),
+  t (true only for a printed total row of that table; "eliminations"/調整額 rows: name "eliminations").
+Never include percentages, changes, forecasts/guidance/予想/見通し, profits, or numbers you computed. Skip sub-totals that are sums of other rows you list.
+If a table repeats in the filing, list it once. If nothing relevant is printed, return an empty list.
+
+Answer with ONLY JSON: {{"items": [{{"k": "geo", "name": "Americas", "end": "2025-09-30", "m": 3, "v": 1234.5, "u": 1000000, "t": false}}]}}
+
+TABLES:
+{tables}
+"""
+
+
+def ask(key, name, doc, cur, segs, geos, txt):
+    ans = ai_seg.claude(PROMPT.format(name=name, key=key, doc=doc, cur=cur, segs=json.dumps(segs, ensure_ascii=False),
+                                      geos=json.dumps(geos, ensure_ascii=False), tables=txt))
+    m = re.search(r"\{.*\}", ans, re.S)
+    if not m:
+        return None
+    try:
+        return json.loads(m.group(0)).get("items") or []
+    except ValueError:
+        return None
+
+
+# ── 검산 ──────────────────────────────────────────────────────────────────
+
+def _months_back(e, m):
+    """종료일에서 m 달 앞 + 하루 = 시작일. 월말 결산이면 그달 1일이 된다(9/30 · 3달 -> 7/1)."""
+    import calendar
+    y, mo = e.year, e.month - m
+    while mo <= 0:
+        y, mo = y - 1, mo + 12
+    last = calendar.monthrange(y, mo)[1]
+    day = last if e.day >= calendar.monthrange(e.year, e.month)[1] else min(e.day, last)
+    return date(y, mo, day) + timedelta(days=1)
+
+
+def span_of(end, m, starts):
+    """(시작, 종료) — 시작은 이 회사가 이미 쓴 시작일 중 10일 안의 것으로 맞춘다(_decum 이 같은 시작끼리 뺀다)."""
+    e = _d(end)
+    st = _months_back(e, m)
+    for s in starts:
+        if abs((_d(s) - st).days) <= 12:
+            return s, end
+    return st.isoformat(), end
+
+
+def fin_rev(B, key, st, en, jspans):
+    """(시작, 종료) 기간의 총매출 — 일본은 같은 공시 요약의 누계, 아니면 우리 분기 매출의 합."""
+    for (a, b), v in (jspans or {}).items():
+        if abs((_d(b) - _d(en)).days) <= 5 and abs((_d(a) - _d(st)).days) <= 12:
+            return v
+    pts = [p for p in (B.FIN.get(key) or {}).get("points") or [] if p.get("end") and p.get("rev")]
+    inside = [p for p in pts if _d(st) + timedelta(days=40) < _d(p["end"]) <= _d(en) + timedelta(days=10)]
+    months = round(((_d(en) - _d(st)).days + 1) / 30.4)
+    need = max(1, round(months / 3))
+    if len(inside) != need:
+        return None
+    return sum(p["rev"] for p in inside)
+
+
+def accept(B, key, items, rec, jspans):
+    """검산 통과분만 rec 에 담는다. 반환: 담은 기간 수."""
+    starts = sorted({k.split("/")[0] for kind in ("seg", "geo") for k in rec.get(kind, {})})
+    groups = {}
+    for it in items or []:
+        try:
+            k, nm, en, m = it["k"], str(it["name"]).strip(), str(it["end"])[:10], int(it.get("m") or 0)
+            v = float(it["v"]) * float(it.get("u") or 1)
+            _d(en)
+        except (KeyError, TypeError, ValueError):
+            continue
+        if en < "2016-10-01" or not nm:
+            continue
+        if k in ("seg", "geo") and m in (3, 6, 9, 12):
+            groups.setdefault((k, en, m), []).append((nm, v, bool(it.get("t"))))
+        elif k == "oh" and m in (3, 6, 9, 12):
+            st, en2 = span_of(en, m, starts)
+            rec.setdefault("oc", {}).setdefault(f"oh|{st}/{en2}", []).append(round(v))
+        elif k in ("ob", "rpo") and m == 0:
+            rec.setdefault("oc", {}).setdefault(f"{k}|{en}", []).append(round(v))
+    n = 0
+    for (k, en, m), rows in groups.items():
+        st, en = span_of(en, m, starts)
+        rev = fin_rev(B, key, st, en, jspans)
+        if not rev:
+            continue
+        parts = {}
+        elim = tot = 0.0
+        for nm, v, is_t in rows:
+            if is_t or re.search(r"^total|合計|総計|^計$|連結", nm, re.I):
+                tot = tot or v
+            elif re.search(r"eliminat|調整|消去|corporate|reconcil", nm, re.I):
+                elim += v
+            elif v > 0:
+                parts.setdefault(nm, v)
+        if len(parts) < 2:
+            continue
+        s = sum(parts.values())
+        ok = abs(s / rev - 1) <= 0.02 or (elim and abs((s + elim) / rev - 1) <= 0.02) \
+            or (tot and abs(s / tot - 1) <= 0.01 and abs(tot / rev - 1) <= 0.02)
+        if not ok:
+            continue
+        rec.setdefault(k, {})[f"{st}/{en}"] = {nm: round(v) for nm, v in parts.items()}
+        starts.append(st)
+        n += 1
+    return n
+
+
+# ── 한 회사 ───────────────────────────────────────────────────────────────
+
+class Budget:
+    def __init__(self):
+        self.calls = 0
+        self.lock = threading.Lock()
+        self.limited = None
+
+    def take(self):
+        with self.lock:
+            if self.limited or self.calls >= MAX_CALLS:
+                return False
+            self.calls += 1
+            return True
+
+
+def one(B, key, miss, db, bud, t0, verbose):
+    m, code = key.split(":")
+    asked = set(db["asked"].get(key, []))
+    rec = json.loads(json.dumps(db["stocks"].get(key) or {}))     # 갈래마다 제 사본 — 저장과 부딪히지 않게
+    new_asked = []
+    f = B.FIN.get(key) or {}
+    cur = f.get("cur") or ("JPY" if m == "jp" else "USD")
+    segs = (B.SEG.get(key) or {}).get("names") or []
+    geos = (B.GEO.get(key) or {}).get("names") or []
+    name = code
+    log, got, tried = [], 0, 0
+    dry_n = 0
+    if m == "us":
+        import scrape_live_us as lu
+        cik = lu.cik_map_cached().get(code) or lu.cik_map_cached().get(code.replace(".", "-"))
+        if not cik:
+            return key, 0, 0, ["CIK 없음"], rec, new_asked, 0
+        files = us_filings(int(cik))
+        docs = [(f"{a}", f"{fm} {rd}", (int(cik), a, nm)) for rd, fm, a, nm in us_pick(files, miss)]
+    else:
+        docs = []
+        for pub, fn in jp_docs(code):
+            docs.append((fn, f"決算短信 {pub}", (code, fn)))
+        # 빈 종료일 언저리(종료 + 30~60일 공시) 또는 한 해 뒤(전기 칸) 것만
+        keep = []
+        for did, label, arg in docs:
+            pub = _d(label.split()[-1])
+            if any(25 <= (pub - _d(e)).days <= 75 or 390 <= (pub - _d(e)).days <= 440 for e in miss):
+                keep.append((did, label, arg))
+        docs = keep
+    for did, label, arg in docs:
+        if did in asked:
+            continue
+        if time.time() - t0 > SECS or not bud.take():
+            break
+        try:
+            if m == "us":
+                cik, acc, nm = arg
+                raw = sec(DOC.format(cik=cik, acc=acc, name=nm), binary=True)
+                txt = tables_text(raw.decode("utf-8", "replace"), KEYS) if raw else ""
+                jspans = None
+            else:
+                txt, jspans = jp_text(*arg)
+            if not txt:
+                new_asked.append(did)
+                log.append(f"{label} 표 없음")
+                continue
+            tried += 1
+            items = ask(key, name, label, cur, segs, geos, txt)
+        except ai_seg.Limited as e:
+            bud.limited = str(e)[:200]
+            break
+        except Exception as e:                          # noqa: BLE001 — 한 서류가 실행을 죽이지 않게
+            log.append(f"{label} 실패 {e!r}"[:120])
+            continue
+        new_asked.append(did)
+        if items is None:
+            log.append(f"{label} 답 깨짐")
+            continue
+        n = accept(B, key, items, rec, jspans)
+        got += n
+        dry_n = 0 if n else dry_n + 1
+        if dry_n >= DRY_N:
+            log.append("연달아 안 맞음 — 쉰다")
+            break
+        if verbose:
+            print(key, label, json.dumps(items, ensure_ascii=False)[:800])
+        log.append(f"{label} 항목 {len(items)} · 맞은 기간 {n}")
+    return key, tried, got, log, rec, new_asked, dry_n
+
+
+def main():
+    only = [a for a in sys.argv[1:] if ":" in a]
+    if not shutil.which("claude") or not (os.environ.get("CLAUDE_CODE_OAUTH_TOKEN") or os.environ.get("ANTHROPIC_API_KEY")):
+        print("claude CLI 또는 토큰이 없다 — 아무것도 안 한다.")
+        return
+    t0 = time.time()
+    import build as B                                   # 화면에 실리는 그대로를 본다(12초쯤)
+    try:
+        db = json.loads(OUT.read_text(encoding="utf-8"))
+    except (OSError, ValueError):
+        db = {}
+    db.setdefault("stocks", {})
+    db.setdefault("asked", {})
+    todo = []
+    dry = db.setdefault("dry", {})
+    for key in targets(B, set(only)):
+        d = dry.get(key) or {}
+        if not only and d.get("n", 0) >= DRY_N and (date.today() - _d(d.get("ts", "2000-01-01"))).days < 120:
+            continue                                  # 공시를 넷 읽어도 하나도 안 맞은 회사 — 넉 달 쉰다(안 내는 회사)
+        miss = gaps(B, key)
+        if miss:
+            todo.append((key, miss))
+    print(f"AI 빈칸 메우기: 빈 분기가 있는 회사 {len(todo):,} (빈 분기 {sum(len(x[1]) for x in todo):,})")
+    bud = Budget()
+    lock = threading.Lock()
+    done_keys, tried, got = 0, 0, 0
+    it = iter(todo)
+    with ThreadPoolExecutor(WORKERS) as ex:
+        live = {}
+        while True:
+            while len(live) < WORKERS and not bud.limited and bud.calls < MAX_CALLS and time.time() - t0 < SECS:
+                nx = next(it, None)
+                if nx is None:
+                    break
+                live[ex.submit(one, B, nx[0], nx[1], db, bud, t0, bool(only))] = nx[0]
+            if not live:
+                break
+            fut = next(as_completed(live))
+            live.pop(fut)
+            try:
+                key, tr, gt, log, rec, new_asked, dn = fut.result()
+            except Exception as e:                      # noqa: BLE001
+                print(f"  ! {e!r}"[:200])
+                continue
+            with lock:
+                if rec:
+                    db["stocks"][key] = rec
+                db["asked"].setdefault(key, []).extend(new_asked)
+                if tr:
+                    dry[key] = {"n": dn, "ts": date.today().isoformat()}
+                done_keys += 1
+                tried += tr
+                got += gt
+                if tr or gt:
+                    print(f"  {key}: " + " / ".join(log[-6:]))
+                if done_keys % 10 == 0:
+                    save(db)
+    if bud.limited:
+        print(f"  ! 구독 한도·과부하 — 여기서 멈춘다: {bud.limited}")
+        db["limited"] = datetime.now(timezone.utc).isoformat(timespec="minutes")
+    save(db)
+    print(f"AI 빈칸 메우기: 회사 {done_keys} · 물어본 공시 {tried} · 검산 통과 기간 {got} · 남은 회사 {len(todo) - done_keys}")
+
+
+def save(db):
+    db["count"] = len(db["stocks"])
+    db["ts"] = datetime.now(timezone.utc).isoformat(timespec="minutes")
+    OUT.write_text(json.dumps(db, ensure_ascii=False, separators=(",", ":")), encoding="utf-8")
+
+
+if __name__ == "__main__":
+    main()
