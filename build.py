@@ -1719,6 +1719,11 @@ def load_ord():
             have = rp.setdefault("us:" + t, {})
             for d, v in rows:
                 have[d] = v
+    # SEC companyconcept(scrape_rpo_us.py) — 분기 묶음에는 RPO 가 거의 없어서(4종목) 이쪽이 뼈대다
+    for t, rec in (_read_stocks("rpo_us.json").get("stocks") or {}).items():
+        have = rp.setdefault("us:" + t, {})
+        for d, v in rec.get("pts") or []:
+            have.setdefault(d, v)
     for k, by_d in rp.items():
         if len(by_d) >= 2:
             out[k] = {"names": ["수주잔고(RPO)"], "pts": [[d, v] for d, v in sorted(by_d.items())]}
@@ -2193,8 +2198,48 @@ def lab_key(lab):
     return (int(m.group(3)), n)
 
 
+def drop_part_totals(rec):
+    """**다른 부문 몇 개의 합**과 같은 줄을 뺀다(소계). 수집기의 drop_subtotals 는 '나머지 전부의 합'만 봐서
+    애플 제품 축의 「Product」(= 아이폰+맥+아이패드+웨어러블, 「Service」 는 따로)가 남아 막대가 부풀었다(11/02).
+    값이 있는 칸의 60% 이상에서 0.5% 안으로 맞고 칸이 넷 이상일 때만 소계로 본다. 부문이 넷 미만이면 손대지 않는다."""
+    from itertools import combinations
+    names, pts = list(rec.get("names") or []), rec.get("pts") or []
+    if len(names) < 4 or len(names) > 12:
+        return rec
+    col = lambda j: [r[j + 1] if j + 1 < len(r) else None for r in pts]   # noqa: E731
+    for _ in range(2):
+        drop = None
+        for j in range(len(names)):
+            cj = col(j)
+            others = [o for o in range(len(names)) if o != j]
+            for size in range(2, len(others)):
+                for sub in combinations(others, size):
+                    hit = tot = 0
+                    for i, v in enumerate(cj):
+                        parts = [pts[i][o + 1] if o + 1 < len(pts[i]) else None for o in sub]
+                        if not v or any(x is None for x in parts):
+                            continue
+                        tot += 1
+                        hit += abs(sum(parts) - v) <= abs(v) * 0.005
+                    if tot >= 4 and hit / tot >= 0.6:
+                        drop = j
+                        break
+                if drop is not None:
+                    break
+            if drop is not None:
+                break
+        if drop is None:
+            break
+        names = names[:drop] + names[drop + 1:]
+        pts = [r[:drop + 1] + r[drop + 2:] for r in pts]
+    if len(names) == len(rec.get("names") or []):
+        return rec
+    return dict(rec, names=names, pts=pts)
+
+
 def pack_seg(rec, fin_rec):
     """[분기 라벨, 부문1, 부문2, …]. 라벨은 총매출 쪽 것을 빌려 온다."""
+    rec = drop_part_totals(rec)
     fit = seg_fit(rec, fin_rec)
     if not fit:
         return None
