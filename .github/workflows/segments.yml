@@ -59,7 +59,7 @@ jobs:
   segments:
     runs-on: ubuntu-latest
     if: github.ref_name == 'main'
-    timeout-minutes: 90
+    timeout-minutes: 105
     steps:
       - uses: actions/checkout@v4
       # **최신 main 으로 맞추고 시작한다.** checkout 은 이 실행을 부른 커밋을
@@ -89,6 +89,15 @@ jobs:
             cat seg.log
             echo '```'
           } >> "$GITHUB_STEP_SUMMARY"
+
+      # 수주잔고(RPO) — 분기 묶음에는 거의 없어 companyconcept 로 따로 받는다(종목당 한 번, 열흘마다)
+      - name: 📦 수주잔고 RPO (SEC companyconcept)
+        continue-on-error: true
+        timeout-minutes: 12
+        env:
+          SEC_UA: 'Earning Samurai Calendar (cbpark@wisdomasset.co.kr)'
+          RPO_SECS: '600'
+        run: python scrape_rpo_us.py | tail -5
 
       # 벌크가 아직 안 실은 최근 분기를 제출 서류에서 직접 받는다.
       # 서류 하나에 요청 두 번 · 300KB(gzip) 라, 한 번에 700건이면 8분쯤이다.

@@ -1173,6 +1173,14 @@ HPE 가 Compute·Storage·Intelligent Edge 를 Cloud&AI·Networking 으로 바�
 - **화면은 1Q18 부터 40분기**(`SEG_KEEP` 20 -> 40). 미국 SEC 벌크는 2017q2 묶음부터 훑는다(`SEG_SEC_SINCE`, 서른아홉 묶음). stockanalysis
   (segments.json)가 SEC 이력을 통째로 갈아치우던 것을 **긴 쪽이 뼈대**로 바꿨다. 홍콩 사업부는 동화순이 최근 세 기간만 주고 동방재부
   F10 에는 主营构成 보고서가 없다(떠보기: RPT_HKF10_* 열두 이름 전부 「报表配置不存在」) — 홍콩은 쌓이는 만큼만 길어진다.
+- **미국 RPO 는 분기 묶음이 아니라 companyconcept 에서**(`scrape_rpo_us.py` → `data/rpo_us.json`, segments.yml). FSDS num.txt 는
+  재무제표 본표 위주라 RPO 가 2,948종목 중 4종목에만 있었다(11/02). companyconcept 는 그 항목의 10-Q·10-K 값을 전부 준다.
+- **'일부의 합' 소계도 뺀다**(`build.py` 의 `drop_part_totals`). 애플 제품 축의 「Product」 는 아이폰+맥+아이패드+웨어러블의 합이고
+  「Service」 는 따로라 '나머지 전부의 합'만 보는 수집기 규칙(drop_subtotals)에 안 걸렸다.
+- **AI 판독은 규칙이 못 읽은 것만, 검산 통과분만**(`ai_seg.py` · `ai_seg.yml`, 회원님 11/02 "구독 CLI 로 AI 를 넣자"). 보도자료 사업부 표를
+  `claude -p` 에 넘겨 이번 분기·전년 같은 분기 값을 받고, 전년 값이 우리가 가진 SEC 값과 0.6% 안·부문 합÷총매출 비가 작년과 3% 안일 때만
+  `data/segments_aipr.json` 에 싣는다. 한 번 물은 공시는 다시 안 묻고, 한도에 걸리면 그 자리에서 멈추고 적는다(옛 Routine 이 닷새를
+  조용히 헛돈 일). 키는 Secrets 의 `CLAUDE_CODE_OAUTH_TOKEN` — 없으면 아무것도 안 한다.
 - 1분기 공시를 못 받은 해의 **상반기 누계를 분기 칸에 앉히지 않는다**(분기 공시가 하나라도 있는 회사). 막대가 두 배로 솟는다.
 - `python geojp.py` 가 손으로 만든 여섯 꼴(미쓰비시전기·히타치건기·고마쓰 가로표·다케다 億円·사업부 표 거르기·수주 둘)을 밟는다.
 
@@ -1221,10 +1229,17 @@ HPE 가 Compute·Storage·Intelligent Edge 를 Cloud&AI·Networking 으로 바�
 | `collect.yml` | **5분**(크론 하한) | `data/earnings.json` · `data/earnings_jp_sched.json` · `data/earnings_us.json` · `data/earnings_hk.json` · `data/caps.json` |
 | `numbers.yml` | **5분**(크론 하한) | `data/financials.json` · `data/financials_intl.json` · `data/segments.json` · `data/segments_hk.json` · `data/desc.json` |
 | `fcst.yml` | 25분 루프 | `data/forecast.json` (연간 표 컨센서스) |
-| `segments.yml` | 30분 | `data/segments_sec.json` · `data/segments_edgar.json` · `data/segments_fpi.json` · `data/financials_fpi.json` |
+| `segments.yml` | 30분 | `data/segments_sec.json` · `data/segments_edgar.json` · `data/segments_fpi.json` · `data/financials_fpi.json` · `data/rpo_us.json` |
 | `monthly.yml` | 10분 | `data/monthly_nums_jp.json` (월매출 수치 — 첨부 PDF) · `data/monthly_web_jp.json` (월매출 — 流通ニュース) · `data/monthly_ir_jp.json` (월매출 — 회사 IR) |
 | `segments_hist.yml` | 하루 1번 | `data/segments_jp_hist.json` (EDINETDB_KEY 있을 때만) |
-| `geo_jp.yml` | 30분 | `data/geo_jp.json` (일본 지역별 매출·수주 — 최근 TDnet + 옛 JPX 보관소 거슬러 받기) |
+| `geo_jp.yml` | 30분 + 이어달리기 | `data/geo_jp.json` (일본 지역별 매출·수주 — 최근 TDnet + 옛 JPX 보관소 거슬러 받기, 세 갈래) |
+| `ai_seg.yml` | 1시간 | `data/segments_aipr.json` (AI 사업부 판독 — CLAUDE_CODE_OAUTH_TOKEN 있을 때만) |
+
+**작업 제한은 단계 제한의 합보다 커야 한다**(11/02). `numbers.yml` 은 단계 합이 35분인데 작업 제한이 29분이라 마지막 「저장소에
+반영」 이 늘 잘렸다 — 11/01 16:39 부터 여덟 시간 넘게 실적 수치(미국 SEC·일본·홍콩)가 한 번도 저장되지 않았고 홍콩 3Q26 이 통째로
+빠졌다. 겉으로는 '취소'라 실패처럼 안 보였다. 단계를 더하면 작업 제한도 같이 올릴 것.
+**빌드가 쓰는 data/ 파일은 충돌해도 우리 것을 택한다**(11/02). `data/audit_gaps.json` 은 빌드 생성물인데 `numbers.yml`·`collect.yml`
+의 반영 단계가 그것을 '원본 데이터 충돌'로 보고 멈춰 수집분을 버렸다. 새 생성물을 data/ 에 두면 두 워크플로의 예외 목록에 같이 넣는다.
 
 **워크플로는 저를 부른 커밋을 꺼내 온다 — 줄을 서면 그게 벌써 낡은 것이다.**
 `actions/checkout` 은 그 실행을 부른 SHA 를 체크아웃한다. 실행이 concurrency

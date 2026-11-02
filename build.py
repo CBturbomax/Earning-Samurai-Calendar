@@ -1504,10 +1504,18 @@ def load_seg():
     # **발표 당일의 보도자료(8-K) 사업부 표**(scrape_seg_pr.py) — 10-Q 가 나오기 전 며칠~몇 주의 빈 칸을 메운다
     # (회원님 11/01: "구글 3분기 실적 나왔는데 브레이크다운이 없다"). 전년 같은 분기 값과 맞는 열만 읽었다.
     # 같은 분기가 이미 있으면(10-Q·벌크) 손대지 않는다 — splice 가 없는 칸만 채운다.
-    try:
-        prs = json.loads((HERE / "data" / "segments_pr.json").read_text(encoding="utf-8")).get("stocks", {})
-    except (OSError, ValueError):
-        prs = {}
+    prs = {}
+    # 규칙 판독(segments_pr) 뒤에 AI 판독(segments_aipr — ai_seg.py, 검산 통과분만)을 잇는다. 같은 분기면 규칙 쪽이 먼저 앉는다.
+    for nm_ in ("segments_pr.json", "segments_aipr.json"):
+        try:
+            for k_, v_ in json.loads((HERE / "data" / nm_).read_text(encoding="utf-8")).get("stocks", {}).items():
+                if k_ in prs and prs[k_].get("names") == v_.get("names"):
+                    have_ = {p_[0] for p_ in prs[k_]["pts"]}
+                    prs[k_] = dict(prs[k_], pts=prs[k_]["pts"] + [p_ for p_ in v_.get("pts", []) if p_[0] not in have_])
+                elif k_ not in prs:
+                    prs[k_] = v_
+        except (OSError, ValueError):
+            pass
     pr_add = 0
     for k, v in prs.items():
         key = "us:" + k
@@ -1711,6 +1719,11 @@ def load_ord():
             have = rp.setdefault("us:" + t, {})
             for d, v in rows:
                 have[d] = v
+    # SEC companyconcept(scrape_rpo_us.py) — 분기 묶음에는 RPO 가 거의 없어서(4종목) 이쪽이 뼈대다
+    for t, rec in (_read_stocks("rpo_us.json").get("stocks") or {}).items():
+        have = rp.setdefault("us:" + t, {})
+        for d, v in rec.get("pts") or []:
+            have.setdefault(d, v)
     for k, by_d in rp.items():
         if len(by_d) >= 2:
             out[k] = {"names": ["수주잔고(RPO)"], "pts": [[d, v] for d, v in sorted(by_d.items())]}
@@ -2185,8 +2198,48 @@ def lab_key(lab):
     return (int(m.group(3)), n)
 
 
+def drop_part_totals(rec):
+    """**다른 부문 몇 개의 합**과 같은 줄을 뺀다(소계). 수집기의 drop_subtotals 는 '나머지 전부의 합'만 봐서
+    애플 제품 축의 「Product」(= 아이폰+맥+아이패드+웨어러블, 「Service」 는 따로)가 남아 막대가 부풀었다(11/02).
+    값이 있는 칸의 60% 이상에서 0.5% 안으로 맞고 칸이 넷 이상일 때만 소계로 본다. 부문이 넷 미만이면 손대지 않는다."""
+    from itertools import combinations
+    names, pts = list(rec.get("names") or []), rec.get("pts") or []
+    if len(names) < 4 or len(names) > 12:
+        return rec
+    col = lambda j: [r[j + 1] if j + 1 < len(r) else None for r in pts]   # noqa: E731
+    for _ in range(2):
+        drop = None
+        for j in range(len(names)):
+            cj = col(j)
+            others = [o for o in range(len(names)) if o != j]
+            for size in range(2, len(others)):
+                for sub in combinations(others, size):
+                    hit = tot = 0
+                    for i, v in enumerate(cj):
+                        parts = [pts[i][o + 1] if o + 1 < len(pts[i]) else None for o in sub]
+                        if not v or any(x is None for x in parts):
+                            continue
+                        tot += 1
+                        hit += abs(sum(parts) - v) <= abs(v) * 0.005
+                    if tot >= 4 and hit / tot >= 0.6:
+                        drop = j
+                        break
+                if drop is not None:
+                    break
+            if drop is not None:
+                break
+        if drop is None:
+            break
+        names = names[:drop] + names[drop + 1:]
+        pts = [r[:drop + 1] + r[drop + 2:] for r in pts]
+    if len(names) == len(rec.get("names") or []):
+        return rec
+    return dict(rec, names=names, pts=pts)
+
+
 def pack_seg(rec, fin_rec):
     """[분기 라벨, 부문1, 부문2, …]. 라벨은 총매출 쪽 것을 빌려 온다."""
+    rec = drop_part_totals(rec)
     fit = seg_fit(rec, fin_rec)
     if not fit:
         return None
