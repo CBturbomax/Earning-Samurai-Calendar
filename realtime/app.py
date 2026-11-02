@@ -20,6 +20,7 @@ Railway 에서 24시간 돌며 원본을 몇 초마다 직접 본다.
 """
 import collections
 import html
+from email.utils import parsedate_to_datetime
 import io
 import json
 import os
@@ -1910,6 +1911,9 @@ def us_process(cik, acc, name, upd, replay=False):
     url = f"https://www.sec.gov/Archives/edgar/data/{cik}/{acc.replace('-', '')}/{acc}-index.htm"
     ev = base_event("us", code, name, pub_et, ET, "SEC 8-K 보도자료", url)
     ev["replay"] = replay
+    if not replay and PR_SENT.get((ev["key"], pub_et[:10])):
+        log(f"8-K {ev['key']} — 보도자료로 이미 보냄")
+        return
     point = None
     try:
         raw = lu.ex99_html(cik, acc.replace("-", ""))
@@ -1957,6 +1961,106 @@ def us_watch():
             log("미국 피드:", e)
             time.sleep(5)
         time.sleep(max(0.2, US_EVERY - (time.time() - t0)))
+
+
+# ── 미국 보도자료(뉴스와이어) — 8-K 보다 먼저 ─────────────────────────────
+# 회원님(11/02): "에스티로더 실적 나왔는데 왜 안 잡았냐." 보도자료는 20:00(KST)에 나왔는데 8-K 는 40분 넘게 SEC 에 없었다 —
+# 우리는 8-K(Item 2.02)만 보고 있었다. 뉴스와이어 실적 피드에서 **오늘·어제 캘린더에 있는 미국 회사**의 실적 제목을 잡아
+# 같은 길(pr_table · finish)로 보낸다. 나중에 8-K 가 오면 같은 사건으로 보고 다시 보내지 않는다(PR_SENT).
+PR_FEEDS = ["https://www.prnewswire.com/rss/financial-services-latest-news/earnings-list.rss"]
+PR_EVERY = float(os.environ.get("PR_EVERY", "15"))
+PR_SENT = {}                                     # (열쇠, 현지 날짜) -> 사건 id
+PR_TITLE = re.compile(r"(report|announce|post|deliver|declare)s?\b.*\b(results|earnings)|\bresults\b.*\b(quarter|fiscal|year)|"
+                      r"\b(first|second|third|fourth)[- ]quarter\b.*\b(results|earnings)|\bQ[1-4]\b.*\bresults", re.I)
+_PR_STOP = re.compile(r"\b(the|inc|incorporated|corp|corporation|co|company|companies|holdings?|group|ltd|limited|plc|n\.?v|s\.?a|"
+                      r"class [a-c]|common stock|ordinary shares|ads|american depositary shares?)\b\.?", re.I)
+
+
+def _pr_norm(s):
+    s = html.unescape(s or "").replace("’", "'").replace("é", "e").replace("É", "E")
+    s = _PR_STOP.sub(" ", s)
+    return re.sub(r"[^a-z0-9]+", " ", s.lower()).strip()
+
+
+def pr_candidates():
+    """오늘·어제·내일(동부) 캘린더의 미국 회사 -> [(정규화한 이름, 열쇠, 코드, 원문 이름)]."""
+    today = datetime.now(ET).date()
+    out = []
+    with H.lock:
+        for key, rs in H.rows_by_key.items():
+            if not key.startswith("us:"):
+                continue
+            r = min(rs, key=lambda r: abs((date.fromisoformat(r[0]) - today).days))
+            if abs((date.fromisoformat(r[0]) - today).days) > 1:
+                continue
+            nm = _pr_norm(r[7] if len(r) > 7 else "")
+            if len(nm) >= 4:
+                out.append((nm, key, key[3:], r[7]))
+    return out
+
+
+def pr_watch():
+    seen, warned = set(), [0.0]
+    while True:
+        t0 = time.time()
+        try:
+            cands = pr_candidates()
+            for feed in PR_FEEDS:
+                try:
+                    xml = http_get(feed, ua="Mozilla/5.0 (Windows NT 10.0; Win64; x64) Chrome/131.0", timeout=20)
+                except Exception as e:                           # noqa: BLE001
+                    if time.time() - warned[0] > 1800:
+                        log("보도자료 피드 실패", feed[:60], repr(e)[:100])
+                        warned[0] = time.time()
+                    continue
+                for it in re.findall(r"<item>(.*?)</item>", xml, re.S):
+                    title = html.unescape(re.sub(r"<!\[CDATA\[|\]\]>", "", (re.search(r"<title>(.*?)</title>", it, re.S) or [None, ""])[1])).strip()
+                    link = html.unescape((re.search(r"<link>(.*?)</link>", it, re.S) or [None, ""])[1]).strip()
+                    pub = (re.search(r"<pubDate>(.*?)</pubDate>", it, re.S) or [None, ""])[1].strip()
+                    if not link or link in seen:
+                        continue
+                    seen.add(link)
+                    if not PR_TITLE.search(title):
+                        continue
+                    nt = " " + _pr_norm(title) + " "
+                    hit = [c for c in cands if (" " + c[0] + " ") in nt]
+                    if len(hit) != 1:                            # 못 찾거나 둘 이상이면 안 보낸다(엉뚱한 회사보다 8-K 를 기다리는 게 낫다)
+                        continue
+                    try:
+                        pt = parsedate_to_datetime(pub).astimezone(timezone.utc)
+                    except (TypeError, ValueError):
+                        pt = datetime.now(timezone.utc)
+                    if stale(pt):
+                        continue
+                    POOL.submit(safe, pr_process, hit[0], title, link, pt)
+        except Exception as e:                                   # noqa: BLE001
+            log("보도자료 감시:", repr(e)[:160])
+        time.sleep(max(1.0, PR_EVERY - (time.time() - t0)))
+
+
+def pr_process(c, title, link, pt):
+    _nm, key, code, orig = c
+    if H.skip("us", code, orig):
+        return
+    pub_et = pt.astimezone(ET).strftime("%Y-%m-%d %H:%M")
+    if (key, pub_et[:10]) in PR_SENT:
+        return
+    ev = base_event("us", code, orig, pub_et, ET, "보도자료(뉴스와이어)", link, title)
+    PR_SENT[(key, pub_et[:10])] = ev["id"]
+    point = None
+    try:
+        raw = http_get(link, ua="Mozilla/5.0 (Windows NT 10.0; Win64; x64) Chrome/131.0", timeout=25)
+        ev["_text"] = brief.us_text(raw)
+        period = us_period(key, pub_et[:10])
+        prior = lu.sec_prior(code, period)
+        got = pr_table.read(raw, prior) if raw and prior else None
+        if got and got.get("rev"):
+            point = {"label": label_of(period), "rev": got["rev"], "opi": got.get("opi"),
+                     "ni": got.get("ni"), "eps": got.get("eps")}
+    except Exception:                                            # noqa: BLE001
+        log("보도자료 표 읽기 실패", code, traceback.format_exc(limit=2))
+    log(f"보도자료로 먼저 잡음 {key} {title[:80]}")
+    finish(ev, point)
 
 
 # ── 일본 ────────────────────────────────────────────────────────────────
@@ -3020,7 +3124,7 @@ def main():
     log("시작 — 판", os.environ.get("RAILWAY_GIT_COMMIT_SHA", "")[:7], "· 텔레그램", "켜짐" if TG_TOKEN else "꺼짐(TG_BOT_TOKEN 없음)", "· 구독", len(TG.subs))
     H.refresh()
     shot.start(lambda: H.html)
-    for fn in (TG.poll, us_watch, jp_watch, hk_watch, history_loop, llm_selftest, replay_loop, segko_loop, fill_loop, biz_loop):
+    for fn in (TG.poll, us_watch, pr_watch, jp_watch, hk_watch, history_loop, llm_selftest, replay_loop, segko_loop, fill_loop, biz_loop):
         threading.Thread(target=fn, daemon=True, name=fn.__name__).start()
     ThreadingHTTPServer(("0.0.0.0", PORT), Handler).serve_forever()
 
