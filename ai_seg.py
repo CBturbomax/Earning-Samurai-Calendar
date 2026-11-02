@@ -48,6 +48,7 @@ class Limited(Exception):
     """구독 한도·과부하 — 이번 실행은 여기서 멈춘다."""
 
 
+USED = {"n": 0, "in": 0, "out": 0}                  # 이번 실행에 쓴 토큰 — 끝에 찍는다
 ENGINE = os.environ.get("AI_ENGINE", "claude")       # claude | codex — 구독 한도를 여러 계정에 나눠 쓴다
 
 
@@ -76,6 +77,10 @@ def codex(prompt):
         if LIMIT_HINT.search(out):
             raise Limited(out[-300:])
         raise RuntimeError(f"codex 실패 {r.returncode}: {out[-300:]}")
+    m = re.search(r"tokens used\D{0,5}([\d,]+)", out, re.I)
+    if m:
+        USED["in"] += int(m.group(1).replace(",", ""))
+    USED["n"] += 1
     return ans
 
 
@@ -104,6 +109,10 @@ def claude(prompt):
         if LIMIT_HINT.search(str(j.get("result"))):
             raise Limited(str(j.get("result"))[:300])
         raise RuntimeError(str(j.get("result"))[:300])
+    u = j.get("usage") or {}
+    USED["in"] += (u.get("input_tokens") or 0) + (u.get("cache_creation_input_tokens") or 0) + (u.get("cache_read_input_tokens") or 0)
+    USED["out"] += u.get("output_tokens") or 0
+    USED["n"] += 1
     return j.get("result") or ""
 
 
