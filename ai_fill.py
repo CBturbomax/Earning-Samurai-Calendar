@@ -113,9 +113,9 @@ def gaps(B, key):
     ordc = len((B.ORD.get(key) or {}).get("pts") or []) >= 2
     geoc = len((B.GEO.get(key) or {}).get("pts") or []) >= 4
     # 사업부 기록이 아예 없는 회사는 대개 '단일 부문'이다 — 시총 상위(BIG)만 묻는다(우리 수집기가 놓친 큰 회사를 찾으려고)
-    segc = len((B.SEG.get(key) or {}).get("pts") or []) >= 4 or key in BIG
+    segc = len((B.SEG.get(key) or {}).get("pts") or []) >= 4 or key in BIG or key in SOON
     since = SINCE
-    if RECENT_DAYS:                                    # 최근 칸부터(같은 토큰으로 눈에 보이는 빈칸이 가장 많이 준다)
+    if RECENT_DAYS and key not in SOON:               # 곧 발표할 회사는 1Q18 부터 전부                                    # 최근 칸부터(같은 토큰으로 눈에 보이는 빈칸이 가장 많이 준다)
         since = max(SINCE, (date.today() - timedelta(days=RECENT_DAYS)).isoformat())
     out = []
     for p in f.get("points") or []:
@@ -127,6 +127,9 @@ def gaps(B, key):
     return out
 
 
+SOON = set()                    # 지난 7일 ~ 앞으로 21일 안에 발표하는 회사(targets 가 채운다)
+
+
 def targets(B, only):
     us, jp = [], []
     try:
@@ -136,29 +139,45 @@ def targets(B, only):
     ucap = {}
     for r in rows:
         ucap["us:" + r["code"]] = max(ucap.get("us:" + r["code"], 0), r.get("cap") or 0)
+    # **곧 발표할 회사가 먼저**(11/02 회원님: "2~3주 안에 실적 낼 회사일수록 예민하게"). 지난 7일 ~ 앞으로 21일 안에
+    # 발표가 있는 회사를 시총과 상관없이 맨 앞에 세운다 — 발표날 차트에 옛 분기 구멍이 없게.
+    soon = SOON
+    lo, hi = (date.today() - timedelta(days=7)).isoformat(), (date.today() + timedelta(days=21)).isoformat()
+    for name, pre in (("earnings_us.json", "us:"), ("earnings.json", "jp:"), ("earnings_jp_sched.json", "jp:"),
+                      ("earnings_jp_past.json", "jp:")):
+        try:
+            rr = rows if name == "earnings_us.json" else \
+                json.loads((HERE / "data" / name).read_text(encoding="utf-8")).get("rows", [])
+        except (OSError, ValueError):
+            rr = []
+        for r in rr:
+            if isinstance(r, dict) and lo <= str(r.get("date") or "") <= hi:
+                soon.add(pre + str(r.get("code")))
     from markets import excluded
     seen = set()
     for key in B.FIN:
         if only and key not in only:
             continue
         m = key.split(":")[0]
-        if excluded(m, "", B.SECTORS.get(key, ""), (B.INDUSTRIES.get(key, "") or "").replace("-", "")):
+        sect = B.SECTORS.get(key, "") or (jp_sector(key[3:]) if m == "jp" else "")
+        if excluded(m, "", sect, (B.INDUSTRIES.get(key, "") or "").replace("-", "")) or (m == "jp" and "銀行" in sect):
             continue                                  # 은행·리츠는 화면에 안 싣는다
         sig = tuple(p.get("rev") for p in (B.FIN[key].get("points") or [])[-6:])
         if m == "us" and sig in seen:
             continue                                  # GOOG/GOOGL 처럼 같은 회사의 두 종목
         seen.add(sig)
+        first = 0 if key in soon else 1
         if m == "us":
-            us.append((-(ucap.get(key) or 0), key))
+            us.append((first, -(ucap.get(key) or 0), key))
         elif m == "jp":
-            jp.append((-(B.CAPS.get(key) or 0), key))
+            jp.append((first, -(B.CAPS.get(key) or 0), key))
     us.sort()
     jp.sort()
     out = []
     for i in range(max(len(us), len(jp))):           # 미국·일본 번갈아 — 한 시장이 대기줄을 다 먹지 않게
         for lst in (us, jp):
             if i < len(lst):
-                out.append(lst[i][1])
+                out.append(lst[i][-1])
     return out
 
 
@@ -178,7 +197,19 @@ def sec(url, binary=False):
         if w > 0:
             time.sleep(w)
         _sec_t[0] = time.time()
-    return se.get(url, timeout=60, binary=binary)
+    return _patient(lambda: se.get(url, timeout=60, binary=binary))
+
+
+def _patient(fn):
+    """남의 서버가 '너무 자주'(429·503·403·끊김)라 하면 물러났다 다시(5·20·60초). 세 번 다 막히면 그 공시만 건너뛴다 —
+    다음 실행이 다시 본다(asked 에 안 적힌다). SEC 는 초당 10건, yanoshin 은 한 사람이 돌리는 무료 API 라 더 조심한다."""
+    for wait in (5, 20, 60, None):
+        try:
+            return fn()
+        except Exception as e:                         # noqa: BLE001
+            if wait is None or not re.search(r"429|503|403|timed out|reset|Throttl|Blocked|URLError", repr(e)):
+                raise
+            time.sleep(wait)
 
 
 def us_filings(cik):
@@ -262,8 +293,8 @@ def jp_docs(code):
     try:
         with G._YANO:
             time.sleep(0.4)
-        j = json.loads(G.get(f"https://webapi.yanoshin.jp/webapi/tdnet/list/{code}.json?limit=600", binary=False,
-                             timeout=30) or "{}")
+        j = json.loads(_patient(lambda: G.get(f"https://webapi.yanoshin.jp/webapi/tdnet/list/{code}.json?limit=600", binary=False,
+                             timeout=30)) or "{}")
         alls = [it.get("Tdnet", it) for it in (j.get("items") or [])]
     except Exception:                                  # noqa: BLE001
         alls = []
@@ -281,7 +312,7 @@ def jp_text(code, fn, pn=""):
     import geojp
     import scrape_fin_jp as F
     import scrape_geo_jp as G
-    blob = G.get(f"https://www2.jpx.co.jp/disc/{code}0/{fn}", timeout=60)
+    blob = _patient(lambda: G.get(f"https://www2.jpx.co.jp/disc/{code}0/{fn}", timeout=60))
     if not blob:
         return "", {}
     spans = G.spans_of(F.read_summary(blob))
@@ -295,7 +326,7 @@ def jp_text(code, fn, pn=""):
         pn = pn if pn.lower().endswith(".pdf") else (fn.replace("0812", "1401", 1) if fn.startswith("0812") else "")
         try:
             import pdftext
-            pdf = G.get(f"https://www2.jpx.co.jp/disc/{code}0/{pn}", timeout=60) if pn else None
+            pdf = _patient(lambda: G.get(f"https://www2.jpx.co.jp/disc/{code}0/{pn}", timeout=60)) if pn else None
             lines = pdftext.extract_cells(pdf, max_pages=40) if pdf else []
         except Exception:                              # noqa: BLE001 — 암호·깨진 PDF
             lines = []
