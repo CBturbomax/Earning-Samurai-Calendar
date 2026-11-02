@@ -12,6 +12,10 @@ on:
         description: '몇 종목만 (예: us:KO jp:6501) — 비우면 전부'
         required: false
         default: ''
+      max:
+        description: '갈래당 최대 호출 수(시험은 작게)'
+        required: false
+        default: '40'
 
 permissions:
   contents: write
@@ -24,7 +28,7 @@ concurrency:
 jobs:
   fill:
     runs-on: ubuntu-latest
-    if: false   # 멈춤(11/02 회원님): 구독 한도를 넘으면 추가 크레딧(돈)이 나간다 — 다시 켜려면 이 줄을 github.ref_name == 'main' 으로
+    if: github.ref_name == 'main'   # 11/02 다시 켬: Claude 두 계정 + Codex, 한도 한 번이면 멈춤. relay(이어달리기)는 첫 시험 확인 뒤에 켠다
     timeout-minutes: 58
     strategy:
       fail-fast: false
@@ -41,10 +45,13 @@ jobs:
       TOK2: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN_2 }}
       CODEX_AUTH_JSON: ${{ secrets.CODEX_AUTH_JSON }}
       AIFILL_RETRY: '1'
-      AI_MODEL: sonnet
+      AI_MODEL: haiku          # 가장 가벼운 모델 — 합계 검산이 틀린 답을 거른다
+      AIFILL_MAX: "${{ github.event.inputs.max || '40' }}"         # 갈래당 한 번에 40건까지만
+      AIFILL_DOC: '20000'
+      CODEX_EFFORT: low
       AIFILL_SHARD: '${{ matrix.shard }}/4'
       AIFILL_SECS: '2700'
-      AIFILL_WORKERS: '2'
+      AIFILL_WORKERS: '1'
       SEC_UA: 'Earning Samurai Calendar (cbpark@wisdomasset.co.kr)'
     steps:
       - uses: actions/checkout@v4
