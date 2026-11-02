@@ -5378,7 +5378,11 @@ function chip(r) {
   const past = pastDay(r);
   // 앞으로 발표할 것에 ✓ 를 달면 안 된다. 지난 분기 수치를 갖고 있다는 이유로
   // 다음 주 발표에 ✓ 가 붙으면 그게 제일 헷갈린다. 날짜가 지난 것만 본다.
-  const got = dn || (past && haveNumbers(r));
+  // **오늘 발표도 끝났으면 ✓**(11/02 회원님: "발표된 회사가 아직 미발표로 뜬다"). 일본·홍콩 줄 중 실제 공시 시각이 찍힌 것
+  // (TDnet·HKEXnews — 공시가 나와야 생기는 줄)은 그 자체가 발표 완료다. 어느 시장이든 방금 발표한 분기 숫자를 이미 가졌으면 완료다.
+  const today_ = dateOf(r) <= D.today;
+  const got = dn || (past && haveNumbers(r)) || (today_ && haveNumbers(r)) ||
+              (today_ && (r[9] === 'jp' || r[9] === 'hk') && r[14] === 1);
   const badge = got
     ? '<span class="tm ok" title="실적이 나왔습니다. 눌러보세요.">✓' + (t ? ' ' + t : '') + '</span>'
     : past
