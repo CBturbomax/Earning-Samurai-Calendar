@@ -93,6 +93,39 @@ def targets(today):
     return sorted(best.values(), key=lambda r: -(r.get("cap") or 0))[:MAX]
 
 
+CURRENT = ("https://www.sec.gov/cgi-bin/browse-edgar?action=getcurrent&type=8-K&company=&dateb=&owner=include"
+           "&start={start}&count=100&output=atom")
+
+
+def early_reporters(today, cikmap, have):
+    """**예정일보다 일찍 낸 회사**(11/02 루멘텀: 나스닥은 11/05 로 적었는데 11/02 에 마벨 합병과 함께 발표). 오늘·어제 예정만 보면
+    영영 안 본다. SEC 최신 8-K 목록(요청 두 번, 200건)에 뜬 회사 중 **앞으로 열흘 안에 예정**된 우리 종목을 대상에 더한다.
+    실적 8-K(Item 2.02)인지는 find_8k 가 가린다."""
+    try:
+        rows = json.loads((HERE / "data" / "earnings_us.json").read_text(encoding="utf-8")).get("rows", [])
+    except (ValueError, OSError):
+        return []
+    ciks = set()
+    for start in (0, 100):
+        try:
+            blob = sec_get(CURRENT.format(start=start), timeout=15, binary=False) or ""
+        except Exception:                                  # noqa: BLE001
+            break
+        ciks |= {int(c) for c in re.findall(r"\((\d{10})\) \(Filer\)", blob)}
+    if not ciks:
+        return []
+    lo, hi = today.isoformat(), (today + timedelta(days=10)).isoformat()
+    out = {}
+    for r in rows:
+        c = r.get("code")
+        if not c or c in have or not (lo < (r.get("date") or "") <= hi):
+            continue
+        cik = cikmap.get(c) or cikmap.get(c.replace(".", "-"))
+        if cik and int(cik) in ciks and not _skip("us", c, r.get("name")):
+            out[c] = dict(r, date=today.isoformat(), early=r.get("date"))
+    return list(out.values())
+
+
 def accepted_et(raw, filing_date=""):
     """acceptanceDateTime -> 'YYYY-MM-DD HH:MM'(미국 동부 시각).
 
@@ -138,7 +171,15 @@ def find_8k(cik, since):
         fd = r["filingDate"][i]
         if fd < since:
             break                                # 최근 것부터 온다
-        if form != "8-K" or "2.02" not in (r.get("items") or [""])[i]:
+        if form == "6-K":
+            # **미국 상장 외국 기업은 8-K 대신 6-K 로 실적을 낸다**(11/02 타워세미 TSEM — 캘린더에 있는데 8-K 만 봐서 영영 '21:00경'
+            # 이었다). 설명·파일명에 실적 낱말이 있거나, 예정일 당일·다음 날의 6-K 면 실적으로 본다(그날 다른 6-K 는 드물다).
+            desc = ((r.get("primaryDocDescription") or [""] * (i + 1))[i] + " " +
+                    (r.get("primaryDocument") or [""] * (i + 1))[i]).lower()
+            near = fd <= (date.fromisoformat(since) + timedelta(days=1)).isoformat()
+            if not (re.search(r"result|earning|quarter|financial|q[1-4]", desc) or near):
+                continue
+        elif form != "8-K" or "2.02" not in (r.get("items") or [""])[i]:
             continue
         acc = r["accessionNumber"][i].replace("-", "")
         at = accepted_et(r.get("acceptanceDateTime", [""])[i], fd)
@@ -312,7 +353,12 @@ def main():
             err(f"SEC 티커 목록 막힘: {e}")
             cikmap = {}
         tg = targets(today)
+        early = early_reporters(today, cikmap, {r["code"] for r in tg}) if cikmap else []
+        if early:
+            print(f"  예정보다 일찍 8-K 를 낸 종목 {len(early)}: " + " ".join(r["code"] for r in early[:20]))
+        tg = early + tg
         st["targets"] = len(tg)
+        st["early"] = [r["code"] for r in early][:30]
         # **본 지 오래된 종목부터.** 시총 순으로만 돌면 한 바퀴 100초에 앞의 120개쯤만
         # 보고 끝나서, 뒤쪽 종목(브링커 EAT)은 영영 차례가 안 왔다(첫 진단에서 드러남).
         # 이미 끝난 종목(8-K 와 EPS 가 다 있다)은 맨 뒤로 보낸다.
