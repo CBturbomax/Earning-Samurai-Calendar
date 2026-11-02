@@ -42,10 +42,32 @@ import ai_seg
 import pr_table as pt
 
 HERE = Path(__file__).parent
-OUT = HERE / "data" / "ai_fill.json"
+# 여러 갈래(러너)가 나눠 돈다 — 열쇠의 해시로 회사를 가른다. 갈래마다 제 파일에만 쓰므로 커밋이 안 부딪힌다.
+SHARD = os.environ.get("AIFILL_SHARD", "")          # "0/4" 꼴. 비면 한 갈래(옛 파일)
+LEGACY = HERE / "data" / "ai_fill.json"
+OUT = HERE / "data" / (f"ai_fill_s{SHARD.split('/')[0]}.json" if SHARD else "ai_fill.json")
 SECS = int(os.environ.get("AIFILL_SECS", "2100"))
-MAX_CALLS = int(os.environ.get("AIFILL_MAX", "150"))
-WORKERS = int(os.environ.get("AIFILL_WORKERS", "3"))
+MAX_CALLS = int(os.environ.get("AIFILL_MAX", "2000"))
+WORKERS = int(os.environ.get("AIFILL_WORKERS", "6"))
+# 수주를 내는 업종 — 사업부·지역이 다 차 있어도 수주 칸이 비면 묻는다
+ORD_JP = re.compile(r"建設|機械|電気機器|精密機器|造船|輸送用機器|情報通信|プラント|エンジニアリング")
+ORD_US = re.compile(r"Industrial Machinery|Aerospace|Military|Electrical Products|Engineering|Construction|Metal Fabrications|"
+                    r"Telecommunications Equipment|Homebuilding|Shipbuilding|Railroad|Ordnance|Electronic Components", re.I)
+_JP_SECT = {}
+
+
+def jp_sector(code):
+    if not _JP_SECT:
+        for name in ("earnings.json", "earnings_jp_sched.json"):
+            try:
+                rows = json.loads((HERE / "data" / name).read_text(encoding="utf-8")).get("rows", [])
+            except (OSError, ValueError):
+                rows = []
+            for r in rows:
+                if isinstance(r, dict) and r.get("sector"):
+                    _JP_SECT.setdefault(str(r.get("code")), r["sector"])
+        _JP_SECT.setdefault("_", "")
+    return _JP_SECT.get(code, "")
 SINCE = "2018-01-01"
 DOC_LIMIT = 42000
 EMPTY_VER = 3                   # 2: 일본 PDF 이름을 목록에서(미국 기준 회사 — 도요타·고마쓰)
@@ -77,12 +99,15 @@ def gaps(B, key):
     f = B.FIN.get(key) or {}
     if f.get("freq") not in ("Q", "H"):
         return []
+    m, code = key.split(":")
+    ordc = bool(B.ORD.get(key)) or (ORD_JP.search(jp_sector(code)) if m == "jp"
+                                    else ORD_US.search(B.INDUSTRIES.get(key, "") or ""))
     out = []
     for p in f.get("points") or []:
         e = p.get("end")
         if not e or e < SINCE or not p.get("rev"):
             continue
-        if not covered(B.SEG.get(key), e) or not covered(B.GEO.get(key), e):
+        if not covered(B.SEG.get(key), e) or not covered(B.GEO.get(key), e) or (ordc and not covered(B.ORD.get(key), e)):
             out.append(e)
     return out
 
@@ -165,14 +190,18 @@ def us_filings(cik):
 
 def us_pick(files, miss):
     """빈 종료일을 덮는 서류 — 그 날 끝난 서류가 먼저, 없으면 한 해 뒤 서류(전년 칸). 결산 분기면 9개월 누계를 줄 3분기 10-Q 도."""
-    want = []
-    for e in miss:
+    want, done = [], []
+    for e in sorted(miss, reverse=True):              # 최근 것부터 — 한 장이 그 분기와 전년 같은 분기를 같이 준다
         ed = _d(e)
+        if any(abs((ed - d0).days) <= 15 for d0 in done):
+            continue
         hit = [f for f in files if abs((_d(f[0]) - ed).days) <= 12]
         nxt = [f for f in files if abs((_d(f[0]) - ed - timedelta(days=365)).days) <= 15]
         for f in hit or nxt:
             if f not in want:
                 want.append(f)
+            fd = _d(f[0])
+            done.extend([fd, fd - timedelta(days=364)])
             if f[1] == "10-K":                       # 연간 − 9개월
                 q3 = [g for g in files if g[1] == "10-Q" and 80 <= (_d(f[0]) - _d(g[0])).days <= 100]
                 for g in q3:
@@ -335,6 +364,7 @@ def accept(B, key, items, rec, jspans):
     """검산 통과분만 rec 에 담는다. 반환: 담은 기간 수."""
     starts = sorted({k.split("/")[0] for kind in ("seg", "geo") for k in rec.get(kind, {})})
     groups = {}
+    n_ord = 0
     for it in items or []:
         try:
             k, nm, en, m = it["k"], str(it["name"]).strip(), str(it["end"])[:10], int(it.get("m") or 0)
@@ -346,11 +376,13 @@ def accept(B, key, items, rec, jspans):
             continue
         if k in ("seg", "geo") and m in (3, 6, 9, 12):
             groups.setdefault((k, en, m), []).append((nm, v, bool(it.get("t"))))
-        elif k == "oh" and m in (3, 6, 9, 12):
+        elif k == "oh" and m in (3, 6, 9, 12) and v > 0:
             st, en2 = span_of(en, m, starts)
             rec.setdefault("oc", {}).setdefault(f"oh|{st}/{en2}", []).append(round(v))
-        elif k in ("ob", "rpo") and m == 0:
+            n_ord += 1
+        elif k in ("ob", "rpo") and m == 0 and v > 0:
             rec.setdefault("oc", {}).setdefault(f"{k}|{en}", []).append(round(v))
+            n_ord += 1
     n = 0
     for (k, en, m), rows in groups.items():
         st, en = span_of(en, m, starts)
@@ -376,7 +408,7 @@ def accept(B, key, items, rec, jspans):
         rec.setdefault(k, {})[f"{st}/{en}"] = {nm: round(v) for nm, v in parts.items()}
         starts.append(st)
         n += 1
-    return n
+    return n + n_ord
 
 
 # ── 한 회사 ───────────────────────────────────────────────────────────────
@@ -420,11 +452,17 @@ def one(B, key, miss, db, bud, t0, verbose):
         for pub, fn, pn in jp_docs(code):
             docs.append((fn, f"決算短信 {pub}", (code, fn, pn)))
         # 빈 종료일 언저리(종료 + 30~60일 공시) 또는 한 해 뒤(전기 칸) 것만
-        keep = []
-        for did, label, arg in docs:
-            pub = _d(label.split()[-1])
-            if any(25 <= (pub - _d(e)).days <= 75 or 390 <= (pub - _d(e)).days <= 440 for e in miss):
-                keep.append((did, label, arg))
+        keep, done = [], []
+        for e in sorted(miss, reverse=True):          # 최근 것부터 — 결산단신 한 장이 당기·전기 두 해를 준다
+            ed = _d(e)
+            if any(abs((ed - d0).days) <= 15 for d0 in done):
+                continue
+            near = [x for x in docs if 25 <= (_d(x[1].split()[-1]) - ed).days <= 75] or \
+                [x for x in docs if 390 <= (_d(x[1].split()[-1]) - ed).days <= 440]
+            if near:
+                if near[0] not in keep:
+                    keep.append(near[0])
+                done.extend([ed, ed - timedelta(days=364)])
         docs = keep
     for did, label, arg in docs:
         if did in asked:
@@ -480,14 +518,31 @@ def main():
         db = {}
     db.setdefault("stocks", {})
     db.setdefault("asked", {})
+    lim = db.get("limited")
+    if lim and not only and (datetime.now(timezone.utc) - datetime.fromisoformat(lim)).total_seconds() < 1500:
+        print(f"구독 한도에 걸린 지 25분이 안 됐다({lim}) — 이번엔 쉰다.")
+        return
+    db.pop("limited", None)
     if db.get("empty_ver") != EMPTY_VER:              # 원문 꺼내는 규칙이 바뀌었다 — '표 없음' 이던 공시를 다시 본다
         if db.get("empty_ver") is None:               # 첫 판은 '표 없음'도 asked 에 적었다 — 일본(PDF 를 못 찾던 것)만 지운다
             for k in [k for k in db["asked"] if k.startswith("jp:")]:
                 db["asked"].pop(k)
         db["empty"], db["empty_ver"] = {}, EMPTY_VER
+    if SHARD:                                         # 옛 단일 파일에서 이미 물은 공시는 다시 안 묻는다
+        try:
+            old = json.loads(LEGACY.read_text(encoding="utf-8"))
+        except (OSError, ValueError):
+            old = {}
+        for k, lst in (old.get("asked") or {}).items():
+            have = db["asked"].setdefault(k, [])
+            have.extend(x for x in lst if x not in have)
+    i_sh, n_sh = (int(x) for x in SHARD.split("/")) if SHARD else (0, 1)
+    import zlib
     todo = []
     dry = db.setdefault("dry", {})
     for key in targets(B, set(only)):
+        if zlib.crc32(key.encode()) % n_sh != i_sh:
+            continue
         d = dry.get(key) or {}
         if not only and d.get("n", 0) >= DRY_N and (date.today() - _d(d.get("ts", "2000-01-01"))).days < 120:
             continue                                  # 공시를 넷 읽어도 하나도 안 맞은 회사 — 넉 달 쉰다(안 내는 회사)
