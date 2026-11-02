@@ -41,10 +41,13 @@ jobs:
       TOK2: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN_2 }}
       CODEX_AUTH_JSON: ${{ secrets.CODEX_AUTH_JSON }}
       AIFILL_RETRY: '1'
-      AI_MODEL: sonnet
+      AI_MODEL: haiku          # 가장 가벼운 모델 — 합계 검산이 틀린 답을 거른다
+      AIFILL_MAX: '40'         # 갈래당 한 번에 40건까지만
+      AIFILL_DOC: '20000'
+      CODEX_EFFORT: low
       AIFILL_SHARD: '${{ matrix.shard }}/4'
       AIFILL_SECS: '2700'
-      AIFILL_WORKERS: '2'
+      AIFILL_WORKERS: '1'
       SEC_UA: 'Earning Samurai Calendar (cbpark@wisdomasset.co.kr)'
     steps:
       - uses: actions/checkout@v4
