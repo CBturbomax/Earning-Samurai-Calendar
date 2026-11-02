@@ -2551,13 +2551,13 @@ def pack_seg(rec, fin_rec):
         else:
             byl[r[0]] = [r[0]] + [a if a is not None else b for a, b in zip(byl[r[0]][1:], r[1:])]
     rows = [byl[l] for l in order if any(v is not None for v in byl[l][1:])][-SEG_KEEP:]
-    # **합이 평소와 20% 넘게 어긋난 칸은 뺀다**(11/02, 루멘텀 2Q26: 부문 하나에 연간 − 9개월이 엉뚱하게 앉아 1,354 > 매출 1,006,
+    # **합이 평소와 12% 넘게 어긋난 칸은 뺀다**(메리어트 결산 분기 0.82·1.16배 — 연간 − 9개월이 어긋난 칸)(11/02, 루멘텀 2Q26: 부문 하나에 연간 − 9개월이 엉뚱하게 앉아 1,354 > 매출 1,006,
     # 나머지 부문은 빈칸). 잣대는 그 회사의 '부문 합 ÷ 총매출' 중앙값 — 상계 전 총액으로 내는 회사(1.3배)도 그대로 통과한다.
     revs = {lab: rv for lab, rv in aligned if rv}
     rat = {r[0]: sum(v for v in r[1:] if v) / revs[r[0]] for r in rows if revs.get(r[0])}
     if len(rat) >= 4:
         mid = sorted(rat.values())[len(rat) // 2]
-        bad = {l for l, x in rat.items() if mid > 0 and abs(x / mid - 1) > 0.2}
+        bad = {l for l, x in rat.items() if mid > 0 and abs(x / mid - 1) > 0.12}
         if bad and len(bad) < len(rat) / 2:
             rows = [r for r in rows if r[0] not in bad]
             SEG_ODD[0] += len(bad)
