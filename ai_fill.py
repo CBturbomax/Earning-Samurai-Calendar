@@ -75,7 +75,7 @@ def jp_sector(code):
     return _JP_SECT.get(code, "")
 SINCE = "2018-01-01"
 BIG = set()                                          # 시총 상위 — main 이 채운다
-BIG_N = int(os.environ.get("AIFILL_BIG", "300"))     # 시장마다 몇 곳까지를 '큰 회사'로
+BIG_N = int(os.environ.get("AIFILL_BIG", "0"))       # 사업부 기록이 아예 없는 회사(단일 부문 — 키엔스·닌텐도·다케다)는 안 묻는다(11/02)
 RECENT_DAYS = int(os.environ.get("AIFILL_RECENT", "0") or 0)   # >0 이면 그 날수 안의 빈칸만
 DOC_LIMIT = int(os.environ.get("AIFILL_DOC", "20000"))   # 원문 길이 상한 — 길수록 한도를 많이 먹는다
 EMPTY_VER = 3                   # 2: 일본 PDF 이름을 목록에서(미국 기준 회사 — 도요타·고마쓰)
