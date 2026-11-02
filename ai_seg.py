@@ -49,7 +49,10 @@ class Limited(Exception):
 
 def claude(prompt):
     """`claude -p` 한 번 -> 답 글자. 도구는 안 쓴다(글만 읽고 JSON 을 쓴다)."""
-    r = subprocess.run(["claude", "-p", prompt, "--output-format", "json", "--max-turns", "1"],
+    cmd = ["claude", "-p", prompt, "--output-format", "json", "--max-turns", "1"]
+    if os.environ.get("AI_MODEL"):                       # 표 읽기는 가벼운 모델로도 된다 — 구독 한도를 아낀다
+        cmd += ["--model", os.environ["AI_MODEL"]]
+    r = subprocess.run(cmd,
                        capture_output=True, text=True, timeout=PER_CALL)
     out = (r.stdout or "") + (r.stderr or "")
     if r.returncode != 0 or LIMIT_HINT.search(out[-2000:]) and '"result"' not in out:
