@@ -171,7 +171,15 @@ def find_8k(cik, since):
         fd = r["filingDate"][i]
         if fd < since:
             break                                # 최근 것부터 온다
-        if form != "8-K" or "2.02" not in (r.get("items") or [""])[i]:
+        if form == "6-K":
+            # **미국 상장 외국 기업은 8-K 대신 6-K 로 실적을 낸다**(11/02 타워세미 TSEM — 캘린더에 있는데 8-K 만 봐서 영영 '21:00경'
+            # 이었다). 설명·파일명에 실적 낱말이 있거나, 예정일 당일·다음 날의 6-K 면 실적으로 본다(그날 다른 6-K 는 드물다).
+            desc = ((r.get("primaryDocDescription") or [""] * (i + 1))[i] + " " +
+                    (r.get("primaryDocument") or [""] * (i + 1))[i]).lower()
+            near = fd <= (date.fromisoformat(since) + timedelta(days=1)).isoformat()
+            if not (re.search(r"result|earning|quarter|financial|q[1-4]", desc) or near):
+                continue
+        elif form != "8-K" or "2.02" not in (r.get("items") or [""])[i]:
             continue
         acc = r["accessionNumber"][i].replace("-", "")
         at = accepted_et(r.get("acceptanceDateTime", [""])[i], fd)
