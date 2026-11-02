@@ -672,6 +672,114 @@ def live_hist(mkt, code):
             "points": [[lab(e), rows[e][0], rows[e][1]] for e in ends if rows[e][0]]}
 
 
+def _apply_point(ev, pts, point):
+    if not point:
+        return pts
+    lab = point["label"]
+    pts = [p for p in pts if p[0] != lab] + [[lab, point["rev"], point.get("opi")]]
+    ev["point"] = [lab, point["rev"], point.get("opi"), point.get("ni"), point.get("eps")]
+    ev["yoy"] = yoy_of(pts, lab, point["rev"])
+    m = re.match(r"(\d)([QH])(\d\d)", lab)
+    pv = next((p for p in pts if m and p[0] == f"{m.group(1)}{m.group(2)}{int(m.group(3)) - 1:02d}"), None)
+    o, po = point.get("opi"), pv[2] if pv and len(pv) > 2 else None
+    if o is not None and po is not None:
+        if po > 0:
+            ev["opiYoy"] = (o / po - 1) * 100
+        elif o > 0:
+            ev["turn"] = "흑자 전환"
+        else:
+            ev["turn"] = "적자 지속"
+    return pts
+
+
+def _target_label(ev, pts):
+    """이번 공시가 낸 분기 이름 — 미국은 캘린더 결산기, 그 밖은 이력의 마지막 분기 다음."""
+    if ev["mkt"] == "us":
+        try:
+            return label_of(us_period(ev["key"], ev["date"]))
+        except Exception:                                        # noqa: BLE001
+            pass
+    labs = [p[0] for p in pts if re.match(r"\d[QH]\d\d$", str(p[0]))]
+    if not labs:
+        return None
+    last = max(labs, key=lambda l: (int(l[2:]), int(l[0])))
+    n, k, y = int(last[0]), last[1], int(last[2:])
+    top = 4 if k == "Q" else 2
+    return f"{1 if n == top else n + 1}{k}{y + 1 if n == top else y:02d}"
+
+
+_UNIT = [(r"십억|billion|bn\b", 1e9), (r"억", 1e8), (r"백만|million|mn\b|mm\b", 1e6), (r"천|thousand", 1e3)]
+
+
+def _point_from_ai(ev, pts, b):
+    """AI 가 읽은 손익 표(fin)에서 이번 분기 — 전년 같은 분기 매출이 우리 이력과 2% 안일 때만 쓴다(단위·열을 그걸로 검산)."""
+    f = (b or {}).get("fin") if b else None
+    if not f or not f.get("rev") or f["rev"][0] is None or f["rev"][1] is None:
+        return None
+    if re.search(r"누계|9개월|반기|상반기|연간|nine|six|year", f.get("period") or "", re.I):
+        return None                                               # 3개월 값이 아니다
+    lab = _target_label(ev, pts)
+    if not lab:
+        return None
+    py = f"{lab[:2]}{int(lab[2:]) - 1:02d}"
+    prev = next((p for p in pts if p[0] == py), None)
+    if not prev or not prev[1]:
+        return None
+    scales = [sc for pat, sc in _UNIT if re.search(pat, f.get("unit") or "", re.I)] or [1, 1e3, 1e6, 1e9]
+    for sc in scales:
+        if abs(f["rev"][1] * sc - prev[1]) <= abs(prev[1]) * 0.02:
+            op = f.get("op")
+            opi = op[0] * sc if op and op[0] is not None and (
+                len(prev) < 3 or prev[2] is None or op[1] is None or abs(op[1] * sc - prev[2]) <= abs(prev[2]) * 0.05 + 1) else None
+            ni = f.get("ni")
+            return {"label": lab, "rev": f["rev"][0] * sc, "opi": opi, "ni": ni[0] * sc if ni and ni[0] is not None else None, "src": "ai"}
+    return None
+
+
+PEND_PATH = DATA / "pending_tg.json"
+try:
+    PEND = json.loads(PEND_PATH.read_text())
+except (OSError, ValueError):
+    PEND = {}
+PEND_LOCK = threading.Lock()
+
+
+def pend_add(ev):
+    with PEND_LOCK:
+        PEND[ev["id"]] = {k: v for k, v in ev.items() if not k.startswith("_") and not callable(v)}
+        PEND_PATH.write_text(json.dumps(PEND, ensure_ascii=False, default=str))
+
+
+def pending_loop():
+    """숫자 대기 공시 — 이력(사이트 payload 를 20분마다 다시 받는다)에 그 분기가 생기면 그 숫자로 보낸다. 사흘 지나면 접는다."""
+    while True:
+        time.sleep(300)
+        try:
+            with PEND_LOCK:
+                items = list(PEND.items())
+            for eid, ev in items:
+                key = ev["key"]
+                with H.lock:
+                    fin = dict(H.D.get("fin", {}).get(key) or {})
+                pts = [list(p) for p in fin.get("points") or []]
+                lab = ev.get("tlab")
+                hit = next((p for p in pts if p[0] == (lab or "") and p[1]), None) if lab else None
+                age = (datetime.now(timezone.utc) - datetime.fromisoformat(ev["published"])).total_seconds() / 3600
+                if hit:
+                    with PEND_LOCK:
+                        PEND.pop(eid, None)
+                        PEND_PATH.write_text(json.dumps(PEND, ensure_ascii=False, default=str))
+                    log("숫자 생김 — 이제 보낸다", key, lab, hit[1])
+                    POOL.submit(safe, finish, dict(ev), {"label": lab, "rev": hit[1], "opi": hit[2] if len(hit) > 2 else None})
+                elif age > 72:
+                    with PEND_LOCK:
+                        PEND.pop(eid, None)
+                        PEND_PATH.write_text(json.dumps(PEND, ensure_ascii=False, default=str))
+                    log("숫자를 사흘 동안 못 구함 — 안 보냄", key)
+        except Exception:                                        # noqa: BLE001
+            log("숫자 대기 확인 실패", traceback.format_exc(limit=2))
+
+
 def finish(ev, point=None):
     """숫자가 있으면 차트를 그리고 · 보관 · 사이트 · 텔레그램."""
     key = ev["key"]
@@ -690,21 +798,7 @@ def finish(ev, point=None):
     pts = [list(p) for p in fin.get("points") or []]
     cur = ev.get("cur") or fin.get("cur") or {"us": "USD", "jp": "JPY", "hk": "HKD"}[ev["mkt"]]
     ev["cur"] = cur
-    if point:
-        lab = point["label"]
-        pts = [p for p in pts if p[0] != lab] + [[lab, point["rev"], point.get("opi")]]
-        ev["point"] = [lab, point["rev"], point.get("opi"), point.get("ni"), point.get("eps")]
-        ev["yoy"] = yoy_of(pts, lab, point["rev"])
-        m = re.match(r"(\d)([QH])(\d\d)", lab)
-        pv = next((p for p in pts if m and p[0] == f"{m.group(1)}{m.group(2)}{int(m.group(3)) - 1:02d}"), None)
-        o, po = point.get("opi"), pv[2] if pv and len(pv) > 2 else None
-        if o is not None and po is not None:
-            if po > 0:
-                ev["opiYoy"] = (o / po - 1) * 100
-            elif o > 0:
-                ev["turn"] = "흑자 전환"
-            else:
-                ev["turn"] = "적자 지속"
+    pts = _apply_point(ev, pts, point)
     text = ev.pop("_text", "")
     more = ev.pop("_more", None)
     box = {}
@@ -746,6 +840,31 @@ def finish(ev, point=None):
                 if sp0:
                     ev["segPoint"] = sp0
         log("완성 기다림", key, "가이던스", "채움" if ev.get("guide") else "없음", "· 사업부", "채움" if ev.get("segPoint") else "없음")
+    # **이번 분기 숫자가 없으면 텔레그램을 보내지 않는다(회원님 11/02: "확실하게 3Q 숫자까지 다 채워진 상태에서만 보내").**
+    # ① 보도자료 손익 표를 AI 가 읽은 값(전년 같은 분기가 우리 SEC 값과 2% 안일 때만) ② 그래도 없으면 사이트에는 싣고
+    # 텔레그램은 미뤄 PENDING 에 넣는다 — pending_loop 가 5분마다 이력(SEC·TDnet·stockanalysis)에 그 분기가 생겼는지 보고 그때 보낸다.
+    if point is None and not ev.get("replay") and ev["mkt"] in ("us", "jp", "hk"):
+        lab0 = _target_label(ev, pts)
+        have = next((p for p in pts if p[0] == lab0 and p[1]), None) if lab0 else None
+        if have:                                  # 이력(SEC·TDnet)에 이미 그 분기가 있다
+            point = {"label": lab0, "rev": have[1], "opi": have[2] if len(have) > 2 else None}
+        else:
+            th.join(90)
+            point = _point_from_ai(ev, pts, box.get("b"))
+        if point:
+            pts = _apply_point(ev, pts, point)
+            log("숫자: 보도자료 손익 표(AI, 전년 검산 통과)", key, point["label"], point["rev"])
+        else:
+            ev["hold"] = True
+            ev["tgWhy"] = None
+            ev["tlab"] = _target_label(ev, pts)
+            if S.add(ev) or True:
+                S.broadcast(ev)
+                S.update(ev)
+            pend_add(ev)
+            log("숫자 대기 — 이번 분기 숫자를 구할 때까지 텔레그램 보류", key)
+            return
+    ev.pop("hold", None)
     with H.lock:
         ann = H.D.get("ann", {}).get(key)
         G = H.D.get("fcst", {}).get(key)
@@ -3124,7 +3243,7 @@ def main():
     log("시작 — 판", os.environ.get("RAILWAY_GIT_COMMIT_SHA", "")[:7], "· 텔레그램", "켜짐" if TG_TOKEN else "꺼짐(TG_BOT_TOKEN 없음)", "· 구독", len(TG.subs))
     H.refresh()
     shot.start(lambda: H.html)
-    for fn in (TG.poll, us_watch, pr_watch, jp_watch, hk_watch, history_loop, llm_selftest, replay_loop, segko_loop, fill_loop, biz_loop):
+    for fn in (TG.poll, us_watch, pr_watch, pending_loop, jp_watch, hk_watch, history_loop, llm_selftest, replay_loop, segko_loop, fill_loop, biz_loop):
         threading.Thread(target=fn, daemon=True, name=fn.__name__).start()
     ThreadingHTTPServer(("0.0.0.0", PORT), Handler).serve_forever()
 
