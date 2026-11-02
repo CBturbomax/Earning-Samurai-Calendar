@@ -20,8 +20,8 @@ jobs:
       - name: 🔎 Railway 실시간 서버 확인
         run: |
           U=https://earning-samurai-calendar-production.up.railway.app
-          { for u in "https://www.businesswire.com/rss/home/?rss=G1QFDERJXkJeEFtRWA==" "https://feed.businesswire.com/rss/home/?rss=G1QFDERJXkJeGVtRWA==" "https://www.prnewswire.com/rss/news-releases-list.rss" "https://www.globenewswire.com/RssFeed/subjectcode/13-Earnings%20Releases%20And%20Operating%20Results/feedTitle/GlobeNewswire%20-%20Earnings%20Releases%20And%20Operating%20Results" "https://www.elcompanies.com/en/news-and-media/newsroom/press-releases" "https://www.businesswire.com/newsroom/subject/earnings"; do
-              echo "== $u"; curl -sS -m 20 -A "Mozilla/5.0" -o /tmp/f "$u" -w "%{http_code} %{size_download}\n"; grep -o -i "<title>[^<]*</title>" /tmp/f | head -8; grep -i -o ".\{0,80\}Lauder.\{0,120\}" /tmp/f | head -3; done
+          { for u in "https://feed.businesswire.com/rss/home/?rss=G1QFDERJXkJeEFtRWA==" "https://feed.businesswire.com/rss/home/?rss=G1QFDERJXkJeGVtRWQ==" "https://feed.businesswire.com/rss/home/?rss=G1QFDERJXkJeEFpRWQ==" "https://www.prnewswire.com/rss/financial-services-latest-news/earnings-list.rss" "https://www.globenewswire.com/RssFeed/orgclass/1/feedTitle/GlobeNewswire%20-%20News%20about%20Public%20Companies" "https://www.accesswire.com/rss/latest"; do
+              echo "== $u"; curl -sS --http1.1 -m 25 -A "Mozilla/5.0 (Windows NT 10.0; Win64; x64) Chrome/131.0" -o /tmp/f "$u" -w "%{http_code} %{size_download}\n" || true; [ -f /tmp/f ] && { grep -c "<item>" /tmp/f || true; grep -o -i "<title>[^<]*</title>" /tmp/f | sed -n '1p;2p;3p' || true; grep -o -i "<pubDate>[^<]*</pubDate>" /tmp/f | sed -n '1p;$p' || true; grep -i -o ".\{0,60\}Lauder.\{0,80\}" /tmp/f | head -2 || true; rm -f /tmp/f; }; done
           } > /tmp/probe.txt 2>&1
           echo "== stream" >> /tmp/probe.txt; timeout 8 curl -sSN $U/stream | head -c 400 >> /tmp/probe.txt 2>&1 || true
 
