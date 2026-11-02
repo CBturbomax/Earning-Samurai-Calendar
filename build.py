@@ -1803,9 +1803,25 @@ def load_ord_jp():
     """일본 수주 — 受注高(누계 -> 분기) · 受注残高(그날 잔액)."""
     raw = (_read_stocks("geo_jp.json").get("raw") or {})
     out = {}
+
+    def confirmed(by_key, main):
+        """PDF 에서 읽은 '확인 전' 값 {열쇠: [공시마다 값]} 중 **두 공시가 1% 안에서 맞는 것**(또는 HTML 값과 맞는 것)만.
+        그해 공시의 당기 칸과 이듬해 공시의 전기 칸이 같은 기간을 말하므로, 둘이 맞으면 칸을 제대로 읽은 것이다."""
+        ok = {}
+        for key, vals in (by_key or {}).items():
+            if key in main:
+                continue
+            vals = [x for x in vals if x]
+            if any(abs(a - b) <= 0.01 * max(a, b) for i, a in enumerate(vals) for b in vals[i + 1:]):
+                ok[key] = sorted(vals)[len(vals) // 2]
+        return ok
     for k, v in raw.items():
-        oh = {e: r["v"] for e, r in _decum(_jp_spans(v.get("oh"))).items() if r.get("v")}
-        ob = {e: x for e, x in (v.get("ob") or {}).items() if x}
+        ohm = dict(v.get("oh") or {})
+        ohm.update(confirmed(v.get("ohp"), ohm))
+        obm = dict(v.get("ob") or {})
+        obm.update(confirmed(v.get("obp"), obm))
+        oh = {e: r["v"] for e, r in _decum(_jp_spans(ohm)).items() if r.get("v")}
+        ob = {e: x for e, x in obm.items() if x}
         ends = sorted(set(oh) | set(ob))
         if len(ends) < 2:
             continue
