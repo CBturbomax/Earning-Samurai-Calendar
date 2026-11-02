@@ -20,14 +20,7 @@ jobs:
       - name: 🔎 Railway 실시간 서버 확인
         run: |
           U=https://earning-samurai-calendar-production.up.railway.app
-          { echo "== log us"; curl -sS -m 30 $U/api/log | grep -E "실적 us:|표 읽기|보도자료|8-K" | tail -60
-            echo "== sent"; curl -sS -m 30 "$U/api/sent?day=$(TZ=Asia/Seoul date +%F)" | python3 -c "import json,sys; d=json.load(sys.stdin); [print(r) for r in d['rows'] if r[0].startswith('us:')]"
-            echo "== live"; curl -sS -m 30 "$U/api/live" | python3 -c "
-import json,sys
-d=json.load(sys.stdin); ev=d.get('events') or d
-for e in (ev if isinstance(ev,list) else [])[:60]:
-    if e.get('mkt')=='us': print(e.get('key'), e.get('kstTime'), 'point' if e.get('point') else 'NOPOINT', e.get('src'), e.get('tgWhy'))
-" 2>&1 | head -60
+          { python3 tools/ai/probe_us.py "$(TZ=Asia/Seoul date +%F)"
           } > /tmp/probe.txt 2>&1
           echo "== stream" >> /tmp/probe.txt; timeout 8 curl -sSN $U/stream | head -c 400 >> /tmp/probe.txt 2>&1 || true
 
