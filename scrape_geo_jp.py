@@ -41,7 +41,7 @@ from markets import excluded
 
 HERE = Path(__file__).parent
 OUT = HERE / "data" / "geo_jp.json"
-RULE_VER = 4      # 2: 옛 공시는 PDF 에서 지역 · 3: PDF 수주(확인 전 칸) · 4: 3개월치 표(우리 분기 매출로 맞춤)
+RULE_VER = 5      # 5: PDF 이름을 목록에서(미국 기준 회사) · 2: 옛 공시는 PDF 에서 지역 · 3: PDF 수주(확인 전 칸) · 4: 3개월치 표(우리 분기 매출로 맞춤)
 SECS = float(os.environ.get("GEO_SECS", "1500"))
 BACK_DAYS = int(os.environ.get("GEO_BACK_DAYS", "4"))
 SINCE = "2016-10-01"            # 1Q18(1~3월)의 전년 같은 분기까지 — 2017년 연간·9개월 누계가 필요하다. JPX 보관소는 2016년치까지 있다(떠보기 11/02)
@@ -351,7 +351,10 @@ def one_code(code, done):
             print(f"  {code} {fn} 실패: {e}")
             complete = False
             continue
-        pdf = f"https://www2.jpx.co.jp/disc/{code}0/{fn.replace('0812', '1401', 1)}" if fn.startswith("0812") else None
+        pn = (it.get("document_url") or "").rsplit("/", 1)[-1]      # 미국 기준 회사(도요타·고마쓰)는 zip 과 PDF 번호가 다르다
+        if not pn.lower().endswith(".pdf"):
+            pn = fn.replace("0812", "1401", 1) if fn.startswith("0812") else ""
+        pdf = f"https://www2.jpx.co.jp/disc/{code}0/{pn}" if pn else None
         try:
             r = read(blob, pdf, code) if blob else {}
         except Exception as e:                       # noqa: BLE001 — 깨진 공시 하나가 실행을 죽이지 않게
