@@ -48,6 +48,11 @@ LEGACY = HERE / "data" / "ai_fill.json"
 OUT = HERE / "data" / (f"ai_fill_s{SHARD.split('/')[0]}.json" if SHARD else "ai_fill.json")
 SECS = int(os.environ.get("AIFILL_SECS", "2100"))
 MAX_CALLS = int(os.environ.get("AIFILL_MAX", "2000"))
+MAX_TOK = int(os.environ.get("AIFILL_TOKENS", "0") or 0)   # 이번 실행 토큰 상한(0 = 없음) — 넘으면 멈춘다
+
+
+def over_tok():
+    return MAX_TOK and ai_seg.USED["in"] + ai_seg.USED["out"] >= MAX_TOK
 WORKERS = int(os.environ.get("AIFILL_WORKERS", "6"))
 # 수주를 내는 업종 — 사업부·지역이 다 차 있어도 수주 칸이 비면 묻는다
 ORD_JP = re.compile(r"建設|機械|電気機器|精密機器|造船|輸送用機器|情報通信|プラント|エンジニアリング")
@@ -440,7 +445,7 @@ class Budget:
 
     def take(self):
         with self.lock:
-            if self.limited or self.calls >= MAX_CALLS:
+            if self.limited or self.calls >= MAX_CALLS or over_tok():
                 return False
             self.calls += 1
             return True
@@ -580,7 +585,7 @@ def main():
     with ThreadPoolExecutor(WORKERS) as ex:
         live = {}
         while True:
-            while len(live) < WORKERS and not bud.limited and bud.calls < MAX_CALLS and time.time() - t0 < SECS:
+            while len(live) < WORKERS and not bud.limited and bud.calls < MAX_CALLS and not over_tok() and time.time() - t0 < SECS:
                 nx = next(it, None)
                 if nx is None:
                     break
