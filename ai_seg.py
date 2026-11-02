@@ -40,7 +40,8 @@ OUT = HERE / "data" / "segments_aipr.json"
 SECS = int(os.environ.get("AISEG_SECS", "1200"))
 PER_CALL = int(os.environ.get("AISEG_TIMEOUT", "240"))
 MAX_CALLS = int(os.environ.get("AISEG_MAX", "40"))       # 한 실행에 묻는 횟수 — 구독 한도를 아낀다
-LIMIT_HINT = re.compile(r"usage limit|rate limit|limit reached|quota|try again later|overloaded", re.I)
+LIMIT_HINT = re.compile(r"usage limit|rate limit|rate_limit|limit reached|quota|try again later|overloaded|"
+                        r'"api_error_status":\s*(429|529)', re.I)
 
 
 class Limited(Exception):
