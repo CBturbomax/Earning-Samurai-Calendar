@@ -20,8 +20,14 @@ jobs:
       - name: 🔎 Railway 실시간 서버 확인
         run: |
           U=https://earning-samurai-calendar-production.up.railway.app
-          { for u in "https://www.businesswire.com/rss/home/?rss=G1QFDERJXkJeEFtRWA==" "https://feed.businesswire.com/rss/home/?rss=G1QFDERJXkJeGVtRWA==" "https://www.prnewswire.com/rss/news-releases-list.rss" "https://www.globenewswire.com/RssFeed/subjectcode/13-Earnings%20Releases%20And%20Operating%20Results/feedTitle/GlobeNewswire%20-%20Earnings%20Releases%20And%20Operating%20Results" "https://www.elcompanies.com/en/news-and-media/newsroom/press-releases" "https://www.businesswire.com/newsroom/subject/earnings"; do
-              echo "== $u"; curl -sS --http1.1 -m 20 -A "Mozilla/5.0 (Windows NT 10.0; Win64; x64) Chrome/131.0" -o /tmp/f "$u" -w "%{http_code} %{size_download}\n" || true; grep -o -i "<title>[^<]*</title>" /tmp/f | head -8 || true; grep -i -o ".\{0,80\}Lauder.\{0,120\}" /tmp/f | head -3; done
+          { echo "== log us"; curl -sS -m 30 $U/api/log | grep -E "실적 us:|표 읽기|보도자료|8-K" | tail -60
+            echo "== sent"; curl -sS -m 30 "$U/api/sent?day=$(TZ=Asia/Seoul date +%F)" | python3 -c "import json,sys; d=json.load(sys.stdin); [print(r) for r in d['rows'] if r[0].startswith('us:')]"
+            echo "== live"; curl -sS -m 30 "$U/api/live" | python3 -c "
+import json,sys
+d=json.load(sys.stdin); ev=d.get('events') or d
+for e in (ev if isinstance(ev,list) else [])[:60]:
+    if e.get('mkt')=='us': print(e.get('key'), e.get('kstTime'), 'point' if e.get('point') else 'NOPOINT', e.get('src'), e.get('tgWhy'))
+" 2>&1 | head -60
           } > /tmp/probe.txt 2>&1
           echo "== stream" >> /tmp/probe.txt; timeout 8 curl -sSN $U/stream | head -c 400 >> /tmp/probe.txt 2>&1 || true
 
