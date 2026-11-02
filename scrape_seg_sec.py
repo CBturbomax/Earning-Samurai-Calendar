@@ -93,11 +93,17 @@ TICKERS = "https://www.sec.gov/files/company_tickers.json"
 # 3: 한 축짜리 행이 몇 줄 섞여 있어도 두 축 행을 버리지 않는다(엑슨)
 # 4: 더 잘게 쪼갠 쪽을 쓴다 · '부문 합계' 줄을 뺀다(셰브런)
 # 5: 지주회사로 갈아탄 티커를 옛 CIK 에 이어 붙인다(엑슨)
-SEG_SEC_VER = 6
+SEG_SEC_VER = 7
 # 열두 분기(3년)면 화면에 그리는 스물두 칸의 절반을 넘고, 큰 종목은
 # stockanalysis 가 스무 분기를 채워 준다. 한 분기 zip 이 85MB 라 열여섯으로
 # 늘리면 한 번에 1.4GB 다 — 남의 서버에서 그만큼 받을 이유가 없다.
-QUARTERS = int(os.environ.get("SEG_SEC_QUARTERS", "12"))
+# **1Q18 부터 그린다**(회원님 11/02: "제품별 지역별도 1Q18 부터 쭉"). 열두 분기만 훑던 시절에는 미국 부문 차트가
+# 2022년부터 시작했다. 2018년 1분기 값은 그해 4~5월 10-Q 묶음(2018q2)에 처음 실리고, 그 전년 같은 분기(YoY 용)는
+# 2017q2 묶음에 있다 — 그래서 2017q2 부터 지금까지를 훑는다(서른여덟 묶음쯤, 묶음 하나에 10초 남짓).
+_SINCE = os.environ.get("SEG_SEC_SINCE", "2017q2")
+_t = date.today()
+QUARTERS = int(os.environ.get("SEG_SEC_QUARTERS") or
+               ((_t.year - int(_SINCE[:4])) * 4 + (_t.month - 1) // 3 + 1 - int(_SINCE[-1]) + 1))
 MIN_PTS = int(os.environ.get("SEG_SEC_MIN_PTS", "4"))      # 이보다 적으면 안 싣는다
 ZIP_PAUSE = float(os.environ.get("SEG_SEC_PAUSE", "2"))    # zip 사이 쉬는 시간
 BACKOFF = (0, 10, 45)

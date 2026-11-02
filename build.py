@@ -1461,7 +1461,17 @@ def load_seg():
         for k, v in got.items():
             if not v.get("names"):
                 continue
-            out[k if ":" in k else "us:" + k] = v
+            key = k if ":" in k else "us:" + k
+            old = out.get(key)
+            # **긴 쪽이 뼈대다.** stockanalysis(segments.json)가 뒤에 와서 SEC 벌크를 통째로 갈아치우면
+            # 1Q18 부터 받아 둔 이력이 그쪽 길이(몇 분기)로 줄어든다. 더 긴 쪽에 짧은 쪽의 빈 분기만 잇는다.
+            if old and len(old.get("pts") or []) > len(v.get("pts") or []):
+                splice(old, dict(v, axis=old.get("axis")))
+                n += 1
+                continue
+            if old:
+                splice(v, dict(old, axis=v.get("axis")))
+            out[key] = v
             n += 1
         print(f"  {name}: {n:,}종목")
 
@@ -2140,7 +2150,7 @@ def seg_fit(rec, fin_rec):
     return names, pts, aligned, (med if hi - lo < 0.10 else None)
 
 
-SEG_KEEP = 20        # 화면에 그리는 것이 스물두 분기라 그만큼만 싣는다
+SEG_KEEP = 40        # 1Q18 부터(회원님 11/02: "제품별 지역별도 1Q18 부터 쭉") — 스무 분기로 잘라 2021년부터였다
 
 
 def lab_key(lab):
@@ -6511,7 +6521,7 @@ function segChart(sg, cur) {
   /* 사업부별 매출 — **선 그래프**(회원님 10/30: 누적 막대 말고 부문마다 선으로, 시계열이 보이게).
      축은 부문 하나의 최댓값으로 잡는다(합계가 아니라). 점마다 값을 적되, 같은 칸에서 글자끼리
      부딪히면 아래로 내려 적는다. 색·글꼴·축·범례는 사이트의 다른 차트와 같은 것을 쓴다. */
-  let pts = (sg.pts || []).filter(p => labFrom18(p[0])).slice(-36);   // 1Q18 부터(회원님 10/30)
+  let pts = (sg.pts || []).filter(p => labFrom18(p[0])).slice(-40);   // 1Q18 부터(회원님 10/30·11/02)
   if (pts.length < 2) return '';
   const names = sg.names || [];
   // **사업부 기준이 바뀌면 차트를 둘로 — 지금 기준과 옛 기준**(회원님 10/30: "둘 다 보여줘, 옛 기준은 최대한").
