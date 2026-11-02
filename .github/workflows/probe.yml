@@ -20,13 +20,8 @@ jobs:
       - name: 🔎 Railway 실시간 서버 확인
         run: |
           U=https://earning-samurai-calendar-production.up.railway.app
-          { echo "== co 2875"; curl -sS -m 20 "$U/api/co?key=jp:2875" | head -c 3000; echo
-            echo "== log 2875/東洋"; curl -sS -m 20 $U/api/log | grep -n -i "2875\|東洋水産\|tdnet\|TDnet\|오류\|Error" | tail -60
-            echo "== log tail"; curl -sS -m 20 $U/api/log | tail -c 4000
-            echo "== sent"; curl -sS -m 20 "$U/api/sent?day=$(TZ=Asia/Seoul date +%F)" | head -c 3000
-            echo "== health"; curl -sS -m 20 $U/health | head -c 1500
-            echo "== yanoshin 2875"; curl -sS -m 20 "https://webapi.yanoshin.jp/webapi/tdnet/list/2875.json?limit=6" | head -c 2500
-            echo "== tdnet today"; for pg in 001 002 003 004 005 006; do curl -sS -m 20 "https://www.release.tdnet.info/inbs/I_list_${pg}_$(TZ=Asia/Tokyo date +%Y%m%d).html" | grep -n -A3 "28750" | head -20; done
+          { for u in "https://www.businesswire.com/rss/home/?rss=G1QFDERJXkJeEFtRWA==" "https://feed.businesswire.com/rss/home/?rss=G1QFDERJXkJeGVtRWA==" "https://www.prnewswire.com/rss/news-releases-list.rss" "https://www.globenewswire.com/RssFeed/subjectcode/13-Earnings%20Releases%20And%20Operating%20Results/feedTitle/GlobeNewswire%20-%20Earnings%20Releases%20And%20Operating%20Results" "https://www.elcompanies.com/en/news-and-media/newsroom/press-releases" "https://www.businesswire.com/newsroom/subject/earnings"; do
+              echo "== $u"; curl -sS -m 20 -A "Mozilla/5.0" -o /tmp/f "$u" -w "%{http_code} %{size_download}\n"; grep -o -i "<title>[^<]*</title>" /tmp/f | head -8; grep -i -o ".\{0,80\}Lauder.\{0,120\}" /tmp/f | head -3; done
           } > /tmp/probe.txt 2>&1
           echo "== stream" >> /tmp/probe.txt; timeout 8 curl -sSN $U/stream | head -c 400 >> /tmp/probe.txt 2>&1 || true
 
