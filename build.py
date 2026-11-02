@@ -2516,6 +2516,9 @@ def drop_part_totals(rec):
     return dict(rec, names=names, pts=pts)
 
 
+SEG_ODD = [0]
+
+
 def pack_seg(rec, fin_rec):
     """[분기 라벨, 부문1, 부문2, …]. 라벨은 총매출 쪽 것을 빌려 온다."""
     rec = drop_part_totals(rec)
@@ -2548,6 +2551,21 @@ def pack_seg(rec, fin_rec):
         else:
             byl[r[0]] = [r[0]] + [a if a is not None else b for a, b in zip(byl[r[0]][1:], r[1:])]
     rows = [byl[l] for l in order if any(v is not None for v in byl[l][1:])][-SEG_KEEP:]
+    # **합이 평소와 20% 넘게 어긋난 칸은 뺀다**(11/02, 루멘텀 2Q26: 부문 하나에 연간 − 9개월이 엉뚱하게 앉아 1,354 > 매출 1,006,
+    # 나머지 부문은 빈칸). 잣대는 그 회사의 '부문 합 ÷ 총매출' 중앙값 — 상계 전 총액으로 내는 회사(1.3배)도 그대로 통과한다.
+    revs = {lab: rv for lab, rv in aligned if rv}
+    rat = {r[0]: sum(v for v in r[1:] if v) / revs[r[0]] for r in rows if revs.get(r[0])}
+    if len(rat) >= 4:
+        mid = sorted(rat.values())[len(rat) // 2]
+        bad = {l for l, x in rat.items() if mid > 0 and abs(x / mid - 1) > 0.2}
+        if bad and len(bad) < len(rat) / 2:
+            rows = [r for r in rows if r[0] not in bad]
+            SEG_ODD[0] += len(bad)
+    # 값이 하나도 없는 부문은 범례에도 안 낸다
+    keep = [j for j in range(len(names)) if any(r[j + 1] is not None for r in rows)]
+    if len(keep) < len(names):
+        names = [names[j] for j in keep]
+        rows = [[r[0]] + [r[j + 1] for j in keep] for r in rows]
     # 이름은 화면 직전에 한글로 옮긴다(아는 이름만 — seg_ko). 여기서 옮겨야
     # 미국·일본·홍콩이 한 길로 지나간다.
     out = {"names": [seg_ko(n) for n in names], "pts": rows}
