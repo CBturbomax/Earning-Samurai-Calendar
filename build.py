@@ -1458,8 +1458,11 @@ def load_seg():
     # **미국 상장 외국 기업은 10-Q 를 안 낸다.** 그래서 벌크·분기색인이 못 잡고
     # 아메르스포츠·ARM·HSBC 의 부문이 통째로 비었다. segments_fpi.json 이
     # 20-F·6-K 의 인라인 XBRL 에서 그 자리를 메운다(scrape_seg_fpi.py).
-    for name in ("segments_sec.json", "segments_jp.json", "segments_fpi.json",
-                 "segments.json"):                        # 뒤엣것이 이긴다
+    # **옛 분기 이력(XBRL 한 번에 · scrape_seg_hist_us.py)이 맨 앞**이다 — 회사의 모든 10-Q·10-K 를 읽은 것이라 벌크보다 길고
+    # 정확하다(벌크는 테슬라가 2Q23 에서 끊기고 1분기 칸 두 부문이 뒤바뀌어 있었다). '긴 쪽이 뼈대' 규칙이 그대로 고른다.
+    hist = sorted(p.name for p in (HERE / "data").glob("segments_hist_us_s*.json"))
+    for name in tuple(hist) + ("segments_sec.json", "segments_jp.json", "segments_fpi.json",
+                               "segments.json"):          # 뒤엣것이 이긴다(짧으면 빈 분기만 잇는다)
         p = HERE / "data" / name
         if not p.exists():
             continue
@@ -1684,12 +1687,21 @@ def _read_stocks(name):
 def load_geo():
     """지역별 매출. 미국은 SEC 벌크·제출 서류의 지역 축(geo), 일본은 결산단신의 지역 표."""
     out = {}
-    for name in ("segments_sec.json", "segments_fpi.json"):
+    hist = sorted(p.name for p in (HERE / "data").glob("segments_hist_us_s*.json"))
+    for name in ("segments_sec.json", "segments_fpi.json") + tuple(hist):
         n = 0
         for k, v in (_read_stocks(name).get("stocks") or {}).items():
             g = v.get("geo")
             if g and g.get("names") and g.get("pts"):
-                out[k if ":" in k else "us:" + k] = dict(g, axis="지역")
+                key = k if ":" in k else "us:" + k
+                g = dict(g, axis="지역")
+                old = out.get(key)
+                if old and len(old.get("pts") or []) > len(g["pts"]):
+                    splice(old, g)                 # 긴 쪽이 뼈대 — 짧은 쪽은 빈 분기만
+                else:
+                    if old:
+                        splice(g, old)
+                    out[key] = g
                 n += 1
         if n:
             print(f"  {name}: 지역 {n:,}종목")
