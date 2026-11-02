@@ -328,7 +328,9 @@ SEG_REV = ["TransactionsWithExternalCustomers",
            "OperatingRevenuesFromExternalCustomers",
            # 외부 매출이 따로 없는 회사는 부문 매출(내부 포함)을 쓴다.
            "OperatingRevenues", "OperatingRevenue", "SalesRevenues",
-           "Revenue", "NetSales"]
+           "Revenue", "NetSales",
+           # 종합상사(미쓰비시상사·미쓰이물산·스미토모상사)는 부문 「収益」을 `Revenue2IFRS` 로 태그한다(11/02 MCP 로 확인).
+           "Revenue2"]
 # **IFRS 꼬리를 떼고 맞춘다.** 같은 항목이 회계기준에 따라 이름 끝에 `IFRS` 가
 # 붙어 온다 — 소니는 `SalesToExternalCustomersIFRS`, 도요타는
 # `OperatingRevenueFromExternalCustomersIFRS`. 꼬리를 안 떼던 시절에는 이 둘을
