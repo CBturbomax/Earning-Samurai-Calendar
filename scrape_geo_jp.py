@@ -27,9 +27,11 @@ import os
 import zipfile
 import re
 import sys
+import threading
 import time
 import urllib.error
 import urllib.request
+from concurrent.futures import FIRST_COMPLETED, ThreadPoolExecutor, wait
 from datetime import date, datetime, timedelta, timezone
 from pathlib import Path
 
@@ -39,7 +41,7 @@ from markets import excluded
 
 HERE = Path(__file__).parent
 OUT = HERE / "data" / "geo_jp.json"
-RULE_VER = 2      # 2: zip 에 본문이 없던 옛 공시는 PDF 에서 지역을 읽는다
+RULE_VER = 3      # 2: 옛 공시는 PDF 에서 지역 · 3: PDF 수주(확인 전 칸)
 SECS = float(os.environ.get("GEO_SECS", "1500"))
 BACK_DAYS = int(os.environ.get("GEO_BACK_DAYS", "4"))
 SINCE = "2016-10-01"            # 1Q18(1~3월)의 전년 같은 분기까지 — 2017년 연간·9개월 누계가 필요하다. JPX 보관소는 2016년치까지 있다(떠보기 11/02)
@@ -117,6 +119,20 @@ def read(blob, pdf_url=None):
         geo = geojp.geo_from(geojp.pdf_tables(pdf), spans) if pdf else {}
         if geo:
             out["geo"] = {f"{st}/{en}": {k: round(v) for k, v in row.items()} for (st, en), row in geo.items()}
+        # PDF 수주는 '확인 전' 칸(ohp·obp)에 공시마다 하나씩 쌓는다 — build.py 가 두 공시가 맞을 때만 싣는다
+        cur = max(spans, key=lambda s_: (s_[1], -len(s_[0])))
+        prior = (_yago(cur[0]), _yago(cur[1]))
+        for rec in (geojp.pdf_orders(pdf) if pdf else []):
+            if rec["kind"] == "受注高":
+                o = out.setdefault("ohp", {})
+                o[f"{cur[0]}/{cur[1]}"] = round(rec["cur"] * 1e6)
+                if rec["prev"]:
+                    o[f"{prior[0]}/{prior[1]}"] = round(rec["prev"] * 1e6)
+            else:
+                o = out.setdefault("obp", {})
+                o[cur[1]] = round(rec["cur"] * 1e6)
+                if rec["prev"]:
+                    o[prior[1]] = round(rec["prev"] * 1e6)
         return out
     geo = geojp.geo_from(tb, spans)
     if geo:
@@ -152,7 +168,10 @@ def absorb(db, code, got):
     for kind, by in got.items():
         dst = slot.setdefault(kind, {})
         for k, v in by.items():
-            dst[k] = v                                           # 나중에 낸 공시(정정·재표시)가 이긴다
+            if kind.endswith("p"):                               # 확인 전(PDF) — 공시마다 따로 남겨 서로 맞춰 본다
+                dst.setdefault(k, []).append(v)                 # 같은 값이 두 공시에서 오면 두 번 — 그게 확인이다
+            else:
+                dst[k] = v                                       # 나중에 낸 공시(정정·재표시)가 이긴다
     return True
 
 
@@ -237,59 +256,94 @@ def recent(db, done):
     print(f"  최근 {BACK_DAYS}일: 결산단신 {n:,}건 · 지역/수주를 읽은 것 {hit:,}")
 
 
-def backfill(db, done):
-    """옛 결산단신 — 시총 큰 순으로, 아직 안 거슬러 간 종목부터."""
-    todo = [c for c in universe() if c not in db["codes"]]
-    print(f"  옛 공시: 남은 종목 {len(todo):,}")
-    n_codes = n_docs = hit = 0
-    streak = 0
-    for code in todo:
-        if left() < 90:
+WORKERS = int(os.environ.get("GEO_WORKERS", "3"))
+_YANO = threading.Lock()
+_yano_t = [0.0]
+
+
+def listing(code):
+    """yanoshin 목록 — 한 사람이 돌리는 무료 API 라 0.4초에 한 번만(실시간 서버 jphist 와 같은 예절)."""
+    with _YANO:
+        wait = 0.4 - (time.time() - _yano_t[0])
+        if wait > 0:
+            time.sleep(wait)
+        _yano_t[0] = time.time()
+    j = json.loads(get(f"https://webapi.yanoshin.jp/webapi/tdnet/list/{code}.json?limit=300&hasXBRL=1",
+                       binary=False, timeout=30) or "{}")
+    items = [it.get("Tdnet", it) for it in (j.get("items") or [])]
+    return sorted((it for it in items
+                   if (it.get("pubdate") or "")[:10] >= SINCE and it.get("url_xbrl")
+                   and F.TANSHIN.search(it.get("title") or "")
+                   and not F.NOT_TANSHIN.search(it.get("title") or "")),
+                  key=lambda it: it["pubdate"])
+
+
+def one_code(code, done):
+    """한 종목의 옛 결산단신 전부 -> (code, 다 받았나, [(zip 이름, 읽은 것)]). db 는 안 만진다(갈래끼리 안 부딪히게)."""
+    items = listing(code)
+    got, complete = [], True
+    for it in items:
+        fn = it["url_xbrl"].rsplit("/", 1)[-1]
+        if fn in done:
+            continue
+        if left() < 60:
+            complete = False
             break
         try:
-            j = json.loads(get(f"https://webapi.yanoshin.jp/webapi/tdnet/list/{code}.json?limit=300&hasXBRL=1",
-                               binary=False, timeout=30) or "{}")
-        except (F.Throttled, ValueError) as e:
-            streak += 1
-            print(f"  {code} 목록 실패: {e}")
-            if streak >= 5:
-                print("  목록이 연달아 막힌다 — 여기서 멈춘다.")
-                break
-            time.sleep(3)
+            blob = get(f"https://www2.jpx.co.jp/disc/{code}0/{fn}", timeout=60)
+        except F.Throttled as e:
+            print(f"  {code} {fn} 실패: {e}")
+            complete = False
             continue
-        streak = 0
-        items = [it.get("Tdnet", it) for it in (j.get("items") or [])]
-        items = sorted((it for it in items
-                        if (it.get("pubdate") or "")[:10] >= SINCE and it.get("url_xbrl")
-                        and F.TANSHIN.search(it.get("title") or "")
-                        and not F.NOT_TANSHIN.search(it.get("title") or "")),
-                       key=lambda it: it["pubdate"])
-        complete = True
-        for it in items:
-            fn = it["url_xbrl"].rsplit("/", 1)[-1]
-            if fn in done:
-                continue
-            if left() < 60:
-                complete = False
+        pdf = f"https://www2.jpx.co.jp/disc/{code}0/{fn.replace('0812', '1401', 1)}" if fn.startswith("0812") else None
+        try:
+            r = read(blob, pdf) if blob else {}
+        except Exception as e:                       # noqa: BLE001 — 깨진 공시 하나가 실행을 죽이지 않게
+            print(f"  {code} {fn} 읽기 실패: {e!r}"[:160])
+            r = {}
+        got.append((fn, r))
+        time.sleep(PAUSE)
+    return code, complete, got
+
+
+def backfill(db, done):
+    """옛 결산단신 — 시총 큰 순으로, 아직 안 거슬러 간 종목부터. **세 갈래로 동시에** 받는다
+    (한 종목에 결산단신이 40건쯤이라 한 줄로는 전 종목이 사흘 걸렸다)."""
+    todo = [c for c in universe() if c not in db["codes"]]
+    print(f"  옛 공시: 남은 종목 {len(todo):,} · {WORKERS}갈래")
+    n_codes = n_docs = hit = fails = 0
+    it = iter(todo)
+    with ThreadPoolExecutor(WORKERS) as ex:
+        live = set()
+        while True:
+            while len(live) < WORKERS and left() > 120:
+                c = next(it, None)
+                if c is None:
+                    break
+                live.add(ex.submit(one_code, c, frozenset(done)))
+            if not live:
                 break
-            try:
-                blob = get(f"https://www2.jpx.co.jp/disc/{code}0/{fn}", timeout=60)
-            except F.Throttled as e:
-                print(f"  {code} {fn} 실패: {e}")
-                complete = False
-                continue
-            done.add(fn)
-            n_docs += 1
-            pdf = f"https://www2.jpx.co.jp/disc/{code}0/{fn.replace('0812', '1401', 1)}" if fn.startswith("0812") else None
-            if blob and absorb(db, code, read(blob, pdf)):
-                hit += 1
-            time.sleep(PAUSE)
-        if complete:
-            db["codes"][code] = date.today().isoformat()
-            n_codes += 1
-        if n_codes and n_codes % 20 == 0:
-            db["docs"] = list(done)
-            save(db)
+            fin, live = wait(live, return_when=FIRST_COMPLETED)
+            for f in fin:
+                try:
+                    code, complete, got = f.result()
+                except (F.Throttled, ValueError) as e:
+                    fails += 1
+                    print(f"  목록 실패: {e}")
+                    if fails >= 8:
+                        print("  목록이 연달아 막힌다 — 새로 넣지 않는다.")
+                        it = iter(())
+                    continue
+                for fn, r in got:
+                    done.add(fn)
+                    n_docs += 1
+                    hit += bool(absorb(db, code, r))
+                if complete:
+                    db["codes"][code] = date.today().isoformat()
+                    n_codes += 1
+                    if n_codes % 20 == 0:
+                        db["docs"] = list(done)
+                        save(db)
     print(f"  옛 공시: 종목 {n_codes:,} 끝 · 결산단신 {n_docs:,}건 · 지역/수주를 읽은 것 {hit:,}")
 
 

@@ -1803,9 +1803,25 @@ def load_ord_jp():
     """일본 수주 — 受注高(누계 -> 분기) · 受注残高(그날 잔액)."""
     raw = (_read_stocks("geo_jp.json").get("raw") or {})
     out = {}
+
+    def confirmed(by_key, main):
+        """PDF 에서 읽은 '확인 전' 값 {열쇠: [공시마다 값]} 중 **두 공시가 1% 안에서 맞는 것**(또는 HTML 값과 맞는 것)만.
+        그해 공시의 당기 칸과 이듬해 공시의 전기 칸이 같은 기간을 말하므로, 둘이 맞으면 칸을 제대로 읽은 것이다."""
+        ok = {}
+        for key, vals in (by_key or {}).items():
+            if key in main:
+                continue
+            vals = [x for x in vals if x]
+            if any(abs(a - b) <= 0.01 * max(a, b) for i, a in enumerate(vals) for b in vals[i + 1:]):
+                ok[key] = sorted(vals)[len(vals) // 2]
+        return ok
     for k, v in raw.items():
-        oh = {e: r["v"] for e, r in _decum(_jp_spans(v.get("oh"))).items() if r.get("v")}
-        ob = {e: x for e, x in (v.get("ob") or {}).items() if x}
+        ohm = dict(v.get("oh") or {})
+        ohm.update(confirmed(v.get("ohp"), ohm))
+        obm = dict(v.get("ob") or {})
+        obm.update(confirmed(v.get("obp"), obm))
+        oh = {e: r["v"] for e, r in _decum(_jp_spans(ohm)).items() if r.get("v")}
+        ob = {e: x for e, x in obm.items() if x}
         ends = sorted(set(oh) | set(ob))
         if len(ends) < 2:
             continue
@@ -3128,6 +3144,14 @@ def audit_gaps(packed, fin, seg):
             out["gap"].append([k, won, ", ".join(miss[:4])])
         la = last_ann.get(k)
         le = lab_end(pts[-1][0])
+        # **마지막 점의 실제 종료일**로 잰다. 분기 이름(달력)으로 재면 회계 분기가 어긋난 회사(CASY 7월 말 분기 =
+        # 2Q26)가 '발표했는데 없음'으로 잡혔다. 발표는 분기 끝나고 석 달 안에 나오므로, 마지막 점이 끝난 지 95일
+        # (반기 회사는 200일)이 넘어 발표가 있으면 그건 우리에게 없는 새 분기다.
+        try:
+            raw_end = max(date.fromisoformat(q["end"]) for q in (FIN.get(k) or {}).get("points") or [] if q.get("end"))
+            le = raw_end + timedelta(days=(200 if f.get("freq") == "H" else 95) - 75)
+        except (ValueError, TypeError):
+            pass
         if la and le and (la - le).days > 75:
             out["stale"].append([k, won, f"발표 {la.isoformat()} · 우리 마지막 {pts[-1][0]}"])
         s = seg.get(k)

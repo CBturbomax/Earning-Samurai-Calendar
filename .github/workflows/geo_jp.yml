@@ -20,6 +20,7 @@ on:
 
 permissions:
   contents: write
+  actions: write      # 다음 실행 예약(이어달리기)
 
 concurrency:
   group: geojp-${{ github.ref_name }}
@@ -33,6 +34,9 @@ jobs:
     env:
       GEO_SECS: '1500'
     steps:
+      - name: 시작 시각
+        run: echo "T0=$(date +%s)" >> "$GITHUB_ENV"
+
       - uses: actions/checkout@v4
       - name: 최신 main 으로 맞춘다
         run: |
@@ -106,3 +110,14 @@ jobs:
             echo "푸시 실패, $((2**i))초 뒤 재시도"; sleep $((2**i))
           done
           echo "푸시를 끝내 못 했다"; exit 1
+
+      # **이어달리기** — 크론은 몇 시간씩 밀린다. 끝나면 다음 실행을 건다(옛 공시를 다 받으면 금방 끝나므로
+      # 시작부터 10분은 채우고 건다 — 쉬지 않고 연달아 돌지 않게).
+      - name: 다음 실행 예약
+        if: always()
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          left=$(( 600 - ($(date +%s) - ${T0:-0}) ))
+          [ "$left" -gt 0 ] && sleep "$left"
+          gh workflow run geo_jp.yml --ref main -R "$GITHUB_REPOSITORY" || echo "예약 실패 — 크론에 맡긴다"

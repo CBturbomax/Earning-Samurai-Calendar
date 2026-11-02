@@ -54,7 +54,10 @@ jobs:
   numbers:
     runs-on: ubuntu-latest
     if: github.ref_name == 'main'
-    timeout-minutes: 29
+    # **단계 제한의 합보다 커야 한다.** 단계 제한을 더하면 35분(4+10+1+6+9+3+2)인데 일은 29분에 잘렸다 —
+    # 마지막 「저장소에 반영」 이 늘 잘려 11/01 16:39 부터 여덟 시간 넘게 실적 수치가 한 번도 안 들어갔다
+    # (홍콩 3Q26 이 통째로 빠진 까닭). 반영·빌드 몫까지 넉넉히.
+    timeout-minutes: 55
     steps:
       - name: 시작 시각
         run: echo "T0=$(date +%s)" >> "$GITHUB_ENV"
