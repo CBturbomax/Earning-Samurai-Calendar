@@ -20,7 +20,14 @@ jobs:
       - name: 🔎 Railway 실시간 서버 확인
         run: |
           U=https://earning-samurai-calendar-production.up.railway.app
-          for p in "/api/co?key=us:AMZN" "/api/co?key=jp:6981" "/api/co?key=hk:00700" /health /api/log /api/stats /api/audit "/api/sent?day=$(TZ=Asia/Seoul date +%F)" /api/live; do echo "== $p"; curl -sS -m 20 $U$p | tail -c 20000; echo; done > /tmp/probe.txt 2>&1
+          { echo "== co 2875"; curl -sS -m 20 "$U/api/co?key=jp:2875" | head -c 3000; echo
+            echo "== log 2875/東洋"; curl -sS -m 20 $U/api/log | grep -n -i "2875\|東洋水産\|tdnet\|TDnet\|오류\|Error" | tail -60
+            echo "== log tail"; curl -sS -m 20 $U/api/log | tail -c 4000
+            echo "== sent"; curl -sS -m 20 "$U/api/sent?day=$(TZ=Asia/Seoul date +%F)" | head -c 3000
+            echo "== health"; curl -sS -m 20 $U/health | head -c 1500
+            echo "== yanoshin 2875"; curl -sS -m 20 "https://webapi.yanoshin.jp/webapi/tdnet/list/2875.json?limit=6" | head -c 2500
+            echo "== tdnet today"; for pg in 001 002 003 004 005 006; do curl -sS -m 20 "https://www.release.tdnet.info/inbs/I_list_${pg}_$(TZ=Asia/Tokyo date +%Y%m%d).html" | grep -n -A3 "28750" | head -20; done
+          } > /tmp/probe.txt 2>&1
           echo "== stream" >> /tmp/probe.txt; timeout 8 curl -sSN $U/stream | head -c 400 >> /tmp/probe.txt 2>&1 || true
 
       - name: 🔎 홍콩 긴 이력 수집기 시험

@@ -74,6 +74,9 @@ def jp_sector(code):
         _JP_SECT.setdefault("_", "")
     return _JP_SECT.get(code, "")
 SINCE = "2018-01-01"
+BIG = set()                                          # 시총 상위 — main 이 채운다
+BIG_N = int(os.environ.get("AIFILL_BIG", "300"))     # 시장마다 몇 곳까지를 '큰 회사'로
+RECENT_DAYS = int(os.environ.get("AIFILL_RECENT", "0") or 0)   # >0 이면 그 날수 안의 빈칸만
 DOC_LIMIT = int(os.environ.get("AIFILL_DOC", "20000"))   # 원문 길이 상한 — 길수록 한도를 많이 먹는다
 EMPTY_VER = 3                   # 2: 일본 PDF 이름을 목록에서(미국 기준 회사 — 도요타·고마쓰)
 DRY_N = 4                       # 연달아 이만큼 읽어 맞은 것이 없으면 그 회사는 넉 달 쉰다
@@ -105,14 +108,21 @@ def gaps(B, key):
     if f.get("freq") not in ("Q", "H"):
         return []
     m, code = key.split(":")
-    ordc = bool(B.ORD.get(key)) or (ORD_JP.search(jp_sector(code)) if m == "jp"
-                                    else ORD_US.search(B.INDUSTRIES.get(key, "") or ""))
+    # **한도 아끼기(11/02 실측)**: 지역·수주는 그 회사가 낸 적이 있을 때만 묻는다. 빈칸 18만 칸 중 대부분이 '분기 지역 매출을
+    # 아예 안 내는 회사'였고, AI 가 그걸 찾느라 공시를 읽고 빈손으로 나왔다. 낸 적이 있는 회사의 구멍만 판다.
+    ordc = len((B.ORD.get(key) or {}).get("pts") or []) >= 2
+    geoc = len((B.GEO.get(key) or {}).get("pts") or []) >= 4
+    # 사업부 기록이 아예 없는 회사는 대개 '단일 부문'이다 — 시총 상위(BIG)만 묻는다(우리 수집기가 놓친 큰 회사를 찾으려고)
+    segc = len((B.SEG.get(key) or {}).get("pts") or []) >= 4 or key in BIG
+    since = SINCE
+    if RECENT_DAYS:                                    # 최근 칸부터(같은 토큰으로 눈에 보이는 빈칸이 가장 많이 준다)
+        since = max(SINCE, (date.today() - timedelta(days=RECENT_DAYS)).isoformat())
     out = []
     for p in f.get("points") or []:
         e = p.get("end")
-        if not e or e < SINCE or not p.get("rev"):
+        if not e or e < since or not p.get("rev"):
             continue
-        if not covered(B.SEG.get(key), e) or not covered(B.GEO.get(key), e) or (ordc and not covered(B.ORD.get(key), e)):
+        if (segc and not covered(B.SEG.get(key), e)) or (geoc and not covered(B.GEO.get(key), e)) or (ordc and not covered(B.ORD.get(key), e)):
             out.append(e)
     return out
 
@@ -568,7 +578,12 @@ def main():
     import zlib
     todo = []
     dry = db.setdefault("dry", {})
-    for key in targets(B, set(only)):
+    tg = targets(B, set(only))
+    for mk in ("us:", "jp:"):
+        BIG.update([k for k in tg if k.startswith(mk)][:BIG_N])
+    if only:
+        BIG.update(only)
+    for key in tg:
         if zlib.crc32(key.encode()) % n_sh != i_sh:
             continue
         d = dry.get(key) or {}

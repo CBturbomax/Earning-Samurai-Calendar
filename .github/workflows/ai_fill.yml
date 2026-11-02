@@ -16,6 +16,10 @@ on:
         description: '갈래당 최대 호출 수(시험은 작게)'
         required: false
         default: '40'
+      recent:
+        description: '최근 며칠 안의 빈칸만(0 = 1Q18 부터 전부)'
+        required: false
+        default: '730'
 
 permissions:
   contents: write
@@ -50,6 +54,7 @@ jobs:
       AI_MODEL: haiku          # 가장 가벼운 모델 — 합계 검산이 틀린 답을 거른다
       AIFILL_MAX: "${{ github.event.inputs.max || '40' }}"         # 갈래당 한 번에 40건까지만
       AIFILL_DOC: '20000'
+      AIFILL_RECENT: "${{ github.event.inputs.recent || '730' }}"
       CODEX_EFFORT: low
       AIFILL_SHARD: '${{ matrix.shard }}/4'
       AIFILL_SECS: '2700'
