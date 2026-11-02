@@ -96,7 +96,13 @@ def main():
     cap = lambda c: caps.get("jp:" + c) if isinstance(caps.get("jp:" + c), (int, float)) else 0   # noqa: E731
     gp = gaps()
     i_sh, n_sh = (int(x) for x in SHARD.split("/")) if SHARD else (0, 1)
-    cands = only or sorted(gp, key=lambda c: -(gp[c] * (1 + (cap(c) or 0) / 1e11)))
+    from markets import excluded
+    try:
+        sect = json.loads((HERE / "data" / "caps.json").read_text(encoding="utf-8")).get("sectors") or {}
+    except (OSError, ValueError):
+        sect = {}
+    # 시총 큰 순 · 은행 등 화면에 안 싣는 업종은 뺀다
+    cands = only or sorted((c for c in gp if not excluded("jp", "", sect.get("jp:" + c) or "")), key=lambda c: -(cap(c) or 0))
     todo = [c for c in cands if only or (c not in done_co and zlib.crc32(c.encode()) % n_sh == i_sh)]
     print(f"이력 받을 일본 회사 {len(todo):,} (사업부 빈칸 있는 회사 {len(gp):,} · 이 갈래 다 읽은 회사 {len(done_co):,})")
     G.T0 = time.time()
