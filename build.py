@@ -3144,6 +3144,14 @@ def audit_gaps(packed, fin, seg):
             out["gap"].append([k, won, ", ".join(miss[:4])])
         la = last_ann.get(k)
         le = lab_end(pts[-1][0])
+        # **마지막 점의 실제 종료일**로 잰다. 분기 이름(달력)으로 재면 회계 분기가 어긋난 회사(CASY 7월 말 분기 =
+        # 2Q26)가 '발표했는데 없음'으로 잡혔다. 발표는 분기 끝나고 석 달 안에 나오므로, 마지막 점이 끝난 지 95일
+        # (반기 회사는 200일)이 넘어 발표가 있으면 그건 우리에게 없는 새 분기다.
+        try:
+            raw_end = max(date.fromisoformat(q["end"]) for q in (FIN.get(k) or {}).get("points") or [] if q.get("end"))
+            le = raw_end + timedelta(days=(200 if f.get("freq") == "H" else 95) - 75)
+        except (ValueError, TypeError):
+            pass
         if la and le and (la - le).days > 75:
             out["stale"].append([k, won, f"발표 {la.isoformat()} · 우리 마지막 {pts[-1][0]}"])
         s = seg.get(k)
