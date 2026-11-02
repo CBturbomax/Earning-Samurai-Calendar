@@ -84,6 +84,8 @@ HERE = Path(__file__).parent
 OUT = HERE / "data" / "segments_edgar.json"
 
 EDGAR_VER = 1
+# 2 — 지역 축(geo)과 수주잔고(RPO)를 같이 뜯는다.
+PARSE_VER = 2
 
 IDX = "https://www.sec.gov/Archives/edgar/full-index/{y}/QTR{q}/form.idx"
 FOLDER = "https://www.sec.gov/Archives/edgar/data/{cik}/{acc}"
@@ -271,13 +273,18 @@ def parse_instance(blob):
                     val = strip_member((m.text or "").strip())
                     if dim and val:
                         dims.append(f"{dim}={val}")
-                start = endd = ""
+                start = endd = inst = ""
                 for p in el.iter():
                     lp = local(p.tag)
                     if lp == "startDate":
                         start = (p.text or "").strip()
                     elif lp == "endDate":
                         endd = (p.text or "").strip()
+                    elif lp == "instant":
+                        inst = (p.text or "").strip()
+                if cid and not dims and inst:
+                    # 축 없는 시점 문맥 = 회사 전체의 그날 잔액(수주잔고 RPO)
+                    ctx[cid] = ("", "", "rpo", ddate_of(inst), 0)
                 if cid and dims and start and endd:
                     q = qtrs_of(start, endd)
                     got = ss.parse_seg(";".join(dims) + ";") if q else None
@@ -293,8 +300,10 @@ def parse_instance(blob):
                 # 확장 항목도 있다 — HSBC 의 부문 매출(RevenueAndOperatingIncome)
                 # 이 그렇다. 이름공간까지 따지다가 HSBC 가 통째로 비었다.
                 # REV_RANK 에 적힌 이름만 줍는 것으로 이미 충분히 좁다.
-                if tag in ss.REV_RANK:
-                    slot = ctx.get(el.get("contextRef"))
+                slot = ctx.get(el.get("contextRef"))
+                if slot and (slot[2] == "rpo") != (tag in ss.RPO_TAGS):
+                    slot = None
+                if tag in ss.REV_RANK or tag in ss.RPO_TAGS:
                     txt = (el.text or "").strip().replace(",", "")
                     if slot and txt and el.get("{http://www.w3.org/2001/XMLSchema-instance}nil") != "true":
                         try:
@@ -313,9 +322,18 @@ def parse_instance(blob):
 
 # ── 쌓기 ────────────────────────────────────────────────────────────────
 
+RPO = {}      # cik -> {ddate: (값, 접수일)} — 수주잔고. save() 가 티커별로 옮겨 적는다.
+
+
 def absorb(facts_by_cik, pairs_by_cik, cik, filed, acc, rows):
     """벌크의 `scan()` 과 같은 모양으로 담는다. 나중에 낸 서류가 이긴다."""
     for axis, member, sub_axis, ddate, qtrs, tag, val in rows:
+        if sub_axis == "rpo":
+            slot = RPO.setdefault(cik, {})
+            old = slot.get(ddate)
+            if old is None or filed > old[1]:
+                slot[ddate] = (val, filed)
+            continue
         if sub_axis == "solo":
             slot = (facts_by_cik.setdefault(cik, {}).setdefault(axis, {})
                     .setdefault(member, {}).setdefault(tag, {}))
@@ -412,6 +430,12 @@ def load_old():
         return {"v": EDGAR_VER, "stocks": {}, "done": []}
     d.setdefault("stocks", {})
     d.setdefault("done", [])
+    # **뜯는 규칙만 바뀌면 본 서류 기록만 비운다**(외국 기업 쪽 PARSE_VER 와 같은 뜻).
+    # 판(EDGAR_VER)을 올리면 모아둔 꼬리까지 지워져 그동안 부문 막대가 짧아진다.
+    if d.get("pv") != PARSE_VER:
+        print(f"  뜯는 규칙이 바뀌었다(pv{d.get('pv')} -> pv{PARSE_VER}). 본 서류 기록만 비운다.")
+        d["done"] = []
+        d["pv"] = PARSE_VER
     return d
 
 
@@ -431,11 +455,21 @@ def save(old, facts_by_cik, pairs_by_cik, by_cik, done):
         if not rec:
             continue
         rec = ss.dedupe_names(rec)
+        if rec.get("geo"):
+            rec["geo"] = ss.dedupe_names(rec["geo"])
         rec["v"] = EDGAR_VER
         for t in by_cik.get(cik, []):
             old["stocks"][t] = rec
             made += 1
     ss.MIN_PTS, ss.MIN_MEMBER_PTS = keep
+    # 수주잔고는 쌓는다 — 서류 두 장씩만 보므로 지난 실행이 본 날을 버리면 안 된다.
+    rp = old.setdefault("rpo", {})
+    for cik, by_d in RPO.items():
+        for t in by_cik.get(cik, []):
+            have = dict(rp.get(t, []))
+            for d, (v, _f) in by_d.items():
+                have[ss.iso(d)] = v
+            rp[t] = sorted(have.items())
     old["v"] = EDGAR_VER
     old["source"] = "SEC EDGAR 제출 서류(인라인 XBRL 인스턴스)"
     old["note"] = ("벌크가 아직 안 실은 최근 분기를 메운다. 판단 규칙은 "
