@@ -7,7 +7,7 @@ def g(p):
 day = sys.argv[1]
 print("== log us")
 for l in g("/api/log").splitlines():
-    if any(k in l for k in ("실적 us:", "표 읽기", "보도자료", "8-K", "완성 기다림")):
+    if any(k in l for k in ("실적 us:", "표 읽기", "보도자료", "8-K", "숫자", "Traceback", "Error", "켬", "시작")):
         print(l)
 print("== sent us")
 for r in json.loads(g(f"/api/sent?day={day}"))["rows"]:
