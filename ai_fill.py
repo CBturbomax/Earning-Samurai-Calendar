@@ -612,6 +612,8 @@ def main():
         print(f"  ! 구독 한도·과부하 — 여기서 멈춘다: {bud.limited}")
         db["limited"] = datetime.now(timezone.utc).isoformat(timespec="minutes")
     save(db)
+    u = ai_seg.USED
+    print(f"토큰: 엔진 {ai_seg.ENGINE} · 호출 {u['n']} · 입력 {u['in']:,} · 출력 {u['out']:,} · 호출당 {(u['in'] + u['out']) // max(u['n'], 1):,}")
     print(f"AI 빈칸 메우기: 회사 {done_keys} · 물어본 공시 {tried} · 검산 통과 기간 {got} · 남은 회사 {len(todo) - done_keys}")
 
 
