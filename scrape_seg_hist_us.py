@@ -19,7 +19,9 @@ import json
 import os
 import sys
 import time
+import threading
 import zlib
+from concurrent.futures import ThreadPoolExecutor
 from datetime import date
 from pathlib import Path
 
@@ -33,6 +35,19 @@ SECS = int(os.environ.get("HIST_SECS", "1300"))
 SINCE = "2017-06-01"
 SUBS = "https://data.sec.gov/submissions/CIK{cik:010d}.json"
 SUBS_OLD = "https://data.sec.gov/submissions/{name}"
+
+
+_LOCK, _T = threading.Lock(), [0.0]
+
+
+def paced(fn, *a):
+    """SEC 는 IP 하나에 초당 10건 — 줄 넷이 같이 써도 0.12초 간격을 지킨다."""
+    with _LOCK:
+        w = 0.12 - (time.time() - _T[0])
+        if w > 0:
+            time.sleep(w)
+        _T[0] = time.time()
+    return fn(*a)
 
 
 def filings(cik):
@@ -77,10 +92,33 @@ def gaps_by_ticker():
         ends = [p["end"] for p in f.get("points") or [] if p.get("end", "") >= "2018-01-01" and p.get("rev")]
         hs = sorted(have.get(t, ()))
         hd = [date.fromisoformat(h) for h in hs if len(h) == 10]
-        miss = sum(1 for e in ends if not any(abs((date.fromisoformat(e) - d).days) <= 20 for d in hd))
+        miss = [e for e in ends if not any(abs((date.fromisoformat(e) - d).days) <= 20 for d in hd)]
         if miss:
             out[t] = miss
     return out
+
+
+def pick(fl, miss):
+    """빈 종료일을 덮는 서류만 — 그 분기에 끝난 서류(없으면 한 해 뒤 서류: 전년 같은 분기 비교치), 결산 분기면 3분기 10-Q 도
+    (연간 − 9개월). 회사마다 37장을 다 읽던 첫 판이 회사당 3분 반이라(11/02 실측) 이렇게 좁힌다."""
+    d = date.fromisoformat
+    want, cov = [], []
+    for e in sorted(miss, reverse=True):
+        ed = d(e)
+        if any(abs((ed - c).days) <= 15 for c in cov):
+            continue
+        hit = [f for f in fl if abs((d(f[0]) - ed).days) <= 12]
+        nxt = [f for f in fl if abs((d(f[0]) - ed).days - 365) <= 15]
+        for f in (hit or nxt)[:1]:
+            if f not in want:
+                want.append(f)
+            fd = d(f[0])
+            cov.extend([fd, date.fromordinal(fd.toordinal() - 364)])
+            if f[1] == "10-K":
+                for g in fl:
+                    if g[1] == "10-Q" and 80 <= (fd - d(g[0])).days <= 100 and g not in want:
+                        want.append(g)
+    return sorted(want, key=lambda x: x[3])
 
 
 def main():
@@ -95,7 +133,14 @@ def main():
     cikmap = ss.cik_map()
     gp = gaps_by_ticker()
     i_sh, n_sh = (int(x) for x in SHARD.split("/")) if SHARD else (0, 1)
-    cands = only or sorted((t for t in gp if t in caps), key=lambda t: -(gp[t] * (1 + (caps.get(t) or 0) / 1e10)))
+    from markets import excluded
+    try:
+        ind = json.loads((HERE / "data" / "caps.json").read_text(encoding="utf-8")).get("industries") or {}
+    except (OSError, ValueError):
+        ind = {}
+    # 시총 큰 순(화면에서 보는 회사부터) · 은행·리츠 등 화면에 안 싣는 업종은 뺀다(첫 판이 은행·리츠부터 읽었다)
+    cands = only or sorted((t for t in gp if t in caps and not excluded("us", "", "", (ind.get("us:" + t) or "").replace("-", ""))),
+                           key=lambda t: -(caps.get(t) or 0))
     todo, seen_cik = [], set()
     for t in cands:
         cik = ss.CIK_ALIAS.get(t) or cikmap.get(t) or cikmap.get(t.replace(".", "-"))
@@ -114,23 +159,26 @@ def main():
             break
         try:
             fl = filings(cik)
+            if not only or gp.get(t):
+                fl = pick(fl, gp.get(t) or [])
             facts, pairs = {}, {}
-            n = 0
-            for rd, form, acc, filed in fl:
-                url = se.instance_url(cik, acc)
-                time.sleep(se.PAUSE)
+
+            def one(f):
+                rd, form, acc, filed = f
+                url = paced(se.instance_url, cik, acc)
                 if not url:
-                    continue
-                blob = se.get(url)
-                time.sleep(se.PAUSE)
-                if not blob:
-                    continue
+                    return f, None
+                blob = paced(se.get, url)
                 try:
-                    rows = se.parse_instance(blob)
+                    return f, (se.parse_instance(blob) if blob else None)
                 except ss.Blocked:
-                    continue
-                se.absorb(facts, pairs, cik, filed, acc, rows)
-                n += 1
+                    return f, None
+            n = 0
+            with ThreadPoolExecutor(4) as ex:
+                for f, rows in ex.map(one, fl):
+                    if rows:
+                        se.absorb(facts, pairs, cik, f[3], f[2], rows)
+                        n += 1
         except ss.Blocked as e:
             fail += 1
             print(f"  ! {t} {e}"[:160])
@@ -147,7 +195,7 @@ def main():
             rec["src"] = "edgar-hist"
             st[t] = rec
             got += 1
-            print(f"  {t}: 서류 {n} · 부문 {len(rec.get('pts') or [])}분기 {rec['pts'][0][0] if rec.get('pts') else ''}~"
+            print(f"  {t}: 빈 분기 {len(gp.get(t) or [])} · 서류 {n} · 부문 {len(rec.get('pts') or [])}분기 {rec['pts'][0][0] if rec.get('pts') else ''}~"
                   + (f" · 지역 {len(rec['geo']['pts'])}" if rec.get("geo") else ""), flush=True)
         if got % 10 == 0:
             db["count"] = len(st)
