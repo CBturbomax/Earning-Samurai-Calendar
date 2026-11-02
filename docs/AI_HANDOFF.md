@@ -174,3 +174,6 @@
 - 11/02 **일본 옛 분기 이력도 한 번에**(`scrape_seg_hist_jp.py` · `segments_hist_jp.yml` 두 갈래). JPX 보관소 결산단신 zip 을 read_segments 로 읽어
   `data/segments_hist_jp_s{n}.json`(raw + stocks). build 는 `segments_hist_*_s*.json` 을 load_seg 맨 앞에 싣는다. 종합상사 부문 매출 태그
   `Revenue2IFRS` 를 SEG_REV 에 더했다(MCP jp_financials items='セグメント' 로 확인 — 그동안 미쓰비시상사·미쓰이물산·스미토모상사 부문이 통째로 없었다).
+- 11/02 옛 분기 이력 파일은 **빈 분기만 잇는다**(뼈대 금지 — 홈디포처럼 축이 다르면 최근 분기가 밀려났다). 이름이 하나도 안 겹치면
+  `prepend_old` 가 **뼈대 시작 전 분기만** 앞에 붙인다(마스터카드 1Q18~4Q21 옛 기준) — segChart 가 지금/옛 기준 두 그림으로 가른다.
+  scrape_seg_hist_us 는 segments.json(stockanalysis, 이름이 달라 화면과 안 이어짐)을 덮인 것으로 안 친다 — 테슬라가 그래서 빠졌었다.

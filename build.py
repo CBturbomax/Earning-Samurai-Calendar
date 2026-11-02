@@ -1440,6 +1440,32 @@ def hk_seg_records():
     return out
 
 
+def prepend_old(base, old):
+    """이름이 하나도 안 겹치는 옛 기록(개편 전 기준·다른 축)을 **뼈대가 시작하기 전 분기에만** 앞에 붙인다(11/02).
+    화면 segChart 가 '지금 기준 / 옛 기준' 두 그림으로 가르므로 섞여 보이지 않는다. 겹치는 기간에는 손대지 않는다."""
+    bp = [r for r in base.get("pts") or [] if re.match(r"\d{4}-\d\d-\d\d$", str(r[0]))]
+    if not bp:
+        return 0
+    first = date.fromisoformat(min(r[0] for r in bp))
+    early = [r for r in old.get("pts") or [] if re.match(r"\d{4}-\d\d-\d\d$", str(r[0]))
+             and (first - date.fromisoformat(r[0])).days > 20 and any(x for x in r[1:])]
+    if len(early) < 2:
+        return 0
+    bn, on = list(base["names"]), list(old["names"])
+    names = bn + [n for n in on if n not in bn]
+    ix = {n: names.index(n) for n in on}
+    rows = []
+    for r in early:
+        row = [r[0]] + [None] * len(names)
+        for j, n in enumerate(on):
+            if j + 1 < len(r) and r[j + 1] is not None:
+                row[ix[n] + 1] = r[j + 1]
+        rows.append(row)
+    base["names"] = names
+    base["pts"] = sorted(rows + [list(r) + [None] * (len(names) + 1 - len(r)) for r in base["pts"]], key=lambda r: str(r[0]))
+    return len(rows)
+
+
 def load_seg():
     """사업부별 매출. 두 곳에서 온다. 열쇠는 미국 코드라 'us:' 를 붙여 맞춘다.
 
@@ -1460,9 +1486,8 @@ def load_seg():
     # 20-F·6-K 의 인라인 XBRL 에서 그 자리를 메운다(scrape_seg_fpi.py).
     # **옛 분기 이력(XBRL 한 번에 · scrape_seg_hist_us.py)이 맨 앞**이다 — 회사의 모든 10-Q·10-K 를 읽은 것이라 벌크보다 길고
     # 정확하다(벌크는 테슬라가 2Q23 에서 끊기고 1분기 칸 두 부문이 뒤바뀌어 있었다). '긴 쪽이 뼈대' 규칙이 그대로 고른다.
-    hist = sorted(p.name for p in (HERE / "data").glob("segments_hist_*_s*.json"))   # 미국 XBRL · 일본 JPX 보관소
-    for name in tuple(hist) + ("segments_sec.json", "segments_jp.json", "segments_fpi.json",
-                               "segments.json"):          # 뒤엣것이 이긴다(짧으면 빈 분기만 잇는다)
+    for name in ("segments_sec.json", "segments_jp.json", "segments_fpi.json",
+                 "segments.json"):                        # 뒤엣것이 이긴다(짧으면 빈 분기만 잇는다)
         p = HERE / "data" / name
         if not p.exists():
             continue
@@ -1514,6 +1539,31 @@ def load_seg():
             added += bool(n_add)
         print(f"  segments_edgar.json: 최근 분기를 이어 붙인 종목 {added:,}"
               f" · 새로 생긴 종목 {new:,}")
+
+    # **옛 분기 이력(scrape_seg_hist_us/jp — XBRL·JPX 보관소를 한 번에 읽은 것)은 빈 분기만 잇는다.** 뼈대로 세웠더니 축이 다른
+    # 회사(홈디포: 이력은 제품 축, 벌크는 사업부 축)에서 최근 분기가 통째로 밀려났다(11/02). 없는 회사만 새로 싣는다.
+    hn = hadd = hpre = 0
+    for name in sorted(p.name for p in (HERE / "data").glob("segments_hist_*_s*.json")):
+        try:
+            got_h = json.loads((HERE / "data" / name).read_text(encoding="utf-8")).get("stocks") or {}
+        except (ValueError, OSError):
+            got_h = {}
+        for k, v in got_h.items():
+            if not v.get("names"):
+                continue
+            key = k if ":" in k else "us:" + k
+            base = out.get(key)
+            if base is None:
+                out[key] = v
+                hn += 1
+            elif splice(base, v):
+                hadd += 1
+            elif prepend_old(base, v):
+                hpre += 1
+    if hn or hadd or hpre:
+        print(f"  옛 분기 이력: 이름이 다른 옛 기준을 앞에 붙인 종목 {hpre:,}")
+    if hn or hadd:
+        print(f"  옛 분기 이력(한 번에 읽은 것): 빈 분기를 이은 종목 {hadd:,} · 새로 생긴 종목 {hn:,}")
 
     # **발표 당일의 보도자료(8-K) 사업부 표**(scrape_seg_pr.py) — 10-Q 가 나오기 전 며칠~몇 주의 빈 칸을 메운다
     # (회원님 11/01: "구글 3분기 실적 나왔는데 브레이크다운이 없다"). 전년 같은 분기 값과 맞는 열만 읽었다.
@@ -1689,6 +1739,7 @@ def load_geo():
     out = {}
     hist = sorted(p.name for p in (HERE / "data").glob("segments_hist_us_s*.json"))
     for name in ("segments_sec.json", "segments_fpi.json") + tuple(hist):
+        only_fill = name in hist                        # 옛 이력은 빈 분기만 잇는다(뼈대가 되면 최근 분기가 밀려난다)
         n = 0
         for k, v in (_read_stocks(name).get("stocks") or {}).items():
             g = v.get("geo")
@@ -1696,7 +1747,7 @@ def load_geo():
                 key = k if ":" in k else "us:" + k
                 g = dict(g, axis="지역")
                 old = out.get(key)
-                if old and len(old.get("pts") or []) > len(g["pts"]):
+                if old and (only_fill or len(old.get("pts") or []) > len(g["pts"])):
                     splice(old, g)                 # 긴 쪽이 뼈대 — 짧은 쪽은 빈 분기만
                 else:
                     if old:
