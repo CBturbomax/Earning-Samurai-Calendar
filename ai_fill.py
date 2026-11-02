@@ -197,7 +197,19 @@ def sec(url, binary=False):
         if w > 0:
             time.sleep(w)
         _sec_t[0] = time.time()
-    return se.get(url, timeout=60, binary=binary)
+    return _patient(lambda: se.get(url, timeout=60, binary=binary))
+
+
+def _patient(fn):
+    """남의 서버가 '너무 자주'(429·503·403·끊김)라 하면 물러났다 다시(5·20·60초). 세 번 다 막히면 그 공시만 건너뛴다 —
+    다음 실행이 다시 본다(asked 에 안 적힌다). SEC 는 초당 10건, yanoshin 은 한 사람이 돌리는 무료 API 라 더 조심한다."""
+    for wait in (5, 20, 60, None):
+        try:
+            return fn()
+        except Exception as e:                         # noqa: BLE001
+            if wait is None or not re.search(r"429|503|403|timed out|reset|Throttl|Blocked|URLError", repr(e)):
+                raise
+            time.sleep(wait)
 
 
 def us_filings(cik):
@@ -281,8 +293,8 @@ def jp_docs(code):
     try:
         with G._YANO:
             time.sleep(0.4)
-        j = json.loads(G.get(f"https://webapi.yanoshin.jp/webapi/tdnet/list/{code}.json?limit=600", binary=False,
-                             timeout=30) or "{}")
+        j = json.loads(_patient(lambda: G.get(f"https://webapi.yanoshin.jp/webapi/tdnet/list/{code}.json?limit=600", binary=False,
+                             timeout=30)) or "{}")
         alls = [it.get("Tdnet", it) for it in (j.get("items") or [])]
     except Exception:                                  # noqa: BLE001
         alls = []
@@ -300,7 +312,7 @@ def jp_text(code, fn, pn=""):
     import geojp
     import scrape_fin_jp as F
     import scrape_geo_jp as G
-    blob = G.get(f"https://www2.jpx.co.jp/disc/{code}0/{fn}", timeout=60)
+    blob = _patient(lambda: G.get(f"https://www2.jpx.co.jp/disc/{code}0/{fn}", timeout=60))
     if not blob:
         return "", {}
     spans = G.spans_of(F.read_summary(blob))
@@ -314,7 +326,7 @@ def jp_text(code, fn, pn=""):
         pn = pn if pn.lower().endswith(".pdf") else (fn.replace("0812", "1401", 1) if fn.startswith("0812") else "")
         try:
             import pdftext
-            pdf = G.get(f"https://www2.jpx.co.jp/disc/{code}0/{pn}", timeout=60) if pn else None
+            pdf = _patient(lambda: G.get(f"https://www2.jpx.co.jp/disc/{code}0/{pn}", timeout=60)) if pn else None
             lines = pdftext.extract_cells(pdf, max_pages=40) if pdf else []
         except Exception:                              # noqa: BLE001 — 암호·깨진 PDF
             lines = []
