@@ -3415,6 +3415,11 @@ def pack_en(r, mkt):
     timing = TIMING_KO.get(raw_time, "") if mkt == "us" else ""
     hhmm = raw_time if mkt == "hk" else ""
     live = LIVE.get(r["code"]) if mkt == "us" else None
+    # **예정보다 일찍 낸 발표는 실제 날짜로 옮긴다**(11/02 루멘텀: 나스닥 예정 11/05, 실제 11/02). 실적 8-K 가 예정일 열흘 안쪽
+    # 앞에서 잡혔으면 그 줄의 날짜를 접수일로 고친다 — 안 옮기면 오늘 칸에 없고 11/05 칸에 '미발표'로 남는다.
+    if live and live.get("acc") and live.get("date") and live["date"] < r["date"] and \
+            (date.fromisoformat(r["date"]) - date.fromisoformat(live["date"])).days <= 10:
+        r = dict(r, date=live["date"])
     if live and live.get("date") == r["date"] and live.get("accepted"):
         # 실제 8-K 접수 시각이 있으면 그걸 쓴다. 장전/장후도 거기서 다시 가른다
         # (나스닥이 발표가 끝난 날의 장전/장후 표시를 지우고 주는 일이 있다).
