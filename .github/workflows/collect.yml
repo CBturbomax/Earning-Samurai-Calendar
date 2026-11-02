@@ -210,7 +210,7 @@ jobs:
                 # 충돌 없이 merge 가 실패했다(잠금 파일 따위). 다음 바퀴에서 다시.
                 echo "merge 실패(충돌 아님), 재시도"; sleep $((2**i)); continue
               fi
-              others=$(echo "$stuck" | grep -v -e '^index\.html$' -e '^version\.txt$' || true)
+              others=$(echo "$stuck" | grep -v -e '^index\.html$' -e '^version\.txt$' -e '^data/audit_gaps\.json$' || true)  # audit_gaps 는 빌드 생성물(11/02 이 충돌로 실적 수치를 버렸다)
               if [ -n "$others" ]; then
                 echo "원본 데이터 또는 코드 충돌 — 자동으로 덮어쓰지 않는다:"; echo "$others"; exit 1
               fi
