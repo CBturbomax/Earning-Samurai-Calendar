@@ -40,7 +40,7 @@ OUT = HERE / "data" / "geo_jp.json"
 RULE_VER = 1
 SECS = float(os.environ.get("GEO_SECS", "1500"))
 BACK_DAYS = int(os.environ.get("GEO_BACK_DAYS", "4"))
-SINCE = "2017-06-01"            # 1Q18 의 전년 같은 분기까지
+SINCE = "2016-10-01"            # 1Q18(1~3월)의 전년 같은 분기까지 — 2017년 연간·9개월 누계가 필요하다. JPX 보관소는 2016년치까지 있다(떠보기 11/02)
 PAUSE = 0.35
 UA = ("Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 "
       "(KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36")
