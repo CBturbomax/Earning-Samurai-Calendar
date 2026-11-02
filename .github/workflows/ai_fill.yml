@@ -36,7 +36,7 @@ jobs:
       AI_MODEL: sonnet
       AIFILL_SHARD: '${{ matrix.shard }}/4'
       AIFILL_SECS: '2700'
-      AIFILL_WORKERS: '6'
+      AIFILL_WORKERS: '4'
       SEC_UA: 'Earning Samurai Calendar (cbpark@wisdomasset.co.kr)'
     steps:
       - uses: actions/checkout@v4
@@ -56,7 +56,7 @@ jobs:
         timeout-minutes: 50
         run: |
           set -o pipefail
-          python ai_fill.py ${{ github.event.inputs.only }} | { grep -v '^  [a-z_]*\.json\|^  !' || true; } | tee fill.log
+          python ai_fill.py ${{ github.event.inputs.only }} | { grep -v '^  [a-z_]*\.json\|번역 받기' || true; } | tee fill.log
           { echo "### 갈래 ${{ matrix.shard }}"; echo '```'; tail -40 fill.log; echo '```'; } >> "$GITHUB_STEP_SUMMARY"
       - name: 저장소에 반영
         if: env.CLAUDE_CODE_OAUTH_TOKEN != ''

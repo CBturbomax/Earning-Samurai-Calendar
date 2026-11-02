@@ -311,7 +311,26 @@ TABLES:
 """
 
 
+_PAUSE = [0.0]
+_PLOCK = threading.Lock()
+
+
 def ask(key, name, doc, cur, segs, geos, txt):
+    """한도(429)에 걸리면 **모든 줄이 함께** 쉬었다가 같은 공시를 다시 묻는다(1·2·3…분). 여섯 번 연달아 막히면 진짜 한도로 본다."""
+    txt = re.sub(r"[\x00-\x08\x0b\x0c\x0e-\x1f]", " ", txt)          # PDF 글자의 NUL 이 명령 인자를 깨뜨렸다
+    for attempt in range(6):
+        w = _PAUSE[0] - time.time()
+        if w > 0:
+            time.sleep(w)
+        try:
+            return _ask(key, name, doc, cur, segs, geos, txt)
+        except ai_seg.Limited:
+            with _PLOCK:
+                _PAUSE[0] = max(_PAUSE[0], time.time() + 60 * (attempt + 1))
+    raise ai_seg.Limited("429 여섯 번 연달아")
+
+
+def _ask(key, name, doc, cur, segs, geos, txt):
     ans = ai_seg.claude(PROMPT.format(name=name, key=key, doc=doc, cur=cur, segs=json.dumps(segs, ensure_ascii=False),
                                       geos=json.dumps(geos, ensure_ascii=False), tables=txt))
     m = re.search(r"\{.*\}", ans, re.S)
