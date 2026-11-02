@@ -6,6 +6,9 @@
 name: AI 빈칸 메우기
 
 on:
+  # 정시 실행은 Codex 갈래만 돈다(11/02) — Claude 계정은 회원님이 쓰는 한도·추가 결제 걱정이 있어 손으로 부를 때만.
+  schedule:
+    - cron: '23 * * * *'
   workflow_dispatch:
     inputs:
       only:
@@ -81,6 +84,7 @@ jobs:
             codex)   mkdir -p ~/.codex && printf '%s' "$CODEX_AUTH_JSON" > ~/.codex/auth.json && chmod 600 ~/.codex/auth.json
                      echo "AI_ENGINE=codex" >> "$GITHUB_ENV";;
           esac
+          if [ "${{ github.event_name }}" = "schedule" ] && [ "$pick" != "codex" ]; then echo "정시 실행은 Codex 만 — 건너뛴다"; pick=""; fi
           [ -n "$pick" ] && echo "AI_READY=1" >> "$GITHUB_ENV" || true
       - name: Claude Code CLI
         if: env.AI_ENGINE == 'claude'
