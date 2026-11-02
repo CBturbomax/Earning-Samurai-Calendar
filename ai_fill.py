@@ -48,7 +48,7 @@ MAX_CALLS = int(os.environ.get("AIFILL_MAX", "150"))
 WORKERS = int(os.environ.get("AIFILL_WORKERS", "3"))
 SINCE = "2018-01-01"
 DOC_LIMIT = 42000
-EMPTY_VER = 2                   # 2: 일본 PDF 이름을 목록에서(미국 기준 회사 — 도요타·고마쓰)
+EMPTY_VER = 3                   # 2: 일본 PDF 이름을 목록에서(미국 기준 회사 — 도요타·고마쓰)
 DRY_N = 4                       # 연달아 이만큼 읽어 맞은 것이 없으면 그 회사는 넉 달 쉰다
 KEYS = re.compile(r"segment|geograph|region|countr|americas|europe|asia|china|japan|emea|international|domestic|"
                   r"backlog|remaining performance|bookings|new orders|order intake|orders received|disaggregat|"
@@ -199,9 +199,26 @@ def tables_text(raw, kw):
 # ── 일본: 결산단신 ────────────────────────────────────────────────────────
 
 def jp_docs(code):
+    """[(공시일, zip 이름, PDF 이름)]. XBRL 목록(hasXBRL=1)의 document_url 은 zip 이라, PDF 는 전체 목록에서 같은 날·같은
+    결산단신 줄을 찾아 짝짓는다(미국 기준 회사 — 도요타·고마쓰 — 는 zip 에 첨부가 없어 PDF 가 유일한 원문이다)."""
+    import scrape_fin_jp as F
     import scrape_geo_jp as G
-    return [(it["pubdate"][:10], it["url_xbrl"].rsplit("/", 1)[-1], (it.get("document_url") or "").rsplit("/", 1)[-1])
-            for it in G.listing(code)]
+    xs = G.listing(code)
+    try:
+        with G._YANO:
+            time.sleep(0.4)
+        j = json.loads(G.get(f"https://webapi.yanoshin.jp/webapi/tdnet/list/{code}.json?limit=600", binary=False,
+                             timeout=30) or "{}")
+        alls = [it.get("Tdnet", it) for it in (j.get("items") or [])]
+    except Exception:                                  # noqa: BLE001
+        alls = []
+    pdfs = {}
+    for it in alls:
+        du = it.get("document_url") or ""
+        if du.lower().endswith(".pdf") and F.TANSHIN.search(it.get("title") or "") \
+                and not F.NOT_TANSHIN.search(it.get("title") or ""):
+            pdfs.setdefault((it.get("pubdate") or "")[:10], du.rsplit("/", 1)[-1])
+    return [(it["pubdate"][:10], it["url_xbrl"].rsplit("/", 1)[-1], pdfs.get(it["pubdate"][:10], "")) for it in xs]
 
 
 def jp_text(code, fn, pn=""):
@@ -214,12 +231,11 @@ def jp_text(code, fn, pn=""):
         return "", {}
     spans = G.spans_of(F.read_summary(blob))
     parts = []
-    if G.has_body(blob):
-        for before, rows in geojp.tables(blob):
-            body = "\n".join(" | ".join(c for c in r if c) for r in rows)
-            if KEYS_JP.search(before + body):
-                parts.append("[" + before[-120:] + "]\n" + body)
-    else:
+    for before, rows in geojp.tables(blob):           # 첨부 이름이 회사마다 달라(도요타) has_body 로 가르지 않는다 — 표가 있으면 쓴다
+        body = "\n".join(" | ".join(c for c in r if c) for r in rows)
+        if KEYS_JP.search(before + body):
+            parts.append("[" + before[-120:] + "]\n" + body)
+    if not parts:
         # PDF 이름은 목록이 준다(미국 기준 회사 — 도요타·고마쓰 — 는 zip 이름과 PDF 이름의 번호가 다르다)
         pn = pn if pn.lower().endswith(".pdf") else (fn.replace("0812", "1401", 1) if fn.startswith("0812") else "")
         try:
