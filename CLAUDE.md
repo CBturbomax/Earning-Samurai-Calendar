@@ -1182,6 +1182,15 @@ HPE 가 Compute·Storage·Intelligent Edge 를 Cloud&AI·Networking 으로 바�
   `data/segments_aipr.json` 에 싣는다. 한 번 물은 공시는 다시 안 묻고, 한도에 걸리면 그 자리에서 멈추고 적는다(옛 Routine 이 닷새를
   조용히 헛돈 일). 키는 Secrets 의 `CLAUDE_CODE_OAUTH_TOKEN` — 없으면 아무것도 안 한다.
 - 1분기 공시를 못 받은 해의 **상반기 누계를 분기 칸에 앉히지 않는다**(분기 공시가 하나라도 있는 회사). 막대가 두 배로 솟는다.
+- **AI 빈칸 메우기(`ai_fill.py` → `data/ai_fill.json`, ai_seg.yml 의 둘째 단계 · 11/02 회원님: "1Q18~3Q26 전부 빠지는 것 없이")**. 규칙 수집기가
+  끝내 못 채운 분기만 — build.py 를 불러 화면 그대로(FIN·SEG·GEO·ORD)를 보고 **총매출은 있는데 사업부·지역이 빈 분기**를 센다. 그 분기를 담은
+  공시(미국 10-Q·10-K 본문 표, 일본 결산단신 첨부 표·PDF 글자)를 `claude -p --model sonnet` 에 넘겨 기간마다 값을 받는다(이번·전년·누계 칸 전부 —
+  10-Q 한 장에 두 해). **검산**: 한 기간의 합이 우리 총매출과 2% 안(상계 줄 더해 2% · 공시 합계와 1%)일 때만 담고, 빌드가 누계를 되돌린 뒤에도
+  분기 합이 매출과 맞는 칸만(지역 3% · 사업부 0.97~1.6배) 쓴다. 수주·수주잔고·RPO 는 **두 공시가 같은 값**일 때만. **빈 분기만 채운다**(있는 값은
+  안 덮는다). 같은 지역 두 표기(TW·Taiwan)는 `seg_ko` 로 한 줄, 연간 표가 분기 표보다 거칠게 묶이면 앞 누계의 남는 이름을 '기타'로 접어
+  결산 분기를 되살린다(`_fold_other`, 엔비디아). 짝 없는 이름은 새 줄 — 그림이 '옛 기준'으로 가른다. 한 번 물은 공시는 다시 안 묻고(`asked`),
+  넷을 연달아 읽어 맞은 게 없으면 그 회사는 넉 달 쉰다(`dry` — 안 내는 회사). 한도에 걸리면 멈추고 적는다. 시총 큰 순 · 미국·일본 번갈아 · 세 갈래.
+  시험(11/02): 6종목 65공시를 4분 반에 읽어 263기간 통과 — 캐터필러 지역 1Q18~3Q26 이 다 찼다. 홍콩은 아직(보고서 PDF).
 - `python geojp.py` 가 손으로 만든 여섯 꼴(미쓰비시전기·히타치건기·고마쓰 가로표·다케다 億円·사업부 표 거르기·수주 둘)을 밟는다.
 
 **부문별 매출은 총매출과 대보되, 그걸 근거로 부문을 지우지는 않는다.**
@@ -1233,7 +1242,7 @@ HPE 가 Compute·Storage·Intelligent Edge 를 Cloud&AI·Networking 으로 바�
 | `monthly.yml` | 10분 | `data/monthly_nums_jp.json` (월매출 수치 — 첨부 PDF) · `data/monthly_web_jp.json` (월매출 — 流通ニュース) · `data/monthly_ir_jp.json` (월매출 — 회사 IR) |
 | `segments_hist.yml` | 하루 1번 | `data/segments_jp_hist.json` (EDINETDB_KEY 있을 때만) |
 | `geo_jp.yml` | 30분 + 이어달리기 | `data/geo_jp.json` (일본 지역별 매출·수주 — 최근 TDnet + 옛 JPX 보관소 거슬러 받기, 세 갈래) |
-| `ai_seg.yml` | 1시간 | `data/segments_aipr.json` (AI 사업부 판독 — CLAUDE_CODE_OAUTH_TOKEN 있을 때만) |
+| `ai_seg.yml` | 30분(줄 섬) | `data/segments_aipr.json` (AI 사업부 판독) · `data/ai_fill.json` (AI 빈칸 메우기 1Q18~) — CLAUDE_CODE_OAUTH_TOKEN 있을 때만 |
 
 **작업 제한은 단계 제한의 합보다 커야 한다**(11/02). `numbers.yml` 은 단계 합이 35분인데 작업 제한이 29분이라 마지막 「저장소에
 반영」 이 늘 잘렸다 — 11/01 16:39 부터 여덟 시간 넘게 실적 수치(미국 SEC·일본·홍콩)가 한 번도 저장되지 않았고 홍콩 3Q26 이 통째로
