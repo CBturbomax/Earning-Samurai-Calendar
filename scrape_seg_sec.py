@@ -93,7 +93,7 @@ TICKERS = "https://www.sec.gov/files/company_tickers.json"
 # 3: 한 축짜리 행이 몇 줄 섞여 있어도 두 축 행을 버리지 않는다(엑슨)
 # 4: 더 잘게 쪼갠 쪽을 쓴다 · '부문 합계' 줄을 뺀다(셰브런)
 # 5: 지주회사로 갈아탄 티커를 옛 CIK 에 이어 붙인다(엑슨)
-SEG_SEC_VER = 7
+SEG_SEC_VER = 8      # 8: 결산 분기를 태그를 넘어 메움(에스티로더·메리어트)
 # 열두 분기(3년)면 화면에 그리는 스물두 칸의 절반을 넘고, 큰 종목은
 # stockanalysis 가 스무 분기를 채워 준다. 한 분기 zip 이 85MB 라 열여섯으로
 # 늘리면 한 번에 1.4GB 다 — 남의 서버에서 그만큼 받을 이유가 없다.
@@ -490,6 +490,19 @@ def quarterly_merged(by_tag):
     for _n, _r, s in got:
         for k, v in s.items():
             out.setdefault(k, v)
+    # **결산 분기가 매년 빈 회사**(11/02, 에스티로더 6월·메리어트 12월): 10-K 의 연간은 B 태그, 10-Q 의 분기는 A 태그로 적혀
+    # 태그마다 따로 되돌리면 '연간 − 앞 세 분기'가 영영 안 나온다. 그 빈 자리만 태그를 넘어 메운다 — 대신 결과가 앞 세 분기
+    # 평균의 0.4~2.5배일 때만(엉뚱한 값이면 버린다). build.py 가 다시 '부문 합 ÷ 총매출'로 한 번 더 거른다.
+    for raw in by_tag.values():
+        for (ds, q), v in raw.items():
+            if q != 4 or ds in out:
+                continue
+            back = [out.get(shift_q(ds, -k)) for k in (1, 2, 3)]
+            if all(back):
+                q4 = v[0] - sum(back)
+                avg = sum(back) / 3
+                if avg > 0 and 0.4 * avg <= q4 <= 2.5 * avg:
+                    out[ds] = q4
     return out
 
 
