@@ -14,6 +14,7 @@ data/earnings*.json  ->  index.html (단일 파일, 외부 의존 없음)
 import base64
 import calendar
 import json
+import os
 import re
 import urllib.request
 from difflib import SequenceMatcher
@@ -1040,6 +1041,16 @@ def current_basis(rec):
         old_end = max((sp[1] for i in dead if (sp := span(i))), default=-1)
         news = [sp[0] for i in born if (sp := span(i))]
         start = min(news) if news else old_end + 1
+    # **옛 기준도 남긴다(11/02).** 예전에는 여기서 개편 전 분기를 잘라 버려, 회사가 실제로 낸 옛 사업부 숫자가 빈칸이 됐다
+    # (미국·일본 1.4만 칸 — 인텔·마이크론·릴리·엔비디아 2018~). 화면(segChart)이 이미 '지금 기준 / 옛 기준' 두 그림으로
+    # 가르므로(회원님 10/30 "둘 다 보여줘, 옛 기준은 최대한"), 여기서는 새 기준 분기에서 옛 이름만 비우고 앞은 그대로 넘긴다.
+    if os.environ.get("SEG_CUT_OLD") != "1":
+        live_s = set(live)
+        rows = [[r[0]] + [(val(r, i) if (j < start or i in live_s) else None) for i in keep] for j, r in enumerate(pts)]
+        rows = [r for r in rows if any(v is not None for v in r[1:])]
+        if len(rows) < 2:
+            return None
+        return {**rec, "names": [names[i] for i in keep], "pts": rows}
     rows = [[r[0]] + [val(r, i) for i in live] for r in pts[start:]]
     # 겹침 구간을 빼고 나면 값이 하나도 없는 칸이 남을 수 있다(재표시는 전년
     # 비교치만 있어 그 사이 분기가 빈다). 빈 칸을 그대로 두면 매출 0 으로
@@ -1447,8 +1458,11 @@ def load_seg():
     # **미국 상장 외국 기업은 10-Q 를 안 낸다.** 그래서 벌크·분기색인이 못 잡고
     # 아메르스포츠·ARM·HSBC 의 부문이 통째로 비었다. segments_fpi.json 이
     # 20-F·6-K 의 인라인 XBRL 에서 그 자리를 메운다(scrape_seg_fpi.py).
-    for name in ("segments_sec.json", "segments_jp.json", "segments_fpi.json",
-                 "segments.json"):                        # 뒤엣것이 이긴다
+    # **옛 분기 이력(XBRL 한 번에 · scrape_seg_hist_us.py)이 맨 앞**이다 — 회사의 모든 10-Q·10-K 를 읽은 것이라 벌크보다 길고
+    # 정확하다(벌크는 테슬라가 2Q23 에서 끊기고 1분기 칸 두 부문이 뒤바뀌어 있었다). '긴 쪽이 뼈대' 규칙이 그대로 고른다.
+    hist = sorted(p.name for p in (HERE / "data").glob("segments_hist_us_s*.json"))
+    for name in tuple(hist) + ("segments_sec.json", "segments_jp.json", "segments_fpi.json",
+                               "segments.json"):          # 뒤엣것이 이긴다(짧으면 빈 분기만 잇는다)
         p = HERE / "data" / name
         if not p.exists():
             continue
@@ -1673,12 +1687,21 @@ def _read_stocks(name):
 def load_geo():
     """지역별 매출. 미국은 SEC 벌크·제출 서류의 지역 축(geo), 일본은 결산단신의 지역 표."""
     out = {}
-    for name in ("segments_sec.json", "segments_fpi.json"):
+    hist = sorted(p.name for p in (HERE / "data").glob("segments_hist_us_s*.json"))
+    for name in ("segments_sec.json", "segments_fpi.json") + tuple(hist):
         n = 0
         for k, v in (_read_stocks(name).get("stocks") or {}).items():
             g = v.get("geo")
             if g and g.get("names") and g.get("pts"):
-                out[k if ":" in k else "us:" + k] = dict(g, axis="지역")
+                key = k if ":" in k else "us:" + k
+                g = dict(g, axis="지역")
+                old = out.get(key)
+                if old and len(old.get("pts") or []) > len(g["pts"]):
+                    splice(old, g)                 # 긴 쪽이 뼈대 — 짧은 쪽은 빈 분기만
+                else:
+                    if old:
+                        splice(g, old)
+                    out[key] = g
                 n += 1
         if n:
             print(f"  {name}: 지역 {n:,}종목")
@@ -2287,11 +2310,24 @@ def seg_unannual(pts, aligned):
     # '평소 비율'은 믿을 만한 칸(부문 합이 총매출의 0.5~3배)으로만 잡는다. 옛 이력에 단위가 어긋난 칸(합이 총매출의
     # 25배·100배·613배 — 일본 몇몇 회사의 EDINET 이력)이 섞여 있으면 그것이 기준을 끌고 가 멀쩡한 칸을 튄 것으로 봤다.
     ok = [x for x in rat if 0.5 <= x <= 3.0]
-    base = _median(ok) if len(ok) >= 3 else 1.0
+    base0 = _median(ok) if len(ok) >= 3 else 1.0
+    # **평소 비율은 같은 기준(값이 있는 부문이 같은 칸)끼리 잰다(11/02).** 사업부 개편 전 옛 기준을 남기면서, 옛 기준(합 = 총매출)과 새 기준
+    # (인텔: 파운드리 내부 매출이 섞여 합이 2.3배)의 비율이 다르다 — 전체 중앙값 하나로 재면 새 기준 칸이 통째로 '튄 칸'으로 빠졌다.
+    rr = [(sum(v or 0 for v in r[1:]) / rev) if rev else None for r, (_l, rev) in zip(pts, aligned)]
+    sig = [frozenset(j for j, v in enumerate(r[1:]) if v is not None) for r in pts]   # 그 칸에 값이 있는 부문들 = 그 칸의 기준
+    grp = {}
+    for i, g in enumerate(sig):
+        if rr[i] is not None and 0.5 <= rr[i] <= 3.0:
+            grp.setdefault(g, []).append(rr[i])
+
+    def base_at(i):
+        w = grp.get(sig[i]) or []
+        return _median(w) if len(w) >= 3 else base0
     out_p, out_a = [], []
     for i, (r, (lab, rev)) in enumerate(zip(pts, aligned)):
         if not rev:
             out_p.append(r); out_a.append((lab, rev)); continue
+        base = base_at(i)
         k = sum(v or 0 for v in r[1:]) / rev / base
         if k < 0.25:                         # 합이 총매출의 4분의 1도 안 되는 칸 — 단위가 어긋난 칸이다
             SEG_FIXED["dropped"] += 1
@@ -2451,7 +2487,16 @@ def pack_seg(rec, fin_rec):
     # 값은 정수로 눕힌다. 부문 수치는 원 단위까지 의미가 없는데 '10863000000.0'
     # 처럼 실으면 종목마다 몇백 바이트씩 늘어난다.
     rows = [[lab] + [int(v) if v else None for v in r[1:]]
-            for r, (lab, _rev) in zip(pts, aligned)][-SEG_KEEP:]
+            for r, (lab, _rev) in zip(pts, aligned)]
+    # **같은 분기 이름이 두 줄이면 하나로**(11/02, 마이크론). 종료일이 월말로 반올림된 다른 소스 줄(값은 'All Other' 0 하나)이
+    # 같은 분기 이름을 받아, 화면이 뒤엣것(빈 줄)을 써서 최근 분기 부문이 통째로 사라졌다. 칸마다 값이 있는 쪽을 쓴다.
+    byl, order = {}, []
+    for r in rows:
+        if r[0] not in byl:
+            byl[r[0]] = list(r); order.append(r[0])
+        else:
+            byl[r[0]] = [r[0]] + [a if a is not None else b for a, b in zip(byl[r[0]][1:], r[1:])]
+    rows = [byl[l] for l in order if any(v is not None for v in byl[l][1:])][-SEG_KEEP:]
     # 이름은 화면 직전에 한글로 옮긴다(아는 이름만 — seg_ko). 여기서 옮겨야
     # 미국·일본·홍콩이 한 길로 지나간다.
     out = {"names": [seg_ko(n) for n in names], "pts": rows}
