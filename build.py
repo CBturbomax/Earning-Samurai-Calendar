@@ -1743,6 +1743,21 @@ def _jp_spans(by_span):
     return out
 
 
+OTHER_NM = re.compile(r"other|その他|기타|其他|rest of", re.I)
+
+
+def _fold_other(prev, cur):
+    """연간 표가 분기 표보다 거칠게 묶일 때(엔비디아: 9개월은 6지역, 연간은 4지역 — 유럽·기타 아시아가 '기타'로).
+    앞 누계에만 있는 이름들을 이번 누계의 '기타' 한 줄로 접는다. 합은 그대로라 빼기가 맞는다. '기타' 가 하나일 때만."""
+    extra = [n for n in prev if n not in cur]
+    oth = [n for n in cur if n in prev and OTHER_NM.search(n)]
+    if not extra or len(oth) != 1 or any(n not in prev for n in cur):
+        return prev
+    out = {n: v for n, v in prev.items() if n in cur}
+    out[oth[0]] = prev[oth[0]] + sum(prev[n] for n in extra)
+    return out
+
+
 def _decum(spans):
     """누계 -> {종료일: {이름: 값}}. 같은 시작일의 바로 앞 누계를 뺀다(결산단신 부문과 같은 셈).
     첫 누계는 한 분기(~125일) 또는 반기일 때만 그대로 쓴다. 사이가 한 분기·한 반기가 아니면 버린다."""
@@ -1765,6 +1780,7 @@ def _decum(spans):
             if not (60 <= gap <= 125 or 150 <= gap <= 220):
                 continue
             prev = ends[order[i - 1]]
+            prev = _fold_other(prev, ends[en])
             cut = {n: v - prev[n] for n, v in ends[en].items() if n in prev and v - prev[n] > 0}
             # 이름이 반 넘게 안 맞으면(지역 구분을 바꾼 해) 그 칸은 버린다 — 반쪽 막대가 매출이 준 것처럼 보인다
             if len(cut) >= max(1, (len(ends[en]) + 1) // 2) and len(cut) == len(ends[en]):
@@ -1870,7 +1886,7 @@ def _ai_fill_one(base, add):
     mp = {}
     for j, an in enumerate(anames):
         k = seg_key(an)
-        hit = next((i for i, bn in enumerate(bnames) if k and seg_key(bn) == k), None)
+        hit = next((i for i, bn in enumerate(bnames) if (k and seg_key(bn) == k) or seg_ko(bn) == seg_ko(an)), None)
         if hit is None:
             cand = {}
             for r in add["pts"]:
@@ -1896,31 +1912,68 @@ def _ai_fill_one(base, add):
         rows = [[r[0]] + [None] * len(bnames) + list(r[1:]) for r in add["pts"]]
         rows += [list(r) + [None] * len(anames) for r in base["pts"]]
         return dict(base, names=names, pts=sorted(rows, key=lambda r: r[0])), len(add["pts"])
-    if not mp:
-        return base, 0
+    # 짝이 없는 이름(그해에만 쓴 지역 구분 — 엔비디아 'Other Asia Pacific')은 새 줄로 붙인다. 빈 분기 칸만 채우므로
+    # 있는 값과 섞이지 않는다. 그 줄은 최근에 값이 없어 그림이 '옛 기준' 칸으로 가른다.
+    extra = {}
     for r in add["pts"]:
         if near(r[0], bpts):
             continue
-        tot = sum(v for v in r[1:] if v)
-        got = sum(r[j + 1] for j in mp if r[j + 1])
-        if not tot or got < tot * 0.9:
-            continue
         new = [r[0]] + [None] * len(names)
-        for j, i in mp.items():
-            new[i + 1] = r[j + 1]
-        rows.append(new)
-        n += 1
-    return (dict(base, pts=sorted(rows, key=lambda x: x[0])), n) if n else (base, 0)
+        for j, an in enumerate(anames):
+            v = r[j + 1]
+            if v is None:
+                continue
+            if j in mp:
+                new[mp[j] + 1] = v
+            else:
+                if j not in extra:
+                    extra[j] = len(names)
+                    names.append(an)
+                    rows = [list(x) + [None] for x in rows]
+                    new.append(None)
+                new[extra[j] + 1] = v
+        if any(v for v in new[1:]):
+            rows.append(new + [None] * (len(names) + 1 - len(new)))
+            n += 1
+    rows = [x + [None] * (len(names) + 1 - len(x)) for x in rows]
+    return (dict(base, names=names, pts=sorted(rows, key=lambda x: x[0])), n) if n else (base, 0)
 
 
 def load_ai_fill():
     raw = _read_stocks("ai_fill.json").get("stocks") or {}
     nseg = ngeo = nord = 0
+    def canon(spans):
+        """같은 회사 안에서 같은 뜻의 두 표기(TW·Taiwan, US·United States)를 먼저 나온 이름 하나로."""
+        first = {}
+        out = {}
+        for sp_, row in sorted(spans.items()):
+            nr = {}
+            for n, x in row.items():
+                c = seg_ko(n) or n
+                nm = first.setdefault(c, n)
+                nr[nm] = nr.get(nm, 0) + x
+            out[sp_] = nr
+        return out
+
+    def fits(k, qs, kind):
+        """되돌린 분기의 합이 우리 분기 매출과 맞는 칸만 — 지역은 3% 안, 사업부는 상계 전 총액이 있어 0.97~1.6배."""
+        pts = [p for p in (FIN.get(k) or {}).get("points") or [] if p.get("end") and p.get("rev")]
+        keep = {}
+        for e, row in qs.items():
+            d = date.fromisoformat(e)
+            p = min(pts, key=lambda q: abs((date.fromisoformat(q["end"]) - d).days), default=None)
+            if not p or abs((date.fromisoformat(p["end"]) - d).days) > 12:
+                continue
+            r = sum(row.values()) / p["rev"]
+            if (0.97 <= r <= 1.03) if kind == "geo" else (0.97 <= r <= 1.6):
+                keep[e] = row
+        return keep
+
     for k, v in raw.items():
         for kind, store, ax in (("seg", SEG, None), ("geo", GEO, "지역")):
             if not v.get(kind):
                 continue
-            rec = _as_rec(_decum(_jp_spans(v[kind])), "지역" if ax else "사업부")
+            rec = _as_rec(fits(k, _decum(_jp_spans(canon(v[kind]))), kind), "지역" if ax else "사업부")
             if not rec:
                 continue
             if not ax:
@@ -1977,8 +2030,6 @@ def load_ai_fill():
     if raw:
         print(f"  AI 빈칸 메우기: 사업부 {nseg:,}칸 · 지역 {ngeo:,}칸 · 수주 {nord:,}칸")
 
-
-load_ai_fill()
 
 # ── 부문 이름 한글 표기 ──────────────────────────────────────────
 # 사전은 markets.py 에 있다(SEG_KO_*). **낱말 단위로 전부 아는 이름만** 옮기고
@@ -2122,6 +2173,7 @@ def load_desc():
     return out
 
 
+load_ai_fill()                 # 부문 이름 옮기기(seg_ko)가 정의된 뒤에 — 같은 지역의 두 표기(TW·Taiwan)를 한 줄로
 DESC = load_desc()
 
 
