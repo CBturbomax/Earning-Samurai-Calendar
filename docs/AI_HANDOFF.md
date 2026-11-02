@@ -177,3 +177,7 @@
 - 11/02 옛 분기 이력 파일은 **빈 분기만 잇는다**(뼈대 금지 — 홈디포처럼 축이 다르면 최근 분기가 밀려났다). 이름이 하나도 안 겹치면
   `prepend_old` 가 **뼈대 시작 전 분기만** 앞에 붙인다(마스터카드 1Q18~4Q21 옛 기준) — segChart 가 지금/옛 기준 두 그림으로 가른다.
   scrape_seg_hist_us 는 segments.json(stockanalysis, 이름이 달라 화면과 안 이어짐)을 덮인 것으로 안 친다 — 테슬라가 그래서 빠졌었다.
+- 11/02 **미국 보도자료 감시(`pr_watch`·`pr_process`, realtime/app.py)**: 에스티로더가 보도자료를 낸 지 40분 넘게 8-K 가 SEC 에 없었다 — 우리는 8-K 만
+  봤다. PR Newswire 실적 피드(15초)에서 오늘·어제·내일 캘린더 미국 회사 이름(원문, Inc·Corp 등 뗀 것)이 제목에 **딱 하나** 맞고 실적 제목일 때만
+  같은 길(pr_table·finish)로 보낸다. 나중에 온 8-K 는 PR_SENT 로 다시 안 보낸다. **Business Wire 실적 피드 주소는 아직 못 찾았다**(feed.businesswire.com
+  카테고리 피드는 열리는데 실적 코드를 모름, www 는 러너에서 시간 초과, GlobeNewswire 403) — 다음 할 일.
