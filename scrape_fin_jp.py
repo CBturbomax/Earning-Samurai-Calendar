@@ -378,6 +378,9 @@ def seg_name(member):
     if m in SEG_RENAME:
         return SEG_RENAME[m]
     out = re.sub(r"(?<=[a-z0-9])(?=[A-Z])|(?<=[A-Z])(?=[A-Z][a-z])", " ", m).strip()
+    # 문맥 이름이 길이 제한으로 잘려 'ReportableSegmentMembe' 같은 꼬리가 남는 공시가 있다(어드밴테스트 11/02) — 같은 부문이
+    # 두 줄(「Test System Business」·「Test System Business Reportable Segment Membe」)로 갈려 서로 반쪽씩 비었다.
+    out = re.sub(r"\s+(Reportable(\s+Segm\w*)?(\s+Memb?e?r?)?|Segment(\s+Memb?e?r?)?|Memb?e?r?)\s*$", "", out).strip() or out
     return out or member
 
 
@@ -501,6 +504,13 @@ def seg_quarters(points):
                     out[en] = dict(ends[en])
                 continue
             prev = ends[order[i - 1]]
+            # **이름만 바뀐 부문 한 짝은 같은 부문으로 뺀다**(어드밴테스트: 1분기 「Services And Others」, 상반기 「Services Support
+            # And Others」). 짝을 못 맞추면 앞 누계를 0 으로 보고 빼서 상반기 누계가 그대로 2분기 칸에 앉았다.
+            lost = [k for k in prev if k not in ends[en]]
+            new_ = [k for k in ends[en] if k not in prev]
+            if len(lost) == 1 and len(new_) == 1:
+                prev = dict(prev)
+                prev[new_[0]] = prev.pop(lost[0])
             gap = (date.fromisoformat(en) - date.fromisoformat(order[i - 1])).days
             if not (60 <= gap <= 125 or 150 <= gap <= 220):
                 continue                      # 사이가 한 분기도 한 반기도 아니다
@@ -529,6 +539,43 @@ def seg_quarters(points):
                     out[q1_end] = q1
                 out[en] = dict(q2)
     return out
+
+
+_GENERIC = {"business", "businesses", "segment", "segments", "other", "others", "group", "related", "事業", "セグメント"}
+
+
+def merge_renamed(q):
+    """같은 분기에 한 번도 같이 안 나오고 크기가 비슷한 두 이름은 같은 부문이다 — 최근 이름으로 잇는다(11/02, 어드밴테스트
+    「Services And Others」/「Services Support And Others」 가 분기마다 번갈아 와 두 줄 모두 반쪽이었다)."""
+    for _ in range(6):
+        seen = {}
+        for e in sorted(q):
+            for n in q[e]:
+                seen.setdefault(n, []).append(e)
+        pair = None
+        names = sorted(seen, key=lambda n: seen[n][-1], reverse=True)
+        for a in names:
+            for b in names:
+                if a == b or set(seen[a]) & set(seen[b]):
+                    continue
+                wa = {w for w in re.findall(r"[a-z]{4,}|[^\x00-\x7f]{2,}", a.lower()) if w not in _GENERIC}
+                wb = {w for w in re.findall(r"[a-z]{4,}|[^\x00-\x7f]{2,}", b.lower()) if w not in _GENERIC}
+                if not (wa & wb):
+                    continue                  # 이름에 같은 낱말이 하나도 없으면 개편이지 이름 바꿈이 아니다
+                va = sorted(q[e][a] for e in seen[a])
+                vb = sorted(q[e][b] for e in seen[b])
+                ma, mb = va[len(va) // 2], vb[len(vb) // 2]
+                if ma > 0 and mb > 0 and 0.5 <= ma / mb <= 2 and seen[a][-1] > seen[b][-1]:
+                    pair = (a, b)
+                    break
+            if pair:
+                break
+        if not pair:
+            return q
+        a, b = pair
+        for e in seen[b]:
+            q[e][a] = q[e].pop(b)
+    return q
 
 
 def drop_totals(q):
@@ -1368,7 +1415,7 @@ def save_segments(raw, seg_done=(), quiet=False):
             clean = seg_clean(row)
             if len(clean) >= 2:
                 pts.append((st, en, clean))
-        q = drop_totals(seg_quarters(pts))
+        q = merge_renamed(drop_totals(seg_quarters(pts)))
         if len(q) < 2:
             continue
         ends = sorted(q)[-36:]
