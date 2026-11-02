@@ -1504,10 +1504,18 @@ def load_seg():
     # **발표 당일의 보도자료(8-K) 사업부 표**(scrape_seg_pr.py) — 10-Q 가 나오기 전 며칠~몇 주의 빈 칸을 메운다
     # (회원님 11/01: "구글 3분기 실적 나왔는데 브레이크다운이 없다"). 전년 같은 분기 값과 맞는 열만 읽었다.
     # 같은 분기가 이미 있으면(10-Q·벌크) 손대지 않는다 — splice 가 없는 칸만 채운다.
-    try:
-        prs = json.loads((HERE / "data" / "segments_pr.json").read_text(encoding="utf-8")).get("stocks", {})
-    except (OSError, ValueError):
-        prs = {}
+    prs = {}
+    # 규칙 판독(segments_pr) 뒤에 AI 판독(segments_aipr — ai_seg.py, 검산 통과분만)을 잇는다. 같은 분기면 규칙 쪽이 먼저 앉는다.
+    for nm_ in ("segments_pr.json", "segments_aipr.json"):
+        try:
+            for k_, v_ in json.loads((HERE / "data" / nm_).read_text(encoding="utf-8")).get("stocks", {}).items():
+                if k_ in prs and prs[k_].get("names") == v_.get("names"):
+                    have_ = {p_[0] for p_ in prs[k_]["pts"]}
+                    prs[k_] = dict(prs[k_], pts=prs[k_]["pts"] + [p_ for p_ in v_.get("pts", []) if p_[0] not in have_])
+                elif k_ not in prs:
+                    prs[k_] = v_
+        except (OSError, ValueError):
+            pass
     pr_add = 0
     for k, v in prs.items():
         key = "us:" + k
