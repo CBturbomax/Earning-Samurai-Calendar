@@ -194,12 +194,22 @@ def us_filings(cik):
     out = []
     for r in blocks:
         for i, form in enumerate(r.get("form", [])):
-            if form not in ("10-Q", "10-K"):
+            if form not in ("10-Q", "10-K", "20-F", "40-F", "6-K"):
                 continue
             rd = (r.get("reportDate") or [""] * (i + 1))[i]
+            if form == "6-K":
+                # 외국 기업(노바티스·셸·아스트라제네카…)은 10-Q 대신 6-K 로 분기 실적을 낸다. 보고 기준일이 비어 오므로
+                # 접수일을 적고, 고를 때 '분기 끝 + 15~80일'로 본다. 설명에 실적 낱말이 있는 것만(6-K 는 수백 건이다).
+                fd = (r.get("filingDate") or [""] * (i + 1))[i]
+                desc = ((r.get("primaryDocDescription") or [""] * (i + 1))[i] + " " + r["primaryDocument"][i]).lower()
+                if fd < "2017-07-01" or not re.search(r"result|earning|quarter|q[1-4]|interim|half|trading|report", desc):
+                    continue
+                out.append((fd, "6-K", r["accessionNumber"][i].replace("-", ""), r["primaryDocument"][i]))
+                continue
             if not rd or rd < "2017-06-01":
                 continue
-            out.append((rd, form, r["accessionNumber"][i].replace("-", ""), r["primaryDocument"][i]))
+            out.append((rd, "10-K" if form in ("20-F", "40-F") else form, r["accessionNumber"][i].replace("-", ""),
+                        r["primaryDocument"][i]))
     return sorted(set(out))
 
 
@@ -210,12 +220,13 @@ def us_pick(files, miss):
         ed = _d(e)
         if any(abs((ed - d0).days) <= 15 for d0 in done):
             continue
-        hit = [f for f in files if abs((_d(f[0]) - ed).days) <= 12]
-        nxt = [f for f in files if abs((_d(f[0]) - ed - timedelta(days=365)).days) <= 15]
+        hit = [f for f in files if f[1] != "6-K" and abs((_d(f[0]) - ed).days) <= 12] or \
+            [f for f in files if f[1] == "6-K" and 15 <= (_d(f[0]) - ed).days <= 80][:2]
+        nxt = [f for f in files if f[1] != "6-K" and abs((_d(f[0]) - ed - timedelta(days=365)).days) <= 15]
         for f in hit or nxt:
             if f not in want:
                 want.append(f)
-            fd = _d(f[0])
+            fd = ed if f[1] == "6-K" else _d(f[0])
             done.extend([fd, fd - timedelta(days=364)])
             if f[1] == "10-K":                       # 연간 − 9개월
                 q3 = [g for g in files if g[1] == "10-Q" and 80 <= (_d(f[0]) - _d(g[0])).days <= 100]
@@ -389,6 +400,8 @@ def fin_rev(B, key, st, en, jspans):
     inside = [p for p in pts if _d(st) + timedelta(days=40) < _d(p["end"]) <= _d(en) + timedelta(days=10)]
     months = round(((_d(en) - _d(st)).days + 1) / 30.4)
     need = max(1, round(months / 3))
+    if (B.FIN.get(key) or {}).get("freq") == "H":     # 반기 회사(유럽·홍콩계 외국 기업)는 점 하나가 여섯 달
+        need = max(1, round(months / 6))
     if len(inside) != need:
         return None
     return sum(p["rev"] for p in inside)
@@ -506,7 +519,11 @@ def one(B, key, miss, db, bud, t0, verbose):
         try:
             if m == "us":
                 cik, acc, nm = arg
-                raw = sec(DOC.format(cik=cik, acc=acc, name=nm), binary=True)
+                if label.startswith("6-K"):                 # 6-K 본문은 표지 — 보도자료는 첨부(EX-99)에 있다
+                    import scrape_live_us as lu
+                    raw = (lu.ex99_html(cik, acc) or "").encode()
+                else:
+                    raw = sec(DOC.format(cik=cik, acc=acc, name=nm), binary=True)
                 txt = tables_text(raw.decode("utf-8", "replace"), KEYS) if raw else ""
                 jspans = None
             else:
