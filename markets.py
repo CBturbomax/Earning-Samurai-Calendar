@@ -292,6 +292,9 @@ SEG_KO_FULL = {
     "International Geographic Areas": "해외", "Geographic Areas": "지역",
     "All Other": "기타", "Corporate and Other": "전사·기타",
     "Datacenter": "데이터센터", "Data Centre": "데이터센터",
+    # SEC 멤버 이름을 낱말로 가르다 생긴 모양(애플 IPhoneMember -> 'I Phone')
+    "I Phone": "아이폰", "I Pad": "아이패드", "Wearables Homeand Accessories": "웨어러블·홈·액세서리",
+    "Wearables Home and Accessories": "웨어러블·홈·액세서리",
     # 나라 두 글자(SEC 지역 축의 country 멤버)
     "TW": "대만", "CN": "중국", "KR": "한국", "JP": "일본", "GB": "영국", "DE": "독일", "SG": "싱가포르",
     "IE": "아일랜드", "NL": "네덜란드", "CH": "스위스", "CA": "캐나다", "MX": "멕시코", "IN": "인도",

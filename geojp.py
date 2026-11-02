@@ -354,19 +354,32 @@ def _try_block(items, headed, pri, spans, got):
             continue
         s = sum(v for _, v in leaf)
         if total and not _close(s, total, 0.005):
-            # 「アジア」 아래 「中国」 처럼 '그중' 줄이 이름표 없이 섞이면 합이 넘친다 — 한 줄을 빼서 맞으면 그 줄을 뺀다
-            drop = [i for i, (_n, v) in enumerate(leaf) if _close(s - v, total, 0.002)]
-            if len(drop) != 1:
+            # 「アジア」 아래 「中国」 처럼 '그중' 줄이나 「海外」 소계가 이름표 없이 섞이면 합이 넘친다(미쓰비시전기 PDF 는
+            # 둘 다 있다). **두 줄까지** 빼서 합계 줄과 **원 단위까지** 맞는 조합이 **딱 하나**일 때만(0.1% 로는 북미·중국처럼
+            # 비슷한 두 줄이 둘 다 맞았다) 그 줄들을 뺀다.
+            from itertools import combinations
+            sols = [c for size in (1, 2) for c in combinations(range(len(leaf)), size)
+                    if abs(s - sum(leaf[i][1] for i in c) - total) <= max(3, abs(total) * 2e-5)]
+            sols = [c for c in sols if len(c) == min(len(x) for x in sols)] if sols else []
+            if len(sols) != 1 or len(leaf) - len(sols[0]) < 2:
                 continue
-            leaf = leaf[:drop[0]] + leaf[drop[0] + 1:]
+            leaf = [x for i, x in enumerate(leaf) if i not in sols[0]]
             s = total
+        # **칸 하나는 가장 잘 맞는 기간 하나에만** 붙인다. 두 해 매출이 1% 남짓 차이면(미쓰비시전기 2018·2019 2분기)
+        # 1.5% 잣대에 둘 다 들어가 전년 칸이 올해 자리에도 앉았다. 같은 기간에 더 잘 맞는 칸이 오면 그쪽이 이긴다.
+        best = None
         for span, rev in spans.items():
-            if not rev or got.get(span, (0,))[0] >= pri:
+            if not rev:
                 continue
             for sc in SCALES:
-                if _close(s * sc, rev, 0.015):
-                    got[span] = (pri, {nm: v * sc for nm, v in leaf})
-                    break
+                err = abs(s * sc - rev) / rev
+                if err <= 0.015 and (best is None or err < best[0]):
+                    best = (err, span, sc)
+        if best:
+            err, span, sc = best
+            old = got.get(span)
+            if old is None or (pri, -err) > (old[0], -old[2]):
+                got[span] = (pri, {nm: v * sc for nm, v in leaf}, err)
 
 
 def geo_from(tbls, spans):
