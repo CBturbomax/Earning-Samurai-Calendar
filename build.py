@@ -1460,7 +1460,7 @@ def load_seg():
     # 20-F·6-K 의 인라인 XBRL 에서 그 자리를 메운다(scrape_seg_fpi.py).
     # **옛 분기 이력(XBRL 한 번에 · scrape_seg_hist_us.py)이 맨 앞**이다 — 회사의 모든 10-Q·10-K 를 읽은 것이라 벌크보다 길고
     # 정확하다(벌크는 테슬라가 2Q23 에서 끊기고 1분기 칸 두 부문이 뒤바뀌어 있었다). '긴 쪽이 뼈대' 규칙이 그대로 고른다.
-    hist = sorted(p.name for p in (HERE / "data").glob("segments_hist_us_s*.json"))
+    hist = sorted(p.name for p in (HERE / "data").glob("segments_hist_*_s*.json"))   # 미국 XBRL · 일본 JPX 보관소
     for name in tuple(hist) + ("segments_sec.json", "segments_jp.json", "segments_fpi.json",
                                "segments.json"):          # 뒤엣것이 이긴다(짧으면 빈 분기만 잇는다)
         p = HERE / "data" / name
