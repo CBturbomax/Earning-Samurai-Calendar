@@ -1849,6 +1849,137 @@ def load_ord_jp():
 GEO = load_geo()
 ORD = load_ord()
 
+
+# ── AI 빈칸 메우기(ai_fill.py → data/ai_fill.json) ───────────────────────
+# 규칙 수집기가 끝내 못 채운 분기만 AI 가 공시 원문에서 읽어 둔다(검산: 기간 합 = 총매출 2% 안).
+# 여기서는 **빈 분기만** 채운다 — 이미 있는 값은 절대 안 덮는다. 이름은 겹치는 분기의 값이 같으면(0.5% 안) 같은 줄로 본다.
+def _ai_fill_one(base, add):
+    """base 에 add 의 빈 분기를 채운다 -> (새 기록, 채운 칸 수)."""
+    if not add or len(add.get("pts") or []) < 1:
+        return base, 0
+    if not base:
+        return (add, len(add["pts"])) if len(add["pts"]) >= 2 else (base, 0)
+    bpts = [r for r in base["pts"] if re.match(r"\d{4}-\d\d-\d\d$", str(r[0]))]
+    if len(bpts) != len(base["pts"]):
+        return base, 0
+    bnames, anames = base["names"], add["names"]
+    def near(e, rows):
+        d = date.fromisoformat(e)
+        return next((r for r in rows if abs((date.fromisoformat(r[0]) - d).days) <= 20), None)
+    # 이름 짝: 같은 열쇠 이름, 아니면 겹치는 분기의 값이 0.5% 안에서 늘 같은 줄
+    mp = {}
+    for j, an in enumerate(anames):
+        k = seg_key(an)
+        hit = next((i for i, bn in enumerate(bnames) if k and seg_key(bn) == k), None)
+        if hit is None:
+            cand = {}
+            for r in add["pts"]:
+                br = near(r[0], bpts)
+                if not br or r[j + 1] is None:
+                    continue
+                for i in range(len(bnames)):
+                    bv = br[i + 1]
+                    if bv:
+                        cand.setdefault(i, []).append(abs(r[j + 1] / bv - 1) <= 0.005)
+            ok = [i for i, v in cand.items() if v and all(v)]
+            hit = ok[0] if len(ok) == 1 else None
+        if hit is not None and hit not in mp.values():
+            mp[j] = hit
+    overlap = any(near(r[0], bpts) for r in add["pts"])
+    rows, n = list(base["pts"]), 0
+    names = list(bnames)
+    if not mp and not overlap:
+        # 옛 기준(이름이 통째로 다른 앞 기간) — 새 이름을 붙여 앞에 잇는다. 그림이 '옛 기준' 칸으로 가른다.
+        if max(r[0] for r in add["pts"]) >= min(r[0] for r in bpts):
+            return base, 0
+        names = bnames + anames
+        rows = [[r[0]] + [None] * len(bnames) + list(r[1:]) for r in add["pts"]]
+        rows += [list(r) + [None] * len(anames) for r in base["pts"]]
+        return dict(base, names=names, pts=sorted(rows, key=lambda r: r[0])), len(add["pts"])
+    if not mp:
+        return base, 0
+    for r in add["pts"]:
+        if near(r[0], bpts):
+            continue
+        tot = sum(v for v in r[1:] if v)
+        got = sum(r[j + 1] for j in mp if r[j + 1])
+        if not tot or got < tot * 0.9:
+            continue
+        new = [r[0]] + [None] * len(names)
+        for j, i in mp.items():
+            new[i + 1] = r[j + 1]
+        rows.append(new)
+        n += 1
+    return (dict(base, pts=sorted(rows, key=lambda x: x[0])), n) if n else (base, 0)
+
+
+def load_ai_fill():
+    raw = _read_stocks("ai_fill.json").get("stocks") or {}
+    nseg = ngeo = nord = 0
+    for k, v in raw.items():
+        for kind, store, ax in (("seg", SEG, None), ("geo", GEO, "지역")):
+            if not v.get(kind):
+                continue
+            rec = _as_rec(_decum(_jp_spans(v[kind])), "지역" if ax else "사업부")
+            if not rec:
+                continue
+            if not ax:
+                rec.pop("axis", None)
+                if SEG.get(k, {}).get("axis"):
+                    rec["axis"] = SEG[k]["axis"]
+            got, n = _ai_fill_one(store.get(k), rec)
+            if n:
+                store[k] = got
+                if kind == "seg":
+                    nseg += n
+                else:
+                    ngeo += n
+        # 수주 — 두 공시가 같은 기간에 같은 값(1% 안)을 줄 때만
+        oc = v.get("oc") or {}
+        conf = {}
+        for key, vals in oc.items():
+            vals = [x for x in vals if x]
+            if any(abs(a - b) <= 0.01 * max(a, b) for i, a in enumerate(vals) for b in vals[i + 1:]):
+                conf[key] = sorted(vals)[len(vals) // 2]
+        if not conf:
+            continue
+        oh = {e: r["v"] for e, r in _decum(_jp_spans({kk[3:]: x for kk, x in conf.items() if kk.startswith("oh|")})).items()
+              if r.get("v")}
+        ob = {kk[3:]: x for kk, x in conf.items() if kk.startswith("ob|")}
+        rp = {kk[4:]: x for kk, x in conf.items() if kk.startswith("rpo|")}
+        cols = [(n, d) for n, d in (("수주고", oh), ("수주잔고", ob), ("수주잔고(RPO)", rp)) if len(d) >= 2]
+        if not cols:
+            continue
+        base = ORD.get(k)
+        if not base:
+            ends = sorted({e for _n, d in cols for e in d})
+            ORD[k] = {"names": [n for n, _d in cols], "pts": [[e] + [d.get(e) for _n, d in cols] for e in ends]}
+            nord += len(ends)
+            continue
+        for n, d in cols:
+            if n not in base["names"]:
+                base["names"].append(n)
+                for r in base["pts"]:
+                    r.append(None)
+            j = base["names"].index(n) + 1
+            have = {r[0]: r for r in base["pts"]}
+            for e, x in d.items():
+                r = have.get(e) or next((rr for rr in base["pts"]
+                                         if abs((date.fromisoformat(rr[0]) - date.fromisoformat(e)).days) <= 20), None)
+                if r is None:
+                    r = [e] + [None] * len(base["names"])
+                    base["pts"].append(r)
+                    have[e] = r
+                if r[j] is None:
+                    r[j] = x
+                    nord += 1
+            base["pts"].sort(key=lambda r: r[0])
+    if raw:
+        print(f"  AI 빈칸 메우기: 사업부 {nseg:,}칸 · 지역 {ngeo:,}칸 · 수주 {nord:,}칸")
+
+
+load_ai_fill()
+
 # ── 부문 이름 한글 표기 ──────────────────────────────────────────
 # 사전은 markets.py 에 있다(SEG_KO_*). **낱말 단위로 전부 아는 이름만** 옮기고
 # 한 낱말이라도 모르면 원문을 그대로 둔다 — 반쪽 번역이 원문보다 더 헷갈리고,
