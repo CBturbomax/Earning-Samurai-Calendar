@@ -24,7 +24,7 @@ concurrency:
 jobs:
   fill:
     runs-on: ubuntu-latest
-    if: false   # 멈춤(11/02 회원님): 구독 한도를 넘으면 추가 크레딧(돈)이 나간다 — 다시 켜려면 이 줄을 github.ref_name == 'main' 으로
+    if: github.ref_name == 'main'   # 11/02 다시 켬: Claude 두 계정 + Codex, 한도 한 번이면 멈춤. relay(이어달리기)는 첫 시험 확인 뒤에 켠다
     timeout-minutes: 58
     strategy:
       fail-fast: false
