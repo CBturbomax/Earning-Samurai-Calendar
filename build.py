@@ -6256,6 +6256,7 @@ function finBlock(m, code) {
   // 실적 수치가 없어도 부문은 있을 수 있다. 그때 통화를 'USD' 로 박아 두면
   // 일본 회사의 엔화 막대에 '단위: bil USD' 라고 적히는 거짓말이 된다.
   const MKT_CUR = { jp: 'JPY', hk: 'HKD' };
+  SEG_AXIS = null;
   if (!f) return biz + (sg
     ? '<div class="finwrap">' + segChart(sg, MKT_CUR[m] || 'USD') + '</div>'
     : '<p class="finnote">이 종목은 아직 실적 수치를 받지 않았습니다. ' +
@@ -6283,6 +6284,8 @@ function finBlock(m, code) {
   // **연간 막대는 그리지 않는다.** 연간으로는 "이번 분기가 작년 같은 분기보다
   // 나아졌나"를 볼 수 없어서 애초에 보려던 그림이 아니다. 분기(또는 홍콩 반기)만 낸다.
   const pts = (f.points || []).filter(() => f.freq === 'Q' || f.freq === 'H');
+  // 아래 사업부·지역·수주 그림이 실적 차트와 **같은 분기 칸**을 쓰게 축을 넘겨준다(회원님 11/02: "다 똑같은 형태").
+  SEG_AXIS = pts.length >= 2 ? pts.map(p => p[0]).filter(labFrom18).slice(-36) : null;
   if (pts.length >= 2) html += finChart(f);
   else if (f.freq === 'A')
     html += '<p class="finnote">이 종목은 <b>분기 실적을 못 구했습니다.</b> ' +
@@ -6634,10 +6637,30 @@ function segChart(sg, cur) {
   const onlyLive = r => [r[0]].concat(r.slice(1).map((v, j) => live.size >= 2 && !live.has(j) ? null : v));
   const nowPts = pts.slice(cut).map(onlyLive);
   const oldPts = pts.slice(0, cut);
-  const span = ps => ps[0][0] + '~' + ps[ps.length - 1][0];
-  let html = segDraw(sg, names, nowPts, cur, cut ? '지금 기준 · ' + span(nowPts) : '');
-  if (cut && oldPts.length >= 2) html += segDraw(sg, names, oldPts, cur, '옛 기준 · ' + span(oldPts));
+  const span = ps => { const r = ps.filter(q => q.slice(1).some(v => v != null)); return r[0][0] + '~' + r[r.length - 1][0]; };
+  let html = segDraw(sg, names, onAxis(nowPts, names.length), cur, cut ? '지금 기준 · ' + span(nowPts) : '');
+  if (cut && oldPts.length >= 2) html += segDraw(sg, names, onAxis(oldPts, names.length), cur, '옛 기준 · ' + span(oldPts));
   return html;
+}
+
+// 분기 칸을 실적 차트와 맞춘다 — 실적 축(SEG_AXIS)과 이 그림의 분기를 합쳐 빠진 분기 없이 잇는다.
+// 값이 없는 분기는 빈칸으로 둔다(지어 넣지 않는다). 그래서 두 그림의 같은 분기가 위아래로 같은 자리에 선다.
+let SEG_AXIS = null;
+const qIx = l => { const m = /^(\d)([QH])(\d\d)$/.exec(l || ''); return m ? { k: m[2], i: (+m[3]) * (m[2] === 'Q' ? 4 : 2) + (+m[1]) - 1 } : null; };
+const qLab = (k, i) => k === 'Q' ? (i % 4 + 1) + 'Q' + String(Math.floor(i / 4)).padStart(2, '0')
+                                 : (i % 2 + 1) + 'H' + String(Math.floor(i / 2)).padStart(2, '0');
+function onAxis(rows, nn) {
+  if (!rows.length) return rows;
+  const k0 = (qIx(rows[0][0]) || {}).k;
+  if (!k0 || rows.some(r => (qIx(r[0]) || {}).k !== k0)) return rows;
+  const by = {}; rows.forEach(r => { by[r[0]] = r; });
+  let ix = rows.map(r => qIx(r[0]).i);
+  (SEG_AXIS || []).forEach(l => { const q = qIx(l); if (q && q.k === k0) ix.push(q.i); });
+  const lo = Math.min(...ix), hi = Math.max(...ix);
+  if (hi - lo > 60) return rows;
+  const out = [];
+  for (let i = lo; i <= hi; i++) { const l = qLab(k0, i); out.push(by[l] || [l].concat(Array(nn).fill(null))); }
+  return out;
 }
 
 // 사업부별 매출 + 사업부별 YoY — 범례를 누르면 그 선을 끄고 켠다(회원님 11/01: "보기 싫은 건 지우고 보고 싶은 것만").
@@ -6650,10 +6673,11 @@ function segDraw(sg, names, pts, cur, tag) {
   return '<div class="segwrap" data-sid="' + id + '">' + segRender(id) + '</div>';
 }
 function segLines(names, pts, vis, opt) {
-  // 선 그림 하나 — opt: { vals(i,j) -> 값|null, fmt, unitLab, clip:[lo,hi] }
+  // 선 그림 하나 — opt: { vals(i,j) -> 값|null, fmt, pct, H }
+  // 생김새는 finChart 와 똑같이(회원님 11/02): 칸 30px · 좁으면 분기 이름을 세워 쓰고 · 글씨 13px 굵게 · 해마다 칸막이.
   const n = pts.length;
-  const W = Math.max(880, n * 46), L = 66, R = 20, B = 42, T = 30, H = opt.H || 360;
-  const BASE = H - B, step = (W - L - R) / n;
+  const W = Math.max(880, n * 30), L = 58, R = 52, T = opt.pct ? 36 : 46, H = opt.H || 420;
+  const step = (W - L - R) / n, rot = step < 40, B = rot ? 58 : 44, BASE = H - B;
   const cx = i => L + step * i + step / 2;
   const all = [];
   names.forEach((nm, j) => { if (vis(j)) pts.forEach((r, i) => { const v = opt.vals(i, j); if (v != null) all.push(v); }); });
@@ -6662,7 +6686,7 @@ function segLines(names, pts, vis, opt) {
   if (opt.pct) {
     const rec = [];                                          // 최근 12칸의 값으로 가운데 띠를 잡는다(yoyMap)
     names.forEach((nm, j) => { if (vis(j)) for (let i = Math.max(0, n - 12); i < n; i++) { const v = opt.vals(i, j); if (v != null) rec.push(v); } });
-    var M = yoyMap(all, rec); lo = M.lo; hi = Infinity;
+    var M = yoyMap(all, rec); lo = M.lo; hi = M.hi;
   } else {
     const mx = Math.max(...all, 1), mn = Math.min(...all, 0);
     hi = niceMax(mx); lo = mn < 0 ? -niceMax(-mn) : 0;
@@ -6670,7 +6694,9 @@ function segLines(names, pts, vis, opt) {
   const y = opt.pct ? (v => BASE - (BASE - T) * M.pos(v)) : (v => BASE - (BASE - T) * (Math.max(lo, Math.min(hi, v)) - lo) / (hi - lo));
   let body = opt.pct ? M.breaks.map(v => '<line x1="' + L + '" y1="' + y(v).toFixed(1) + '" x2="' + (W - R) + '" y2="' + y(v).toFixed(1) +
     '" style="stroke:rgba(255,255,255,.35);stroke-dasharray:4 4"/>').join('') : '';
-  const used = pts.map(() => []);
+  const placed = [];                                       // 적은 숫자의 자리 — 옆 칸·다른 선의 숫자와 겹치면 다른 자리를 찾는다
+  const hit = (x, yy, w) => placed.some(q => Math.abs(q[0] - x) < (q[2] + w) / 2 + 1 && Math.abs(q[1] - yy) < 14);
+  const multi = names.filter((_, j) => vis(j)).length > 1;
   names.forEach((nm, j) => {
     if (!vis(j)) return;
     const c = SEG_COLORS[j % SEG_COLORS.length];
@@ -6678,33 +6704,40 @@ function segLines(names, pts, vis, opt) {
     if (!ps.length) return;
     let d = '', prev = null;
     ps.forEach(([i, v]) => { d += (prev !== null && i === prev + 1 ? 'L' : 'M') + cx(i).toFixed(1) + ',' + y(v).toFixed(1); prev = i; });
-    body += '<path d="' + d + '" fill="none" stroke="' + c + '" stroke-width="2.2"/>';
+    body += '<path d="' + d + '" fill="none" stroke="' + c + '" stroke-width="2.6"/>';
     // 바닥에 깔린 작은 부문(축 높이의 4% 밑)은 숫자를 안 적는다 — 아래 분기 이름과 겹쳐 둘 다 안 읽혔다(에스티로더 '기타').
-    const tiny = !opt.pct && Math.max(...ps.map(q => Math.abs(q[1]))) < (hi - lo) * 0.04;
+    const tiny = !opt.pct && multi && Math.max(...ps.map(q => Math.abs(q[1]))) < (hi - lo) * 0.04;
     ps.forEach(([i, v]) => {
-      const yy = y(v);
-      body += '<circle class="dot" cx="' + cx(i).toFixed(1) + '" cy="' + yy.toFixed(1) + '" r="3" fill="' + c + '"><title>' +
+      const yy = y(v), x = cx(i);
+      body += '<circle class="dot" cx="' + x.toFixed(1) + '" cy="' + yy.toFixed(1) + '" r="3.8" fill="' + c + '"><title>' +
         esc(nm) + ' ' + pts[i][0] + ' ' + opt.fmt(v) + '</title></circle>';
       if (tiny) return;
-      let ty = v > hi ? yy + 16 : yy - 8;                 // 위로 넘친 점은 숫자를 점 아래에, 아래로 넘친 점은 위에(축 이름과 안 겹치게)
-      if (used[i].some(u => Math.abs(u - ty) < 13)) ty = v > hi ? yy + 30 : yy + 16;
-      if (used[i].some(u => Math.abs(u - ty) < 13)) return;
-      used[i].push(ty);
-      body += '<text class="vn" x="' + cx(i).toFixed(1) + '" y="' + ty.toFixed(1) + '" text-anchor="middle" style="fill:' + c +
-        (i === n - 1 ? ';font-weight:800' : '') + '">' + opt.fmt(v) + '</text>';
+      const txt = opt.fmt(v), w = txt.length * 13 * 0.6;
+      // 실적 YoY 와 같은 자리 규칙: 기본은 점 위, 음수·위로 넘친 점은 점 아래. 막히면 반대쪽·한 칸 더.
+      const down = opt.pct && ((v < 0 && v >= lo) || v > hi);
+      const cand = (down ? [19, -10, 33, -24] : [-10, 19, -24, 33]).map(o => yy + o).filter(t => t > 12 && t < BASE - 2);
+      const ty = cand.find(t => !hit(x, t, w));
+      if (ty == null) return;
+      placed.push([x, ty, w]);
+      body += '<text class="vn" x="' + x.toFixed(1) + '" y="' + ty.toFixed(1) + '" text-anchor="middle" style="font-size:13px;font-weight:800;fill:' +
+        (opt.pct && !multi && v < 0 ? '#5fb3ff' : c) + '">' + txt + '</text>';
     });
   });
-  const ticks = opt.pct ? M.ticks
-                        : (lo < 0 ? [lo, 0, hi] : [0, hi / 2, hi]);
+  const ticks = opt.pct ? M.ticks : (lo < 0 ? [lo, 0, hi] : [0, hi / 2, hi]);
   const axis = ticks.map(v =>
-    '<line class="' + (v === 0 && (lo < 0) ? 'fzero' : 'fz') + '" x1="' + L + '" y1="' + y(v).toFixed(1) + '" x2="' + (W - R) +
-    '" y2="' + y(v).toFixed(1) + '"/><text class="fx" x="' + (L - 8) + '" y="' + (y(v) + 4).toFixed(1) +
-    '" text-anchor="end">' + (opt.pct ? pcN(v) : fmtN(v)) + '</text>').join('');
-  const xlab = pts.map((r, i) =>
-    ((i > 0 && /^1[QH]/.test(r[0])) ? '<line x1="' + (cx(i) - step / 2).toFixed(1) + '" y1="' + (H - B + 3) + '" x2="' +
-      (cx(i) - step / 2).toFixed(1) + '" y2="' + (H - 2) + '" style="stroke:rgba(255,255,255,.22);stroke-width:1"/>' : '') +
-    '<text class="fx' + (i === n - 1 ? ' now' : '') + '" x="' + cx(i).toFixed(1) +
-    '" y="' + (H - B + 20) + '" text-anchor="middle" style="font-size:13px">' + r[0] + '</text>').join('');
+    '<line class="' + (v === 0 && (lo < 0 || opt.pct) ? 'fzero' : 'fz') + '" x1="' + L + '" y1="' + y(v).toFixed(1) + '" x2="' + (W - R) +
+    '" y2="' + y(v).toFixed(1) + '"/><text class="fx" x="' + (L - 8) + '" y="' + (y(v) + 5).toFixed(1) +
+    '" text-anchor="end" style="font-size:13px">' + (opt.pct ? pcN(v) : fmtN(v)) + '</text>').join('');
+  const xlab = pts.map((r, i) => {
+    const sep = (i > 0 && /^1[QH]/.test(r[0])) ? '<line x1="' + (cx(i) - step / 2).toFixed(1) + '" y1="' + (BASE + 3) + '" x2="' +
+      (cx(i) - step / 2).toFixed(1) + '" y2="' + (H - 2) + '" style="stroke:rgba(255,255,255,.22);stroke-width:1"/>' : '';
+    const t = rot
+      ? '<text class="fx' + (i === n - 1 ? ' now' : '') + '" transform="translate(' + (cx(i) + 4).toFixed(1) + ',' + (BASE + 8) +
+        ') rotate(-90)" text-anchor="end" style="font-size:13px">' + r[0] + '</text>'
+      : '<text class="fx' + (i === n - 1 ? ' now' : '') + '" x="' + cx(i).toFixed(1) + '" y="' + (BASE + 20) +
+        '" text-anchor="middle" style="font-size:13px">' + r[0] + '</text>';
+    return sep + t;
+  }).join('');
   return '<div class="finbox"><svg viewBox="0 0 ' + W + ' ' + H + '" class="finsvg">' + axis + body + xlab + '</svg></div>';
 }
 function segRender(id) {
@@ -6723,8 +6756,8 @@ function segRender(id) {
   const prevLab = l => { const m = /^(\d)([QH])(\d\d)$/.exec(l); return m ? m[1] + m[2] + String(+m[3] - 1).padStart(2, '0') : null; };
   const yoy = (i, j) => { const a = pts[i][j + 1], pr = byLab[prevLab(pts[i][0])], b = pr ? pr[j + 1] : null;
     return (a != null && b != null && b > 0) ? a / b - 1 : null; };
-  const pcS = v => (v > 0 ? '+' : '') + (v * 100).toFixed(0) + '%';
-  const bot = segLines(names, pts, vis, { vals: yoy, fmt: pcS, pct: true, H: 320 });
+  const pcS = pcN;
+  const bot = segLines(names, pts, vis, { vals: yoy, fmt: pcS, pct: true, H: 300 });
   const ax = esc(sg.ax || '사업부');
   // 수주 지표(수주고·수주잔고·RPO)는 '…별 매출'이 아니다 — 제목을 따로 단다.
   const ttl = sg.ax === '수주' ? '수주 · 수주잔고' : ax + '별 매출';
