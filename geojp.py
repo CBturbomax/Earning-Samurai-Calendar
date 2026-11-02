@@ -182,6 +182,64 @@ def pdf_tables(pdf):
     return out
 
 
+def pdf_orders(pdf):
+    """결산단신 PDF 의 수주 표 -> [{"kind", "cur", "prev"}]. **글자의 가로 자리로 칸을 가른다.**
+
+    PDF 는 빈 칸이 아예 없어 칸 차례로는 당기·전기를 못 가른다(구덴코 418,000 통기 예상을 집은 까닭). 그래서 제목
+    (受注高·受注残高 — 예상·계획 제목은 뺀다) 아래 열두 줄 안에서 **머리줄 글자의 x** 를 모아 두고, 합계 줄 숫자마다
+    왼쪽으로 가장 가까운 기간 머리(前…/当…)와 종류 머리(金額/構成比)를 붙인다. 当·金額 인 칸이 당기, 前·金額 이 전기다.
+    둘 다 못 찾으면 안 담는다. 이 값은 build.py 가 **다른 공시와 맞을 때만** 싣는다(그해 당기 = 이듬해 전기)."""
+    try:
+        import pdftext
+        lines = pdftext.extract_cells(pdf, max_pages=40)
+    except Exception:                                   # noqa: BLE001
+        return []
+    lines = [sorted(c) for c in lines if c]
+    out = []
+    for i, cells in enumerate(lines):
+        txt = "".join(t for _x, t in cells)
+        if len(txt) > 40 or "受注" not in txt or FCST.search(txt):
+            continue
+        kind = "受注残高" if "残" in txt else ("受注高" if re.search(r"受注(高|実績|状況|の状況)", txt) else None)
+        if not kind:
+            continue
+        head = []
+        for cells2 in lines[i + 1:i + 13]:
+            t2 = "".join(t for _x, t in cells2)
+            nums = [(x, num(t)) for x, t in cells2 if num(t) is not None]
+            if re.search(r"受注|売上|生産|予想", t2) and not nums and head:
+                break                                   # 다음 표 제목
+            if not nums or re.search(r"\d{4}[.年]", t2):
+                head += [(x, t) for x, t in cells2]
+                continue
+            lab = "".join(t for x, t in cells2 if num(t) is None and x < nums[0][0])
+            if not TOTAL.search(lab.replace(" ", "")):
+                continue
+            got = {}
+            for x, v in nums:
+                if v is None or v <= 0:
+                    continue
+                per = max(((hx, ht) for hx, ht in head if hx <= x + 25 and re.search(r"前|当|増減|比較", ht)),
+                          default=None)
+                typ = max(((hx, ht) for hx, ht in head if hx <= x + 25 and re.search(r"金額|構成|比率|増減|%|％", ht)),
+                          default=None)
+                if not per or (typ and not re.search(r"金額", typ[1])):
+                    continue
+                k = _kind_of(per[1])
+                if k and k not in got:
+                    got[k] = v
+            if "cur" in got:
+                sc = 1e8 if "億円" in "".join(t for _x, t in head) else 1e6
+                out.append({"kind": kind, "cur": got["cur"] * sc / 1e6, "prev": (got.get("prev") or 0) * sc / 1e6 or None})
+            break
+    seen, uniq = set(), []
+    for o in out:
+        if o["kind"] not in seen:
+            seen.add(o["kind"])
+            uniq.append(o)
+    return uniq
+
+
 # ── 줄 하나 -> (이름, 들여쓰기, 값들) ──────────────────────────────────
 
 def parse_row(cells):

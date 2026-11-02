@@ -41,7 +41,7 @@ from markets import excluded
 
 HERE = Path(__file__).parent
 OUT = HERE / "data" / "geo_jp.json"
-RULE_VER = 2      # 2: zip 에 본문이 없던 옛 공시는 PDF 에서 지역을 읽는다
+RULE_VER = 3      # 2: 옛 공시는 PDF 에서 지역 · 3: PDF 수주(확인 전 칸)
 SECS = float(os.environ.get("GEO_SECS", "1500"))
 BACK_DAYS = int(os.environ.get("GEO_BACK_DAYS", "4"))
 SINCE = "2016-10-01"            # 1Q18(1~3월)의 전년 같은 분기까지 — 2017년 연간·9개월 누계가 필요하다. JPX 보관소는 2016년치까지 있다(떠보기 11/02)
@@ -119,6 +119,20 @@ def read(blob, pdf_url=None):
         geo = geojp.geo_from(geojp.pdf_tables(pdf), spans) if pdf else {}
         if geo:
             out["geo"] = {f"{st}/{en}": {k: round(v) for k, v in row.items()} for (st, en), row in geo.items()}
+        # PDF 수주는 '확인 전' 칸(ohp·obp)에 공시마다 하나씩 쌓는다 — build.py 가 두 공시가 맞을 때만 싣는다
+        cur = max(spans, key=lambda s_: (s_[1], -len(s_[0])))
+        prior = (_yago(cur[0]), _yago(cur[1]))
+        for rec in (geojp.pdf_orders(pdf) if pdf else []):
+            if rec["kind"] == "受注高":
+                o = out.setdefault("ohp", {})
+                o[f"{cur[0]}/{cur[1]}"] = round(rec["cur"] * 1e6)
+                if rec["prev"]:
+                    o[f"{prior[0]}/{prior[1]}"] = round(rec["prev"] * 1e6)
+            else:
+                o = out.setdefault("obp", {})
+                o[cur[1]] = round(rec["cur"] * 1e6)
+                if rec["prev"]:
+                    o[prior[1]] = round(rec["prev"] * 1e6)
         return out
     geo = geojp.geo_from(tb, spans)
     if geo:
@@ -154,7 +168,10 @@ def absorb(db, code, got):
     for kind, by in got.items():
         dst = slot.setdefault(kind, {})
         for k, v in by.items():
-            dst[k] = v                                           # 나중에 낸 공시(정정·재표시)가 이긴다
+            if kind.endswith("p"):                               # 확인 전(PDF) — 공시마다 따로 남겨 서로 맞춰 본다
+                dst.setdefault(k, []).append(v)                 # 같은 값이 두 공시에서 오면 두 번 — 그게 확인이다
+            else:
+                dst[k] = v                                       # 나중에 낸 공시(정정·재표시)가 이긴다
     return True
 
 
