@@ -25,6 +25,7 @@ import os
 import re
 import shutil
 import subprocess
+import tempfile
 import sys
 import time
 from datetime import date, datetime, timedelta, timezone
@@ -54,7 +55,6 @@ ENGINE = os.environ.get("AI_ENGINE", "claude")       # claude | codex — 구독
 
 def codex(prompt):
     """`codex exec` 한 번(ChatGPT 구독 한도) -> 답 글자. 프롬프트는 표준입력으로(길어서), 답은 마지막 메시지 파일로."""
-    import tempfile
     with tempfile.NamedTemporaryFile("r", suffix=".txt", delete=False) as f:
         last = f.name
     cmd = ["codex", "exec", "--skip-git-repo-check", "--sandbox", "read-only", "--color", "never",
@@ -62,7 +62,7 @@ def codex(prompt):
     cmd += ["-c", 'model_reasoning_effort="%s"' % os.environ.get("CODEX_EFFORT", "low")]   # 표 읽기엔 깊게 생각할 필요 없다 — 한도 아끼기
     if os.environ.get("CODEX_MODEL"):
         cmd += ["--model", os.environ["CODEX_MODEL"]]
-    r = subprocess.run(cmd + ["-"], input=prompt, capture_output=True, text=True, timeout=PER_CALL)
+    r = subprocess.run(cmd + ["-"], input=prompt, cwd=tempfile.gettempdir(), capture_output=True, text=True, timeout=PER_CALL)
     out = (r.stdout or "") + (r.stderr or "")
     try:
         ans = open(last, encoding="utf-8").read()
@@ -94,7 +94,8 @@ def claude(prompt):
            "--strict-mcp-config", "--disable-slash-commands"]
     if os.environ.get("AI_MODEL"):                       # 표 읽기는 가벼운 모델로도 된다 — 구독 한도를 아낀다
         cmd += ["--model", os.environ["AI_MODEL"]]
-    r = subprocess.run(cmd, stdin=subprocess.DEVNULL,
+    # cwd 를 저장소 밖으로 — 저장소 안에서 부르면 CLAUDE.md(14만 자 ≈ 7만 토큰)가 매 호출 따라붙었다(11/02 실측)
+    r = subprocess.run(cmd, stdin=subprocess.DEVNULL, cwd=tempfile.gettempdir(),
                        capture_output=True, text=True, timeout=PER_CALL)
     out = (r.stdout or "") + (r.stderr or "")
     if r.returncode != 0 or LIMIT_HINT.search(out[-2000:]) and '"result"' not in out:
