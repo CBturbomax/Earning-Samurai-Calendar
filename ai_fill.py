@@ -48,6 +48,7 @@ MAX_CALLS = int(os.environ.get("AIFILL_MAX", "150"))
 WORKERS = int(os.environ.get("AIFILL_WORKERS", "3"))
 SINCE = "2018-01-01"
 DOC_LIMIT = 42000
+EMPTY_VER = 2                   # 2: 일본 PDF 이름을 목록에서(미국 기준 회사 — 도요타·고마쓰)
 DRY_N = 4                       # 연달아 이만큼 읽어 맞은 것이 없으면 그 회사는 넉 달 쉰다
 KEYS = re.compile(r"segment|geograph|region|countr|americas|europe|asia|china|japan|emea|international|domestic|"
                   r"backlog|remaining performance|bookings|new orders|order intake|orders received|disaggregat|"
@@ -199,10 +200,11 @@ def tables_text(raw, kw):
 
 def jp_docs(code):
     import scrape_geo_jp as G
-    return [(it["pubdate"][:10], it["url_xbrl"].rsplit("/", 1)[-1]) for it in G.listing(code)]
+    return [(it["pubdate"][:10], it["url_xbrl"].rsplit("/", 1)[-1], (it.get("document_url") or "").rsplit("/", 1)[-1])
+            for it in G.listing(code)]
 
 
-def jp_text(code, fn):
+def jp_text(code, fn, pn=""):
     """(글, {(시작, 종료): 누계 매출}) — zip 첨부 표, 없으면 PDF 글자."""
     import geojp
     import scrape_fin_jp as F
@@ -217,10 +219,12 @@ def jp_text(code, fn):
             body = "\n".join(" | ".join(c for c in r if c) for r in rows)
             if KEYS_JP.search(before + body):
                 parts.append("[" + before[-120:] + "]\n" + body)
-    elif fn.startswith("0812"):
+    else:
+        # PDF 이름은 목록이 준다(미국 기준 회사 — 도요타·고마쓰 — 는 zip 이름과 PDF 이름의 번호가 다르다)
+        pn = pn if pn.lower().endswith(".pdf") else (fn.replace("0812", "1401", 1) if fn.startswith("0812") else "")
         try:
             import pdftext
-            pdf = G.get(f"https://www2.jpx.co.jp/disc/{code}0/{fn.replace('0812', '1401', 1)}", timeout=60)
+            pdf = G.get(f"https://www2.jpx.co.jp/disc/{code}0/{pn}", timeout=60) if pn else None
             lines = pdftext.extract_cells(pdf, max_pages=40) if pdf else []
         except Exception:                              # noqa: BLE001 — 암호·깨진 PDF
             lines = []
@@ -379,7 +383,8 @@ def one(B, key, miss, db, bud, t0, verbose):
     m, code = key.split(":")
     asked = set(db["asked"].get(key, []))
     rec = json.loads(json.dumps(db["stocks"].get(key) or {}))     # 갈래마다 제 사본 — 저장과 부딪히지 않게
-    new_asked = []
+    new_asked, new_empty = [], []
+    asked |= set(db.get("empty", {}).get(key, []))
     f = B.FIN.get(key) or {}
     cur = f.get("cur") or ("JPY" if m == "jp" else "USD")
     segs = (B.SEG.get(key) or {}).get("names") or []
@@ -391,13 +396,13 @@ def one(B, key, miss, db, bud, t0, verbose):
         import scrape_live_us as lu
         cik = lu.cik_map_cached().get(code) or lu.cik_map_cached().get(code.replace(".", "-"))
         if not cik:
-            return key, 0, 0, ["CIK 없음"], rec, new_asked, 0
+            return key, 0, 0, ["CIK 없음"], rec, (new_asked, new_empty), 0
         files = us_filings(int(cik))
         docs = [(f"{a}", f"{fm} {rd}", (int(cik), a, nm)) for rd, fm, a, nm in us_pick(files, miss)]
     else:
         docs = []
-        for pub, fn in jp_docs(code):
-            docs.append((fn, f"決算短信 {pub}", (code, fn)))
+        for pub, fn, pn in jp_docs(code):
+            docs.append((fn, f"決算短信 {pub}", (code, fn, pn)))
         # 빈 종료일 언저리(종료 + 30~60일 공시) 또는 한 해 뒤(전기 칸) 것만
         keep = []
         for did, label, arg in docs:
@@ -419,7 +424,7 @@ def one(B, key, miss, db, bud, t0, verbose):
             else:
                 txt, jspans = jp_text(*arg)
             if not txt:
-                new_asked.append(did)
+                new_empty.append(did)                  # 표 없음 — 읽는 규칙(EMPTY_VER)이 바뀌면 다시 본다
                 log.append(f"{label} 표 없음")
                 continue
             tried += 1
@@ -443,7 +448,7 @@ def one(B, key, miss, db, bud, t0, verbose):
         if verbose:
             print(key, label, json.dumps(items, ensure_ascii=False)[:800])
         log.append(f"{label} 항목 {len(items)} · 맞은 기간 {n}")
-    return key, tried, got, log, rec, new_asked, dry_n
+    return key, tried, got, log, rec, (new_asked, new_empty), dry_n
 
 
 def main():
@@ -459,6 +464,11 @@ def main():
         db = {}
     db.setdefault("stocks", {})
     db.setdefault("asked", {})
+    if db.get("empty_ver") != EMPTY_VER:              # 원문 꺼내는 규칙이 바뀌었다 — '표 없음' 이던 공시를 다시 본다
+        if db.get("empty_ver") is None:               # 첫 판은 '표 없음'도 asked 에 적었다 — 일본(PDF 를 못 찾던 것)만 지운다
+            for k in [k for k in db["asked"] if k.startswith("jp:")]:
+                db["asked"].pop(k)
+        db["empty"], db["empty_ver"] = {}, EMPTY_VER
     todo = []
     dry = db.setdefault("dry", {})
     for key in targets(B, set(only)):
@@ -493,7 +503,8 @@ def main():
             with lock:
                 if rec:
                     db["stocks"][key] = rec
-                db["asked"].setdefault(key, []).extend(new_asked)
+                db["asked"].setdefault(key, []).extend(new_asked[0])
+                db["empty"].setdefault(key, []).extend(new_asked[1])
                 if tr:
                     dry[key] = {"n": dn, "ts": date.today().isoformat()}
                 done_keys += 1
