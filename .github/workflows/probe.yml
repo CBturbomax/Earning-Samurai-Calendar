@@ -17,16 +17,19 @@ jobs:
         with:
           python-version: '3.12'
 
-      - name: 🔎 홍콩 사업부 이력 · JPX 보관소 깊이
-        continue-on-error: true
-        timeout-minutes: 15
+      - name: 🔎 Railway 실시간 서버 확인
         run: |
-          mkdir -p /tmp/po && python tools/ai/probe_oldzips.py > /tmp/probe.txt 2>&1
+          U=https://earning-samurai-calendar-production.up.railway.app
+          for p in "/api/co?key=us:AMZN" "/api/co?key=jp:6981" "/api/co?key=hk:00700" /health /api/log /api/stats /api/audit "/api/sent?day=$(TZ=Asia/Seoul date +%F)" /api/live; do echo "== $p"; curl -sS -m 20 $U$p | tail -c 20000; echo; done > /tmp/probe.txt 2>&1
+          echo "== stream" >> /tmp/probe.txt; timeout 8 curl -sSN $U/stream | head -c 400 >> /tmp/probe.txt 2>&1 || true
 
+      - name: 🔎 홍콩 긴 이력 수집기 시험
+        continue-on-error: true
+        run: python scrape_fin_hk_em.py 00700 03750 09992 01211 02020 00992 >> /tmp/probe.txt 2>&1
       - name: 결과를 probe-out 가지에
         if: always()
         run: |
-          mkdir -p /tmp/po && cd /tmp/po && rm -rf .git && git init -q
+          cd /tmp && rm -rf po && mkdir po && cd po && git init -q
           cp /tmp/probe.txt . ; git add . && git -c user.name=bot -c user.email=b@b commit -qm probe
           git push -f "https://x-access-token:${{ github.token }}@github.com/${{ github.repository }}" HEAD:refs/heads/probe-out
 

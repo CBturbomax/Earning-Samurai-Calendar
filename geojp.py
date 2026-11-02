@@ -161,8 +161,15 @@ def pdf_tables(pdf):
         lines = pdftext.extract_cells(pdf, max_pages=40)
     except Exception:                                   # noqa: BLE001 — 암호·깨진 PDF 는 못 읽은 것으로
         return []
-    rows = [[re.sub(r"\s+", " ", t).strip() for _x, t in sorted(cells) if t.strip()] for cells in lines]
-    rows = [r for r in rows if r]
+    rows = []
+    for cells in lines:
+        r = [re.sub(r"\s+", " ", t).strip() for _x, t in sorted(cells) if t.strip()]
+        # 이름이 글자마다 칸으로 쪼개져 온다(「日 | 本」·「ア | ジ | ア」) — 첫 숫자 칸 앞의 글자 칸을 하나로 붙인다
+        k = next((i for i, c in enumerate(r) if num(c) is not None), len(r))
+        if k > 1:
+            r = ["".join(r[:k])] + r[k:]
+        if r:
+            rows.append(r)
     out = []
     for i, r in enumerate(rows):
         txt = " ".join(r)
@@ -284,9 +291,17 @@ def _try_block(items, headed, pri, spans, got):
         leaf, total = leaf_set(items, k)
         if len(leaf) < 2 or sum(1 for nm, _ in leaf if GEO_WORD.search(nm)) < len(leaf) - 1:
             continue
+        # 지역 매출은 음수가 없다 — 증감 칸(△1,294)이 우연히 매출과 맞은 적이 있다(미쓰비시전기 2018 PDF)
+        if any(v <= 0 for _, v in leaf):
+            continue
         s = sum(v for _, v in leaf)
         if total and not _close(s, total, 0.005):
-            continue
+            # 「アジア」 아래 「中国」 처럼 '그중' 줄이 이름표 없이 섞이면 합이 넘친다 — 한 줄을 빼서 맞으면 그 줄을 뺀다
+            drop = [i for i, (_n, v) in enumerate(leaf) if _close(s - v, total, 0.002)]
+            if len(drop) != 1:
+                continue
+            leaf = leaf[:drop[0]] + leaf[drop[0] + 1:]
+            s = total
         for span, rev in spans.items():
             if not rev or got.get(span, (0,))[0] >= pri:
                 continue

@@ -21,8 +21,10 @@ data/geo_jp.json
      oh = 受注高(누계 흐름) · ob = 受注残高(그날 잔액)
   docs   = 읽은 zip 이름(다시 안 받는다) · codes = 옛 공시를 다 거슬러 받은 날
 """
+import io
 import json
 import os
+import zipfile
 import re
 import sys
 import time
@@ -37,7 +39,7 @@ from markets import excluded
 
 HERE = Path(__file__).parent
 OUT = HERE / "data" / "geo_jp.json"
-RULE_VER = 1
+RULE_VER = 2      # 2: zip 에 본문이 없던 옛 공시는 PDF 에서 지역을 읽는다
 SECS = float(os.environ.get("GEO_SECS", "1500"))
 BACK_DAYS = int(os.environ.get("GEO_BACK_DAYS", "4"))
 SINCE = "2016-10-01"            # 1Q18(1~3월)의 전년 같은 분기까지 — 2017년 연간·9개월 누계가 필요하다. JPX 보관소는 2016년치까지 있다(떠보기 11/02)
@@ -87,14 +89,35 @@ def _yago(d):
         return (date.fromisoformat(d) - timedelta(days=365)).isoformat()
 
 
-def read(blob):
-    """zip 한 개 -> {"geo": {...}, "oh": {...}, "ob": {...}} (비면 {})."""
+def has_body(blob):
+    """zip 에 본문(qualitative·세그먼트 장)이 있나. 2019~2022년쯤 zip 에는 재무제표 장만 있다."""
+    try:
+        return any("qualitative" in n or "sg" in n.rsplit("/", 1)[-1][:16]
+                   for n in zipfile.ZipFile(io.BytesIO(blob)).namelist())
+    except zipfile.BadZipFile:
+        return False
+
+
+def read(blob, pdf_url=None):
+    """zip 한 개 -> {"geo": {...}, "oh": {...}, "ob": {...}} (비면 {}).
+
+    **zip 에 본문이 없으면 같은 공시의 PDF 를 읽는다**(pdf_url) — 지역만. 수주는 PDF 에서 칸 이름(当·前)을
+    가를 수 없어 예상·누계를 집는다(구덴코 418,000 은 통기 예상이었다). 틀린 숫자보다 빈칸이 낫다."""
     vals = F.read_summary(blob)
     spans = spans_of(vals)
     if not spans:
         return {}
     tb = geojp.tables(blob)
     out = {}
+    if pdf_url and not has_body(blob):
+        try:
+            pdf = get(pdf_url, timeout=60)
+        except F.Throttled:
+            pdf = None
+        geo = geojp.geo_from(geojp.pdf_tables(pdf), spans) if pdf else {}
+        if geo:
+            out["geo"] = {f"{st}/{en}": {k: round(v) for k, v in row.items()} for (st, en), row in geo.items()}
+        return out
     geo = geojp.geo_from(tb, spans)
     if geo:
         out["geo"] = {f"{st}/{en}": {k: round(v) for k, v in row.items()} for (st, en), row in geo.items()}
@@ -257,7 +280,8 @@ def backfill(db, done):
                 continue
             done.add(fn)
             n_docs += 1
-            if blob and absorb(db, code, read(blob)):
+            pdf = f"https://www2.jpx.co.jp/disc/{code}0/{fn.replace('0812', '1401', 1)}" if fn.startswith("0812") else None
+            if blob and absorb(db, code, read(blob, pdf)):
                 hit += 1
             time.sleep(PAUSE)
         if complete:

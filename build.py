@@ -1759,8 +1759,15 @@ def _decum(spans):
     return out
 
 
+GEO_SAME = {"国内": "日本", "国内売上収益": "日本", "国内売上高": "日本", "日本国内": "日本",
+            "その他の地域": "その他", "その他地域": "その他", "その他の国": "その他"}
+
+
 def _as_rec(qs, axis):
-    """{종료일: {이름: 값}} -> 사업부 기록 꼴 {names, pts, axis}. 이름은 마지막 칸 값이 큰 순."""
+    """{종료일: {이름: 값}} -> 사업부 기록 꼴 {names, pts, axis}. 이름은 마지막 칸 값이 큰 순.
+    해마다 표기가 바뀌는 같은 지역(히타치 「国内売上収益」 -> 「日本」)은 한 줄로 잇는다(GEO_SAME)."""
+    if axis == "지역":
+        qs = {e: {GEO_SAME.get(n, n): v for n, v in r.items()} for e, r in qs.items()}
     if len(qs) < 2:
         return None
     ends = sorted(qs)
