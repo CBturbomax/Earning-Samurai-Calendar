@@ -189,11 +189,12 @@ def check(segs, prior, tot_now, tot_prior):
 
 def main():
     only = [a.upper() for a in sys.argv[1:]]
-    if not shutil.which("claude"):
-        print("claude CLI 가 없다 — 아무것도 안 한다.")
-        return
-    if not (os.environ.get("CLAUDE_CODE_OAUTH_TOKEN") or os.environ.get("ANTHROPIC_API_KEY")):
-        print("CLAUDE_CODE_OAUTH_TOKEN 이 없다 — 아무것도 안 한다(GitHub Secrets 에 넣으면 돈다).")
+    if ENGINE == "codex":
+        if not shutil.which("codex"):
+            print("codex CLI 가 없다 — 아무것도 안 한다.")
+            return
+    elif not shutil.which("claude") or not (os.environ.get("CLAUDE_CODE_OAUTH_TOKEN") or os.environ.get("ANTHROPIC_API_KEY")):
+        print("claude CLI 나 CLAUDE_CODE_OAUTH_TOKEN 이 없다 — 아무것도 안 한다.")
         return
     srcs = [sp.load("segments_sec.json"), sp.load("segments_edgar.json"), sp.load("segments_fpi.json"),
             sp.load("segments.json"), sp.load("segments_pr.json")]
