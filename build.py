@@ -1940,7 +1940,16 @@ def _ai_fill_one(base, add):
 
 
 def load_ai_fill():
-    raw = _read_stocks("ai_fill.json").get("stocks") or {}
+    raw = {}
+    for f in ["ai_fill.json"] + sorted(x.name for x in (HERE / "data").glob("ai_fill_s*.json")):   # 갈래마다 제 파일
+        for k, v in (_read_stocks(f).get("stocks") or {}).items():
+            have = raw.setdefault(k, {})
+            for kind, d in v.items():
+                if kind == "oc":
+                    for kk, lst in d.items():
+                        have.setdefault("oc", {}).setdefault(kk, []).extend(lst)
+                else:
+                    have.setdefault(kind, {}).update(d)
     nseg = ngeo = nord = 0
     def canon(spans):
         """같은 회사 안에서 같은 뜻의 두 표기(TW·Taiwan, US·United States)를 먼저 나온 이름 하나로."""
