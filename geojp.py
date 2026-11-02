@@ -147,6 +147,34 @@ def tables(blob):
     return out
 
 
+# ── PDF 결산단신(2019~2022년쯤 — zip 에 본문 표가 없던 시절) ─────────────────
+#
+# **그 시절 zip 에는 재무제표 장만 있다**(떠보기 11/02 — 2019~2021 미쓰비시전기·히타치·다케다·마키노 zip 에 qualitative·
+# 세그먼트 장이 없다). 지역·수주 표는 결산단신 PDF 에만 있다. PDF 를 줄·칸으로 펴서(pdftext.extract_cells) **HTML 표와
+# 같은 꼴**(앞글, 줄들)로 넘기면, 열·단위·기간을 연결 매출로 맞추는 규칙(geo_from)과 수주 규칙(orders_from)이 그대로 돈다.
+# 칸이 비면 PDF 에는 그 칸이 아예 없어 자리가 밀린다 — 그래서 합이 연결 매출과 맞는 칸만 쓰는 검증이 더 중요하다.
+
+def pdf_tables(pdf):
+    """결산단신 PDF -> [(앞글, 줄들)]. 지역·수주 낱말이 든 줄을 제목으로 보고 그 아래 서른 줄을 한 표로 본다."""
+    try:
+        import pdftext
+        lines = pdftext.extract_cells(pdf, max_pages=40)
+    except Exception:                                   # noqa: BLE001 — 암호·깨진 PDF 는 못 읽은 것으로
+        return []
+    rows = [[re.sub(r"\s+", " ", t).strip() for _x, t in sorted(cells) if t.strip()] for cells in lines]
+    rows = [r for r in rows if r]
+    out = []
+    for i, r in enumerate(rows):
+        txt = " ".join(r)
+        if len(txt) > 80 or not (GEO_HEAD.search(txt) or ORD_HEAD.search(txt)):
+            continue
+        before = " ".join(" ".join(x) for x in rows[max(0, i - 3):i + 1])
+        body = rows[i + 1:i + 31]
+        if len(body) >= 2:
+            out.append((before[-220:], body))
+    return out
+
+
 # ── 줄 하나 -> (이름, 들여쓰기, 값들) ──────────────────────────────────
 
 def parse_row(cells):
