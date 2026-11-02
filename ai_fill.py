@@ -69,7 +69,7 @@ def jp_sector(code):
         _JP_SECT.setdefault("_", "")
     return _JP_SECT.get(code, "")
 SINCE = "2018-01-01"
-DOC_LIMIT = 42000
+DOC_LIMIT = int(os.environ.get("AIFILL_DOC", "20000"))   # 원문 길이 상한 — 길수록 한도를 많이 먹는다
 EMPTY_VER = 3                   # 2: 일본 PDF 이름을 목록에서(미국 기준 회사 — 도요타·고마쓰)
 DRY_N = 4                       # 연달아 이만큼 읽어 맞은 것이 없으면 그 회사는 넉 달 쉰다
 KEYS = re.compile(r"segment|geograph|region|countr|americas|europe|asia|china|japan|emea|international|domestic|"
@@ -612,6 +612,8 @@ def main():
         print(f"  ! 구독 한도·과부하 — 여기서 멈춘다: {bud.limited}")
         db["limited"] = datetime.now(timezone.utc).isoformat(timespec="minutes")
     save(db)
+    u = ai_seg.USED
+    print(f"토큰: 엔진 {ai_seg.ENGINE} · 호출 {u['n']} · 입력 {u['in']:,} · 출력 {u['out']:,} · 호출당 {(u['in'] + u['out']) // max(u['n'], 1):,}")
     print(f"AI 빈칸 메우기: 회사 {done_keys} · 물어본 공시 {tried} · 검산 통과 기간 {got} · 남은 회사 {len(todo) - done_keys}")
 
 
