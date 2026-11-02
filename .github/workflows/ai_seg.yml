@@ -25,7 +25,7 @@ jobs:
   ai:
     runs-on: ubuntu-latest
     if: github.ref_name == 'main'
-    timeout-minutes: 58
+    timeout-minutes: 20
     env:
       CLAUDE_CODE_OAUTH_TOKEN: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
       AI_MODEL: sonnet
@@ -52,24 +52,14 @@ jobs:
           set -o pipefail
           python ai_seg.py | tee ai.log
           { echo '### AI 사업부 판독'; echo '```'; tail -40 ai.log; echo '```'; } >> "$GITHUB_STEP_SUMMARY"
-      - name: 🤖 AI 빈칸 메우기 (1Q18~ 사업부·지역·수주)
-        if: env.CLAUDE_CODE_OAUTH_TOKEN != ''
-        continue-on-error: true
-        timeout-minutes: 38
-        env:
-          AIFILL_SECS: '2040'
-        run: |
-          set -o pipefail
-          python ai_fill.py ${{ github.event.inputs.only }} | { grep -v '^  [a-z_]*\.json\|^  !' || true; } | tee fill.log
-          { echo '### AI 빈칸 메우기'; echo '```'; tail -60 fill.log; echo '```'; } >> "$GITHUB_STEP_SUMMARY"
       - name: 저장소에 반영
         if: env.CLAUDE_CODE_OAUTH_TOKEN != ''
         run: |
           set -u
           git config user.name  "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          rm -f ai.log fill.log
-          git add data/segments_aipr.json data/ai_fill.json 2>/dev/null || true
+          rm -f ai.log
+          git add data/segments_aipr.json 2>/dev/null || true
           git diff --cached --quiet && { echo "달라진 게 없다."; exit 0; }
           git commit -m "AI 사업부 판독 $(date -u +%F' '%H:%M) [skip ci]"
           for i in 1 2 3 4 5; do
