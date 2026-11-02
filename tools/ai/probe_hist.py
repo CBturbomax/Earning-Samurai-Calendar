@@ -22,11 +22,13 @@ def get(u):
 B = "https://emweb.securities.eastmoney.com/PC_HKF10/pages/home/index.html?code=00700&type=web&color=w"
 st, html = get(B)
 print("index", st, len(html))
-js = re.findall(r'(?:src|href)="([^"]+\.js)"', html)
+js = re.findall(r'(?:src|href)=["\']?([^"\' >]+\.js)', html)
+print(html[:4700])
 print("js:", js)
 names = set()
 for j in js:
-    u = j if j.startswith("http") else "https://emweb.securities.eastmoney.com/PC_HKF10/pages/home/" + j.lstrip("./")
+    u = j if j.startswith("http") else ("https:" + j if j.startswith("//") else
+                                         "https://emweb.securities.eastmoney.com/PC_HKF10/pages/home/" + j.lstrip("./"))
     s, t = get(u)
     found = set(re.findall(r"RPT_[A-Z0-9_]+", t))
     names |= found
@@ -46,12 +48,3 @@ for r in sorted(names):
         print(r, s, t[:500].replace("\n", " "))
         time.sleep(0.3)
 
-print("\n===== 동화순")
-for u in ("https://basic.10jqka.com.cn/HK0700/operate.html", "https://basic.10jqka.com.cn/new/HK0700/operate.html",
-          "https://basic.10jqka.com.cn/api/hk/HK0700/operate/", "https://basic.10jqka.com.cn/HK0700/operate.html?type=year"):
-    s, t = get(u)
-    print(u, s, len(t))
-    if t:
-        print("   ajax/json 주소:", sorted(set(re.findall(r'["\'](/[^"\']*(?:json|ajax|api)[^"\']*)["\']', t)))[:20])
-        print("   기간 표기:", sorted(set(re.findall(r"20\d\d-\d\d-\d\d", t)))[:20])
-    time.sleep(0.3)
