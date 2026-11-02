@@ -3415,6 +3415,11 @@ def pack_en(r, mkt):
     timing = TIMING_KO.get(raw_time, "") if mkt == "us" else ""
     hhmm = raw_time if mkt == "hk" else ""
     live = LIVE.get(r["code"]) if mkt == "us" else None
+    # **예정보다 일찍 낸 발표는 실제 날짜로 옮긴다**(11/02 루멘텀: 나스닥 예정 11/05, 실제 11/02). 실적 8-K 가 예정일 열흘 안쪽
+    # 앞에서 잡혔으면 그 줄의 날짜를 접수일로 고친다 — 안 옮기면 오늘 칸에 없고 11/05 칸에 '미발표'로 남는다.
+    if live and live.get("acc") and live.get("date") and live["date"] < r["date"] and \
+            (date.fromisoformat(r["date"]) - date.fromisoformat(live["date"])).days <= 10:
+        r = dict(r, date=live["date"])
     if live and live.get("date") == r["date"] and live.get("accepted"):
         # 실제 8-K 접수 시각이 있으면 그걸 쓴다. 장전/장후도 거기서 다시 가른다
         # (나스닥이 발표가 끝난 날의 장전/장후 표시를 지우고 주는 일이 있다).
@@ -5378,7 +5383,11 @@ function chip(r) {
   const past = pastDay(r);
   // 앞으로 발표할 것에 ✓ 를 달면 안 된다. 지난 분기 수치를 갖고 있다는 이유로
   // 다음 주 발표에 ✓ 가 붙으면 그게 제일 헷갈린다. 날짜가 지난 것만 본다.
-  const got = dn || (past && haveNumbers(r));
+  // **오늘 발표도 끝났으면 ✓**(11/02 회원님: "발표된 회사가 아직 미발표로 뜬다"). 일본·홍콩 줄 중 실제 공시 시각이 찍힌 것
+  // (TDnet·HKEXnews — 공시가 나와야 생기는 줄)은 그 자체가 발표 완료다. 어느 시장이든 방금 발표한 분기 숫자를 이미 가졌으면 완료다.
+  const today_ = dateOf(r) <= D.today;
+  const got = dn || (past && haveNumbers(r)) || (today_ && haveNumbers(r)) ||
+              (today_ && (r[9] === 'jp' || r[9] === 'hk') && r[14] === 1);
   const badge = got
     ? '<span class="tm ok" title="실적이 나왔습니다. 눌러보세요.">✓' + (t ? ' ' + t : '') + '</span>'
     : past

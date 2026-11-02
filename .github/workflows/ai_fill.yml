@@ -11,6 +11,10 @@ on:
     - cron: '23,53 * * * *'
   workflow_dispatch:
     inputs:
+      codex_only:
+        description: '1 이면 Codex 갈래만(이어달리기가 쓴다)'
+        required: false
+        default: ''
       only:
         description: '몇 종목만 (예: us:KO jp:6501) — 비우면 전부'
         required: false
@@ -46,8 +50,8 @@ jobs:
           # tok = 이번 실행 토큰 상한. claude2(회원님이 지금 채팅하는 계정)는 작게 — 채팅까지 막히면 안 된다
           - {shard: 0, want: claude1, tok: '150000'}
           - {shard: 1, want: claude2, tok: '60000'}
-          - {shard: 2, want: codex, tok: '300000'}
-          - {shard: 3, want: codex, tok: '300000'}
+          - {shard: 2, want: codex, tok: '300000', w: '2'}
+          - {shard: 3, want: codex, tok: '300000', w: '2'}
     env:
       TOK1: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
       TOK2: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN_2 }}
@@ -61,7 +65,7 @@ jobs:
       CODEX_EFFORT: low
       AIFILL_SHARD: '${{ matrix.shard }}/4'
       AIFILL_SECS: '2700'
-      AIFILL_WORKERS: '1'
+      AIFILL_WORKERS: "${{ matrix.w || '1' }}"   # Codex 갈래는 두 줄
       SEC_UA: 'Earning Samurai Calendar (cbpark@wisdomasset.co.kr)'
     steps:
       - uses: actions/checkout@v4
@@ -84,7 +88,6 @@ jobs:
             codex)   mkdir -p ~/.codex && printf '%s' "$CODEX_AUTH_JSON" > ~/.codex/auth.json && chmod 600 ~/.codex/auth.json
                      echo "AI_ENGINE=codex" >> "$GITHUB_ENV";;
           esac
-          if [ "${{ github.event_name }}" = "schedule" ] && [ "$pick" != "codex" ]; then echo "정시 실행은 Codex 만 — 건너뛴다"; pick=""; fi
           [ -n "$pick" ] && echo "AI_READY=1" >> "$GITHUB_ENV" || true
       - name: Claude Code CLI
         if: env.AI_ENGINE == 'claude'
@@ -122,10 +125,13 @@ jobs:
 
   relay:
     needs: fill
-    if: false
+    # 끝나면 곧장 다음 실행(Codex 갈래만) — 30분 크론을 기다리지 않는다. 한도에 걸린 갈래는 다음 실행에서 25분 쉰다.
+    if: always() && github.ref_name == 'main' && github.event.inputs.only == ''
     runs-on: ubuntu-latest
     steps:
       - name: 다음 실행을 건다(이어달리기)
         env:
           GH_TOKEN: ${{ github.token }}
-        run: gh workflow run ai_fill.yml --repo "${{ github.repository }}" --ref main || true
+        run: |
+          sleep 60
+          gh workflow run ai_fill.yml --repo "${{ github.repository }}" --ref main -f codex_only=1 || true
