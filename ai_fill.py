@@ -318,7 +318,7 @@ _PLOCK = threading.Lock()
 def ask(key, name, doc, cur, segs, geos, txt):
     """한도(429)에 걸리면 **모든 줄이 함께** 쉬었다가 같은 공시를 다시 묻는다(1·2·3…분). 여섯 번 연달아 막히면 진짜 한도로 본다."""
     txt = re.sub(r"[\x00-\x08\x0b\x0c\x0e-\x1f]", " ", txt)          # PDF 글자의 NUL 이 명령 인자를 깨뜨렸다
-    for attempt in range(6):
+    for attempt in range(int(os.environ.get("AIFILL_RETRY", "1"))):   # 기본 1 — 한도에 한 번 걸리면 곧장 멈춘다(추가 결제 금지)
         w = _PAUSE[0] - time.time()
         if w > 0:
             time.sleep(w)
@@ -327,7 +327,7 @@ def ask(key, name, doc, cur, segs, geos, txt):
         except ai_seg.Limited:
             with _PLOCK:
                 _PAUSE[0] = max(_PAUSE[0], time.time() + 60 * (attempt + 1))
-    raise ai_seg.Limited("429 여섯 번 연달아")
+    raise ai_seg.Limited("한도에 걸림")
 
 
 def _ask(key, name, doc, cur, segs, geos, txt):
@@ -526,8 +526,12 @@ def one(B, key, miss, db, bud, t0, verbose):
 
 def main():
     only = [a for a in sys.argv[1:] if ":" in a]
-    if not shutil.which("claude") or not (os.environ.get("CLAUDE_CODE_OAUTH_TOKEN") or os.environ.get("ANTHROPIC_API_KEY")):
-        print("claude CLI 또는 토큰이 없다 — 아무것도 안 한다.")
+    if ai_seg.ENGINE == "codex":
+        if not shutil.which("codex") or not (Path.home() / ".codex" / "auth.json").exists():
+            print("codex CLI 또는 로그인 파일이 없다 — 아무것도 안 한다.")
+            return
+    elif not shutil.which("claude") or not os.environ.get("CLAUDE_CODE_OAUTH_TOKEN"):
+        print("claude CLI 또는 구독 토큰이 없다 — 아무것도 안 한다.")   # API 키(종량제)로는 돌지 않는다
         return
     t0 = time.time()
     import build as B                                   # 화면에 실리는 그대로를 본다(12초쯤)

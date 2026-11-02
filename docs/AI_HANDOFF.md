@@ -146,3 +146,9 @@
   고쳐 헛경보 497 -> 193. AI 판독(ai_seg.py)은 회원님이 CLAUDE_CODE_OAUTH_TOKEN 을 Secrets 에 넣어야 돈다.
   **남은 것**: 홍콩 사업부·지역 옛 이력(무료 기계 판독 소스 없음 — 반기·연간 보고서 PDF 를 AI 로 읽는 길), 일본 지역·수주 옛 공시 수집 진행 중.
 
+
+## AI 빈칸 메우기 — 여러 구독 나눠 쓰기 (11/02)
+- `ai_seg.claude()` 는 `AI_ENGINE=codex` 면 `codex exec`(ChatGPT 구독)로 묻는다. 아니면 `claude -p`.
+- ai_fill.yml 네 갈래: 0=CLAUDE_CODE_OAUTH_TOKEN, 1=CLAUDE_CODE_OAUTH_TOKEN_2, 2·3=CODEX_AUTH_JSON(~/.codex/auth.json 내용). 빈 열쇠는 남은 것으로 대신.
+- 한도에 한 번 걸리면 그 갈래는 곧장 멈춘다(AIFILL_RETRY=1). 갈래당 2줄. 종량제 API 키로는 안 돈다.
+- 아직 `if: false`(꺼짐). 회원님이 열쇠를 넣고 각 계정의 추가 사용량(크레딧)을 끈 걸 확인한 뒤에만 켠다.
