@@ -152,3 +152,5 @@
 - ai_fill.yml 네 갈래: 0=CLAUDE_CODE_OAUTH_TOKEN, 1=CLAUDE_CODE_OAUTH_TOKEN_2, 2·3=CODEX_AUTH_JSON(~/.codex/auth.json 내용). 빈 열쇠는 남은 것으로 대신.
 - 한도에 한 번 걸리면 그 갈래는 곧장 멈춘다(AIFILL_RETRY=1). 갈래당 2줄. 종량제 API 키로는 안 돈다.
 - 아직 `if: false`(꺼짐). 회원님이 열쇠를 넣고 각 계정의 추가 사용량(크레딧)을 끈 걸 확인한 뒤에만 켠다.
+- 11/02 한도 아끼기: claude 는 `--tools "" --system-prompt 한 줄 --strict-mcp-config` + haiku, codex 는 reasoning low.
+  갈래당 1줄·한 번에 40건(AIFILL_MAX)·원문 2만 자(AIFILL_DOC). 이어달리기(relay)는 꺼 둠 — 손으로 한 번씩 돌린다.

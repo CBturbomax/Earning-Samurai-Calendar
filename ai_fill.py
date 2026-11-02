@@ -69,7 +69,7 @@ def jp_sector(code):
         _JP_SECT.setdefault("_", "")
     return _JP_SECT.get(code, "")
 SINCE = "2018-01-01"
-DOC_LIMIT = 42000
+DOC_LIMIT = int(os.environ.get("AIFILL_DOC", "20000"))   # 원문 길이 상한 — 길수록 한도를 많이 먹는다
 EMPTY_VER = 3                   # 2: 일본 PDF 이름을 목록에서(미국 기준 회사 — 도요타·고마쓰)
 DRY_N = 4                       # 연달아 이만큼 읽어 맞은 것이 없으면 그 회사는 넉 달 쉰다
 KEYS = re.compile(r"segment|geograph|region|countr|americas|europe|asia|china|japan|emea|international|domestic|"
