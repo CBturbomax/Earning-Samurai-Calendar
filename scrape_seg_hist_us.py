@@ -78,7 +78,7 @@ def gaps_by_ticker():
             return {}
     fin = stocks("financials.json")
     have = {}
-    for name in ("segments_sec.json", "segments_edgar.json", "segments.json"):
+    for name in ("segments_sec.json", "segments_edgar.json"):    # segments.json(stockanalysis)은 이름이 달라 화면 기록과 안 이어진다 — 덮인 걸로 안 친다
         for k, v in stocks(name).items():
             t = k.replace("us:", "")
             for p in v.get("pts") or []:
