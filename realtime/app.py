@@ -2195,6 +2195,9 @@ PR_EVERY = float(os.environ.get("PR_EVERY", "15"))
 PR_SENT = {}                                     # (열쇠, 현지 날짜) -> 사건 id
 PR_TITLE = re.compile(r"(report|announce|post|deliver|declare)s?\b.*\b(results|earnings)|\bresults\b.*\b(quarter|fiscal|year)|"
                       r"\b(first|second|third|fourth)[- ]quarter\b.*\b(results|earnings)|\bQ[1-4]\b.*\bresults", re.I)
+YAHOO_DONE = re.compile(r"earnings snapshot|^(?=.*\b(reports?|posts?|surpass(es)?|tops?|beats?|lags?|miss(es)?|meets?|matches|delivers?)\b)"
+                        r"(?=.*\b(Q[1-4]|quarter|quarterly)\b)(?=.*\b(earnings|results|loss|profit|revenues?)\b)", re.I)
+PR_PREVIEW = re.compile(r"gears up|what to expect|ahead of|to report|will report|preview|set to|expected to|could|should|\?", re.I)
 PR_NOT = re.compile(r"gears up|what to expect|preview|ahead of|to report|will report|set to|expected to|estimates?\b|should you|"
                     r"\bbeat|\bmiss|analyst|transcript|\bstock\b|\bshares\b|investors|watch|\bvs\.?\b|key metrics|"
                     r"wall street|\bwhy\b|\bhow\b|\?|conference call|webcast|to announce|will announce|date|schedule", re.I)
@@ -2254,10 +2257,16 @@ def pr_watch():
                     if not link or link in seen:
                         continue
                     seen.add(link)
-                    if not PR_TITLE.search(title) or PR_NOT.search(title):
-                        continue                                 # 예고·분석 기사(「Gears Up to Report Q3 Earnings: What to Expect」)는 발표가 아니다
                     nt = " " + _pr_norm(title) + " "
                     hit = [c for c in cands if (" " + c[0] + " ") in nt]
+                    # 발표 **뒤에** 붙는 확인 기사 — AP 「Ferrari: Q3 Earnings Snapshot」 · Zacks 「Ferrari (RACE) Surpasses Q3 Earnings…」.
+                    # 회사 보도자료 제목에 이름도 '실적'도 없을 때(페라리 11/03 「STRONG MIX … SUSTAIN Q3 GROWTH」) 이것으로 잡는다.
+                    tick = re.findall(r"\((?:NYSE|NASDAQ|Nasdaq|NYSEAMERICAN)?:?\s*([A-Z][A-Z.\-]{0,6})\)", title)
+                    if tick:
+                        hit = [c for c in cands if c[2] in tick or c[2].replace(".", "-") in tick] or hit
+                    done_note = bool(YAHOO_DONE.search(title)) and bool(hit) and not PR_PREVIEW.search(title)
+                    if not done_note and (not PR_TITLE.search(title) or PR_NOT.search(title)):
+                        continue                                 # 예고·분석 기사(「Gears Up to Report Q3 Earnings: What to Expect」)는 발표가 아니다
                     if len(hit) != 1:                            # 못 찾거나 둘 이상이면 안 보낸다(엉뚱한 회사보다 8-K 를 기다리는 게 낫다)
                         continue
                     try:
@@ -2270,6 +2279,32 @@ def pr_watch():
         except Exception as e:                                   # noqa: BLE001
             log("보도자료 감시:", repr(e)[:160])
         time.sleep(max(1.0, PR_EVERY - (time.time() - t0)))
+
+
+_ZK = re.compile(r"revenues? of \$\s?([\d,.]+)\s*(billion|million)[^.]{0,80}?quarter ended (\w+) (\d{4})[^$]{0,300}?"
+                 r"year-ago revenues? of \$\s?([\d,.]+)\s*(billion|million)", re.I)
+
+
+def zacks_point(key, period, raw):
+    """확인 기사 본문의 「revenues of $1.98 billion for the quarter ended September 2026 … year-ago revenues of $1.71 billion」.
+    **전년 값이 우리가 가진 전년 같은 분기와 2% 안일 때만** 이번 값을 쓴다(숫자를 다시는 틀리지 않게 — 11/03 회원님)."""
+    t = re.sub(r"<[^>]+>", " ", raw)
+    t = re.sub(r"\s+", " ", html.unescape(t))
+    m = _ZK.search(t)
+    if not m:
+        return None
+    k = lambda v, u: float(v.replace(",", "")) * (1e9 if u.lower() == "billion" else 1e6)
+    cur, prev = k(m.group(1), m.group(2)), k(m.group(5), m.group(6))
+    lab = label_of(period)
+    py = _prev_year(lab)
+    with H.lock:
+        pts = [list(p) for p in (H.D.get("fin", {}).get(key) or {}).get("points") or []]
+    ref = next((p[1] for p in pts if p[0] == py and p[1]), None)
+    if not ref or abs(prev - ref) / ref > 0.02:
+        log("확인 기사 숫자 — 전년 값이 우리 것과 안 맞아 버림", key, prev, ref)
+        return None
+    log("확인 기사에서 이번 분기 매출", key, lab, cur)
+    return {"label": lab, "rev": cur}
 
 
 def pr_process(c, title, link, pt):
@@ -2291,6 +2326,8 @@ def pr_process(c, title, link, pt):
         if got and got.get("rev"):
             point = {"label": label_of(period), "rev": got["rev"], "opi": got.get("opi"),
                      "ni": got.get("ni"), "eps": got.get("eps")}
+        elif raw:
+            point = zacks_point(key, period, raw)
     except Exception:                                            # noqa: BLE001
         log("보도자료 표 읽기 실패", code, traceback.format_exc(limit=2))
     log(f"보도자료로 먼저 잡음 {key} {title[:80]}")
