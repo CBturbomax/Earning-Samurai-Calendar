@@ -47,7 +47,7 @@ KEEP_DAYS = 4
 # 보도자료 표 읽기 규칙 판. 올리면 이미 읽은 종목도 다시 읽는다(pr_table 을 고칠 때).
 # 2: 누계 열 거르기(직전 분기의 0.5~2배) · 영업이익·순이익 전년 대조 0.6%
 # 3: 직전 분기 0.6~1.7배 · 전년 분기 0.5~2.0배 (CVLT·LECO 오검출)
-PR_V = 3
+PR_V = 4
 
 
 def et_today():
@@ -433,6 +433,27 @@ def main():
                 save(stocks, typical, st)
         else:
             st["stage"] = "끝"
+        # **오늘·어제 밖의 종목도 규칙이 바뀌면 다시 읽는다**(11/03 YUM 오독 — 이번 시즌에 읽어 둔 137곳). 남은 시간만큼씩.
+        if cikmap:
+            for sym, rec in list(stocks.items()):
+                if time.time() - t0 > SECS:
+                    break
+                if not (isinstance(rec, dict) and rec.get("acc") and rec.get("pr") and rec.get("prv") != PR_V):
+                    continue
+                pri = sec_prior(sym, rec.get("period"))
+                cik = ss.cik_of(cikmap, sym)
+                raw = ex99_html(cik, rec["acc"]) if (pri and cik) else None
+                time.sleep(PAUSE)
+                if raw is None and pri and cik:
+                    continue                     # 받기 실패 — 다음 바퀴
+                got = pr_table.read(raw, pri) if raw else None
+                if got:
+                    y, m, d = pri["end"].split("-")
+                    got["end"] = f"{int(y) + 1}-{m}-{d}"
+                old = (rec.get("pr") or {}).get("rev")
+                if old and (not got or abs(got["rev"] - old) > 1):
+                    print(f"  8-K 표 다시 읽음 {sym}: {old / 1e6:,.0f}M -> {got['rev'] / 1e6:,.0f}M" if got else f"  8-K 표 다시 읽음 {sym}: 버림")
+                rec["pr"], rec["prv"] = got, PR_V
     except Exception as e:                       # 무엇이든 남기고 죽는다
         import traceback
         err("예외: " + "".join(traceback.format_exception_only(type(e), e)).strip())

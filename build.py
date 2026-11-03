@@ -3694,7 +3694,10 @@ def pack_en(r, mkt):
     if live and live.get("acc") and live.get("date") and live["date"] < r["date"] and \
             (date.fromisoformat(r["date"]) - date.fromisoformat(live["date"])).days <= 10:
         r = dict(r, date=live["date"])
-    if live and live.get("date") == r["date"] and live.get("accepted"):
+    # **접수가 다음 날 아침이고 나스닥이 '장후'라 했으면 보도자료는 전날 저녁에 나갔다** — 외국 기업 6-K 는 보도자료 뒤 몇 시간
+    # 지나 SEC 에 접수된다(11/03 그랩: 11/02 장후 발표, 6-K 는 11/03 08:16 접수 → 하루 늦게 '오늘 발표'로 보였다). 그땐 접수 시각을 안 쓴다.
+    late_file = bool(live and live.get("accepted") and live["accepted"][:10] > r["date"] and raw_time == "time-after-hours")
+    if live and live.get("date") == r["date"] and live.get("accepted") and not late_file:
         # 실제 8-K 접수 시각이 있으면 그걸 쓴다. 장전/장후도 거기서 다시 가른다
         # (나스닥이 발표가 끝난 날의 장전/장후 표시를 지우고 주는 일이 있다).
         hhmm = live["accepted"]
@@ -8291,7 +8294,9 @@ function rtApply(ev) {
   const m = ev.mkt, code = ev.code, key = m + ':' + code;
   if (!MKT[m]) return false;
   let r = ROWS.find(x => keyOf(x) === key && Math.abs(Date.parse(x[0]) - Date.parse(ev.date)) <= 4 * 864e5);
-  if (r) { r[0] = ev.date; r[12] = ev.kstDate; r[13] = ev.kstTime; r[14] = 1; }
+  // 장후 발표 회사의 서류가 다음 날 아침 접수되면(외국 기업 6-K — 그랩) 발표일을 옮기지 않는다
+  const lateFile = r && r[10] === '장후' && (Date.parse(ev.date) - Date.parse(r[0])) === 864e5;
+  if (r && !lateFile) { r[0] = ev.date; r[12] = ev.kstDate; r[13] = ev.kstTime; r[14] = 1; }
   else {
     // 은행·리츠·ETF·채권 펀드는 싣지 않는다(빌드의 drop_banks_reits 와 같은 뜻 — 회원님 11/03 「493A 국채 ETF 는 왜 있나」)
     const raw = (ev.orig || '') + ' ' + (ev.name || '');
