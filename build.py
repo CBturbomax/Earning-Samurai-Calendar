@@ -2311,6 +2311,104 @@ def load_px(keys):
     rs = {k: max(1, min(99, int(i * 99 / max(1, len(order) - 1)) + 1)) for i, k in enumerate(order)}
     return {k: v[2:9] + [rs.get(k)] for k, v in px.items()}
 
+
+JP_SEC_SAME = {"식품": "식료품", "자동차": "운송용기기", "情報通信": "정보·통신", "비철금속제품": "비철금속", "섬유": "섬유제품",
+               "기타제조": "기타제품", "요업": "유리·토석제품"}
+
+
+def _trend(cl, n, slope=4):
+    """이평선 위·상승 1, 아래·하락 -1, 엇갈림 0 (자료 모자라면 None)."""
+    if len(cl) < n + slope:
+        return None
+    ma = sum(cl[-n:]) / n
+    ma0 = sum(cl[-n - slope:-slope]) / n
+    return 1 if cl[-1] > ma and ma > ma0 else -1 if cl[-1] < ma and ma < ma0 else 0
+
+
+def _ma(cl, n):
+    return [round(sum(cl[i - n + 1:i + 1]) / n, 2) if i >= n - 1 else None for i in range(len(cl))]
+
+
+def load_board(packed):
+    """시장 현황판(회원님 11/03) — 나라마다 지수·ETF 타일 + 우리 종목으로 만든 업종 지수(시총 가중) 타일.
+    주가는 scrape_px.py 의 2년 주봉(w)·ETF 일봉(etf). 타일 = 2년 주봉 선(첫 주 = 100) + 30주선 + 일·주·월 추세 + 1·3개월 수익률."""
+    import scrape_px
+    w, etf = {}, {}
+    for f in sorted((HERE / "data").glob("px_s*.json")):
+        try:
+            d = json.loads(f.read_text(encoding="utf-8"))
+            w.update(d.get("w", {}))
+            etf.update(d.get("etf", {}))
+        except (OSError, ValueError):
+            pass
+    if not w and not etf:
+        return []
+    cap, sec = {}, {}
+    for p in packed:
+        k = p[9] + ":" + p[1]
+        cap[k] = max(cap.get(k, 0), p[11] or 0)
+        if p[5]:
+            sec[k] = JP_SEC_SAME.get(p[5], p[5]) if p[9] == "jp" else p[5]
+
+    def weekly_of_daily(pts):
+        by = {}
+        for d, c in pts:
+            y, wn, _ = date.fromisoformat(d).isocalendar()
+            by[(y, wn)] = c
+        return [by[k] for k in sorted(by)][-105:]
+
+    def tile(name, sub, wk, daily=None, bench3=None, extra=None):
+        if len(wk) < 40:
+            return None
+        base = wk[0]
+        pts = [round(c / base * 100, 2) for c in wk]
+        r = lambda n: round((wk[-1] / wk[-1 - n] - 1) * 100, 1) if len(wk) > n and wk[-1 - n] else None
+        t = {"n": name, "s": sub, "p": pts, "m": _ma(pts, 30), "r1": r(4), "r3": r(13),
+             "d52": round((1 - wk[-1] / max(wk[-52:])) * 100, 1),
+             "b": [_trend([c for _, c in daily], 50) if daily else None, _trend(wk, 30), _trend(wk, 43)]}
+        if bench3 is not None and t["r3"] is not None:
+            t["rel"] = round(t["r3"] - bench3, 1)
+        if extra:
+            t.update(extra)
+        return t
+
+    out = []
+    for mkt in ("us", "jp", "hk"):
+        lst = scrape_px.ETFS[mkt]
+        bw = weekly_of_daily(etf[lst[0][0]]) if lst[0][0] in etf else []
+        b3 = round((bw[-1] / bw[-14] - 1) * 100, 1) if len(bw) > 14 else None
+        tiles = []
+        for sym, nm in lst:
+            if sym in etf:
+                t = tile(nm, sym.replace(".T", "").replace(".HK", ""), weekly_of_daily(etf[sym]), etf[sym], b3)
+                if t:
+                    t["idx"] = 1 if sym in [x[0] for x in lst[:4 if mkt == "us" else 3]] else 0
+                    tiles.append(t)
+        if mkt != "us":                                       # 미국 업종은 섹터 ETF 가 더 잘게 갈라 준다
+            groups = {}
+            for k, v in w.items():
+                if k.startswith(mkt + ":") and sec.get(k) and cap.get(k):
+                    groups.setdefault(sec[k], []).append(k)
+            for g, ks in groups.items():
+                keys = None
+                ser = []
+                for k in ks:
+                    d0, cl = w[k]
+                    if len(cl) < 100:
+                        continue
+                    ser.append((cap[k], cl[-100:]))
+                if len(ser) < 6:
+                    continue
+                tot = sum(c for c, _ in ser)
+                idx = [sum(c * cl[i] / cl[-1] for c, cl in ser) / tot for i in range(100)]
+                t = tile(g, "", idx, None, b3, {"c": len(ser), "f": [mkt, g]})
+                if t:
+                    tiles.append(t)
+        tiles.sort(key=lambda t: (-t.get("idx", 0), -(t.get("rel") if t.get("rel") is not None else -1e9)))
+        if tiles:
+            out.append({"m": mkt, "t": tiles})
+    return out
+
 def load_surprise(keys):
     """Zacks EPS 서프라이즈 이력(scrape_surprise.py) -> {us:티커: [[회계분기 'YYYY-MM', %], ...]} — 2017-10 이후 최대 36칸."""
     st = {}
@@ -4145,6 +4243,7 @@ def build():
         "descKo": {k: drop_name_lead(v, names_of.get(k, ())) for k, v in dict(_desc_ai(), **DESC_KO).items() if k in on_screen},   # 사람이 쓴 것(DESC_KO)이 AI 번역을 이긴다
         "sur": load_surprise(on_screen),
         "px": load_px(on_screen),
+        "board": load_board(packed),
         "desc": {k: v["t"] for k, v in DESC.items()
                  if v.get("t") and k in on_screen and k not in DESC_KO},
         # 사업부별 매출. "매출이 늘었다"보다 "어디서 늘었다"가 중요할 때가 있다.
@@ -4436,6 +4535,19 @@ __FLAGCSS__
    같은 꼴이다 — 묶음 머리에 종목 수와 합계, 카드마다 코드·이름·업종·시총,
    그 아래 최신월 수치와 전년비, 막대 그림, 맨 아래 한 줄짜리 사업 설명.
    한 종목이 한 줄을 다 쓰던 큰 카드도, 이름만 빽빽하던 작은 카드도 아니다. */
+.board .bdg { margin:6px 0 18px; }
+.board .bdh { font-weight:800; font-size:15px; margin:4px 0 8px; }
+.board .bdt { display:grid; grid-template-columns:repeat(auto-fill, minmax(250px, 1fr)); gap:10px; }
+.board .bt { border:1px solid var(--line, #30363d); border-radius:10px; padding:9px 10px 7px; background:var(--panel, #161b22); }
+.board .bt.idx { border-color:#8b949e; }
+.board .bt.f { cursor:pointer; } .board .bt.f:hover { border-color:#f5b301; }
+.board .bt1 { display:flex; justify-content:space-between; font-size:13px; font-weight:700; }
+.board .bt1 small { font-weight:400; opacity:.6; margin-left:4px; }
+.board .bt svg { width:100%; height:70px; display:block; }
+.board .bt2 { display:flex; justify-content:space-between; align-items:center; font-size:11.5px; opacity:.9; margin-top:3px; }
+.board .bb { display:inline-block; padding:0 5px; border-radius:4px; margin-right:3px; font-size:11px; background:rgba(139,148,158,.18); }
+.board .bb.u { background:rgba(255,92,92,.18); color:#ff6b6b; } .board .bb.d { background:rgba(76,154,255,.18); color:#5ca8ff; }
+.board .up { color:#ff5c5c; } .board .dn { color:#4c9aff; }
 .scrtools { flex-wrap:wrap; }
 .scrpre { display:flex; flex-wrap:wrap; gap:6px; }
 .scrpre button { background:var(--panel, #161b22); color:inherit; border:1px solid var(--line, #30363d); border-radius:16px;
@@ -5072,6 +5184,7 @@ svg.bars rect.b:hover { fill:var(--a3); }
 
 <nav class="samurai-nav" aria-label="어닝사무라이 메뉴">
   <a href="./" aria-current="page">실적 캘린더</a>
+  <a href="#bdMeta">시장 현황판</a>
   <a href="#scrMeta">실적 스크리너</a>
   <a href="#mnMeta">일본 월매출</a>
   <a href="japan-exports/">일본 수출</a>
@@ -5111,7 +5224,10 @@ svg.bars rect.b:hover { fill:var(--a3); }
   <button class="btn" id="fitBtn" hidden></button>
 </div>
 
-<h2><span class="n">2</span>📈 실적 스크리너 <span class="meta" id="scrMeta"></span></h2>
+<h2><span class="n">2</span>🧭 시장 현황판 <span class="meta" id="bdMeta">2년 주봉 · 주황선 30주선 · 강한 순</span></h2>
+<div class="board" id="board"></div>
+
+<h2><span class="n">3</span>📈 실적 스크리너 <span class="meta" id="scrMeta"></span></h2>
 <div class="tools scrtools">
   <span class="scrpre" id="scrPre"></span>
   <select id="scrMkt"><option value="">미국·일본·홍콩</option><option value="us">미국</option><option value="jp">일본</option><option value="hk">홍콩</option></select>
@@ -5124,7 +5240,7 @@ svg.bars rect.b:hover { fill:var(--a3); }
 </div>
 <div class="scrwrap" id="scr"></div>
 
-<h2><span class="n">3</span>🇯🇵 일본 월매출 <span class="meta" id="mnMeta"></span></h2>
+<h2><span class="n">4</span>🇯🇵 일본 월매출 <span class="meta" id="mnMeta"></span></h2>
 <div class="tools">
   <input type="search" id="mnQ" placeholder="회사·코드 검색 — 뷰셀 / 7685 / 라운드원" autocomplete="off">
   <select id="mnCap">
@@ -5143,14 +5259,14 @@ svg.bars rect.b:hover { fill:var(--a3); }
 </div>
 <div id="mnList"></div>
 
-<h2><span class="n">4</span>테마별 주요 종목 실적발표일 <span class="meta" id="gMeta"></span></h2>
+<h2><span class="n">5</span>테마별 주요 종목 실적발표일 <span class="meta" id="gMeta"></span></h2>
 <div id="groups"></div>
 
-<h2><span class="n">5</span>일자별 발표 건수 <span class="meta">좌우로 스크롤 · 막대를 누르면 그 주로 이동</span></h2>
+<h2><span class="n">6</span>일자별 발표 건수 <span class="meta">좌우로 스크롤 · 막대를 누르면 그 주로 이동</span></h2>
 <div class="chartbox" id="dailyChartScroll" tabindex="0" role="region" aria-label="일자별 발표 건수, 좌우로 스크롤"><svg class="bars" id="bars" viewBox="0 0 360 280"
      preserveAspectRatio="xMinYMid meet" role="img" aria-label="날짜별 발표 건수 막대 차트"></svg></div>
 
-<h2><span class="n">6</span>전체 종목 표</h2>
+<h2><span class="n">7</span>전체 종목 표</h2>
 <div class="tools">
   <input type="search" id="q" placeholder="한글·원문·영문·코드 검색 — 엔비디아 / NVDA / 소니 / ソニー / 텐센트 / 00700" autocomplete="off">
   <select id="fSector"><option value="">전체 업종</option></select>
@@ -7800,6 +7916,39 @@ const FIND = (() => {
 
 /* ── 실적 스크리너(회원님 11/03) — 이미 실린 분기 실적(D.fin)만으로 화면에서 거른다. 분기 보고 회사만(반기 회사는 뺀다).
    기준 분기는 회사마다 가장 최근 분기, 비교는 전년 같은 분기(라벨 '3Q26' ↔ '3Q25'). 오래된 실적(가장 새 분기보다 두 분기 넘게 뒤)은 뺀다. */
+/* ── 시장 현황판(회원님 11/03) — D.board: 나라마다 지수·ETF + 업종 지수 타일. 업종 타일을 누르면 아래 스크리너가 그 업종으로 걸러진다. */
+let scrSecF = null;
+function bdDraw() {
+  const B = D.board || [], el = document.getElementById('board');
+  if (!B.length) { el.innerHTML = '<p class="meta">주가를 아직 모으는 중입니다.</p>'; return; }
+  const MK = { us: '🇺🇸 미국 — 지수·섹터 ETF', jp: '🇯🇵 일본 — 지수 · 업종(구성 종목 시총 가중)', hk: '🇭🇰 홍콩 — 지수 · 업종(구성 종목 시총 가중)' };
+  const pf = v => v == null ? '—' : (v >= 0 ? '+' : '') + (Math.abs(v) >= 10 ? Math.round(v) : v.toFixed(1));
+  const cls = v => v == null ? '' : v >= 0 ? 'up' : 'dn';
+  const svg = t => {
+    const W = 240, H = 70, all = t.p.concat(t.m.filter(x => x != null)), lo = Math.min(...all), hi = Math.max(...all);
+    const X = i => (i / (t.p.length - 1) * (W - 34)).toFixed(1), Y = v => (H - 4 - (v - lo) / ((hi - lo) || 1) * (H - 10)).toFixed(1);
+    const line = (a, c, w) => '<polyline fill="none" stroke="' + c + '" stroke-width="' + w + '" points="' +
+      a.map((v, i) => v == null ? '' : X(i) + ',' + Y(v)).filter(Boolean).join(' ') + '"/>';
+    const last = t.p[t.p.length - 1], tot = last - 100;
+    return '<svg viewBox="0 0 ' + W + ' ' + H + '" preserveAspectRatio="none">' + line(t.m, '#f0883e', 1.2) + line(t.p, 'currentColor', 1.4) +
+      '<text x="' + (W - 32) + '" y="' + (+Y(last) + 4) + '" font-size="10" font-weight="700" fill="currentColor">' + pf(tot) + '%</text></svg>';
+  };
+  const badge = (l, v) => '<span class="bb ' + (v === 1 ? 'u' : v === -1 ? 'd' : '') + '">' + l + (v === 1 ? '▲' : v === -1 ? '▼' : v === 0 ? '·' : '—') + '</span>';
+  el.innerHTML = B.map(g => '<div class="bdg"><div class="bdh">' + MK[g.m] + '</div><div class="bdt">' + g.t.map(t =>
+    '<div class="bt' + (t.idx ? ' idx' : '') + (t.f ? ' f' : '') + '"' + (t.f ? ' data-bdf="' + esc(t.f.join('|')) + '"' : '') + '>' +
+    '<div class="bt1"><span>' + esc(t.n) + '<small>' + esc(t.s || (t.c ? t.c + '종목' : '')) + '</small></span><span class="' + cls(t.r1) + '">1개월 ' + pf(t.r1) + '%</span></div>' +
+    svg(t) +
+    '<div class="bt2"><span>' + (t.b[0] != null ? badge('일', t.b[0]) : '') + badge('주', t.b[1]) + badge('월', t.b[2]) + '</span><span>' +
+    (t.idx ? '52주 고점 대비 -' + pf(t.d52).replace('+', '') + '%' : '3개월 상대 <b class="' + cls(t.rel) + '">' + pf(t.rel) + '%p</b>') + '</span></div></div>').join('') + '</div></div>').join('');
+}
+document.getElementById('board').addEventListener('click', e => {
+  const t = e.target.closest('[data-bdf]'); if (!t) return;
+  const [m, g] = t.dataset.bdf.split('|');
+  scrSecF = [m, g]; scrPre = ''; document.getElementById('scrMkt').value = m; scrDraw();
+  document.getElementById('scrMeta').scrollIntoView({ behavior: 'smooth' });
+});
+bdDraw();
+
 const SCR_BAD = [];
 const SCR = (() => {
   const qi = l => { const m = /^([1-4])Q(\d\d)$/.exec(l || ''); return m ? (2000 + +m[2]) * 4 + (+m[1] - 1) : null; };
@@ -7855,13 +8004,16 @@ function scrDraw() {
         capMin = +document.getElementById('scrCap').value, bySec = document.getElementById('scrSec').checked;
   const jo = b => b * 1e9 * D.usdKrw / 1e12;
   const base = document.getElementById('scrBase').checked;
-  let rows = SCR.filter(o => pre[2](o) && (!base || !(o.revY >= 200 || o.opY >= 200)) && (!mkt || o.r[9] === mkt) && (!capMin || (o.cap && jo(o.cap) >= capMin)));
+  const secOf = o => o.r[9] === 'jp' ? ({ '식품': '식료품', '자동차': '운송용기기', '情報通信': '정보·통신', '비철금속제품': '비철금속', '섬유': '섬유제품', '기타제조': '기타제품', '요업': '유리·토석제품' }[o.r[5]] || o.r[5]) : o.r[5];
+  let rows = SCR.filter(o => pre[2](o) && (!scrSecF || (o.r[9] === scrSecF[0] && secOf(o) === scrSecF[1])) && (!base || !(o.revY >= 200 || o.opY >= 200)) && (!mkt || o.r[9] === mkt) && (!capMin || (o.cap && jo(o.cap) >= capMin)));
   const key = scrSort || pre[3];
   rows.sort((a, b) => ((b[key] ?? -1e9) - (a[key] ?? -1e9)) * (scrDesc ? 1 : -1) * (key === 'd52' ? -1 : 1));
   if (bySec) rows.sort((a, b) => (a.r[5] ? 0 : 1) - (b.r[5] ? 0 : 1) || (a.r[5] || '').localeCompare(b.r[5] || ''));   // 업종 미상은 맨 뒤
   document.getElementById('scrPre').innerHTML = SCR_PRE.map(p =>
     '<button data-scrpre="' + p[0] + '" class="' + (p[0] === scrPre ? 'on' : '') + '">' + p[1] + '</button>').join('');
-  document.getElementById('scrMeta').textContent = rows.length.toLocaleString() + '종목';
+  document.getElementById('scrMeta').innerHTML = rows.length.toLocaleString() + '종목' +
+    (scrSecF ? ' · <button class="btn" id="scrSecX">업종: ' + esc(scrSecF[1]) + ' ✕</button>' : '');
+  const sx = document.getElementById('scrSecX'); if (sx) sx.onclick = () => { scrSecF = null; scrDraw(); };
   const pf = v => Math.abs(v) >= 10 ? Math.round(v).toLocaleString() : v.toFixed(1);   // 두 자리 넘으면 소수점 없이(회원님 11/03)
   const pc = v => v == null ? '—' : '<span class="' + (v >= 0 ? 'up' : 'dn') + '">' + (v >= 0 ? '+' : '') + pf(v) + '%</span>';
   const th = (k, t, l) => '<th class="' + (l ? 'l' : '') + '"' + (k ? ' data-scrsort="' + k + '"' : '') + '>' + t + (key === k ? (scrDesc ? ' ▼' : ' ▲') : '') + '</th>';
