@@ -860,6 +860,7 @@ def merge_fin(a, b):
 
 
 FIN = load_fin()
+FIN_PK = {}
 
 
 def load_live():
@@ -2411,6 +2412,34 @@ def load_board(packed):
         tiles.sort(key=lambda t: (-t.get("idx", 0), -(t.get("rel") if t.get("rel") is not None else -1e9)))
         if tiles:
             out.append({"m": mkt, "t": tiles})
+    return out
+
+
+def load_acq(fin_packed):
+    """미국 인수 확인(scrape_acq_us.py) -> {us:티커: [[분기, 인수 지출 달러]]}. 매출이 전년비 +35%·직전 분기 대비 +25% 뛴 분기에
+    그 분기나 직전 분기의 '사업 인수 지출'이 직전 1년 매출의 15% 를 넘을 때만(회원님 11/03 닥터페퍼 JDE Peet's)."""
+    try:
+        st = json.loads((HERE / "data" / "acq_us.json").read_text(encoding="utf-8")).get("stocks", {})
+    except (OSError, ValueError):
+        return {}
+    out = {}
+    for t, rec in st.items():
+        q, raw, pk = rec.get("q") or {}, FIN.get("us:" + t) or {}, fin_packed.get("us:" + t) or {}
+        pts = [p for p in (raw.get("points") or []) if p.get("rev") and p.get("end")]
+        lab = {round(p[1]): p[0] for p in (pk.get("points") or []) if p[1]}
+        if not q or len(pts) < 5:
+            continue
+
+        def spent(end):
+            d0 = date.fromisoformat(end)
+            return sum(v for e, v in q.items() if abs((date.fromisoformat(e) - d0).days) <= 20)
+        for i in range(4, len(pts)):
+            p, pq, y = pts[i], pts[i - 1], pts[i - 4]
+            if not (y["rev"] > 0 and pq["rev"] > 0 and p["rev"] / y["rev"] >= 1.35 and p["rev"] / pq["rev"] >= 1.25):
+                continue
+            amt = spent(p["end"]) + spent(pq["end"])
+            if amt >= 0.15 * sum(x["rev"] for x in pts[i - 4:i]) and round(p["rev"]) in lab:
+                out.setdefault("us:" + t, []).append([lab[round(p["rev"])], amt])
     return out
 
 def load_surprise(keys):
@@ -4038,6 +4067,9 @@ def build():
     # 사업부별 매출은 총매출과 대본 뒤에 싣는다. 두 배로 부푼 종목은 조용히
     # 지우지 않고 몇 종목을 뺐는지 수집 기록에 적는다.
     on_screen = {p[9] + ":" + p[1] for p in packed}
+    global FIN_PK
+    FIN_PK = {s: pack_fin(rec) for s, rec in FIN.items()
+              if (rec.get("points") or rec.get("eps")) and s in on_screen}
     names_of = {}
     for p in packed:
         names_of.setdefault(p[9] + ":" + p[1], set()).update([p[2], p[7]])
@@ -4250,9 +4282,8 @@ def build():
         "live": {s: [v["date"], v.get("url", "")] for s, v in LIVE.items() if v.get("acc")},
         # 실시간 서버(Railway) 주소 — realtime/URL. 있으면 화면이 거기서 새 실적을 직접 받는다.
         "rt": RT_URL,
-        "fin": {s: pack_fin(rec) for s, rec in FIN.items()
-                if (rec.get("points") or rec.get("eps"))
-                and s in {p[9] + ":" + p[1] for p in packed}},
+        "fin": FIN_PK,
+        "acq": load_acq(FIN_PK),
         # 무엇을 파는 회사인가. 한국어는 사람이 쓴 것(descriptions.py), 원문은
         # 받아온 것(desc.json). 화면에 실린 종목 것만 싣는다.
         "descKo": {k: drop_name_lead(v, names_of.get(k, ())) for k, v in dict(_desc_ai(), **DESC_KO).items() if k in on_screen},   # 사람이 쓴 것(DESC_KO)이 AI 번역을 이긴다
@@ -5259,6 +5290,7 @@ svg.bars rect.b:hover { fill:var(--a3); }
   </select>
   <label class="chk"><input type="checkbox" id="scrSec">업종별로 묶기</label>
   <label class="chk" title="전년 기저가 낮아 성장률이 부풀려진 종목을 뺍니다"><input type="checkbox" id="scrBase">YoY +200%↑ 제외</label>
+  <label class="chk" title="최근 1년 안에 큰 인수로 매출이 뛴 회사(미국, SEC 확인)를 뺍니다"><input type="checkbox" id="scrAcq">인수 효과 빼기</label>
   <details class="scrsecs" id="scrSecs"><summary id="scrSecSum">업종 고르기</summary><div id="scrSecList"></div></details>
 </div>
 <div class="scrwrap" id="scr"></div>
@@ -6948,6 +6980,10 @@ function finBlock(m, code) {
     html += '<p class="finnote">이 종목은 <b>분기 실적을 못 구했습니다.</b> ' +
             '연 1회만 공시하는 회사이거나 아직 분기 자료를 받지 못한 경우입니다. ' +
             '(연간 수치는 추세를 볼 수 없어 싣지 않습니다.)</p>';
+  // 인수로 매출이 뛴 분기(미국 · SEC '사업 인수 지출' 확인 — 회원님 11/03 닥터페퍼)
+  if (D.acq && D.acq[key]) html += '<p class="finnote">🔀 <b>인수로 매출이 뛴 분기</b> — ' + D.acq[key].map(a =>
+    esc(a[0]) + ' (사업 인수 지출 약 ' + (a[1] >= 1e8 ? Math.round(a[1] / 1e8).toLocaleString() + '억' : Math.round(a[1] / 1e6) + '백만') + ' 달러)').join(' · ') +
+    '. 이 분기 전년비에는 인수한 회사 매출이 들어 있습니다.</p>';
   else if (pts.length === 1) {
     const p = pts[0], U = curOf(f.cur);
     html += '<p class="finnote">받은 분기가 <b>' + esc(p[0]) + '</b> 하나뿐이라 ' +
@@ -8005,6 +8041,8 @@ const SCR = (() => {
         record: hist.length >= 8 && cur[1] > Math.max(...hist),
         opm: cur[2] != null && cur[1] > 0 ? cur[2] / cur[1] * 100 : null });
       newest = Math.max(newest, L);
+      // 최근 네 분기 안에 인수로 매출이 뛰었으면 이번 전년비에 인수 효과가 섞여 있다(미국 · D.acq)
+      o.acq = ((D.acq || {})[x.k] || []).some(a => { const i = qi(a[0]); return i != null && i >= L - 3 && i <= L; });
     }
     if (o.L != null || px) out.push(o);
   }
@@ -8029,7 +8067,8 @@ function scrDraw() {
   const jo = b => b * 1e9 * D.usdKrw / 1e12;
   const base = document.getElementById('scrBase').checked;
   const secOf = o => o.r[9] === 'jp' ? ({ '식품': '식료품', '자동차': '운송용기기', '情報通信': '정보·통신', '비철금속제품': '비철금속', '섬유': '섬유제품', '기타제조': '기타제품', '요업': '유리·토석제품' }[o.r[5]] || o.r[5]) : o.r[5];
-  let rows = SCR.filter(o => pre[2](o) && (!scrSecSet.size || scrSecSet.has(secOf(o) || '업종 미상')) && (!base || !(o.revY >= 200 || o.opY >= 200)) && (!mkt || o.r[9] === mkt) && (!capMin || (o.cap && jo(o.cap) >= capMin)));
+  const noAcq = document.getElementById('scrAcq').checked;
+  let rows = SCR.filter(o => pre[2](o) && (!noAcq || !o.acq) && (!scrSecSet.size || scrSecSet.has(secOf(o) || '업종 미상')) && (!base || !(o.revY >= 200 || o.opY >= 200)) && (!mkt || o.r[9] === mkt) && (!capMin || (o.cap && jo(o.cap) >= capMin)));
   const key = scrSort || pre[3];
   rows.sort((a, b) => ((b[key] ?? -1e9) - (a[key] ?? -1e9)) * (scrDesc ? 1 : -1) * (key === 'd52' ? -1 : 1));
   if (bySec) rows.sort((a, b) => (a.r[5] ? 0 : 1) - (b.r[5] ? 0 : 1) || (a.r[5] || '').localeCompare(b.r[5] || ''));   // 업종 미상은 맨 뒤
@@ -8053,7 +8092,7 @@ function scrDraw() {
   let sec = null;
   for (const o of rows.slice(0, 600)) {
     if (bySec && o.r[5] !== sec) { sec = o.r[5]; h += '<tr class="scrg"><td colspan="12">' + esc(sec || '업종 미상') + '</td></tr>'; }
-    h += '<tr class="scrr" data-key="' + esc(o.k) + '" data-date="' + o.r[0] + '"><td class="l">' + FL(o.r[9]) + ' <span class="cd">' + esc(o.r[1]) + '</span>' + esc(o.r[2]) +
+    h += '<tr class="scrr" data-key="' + esc(o.k) + '" data-date="' + o.r[0] + '"><td class="l">' + FL(o.r[9]) + ' <span class="cd">' + esc(o.r[1]) + '</span>' + esc(o.r[2]) + (o.acq ? ' <span title="최근 1년 안 인수로 매출이 뛴 회사 — 전년비에 인수 효과가 섞여 있다">🔀</span>' : '') +
          '</td><td class="l">' + esc(o.r[5] || '') + '</td><td>' + (o.cap ? capShort(o.cap) : '—') + '</td><td>' + esc(o.lab) +
          '</td><td>' + pc(o.revY) + '</td><td>' + (o.turn ? '<span class="up">흑자 전환</span>' : pc(o.opY)) + '</td><td>' + pc(o.revY1) +
          '</td><td>' + (o.opm == null ? '—' : pf(o.opm) + '%') + '</td><td>' + pc(o.r3) + '</td><td>' + pc(o.r12) +
@@ -8071,7 +8110,7 @@ document.getElementById('scr').addEventListener('click', e => {
   if (t) { const k = t.dataset.scrsort; scrDesc = scrSort === k ? !scrDesc : true; scrSort = k; scrDraw(); return; }
   const tr = e.target.closest('tr.scrr'); if (tr) openModal(tr.dataset.key, tr.dataset.date);
 });
-['scrMkt', 'scrCap', 'scrSec', 'scrBase'].forEach(id => document.getElementById(id).onchange = scrDraw);
+['scrMkt', 'scrCap', 'scrSec', 'scrBase', 'scrAcq'].forEach(id => document.getElementById(id).onchange = scrDraw);
 document.getElementById('scrSecList').addEventListener('change', e => {
   const c = e.target.closest('[data-scrsec]'); if (!c) return;
   c.checked ? scrSecSet.add(c.dataset.scrsec) : scrSecSet.delete(c.dataset.scrsec); scrDraw();
