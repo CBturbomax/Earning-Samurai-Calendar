@@ -5088,7 +5088,6 @@ svg.bars rect.b:hover { fill:var(--a3); }
 </div>
 
 <div class="mtabs" id="mtabs"></div>
-<div class="cards" id="cards"></div>
 </div>
 
 <h2><span class="n">1</span>주간 캘린더 <span class="meta" id="calMeta"></span></h2>
@@ -7723,7 +7722,8 @@ function renderCards() {
     ['최다 발표일', busiest
       ? busiest + ' · ' + byDate.get(busiest).length.toLocaleString() + '건' : '—', 'sm'],
   ];
-  document.getElementById('cards').innerHTML = cards.map(c =>
+  const cardsEl = document.getElementById('cards');          // 요약 카드는 화면에서 뺐다(회원님 11/03)
+  if (cardsEl) cardsEl.innerHTML = cards.map(c =>
     '<div class="card"><div class="k">' + c[0] + '</div>' +
     '<div class="v ' + c[2] + '">' + c[1] + '</div></div>').join('');
 
