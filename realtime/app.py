@@ -2207,10 +2207,12 @@ PR_TITLE = re.compile(r"(report|announce|post|deliver|declare)s?\b.*\b(results|e
                       r"\b(first|second|third|fourth)[- ]quarter\b.*\b(results|earnings)|\bQ[1-4]\b.*\bresults", re.I)
 YAHOO_DONE = re.compile(r"earnings snapshot|^(?=.*\b(reports?|posts?|surpass(es)?|tops?|beats?|lags?|miss(es)?|meets?|matches|delivers?)\b)"
                         r"(?=.*\b(Q[1-4]|quarter|quarterly)\b)(?=.*\b(earnings|results|loss|profit|revenues?)\b)", re.I)
-PR_PREVIEW = re.compile(r"gears up|what to expect|ahead of|to report|will report|preview|set to|expected to|could|should|\?", re.I)
+PR_PREVIEW = re.compile(r"gears up|what to expect|ahead of|to report|will report|preview|set to|expected to|could|should|\?|"
+                        r"exchange offer|tender offer|expiration|\bnotes\b", re.I)
 PR_NOT = re.compile(r"gears up|what to expect|preview|ahead of|to report|will report|set to|expected to|estimates?\b|should you|"
                     r"\bbeat|\bmiss|analyst|transcript|\bstock\b|\bshares\b|investors|watch|\bvs\.?\b|key metrics|"
-                    r"wall street|\bwhy\b|\bhow\b|\?|conference call|webcast|to announce|will announce|date|schedule", re.I)
+                    r"wall street|\bwhy\b|\bhow\b|\?|conference call|webcast|to announce|will announce|date|schedule|"
+                    r"exchange offer|tender offer|expiration|\bnotes\b|dividend|redemption|pricing|consent solicitation|trial|study|phase", re.I)
 _PR_STOP = re.compile(r"\b(the|inc|incorporated|corp|corporation|co|company|companies|holdings?|group|ltd|limited|plc|n\.?v|s\.?a|"
                       r"class [a-c]|common stock|ordinary shares|ads|american depositary shares?)\b\.?", re.I)
 
