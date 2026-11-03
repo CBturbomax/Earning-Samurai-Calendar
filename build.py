@@ -2294,6 +2294,23 @@ def drop_name_lead(desc, names):
             return rest
     return desc
 
+
+def load_px(keys):
+    """주가 요약(scrape_px.py → data/px_s*.json) -> {열쇠: [r1, r3, r6, r12, d13, d52, dall, RS]}. RS 는 2×3개월+6개월+1년 수익률의
+    전 종목 백분위(1~99) — 시장을 가리지 않고 한 줄에 세운다(회원님 11/03 스크리너)."""
+    px = {}
+    for f in sorted((HERE / "data").glob("px_s*.json")):
+        try:
+            px.update(json.loads(f.read_text(encoding="utf-8")).get("px", {}))
+        except (OSError, ValueError):
+            pass
+    newest = max((v[0] for v in px.values()), default="")
+    px = {k: v for k, v in px.items() if k in keys and v[0] >= (date.fromisoformat(newest[:10]) - timedelta(days=10)).isoformat()} if newest else {}
+    sc = {k: 2 * v[3] + (v[4] or 0) + (v[5] or 0) for k, v in px.items() if v[3] is not None}
+    order = sorted(sc, key=sc.get)
+    rs = {k: max(1, min(99, int(i * 99 / max(1, len(order) - 1)) + 1)) for i, k in enumerate(order)}
+    return {k: v[2:9] + [rs.get(k)] for k, v in px.items()}
+
 def load_surprise(keys):
     """Zacks EPS 서프라이즈 이력(scrape_surprise.py) -> {us:티커: [[회계분기 'YYYY-MM', %], ...]} — 2017-10 이후 최대 36칸."""
     st = {}
@@ -4127,6 +4144,7 @@ def build():
         # 받아온 것(desc.json). 화면에 실린 종목 것만 싣는다.
         "descKo": {k: drop_name_lead(v, names_of.get(k, ())) for k, v in dict(_desc_ai(), **DESC_KO).items() if k in on_screen},   # 사람이 쓴 것(DESC_KO)이 AI 번역을 이긴다
         "sur": load_surprise(on_screen),
+        "px": load_px(on_screen),
         "desc": {k: v["t"] for k, v in DESC.items()
                  if v.get("t") and k in on_screen and k not in DESC_KO},
         # 사업부별 매출. "매출이 늘었다"보다 "어디서 늘었다"가 중요할 때가 있다.
@@ -7787,32 +7805,37 @@ const SCR = (() => {
   const out = [];
   let newest = 0;
   for (const x of FIND) {
+    const o = { k: x.k, r: x.r, cap: x.cap, L: null, revY: null, opY: null, revY1: null, turn: false, record: false, opm: null, lab: '' };
+    const px = D.px && D.px[x.k];
+    if (px) [o.r1, o.r3, o.r6, o.r12, o.d13, o.d52, o.dall, o.rs] = px;
     const f = D.fin && D.fin[x.k];
-    if (!f || f.freq !== 'Q' || !f.points || f.points.length < 6) continue;
-    const by = new Map();
-    for (const p of f.points) { const i = qi(p[0]); if (i != null && p[1] != null) by.set(i, p); }
-    const idx = [...by.keys()].sort((a, b) => a - b);
-    if (!idx.length) continue;
-    const L = idx[idx.length - 1], cur = by.get(L), py = by.get(L - 4), prv = by.get(L - 1), pp = by.get(L - 5);
-    if (!py || !(py[1] > 0)) continue;
-    // 앞뒤 분기보다 턱없이 작은 '전년 분기'는 수집 구멍(부분 기간·단위 어긋남)이다 — +37,500% 같은 숫자를 만든다. 뺀다.
-    const nb = [by.get(L - 5), by.get(L - 3)].filter(Boolean).map(p => p[1]);
-    if (nb.length && py[1] < 0.35 * Math.min(...nb)) continue;
-    // 이번 분기만 앞 네 분기의 세 배 넘게 솟은 것도 수집 잘못(다른 항목·누계를 읽음)이다 — 회사 차트도 같이 손봐야 할 것들.
-    const p4 = [1, 2, 3, 4].map(d => by.get(L - d)).filter(Boolean).map(p => p[1]);
-    if (p4.length >= 3 && cur[1] > 3 * Math.max(...p4)) { SCR_BAD.push(x.k); continue; }
-    const g = (a, b) => (a != null && b != null && b > 0) ? (a / b - 1) * 100 : null;
-    const revY = g(cur[1], py[1]), opY = g(cur[2], py[2]);
-    if (revY > 1000) { SCR_BAD.push(x.k); continue; }              // 매출 열 배 넘게 — 실제로는 수집 잘못뿐이었다(Greif +37,500%)
-    const revY1 = prv && pp ? g(prv[1], pp[1]) : null;
-    const turn = cur[2] != null && py[2] != null && py[2] <= 0 && cur[2] > 0;
-    const hist = idx.filter(i => i < L).map(i => by.get(i)[1]);
-    const record = hist.length >= 8 && cur[1] > Math.max(...hist);
-    const opm = cur[2] != null && cur[1] > 0 ? cur[2] / cur[1] * 100 : null;
-    newest = Math.max(newest, L);
-    out.push({ k: x.k, r: x.r, cap: x.cap, L, lab: cur[0], revY, opY, revY1, turn, record, opm });
+    fin: if (f && f.freq === 'Q' && f.points && f.points.length >= 6) {
+      const by = new Map();
+      for (const p of f.points) { const i = qi(p[0]); if (i != null && p[1] != null) by.set(i, p); }
+      const idx = [...by.keys()].sort((a, b) => a - b);
+      if (!idx.length) break fin;
+      const L = idx[idx.length - 1], cur = by.get(L), py = by.get(L - 4), prv = by.get(L - 1), pp = by.get(L - 5);
+      if (!py || !(py[1] > 0)) break fin;
+      // 앞뒤 분기보다 턱없이 작은 '전년 분기'는 수집 구멍(부분 기간·단위 어긋남)이다 — +37,500% 같은 숫자를 만든다. 뺀다.
+      const nb = [by.get(L - 5), by.get(L - 3)].filter(Boolean).map(p => p[1]);
+      if (nb.length && py[1] < 0.35 * Math.min(...nb)) break fin;
+      // 이번 분기만 앞 네 분기의 세 배 넘게 솟은 것도 수집 잘못(다른 항목·누계를 읽음)이다 — 회사 차트도 같이 손봐야 할 것들.
+      const p4 = [1, 2, 3, 4].map(d => by.get(L - d)).filter(Boolean).map(p => p[1]);
+      if (p4.length >= 3 && cur[1] > 3 * Math.max(...p4)) { SCR_BAD.push(x.k); break fin; }
+      const g = (a, b) => (a != null && b != null && b > 0) ? (a / b - 1) * 100 : null;
+      const revY = g(cur[1], py[1]);
+      if (revY > 1000) { SCR_BAD.push(x.k); break fin; }            // 매출 열 배 넘게 — 실제로는 수집 잘못뿐이었다(Greif +37,500%)
+      const hist = idx.filter(i => i < L).map(i => by.get(i)[1]);
+      Object.assign(o, { L, lab: cur[0], revY, opY: g(cur[2], py[2]), revY1: prv && pp ? g(prv[1], pp[1]) : null,
+        turn: cur[2] != null && py[2] != null && py[2] <= 0 && cur[2] > 0,
+        record: hist.length >= 8 && cur[1] > Math.max(...hist),
+        opm: cur[2] != null && cur[1] > 0 ? cur[2] / cur[1] * 100 : null });
+      newest = Math.max(newest, L);
+    }
+    if (o.L != null || px) out.push(o);
   }
-  return out.filter(o => o.L >= newest - 2);
+  for (const o of out) if (o.L != null && o.L < newest - 2) Object.assign(o, { L: null, revY: null, opY: null, revY1: null, turn: false, record: false, opm: null, lab: '' });
+  return out;
 })();
 const SCR_PRE = [
   ['g20', '매출·영업이익 +20%↑', o => o.revY >= 20 && o.opY >= 20, 'revY'],
@@ -7820,6 +7843,11 @@ const SCR_PRE = [
   ['turn', '흑자 전환', o => o.turn, 'revY'],
   ['rec', '분기 매출 사상 최고', o => o.record, 'revY'],
   ['rev', '매출 성장 순(전부)', o => o.revY != null, 'revY'],
+  ['h13', '3개월 신고가', o => o.d13 === 0, 'rs'],
+  ['h52', '52주 신고가', o => o.d52 === 0, 'rs'],
+  ['hall', '역사적 신고가', o => o.dall === 0, 'rs'],
+  ['rs', 'RS 강도 상위', o => o.rs >= 90, 'rs'],
+  ['g20h', '실적 +20% & 52주 신고가 근처(5% 안)', o => o.revY >= 20 && o.opY >= 20 && o.d52 != null && o.d52 <= 5, 'rs'],
 ];
 let scrPre = 'g20', scrSort = null, scrDesc = true;
 function scrDraw() {
@@ -7828,24 +7856,27 @@ function scrDraw() {
   const jo = b => b * 1e9 * D.usdKrw / 1e12;
   let rows = SCR.filter(o => pre[2](o) && (!mkt || o.r[9] === mkt) && (!capMin || (o.cap && jo(o.cap) >= capMin)));
   const key = scrSort || pre[3];
-  rows.sort((a, b) => ((b[key] ?? -1e9) - (a[key] ?? -1e9)) * (scrDesc ? 1 : -1));
+  rows.sort((a, b) => ((b[key] ?? -1e9) - (a[key] ?? -1e9)) * (scrDesc ? 1 : -1) * (key === 'd52' ? -1 : 1));
   if (bySec) rows.sort((a, b) => (a.r[5] || '').localeCompare(b.r[5] || ''));
   document.getElementById('scrPre').innerHTML = SCR_PRE.map(p =>
     '<button data-scrpre="' + p[0] + '" class="' + (p[0] === scrPre ? 'on' : '') + '">' + p[1] + '</button>').join('');
-  document.getElementById('scrMeta').textContent = rows.length + '종목 · 분기 실적 회사 ' + SCR.length + '곳 중 · 회사마다 가장 최근 분기를 전년 같은 분기와 비교';
+  document.getElementById('scrMeta').textContent = rows.length + '종목 · 실적은 회사마다 가장 최근 분기를 전년 같은 분기와(분기 보고 회사만) · 주가는 주봉 · RS = 3개월 수익률을 두 배로 친 1년 상대강도(전 종목 백분위)';
   const pc = v => v == null ? '—' : '<span class="' + (v >= 0 ? 'up' : 'dn') + '">' + (v >= 0 ? '+' : '') + (Math.abs(v) >= 1000 ? Math.round(v).toLocaleString() : v.toFixed(1)) + '%</span>';
   const th = (k, t, l) => '<th class="' + (l ? 'l' : '') + '"' + (k ? ' data-scrsort="' + k + '"' : '') + '>' + t + (key === k ? (scrDesc ? ' ▼' : ' ▲') : '') + '</th>';
   let h = '<table class="scrt"><thead><tr>' + th('', '회사', 1) + th('', '업종', 1) + th('cap', '시총') + th('', '분기') +
-          th('revY', '매출 YoY') + th('opY', '영업이익 YoY') + th('revY1', '직전 분기 매출 YoY') + th('opm', '영업이익률') + '</tr></thead><tbody>';
+          th('revY', '매출 YoY') + th('opY', '영업이익 YoY') + th('revY1', '직전 분기 매출 YoY') + th('opm', '영업이익률') +
+          th('r3', '3개월 주가') + th('r12', '1년 주가') + th('d52', '52주 고가 대비') + th('rs', 'RS') + '</tr></thead><tbody>';
   let sec = null;
   for (const o of rows.slice(0, 600)) {
-    if (bySec && o.r[5] !== sec) { sec = o.r[5]; h += '<tr class="scrg"><td colspan="8">' + esc(sec || '업종 미상') + '</td></tr>'; }
+    if (bySec && o.r[5] !== sec) { sec = o.r[5]; h += '<tr class="scrg"><td colspan="12">' + esc(sec || '업종 미상') + '</td></tr>'; }
     h += '<tr class="scrr" data-key="' + esc(o.k) + '" data-date="' + o.r[0] + '"><td class="l">' + FL(o.r[9]) + ' <span class="cd">' + esc(o.r[1]) + '</span>' + esc(o.r[2]) +
          '</td><td class="l">' + esc(o.r[5] || '') + '</td><td>' + (o.cap ? capShort(o.cap) : '—') + '</td><td>' + esc(o.lab) +
          '</td><td>' + pc(o.revY) + '</td><td>' + (o.turn ? '<span class="up">흑자 전환</span>' : pc(o.opY)) + '</td><td>' + pc(o.revY1) +
-         '</td><td>' + (o.opm == null ? '—' : o.opm.toFixed(1) + '%') + '</td></tr>';
+         '</td><td>' + (o.opm == null ? '—' : o.opm.toFixed(1) + '%') + '</td><td>' + pc(o.r3) + '</td><td>' + pc(o.r12) +
+         '</td><td>' + (o.d52 == null ? '—' : o.d52 === 0 ? '<span class="up">신고가</span>' : '-' + o.d52.toFixed(1) + '%') +
+         '</td><td>' + (o.rs == null ? '—' : o.rs) + '</td></tr>';
   }
-  if (!rows.length) h += '<tr><td colspan="8" class="l">조건에 맞는 종목이 없습니다.</td></tr>';
+  if (!rows.length) h += '<tr><td colspan="12" class="l">조건에 맞는 종목이 없습니다.</td></tr>';
   document.getElementById('scr').innerHTML = h + '</tbody></table>';
 }
 document.getElementById('scrPre').addEventListener('click', e => {
