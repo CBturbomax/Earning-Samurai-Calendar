@@ -4548,6 +4548,13 @@ __FLAGCSS__
 .board .bb { display:inline-block; padding:0 5px; border-radius:4px; margin-right:3px; font-size:11px; background:rgba(139,148,158,.18); }
 .board .bb.u { background:rgba(255,92,92,.18); color:#ff6b6b; } .board .bb.d { background:rgba(76,154,255,.18); color:#5ca8ff; }
 .board .up { color:#ff5c5c; } .board .dn { color:#4c9aff; }
+.scrsecs { position:relative; }
+.scrsecs summary { cursor:pointer; padding:6px 12px; border:1px solid var(--line, #30363d); border-radius:8px; list-style:none; }
+.scrsecs[open] summary { border-color:#f5b301; color:#f5b301; }
+.scrsecs > div { position:absolute; z-index:20; top:110%; left:0; width:min(560px, 90vw); max-height:340px; overflow:auto;
+  background:var(--bg2, #0d1117); border:1px solid #f5b301; border-radius:10px; padding:10px; display:grid;
+  grid-template-columns:repeat(auto-fill, minmax(150px, 1fr)); gap:4px 10px; }
+.scrsecs small { opacity:.55; }
 .scrtools { flex-wrap:wrap; }
 .scrpre { display:flex; flex-wrap:wrap; gap:6px; }
 .scrpre button { background:var(--panel, #161b22); color:inherit; border:1px solid var(--line, #30363d); border-radius:16px;
@@ -5232,11 +5239,12 @@ svg.bars rect.b:hover { fill:var(--a3); }
   <span class="scrpre" id="scrPre"></span>
   <select id="scrMkt"><option value="">미국·일본·홍콩</option><option value="us">미국</option><option value="jp">일본</option><option value="hk">홍콩</option></select>
   <select id="scrCap">
-    <option value="0">시총 가리지 않기</option><option value="0.5">5,000억원 이상</option>
-    <option value="1" selected>1조원 이상</option><option value="3">3조원 이상</option><option value="10">10조원 이상</option>
+    <option value="0">시총 가리지 않기</option><option value="0.5" selected>5,000억원 이상</option>
+    <option value="1">1조원 이상</option><option value="3">3조원 이상</option><option value="10">10조원 이상</option>
   </select>
   <label class="chk"><input type="checkbox" id="scrSec">업종별로 묶기</label>
-  <label class="chk" title="전년 기저가 낮아 성장률이 부풀려진 종목을 뺍니다"><input type="checkbox" id="scrBase">기저효과 빼기(+200%↑ 제외)</label>
+  <label class="chk" title="전년 기저가 낮아 성장률이 부풀려진 종목을 뺍니다"><input type="checkbox" id="scrBase">YoY +200%↑ 제외</label>
+  <details class="scrsecs" id="scrSecs"><summary id="scrSecSum">업종 고르기</summary><div id="scrSecList"></div></details>
 </div>
 <div class="scrwrap" id="scr"></div>
 
@@ -5543,10 +5551,11 @@ const yesterday = (() => {
 
 const capSel = document.getElementById('fCap');
 capSel.innerHTML = '<option value="0">전체 보기 (규모 무관)</option>' +
-  D.capSteps.map(s => '<option value="' + s.usdB + '">시총 ' + s.jo + '조원 이상</option>').join('');
+  D.capSteps.map(s => '<option value="' + s.usdB + '">시총 ' + (s.jo < 1 ? (s.jo * 10000).toLocaleString() + '억원' : s.jo + '조원') + ' 이상</option>').join('');
 /* **1조원 이상을 기본으로 연다.** 전체를 열면 껍데기 회사가 화면을 뒤덮어
    정작 볼 회사가 안 보인다. 작은 회사를 보고 싶으면 '전체 보기'를 고르면 된다. */
-const capDefault = (D.capSteps.find(s => s.jo === 1) || D.capSteps[0] || {}).usdB || 0;
+const capDefault = (D.capSteps.find(s => s.jo === 0.5) ||   // 5,000억원 이상으로 연다(회원님 11/03)
+                    D.capSteps.find(s => s.jo === 1) || D.capSteps[0] || {}).usdB || 0;
 capSel.value = String(capDefault);
 const capMin = () => +capSel.value || 0;
 
@@ -7917,7 +7926,7 @@ const FIND = (() => {
 /* ── 실적 스크리너(회원님 11/03) — 이미 실린 분기 실적(D.fin)만으로 화면에서 거른다. 분기 보고 회사만(반기 회사는 뺀다).
    기준 분기는 회사마다 가장 최근 분기, 비교는 전년 같은 분기(라벨 '3Q26' ↔ '3Q25'). 오래된 실적(가장 새 분기보다 두 분기 넘게 뒤)은 뺀다. */
 /* ── 시장 현황판(회원님 11/03) — D.board: 나라마다 지수·ETF + 업종 지수 타일. 업종 타일을 누르면 아래 스크리너가 그 업종으로 걸러진다. */
-let scrSecF = null;
+let scrSecSet = new Set();
 function bdDraw() {
   const B = D.board || [], el = document.getElementById('board');
   if (!B.length) { el.innerHTML = '<p class="meta">주가를 아직 모으는 중입니다.</p>'; return; }
@@ -7944,7 +7953,7 @@ function bdDraw() {
 document.getElementById('board').addEventListener('click', e => {
   const t = e.target.closest('[data-bdf]'); if (!t) return;
   const [m, g] = t.dataset.bdf.split('|');
-  scrSecF = [m, g]; scrPre = ''; document.getElementById('scrMkt').value = m; scrDraw();
+  scrSecSet = new Set([g]); scrPre = ''; document.getElementById('scrMkt').value = m; scrDraw();
   document.getElementById('scrMeta').scrollIntoView({ behavior: 'smooth' });
 });
 bdDraw();
@@ -8005,15 +8014,21 @@ function scrDraw() {
   const jo = b => b * 1e9 * D.usdKrw / 1e12;
   const base = document.getElementById('scrBase').checked;
   const secOf = o => o.r[9] === 'jp' ? ({ '식품': '식료품', '자동차': '운송용기기', '情報通信': '정보·통신', '비철금속제품': '비철금속', '섬유': '섬유제품', '기타제조': '기타제품', '요업': '유리·토석제품' }[o.r[5]] || o.r[5]) : o.r[5];
-  let rows = SCR.filter(o => pre[2](o) && (!scrSecF || (o.r[9] === scrSecF[0] && secOf(o) === scrSecF[1])) && (!base || !(o.revY >= 200 || o.opY >= 200)) && (!mkt || o.r[9] === mkt) && (!capMin || (o.cap && jo(o.cap) >= capMin)));
+  let rows = SCR.filter(o => pre[2](o) && (!scrSecSet.size || scrSecSet.has(secOf(o) || '업종 미상')) && (!base || !(o.revY >= 200 || o.opY >= 200)) && (!mkt || o.r[9] === mkt) && (!capMin || (o.cap && jo(o.cap) >= capMin)));
   const key = scrSort || pre[3];
   rows.sort((a, b) => ((b[key] ?? -1e9) - (a[key] ?? -1e9)) * (scrDesc ? 1 : -1) * (key === 'd52' ? -1 : 1));
   if (bySec) rows.sort((a, b) => (a.r[5] ? 0 : 1) - (b.r[5] ? 0 : 1) || (a.r[5] || '').localeCompare(b.r[5] || ''));   // 업종 미상은 맨 뒤
   document.getElementById('scrPre').innerHTML = SCR_PRE.map(p =>
     '<button data-scrpre="' + p[0] + '" class="' + (p[0] === scrPre ? 'on' : '') + '">' + p[1] + '</button>').join('');
   document.getElementById('scrMeta').innerHTML = rows.length.toLocaleString() + '종목' +
-    (scrSecF ? ' · <button class="btn" id="scrSecX">업종: ' + esc(scrSecF[1]) + ' ✕</button>' : '');
-  const sx = document.getElementById('scrSecX'); if (sx) sx.onclick = () => { scrSecF = null; scrDraw(); };
+    (scrSecSet.size ? ' · <button class="btn" id="scrSecX">업종 ' + scrSecSet.size + '개 ✕</button>' : '');
+  const sx = document.getElementById('scrSecX'); if (sx) sx.onclick = () => { scrSecSet.clear(); scrDraw(); };
+  // 업종 고르기 — 지금 시장·시총에 있는 업종을 종목 수 많은 순으로(회원님 11/03: "건설·경기소비재만 체크하면 그것만")
+  const cnt = new Map();
+  for (const o of SCR) if ((!mkt || o.r[9] === mkt) && (!capMin || (o.cap && jo(o.cap) >= capMin))) { const g = secOf(o) || '업종 미상'; cnt.set(g, (cnt.get(g) || 0) + 1); }
+  document.getElementById('scrSecSum').textContent = scrSecSet.size ? '업종 ' + scrSecSet.size + '개 고름' : '업종 고르기';
+  document.getElementById('scrSecList').innerHTML = [...cnt].sort((a, b) => b[1] - a[1]).map(([g, n]) =>
+    '<label class="chk"><input type="checkbox" data-scrsec="' + esc(g) + '"' + (scrSecSet.has(g) ? ' checked' : '') + '>' + esc(g) + ' <small>' + n + '</small></label>').join('');
   const pf = v => Math.abs(v) >= 10 ? Math.round(v).toLocaleString() : v.toFixed(1);   // 두 자리 넘으면 소수점 없이(회원님 11/03)
   const pc = v => v == null ? '—' : '<span class="' + (v >= 0 ? 'up' : 'dn') + '">' + (v >= 0 ? '+' : '') + pf(v) + '%</span>';
   const th = (k, t, l) => '<th class="' + (l ? 'l' : '') + '"' + (k ? ' data-scrsort="' + k + '"' : '') + '>' + t + (key === k ? (scrDesc ? ' ▼' : ' ▲') : '') + '</th>';
@@ -8042,6 +8057,10 @@ document.getElementById('scr').addEventListener('click', e => {
   const tr = e.target.closest('tr.scrr'); if (tr) openModal(tr.dataset.key, tr.dataset.date);
 });
 ['scrMkt', 'scrCap', 'scrSec', 'scrBase'].forEach(id => document.getElementById(id).onchange = scrDraw);
+document.getElementById('scrSecList').addEventListener('change', e => {
+  const c = e.target.closest('[data-scrsec]'); if (!c) return;
+  c.checked ? scrSecSet.add(c.dataset.scrsec) : scrSecSet.delete(c.dataset.scrsec); scrDraw();
+});
 scrDraw();
 
 const fq = document.getElementById('fq'), fqList = document.getElementById('fqList');
