@@ -783,12 +783,43 @@ def pending_loop():
             log("숫자 대기 확인 실패", traceback.format_exc(limit=2))
 
 
+# **한 회사 · 한 발표일 = 텔레그램 한 번.** 보도자료(와이어)로 먼저 보내고 8-K 가 뒤에 오면 PR_SENT 가 막았는데, 그 표는 메모리에만
+# 있어 서버를 다시 올리면 사라졌다 — 켤 때 지난 공시를 다시 훑으면서 같은 실적을 「(90분 늦게 잡음)」으로 또 보냈다(11/03). 볼륨에 남긴다.
+TGDAY_PATH = DATA / "tg_day.json"
+try:
+    TGDAY = set(json.loads(TGDAY_PATH.read_text(encoding="utf-8")))
+except (OSError, ValueError):
+    TGDAY = set()
+TGDAY_LOCK = threading.Lock()
+
+
+def _tgday_key(ev):
+    return f"{ev['key']}|{ev.get('date', '')}"
+
+
+def _tg_already(ev):
+    """같은 회사가 그날이나 전날(장후 보도자료 → 다음 날 아침 6-K) 이미 텔레그램으로 나갔나 — 볼륨 기록과 보관된 사건 둘 다 본다."""
+    try:
+        d = date.fromisoformat(ev.get("date", ""))
+    except ValueError:
+        return False
+    days = {d.isoformat(), (d - timedelta(days=1)).isoformat()}
+    if any(f"{ev['key']}|{x}" in TGDAY for x in days):
+        return True
+    with S.lock:
+        return any(e.get("key") == ev["key"] and e.get("date") in days and e.get("t_tg") and e.get("id") != ev.get("id")
+                   for e in S.events[-3000:])
+
+
 def finish(ev, point=None):
     """숫자가 있으면 차트를 그리고 · 보관 · 사이트 · 텔레그램."""
     key = ev["key"]
     if not ev.get("replay"):                     # 이미 보낼지 정한 공시 — 다시 그리지도 않는다(켤 때 다시 훑는 몫)
         old = S.get(ev["id"]) or {}
         if old.get("tgWhy") or old.get("t_tg"):
+            return
+        if _tg_already(ev):                      # 같은 회사 같은 날 실적을 이미 텔레그램으로 보냈다(다른 경로·재시작 뒤)
+            log("이미 보낸 실적 — 다시 안 보냄", _tgday_key(ev))
             return
     with H.lock:
         fin = dict(H.D.get("fin", {}).get(key) or {})
@@ -920,6 +951,11 @@ def finish(ev, point=None):
         ev["t_tg"] = now_iso()
         if not replay:
             late_note(ev, ids)
+            with TGDAY_LOCK:
+                TGDAY.add(_tgday_key(ev))
+                keep = sorted(TGDAY, key=lambda x: x.rsplit("|", 1)[-1])[-5000:]
+                TGDAY.clear(); TGDAY.update(keep)
+                TGDAY_PATH.write_text(json.dumps(keep), encoding="utf-8")
     if not replay:
         S.update(ev)
     log(f"실적 {ev['mkt']}:{ev['code']} {ev['name']} · 공개 {ev.get('published')} 감지 {ev['detected']} "
@@ -2151,7 +2187,10 @@ def pr_candidates():
             if not key.startswith("us:"):
                 continue
             r = min(rs, key=lambda r: abs((date.fromisoformat(r[0]) - today).days))
-            if abs((date.fromisoformat(r[0]) - today).days) > 1:
+            # 시총 200억 달러 이상은 날짜와 상관없이 늘 본다 — 캘린더에 앞날이 없는 외국 기업(페라리 RACE: 나스닥 캘린더에 없고
+            # 6-K 로만 지나간 발표가 잡힌다)도 보도자료가 나오는 그 순간 잡히게(회원님 11/03).
+            big = max((x[11] or 0) for x in rs) >= 20
+            if abs((date.fromisoformat(r[0]) - today).days) > 1 and not big:
                 continue
             nm = _pr_norm(r[7] if len(r) > 7 else "")
             if len(nm) >= 4:
@@ -2160,13 +2199,16 @@ def pr_candidates():
 
 
 def pr_watch():
-    seen, warned = set(), [0.0]
+    seen, warned, rot = set(), [0.0], [0]
     while True:
         t0 = time.time()
         try:
             cands = pr_candidates()
             syms = sorted({c[2].replace(".", "-") for c in cands})
-            feeds = PR_FEEDS + [YAHOO_RSS.format(syms=",".join(syms[i:i + 40])) for i in range(0, len(syms), 40)]
+            yf = [YAHOO_RSS.format(syms=",".join(syms[i:i + 40])) for i in range(0, len(syms), 40)]
+            # 한 바퀴(15초)에 네 묶음씩 돌아가며 — 종목마다 1분에 한 번꼴, 야후를 1분에 열여섯 번만 두드린다
+            rot[0] = (rot[0] + 4) % max(1, len(yf))
+            feeds = PR_FEEDS + (yf + yf)[rot[0]:rot[0] + min(4, len(yf))]
             for feed in feeds:
                 try:
                     xml = http_get(feed, ua="Mozilla/5.0 (Windows NT 10.0; Win64; x64) Chrome/131.0", timeout=20)
@@ -2192,8 +2234,8 @@ def pr_watch():
                         pt = parsedate_to_datetime(pub).astimezone(timezone.utc)
                     except (TypeError, ValueError):
                         pt = datetime.now(timezone.utc)
-                    if stale(pt):
-                        continue
+                    if stale(pt) or (datetime.now(timezone.utc) - pt).total_seconds() > 12 * 3600:
+                        continue                                 # 야후 종목 피드에는 몇 주 전 기사도 섞여 온다 — 12시간 안의 것만
                     POOL.submit(safe, pr_process, hit[0], title, link, pt)
         except Exception as e:                                   # noqa: BLE001
             log("보도자료 감시:", repr(e)[:160])
