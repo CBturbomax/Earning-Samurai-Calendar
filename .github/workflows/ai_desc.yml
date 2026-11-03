@@ -95,14 +95,3 @@ jobs:
           done
           echo "푸시를 끝내 못 했다"; exit 1
 
-  relay:
-    needs: desc
-    if: always() && github.ref_name == 'main'
-    runs-on: ubuntu-latest
-    steps:
-      - name: 다음 실행(이어달리기)
-        env:
-          GH_TOKEN: ${{ github.token }}
-        run: |
-          sleep 20
-          gh workflow run ai_desc.yml --repo "${{ github.repository }}" --ref main || true
