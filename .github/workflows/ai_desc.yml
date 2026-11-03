@@ -87,11 +87,11 @@ jobs:
           git add "$F"
           git diff --cached --quiet && { echo "달라진 게 없다."; exit 0; }
           git commit -m "사업 설명 번역 갈래 ${{ matrix.shard }} $(date -u +%F' '%H:%M) [skip ci]"
-          for i in 1 2 3 4 5 6; do
-            git fetch origin main || { sleep $((2**i)); continue; }
+          for i in $(seq 1 25); do
+            git fetch origin main || { sleep 3; continue; }
             git merge --no-edit -X ours origin/main || { git merge --abort; sleep $((2**i)); continue; }
             git push origin HEAD:main && exit 0
-            sleep $((2**i + RANDOM % 5))
+            sleep $((1 + RANDOM % 4))
           done
           echo "푸시를 끝내 못 했다"; exit 1
 
