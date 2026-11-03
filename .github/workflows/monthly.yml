@@ -50,7 +50,7 @@ jobs:
     # 그보다 짧게 두면 셋 다 제 예산을 다 쓰는 날 **일이 끝나기 전에 잘려**
     # 그 실행의 커밋이 통째로 사라진다(수집기는 디스크에 저장했는데 되커밋을
     # 못 한다). 빌드·되커밋까지 넉넉히 잡는다.
-    timeout-minutes: 50
+    timeout-minutes: 62
     steps:
       - name: 시작 시각
         run: echo "T0=$(date +%s)" >> "$GITHUB_ENV"
@@ -140,6 +140,15 @@ jobs:
             tail -20 ir.log
             echo '```'
           } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: 🗄️ 월매출 옛 공시(JPX 보관소, 2024-01 부터)
+        continue-on-error: true
+        timeout-minutes: 8
+        env:
+          MON_HIST_SECS: '360'
+        run: |
+          set -o pipefail
+          python scrape_mon_hist.py | tail -5 | tee -a "$GITHUB_STEP_SUMMARY"
 
       - name: 페이지 다시 만들기
         run: python build.py > /dev/null
