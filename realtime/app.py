@@ -878,7 +878,12 @@ def finish(ev, point=None):
     pngs = None
     if H.html:
         try:                                                     # 사이트 화면 그대로 찍는다
-            pngs = shot.render({k: v for k, v in ev.items() if not k.startswith("_")}, gh)
+            ev_s = {k: v for k, v in ev.items() if not k.startswith("_")}
+            try:
+                ev_s["px"] = price_history(key)                 # 주가 2년 그림(회원님 11/03) — 한 시간 캐시
+            except Exception:                                    # noqa: BLE001
+                pass
+            pngs = shot.render(ev_s, gh)
         except Exception:                                        # noqa: BLE001
             log("사이트 그림 실패", key, traceback.format_exc(limit=2))
     if not pngs:
@@ -910,6 +915,8 @@ def finish(ev, point=None):
     if send:                                     # ① 그림·핵심 숫자 먼저 — 몇 초 안에
         ids = TG.send_album(("🧪 <i>지난 공시 다시 보내기(시험)</i>\n" if replay else "") + caption(ev), pngs)
         ev["t_tg"] = now_iso()
+        if not replay:
+            late_note(ev, ids)
     if not replay:
         S.update(ev)
     log(f"실적 {ev['mkt']}:{ev['code']} {ev['name']} · 공개 {ev.get('published')} 감지 {ev['detected']} "
@@ -3044,6 +3051,74 @@ def audit_fill():
         segfill(len(keys), set(keys))
 
 
+# ── 뒤늦게 확인된 사업부·지역·수주는 그 장표만 답장으로 보강(회원님 11/03) ─────────────
+# 속보를 보낼 때 이번 분기 칸이 사이트에 없던 그림(사업부·지역·수주)을 적어 두고, 사이트가 다시 빌드될 때마다(history_loop)
+# 그 칸이 생겼는지 본다. 생기면 그 그림 하나만 원래 알림에 답장으로 보낸다. 열흘이 지나면 그만 본다.
+LATE_PATH = DATA / "late_fill.json"
+try:
+    LATE = json.loads(LATE_PATH.read_text())
+except (OSError, ValueError):
+    LATE = {}
+LATE_KINDS = (("seg", "segchart", "사업부별 매출"), ("geo", "geochart", "지역별 매출"), ("ord", "ordchart", "수주·수주잔고"))
+
+
+def _has_label(rec, lab):
+    return bool(rec) and any(r and r[0] == lab and any(v is not None for v in r[1:]) for r in rec.get("pts") or [])
+
+
+def late_note(ev, ids):
+    lab = (ev.get("point") or [None])[0]
+    if not lab or not ids:
+        return
+    key = ev["key"]
+    # 그 분기 칸이 사이트에 없는 그림만 — 기록 자체가 없던 회사도 넣는다(생기면 보낸다, 안 생기면 열흘 뒤 조용히 지운다)
+    miss = [k for k, _o, _n in LATE_KINDS if not _has_label((H.D.get(k) or {}).get(key), lab)]
+    if "seg" in miss and ev.get("segPoint"):
+        miss.remove("seg")                                       # 속보 때 이미 보도자료 사업부를 얹어 보냈다
+    if not miss:
+        return
+    LATE[key] = {"ids": ids, "lab": lab, "miss": miss, "t": now_iso(), "name": ev.get("name") or ev["code"],
+                 "ev": {k: ev[k] for k in ("mkt", "code", "key", "name", "cur") if k in ev}}
+    try:
+        LATE_PATH.write_text(json.dumps(LATE, ensure_ascii=False))
+    except OSError:
+        pass
+
+
+def late_check():
+    if not LATE or not H.html:
+        return
+    changed = False
+    for key, rec in list(LATE.items()):
+        try:
+            old = (datetime.now(timezone.utc) - datetime.fromisoformat(rec["t"])).days
+        except (ValueError, TypeError):
+            old = 99
+        if old > 10:
+            LATE.pop(key, None)
+            changed = True
+            continue
+        for kind, only, ko in LATE_KINDS:
+            if kind not in rec["miss"] or not _has_label((H.D.get(kind) or {}).get(key), rec["lab"]):
+                continue
+            try:
+                png = (shot.render(dict(rec["ev"], onlySeg=only)) or [None])[0]
+            except Exception:                                    # noqa: BLE001
+                png = None
+            if png:
+                TG.reply(rec["ids"], f"<b>{html.escape(rec['name'])}</b> {rec['lab']} {ko} — 뒤늦게 확인돼 보강합니다", png)
+                log("보강", key, rec["lab"], ko)
+            rec["miss"].remove(kind)
+            changed = True
+        if not rec["miss"]:
+            LATE.pop(key, None)
+    if changed:
+        try:
+            LATE_PATH.write_text(json.dumps(LATE, ensure_ascii=False))
+        except OSError:
+            pass
+
+
 def fill_loop():
     """끊겨도 저절로 이어 간다 — 재배포로 서버가 다시 켜지면 하던 큰 일(옛 결산단신)이 멈췄고, 이번 분기 부문
     메우기도 사람이 다시 걸어야 했다(인텔 3Q26 이 그래서 빠졌다, 10/30). 켜진 뒤 2분, 그다음 두 시간마다."""
@@ -3073,6 +3148,7 @@ def history_loop():
             v = None
         if (v and last and v != last) or time.time() - t0 > 20 * 60:
             safe(H.refresh)
+            safe(late_check)
             t0 = time.time()
         last = v or last
 
