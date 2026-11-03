@@ -3422,9 +3422,30 @@ def apply_ledger_fill(monthly, nums):
         n['m'].sort(key=lambda r: r[0])
     return monthly, nums
 
+def _names_ai():
+    """AI 가 받아 온 '한국에서 부르는 회사 이름'(ai_names.py → data/names_ko_ai*.json, 회원님 11/03 「송옥」 → 마쓰야).
+    원문 이름이 그때와 같을 때만 쓴다."""
+    out = {}
+    for f in sorted((HERE / "data").glob("names_ko_ai*.json")):
+        try:
+            d = json.loads(f.read_text(encoding="utf-8"))
+            for k, v in d.get("ko", {}).items():
+                out[k] = (v, d.get("src", {}).get(k, ""))
+        except (OSError, ValueError):
+            pass
+    return out
+
+
+NAMES_AI = _names_ai()
+
+
 def pack_jp(r):
     """일본만 기계 변환을 거친다. 원본이 일본어라 그대로는 훑어보기가 안 된다."""
     ko, lvl = to_korean(r["name"], companies.NOTABLE.get(r["code"], ("",))[0])
+    ai = NAMES_AI.get("jp:" + r["code"])
+    if ai and r["code"] not in companies.NOTABLE and (lvl == 0 or not re.search(r"[가-힣]", ko)
+                                                      or re.search(r"[぀-ヿ㐀-鿿]", ko)):
+        ko, lvl = ai[0], 1                                  # 기계 변환(한자 한국음)보다 그 회사를 아는 쪽이 낫다
     return [r["date"], r["code"], ko,
             r.get("fy", "").replace("月期", "월 결산"),
             KIND_MAP.get(r.get("kind", ""), r.get("kind", "")),
@@ -3502,6 +3523,8 @@ def pack_en(r, mkt):
     # 그래서 시장마다 '이름만 바꾸는' NAMES 를 따로 둔다(없는 시장도 있다).
     ko = cur[0] if cur else getattr(DICTS[mkt], "NAMES", {}).get(r["code"], "")
     name = r.get("name", "")
+    if not ko and (mkt + ":" + r["code"]) in NAMES_AI:
+        ko = NAMES_AI[mkt + ":" + r["code"]][0]             # 사전에 없는 영문 이름 → 한국에서 부르는 이름(AI)
     # 미국의 time 은 장전/장후 구분, 홍콩의 time 은 실제 시각(HH:MM)이다.
     raw_time = r.get("time", "")
     timing = TIMING_KO.get(raw_time, "") if mkt == "us" else ""
