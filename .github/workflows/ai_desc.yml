@@ -29,14 +29,14 @@ jobs:
           - {shard: 2, want: claude2}
           - {shard: 3, want: codex}
           - {shard: 4, want: claude1}
-          - {shard: 5, want: claude2}
+          - {shard: 5, want: codex}
     env:
       TOK1: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
       TOK2: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN_2 }}
       CODEX_AUTH_JSON: ${{ secrets.CODEX_AUTH_JSON }}
       AI_MODEL: haiku
       CODEX_EFFORT: low
-      AIDESC_SHARD: '${{ matrix.shard }}/6'
+      AIDESC_OUT: 'desc_ko_ai_s${{ matrix.shard }}.json'
       AIDESC_BATCH: '40'
       AIDESC_MAX: '60'
       AIDESC_SECS: '1800'
@@ -51,6 +51,8 @@ jobs:
           python-version: '3.12'
       - name: 엔진 고르기
         run: |
+          # 맡는 몫을 바퀴마다 돌린다 — 한도에 걸린 계정의 몫이 다음 바퀴엔 다른 계정에 간다(파일은 갈래마다 그대로)
+          echo "AIDESC_SHARD=$(( (${{ matrix.shard }} + ${{ github.run_number }}) % 6 ))/6" >> "$GITHUB_ENV"
           has() { case $1 in claude1) [ -n "$TOK1" ];; claude2) [ -n "$TOK2" ];; codex) [ -n "$CODEX_AUTH_JSON" ];; esac; }
           pick=""
           for e in ${{ matrix.want }} codex claude1 claude2; do has $e && { pick=$e; break; }; done
