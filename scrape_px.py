@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 """주가 요약 — 스크리너용 신고가·수익률(회원님 11/03: "신고가 애들, 3달·52주·역사적, RS 강도 센 애들").
 
-야후 차트 API 를 종목당 한 번(range=max · 주봉). 주봉 고가로 13주·52주·상장 이래 고가를 보고, 종가로 1·3·6·12개월 수익률을 낸다.
+야후 차트 API 를 종목당 두 번(2년 주봉 + 상장 이래 3개월봉). 주봉 고가로 13주·52주·상장 이래 고가를 보고, 종가로 1·3·6·12개월 수익률을 낸다.
 전체 이력은 싣지 않는다 — 종목마다 숫자 몇 개만. RS(상대강도) 순위는 빌드가 전 종목을 모아 매긴다.
 
 data/px_s{i}.json  {"px": {열쇠: [기준일, 종가, r1, r3, r6, r12, d13, d52, dall]}}   (r = 수익률 %, d = 그 고가에서 몇 % 아래, 0 이면 신고가)
@@ -29,12 +29,18 @@ def sym(k):
     return {"us": code.replace(".", "-"), "jp": code + ".T", "hk": code.lstrip("0").zfill(4) + ".HK"}.get(mkt)
 
 
-def summary(j):
+def bars(j):
     r = ((j.get("chart") or {}).get("result") or [{}])[0]
     q = ((r.get("indicators") or {}).get("quote") or [{}])[0]
     ts, cl, hi = r.get("timestamp") or [], q.get("close") or [], q.get("high") or []
-    rows = [(t, c, h if h is not None else c) for t, c, h in zip(ts, cl, hi) if c is not None]
-    if len(rows) < 14:
+    return [(t, c, h if h is not None else c) for t, c, h in zip(ts, cl, hi) if c is not None]
+
+
+def summary(j, jmax=None):
+    """j = 2년 주봉(수익률·13주·52주), jmax = 상장 이래 3개월봉(역사적 고가만). range=max 에 주봉을 달라고 하면 야후가
+    3개월봉을 준다 — 그걸 주봉으로 읽어 마이크로소프트 1년 수익률이 +1,224% 로 나왔다(11/03). 그래서 둘로 나눠 받는다."""
+    rows = bars(j)
+    if len(rows) < 14 or (rows[-1][0] - rows[-14][0]) > 13 * 8 * 86400:   # 13주가 석 달 남짓이어야 주봉이다
         return None
     last_t, last = rows[-1][0], rows[-1][1]
 
@@ -42,7 +48,7 @@ def summary(j):
         return round((last / rows[-1 - weeks][1] - 1) * 100, 1) if len(rows) > weeks and rows[-1 - weeks][1] else None
 
     def dist(weeks):
-        hs = [h for _, _, h in (rows[-weeks:] if weeks else rows)]
+        hs = [h for _, _, h in rows[-weeks:]] if weeks else [h for _, _, h in (bars(jmax) if jmax else rows)] + [rows[-1][2]]
         top = max(hs)
         if hs[-1] >= top:
             return 0                                         # 이번 주 고가가 그 기간 최고 — 신고가
@@ -74,6 +80,8 @@ def main():
     now = datetime.now(timezone.utc)
     today = now.date().isoformat() + ("a" if now.hour < 12 else "p")      # 하루 두 번(아시아 장 마감 뒤 · 미국 장 마감 뒤)
     seen = db.setdefault("seen", {})
+    if db.get("v") != 2:                                     # 3개월봉을 주봉으로 읽던 판(1) — 통째로 다시
+        px.clear(); seen.clear(); db["v"] = 2
     todo = [k for k in todo if seen.get(k) != today]          
     print(f"주가: 오늘 볼 것 {len(todo):,}")
     t0, n, fails = time.time(), 0, 0
@@ -84,9 +92,11 @@ def main():
         if not s:
             continue
         try:
-            req = urllib.request.Request(f"https://query1.finance.yahoo.com/v8/finance/chart/{s}?range=max&interval=1wk", headers=UA)
-            with urllib.request.urlopen(req, timeout=20) as r:
+            base = f"https://query1.finance.yahoo.com/v8/finance/chart/{s}"
+            with urllib.request.urlopen(urllib.request.Request(base + "?range=2y&interval=1wk", headers=UA), timeout=20) as r:
                 j = json.loads(r.read())
+            with urllib.request.urlopen(urllib.request.Request(base + "?range=max&interval=3mo", headers=UA), timeout=20) as r:
+                jmax = json.loads(r.read())
             fails = 0
         except urllib.error.HTTPError as e:
             if e.code in (401, 403, 429):
@@ -103,7 +113,7 @@ def main():
             print(f"  ! {k} {e!r}"[:120])
             time.sleep(2)
             continue
-        v = summary(j)
+        v = summary(j, jmax)
         if v:
             px[k] = v
         seen[k] = today
