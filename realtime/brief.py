@@ -16,11 +16,28 @@ import os
 import re
 import shutil
 import subprocess
+import time
 import urllib.request
 
 OR_KEY = os.environ.get("OPENROUTER_API_KEY", "")
 AN_KEY = os.environ.get("ANTHROPIC_API_KEY", "")
 CC_TOKEN = os.environ.get("CLAUDE_CODE_OAUTH_TOKEN", "")
+# **계정을 여럿 돌린다**(회원님 11/03: "클로드 그 계정 말고도 이 계정이랑 GPT 도 달아줬잖아"). 한 계정이 한도에 걸리면 한 시간 쉬게 하고
+# 다음 계정 → Codex(ChatGPT 구독) → API 키 순. Railway 변수: CLAUDE_CODE_OAUTH_TOKEN · CLAUDE_CODE_OAUTH_TOKEN_2 · CODEX_AUTH_JSON.
+CC_TOKENS = list(dict.fromkeys(t for t in (os.environ.get("CLAUDE_CODE_OAUTH_TOKEN_1", ""), CC_TOKEN,
+                                           os.environ.get("CLAUDE_CODE_OAUTH_TOKEN_2", "")) if t))
+_REST = {}                                         # 토큰(또는 'codex') -> 이때까지 쉰다(time.time())
+CODEX_AUTH = os.environ.get("CODEX_AUTH_JSON", "")
+if CODEX_AUTH:
+    try:
+        _cd = os.path.expanduser("~/.codex")
+        os.makedirs(_cd, exist_ok=True)
+        with open(os.path.join(_cd, "auth.json"), "w", encoding="utf-8") as _f:
+            _f.write(CODEX_AUTH)
+        os.chmod(os.path.join(_cd, "auth.json"), 0o600)
+    except OSError:
+        pass
+_LIMIT = re.compile(r"limit|429|529|rate|quota|exceeded|usage", re.I)
 CC_MODEL = os.environ.get("CLAUDE_MODEL", "haiku")      # Max 안에서 — 빠른 것. sonnet 으로 바꿔도 된다
 OR_MODEL = os.environ.get("LLM_MODEL", "google/gemini-3-flash-preview")
 AN_MODEL = os.environ.get("LLM_MODEL_ANTHROPIC", "claude-haiku-5-5")
@@ -50,14 +67,54 @@ def _post(url, body, headers, timeout):
         return json.loads(r.read())
 
 
+def _codex(user, timeout):
+    import tempfile
+    with tempfile.NamedTemporaryFile("r", suffix=".txt", delete=False) as f:
+        last = f.name
+    r = subprocess.run(["codex", "exec", "--skip-git-repo-check", "--sandbox", "read-only", "--color", "never",
+                        "--output-last-message", last, "-c", 'model_reasoning_effort="low"', "-"],
+                       input=SYSTEM + "\n\n" + user, capture_output=True, text=True, timeout=timeout, cwd=tempfile.gettempdir())
+    try:
+        ans = open(last, encoding="utf-8").read()
+    except OSError:
+        ans = ""
+    finally:
+        try:
+            os.unlink(last)
+        except OSError:
+            pass
+    if r.returncode == 0 and ans.strip():
+        return ans
+    raise RuntimeError(((r.stderr or "") + (r.stdout or ""))[-300:])
+
+
+VIA = {"last": ""}
+
+
 def _ask(user, timeout):
-    if CC_TOKEN and shutil.which("claude"):
-        r = subprocess.run(["claude", "-p", "--model", CC_MODEL, "--output-format", "text", "--max-turns", "1"],
-                           input=SYSTEM + "\n\n" + user, capture_output=True, text=True, timeout=timeout,
-                           env={**os.environ, "CLAUDE_CODE_OAUTH_TOKEN": CC_TOKEN})
-        if r.returncode == 0 and r.stdout.strip():
-            return r.stdout
-        LOG("Claude Code 실패:", r.returncode, (r.stderr or r.stdout)[-300:])
+    if shutil.which("claude"):
+        for i, tok in enumerate(CC_TOKENS):
+            if _REST.get(tok, 0) > time.time():
+                continue
+            r = subprocess.run(["claude", "-p", "--model", CC_MODEL, "--output-format", "text", "--max-turns", "1"],
+                               input=SYSTEM + "\n\n" + user, capture_output=True, text=True, timeout=timeout,
+                               env={**os.environ, "CLAUDE_CODE_OAUTH_TOKEN": tok})
+            if r.returncode == 0 and r.stdout.strip():
+                VIA["last"] = f"claude{i + 1}"
+                return r.stdout
+            err = (r.stderr or r.stdout)[-300:]
+            LOG(f"Claude Code 계정{i + 1} 실패:", r.returncode, err)
+            if _LIMIT.search(err):
+                _REST[tok] = time.time() + 3600          # 한도 — 한 시간 쉬고 다음 계정으로
+    if CODEX_AUTH and shutil.which("codex") and _REST.get("codex", 0) <= time.time():
+        try:
+            out = _codex(user, timeout)
+            VIA["last"] = "codex"
+            return out
+        except Exception as e:                       # noqa: BLE001
+            LOG("Codex 실패:", repr(e)[-300:])
+            if _LIMIT.search(str(e)):
+                _REST["codex"] = time.time() + 3600
     if AN_KEY:
         d = _post("https://api.anthropic.com/v1/messages",
                   {"model": AN_MODEL, "max_tokens": 1200, "system": SYSTEM,
@@ -109,7 +166,7 @@ def translate_lines(lines, timeout=40):
 
 
 def enabled():
-    return bool(CC_TOKEN or AN_KEY or OR_KEY)
+    return bool(CC_TOKENS or CODEX_AUTH or AN_KEY or OR_KEY)
 
 
 def us_text(raw):
