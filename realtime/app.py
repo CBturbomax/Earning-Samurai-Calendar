@@ -795,7 +795,7 @@ def pending_loop():
                         PEND.pop(eid, None)
                         PEND_PATH.write_text(json.dumps(PEND, ensure_ascii=False, default=str))
                     log("숫자 생김 — 이제 보낸다", key, lab, hit[1])
-                    POOL.submit(safe, finish, dict(ev), {"label": lab, "rev": hit[1], "opi": hit[2] if len(hit) > 2 else None})
+                    POOL.submit(safe, finish, dict(ev, _pend=True), {"label": lab, "rev": hit[1], "opi": hit[2] if len(hit) > 2 else None})
                 elif age > 24 * 10:                              # 열흘(회원님 11/03: "3Q 못 잡았으면 다시 잡아서 꼭 쏴줘") — 10-Q 는 보통 한 달 안
                     with PEND_LOCK:
                         PEND.pop(eid, None)
@@ -846,6 +846,8 @@ def finish(ev, point=None):
     with H.lock:
         fin = dict(H.D.get("fin", {}).get(key) or {})
         seg = H.D.get("seg", {}).get(key)
+    # 이 사건 **전에** 사이트가 이미 가진 분기 — 그 분기를 낸 지 며칠 된 회사를 '방금 발표'로 다시 보내지 않으려고(11/03 마이크로소프트)
+    had_labels = {p[0] for p in (fin.get("points") or []) if len(p) > 1 and p[1]}
     if len(fin.get("points") or []) < 2 or fin.get("freq") not in ("Q", "H"):
         got = live_hist(ev["mkt"], ev["code"])
         if got:
@@ -966,6 +968,20 @@ def finish(ev, point=None):
     else:
         S.broadcast(ev)
         send, why = tg_pick(ev, pts)
+        # **이미 발표된 분기는 다시 안 보낸다.** 큰 회사를 늘 뉴스로 보다 보니 며칠 지난 분석 기사(「Microsoft … Q1 Earnings」)가 새 발표처럼
+        # 잡혀 지난주 실적이 텔레그램으로 또 나갔다(11/03). 그 분기 숫자가 이 사건 전에 이미 사이트에 있었고, 캘린더상 발표일이 이틀 넘게
+        # 지났으면(또는 캘린더 줄이 없으면) 지난 발표다. 숫자 대기에서 풀린 것(_pend)은 이 사건이 처음 잡은 것이므로 예외.
+        if send and not ev.get("_pend"):
+            tl = ev.get("tlab") or _target_label(ev, pts)
+            with H.lock:
+                r0 = H.row(key, ev["date"])
+            try:
+                old_row = (not r0) or (date.fromisoformat(ev["date"]) - date.fromisoformat(r0[0])).days >= 2
+            except ValueError:
+                old_row = True
+            if tl and tl in had_labels and old_row:
+                send, why = False, f"이미 발표된 분기({tl})"
+                log("이미 발표된 분기 — 안 보냄", key, tl)
     ev["tg"], ev["tgWhy"] = send, why
     ids = {}
     if send and not replay:
