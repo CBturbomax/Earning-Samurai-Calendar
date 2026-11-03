@@ -23,7 +23,7 @@ import ai_seg
 
 HERE = Path(__file__).parent
 SHARD = os.environ.get("AIDESC_SHARD", "")          # "0/3" — 갈래마다 제 파일(커밋이 안 부딪힌다)
-OUT = HERE / "data" / (f"desc_ko_ai_s{SHARD.split('/')[0]}.json" if SHARD else "desc_ko_ai.json")
+OUT = HERE / "data" / (os.environ.get("AIDESC_OUT") or (f"desc_ko_ai_s{SHARD.split('/')[0]}.json" if SHARD else "desc_ko_ai.json"))
 BATCH = int(os.environ.get("AIDESC_BATCH", "25"))
 MAX_CALLS = int(os.environ.get("AIDESC_MAX", "40"))
 SECS = int(os.environ.get("AIDESC_SECS", "1500"))
