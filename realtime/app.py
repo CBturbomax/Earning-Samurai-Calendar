@@ -68,7 +68,7 @@ HK_EVERY = float(os.environ.get("HK_EVERY", "10"))
 QUIET = os.environ.get("QUIET_START", "1") == "1"   # 켤 때 이미 떠 있던 공시는 알리지 않는다
 # 다만 막 뜬 것(재배포 중에 나온 공시)까지 삼키면 안 된다 — 이 분 안의 것은 그대로 알린다.
 # 같은 공시를 두 번 보내는 것은 events.json(볼륨)의 id 로 막힌다.
-QUIET_MIN = int(os.environ.get("QUIET_MIN", "180"))   # 켤 때 지난 3시간 공시를 다시 본다 — 보낸 것은 S 가 거른다(10/30 누락)
+QUIET_MIN = int(os.environ.get("QUIET_MIN", "720"))   # 켤 때 지난 12시간 공시를 다시 본다 — 보낸 것은 S·TGDAY 가 거른다(11/03: 페라리처럼 못 잡은 건 늦게라도 보낸다)
 
 
 def stale(t):
@@ -94,6 +94,28 @@ def log(*a):
     print(line, flush=True)
     LOGS.append(line[:1500])
     del LOGS[:-300]
+
+
+# **SEC 는 IP 하나에 초당 10건을 넘으면 10분쯤 막는다.** 이 서버 안의 여러 일(8-K 피드 2초 · 6-K 확인 · 보도자료 받기 · 전년 수치 ·
+# 옛 이력 메우기)이 저마다 SEC 를 두드려 한도를 넘었고, 막히자 피드가 5초마다 열두 쪽을 다시 받아 **막힘이 풀리지 않았다** —
+# 11/03 밤 8-K·6-K 를 하나도 못 받았다(페라리·그랩). 프로세스 전체의 SEC 요청을 여기 한 곳에서 초당 5건으로 묶는다.
+_SEC_GATE = threading.Lock()
+_SEC_LAST = [0.0]
+_urlopen0 = urllib.request.urlopen
+
+
+def _urlopen_paced(req, *a, **k):
+    url = req.full_url if isinstance(req, urllib.request.Request) else str(req)
+    if "sec.gov" in url:
+        with _SEC_GATE:
+            w = 0.2 - (time.time() - _SEC_LAST[0])
+            if w > 0:
+                time.sleep(w)
+            _SEC_LAST[0] = time.time()
+    return _urlopen0(req, *a, **k)
+
+
+urllib.request.urlopen = _urlopen_paced
 
 
 def http_get(url, ua=None, timeout=20, binary=False):
@@ -2128,7 +2150,7 @@ def us_watch():
             for form in ("8-K", "6-K"):
                 # 켤 때는 앞 몇 쪽을 넘겨 본다 — 꺼져 있던 사이 올라온 8-K 가 최신 40건 밖으로 밀렸을 수 있다.
                 xml = "".join(http_get(FEED.format(form=form).replace("start=0&count=40", f"start={st}&count=100"), timeout=20)
-                              for st in (range(0, 600, 100) if first else [None])) if first else http_get(FEED.format(form=form), timeout=15)
+                              for st in (range(0, 300, 100) if first else [None])) if first else http_get(FEED.format(form=form), timeout=15)
                 for e in ENTRY.findall(xml):
                     acc = re.search(r"AccNo:\s*</b>\s*([\d-]+)|AccNo:\s*([\d-]+)", html.unescape(e))
                     acc = acc and (acc.group(1) or acc.group(2))
@@ -2150,7 +2172,12 @@ def us_watch():
             first = False
         except Exception as e:                                   # noqa: BLE001
             log("미국 피드:", e)
-            time.sleep(5)
+            # 429 면 SEC 가 IP 를 잠근 것이다 — 두드릴수록 길어진다. 1분 쉬고, 켤 때 몇 쪽 넘겨 보기는 접는다(그 사이 것은 보도자료 피드가 잡는다).
+            if "429" in str(e):
+                first = False
+                time.sleep(60)
+            else:
+                time.sleep(5)
         time.sleep(max(0.2, US_EVERY - (time.time() - t0)))
 
 
