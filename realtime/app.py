@@ -968,6 +968,16 @@ def finish(ev, point=None):
         send, why = tg_pick(ev, pts)
     ev["tg"], ev["tgWhy"] = send, why
     ids = {}
+    if send and not replay:
+        # **보내기 직전에 한 번 더, 잠금 안에서 확인하고 바로 적는다** — 숫자 대기 중이던 같은 회사 사건 셋이 한꺼번에 풀려
+        # 톰슨로이터가 같은 순간 세 번 나갔다(11/03). 셋 다 '아직 안 보냄'을 본 뒤 보냈기 때문이다.
+        with TGDAY_LOCK:
+            if _tg_already(ev):
+                send, why = False, "이미 보냄"
+                ev["tg"], ev["tgWhy"] = send, why
+            else:
+                TGDAY.add(_tgday_key(ev))
+                TGDAY_PATH.write_text(json.dumps(sorted(TGDAY)[-5000:]), encoding="utf-8")
     if send:                                     # ① 그림·핵심 숫자 먼저 — 몇 초 안에
         ids = TG.send_album(("🧪 <i>지난 공시 다시 보내기(시험)</i>\n" if replay else "") + caption(ev), pngs)
         ev["t_tg"] = now_iso()
@@ -2258,7 +2268,9 @@ def pr_watch():
                         continue
                     seen.add(link)
                     nt = " " + _pr_norm(title) + " "
-                    hit = [c for c in cands if (" " + c[0] + " ") in nt]
+                    # 회사 이름이 **제목 맨 앞**에 와야 한다 — 「Recursion's Q3 Earnings Beat … on Sanofi Milestone」을 사노피 발표로,
+                    # 「D.A. Davidson … Delivers His Apple Earnings Takeaways」를 애플 발표로 잡았다(11/03). 보도자료·AP 는 이름이 앞에 온다.
+                    hit = [c for c in cands if nt.startswith(" " + c[0] + " ")]
                     # 발표 **뒤에** 붙는 확인 기사 — AP 「Ferrari: Q3 Earnings Snapshot」 · Zacks 「Ferrari (RACE) Surpasses Q3 Earnings…」.
                     # 회사 보도자료 제목에 이름도 '실적'도 없을 때(페라리 11/03 「STRONG MIX … SUSTAIN Q3 GROWTH」) 이것으로 잡는다.
                     tick = re.findall(r"\((?:NYSE|NASDAQ|Nasdaq|NYSEAMERICAN)?:?\s*([A-Z][A-Z.\-]{0,6})\)", title)
