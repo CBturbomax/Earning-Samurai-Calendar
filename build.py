@@ -2267,6 +2267,24 @@ def seg_ko(name):
 
 
 
+def load_surprise(keys):
+    """Zacks EPS 서프라이즈 이력(scrape_surprise.py) -> {us:티커: [[회계분기 'YYYY-MM', %], ...]} — 2017-10 이후 최대 36칸."""
+    try:
+        st = json.loads((HERE / "data" / "surprise_us.json").read_text(encoding="utf-8")).get("stocks", {})
+    except (OSError, ValueError):
+        return {}
+    return {"us:" + t: [[x[0], x[2]] for x in v["s"] if x[0] >= "2017-10"][-36:]
+            for t, v in st.items() if v.get("s") and "us:" + t in keys}
+
+
+def _desc_ai():
+    """AI 가 원문에서 옮긴 사업 설명 한 줄(ai_desc.py → data/desc_ko_ai.json, 회원님 11/03)."""
+    try:
+        return json.loads((HERE / "data" / "desc_ko_ai.json").read_text(encoding="utf-8")).get("ko", {})
+    except (OSError, ValueError):
+        return {}
+
+
 def load_desc():
     """받아둔 사업 설명 원문. 한국어가 없는 종목에만 쓴다.
 
@@ -4047,7 +4065,8 @@ def build():
                 and s in {p[9] + ":" + p[1] for p in packed}},
         # 무엇을 파는 회사인가. 한국어는 사람이 쓴 것(descriptions.py), 원문은
         # 받아온 것(desc.json). 화면에 실린 종목 것만 싣는다.
-        "descKo": {k: v for k, v in DESC_KO.items() if k in on_screen},
+        "descKo": {k: v for k, v in dict(_desc_ai(), **DESC_KO).items() if k in on_screen},   # 사람이 쓴 것(DESC_KO)이 AI 번역을 이긴다
+        "sur": load_surprise(on_screen),
         "desc": {k: v["t"] for k, v in DESC.items()
                  if v.get("t") and k in on_screen and k not in DESC_KO},
         # 사업부별 매출. "매출이 늘었다"보다 "어디서 늘었다"가 중요할 때가 있다.
@@ -6321,26 +6340,13 @@ function openModal(k, dt) {
     altOf(r).concat(r[8] === 0 ? ['한글 표기는 기계 변환'] : []).join(' · ');
   const dd = Math.round((parse(r[0]) - parse(D.today)) / 86400000);
   const dn = doneInfo(r);
-  document.getElementById('mdList').innerHTML =
-    '<dt>' + (dn ? '발표일' : '발표 예정일') + '</dt><dd>' +
-    r[0] + ' (' + DOW[(parse(r[0]).getDay()+6)%7] + ') ' +
-    (dd === 0 ? '· 오늘' : dd > 0 ? '· D-' + dd : '· ' + (-dd) + '일 전') +
-    (dn ? ' <span class="donetag">✓ 발표 완료</span>' +
-          (dn.actual ? ' <span class="dim">EPS ' + esc(String(dn.actual)) +
-                       ' ' + surprise(dn.actual, dn.consensus) + '</span>' : '') +
-          (dn.url ? ' <a class="dim" target="_blank" rel="noopener" href="' + esc(dn.url) +
-                    '">SEC 8-K 원문 ↗</a> <span class="dim">(EPS 는 나스닥 반영 후)</span>' : '')
-        : '') + '</dd>' +
+  document.getElementById('mdList').innerHTML =      // 발표일·분기·테마 줄은 뺐다(회원님 11/03)
     (r[10] ? '<dt>발표 시각</dt><dd>' + esc(r[10]) +
              (r[10] === '장전' ? ' (Before Open)' : r[10] === '장중' ? ' (Market Hours)' : ' (After Close)') +
              (r[13] ? ' · 한국 ' + esc(r[12].slice(5).replace('-', '/')) + ' ' + r[13] + (r[14] ? ' (실제 공시 시각)' : '경') : '') + '</dd>' : '') +
-    '<dt>분기</dt><dd>' +
-      (dn && dn.period ? '<b>' + esc(epsQ(dn.period)) + '</b> · ' : '') +
-      esc([r[4], r[3]].filter(Boolean).join(' · ') || '—') + '</dd>' +
     (r[11] || liveCap(k) ? '<dt>시가총액</dt><dd>' + capKo(r[11], k) + '</dd>' : '') +
     (r[5] ? '<dt>업종</dt><dd>' + esc(r[5]) + '</dd>' : '') +
-    '<dt>시장</dt><dd>' + esc(MKT[m].ko) + (r[6] ? ' · ' + esc(r[6]) : '') + '</dd>' +
-    (nt ? '<dt>테마</dt><dd>' + esc(nt[2]) + '</dd>' : '');
+    '<dt>시장</dt><dd>' + esc(MKT[m].ko) + (r[6] ? ' · ' + esc(r[6]) : '') + '</dd>';
   const L = links(m, code);
   const a1 = document.getElementById('mdLink1'), a2 = document.getElementById('mdLink2');
   a1.textContent = L[0]; a1.href = L[1];
@@ -6376,6 +6382,38 @@ function curOf(code) {
 /* **무엇을 파는 회사인가.** 업종 이름만으로는 안 보인다 — 'ONEOK 에너지'라고
    적어봐야 뭘 파는지 모른다. 한국어 설명이 있으면 그걸 쓰고, 아직 안 쓴 종목은
    받아온 원문을 그대로 보인다. 원문은 영어·일본어라 「원문」이라고 적어 둔다. */
+/* **EPS 서프라이즈 — 컨센서스 대비 몇 % 웃돌았나/밑돌았나만**(회원님 11/03: "EPS 가 얼마인지는 안 궁금하다").
+   Zacks 이력(D.sur, 지난 발표 전부)이 있으면 그것, 없으면 나스닥 최근 네 분기(f.eps.done). 웃돌면 빨강 위로, 밑돌면 파랑 아래로. */
+function surpChart(key, f) {
+  let rows = ((D.sur || {})[key] || []).map(r => [r[0], r[1]]);
+  if (!rows.length && f && f.eps && f.eps.done) {
+    rows = f.eps.done.map(x => { const a = num(x.actual), c = num(x.consensus);
+      const m = epsKey(x.period); return (a == null || !c || !m) ? null : [m.replace(/-(\d)$/, '-0$1'), (a - c) / Math.abs(c) * 100]; }).filter(Boolean);
+  }
+  rows = rows.filter(r => r[0] >= '2017-10').slice(-36);
+  if (rows.length < 2) return '';
+  const lab = p => { const y = +p.slice(0, 4), m = +p.slice(5, 7); return Math.ceil(m / 3) + 'Q' + String(y % 100).padStart(2, '0'); };
+  const n = rows.length, W = Math.max(880, n * 30), L = 58, R = 30, H = 230, T = 30, B = 56;
+  const step = (W - L - R) / n, cx = i => L + step * (i + 0.5);
+  const vals = rows.map(r => r[1]);
+  const cap = Math.max(5, Math.min(50, Math.max(...vals.map(Math.abs))));       // ±50% 넘는 칸은 끝에 붙이고 숫자는 그대로
+  const mid = T + (H - T - B) / 2, half = (H - T - B) / 2, y = v => mid - half * Math.max(-1, Math.min(1, v / cap));
+  let s = '<line class="fzero" x1="' + L + '" y1="' + mid + '" x2="' + (W - R) + '" y2="' + mid + '"/>' +
+    '<text class="fx" x="' + (L - 8) + '" y="' + (mid + 5) + '" text-anchor="end" style="font-size:13px">0%</text>';
+  rows.forEach((r, i) => {
+    const v = r[1], up = v >= 0, c = up ? '#ff5b5b' : '#4ea3ff', x = cx(i), yy = y(v), bw = step * 0.62;
+    s += '<rect x="' + (x - bw / 2).toFixed(1) + '" y="' + Math.min(yy, mid).toFixed(1) + '" width="' + bw.toFixed(1) +
+      '" height="' + Math.max(1, Math.abs(yy - mid)).toFixed(1) + '" style="fill:' + c + '"/>' +
+      '<text class="vn" x="' + x.toFixed(1) + '" y="' + (up ? yy - 6 : yy + 15).toFixed(1) + '" text-anchor="middle" style="font-size:12px;font-weight:800;fill:' +
+      c + '">' + (up ? '+' : '') + (Math.abs(v) >= 10 ? v.toFixed(0) : v.toFixed(1)) + '</text>';
+    const q = lab(r[0]);
+    if (i > 0 && /^1Q/.test(q)) s += '<line x1="' + (x - step / 2).toFixed(1) + '" y1="' + (H - B + 3) + '" x2="' + (x - step / 2).toFixed(1) + '" y2="' + (H - 2) + '" style="stroke:rgba(255,255,255,.22)"/>';
+    s += '<text class="fx' + (i === n - 1 ? ' now' : '') + '" transform="translate(' + (x + 4).toFixed(1) + ',' + (H - B + 8) + ') rotate(-90)" text-anchor="end" style="font-size:13px">' + q + '</text>';
+  });
+  const beat = vals.filter(v => v > 0).length;
+  return '<div class="finwrap"><div class="finhead">EPS 서프라이즈 <span class="dim">(컨센서스 대비 % · 웃돈 분기 ' + beat + '/' + n + ')</span></div>' +
+    '<div class="finbox"><svg viewBox="0 0 ' + W + ' ' + H + '" class="finsvg">' + s + '</svg></div></div>';
+}
 function bizLine(m, code) {
   const key = m + ':' + code;
   const ko = D.descKo && D.descKo[key];
@@ -6591,16 +6629,16 @@ function pxRender(key) {
       '<text x="' + mx + '" y="' + (BASE - 15) + '" text-anchor="middle" style="font-size:14px;font-weight:800;fill:' + c + '">' +
       (r >= 0 ? '+' : '') + (r * 100).toFixed(1) + '%  <tspan style="fill:#9fb0c0;font-weight:600;font-size:12px">' + dd(a[0]) + ' → ' + dd(b[0]) + '</tspan></text>';
   }
-  if (ev.length) s += '<text class="fx now" x="' + L + '" y="18" style="font-size:14px">▼ 점선 = 실적 발표일 · 위 숫자 = 실적 발표 후 주가 반응</text>';
+  if (ev.length) s += '<text class="fx now" x="4" y="' + (T - 34) + '" style="font-size:12px;font-weight:700">실적 발표일</text>' +   // 회원님 11/03 — 줄머리에 이름만
+    '<text class="fx" x="4" y="' + (T - 14) + '" style="font-size:12px;font-weight:700">주가 반응</text>';
   S.view = { pts, tx, L, R, W };
   const r1 = pts[n - 1][1] / pts[0][1] - 1;
   const btn = ['YTD', '1년', '2년', '3년', '5년', '10년'].map(k => '<button class="pxb' + (k === S.range ? ' on' : '') + '" data-pxk="' + key + '" data-r="' + k + '">' + k + '</button>').join('');
   return '<div class="finhead">주가 <span class="dim">(' + esc(S.cur) + ')</span><span class="pxret" style="color:' + (r1 >= 0 ? '#ff6b6b' : '#5fb3ff') + '">' +
     S.range + ' ' + (r1 >= 0 ? '+' : '') + (r1 * 100).toFixed(1) + '%</span><span class="pxbtns">' + btn + '</span></div>' +
     '<div class="finbox"><svg viewBox="0 0 ' + W + ' ' + H + '" class="finsvg pxsvg" data-pxk="' + key + '">' + s + '</svg></div>' +
-    '<div class="finlegend">' + (ohlc ? '<span class="lg" style="--c:#ff5b5b">' + ({ d: '일봉', w: '주봉', m: '월봉' })[unit] +
-      ' · 아래 막대 거래량</span>' : '<span class="lg" style="--c:#5B9BD5">종가</span>') + '<span class="lg" style="--c:rgba(255,255,255,.55)">실적 발표일 — 위 숫자는 발표 후 주가 반응(장후 발표면 다음 날 종가)</span>' +
-    '<span class="src">끌어서 구간 수익률</span></div>';
+    '<div class="finlegend">' + (ohlc ? '<span class="lg" style="--c:#ff5b5b">' + ({ d: '일봉', w: '주봉', m: '월봉' })[unit] + '</span>'
+      : '<span class="lg" style="--c:#5B9BD5">종가</span>') + '</div>';      // 범례는 봉 단위만(회원님 11/03)
 }
 document.addEventListener('click', e => {
   const b = e.target.closest && e.target.closest('.pxb');
@@ -6645,17 +6683,7 @@ function finBlock(m, code) {
     : '<p class="finnote">이 종목은 아직 실적 수치를 받지 않았습니다. ' +
       '시가총액 큰 종목부터 채우는 중입니다.</p>');
   let html = biz;
-  if (f.eps) {
-    const u = f.eps.upcoming, d = f.eps.done.slice(-4);
-    html += '<div class="epsrow">' +
-      d.map(x => '<span class="epsbox"><b>' + esc(epsQ(x.period)) + '</b>' +
-        'EPS ' + esc(String(x.actual)) +
-        (x.consensus ? ' <i>(예상 ' + esc(String(x.consensus)) + ')</i>' : '') +
-        surprise(x.actual, x.consensus) + '</span>').join('') +
-      (u ? '<span class="epsbox next"><b>' + esc(epsQ(u.period)) + '</b>아직 발표 전' +
-           (u.consensus ? ' <i>(예상 ' + u.consensus + ')</i>' : '') + '</span>' : '') +
-      '</div>';
-  }
+  html += surpChart(key, f);                               // EPS 상자 대신 서프라이즈 막대(회원님 11/03)
   // 최신 분기를 SEC 10-Q 가 아니라 발표 당일 8-K 보도자료에서 읽었다면 그렇다고 적는다.
   if (f.prLast) {
     const p = f.prLast;
