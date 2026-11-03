@@ -825,7 +825,7 @@ def _tg_already(ev):
         d = date.fromisoformat(ev.get("date", ""))
     except ValueError:
         return False
-    days = {d.isoformat(), (d - timedelta(days=1)).isoformat()}
+    days = {(d + timedelta(days=k)).isoformat() for k in (-1, 0, 1)}
     if any(f"{ev['key']}|{x}" in TGDAY for x in days):
         return True
     with S.lock:
@@ -2195,6 +2195,9 @@ PR_EVERY = float(os.environ.get("PR_EVERY", "15"))
 PR_SENT = {}                                     # (열쇠, 현지 날짜) -> 사건 id
 PR_TITLE = re.compile(r"(report|announce|post|deliver|declare)s?\b.*\b(results|earnings)|\bresults\b.*\b(quarter|fiscal|year)|"
                       r"\b(first|second|third|fourth)[- ]quarter\b.*\b(results|earnings)|\bQ[1-4]\b.*\bresults", re.I)
+PR_NOT = re.compile(r"gears up|what to expect|preview|ahead of|to report|will report|set to|expected to|estimates?\b|should you|"
+                    r"\bbeat|\bmiss|analyst|transcript|\bstock\b|\bshares\b|investors|watch|\bvs\.?\b|key metrics|"
+                    r"wall street|\bwhy\b|\bhow\b|\?|conference call|webcast|to announce|will announce|date|schedule", re.I)
 _PR_STOP = re.compile(r"\b(the|inc|incorporated|corp|corporation|co|company|companies|holdings?|group|ltd|limited|plc|n\.?v|s\.?a|"
                       r"class [a-c]|common stock|ordinary shares|ads|american depositary shares?)\b\.?", re.I)
 
@@ -2251,8 +2254,8 @@ def pr_watch():
                     if not link or link in seen:
                         continue
                     seen.add(link)
-                    if not PR_TITLE.search(title):
-                        continue
+                    if not PR_TITLE.search(title) or PR_NOT.search(title):
+                        continue                                 # 예고·분석 기사(「Gears Up to Report Q3 Earnings: What to Expect」)는 발표가 아니다
                     nt = " " + _pr_norm(title) + " "
                     hit = [c for c in cands if (" " + c[0] + " ") in nt]
                     if len(hit) != 1:                            # 못 찾거나 둘 이상이면 안 보낸다(엉뚱한 회사보다 8-K 를 기다리는 게 낫다)
