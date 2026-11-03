@@ -48,9 +48,10 @@ def quarterly(facts):
         prev = 0.0
         for e in sorted(ends):
             days = (date.fromisoformat(e) - date.fromisoformat(s)).days
+            # 앞 분기 값이 없으면(그 분기엔 인수가 없어 회사가 안 적었다) 누계가 곧 그 기간의 인수 지출이다 —
+            # 닥터페퍼는 1분기 줄이 없고 상반기 누계에만 JDE Peet's 가 있어 통째로 버려졌다(11/03).
             v = ends[e] - prev if days > 125 else ends[e]
-            if days <= 125 or prev:
-                q.setdefault(e, round(v))
+            q.setdefault(e, round(v))
             prev = ends[e]
     return q
 
@@ -61,6 +62,8 @@ def main():
     except (OSError, ValueError):
         db = {}
     st = db.setdefault("stocks", {})
+    if db.get("v") != 2:                                       # 1: 앞 분기 없는 누계를 버림 — 다시
+        st.clear(); db["v"] = 2
     cikmap = ss.cik_map()
     today = date.today().isoformat()
     todo = [t for t in candidates() if (st.get(t) or {}).get("ts", "")[:10] < today[:8] + "01" or t not in st]
