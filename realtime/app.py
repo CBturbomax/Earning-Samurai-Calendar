@@ -2045,7 +2045,7 @@ def us_process(cik, acc, name, upd, replay=False):
         return
     pub_et = datetime.fromisoformat(upd).astimezone(ET).strftime("%Y-%m-%d %H:%M")
     url = f"https://www.sec.gov/Archives/edgar/data/{cik}/{acc.replace('-', '')}/{acc}-index.htm"
-    ev = base_event("us", code, name, pub_et, ET, "SEC 8-K 보도자료", url)
+    ev = base_event("us", code, name, pub_et, ET, "SEC 실적 공시(8-K·6-K) 보도자료", url)
     ev["replay"] = replay
     if not replay and PR_SENT.get((ev["key"], pub_et[:10])):
         log(f"8-K {ev['key']} — 보도자료로 이미 보냄")
@@ -2066,13 +2066,27 @@ def us_process(cik, acc, name, upd, replay=False):
     finish(ev, point)
 
 
+def fpi_due(cik, upd):
+    """**미국 상장 외국 기업은 8-K 대신 6-K 로 실적을 낸다**(11/03 그랩 GRAB — 텔레그램이 8-K Item 2.02 만 봐서 못 쐈다).
+    6-K 는 실적 말고도 온갖 공시라 거른다: 우리 미국 캘린더에 접수일(동부) 앞뒤 하루 안의 실적 일정이 있는 회사만."""
+    tick = cik_ticker().get(cik)
+    if not tick:
+        return False
+    day = datetime.fromisoformat(upd.replace("Z", "+00:00")).astimezone(ET).date()
+    r = H.row("us:" + tick.replace("-", "."), day.isoformat())
+    try:
+        return bool(r) and abs((date.fromisoformat(r[0]) - day).days) <= 1
+    except (ValueError, TypeError):
+        return False
+
+
 def us_watch():
     seen = set()
     first = True
     while True:
         t0 = time.time()
         try:
-            for form in ("8-K",):
+            for form in ("8-K", "6-K"):
                 # 켤 때는 앞 몇 쪽을 넘겨 본다 — 꺼져 있던 사이 올라온 8-K 가 최신 40건 밖으로 밀렸을 수 있다.
                 xml = "".join(http_get(FEED.format(form=form).replace("start=0&count=40", f"start={st}&count=100"), timeout=20)
                               for st in (range(0, 600, 100) if first else [None])) if first else http_get(FEED.format(form=form), timeout=15)
@@ -2083,12 +2097,14 @@ def us_watch():
                         continue
                     seen.add(acc)
                     summ = html.unescape(e)
-                    if "2.02" not in summ:
-                        continue
                     m = re.search(r"<title>[^<]*?-\s*(.*?)\s*\((\d{10})\)", e)
                     upd = re.search(r"<updated>([^<]+)</updated>", e)
                     if not (m and upd):
                         continue
+                    if form == "8-K" and "2.02" not in summ:
+                        continue
+                    if form == "6-K" and not fpi_due(int(m.group(2)), upd.group(1)):
+                        continue                                 # 외국 기업 6-K 는 실적 일정이 오늘·어제·내일인 회사만(그랩 11/03)
                     if first and stale(datetime.fromisoformat(upd.group(1).replace("Z", "+00:00"))):
                         continue
                     POOL.submit(safe, us_process, int(m.group(2)), acc, html.unescape(m.group(1)), upd.group(1))
