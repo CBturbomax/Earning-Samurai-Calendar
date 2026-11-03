@@ -83,7 +83,8 @@ SINCE = "2017-01-01"                                  # 1Q18 부터(회원님 10
 #           길이도 60~125일로 넓혔다 — 코스트코의 16주 분기가 빠지고 있었다.
 #   7 -> 8  1Q18 부터 받는다(SINCE 2018-10 -> 2017-01). 회원님: "1Q18부터 좀 더 장기로."
 #   8 -> 9  대부분 맞는 옛 태그로 빈 분기를 메운다(mostly). 3M 등 929종목의 3Q21~1Q23 구멍.
-FIN_VER = 9
+#   9 -> 10 앞 두 매출 태그를 늘 같이 보고, 꾸준히 1.5배 넘게 작은 쪽(매출의 일부)은 뼈대에서 뺀다(휴매나·SoFi·Greif).
+FIN_VER = 10
 
 BACKOFF = (0, 5, 20, 60)   # SEC 가 막으면 쉬었다 다시. 없는 태그(404)는 재시도 않는다.
 GIVE_UP_AFTER = 5          # 연속 이만큼 막히면 이번 실행은 접는다
@@ -344,7 +345,9 @@ def merged(cik, ns, tags, into=None, enough=0):
         if q or a:
             got.append((q, a, c))
         # 첫 태그만으로 넉넉하고 최근까지 온다면 더 물어볼 것이 없다.
-        if (enough and not into and len(got) == 1
+        # 다만 앞 둘(고객 계약 매출 · 총매출)은 늘 같이 본다 — 보험·금융은 첫 태그가 매출의 일부뿐이다(휴매나: 고객 계약 매출
+        # 30억 달러 대 총매출 320억, SoFi·Greif 도 같은 꼴). 첫 태그에서 멈추면 큰 쪽을 영영 안 묻는다(11/03).
+        if (enough and not into and len(got) == 2 and tag != tags[0]
                 and len(q) >= enough and reaches(q) >= fresh):
             break
 
@@ -359,6 +362,16 @@ def merged(cik, ns, tags, into=None, enough=0):
     def rank(d):
         return (reaches(d) >= fresh, len(d), reaches(d))
 
+    # **같은 기간에 한 태그가 다른 태그의 1.5배를 넘게 꾸준히 크면 작은 쪽은 매출의 일부다** — 뼈대 후보에서 뺀다.
+    # 총매출(Revenues)은 고객 계약 매출(보험료·이자 제외)보다 작을 수 없다.
+    def part_of(small, big):
+        shared = [k for k in small if k in big and small[k][0] and big[k][0] and small[k][0] > 0]
+        if len(shared) < 3:
+            return False
+        r = sorted(big[k][0] / small[k][0] for k in shared)[len(shared) // 2]
+        return r >= 1.5
+    keep = [t for t in got if not any(part_of(t[0], u[0]) or part_of(t[1], u[1]) for u in got if u is not t)]
+    got = keep or got
     if not mq and got:
         pick = max(got, key=lambda t: rank(t[0]))
         mq, cur = dict(pick[0]), cur or pick[2]
