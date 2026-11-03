@@ -3455,7 +3455,7 @@ def llm_selftest():
                   "servers in North America and price increases. Operating margin improved due to lower "
                   "component costs. The company raised its full-year revenue outlook.")
     LLM_TEST.update(state="정상" if r else "실패", sec=round(time.time() - t0, 1),
-                    via="claude-max" if brief.CC_TOKEN else "api", sample=(r or {}).get("why", [])[:1])
+                    via=brief.VIA.get("last") or (f"claude×{len(brief.CC_TOKENS)}" + ("+codex" if brief.CODEX_AUTH else "")), accounts=len(brief.CC_TOKENS), codex=bool(brief.CODEX_AUTH), sample=(r or {}).get("why", [])[:1])
 
 
 def main():
