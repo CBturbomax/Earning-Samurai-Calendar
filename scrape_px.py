@@ -11,6 +11,7 @@ import os
 import re
 import time
 import urllib.error
+import urllib.parse
 import urllib.request
 import zlib
 from datetime import datetime, timezone
@@ -64,7 +65,20 @@ def universe():
     for r in D["rows"]:
         k = r[9] + ":" + r[1]
         cap[k] = max(cap.get(k, 0), r[11] or 0)
-    return sorted(cap, key=lambda k: -cap[k])
+    return sorted(cap, key=lambda k: -cap[k]), cap
+
+
+# 시장 현황판의 지수·ETF(회원님 11/03) — 갈래 0 이 일봉 2년치를 받는다(50일선·주·월 추세).
+ETFS = {"us": [("SPY", "S&P 500"), ("QQQ", "나스닥100"), ("IWM", "러셀2000"), ("RSP", "S&P 500 동일가중"),
+               ("SMH", "반도체"), ("IGV", "소프트웨어"), ("XLK", "기술"), ("XLC", "커뮤니케이션"), ("XLY", "경기소비재"),
+               ("XLP", "필수소비재"), ("XLV", "헬스케어"), ("IBB", "바이오"), ("XLF", "금융"), ("XLI", "산업재"),
+               ("ITA", "방산·항공"), ("XLE", "에너지"), ("XLB", "소재"), ("XLU", "유틸리티"), ("GDX", "금광"), ("ARKK", "혁신성장")],
+        "jp": [("^N225", "닛케이225"), ("1306.T", "TOPIX"), ("2516.T", "그로스250")],
+        "hk": [("^HSI", "항셍"), ("3033.HK", "항셍테크"), ("2828.HK", "H주")]}
+
+
+def sig(x):
+    return float(f"{x:.4g}")
 
 
 def main():
@@ -73,7 +87,8 @@ def main():
     except (OSError, ValueError):
         db = {}
     px = db.setdefault("px", {})
-    todo = universe()
+    todo, cap = universe()
+    wk = db.setdefault("w", {})
     if SHARD:
         i_sh, n_sh = (int(x) for x in SHARD.split("/"))
         todo = [k for k in todo if zlib.crc32(k.encode()) % n_sh == i_sh]
@@ -116,11 +131,27 @@ def main():
         v = summary(j, jmax)
         if v:
             px[k] = v
+            if cap.get(k, 0) >= 0.3:                            # 업종 지수용 주봉 종가 — 시총 약 4천억원 이상만(작은 회사는 가중치가 없다)
+                b = bars(j)[-105:]
+                wk[k] = [datetime.fromtimestamp(b[0][0], timezone.utc).date().isoformat(), [sig(c) for _, c, _ in b]]
         seen[k] = today
         n += 1
         if n % 200 == 0:
             OUT.write_text(json.dumps(db, separators=(",", ":")), encoding="utf-8")
         time.sleep(SLEEP)
+    if not SHARD or SHARD.startswith("0/"):
+        etf = db.setdefault("etf", {})
+        for mkt, lst in ETFS.items():
+            for s, _ in lst:
+                try:
+                    u = f"https://query1.finance.yahoo.com/v8/finance/chart/{urllib.parse.quote(s)}?range=2y&interval=1d"
+                    with urllib.request.urlopen(urllib.request.Request(u, headers=UA), timeout=20) as r:
+                        b = bars(json.loads(r.read()))
+                    if len(b) > 200:
+                        etf[s] = [[datetime.fromtimestamp(t, timezone.utc).date().isoformat(), sig(c)] for t, c, _ in b]
+                except Exception as e:                          # noqa: BLE001
+                    print(f"  ! ETF {s} {e!r}"[:120])
+                time.sleep(SLEEP)
     OUT.write_text(json.dumps(db, separators=(",", ":")), encoding="utf-8")
     print(f"주가: 이번 {n:,} · 이 파일 {len(px):,}")
 
