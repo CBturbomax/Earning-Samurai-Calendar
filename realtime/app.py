@@ -68,7 +68,7 @@ HK_EVERY = float(os.environ.get("HK_EVERY", "10"))
 QUIET = os.environ.get("QUIET_START", "1") == "1"   # 켤 때 이미 떠 있던 공시는 알리지 않는다
 # 다만 막 뜬 것(재배포 중에 나온 공시)까지 삼키면 안 된다 — 이 분 안의 것은 그대로 알린다.
 # 같은 공시를 두 번 보내는 것은 events.json(볼륨)의 id 로 막힌다.
-QUIET_MIN = int(os.environ.get("QUIET_MIN", "180"))   # 켤 때 지난 3시간 공시를 다시 본다 — 보낸 것은 S 가 거른다(10/30 누락)
+QUIET_MIN = int(os.environ.get("QUIET_MIN", "720"))   # 켤 때 지난 12시간 공시를 다시 본다 — 보낸 것은 S·TGDAY 가 거른다(11/03: 페라리처럼 못 잡은 건 늦게라도 보낸다)
 
 
 def stale(t):
@@ -94,6 +94,28 @@ def log(*a):
     print(line, flush=True)
     LOGS.append(line[:1500])
     del LOGS[:-300]
+
+
+# **SEC 는 IP 하나에 초당 10건을 넘으면 10분쯤 막는다.** 이 서버 안의 여러 일(8-K 피드 2초 · 6-K 확인 · 보도자료 받기 · 전년 수치 ·
+# 옛 이력 메우기)이 저마다 SEC 를 두드려 한도를 넘었고, 막히자 피드가 5초마다 열두 쪽을 다시 받아 **막힘이 풀리지 않았다** —
+# 11/03 밤 8-K·6-K 를 하나도 못 받았다(페라리·그랩). 프로세스 전체의 SEC 요청을 여기 한 곳에서 초당 5건으로 묶는다.
+_SEC_GATE = threading.Lock()
+_SEC_LAST = [0.0]
+_urlopen0 = urllib.request.urlopen
+
+
+def _urlopen_paced(req, *a, **k):
+    url = req.full_url if isinstance(req, urllib.request.Request) else str(req)
+    if "sec.gov" in url:
+        with _SEC_GATE:
+            w = 0.2 - (time.time() - _SEC_LAST[0])
+            if w > 0:
+                time.sleep(w)
+            _SEC_LAST[0] = time.time()
+    return _urlopen0(req, *a, **k)
+
+
+urllib.request.urlopen = _urlopen_paced
 
 
 def http_get(url, ua=None, timeout=20, binary=False):
@@ -803,7 +825,7 @@ def _tg_already(ev):
         d = date.fromisoformat(ev.get("date", ""))
     except ValueError:
         return False
-    days = {d.isoformat(), (d - timedelta(days=1)).isoformat()}
+    days = {(d + timedelta(days=k)).isoformat() for k in (-1, 0, 1)}
     if any(f"{ev['key']}|{x}" in TGDAY for x in days):
         return True
     with S.lock:
@@ -2128,7 +2150,7 @@ def us_watch():
             for form in ("8-K", "6-K"):
                 # 켤 때는 앞 몇 쪽을 넘겨 본다 — 꺼져 있던 사이 올라온 8-K 가 최신 40건 밖으로 밀렸을 수 있다.
                 xml = "".join(http_get(FEED.format(form=form).replace("start=0&count=40", f"start={st}&count=100"), timeout=20)
-                              for st in (range(0, 600, 100) if first else [None])) if first else http_get(FEED.format(form=form), timeout=15)
+                              for st in (range(0, 300, 100) if first else [None])) if first else http_get(FEED.format(form=form), timeout=15)
                 for e in ENTRY.findall(xml):
                     acc = re.search(r"AccNo:\s*</b>\s*([\d-]+)|AccNo:\s*([\d-]+)", html.unescape(e))
                     acc = acc and (acc.group(1) or acc.group(2))
@@ -2150,7 +2172,12 @@ def us_watch():
             first = False
         except Exception as e:                                   # noqa: BLE001
             log("미국 피드:", e)
-            time.sleep(5)
+            # 429 면 SEC 가 IP 를 잠근 것이다 — 두드릴수록 길어진다. 1분 쉬고, 켤 때 몇 쪽 넘겨 보기는 접는다(그 사이 것은 보도자료 피드가 잡는다).
+            if "429" in str(e):
+                first = False
+                time.sleep(60)
+            else:
+                time.sleep(5)
         time.sleep(max(0.2, US_EVERY - (time.time() - t0)))
 
 
@@ -2168,6 +2195,12 @@ PR_EVERY = float(os.environ.get("PR_EVERY", "15"))
 PR_SENT = {}                                     # (열쇠, 현지 날짜) -> 사건 id
 PR_TITLE = re.compile(r"(report|announce|post|deliver|declare)s?\b.*\b(results|earnings)|\bresults\b.*\b(quarter|fiscal|year)|"
                       r"\b(first|second|third|fourth)[- ]quarter\b.*\b(results|earnings)|\bQ[1-4]\b.*\bresults", re.I)
+YAHOO_DONE = re.compile(r"earnings snapshot|^(?=.*\b(reports?|posts?|surpass(es)?|tops?|beats?|lags?|miss(es)?|meets?|matches|delivers?)\b)"
+                        r"(?=.*\b(Q[1-4]|quarter|quarterly)\b)(?=.*\b(earnings|results|loss|profit|revenues?)\b)", re.I)
+PR_PREVIEW = re.compile(r"gears up|what to expect|ahead of|to report|will report|preview|set to|expected to|could|should|\?", re.I)
+PR_NOT = re.compile(r"gears up|what to expect|preview|ahead of|to report|will report|set to|expected to|estimates?\b|should you|"
+                    r"\bbeat|\bmiss|analyst|transcript|\bstock\b|\bshares\b|investors|watch|\bvs\.?\b|key metrics|"
+                    r"wall street|\bwhy\b|\bhow\b|\?|conference call|webcast|to announce|will announce|date|schedule", re.I)
 _PR_STOP = re.compile(r"\b(the|inc|incorporated|corp|corporation|co|company|companies|holdings?|group|ltd|limited|plc|n\.?v|s\.?a|"
                       r"class [a-c]|common stock|ordinary shares|ads|american depositary shares?)\b\.?", re.I)
 
@@ -2224,10 +2257,16 @@ def pr_watch():
                     if not link or link in seen:
                         continue
                     seen.add(link)
-                    if not PR_TITLE.search(title):
-                        continue
                     nt = " " + _pr_norm(title) + " "
                     hit = [c for c in cands if (" " + c[0] + " ") in nt]
+                    # 발표 **뒤에** 붙는 확인 기사 — AP 「Ferrari: Q3 Earnings Snapshot」 · Zacks 「Ferrari (RACE) Surpasses Q3 Earnings…」.
+                    # 회사 보도자료 제목에 이름도 '실적'도 없을 때(페라리 11/03 「STRONG MIX … SUSTAIN Q3 GROWTH」) 이것으로 잡는다.
+                    tick = re.findall(r"\((?:NYSE|NASDAQ|Nasdaq|NYSEAMERICAN)?:?\s*([A-Z][A-Z.\-]{0,6})\)", title)
+                    if tick:
+                        hit = [c for c in cands if c[2] in tick or c[2].replace(".", "-") in tick] or hit
+                    done_note = bool(YAHOO_DONE.search(title)) and bool(hit) and not PR_PREVIEW.search(title)
+                    if not done_note and (not PR_TITLE.search(title) or PR_NOT.search(title)):
+                        continue                                 # 예고·분석 기사(「Gears Up to Report Q3 Earnings: What to Expect」)는 발표가 아니다
                     if len(hit) != 1:                            # 못 찾거나 둘 이상이면 안 보낸다(엉뚱한 회사보다 8-K 를 기다리는 게 낫다)
                         continue
                     try:
@@ -2240,6 +2279,32 @@ def pr_watch():
         except Exception as e:                                   # noqa: BLE001
             log("보도자료 감시:", repr(e)[:160])
         time.sleep(max(1.0, PR_EVERY - (time.time() - t0)))
+
+
+_ZK = re.compile(r"revenues? of \$\s?([\d,.]+)\s*(billion|million)[^.]{0,80}?quarter ended (\w+) (\d{4})[^$]{0,300}?"
+                 r"year-ago revenues? of \$\s?([\d,.]+)\s*(billion|million)", re.I)
+
+
+def zacks_point(key, period, raw):
+    """확인 기사 본문의 「revenues of $1.98 billion for the quarter ended September 2026 … year-ago revenues of $1.71 billion」.
+    **전년 값이 우리가 가진 전년 같은 분기와 2% 안일 때만** 이번 값을 쓴다(숫자를 다시는 틀리지 않게 — 11/03 회원님)."""
+    t = re.sub(r"<[^>]+>", " ", raw)
+    t = re.sub(r"\s+", " ", html.unescape(t))
+    m = _ZK.search(t)
+    if not m:
+        return None
+    k = lambda v, u: float(v.replace(",", "")) * (1e9 if u.lower() == "billion" else 1e6)
+    cur, prev = k(m.group(1), m.group(2)), k(m.group(5), m.group(6))
+    lab = label_of(period)
+    py = _prev_year(lab)
+    with H.lock:
+        pts = [list(p) for p in (H.D.get("fin", {}).get(key) or {}).get("points") or []]
+    ref = next((p[1] for p in pts if p[0] == py and p[1]), None)
+    if not ref or abs(prev - ref) / ref > 0.02:
+        log("확인 기사 숫자 — 전년 값이 우리 것과 안 맞아 버림", key, prev, ref)
+        return None
+    log("확인 기사에서 이번 분기 매출", key, lab, cur)
+    return {"label": lab, "rev": cur}
 
 
 def pr_process(c, title, link, pt):
@@ -2261,6 +2326,8 @@ def pr_process(c, title, link, pt):
         if got and got.get("rev"):
             point = {"label": label_of(period), "rev": got["rev"], "opi": got.get("opi"),
                      "ni": got.get("ni"), "eps": got.get("eps")}
+        elif raw:
+            point = zacks_point(key, period, raw)
     except Exception:                                            # noqa: BLE001
         log("보도자료 표 읽기 실패", code, traceback.format_exc(limit=2))
     log(f"보도자료로 먼저 잡음 {key} {title[:80]}")
