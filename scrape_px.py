@@ -95,8 +95,8 @@ def main():
     now = datetime.now(timezone.utc)
     today = now.date().isoformat() + ("a" if now.hour < 12 else "p")      # 하루 두 번(아시아 장 마감 뒤 · 미국 장 마감 뒤)
     seen = db.setdefault("seen", {})
-    if db.get("v") != 2:                                     # 3개월봉을 주봉으로 읽던 판(1) — 통째로 다시
-        px.clear(); seen.clear(); db["v"] = 2
+    if db.get("v") != 3:                                     # 1: 3개월봉을 주봉으로 읽음 · 2: 업종 지수용 주봉(w)이 없음 — 다시 받는다                                     # 3개월봉을 주봉으로 읽던 판(1) — 통째로 다시
+        seen.clear(); db["v"] = 3
     todo = [k for k in todo if seen.get(k) != today]          
     print(f"주가: 오늘 볼 것 {len(todo):,}")
     t0, n, fails = time.time(), 0, 0
