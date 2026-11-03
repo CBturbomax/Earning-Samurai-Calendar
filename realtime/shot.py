@@ -99,8 +99,10 @@ window.tgBuild = function (ev, gh) {
   if (ev.px && (ev.px.pts || []).length > 20 && typeof pxRender === 'function') {
     try {
       PX[key] = { pts: ev.px.pts, ev: ev.px.ev || [], cur: ev.px.cur || '', range: '2년', sel: null };
-      const p = pxRender(key);
-      if (p) out.push('<div class="finhead">' + title + ' 주가 <span class="dim">(2년 · 점선 = 실적 발표일 · 숫자 = 발표 뒤 주가 반응)</span></div>' + p);
+      const p = (pxRender(key) || '')                         // 텔레그램에선 안 눌리는 기간 버튼·'끌어서' 안내는 뺀다
+        .replace(/<span class="pxbtns">[\s\S]*?<\/span><\/div>/, '</div>')
+        .replace(/<span class="src">끌어서 구간 수익률<\/span>/, '');
+      if (p) out.push('<div class="finhead">' + title + ' 주가 <span class="dim">(2년)</span></div>' + p);
     } catch (e) {}
   }
   if (gh) { const g = tgGuide(gh, title, m, key); if (g) out.push(g); }
