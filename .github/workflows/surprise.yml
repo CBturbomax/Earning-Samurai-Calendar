@@ -1,0 +1,62 @@
+# EPS 서프라이즈 이력(Zacks) — scrape_surprise.py. **이 워크플로가 data/surprise_us.json 의 주인이다.**
+name: EPS 서프라이즈
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: '41 * * * *'
+
+permissions:
+  contents: write
+  actions: write
+
+concurrency:
+  group: surprise-${{ github.ref_name }}
+  cancel-in-progress: false
+
+jobs:
+  surprise:
+    runs-on: ubuntu-latest
+    if: github.ref_name == 'main'
+    timeout-minutes: 32
+    steps:
+      - uses: actions/checkout@v4
+      - name: 최신 main 으로 맞춘다
+        run: |
+          git fetch origin main
+          git reset --hard origin/main
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: 서프라이즈 받기
+        continue-on-error: true
+        timeout-minutes: 23
+        env:
+          SURPRISE_SECS: '1200'
+        run: python scrape_surprise.py
+      - name: 저장소에 반영
+        run: |
+          set -u
+          git config user.name  "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add data/surprise_us.json 2>/dev/null || true
+          git diff --cached --quiet && { echo "달라진 게 없다."; exit 0; }
+          git commit -m "EPS 서프라이즈 $(date -u +%F' '%H:%M) [skip ci]"
+          for i in 1 2 3 4 5; do
+            git fetch origin main || { sleep $((2**i)); continue; }
+            git merge --no-edit -X ours origin/main || { git merge --abort; sleep $((2**i)); continue; }
+            git push origin HEAD:main && exit 0
+            sleep $((2**i))
+          done
+          echo "푸시를 끝내 못 했다"; exit 1
+      - name: 다음 실행(남은 종목이 있으면 이어달리기)
+        if: always()
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          python - <<'PY' && gh workflow run surprise.yml --repo "${{ github.repository }}" --ref main || true
+          import json, sys
+          d = json.load(open("data/surprise_us.json"))
+          sys.exit(0 if len(d.get("stocks", {})) < 3800 else 1)
+          PY
+

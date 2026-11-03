@@ -24,7 +24,7 @@ jobs:
   ai:
     runs-on: ubuntu-latest
     if: github.ref_name == 'main'   # 11/02 다시 켬 — Codex(ChatGPT 구독)로만 돈다. Claude 계정은 안 쓴다(추가 결제 걱정)
-    timeout-minutes: 20
+    timeout-minutes: 28
     env:
       CODEX_AUTH_JSON: ${{ secrets.CODEX_AUTH_JSON }}
       AI_ENGINE: codex
