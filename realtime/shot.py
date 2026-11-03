@@ -95,6 +95,14 @@ window.tgBuild = function (ev, gh) {
   if (t) out.push('<div class="finhead">' + title + ' 연간 실적 · 컨센서스</div>' + t);
   if (f && (f.points || []).length >= 2 && (f.freq === 'Q' || f.freq === 'H'))
     out.push(finChart(f).replace(/(<div class="finhead[^"]*">)/, '$1' + title + ' '));
+  // 주가 2년(회원님 11/03: "사이트 주가 그래프 그대로, 2년치") — 서버가 넘겨준 /api/px 자료로 사이트 pxRender 를 그대로 부른다
+  if (ev.px && (ev.px.pts || []).length > 20 && typeof pxRender === 'function') {
+    try {
+      PX[key] = { pts: ev.px.pts, ev: ev.px.ev || [], cur: ev.px.cur || '', range: '2년', sel: null };
+      const p = pxRender(key);
+      if (p) out.push('<div class="finhead">' + title + ' 주가 <span class="dim">(2년 · 점선 = 실적 발표일 · 숫자 = 발표 뒤 주가 반응)</span></div>' + p);
+    } catch (e) {}
+  }
   if (gh) { const g = tgGuide(gh, title, m, key); if (g) out.push(g); }
   if (sg) {
     const MC = { jp: 'JPY', hk: 'HKD' };
@@ -123,6 +131,13 @@ window.tgBuild = function (ev, gh) {
     out.length = 0;
     if (D.seg[key]) {
       const s2 = segChart(D.seg[key], (f && f.cur) || ({ jp: 'JPY', hk: 'HKD' })[m] || 'USD');
+      if (s2) out.push(s2.replace(/(<div class="finhead[^"]*">)/, '$1' + title + ' '));
+    }
+  } else if (ev.onlySeg === 'geochart' || ev.onlySeg === 'ordchart') {   // 뒤늦게 확인된 지역별·수주 — 그 장표만 보강으로
+    out.length = 0;
+    const src = ev.onlySeg === 'geochart' ? D.geo : D.ord;
+    if (src && src[key]) {
+      const s2 = segChart(src[key], (f && f.cur) || ({ jp: 'JPY', hk: 'HKD' })[m] || 'USD');
       if (s2) out.push(s2.replace(/(<div class="finhead[^"]*">)/, '$1' + title + ' '));
     }
   } else if (ev.onlySeg === 'guide') {                     // 답장용 — 가이던스 변천만(미국: 보도자료를 읽은 뒤라 앨범보다 늦다)

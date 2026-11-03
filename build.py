@@ -502,16 +502,30 @@ def pack_fin(rec):
     """
     out = {k: rec[k] for k in ("freq", "eps", "cur", "src", "prLast") if rec.get(k)}
     if rec.get("freq") in ("Q", "H"):
-        pts = rec.get("points") or []
+        pts = dedup_points(rec.get("points") or [])
         # **반기만 내는 회사는 반기답게 적는다.** 홍콩에 특히 많다. 점 사이가
         # 반년쯤이면 반기 보고다 — 그걸 2Q25·4Q25 로 적으면 사이가 빈 것처럼
         # 보여 헷갈린다. 화면 쪽은 이미 freq 가 'H' 면 「반기」로 쓰고 전년
         # 대비도 두 기간 전과 견준다.
         kind = "H" if half_yearly(pts) else "Q"
         out["freq"] = kind
-        labs = unstack([(h_label(p["end"], p.get("mid", "")) if kind == "H"
-                         else q_label(p["end"], p.get("mid", ""), p.get("q", "")))
-                        if p.get("end") else p["label"] for p in pts], kind)
+        natural = [(h_label(p["end"], p.get("mid", "")) if kind == "H"
+                    else q_label(p["end"], p.get("mid", ""), p.get("q", "")))
+                   if p.get("end") else p["label"] for p in pts]
+        labs = unstack(natural, kind)
+        # **밀린 이름이 제 날짜보다 한 칸 넘게 앞서면 밀기를 그만둔다**(11/03 — 회계연도를 바꾼 퍼거슨, 반기→분기로 바꾼 일본 회사가
+        # 겹친 점 때문에 줄줄이 밀려 '2Q28' 같은 미래 분기가 섰다). 그때는 날짜대로의 이름을 쓰고, 같은 이름이 둘이면 뒤엣것을 남긴다.
+        now_i = per_index(h_label(date.today().isoformat()) if kind == "H" else q_label(date.today().isoformat()))
+        if any(per_index(a) is not None and per_index(b) is not None and
+               (per_index(a) - per_index(b) > 1 or (now_i is not None and per_index(a) > now_i))
+               for a, b in zip(labs, natural)):
+            keep = {}
+            for i, lab in enumerate(natural):
+                keep[lab] = i
+            idx = sorted(keep.values())
+            pts = [pts[i] for i in idx]
+            labs = [natural[i] for i in idx]
+            UNSTACK_OFF[0] += 1
         out["points"] = [[lab, p["rev"], p.get("opi")]
                          for lab, p in zip(labs, pts)]
         # 가장 최근 분기의 **종료일**. 점마다 날짜를 실으면 파일이 1MB 늘어나므로
@@ -521,6 +535,32 @@ def pack_fin(rec):
         if last:
             out["last"] = max(last)
     return out
+
+
+def dedup_points(pts):
+    """**같은 분기가 종료일만 하루이틀 달리 두 번 들어온 것을 하나로**(11/03 내셔널프레스토 NPK: SEC 가 같은 분기를 9/30 과
+    10/1 로 두 번 줘서 `unstack` 이 뒤 분기 이름을 하나씩 밀었다 — 최신 분기가 '1Q30' 이 됐다). 종료일이 20일 안이면 같은 분기로
+    보고, 매출이 같거나(1% 안) 한쪽이 비면 영업이익이 있는 쪽 하나만 남긴다. 값이 다르면 둘 다 둔다(진짜 다른 기간일 수 있다)."""
+    out = []
+    for p in sorted((q for q in pts if q.get("end")), key=lambda q: q["end"]):
+        if out:
+            a = out[-1]
+            try:
+                close = (date.fromisoformat(p["end"]) - date.fromisoformat(a["end"])).days <= 20
+            except ValueError:
+                close = False
+            ra, rb = a.get("rev") or 0, p.get("rev") or 0
+            if close and (not ra or not rb or abs(ra - rb) <= 0.01 * max(abs(ra), abs(rb))):
+                keep = p if (p.get("opi") is not None and a.get("opi") is None) or (ra == 0 and rb) else a
+                out[-1] = dict(keep, end=max(a["end"], p["end"]) if keep is p else a["end"])
+                DEDUP_N[0] += 1
+                continue
+        out.append(p)
+    return out + [q for q in pts if not q.get("end")]
+
+
+DEDUP_N = [0]
+UNSTACK_OFF = [0]
 
 
 def half_yearly(pts):
