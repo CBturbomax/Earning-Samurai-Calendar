@@ -158,7 +158,9 @@ def header_years(t, width):
 
 
 def _known(v, known):
-    return any(k and abs(v - k) <= abs(k) * 0.003 for k in known)
+    # 이미 가진 중간 분기와 **같은 값**인가. 0.3% 로 잡았더니 이번 분기가 우연히 직전 분기와 비슷하면(YUM 3Q26 2,054 대
+    # 1Q26 2,059 — 0.24%) 맞는 열을 버리고 엉뚱한 표의 2,406(누계 회사 매출)을 집었다(11/03). 같은 숫자는 0.05% 안이다.
+    return any(k and abs(v - k) <= abs(k) * 0.0005 for k in known)
 
 
 def read(raw, prior):
