@@ -2267,6 +2267,33 @@ def seg_ko(name):
 
 
 
+
+_LEAD = re.compile(r"^([^.。]{1,30})[.。]\s+(?=\S)")
+_NAME_SUF = re.compile(r"(홀딩스|그룹|지주|주식회사|㈜|HD|홍콩 상장분|DR|\s|[()（）·\-&.,])")
+_LEAD_NOT_NAME = {"철강", "리튬", "페인트", "사모펀드", "사모펀드·보험", "연금(어뉴이티)·생명보험사", "운동화·운동복",
+                  "인쇄회로기판(PCB)", "장기요양보험", "하드디스크(HDD)"}
+
+
+def drop_name_lead(desc, names):
+    """사업 설명 첫머리의 회사 이름을 뗀다 — 「산리오. 헬로키티 캐릭터 라이선스.」 → 「헬로키티 캐릭터 라이선스.」
+    (회원님 11/03: 제목에 이름이 있는데 설명에 또 쓸 필요 없다). 첫 문장이 화면 이름과 맞거나, 띄어쓰기 없는 한 낱말이면
+    이름으로 본다 — 그런 꼴인데 내용인 것(「철강.」 「하드디스크(HDD).」)은 `_LEAD_NOT_NAME` 에 손으로 적었다."""
+    m = _LEAD.match(desc or "")
+    if not m:
+        return desc
+    first = m.group(1).strip()
+    if first in _LEAD_NOT_NAME or len(first) > 24:
+        return desc
+    rest = desc[m.end():]
+    if " " not in first:
+        return rest
+    a = _NAME_SUF.sub("", re.sub(r"\(.*?\)", "", first)).lower()
+    for n in names:
+        b = _NAME_SUF.sub("", n or "").lower()
+        if b and len(a) >= 2 and (a in b or b in a):
+            return rest
+    return desc
+
 def load_surprise(keys):
     """Zacks EPS 서프라이즈 이력(scrape_surprise.py) -> {us:티커: [[회계분기 'YYYY-MM', %], ...]} — 2017-10 이후 최대 36칸."""
     st = {}
@@ -3858,6 +3885,9 @@ def build():
     # 사업부별 매출은 총매출과 대본 뒤에 싣는다. 두 배로 부푼 종목은 조용히
     # 지우지 않고 몇 종목을 뺐는지 수집 기록에 적는다.
     on_screen = {p[9] + ":" + p[1] for p in packed}
+    names_of = {}
+    for p in packed:
+        names_of.setdefault(p[9] + ":" + p[1], set()).update([p[2], p[7]])
     seg, tossed = {}, []
     for s, rec in SEG.items():
         if s not in on_screen:
@@ -4072,7 +4102,7 @@ def build():
                 and s in {p[9] + ":" + p[1] for p in packed}},
         # 무엇을 파는 회사인가. 한국어는 사람이 쓴 것(descriptions.py), 원문은
         # 받아온 것(desc.json). 화면에 실린 종목 것만 싣는다.
-        "descKo": {k: v for k, v in dict(_desc_ai(), **DESC_KO).items() if k in on_screen},   # 사람이 쓴 것(DESC_KO)이 AI 번역을 이긴다
+        "descKo": {k: drop_name_lead(v, names_of.get(k, ())) for k, v in dict(_desc_ai(), **DESC_KO).items() if k in on_screen},   # 사람이 쓴 것(DESC_KO)이 AI 번역을 이긴다
         "sur": load_surprise(on_screen),
         "desc": {k: v["t"] for k, v in DESC.items()
                  if v.get("t") and k in on_screen and k not in DESC_KO},
