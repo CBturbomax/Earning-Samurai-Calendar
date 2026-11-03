@@ -4418,6 +4418,21 @@ __FLAGCSS__
    같은 꼴이다 — 묶음 머리에 종목 수와 합계, 카드마다 코드·이름·업종·시총,
    그 아래 최신월 수치와 전년비, 막대 그림, 맨 아래 한 줄짜리 사업 설명.
    한 종목이 한 줄을 다 쓰던 큰 카드도, 이름만 빽빽하던 작은 카드도 아니다. */
+.scrtools { flex-wrap:wrap; }
+.scrpre { display:flex; flex-wrap:wrap; gap:6px; }
+.scrpre button { background:var(--panel, #161b22); color:inherit; border:1px solid var(--line, #30363d); border-radius:16px;
+  padding:5px 12px; cursor:pointer; font:inherit; font-size:13px; }
+.scrpre button.on { border-color:#f5b301; color:#f5b301; font-weight:700; }
+.scrwrap { max-height:620px; overflow:auto; border:1px solid var(--line, #30363d); border-radius:10px; }
+.scrt { width:100%; border-collapse:collapse; font-size:13px; }
+.scrt th { position:sticky; top:0; background:var(--bg2, #0d1117); text-align:right; padding:7px 8px; font-weight:600; cursor:pointer; white-space:nowrap; }
+.scrt th.l, .scrt td.l { text-align:left; }
+.scrt td { padding:6px 8px; text-align:right; border-top:1px solid var(--line, #21262d); white-space:nowrap; }
+.scrt tr.scrr { cursor:pointer; }
+.scrt tr.scrr:hover td { background:rgba(245,179,1,.07); }
+.scrt tr.scrg td { background:rgba(255,255,255,.04); font-weight:700; text-align:left; }
+.scrt .up { color:#ff5c5c; } .scrt .dn { color:#4c9aff; }
+.scrt .cd { opacity:.65; font-size:12px; margin-right:6px; }
 .mn { display:flex; flex-direction:column; gap:22px; }
 .mgrp > h3 { font-size:20px; font-weight:800; margin:0 0 10px;
              border-left:4px solid var(--a2); padding-left:10px; }
@@ -5039,6 +5054,7 @@ svg.bars rect.b:hover { fill:var(--a3); }
 
 <nav class="samurai-nav" aria-label="어닝사무라이 메뉴">
   <a href="./" aria-current="page">실적 캘린더</a>
+  <a href="#scrMeta">실적 스크리너</a>
   <a href="#mnMeta">일본 월매출</a>
   <a href="japan-exports/">일본 수출</a>
   <a href="us-trade/#export">미국 수출</a>
@@ -5078,7 +5094,19 @@ svg.bars rect.b:hover { fill:var(--a3); }
   <button class="btn" id="fitBtn" hidden></button>
 </div>
 
-<h2><span class="n">2</span>🇯🇵 일본 월매출 <span class="meta" id="mnMeta"></span></h2>
+<h2><span class="n">2</span>📈 실적 스크리너 <span class="meta" id="scrMeta"></span></h2>
+<div class="tools scrtools">
+  <span class="scrpre" id="scrPre"></span>
+  <select id="scrMkt"><option value="">미국·일본·홍콩</option><option value="us">미국</option><option value="jp">일본</option><option value="hk">홍콩</option></select>
+  <select id="scrCap">
+    <option value="0">시총 가리지 않기</option><option value="0.5">5,000억원 이상</option>
+    <option value="1" selected>1조원 이상</option><option value="3">3조원 이상</option><option value="10">10조원 이상</option>
+  </select>
+  <label class="chk"><input type="checkbox" id="scrSec">업종별로 묶기</label>
+</div>
+<div class="scrwrap" id="scr"></div>
+
+<h2><span class="n">3</span>🇯🇵 일본 월매출 <span class="meta" id="mnMeta"></span></h2>
 <div class="tools">
   <input type="search" id="mnQ" placeholder="회사·코드 검색 — 뷰셀 / 7685 / 라운드원" autocomplete="off">
   <select id="mnCap">
@@ -5097,14 +5125,14 @@ svg.bars rect.b:hover { fill:var(--a3); }
 </div>
 <div id="mnList"></div>
 
-<h2><span class="n">3</span>테마별 주요 종목 실적발표일 <span class="meta" id="gMeta"></span></h2>
+<h2><span class="n">4</span>테마별 주요 종목 실적발표일 <span class="meta" id="gMeta"></span></h2>
 <div id="groups"></div>
 
-<h2><span class="n">4</span>일자별 발표 건수 <span class="meta">좌우로 스크롤 · 막대를 누르면 그 주로 이동</span></h2>
+<h2><span class="n">5</span>일자별 발표 건수 <span class="meta">좌우로 스크롤 · 막대를 누르면 그 주로 이동</span></h2>
 <div class="chartbox" id="dailyChartScroll" tabindex="0" role="region" aria-label="일자별 발표 건수, 좌우로 스크롤"><svg class="bars" id="bars" viewBox="0 0 360 280"
      preserveAspectRatio="xMinYMid meet" role="img" aria-label="날짜별 발표 건수 막대 차트"></svg></div>
 
-<h2><span class="n">5</span>전체 종목 표</h2>
+<h2><span class="n">6</span>전체 종목 표</h2>
 <div class="tools">
   <input type="search" id="q" placeholder="한글·원문·영문·코드 검색 — 엔비디아 / NVDA / 소니 / ソニー / 텐센트 / 00700" autocomplete="off">
   <select id="fSector"><option value="">전체 업종</option></select>
@@ -7750,6 +7778,86 @@ const FIND = (() => {
              code: r[1].toLowerCase(), name: (r[2] || '').toLowerCase() };
   });
 })();
+
+/* ── 실적 스크리너(회원님 11/03) — 이미 실린 분기 실적(D.fin)만으로 화면에서 거른다. 분기 보고 회사만(반기 회사는 뺀다).
+   기준 분기는 회사마다 가장 최근 분기, 비교는 전년 같은 분기(라벨 '3Q26' ↔ '3Q25'). 오래된 실적(가장 새 분기보다 두 분기 넘게 뒤)은 뺀다. */
+const SCR_BAD = [];
+const SCR = (() => {
+  const qi = l => { const m = /^([1-4])Q(\d\d)$/.exec(l || ''); return m ? (2000 + +m[2]) * 4 + (+m[1] - 1) : null; };
+  const out = [];
+  let newest = 0;
+  for (const x of FIND) {
+    const f = D.fin && D.fin[x.k];
+    if (!f || f.freq !== 'Q' || !f.points || f.points.length < 6) continue;
+    const by = new Map();
+    for (const p of f.points) { const i = qi(p[0]); if (i != null && p[1] != null) by.set(i, p); }
+    const idx = [...by.keys()].sort((a, b) => a - b);
+    if (!idx.length) continue;
+    const L = idx[idx.length - 1], cur = by.get(L), py = by.get(L - 4), prv = by.get(L - 1), pp = by.get(L - 5);
+    if (!py || !(py[1] > 0)) continue;
+    // 앞뒤 분기보다 턱없이 작은 '전년 분기'는 수집 구멍(부분 기간·단위 어긋남)이다 — +37,500% 같은 숫자를 만든다. 뺀다.
+    const nb = [by.get(L - 5), by.get(L - 3)].filter(Boolean).map(p => p[1]);
+    if (nb.length && py[1] < 0.35 * Math.min(...nb)) continue;
+    // 이번 분기만 앞 네 분기의 세 배 넘게 솟은 것도 수집 잘못(다른 항목·누계를 읽음)이다 — 회사 차트도 같이 손봐야 할 것들.
+    const p4 = [1, 2, 3, 4].map(d => by.get(L - d)).filter(Boolean).map(p => p[1]);
+    if (p4.length >= 3 && cur[1] > 3 * Math.max(...p4)) { SCR_BAD.push(x.k); continue; }
+    const g = (a, b) => (a != null && b != null && b > 0) ? (a / b - 1) * 100 : null;
+    const revY = g(cur[1], py[1]), opY = g(cur[2], py[2]);
+    if (revY > 1000) { SCR_BAD.push(x.k); continue; }              // 매출 열 배 넘게 — 실제로는 수집 잘못뿐이었다(Greif +37,500%)
+    const revY1 = prv && pp ? g(prv[1], pp[1]) : null;
+    const turn = cur[2] != null && py[2] != null && py[2] <= 0 && cur[2] > 0;
+    const hist = idx.filter(i => i < L).map(i => by.get(i)[1]);
+    const record = hist.length >= 8 && cur[1] > Math.max(...hist);
+    const opm = cur[2] != null && cur[1] > 0 ? cur[2] / cur[1] * 100 : null;
+    newest = Math.max(newest, L);
+    out.push({ k: x.k, r: x.r, cap: x.cap, L, lab: cur[0], revY, opY, revY1, turn, record, opm });
+  }
+  return out.filter(o => o.L >= newest - 2);
+})();
+const SCR_PRE = [
+  ['g20', '매출·영업이익 +20%↑', o => o.revY >= 20 && o.opY >= 20, 'revY'],
+  ['g15x2', '2분기 연속 매출 +15%↑', o => o.revY >= 15 && o.revY1 >= 15, 'revY'],
+  ['turn', '흑자 전환', o => o.turn, 'revY'],
+  ['rec', '분기 매출 사상 최고', o => o.record, 'revY'],
+  ['rev', '매출 성장 순(전부)', o => o.revY != null, 'revY'],
+];
+let scrPre = 'g20', scrSort = null, scrDesc = true;
+function scrDraw() {
+  const pre = SCR_PRE.find(p => p[0] === scrPre), mkt = document.getElementById('scrMkt').value,
+        capMin = +document.getElementById('scrCap').value, bySec = document.getElementById('scrSec').checked;
+  const jo = b => b * 1e9 * D.usdKrw / 1e12;
+  let rows = SCR.filter(o => pre[2](o) && (!mkt || o.r[9] === mkt) && (!capMin || (o.cap && jo(o.cap) >= capMin)));
+  const key = scrSort || pre[3];
+  rows.sort((a, b) => ((b[key] ?? -1e9) - (a[key] ?? -1e9)) * (scrDesc ? 1 : -1));
+  if (bySec) rows.sort((a, b) => (a.r[5] || '').localeCompare(b.r[5] || ''));
+  document.getElementById('scrPre').innerHTML = SCR_PRE.map(p =>
+    '<button data-scrpre="' + p[0] + '" class="' + (p[0] === scrPre ? 'on' : '') + '">' + p[1] + '</button>').join('');
+  document.getElementById('scrMeta').textContent = rows.length + '종목 · 분기 실적 회사 ' + SCR.length + '곳 중 · 회사마다 가장 최근 분기를 전년 같은 분기와 비교';
+  const pc = v => v == null ? '—' : '<span class="' + (v >= 0 ? 'up' : 'dn') + '">' + (v >= 0 ? '+' : '') + (Math.abs(v) >= 1000 ? Math.round(v).toLocaleString() : v.toFixed(1)) + '%</span>';
+  const th = (k, t, l) => '<th class="' + (l ? 'l' : '') + '"' + (k ? ' data-scrsort="' + k + '"' : '') + '>' + t + (key === k ? (scrDesc ? ' ▼' : ' ▲') : '') + '</th>';
+  let h = '<table class="scrt"><thead><tr>' + th('', '회사', 1) + th('', '업종', 1) + th('cap', '시총') + th('', '분기') +
+          th('revY', '매출 YoY') + th('opY', '영업이익 YoY') + th('revY1', '직전 분기 매출 YoY') + th('opm', '영업이익률') + '</tr></thead><tbody>';
+  let sec = null;
+  for (const o of rows.slice(0, 600)) {
+    if (bySec && o.r[5] !== sec) { sec = o.r[5]; h += '<tr class="scrg"><td colspan="8">' + esc(sec || '업종 미상') + '</td></tr>'; }
+    h += '<tr class="scrr" data-key="' + esc(o.k) + '" data-date="' + o.r[0] + '"><td class="l">' + FL(o.r[9]) + ' <span class="cd">' + esc(o.r[1]) + '</span>' + esc(o.r[2]) +
+         '</td><td class="l">' + esc(o.r[5] || '') + '</td><td>' + (o.cap ? capShort(o.cap) : '—') + '</td><td>' + esc(o.lab) +
+         '</td><td>' + pc(o.revY) + '</td><td>' + (o.turn ? '<span class="up">흑자 전환</span>' : pc(o.opY)) + '</td><td>' + pc(o.revY1) +
+         '</td><td>' + (o.opm == null ? '—' : o.opm.toFixed(1) + '%') + '</td></tr>';
+  }
+  if (!rows.length) h += '<tr><td colspan="8" class="l">조건에 맞는 종목이 없습니다.</td></tr>';
+  document.getElementById('scr').innerHTML = h + '</tbody></table>';
+}
+document.getElementById('scrPre').addEventListener('click', e => {
+  const b = e.target.closest('[data-scrpre]'); if (b) { scrPre = b.dataset.scrpre; scrSort = null; scrDesc = true; scrDraw(); }
+});
+document.getElementById('scr').addEventListener('click', e => {
+  const t = e.target.closest('[data-scrsort]');
+  if (t) { const k = t.dataset.scrsort; scrDesc = scrSort === k ? !scrDesc : true; scrSort = k; scrDraw(); return; }
+  const tr = e.target.closest('tr.scrr'); if (tr) openModal(tr.dataset.key, tr.dataset.date);
+});
+['scrMkt', 'scrCap', 'scrSec'].forEach(id => document.getElementById(id).onchange = scrDraw);
+scrDraw();
 
 const fq = document.getElementById('fq'), fqList = document.getElementById('fqList');
 let fqHits = [], fqAt = -1;
