@@ -4448,7 +4448,7 @@ __FLAGCSS__
 .scrt td { padding:6px 8px; text-align:right; border-top:1px solid var(--line, #21262d); white-space:nowrap; }
 .scrt tr.scrr { cursor:pointer; }
 .scrt tr.scrr:hover td { background:rgba(245,179,1,.07); }
-.scrt tr.scrg td { background:rgba(255,255,255,.04); font-weight:700; text-align:left; }
+.scrt tr.scrg td { background:rgba(245,179,1,.10); color:#f5b301; font-weight:800; text-align:left; border-top:2px solid #f5b301; padding:8px; }
 .scrt .up { color:#ff5c5c; } .scrt .dn { color:#4c9aff; }
 .scrt .cd { opacity:.65; font-size:12px; margin-right:6px; }
 .mn { display:flex; flex-direction:column; gap:22px; }
@@ -5120,6 +5120,7 @@ svg.bars rect.b:hover { fill:var(--a3); }
     <option value="1" selected>1조원 이상</option><option value="3">3조원 이상</option><option value="10">10조원 이상</option>
   </select>
   <label class="chk"><input type="checkbox" id="scrSec">업종별로 묶기</label>
+  <label class="chk" title="전년 기저가 낮아 성장률이 부풀려진 종목을 뺍니다"><input type="checkbox" id="scrBase">기저효과 빼기(+200%↑ 제외)</label>
 </div>
 <div class="scrwrap" id="scr"></div>
 
@@ -7842,7 +7843,6 @@ const SCR_PRE = [
   ['g15x2', '2분기 연속 매출 +15%↑', o => o.revY >= 15 && o.revY1 >= 15, 'revY'],
   ['turn', '흑자 전환', o => o.turn, 'revY'],
   ['rec', '분기 매출 사상 최고', o => o.record, 'revY'],
-  ['rev', '매출 성장 순(전부)', o => o.revY != null, 'revY'],
   ['h13', '3개월 신고가', o => o.d13 === 0, 'rs'],
   ['h52', '52주 신고가', o => o.d52 === 0, 'rs'],
   ['hall', '역사적 신고가', o => o.dall === 0, 'rs'],
@@ -7851,17 +7851,19 @@ const SCR_PRE = [
 ];
 let scrPre = 'g20', scrSort = null, scrDesc = true;
 function scrDraw() {
-  const pre = SCR_PRE.find(p => p[0] === scrPre), mkt = document.getElementById('scrMkt').value,
+  const pre = SCR_PRE.find(p => p[0] === scrPre) || ['', '', o => o.revY != null || o.rs != null, 'revY'], mkt = document.getElementById('scrMkt').value,
         capMin = +document.getElementById('scrCap').value, bySec = document.getElementById('scrSec').checked;
   const jo = b => b * 1e9 * D.usdKrw / 1e12;
-  let rows = SCR.filter(o => pre[2](o) && (!mkt || o.r[9] === mkt) && (!capMin || (o.cap && jo(o.cap) >= capMin)));
+  const base = document.getElementById('scrBase').checked;
+  let rows = SCR.filter(o => pre[2](o) && (!base || !(o.revY >= 200 || o.opY >= 200)) && (!mkt || o.r[9] === mkt) && (!capMin || (o.cap && jo(o.cap) >= capMin)));
   const key = scrSort || pre[3];
   rows.sort((a, b) => ((b[key] ?? -1e9) - (a[key] ?? -1e9)) * (scrDesc ? 1 : -1) * (key === 'd52' ? -1 : 1));
-  if (bySec) rows.sort((a, b) => (a.r[5] || '').localeCompare(b.r[5] || ''));
+  if (bySec) rows.sort((a, b) => (a.r[5] ? 0 : 1) - (b.r[5] ? 0 : 1) || (a.r[5] || '').localeCompare(b.r[5] || ''));   // 업종 미상은 맨 뒤
   document.getElementById('scrPre').innerHTML = SCR_PRE.map(p =>
     '<button data-scrpre="' + p[0] + '" class="' + (p[0] === scrPre ? 'on' : '') + '">' + p[1] + '</button>').join('');
-  document.getElementById('scrMeta').textContent = rows.length + '종목 · 실적은 회사마다 가장 최근 분기를 전년 같은 분기와(분기 보고 회사만) · 주가는 주봉 · RS = 3개월 수익률을 두 배로 친 1년 상대강도(전 종목 백분위)';
-  const pc = v => v == null ? '—' : '<span class="' + (v >= 0 ? 'up' : 'dn') + '">' + (v >= 0 ? '+' : '') + (Math.abs(v) >= 1000 ? Math.round(v).toLocaleString() : v.toFixed(1)) + '%</span>';
+  document.getElementById('scrMeta').textContent = rows.length.toLocaleString() + '종목';
+  const pf = v => Math.abs(v) >= 10 ? Math.round(v).toLocaleString() : v.toFixed(1);   // 두 자리 넘으면 소수점 없이(회원님 11/03)
+  const pc = v => v == null ? '—' : '<span class="' + (v >= 0 ? 'up' : 'dn') + '">' + (v >= 0 ? '+' : '') + pf(v) + '%</span>';
   const th = (k, t, l) => '<th class="' + (l ? 'l' : '') + '"' + (k ? ' data-scrsort="' + k + '"' : '') + '>' + t + (key === k ? (scrDesc ? ' ▼' : ' ▲') : '') + '</th>';
   let h = '<table class="scrt"><thead><tr>' + th('', '회사', 1) + th('', '업종', 1) + th('cap', '시총') + th('', '분기') +
           th('revY', '매출 YoY') + th('opY', '영업이익 YoY') + th('revY1', '직전 분기 매출 YoY') + th('opm', '영업이익률') +
@@ -7872,22 +7874,22 @@ function scrDraw() {
     h += '<tr class="scrr" data-key="' + esc(o.k) + '" data-date="' + o.r[0] + '"><td class="l">' + FL(o.r[9]) + ' <span class="cd">' + esc(o.r[1]) + '</span>' + esc(o.r[2]) +
          '</td><td class="l">' + esc(o.r[5] || '') + '</td><td>' + (o.cap ? capShort(o.cap) : '—') + '</td><td>' + esc(o.lab) +
          '</td><td>' + pc(o.revY) + '</td><td>' + (o.turn ? '<span class="up">흑자 전환</span>' : pc(o.opY)) + '</td><td>' + pc(o.revY1) +
-         '</td><td>' + (o.opm == null ? '—' : o.opm.toFixed(1) + '%') + '</td><td>' + pc(o.r3) + '</td><td>' + pc(o.r12) +
-         '</td><td>' + (o.d52 == null ? '—' : o.d52 === 0 ? '<span class="up">신고가</span>' : '-' + o.d52.toFixed(1) + '%') +
+         '</td><td>' + (o.opm == null ? '—' : pf(o.opm) + '%') + '</td><td>' + pc(o.r3) + '</td><td>' + pc(o.r12) +
+         '</td><td>' + (o.d52 == null ? '—' : o.d52 === 0 ? '<span class="up">신고가</span>' : '-' + pf(o.d52) + '%') +
          '</td><td>' + (o.rs == null ? '—' : o.rs) + '</td></tr>';
   }
   if (!rows.length) h += '<tr><td colspan="12" class="l">조건에 맞는 종목이 없습니다.</td></tr>';
   document.getElementById('scr').innerHTML = h + '</tbody></table>';
 }
 document.getElementById('scrPre').addEventListener('click', e => {
-  const b = e.target.closest('[data-scrpre]'); if (b) { scrPre = b.dataset.scrpre; scrSort = null; scrDesc = true; scrDraw(); }
+  const b = e.target.closest('[data-scrpre]'); if (b) { scrPre = scrPre === b.dataset.scrpre ? '' : b.dataset.scrpre; scrSort = null; scrDesc = true; scrDraw(); }
 });
 document.getElementById('scr').addEventListener('click', e => {
   const t = e.target.closest('[data-scrsort]');
   if (t) { const k = t.dataset.scrsort; scrDesc = scrSort === k ? !scrDesc : true; scrSort = k; scrDraw(); return; }
   const tr = e.target.closest('tr.scrr'); if (tr) openModal(tr.dataset.key, tr.dataset.date);
 });
-['scrMkt', 'scrCap', 'scrSec'].forEach(id => document.getElementById(id).onchange = scrDraw);
+['scrMkt', 'scrCap', 'scrSec', 'scrBase'].forEach(id => document.getElementById(id).onchange = scrDraw);
 scrDraw();
 
 const fq = document.getElementById('fq'), fqList = document.getElementById('fqList');
@@ -8052,6 +8054,7 @@ function rtSegBlock(key) {
           unit: N.cur === 'JPY' ? '억 엔' : '백만 ' + (N.cur || 'USD'), basis: N.label, src: '실적 보도자료·IR 자료' };
   }
   if (!s || !(s.segs || []).length) return '';
+  const pf = v => Math.abs(v) >= 10 ? Math.round(v).toLocaleString() : v.toFixed(1);   // 두 자리 넘으면 소수점 없이(회원님 11/03)
   const pc = v => v == null || !isFinite(v) ? '—' : (v > 0 ? '+' : '') + (+v).toFixed(1) + '%';
   return '<div class="rtseg"><table><thead><tr><th style="text-align:left">방금 발표 · 사업부별 매출' +
     (s.basis ? ' (' + esc(s.basis) + ')' : '') + '</th><th>' + esc(s.unit || '') + '</th><th>전년비</th></tr></thead><tbody>' +
