@@ -1,0 +1,108 @@
+# 사업 설명 쉬운 한국어 번역(ai_desc.py) — **여섯 갈래 동시**(Codex · Claude 1·2번 계정 각 둘), 갈래마다 제 파일 data/desc_ko_ai_s{0..5}.json.
+# 끝나면 1분 뒤 다음 실행(이어달리기). 한도에 걸린 갈래는 그 실행에서 멈춘다(추가 결제 금지).
+name: AI 사업 설명 번역
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: '13,43 * * * *'
+
+permissions:
+  contents: write
+  actions: write
+
+concurrency:
+  group: aidesc-${{ github.ref_name }}
+  cancel-in-progress: false
+
+jobs:
+  desc:
+    runs-on: ubuntu-latest
+    if: github.ref_name == 'main'
+    timeout-minutes: 40
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - {shard: 0, want: codex}
+          - {shard: 1, want: claude1}
+          - {shard: 2, want: claude2}
+          - {shard: 3, want: codex}
+          - {shard: 4, want: claude1}
+          - {shard: 5, want: codex}
+    env:
+      TOK1: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
+      TOK2: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN_2 }}
+      CODEX_AUTH_JSON: ${{ secrets.CODEX_AUTH_JSON }}
+      AI_MODEL: haiku
+      CODEX_EFFORT: low
+      AIDESC_OUT: 'desc_ko_ai_s${{ matrix.shard }}.json'
+      AIDESC_BATCH: '40'
+      AIDESC_MAX: '60'
+      AIDESC_SECS: '1800'
+    steps:
+      - uses: actions/checkout@v4
+      - name: 최신 main 으로 맞춘다
+        run: |
+          git fetch origin main
+          git reset --hard origin/main
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: 엔진 고르기
+        run: |
+          # 맡는 몫을 바퀴마다 돌린다 — 한도에 걸린 계정의 몫이 다음 바퀴엔 다른 계정에 간다(파일은 갈래마다 그대로)
+          echo "AIDESC_SHARD=$(( (${{ matrix.shard }} + ${{ github.run_number }}) % 6 ))/6" >> "$GITHUB_ENV"
+          has() { case $1 in claude1) [ -n "$TOK1" ];; claude2) [ -n "$TOK2" ];; codex) [ -n "$CODEX_AUTH_JSON" ];; esac; }
+          pick=""
+          for e in ${{ matrix.want }} codex claude1 claude2; do has $e && { pick=$e; break; }; done
+          echo "엔진: ${pick:-없음}"
+          case $pick in
+            claude1) echo "CLAUDE_CODE_OAUTH_TOKEN=$TOK1" >> "$GITHUB_ENV"; echo "AI_ENGINE=claude" >> "$GITHUB_ENV";;
+            claude2) echo "CLAUDE_CODE_OAUTH_TOKEN=$TOK2" >> "$GITHUB_ENV"; echo "AI_ENGINE=claude" >> "$GITHUB_ENV";;
+            codex)   mkdir -p ~/.codex && printf '%s' "$CODEX_AUTH_JSON" > ~/.codex/auth.json && chmod 600 ~/.codex/auth.json
+                     echo "AI_ENGINE=codex" >> "$GITHUB_ENV";;
+          esac
+          [ -n "$pick" ] && echo "AI_READY=1" >> "$GITHUB_ENV" || true
+      - name: Claude Code CLI
+        if: env.AI_ENGINE == 'claude'
+        run: npm install -g @anthropic-ai/claude-code >/dev/null 2>&1 && claude --version
+      - name: Codex CLI
+        if: env.AI_ENGINE == 'codex'
+        run: npm install -g @openai/codex >/dev/null 2>&1 && codex --version
+      - name: 🤖 사업 설명 번역
+        if: env.AI_READY == '1'
+        continue-on-error: true
+        timeout-minutes: 32
+        run: |
+          W=$PWD; (cd /tmp && python "$W/ai_desc.py") | tail -8
+      - name: 저장소에 반영
+        if: env.AI_READY == '1'
+        run: |
+          set -u
+          git config user.name  "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          F=data/desc_ko_ai_s${{ matrix.shard }}.json
+          [ -f "$F" ] || { echo "파일이 없다."; exit 0; }
+          git add "$F"
+          git diff --cached --quiet && { echo "달라진 게 없다."; exit 0; }
+          git commit -m "사업 설명 번역 갈래 ${{ matrix.shard }} $(date -u +%F' '%H:%M) [skip ci]"
+          for i in 1 2 3 4 5 6; do
+            git fetch origin main || { sleep $((2**i)); continue; }
+            git merge --no-edit -X ours origin/main || { git merge --abort; sleep $((2**i)); continue; }
+            git push origin HEAD:main && exit 0
+            sleep $((2**i + RANDOM % 5))
+          done
+          echo "푸시를 끝내 못 했다"; exit 1
+
+  relay:
+    needs: desc
+    if: always() && github.ref_name == 'main'
+    runs-on: ubuntu-latest
+    steps:
+      - name: 다음 실행(이어달리기)
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          sleep 20
+          gh workflow run ai_desc.yml --repo "${{ github.repository }}" --ref main || true
