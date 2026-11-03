@@ -1462,9 +1462,19 @@ def price_history(key):
                             ua=BROWSER_UA, timeout=20))
     r = ((j.get("chart") or {}).get("result") or [{}])[0]
     tz = ZoneInfo((r.get("meta") or {}).get("exchangeTimezoneName") or "UTC")
-    cl = ((r.get("indicators") or {}).get("quote") or [{}])[0].get("close") or []
-    pts = [[datetime.fromtimestamp(t, tz).strftime("%Y-%m-%d"), round(v, 4)]
-           for t, v in zip(r.get("timestamp") or [], cl) if v is not None]
+    q = ((r.get("indicators") or {}).get("quote") or [{}])[0]
+    cl = q.get("close") or []
+    n_ = len(cl)
+    op, hi_, lo_, vo = (q.get(k) or [None] * n_ for k in ("open", "high", "low", "volume"))
+    # [날짜, 종가, 시, 고, 저, 거래량] — 종가가 둘째 자리 그대로라 옛 그림(선)도 깨지지 않는다. 봉은 사이트가 주·월로 묶는다(11/03)
+    pts = []
+    for t, c, o, h, l, v in zip(r.get("timestamp") or [], cl, op, hi_, lo_, vo):
+        if c is None:
+            continue
+        o = c if o is None else o
+        h = max(c, o) if h is None else h
+        l = min(c, o) if l is None else l
+        pts.append([datetime.fromtimestamp(t, tz).strftime("%Y-%m-%d"), round(c, 4), round(o, 4), round(h, 4), round(l, 4), int(v or 0)])
     ev = {}
 
     def put(dt_local):                                   # 거래소 현지 시각 -> (날짜, 장전/장중/장후)
