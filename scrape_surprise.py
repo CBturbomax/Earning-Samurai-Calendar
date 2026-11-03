@@ -20,7 +20,9 @@ from datetime import date, datetime, timedelta, timezone
 from pathlib import Path
 
 HERE = Path(__file__).parent
-OUT = HERE / "data" / "surprise_us.json"
+SHARD = os.environ.get("SURPRISE_SHARD", "")       # "0/4" — 러너마다 IP 가 달라 갈래를 나누면 그만큼 빨라진다. 갈래마다 제 파일.
+OUT = HERE / "data" / (f"surprise_us_s{SHARD.split('/')[0]}.json" if SHARD else "surprise_us.json")
+SLEEP = float(os.environ.get("SURPRISE_SLEEP", "0.7"))
 SECS = int(os.environ.get("SURPRISE_SECS", "1200"))
 UA = {"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0 Safari/537.36",
       "Accept-Encoding": "gzip", "Accept-Language": "en-US,en;q=0.9"}
@@ -62,6 +64,15 @@ def main():
     except (OSError, ValueError):
         db = {}
     st = db.setdefault("stocks", {})
+    other = {}                                               # 다른 갈래·옛 파일이 이미 받은 것
+    for f in (HERE / "data").glob("surprise_us*.json"):
+        if f != OUT:
+            try:
+                for t, v in json.loads(f.read_text(encoding="utf-8")).get("stocks", {}).items():
+                    if (v.get("ts") or "") > ((other.get(t) or {}).get("ts") or ""):
+                        other[t] = v
+            except (OSError, ValueError):
+                pass
     try:
         rows = json.loads((HERE / "data" / "earnings_us.json").read_text(encoding="utf-8")).get("rows", [])
     except (OSError, ValueError):
@@ -81,10 +92,17 @@ def main():
 
     def due(c):
         rec = st.get(c)
+        o = other.get(c)
+        if o and (o.get("ts") or "") > ((rec or {}).get("ts") or ""):
+            rec = o
         if not rec or not rec.get("ts"):
             return True
         age = (today - date.fromisoformat(rec["ts"][:10])).days
         return age >= (0 if c in near else 30) and not (c in near and rec["ts"][:13] >= (datetime.now(timezone.utc) - timedelta(hours=6)).strftime("%Y-%m-%dT%H"))
+    if SHARD:
+        import zlib
+        i_sh, n_sh = (int(x) for x in SHARD.split("/"))
+        cap = {c: v for c, v in cap.items() if zlib.crc32(c.encode()) % n_sh == i_sh}
     todo = sorted((c for c in cap if cap[c] and due(c)), key=lambda c: (c not in near, -cap[c]))
     print(f"서프라이즈: 대상 {len(todo):,} (발표 언저리 {len(near & set(todo)):,})")
     t0, n, got, fails = time.time(), 0, 0, 0
@@ -111,14 +129,14 @@ def main():
             continue
         n += 1
         s = parse(html) or []
-        old = {x[0]: x for x in (st.get(c) or {}).get("s", [])}
+        old = {x[0]: x for x in ((other.get(c) or {}).get("s", []) + (st.get(c) or {}).get("s", []))}
         for x in s:
             old[x[0]] = x                                    # 쌓는다 — 새 값이 이긴다
         st[c] = {"s": sorted(old.values()), "ts": datetime.now(timezone.utc).isoformat(timespec="minutes")}
         got += bool(s)
         if n % 50 == 0:
             OUT.write_text(json.dumps(db, separators=(",", ":")), encoding="utf-8")
-        time.sleep(1.2)
+        time.sleep(SLEEP)
     db["count"] = sum(1 for v in st.values() if v.get("s"))
     OUT.write_text(json.dumps(db, separators=(",", ":")), encoding="utf-8")
     print(f"서프라이즈: 이번 {n:,}곳 · 이력 있음 {got:,} · 전체 {db['count']:,}")
