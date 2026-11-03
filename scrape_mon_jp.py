@@ -94,7 +94,7 @@ def save(by, done, skip):
         "companies": len(by),
         "months": months,
         # 본 공시는 주소로 기억한다. 없으면 매 실행 수백 건을 다시 받는다.
-        "done": sorted(done)[-6000:],
+        "done": sorted(done)[-30000:],
         # 뜯어도 아무것도 안 나온 공시. 다시 두드릴 이유가 없다.
         "skip": skip,
     }
