@@ -6497,8 +6497,23 @@ function pxRender(key) {
   if (days > 1100) pts = pts.filter((p, i) => i % 5 === 0 || i === pts.length - 1);        // 3년 넘으면 주 단위로 솎는다
   const n = pts.length;
   if (n < 2) return '';
-  const W = 960, H = 380, L = 62, R = 66, T = 86, B = 34, BASE = H - B;
-  const vs = pts.map(p => p[1]);
+  // **캔들(봉)** — 회원님 11/03 "주봉으로". 서버가 [날짜, 종가, 시, 고, 저, 거래량] 을 주면 봉으로, 종가뿐이면 예전 선으로.
+  // 봉 단위는 기간이 정한다: YTD·1년 일봉 · 2·3년 주봉 · 5·10년 월봉. 아래 띠는 거래량.
+  const ohlc = (all[0] || []).length >= 6;
+  const unit = !ohlc ? '' : (S.range === 'YTD' || S.range === '1년') ? 'd' : (days <= 1100 ? 'w' : 'm');
+  const bars = [];
+  if (ohlc) {
+    let cur = null;
+    all.filter(p => p[0] >= from).forEach(p => {
+      const d = p[0], k = unit === 'd' ? d : unit === 'm' ? d.slice(0, 7)
+        : new Date((dOf(d) - (new Date(d + 'T00:00:00Z').getUTCDay() + 6) % 7) * 864e5).toISOString().slice(0, 10);
+      if (!cur || cur.k !== k) { cur = { k, d0: d, d1: d, o: p[2], h: p[3], l: p[4], c: p[1], v: p[5] || 0 }; bars.push(cur); }
+      else { cur.d1 = d; cur.h = Math.max(cur.h, p[3]); cur.l = Math.min(cur.l, p[4]); cur.c = p[1]; cur.v += p[5] || 0; }
+    });
+  }
+  const VOL = ohlc ? 64 : 0;
+  const W = 960, H = 380 + VOL, L = 62, R = 66, T = 86, B = 34, BASE = H - B - VOL;
+  const vs = ohlc ? bars.flatMap(b => [b.h, b.l]) : pts.map(p => p[1]);
   let lo = Math.min(...vs), hi = Math.max(...vs);
   const sp = (hi - lo) || hi * 0.1 || 1; lo -= sp * 0.06; hi += sp * 0.04;
   const st = niceStep((hi - lo) / 4); lo = Math.max(0, Math.floor(lo / st) * st); hi = Math.ceil(hi / st) * st;
@@ -6518,7 +6533,7 @@ function pxRender(key) {
     if (prev && (long || (m - 1) % every === 0 || m === 1)) {
       const x = tx(p[0]);
       if (m === 1) s += '<line x1="' + x.toFixed(1) + '" y1="' + (BASE + 3) + '" x2="' + x.toFixed(1) + '" y2="' + (H - 2) + '" style="stroke:rgba(255,255,255,.22)"/>';
-      s += '<text class="fx" x="' + (x + (m === 1 ? 4 : 0)).toFixed(1) + '" y="' + (BASE + 22) + '" text-anchor="' + (m === 1 ? 'start' : 'middle') +
+      s += '<text class="fx" x="' + (x + (m === 1 ? 4 : 0)).toFixed(1) + '" y="' + (H - B + 22) + '" text-anchor="' + (m === 1 ? 'start' : 'middle') +
         '" style="font-size:13px' + (m === 1 ? ';font-weight:700' : '') + '">' + (long ? y : (m === 1 ? (y % 100) + '년 ' : '') + m + '월') + '</text>';
     }
     prev = k;
@@ -6546,9 +6561,21 @@ function pxRender(key) {
       '<text class="vn" x="' + x.toFixed(1) + '" y="' + (T - 14) + '" text-anchor="middle" style="font-size:15px;font-weight:800;fill:' +
       (r >= 0 ? '#ff6b6b' : '#5fb3ff') + '">' + (r >= 0 ? '+' : '') + (r * 100).toFixed(1) + '%</text>';
   });
-  const d = pts.map((p, i) => (i ? 'L' : 'M') + tx(p[0]).toFixed(1) + ',' + ty(p[1]).toFixed(1)).join('');
-  s += '<path d="' + d + 'L' + tx(pts[n - 1][0]).toFixed(1) + ',' + BASE + 'L' + L + ',' + BASE + 'Z" style="fill:rgba(91,155,213,.10)"/>' +
-       '<path d="' + d + '" fill="none" style="stroke:#5B9BD5;stroke-width:2.2"/>';
+  if (ohlc && bars.length) {
+    const slot = (W - L - R) / bars.length, bw = Math.max(1, slot * 0.66), vmax = Math.max(...bars.map(b => b.v)) || 1;
+    bars.forEach(b => {
+      const x = (tx(b.d0) + tx(b.d1)) / 2, up = b.c >= b.o, c = up ? '#ff5b5b' : '#4ea3ff';
+      s += '<line x1="' + x.toFixed(1) + '" y1="' + ty(b.h).toFixed(1) + '" x2="' + x.toFixed(1) + '" y2="' + ty(b.l).toFixed(1) + '" style="stroke:' + c + ';stroke-width:1"/>' +
+        '<rect x="' + (x - bw / 2).toFixed(1) + '" y="' + ty(Math.max(b.o, b.c)).toFixed(1) + '" width="' + bw.toFixed(1) + '" height="' +
+        Math.max(1, Math.abs(ty(b.o) - ty(b.c))).toFixed(1) + '" style="fill:' + c + '"/>' +
+        '<rect x="' + (x - bw / 2).toFixed(1) + '" y="' + (H - B - VOL * b.v / vmax).toFixed(1) + '" width="' + bw.toFixed(1) + '" height="' +
+        (VOL * b.v / vmax).toFixed(1) + '" style="fill:' + c + ';opacity:.45"/>';
+    });
+  } else {
+    const d = pts.map((p, i) => (i ? 'L' : 'M') + tx(p[0]).toFixed(1) + ',' + ty(p[1]).toFixed(1)).join('');
+    s += '<path d="' + d + 'L' + tx(pts[n - 1][0]).toFixed(1) + ',' + BASE + 'L' + L + ',' + BASE + 'Z" style="fill:rgba(91,155,213,.10)"/>' +
+         '<path d="' + d + '" fill="none" style="stroke:#5B9BD5;stroke-width:2.2"/>';
+  }
   const lp = pts[n - 1];
   s += '<circle cx="' + tx(lp[0]).toFixed(1) + '" cy="' + ty(lp[1]).toFixed(1) + '" r="4" style="fill:#FFCB05"/>' +
        '<text class="vn" x="' + (tx(lp[0]) + 8).toFixed(1) + '" y="' + (ty(lp[1]) + 5).toFixed(1) + '" style="font-size:15px;font-weight:800;fill:#FFCB05">' + fmtP(lp[1]) + '</text>';
@@ -6571,7 +6598,8 @@ function pxRender(key) {
   return '<div class="finhead">주가 <span class="dim">(' + esc(S.cur) + ')</span><span class="pxret" style="color:' + (r1 >= 0 ? '#ff6b6b' : '#5fb3ff') + '">' +
     S.range + ' ' + (r1 >= 0 ? '+' : '') + (r1 * 100).toFixed(1) + '%</span><span class="pxbtns">' + btn + '</span></div>' +
     '<div class="finbox"><svg viewBox="0 0 ' + W + ' ' + H + '" class="finsvg pxsvg" data-pxk="' + key + '">' + s + '</svg></div>' +
-    '<div class="finlegend"><span class="lg" style="--c:#5B9BD5">종가</span><span class="lg" style="--c:rgba(255,255,255,.55)">실적 발표일 — 위 숫자는 발표 후 주가 반응(장후 발표면 다음 날 종가)</span>' +
+    '<div class="finlegend">' + (ohlc ? '<span class="lg" style="--c:#ff5b5b">' + ({ d: '일봉', w: '주봉', m: '월봉' })[unit] +
+      ' · 아래 막대 거래량</span>' : '<span class="lg" style="--c:#5B9BD5">종가</span>') + '<span class="lg" style="--c:rgba(255,255,255,.55)">실적 발표일 — 위 숫자는 발표 후 주가 반응(장후 발표면 다음 날 종가)</span>' +
     '<span class="src">끌어서 구간 수익률</span></div>';
 }
 document.addEventListener('click', e => {
