@@ -409,6 +409,10 @@ def drop_banks_reits(m, rows):
         sec = r.get("sector", "") or SECTORS.get(k, "")
         if excluded(m, r.get("name", ""), sec, ind):
             bad.add(c)
+        # ETF·채권 펀드의 결산단신은 제목에 회계기준(日本基準·IFRS)이 없고 계산 기간(3月21日～9月20日)이 붙는다 — 실측 181건 전부 ETF(11/03)
+        t = r.get("title") or ""
+        if m == "jp" and re.search(r"[～〜~]", t) and not re.search(r"基準|IFRS|ＩＦＲＳ|四半期|中間", t):
+            bad.add(c)
     return [r for r in rows if r.get("code") not in bad], len(bad)
 
 
@@ -8239,8 +8243,14 @@ function rtApply(ev) {
   let r = ROWS.find(x => keyOf(x) === key && Math.abs(Date.parse(x[0]) - Date.parse(ev.date)) <= 4 * 864e5);
   if (r) { r[0] = ev.date; r[12] = ev.kstDate; r[13] = ev.kstTime; r[14] = 1; }
   else {
-    r = [ev.date, code, ev.name || code, ev.fy || '', ev.kind || '', ev.sector || '', '',
-         ev.orig || ev.name || code, 2, m, '', ev.cap || 0, ev.kstDate, ev.kstTime, 1];
+    // 은행·리츠·ETF·채권 펀드는 싣지 않는다(빌드의 drop_banks_reits 와 같은 뜻 — 회원님 11/03 「493A 국채 ETF 는 왜 있나」)
+    const raw = (ev.orig || '') + ' ' + (ev.name || '');
+    if (m === 'jp' && /銀行|銀$|投資法人|ＥＴＦ|ＥＴＮ|国債|社債|債券|リート|ＲＥＩＴ|^Ｏｎｅ|^上場|^ｉ[ＳＦ]|^ＧＸ|^ＮＦ|^ＭＸ|ブル$|ベア$/.test((ev.orig || ev.name || '').trim())) return false;
+    if (/\bREIT\b|\bETF\b|리츠|은행/.test(raw)) return false;
+    // 이름은 우리가 이미 가진 같은 회사 줄의 한글 이름을 쓴다(실시간 서버는 TDnet 원문 이름을 보낸다)
+    const known = ROWS.find(x => keyOf(x) === key);
+    r = [ev.date, code, known ? known[2] : (ev.name || code), ev.fy || '', ev.kind || '', ev.sector || (known ? known[5] : ''), '',
+         ev.orig || ev.name || code, known ? known[8] : 2, m, '', ev.cap || (known ? known[11] : 0), ev.kstDate, ev.kstTime, 1];
     ROWS.push(r);
   }
   if (m === 'us') { D.live = D.live || {}; D.live[code] = [ev.date, ev.url || '']; }

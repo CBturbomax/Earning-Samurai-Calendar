@@ -618,6 +618,9 @@ def guide_boom(ev):
 
 def tg_pick(ev, pts):
     """(보낼까, 왜)."""
+    if ev["mkt"] == "jp" and re.search(r"銀行|銀$|投資法人|ＥＴＦ|ＥＴＮ|国債|社債|債券|リート|^Ｏｎｅ|^上場|^ｉ[ＳＦ]|^ＧＸ|^ＮＦ|^ＭＸ|ブル$|ベア$",
+                                       (ev.get("orig") or "").strip()):
+        return False, "ETF·채권·은행 제외"                     # 회원님 11/03 — 회사가 아니다
     boom = guide_boom(ev)
     if boom:
         return True, boom
