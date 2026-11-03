@@ -3284,7 +3284,11 @@ def load_monthly_nums(monthly):
         got = {"codes": {}}
 
     ir_c, web_c = load_monthly_ir(), load_monthly_web()
-    all_codes = set(target) | set((got.get("codes") or {})) | set(ir_c) | set(web_c)
+    try:
+        ai_c = json.loads((HERE / "data" / "monthly_ai_jp.json").read_text(encoding="utf-8")).get("codes") or {}
+    except (ValueError, OSError):
+        ai_c = {}
+    all_codes = set(target) | set((got.get("codes") or {})) | set(ir_c) | set(web_c) | set(ai_c)
     out = {}
 
     for code in sorted(all_codes):
@@ -3310,6 +3314,13 @@ def load_monthly_nums(monthly):
                 base = _base_of(rec.get("amount_label", "") +
                                 rec.get("yoy_label", ""))
                 cand.append((2, "TDnet PDF", rows, base,
+                             _tdnet_trusted(rows, want), rec))
+
+        rec = ai_c.get(code)                                   # 표 규칙이 못 읽은 PDF 를 AI 가 읽고 원문 숫자로 검산한 것(ai_mon.py)
+        if rec:
+            rows = _tdnet_series(rec)
+            if rows:
+                cand.append((3, "AI 판독", rows, _base_of(rec.get("amount_label", "") + rec.get("yoy_label", "")),
                              _tdnet_trusted(rows, want), rec))
 
         if not cand:
