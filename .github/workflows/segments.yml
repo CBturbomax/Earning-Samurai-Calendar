@@ -59,7 +59,7 @@ jobs:
   segments:
     runs-on: ubuntu-latest
     if: github.ref_name == 'main'
-    timeout-minutes: 105
+    timeout-minutes: 112
     steps:
       - uses: actions/checkout@v4
       # **최신 main 으로 맞추고 시작한다.** checkout 은 이 실행을 부른 커밋을
@@ -98,6 +98,15 @@ jobs:
           SEC_UA: 'Earning Samurai Calendar (cbpark@wisdomasset.co.kr)'
           RPO_SECS: '600'
         run: python scrape_rpo_us.py | tail -5
+
+      # 인수 확인 — 매출이 계단처럼 뛴 회사만 SEC '사업 인수 지출'을 본다(회원님 11/03 닥터페퍼)
+      - name: 🔀 인수 확인 (SEC)
+        continue-on-error: true
+        timeout-minutes: 6
+        env:
+          SEC_UA: 'Earning Samurai Calendar (cbpark@wisdomasset.co.kr)'
+          ACQ_SECS: '240'
+        run: python scrape_acq_us.py | tail -3
 
       # 벌크가 아직 안 실은 최근 분기를 제출 서류에서 직접 받는다.
       # 서류 하나에 요청 두 번 · 300KB(gzip) 라, 한 번에 700건이면 8분쯤이다.
