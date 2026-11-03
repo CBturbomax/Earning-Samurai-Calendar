@@ -2269,10 +2269,14 @@ def seg_ko(name):
 
 def load_surprise(keys):
     """Zacks EPS 서프라이즈 이력(scrape_surprise.py) -> {us:티커: [[회계분기 'YYYY-MM', %], ...]} — 2017-10 이후 최대 36칸."""
-    try:
-        st = json.loads((HERE / "data" / "surprise_us.json").read_text(encoding="utf-8")).get("stocks", {})
-    except (OSError, ValueError):
-        return {}
+    st = {}
+    for f in sorted((HERE / "data").glob("surprise_us*.json")):         # 갈래마다 제 파일(surprise_us_s0.json …)
+        try:
+            for t, v in json.loads(f.read_text(encoding="utf-8")).get("stocks", {}).items():
+                if v.get("s") and len(v["s"]) >= len((st.get(t) or {}).get("s") or []):
+                    st[t] = v
+        except (OSError, ValueError):
+            pass
     return {"us:" + t: [[x[0], x[2]] for x in v["s"] if x[0] >= "2017-10"][-36:]
             for t, v in st.items() if v.get("s") and "us:" + t in keys}
 

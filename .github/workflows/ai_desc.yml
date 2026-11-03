@@ -1,4 +1,4 @@
-# 사업 설명 쉬운 한국어 번역(ai_desc.py) — **세 갈래 동시**(Codex · Claude 1·2번 계정), 갈래마다 제 파일 data/desc_ko_ai_s{0..2}.json.
+# 사업 설명 쉬운 한국어 번역(ai_desc.py) — **여섯 갈래 동시**(Codex · Claude 1·2번 계정 각 둘), 갈래마다 제 파일 data/desc_ko_ai_s{0..5}.json.
 # 끝나면 1분 뒤 다음 실행(이어달리기). 한도에 걸린 갈래는 그 실행에서 멈춘다(추가 결제 금지).
 name: AI 사업 설명 번역
 
@@ -27,14 +27,17 @@ jobs:
           - {shard: 0, want: codex}
           - {shard: 1, want: claude1}
           - {shard: 2, want: claude2}
+          - {shard: 3, want: codex}
+          - {shard: 4, want: claude1}
+          - {shard: 5, want: claude2}
     env:
       TOK1: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
       TOK2: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN_2 }}
       CODEX_AUTH_JSON: ${{ secrets.CODEX_AUTH_JSON }}
       AI_MODEL: haiku
       CODEX_EFFORT: low
-      AIDESC_SHARD: '${{ matrix.shard }}/3'
-      AIDESC_BATCH: '30'
+      AIDESC_SHARD: '${{ matrix.shard }}/6'
+      AIDESC_BATCH: '40'
       AIDESC_MAX: '60'
       AIDESC_SECS: '1800'
     steps:
@@ -99,5 +102,5 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          sleep 60
+          sleep 20
           gh workflow run ai_desc.yml --repo "${{ github.repository }}" --ref main || true
