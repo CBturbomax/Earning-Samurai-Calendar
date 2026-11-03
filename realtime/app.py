@@ -774,11 +774,11 @@ def pending_loop():
                         PEND_PATH.write_text(json.dumps(PEND, ensure_ascii=False, default=str))
                     log("숫자 생김 — 이제 보낸다", key, lab, hit[1])
                     POOL.submit(safe, finish, dict(ev), {"label": lab, "rev": hit[1], "opi": hit[2] if len(hit) > 2 else None})
-                elif age > 72:
+                elif age > 24 * 10:                              # 열흘(회원님 11/03: "3Q 못 잡았으면 다시 잡아서 꼭 쏴줘") — 10-Q 는 보통 한 달 안
                     with PEND_LOCK:
                         PEND.pop(eid, None)
                         PEND_PATH.write_text(json.dumps(PEND, ensure_ascii=False, default=str))
-                    log("숫자를 사흘 동안 못 구함 — 안 보냄", key)
+                    log("숫자를 열흘 동안 못 구함 — 안 보냄", key)
         except Exception:                                        # noqa: BLE001
             log("숫자 대기 확인 실패", traceback.format_exc(limit=2))
 
@@ -2122,7 +2122,12 @@ def us_watch():
 # 회원님(11/02): "에스티로더 실적 나왔는데 왜 안 잡았냐." 보도자료는 20:00(KST)에 나왔는데 8-K 는 40분 넘게 SEC 에 없었다 —
 # 우리는 8-K(Item 2.02)만 보고 있었다. 뉴스와이어 실적 피드에서 **오늘·어제 캘린더에 있는 미국 회사**의 실적 제목을 잡아
 # 같은 길(pr_table · finish)로 보낸다. 나중에 8-K 가 오면 같은 사건으로 보고 다시 보내지 않는다(PR_SENT).
-PR_FEEDS = ["https://www.prnewswire.com/rss/financial-services-latest-news/earnings-list.rss"]
+PR_FEEDS = ["https://www.prnewswire.com/rss/financial-services-latest-news/earnings-list.rss",
+            # GlobeNewswire 실적 주제 피드(그랩·외국 기업이 많이 쓴다) — 러너에서는 403 이었지만 Railway 에서는 열릴 수 있다(실패는 30분에 한 번만 적는다)
+            "https://www.globenewswire.com/RssFeed/subjectcode/13-Earnings%20Releases%20And%20Operating%20Results/feedTitle/GlobeNewswire%20-%20Earnings%20Releases%20And%20Operating%20Results"]
+# 야후 파이낸스 종목 뉴스 피드 — 오늘 발표 예정 종목 마흔 개씩 한 요청. 비즈니스와이어·GlobeNewswire·PR Newswire·회사 자체 발표가
+# 한데 모여 오므로 어느 와이어로 냈든 잡힌다(회원님 11/03: "공시 아니어도 뉴스로라도 실시간으로").
+YAHOO_RSS = "https://feeds.finance.yahoo.com/rss/2.0/headline?s={syms}&region=US&lang=en-US"
 PR_EVERY = float(os.environ.get("PR_EVERY", "15"))
 PR_SENT = {}                                     # (열쇠, 현지 날짜) -> 사건 id
 PR_TITLE = re.compile(r"(report|announce|post|deliver|declare)s?\b.*\b(results|earnings)|\bresults\b.*\b(quarter|fiscal|year)|"
@@ -2160,7 +2165,9 @@ def pr_watch():
         t0 = time.time()
         try:
             cands = pr_candidates()
-            for feed in PR_FEEDS:
+            syms = sorted({c[2].replace(".", "-") for c in cands})
+            feeds = PR_FEEDS + [YAHOO_RSS.format(syms=",".join(syms[i:i + 40])) for i in range(0, len(syms), 40)]
+            for feed in feeds:
                 try:
                     xml = http_get(feed, ua="Mozilla/5.0 (Windows NT 10.0; Win64; x64) Chrome/131.0", timeout=20)
                 except Exception as e:                           # noqa: BLE001
