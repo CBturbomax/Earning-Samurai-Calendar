@@ -22,7 +22,8 @@ from pathlib import Path
 import ai_seg
 
 HERE = Path(__file__).parent
-OUT = HERE / "data" / "desc_ko_ai.json"
+SHARD = os.environ.get("AIDESC_SHARD", "")          # "0/3" — 갈래마다 제 파일(커밋이 안 부딪힌다)
+OUT = HERE / "data" / (f"desc_ko_ai_s{SHARD.split('/')[0]}.json" if SHARD else "desc_ko_ai.json")
 BATCH = int(os.environ.get("AIDESC_BATCH", "25"))
 MAX_CALLS = int(os.environ.get("AIDESC_MAX", "40"))
 SECS = int(os.environ.get("AIDESC_SECS", "1500"))
@@ -86,6 +87,17 @@ def main():
         if db["src"].get(k) == hh or db["skip"].get(k) == hh:
             continue
         todo.append(k)
+    if SHARD:
+        import zlib
+        i_sh, n_sh = (int(x) for x in SHARD.split("/"))
+        todo = [k for k in todo if zlib.crc32(k.encode()) % n_sh == i_sh]
+        for f in (HERE / "data").glob("desc_ko_ai*.json"):          # 다른 갈래·옛 파일이 이미 옮긴 것은 건너뛴다
+            if f != OUT:
+                try:
+                    done = json.loads(f.read_text(encoding="utf-8")).get("src", {})
+                    todo = [k for k in todo if done.get(k) != h((src[k].get("t") or "").strip())]
+                except (OSError, ValueError):
+                    pass
     todo = order(todo)
     only = [a for a in sys.argv[1:] if ":" in a]
     if only:

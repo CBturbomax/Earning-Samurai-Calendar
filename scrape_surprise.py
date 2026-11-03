@@ -118,7 +118,7 @@ def main():
         got += bool(s)
         if n % 50 == 0:
             OUT.write_text(json.dumps(db, separators=(",", ":")), encoding="utf-8")
-        time.sleep(1.2)
+        time.sleep(0.7)
     db["count"] = sum(1 for v in st.values() if v.get("s"))
     OUT.write_text(json.dumps(db, separators=(",", ":")), encoding="utf-8")
     print(f"서프라이즈: 이번 {n:,}곳 · 이력 있음 {got:,} · 전체 {db['count']:,}")

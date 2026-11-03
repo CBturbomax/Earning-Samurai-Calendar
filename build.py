@@ -2279,10 +2279,13 @@ def load_surprise(keys):
 
 def _desc_ai():
     """AI 가 원문에서 옮긴 사업 설명 한 줄(ai_desc.py → data/desc_ko_ai.json, 회원님 11/03)."""
-    try:
-        return json.loads((HERE / "data" / "desc_ko_ai.json").read_text(encoding="utf-8")).get("ko", {})
-    except (OSError, ValueError):
-        return {}
+    out = {}
+    for f in sorted((HERE / "data").glob("desc_ko_ai*.json")):         # 갈래마다 제 파일(desc_ko_ai_s0.json …)
+        try:
+            out.update(json.loads(f.read_text(encoding="utf-8")).get("ko", {}))
+        except (OSError, ValueError):
+            pass
+    return out
 
 
 def load_desc():
