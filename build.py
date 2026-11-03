@@ -6401,7 +6401,7 @@ function surpChart(key, f) {
   let s = '<line class="fzero" x1="' + L + '" y1="' + mid + '" x2="' + (W - R) + '" y2="' + mid + '"/>' +
     '<text class="fx" x="' + (L - 8) + '" y="' + (mid + 5) + '" text-anchor="end" style="font-size:13px">0%</text>';
   rows.forEach((r, i) => {
-    const v = r[1], up = v >= 0, c = up ? '#ff5b5b' : '#4ea3ff', x = cx(i), yy = y(v), bw = step * 0.62;
+    const v = r[1], up = v >= 0, c = up ? '#ff5b5b' : '#4ea3ff', x = cx(i), yy = y(v), bw = Math.min(step * 0.62, 22);
     s += '<rect x="' + (x - bw / 2).toFixed(1) + '" y="' + Math.min(yy, mid).toFixed(1) + '" width="' + bw.toFixed(1) +
       '" height="' + Math.max(1, Math.abs(yy - mid)).toFixed(1) + '" style="fill:' + c + '"/>' +
       '<text class="vn" x="' + x.toFixed(1) + '" y="' + (up ? yy - 6 : yy + 15).toFixed(1) + '" text-anchor="middle" style="font-size:12px;font-weight:800;fill:' +
