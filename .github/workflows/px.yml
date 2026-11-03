@@ -1,0 +1,58 @@
+# 주가 요약(야후 주봉) — scrape_px.py → data/px_s{0..5}.json. 스크리너의 신고가·RS. 하루 두 번(아시아 장 뒤 · 미국 장 뒤).
+name: 주가 요약
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: '23 7 * * 1-5'
+    - cron: '33 21 * * 1-5'
+
+permissions:
+  contents: write
+  actions: write
+
+concurrency:
+  group: px-${{ github.ref_name }}
+  cancel-in-progress: false
+
+jobs:
+  px:
+    runs-on: ubuntu-latest
+    if: github.ref_name == 'main'
+    timeout-minutes: 32
+    strategy:
+      fail-fast: false
+      matrix:
+        shard: [0, 1, 2, 3, 4, 5]            # 러너마다 IP 가 달라 여섯 갈래 = 여섯 배. 갈래마다 제 파일.
+    steps:
+      - uses: actions/checkout@v4
+      - name: 최신 main 으로 맞춘다
+        run: |
+          git fetch origin main
+          git reset --hard origin/main
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: 주가 받기
+        continue-on-error: true
+        timeout-minutes: 23
+        env:
+          PX_SECS: '1260'
+          PX_SHARD: '${{ matrix.shard }}/6'
+        run: python scrape_px.py
+      - name: 저장소에 반영
+        run: |
+          set -u
+          git config user.name  "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add data/px_s${{ matrix.shard }}.json 2>/dev/null || true
+          git diff --cached --quiet && { echo "달라진 게 없다."; exit 0; }
+          git commit -m "주가 요약 갈래 ${{ matrix.shard }} $(date -u +%F' '%H:%M) [skip ci]"
+          for i in $(seq 1 25); do
+            git fetch origin main || { sleep $((2**i)); continue; }
+            git merge --no-edit -X ours origin/main || { git merge --abort; sleep $((2**i)); continue; }
+            git push origin HEAD:main && exit 0
+            sleep $((1 + RANDOM % 4))
+          done
+          echo "푸시를 끝내 못 했다"; exit 1
+
