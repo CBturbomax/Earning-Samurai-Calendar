@@ -1581,6 +1581,10 @@ def load_seg():
                     out[key] = v
                     new += 1
                 continue
+            if _one_line(base) and not _one_line(v) and len(v.get("pts") or []) >= 2 and _sums_to_rev(key, v):
+                out[key] = v                                  # LLY: 벌크는 'Reportable' 한 줄(=총매출)뿐, 10-Q 엔 제품별이 있다
+                new += 1
+                continue
             n_add = splice(base, v)
             added += bool(n_add)
         print(f"  segments_edgar.json: 최근 분기를 이어 붙인 종목 {added:,}"
@@ -1688,7 +1692,34 @@ def load_seg():
     if cut or gone:
         print(f"  기준이 바뀐 종목 {cut:,}: 옛 부문을 뺐다"
               + (f" · 남는 부문이 없어 뺀 종목 {gone:,}" if gone else ""))
+    # **한 줄짜리는 사업부 그림이 아니다**(11/04 LLY: 'Reportable' 한 줄 = 총매출). 186곳이 그랬다 — 그림을 안 내야
+    # 빈칸 메우기(AI)가 '사업부 없음'으로 보고 원문에서 다시 읽는다.
+    one = [k for k in out if _one_line(out[k])]
+    for k in one:
+        del out[k]
+    if one:
+        print(f"  사업부가 한 줄뿐(=총매출)이라 그림을 안 내는 종목 {len(one):,}")
     return out
+
+
+def _sums_to_rev(key, rec):
+    """마지막 칸의 부문 합이 그 분기 총매출의 0.97~1.1배일 때만 — LLY 10-Q 는 상위 줄(Cardiometabolic)과 그 아래
+    제품(Mounjaro…)을 같이 실어 합이 총매출의 1.9배였다. 겹쳐 쌓으면 막대가 거짓말을 한다."""
+    pts = [p for p in (FIN.get(key) or {}).get("points") or [] if p.get("end") and p.get("rev")]
+    last = (rec.get("pts") or [[None]])[-1]
+    if not pts or not re.match(r"\d{4}-\d\d-\d\d$", str(last[0])):
+        return False
+    d = date.fromisoformat(last[0])
+    p = min(pts, key=lambda q: abs((date.fromisoformat(q["end"]) - d).days))
+    if abs((date.fromisoformat(p["end"]) - d).days) > 20:
+        return False
+    return 0.97 <= sum(v for v in last[1:] if v) / p["rev"] <= 1.1
+
+
+def _one_line(rec):
+    """최근 네 칸이 모두 값 하나 이하 — 쪼갠 것이 아니다."""
+    pts = [r for r in (rec.get("pts") or []) if any(v for v in r[1:])][-4:]
+    return bool(pts) and all(sum(1 for v in r[1:] if v) <= 1 for r in pts)
 
 
 SEG_NORM = re.compile(r"[^a-z0-9]|and")
