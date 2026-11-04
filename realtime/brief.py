@@ -67,13 +67,13 @@ def _post(url, body, headers, timeout):
         return json.loads(r.read())
 
 
-def _codex(user, timeout):
+def _codex(user, timeout, sysm=None):
     import tempfile
     with tempfile.NamedTemporaryFile("r", suffix=".txt", delete=False) as f:
         last = f.name
     r = subprocess.run(["codex", "exec", "--skip-git-repo-check", "--sandbox", "read-only", "--color", "never",
                         "--output-last-message", last, "-c", 'model_reasoning_effort="low"', "-"],
-                       input=SYSTEM + "\n\n" + user, capture_output=True, text=True, timeout=timeout, cwd=tempfile.gettempdir())
+                       input=(sysm or SYSTEM) + "\n\n" + user, capture_output=True, text=True, timeout=timeout, cwd=tempfile.gettempdir())
     try:
         ans = open(last, encoding="utf-8").read()
     except OSError:
@@ -91,13 +91,19 @@ def _codex(user, timeout):
 VIA = {"last": ""}
 
 
-def _ask(user, timeout):
+def _ask_plain(prompt, timeout):
+    """실적 '왜' 지시문(SYSTEM) 없이 — 월차 표 판독 같은 다른 일에. 계정 돌리기·Codex 넘김은 _ask 와 같다."""
+    return _ask(prompt, timeout, system="JSON 으로만 답한다.")
+
+
+def _ask(user, timeout, system=None):
+    sysm = system or SYSTEM
     if shutil.which("claude"):
         for i, tok in enumerate(CC_TOKENS):
             if _REST.get(tok, 0) > time.time():
                 continue
             r = subprocess.run(["claude", "-p", "--model", CC_MODEL, "--output-format", "text", "--max-turns", "1"],
-                               input=SYSTEM + "\n\n" + user, capture_output=True, text=True, timeout=timeout,
+                               input=sysm + "\n\n" + user, capture_output=True, text=True, timeout=timeout,
                                env={**os.environ, "CLAUDE_CODE_OAUTH_TOKEN": tok})
             if r.returncode == 0 and r.stdout.strip():
                 VIA["last"] = f"claude{i + 1}"
@@ -108,7 +114,7 @@ def _ask(user, timeout):
                 _REST[tok] = time.time() + 3600          # 한도 — 한 시간 쉬고 다음 계정으로
     if CODEX_AUTH and shutil.which("codex") and _REST.get("codex", 0) <= time.time():
         try:
-            out = _codex(user, timeout)
+            out = _codex(user, timeout, sysm)
             VIA["last"] = "codex"
             return out
         except Exception as e:                       # noqa: BLE001
@@ -117,7 +123,7 @@ def _ask(user, timeout):
                 _REST["codex"] = time.time() + 3600
     if AN_KEY:
         d = _post("https://api.anthropic.com/v1/messages",
-                  {"model": AN_MODEL, "max_tokens": 1200, "system": SYSTEM,
+                  {"model": AN_MODEL, "max_tokens": 1200, "system": sysm,
                    "messages": [{"role": "user", "content": user}]},
                   {"x-api-key": AN_KEY, "anthropic-version": "2023-06-01", "content-type": "application/json"},
                   timeout)
@@ -126,7 +132,7 @@ def _ask(user, timeout):
         d = _post("https://openrouter.ai/api/v1/chat/completions",
                   {"model": OR_MODEL, "temperature": 0.1, "max_tokens": 1200,
                    "response_format": {"type": "json_object"},
-                   "messages": [{"role": "system", "content": SYSTEM}, {"role": "user", "content": user}]},
+                   "messages": [{"role": "system", "content": sysm}, {"role": "user", "content": user}]},
                   {"Authorization": f"Bearer {OR_KEY}", "content-type": "application/json"}, timeout)
         return d["choices"][0]["message"]["content"]
     return ""
