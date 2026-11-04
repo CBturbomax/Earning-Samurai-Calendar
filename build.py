@@ -2469,6 +2469,34 @@ def dedupe_moved(rows):
         print(f"  us: 날짜를 옮긴 회사의 옛 줄 {len(drop):,}건 뺌")
     return [r for r in rows if id(r) not in drop]
 
+
+def mon_none(nums):
+    """회사마다 **월차 공시가 실제로 없던 달**(최근 2년, 값 없는 칸만) — scrape_mon_hist 가 yanoshin 목록 전체에서 읽은 '낸 달'
+    (data/monthly_hist_jp.json 의 periods)에 없는 달. 목록을 못 본 회사(IR 전용)는 비워 둔다 — 확인 못 한 것을 없다고 쓰지 않는다."""
+    try:
+        per = json.loads((HERE / "data" / "monthly_hist_jp.json").read_text(encoding="utf-8")).get("periods") or {}
+    except (OSError, ValueError):
+        return {}
+    today = date.today()
+    win = []
+    y, m = today.year, today.month
+    for _ in range(25):
+        m -= 1
+        if m == 0:
+            y, m = y - 1, 12
+        win.append(f"{y:04d}-{m:02d}")
+    out = {}
+    for c, v in nums.items():
+        ps = set(per.get(c) or [])
+        if c not in per or not ps:
+            continue
+        have = {r[0] for r in v.get("m") or [] if r[1] is not None or r[2] is not None}
+        first = min(ps)
+        miss = [p for p in win if p not in have and p not in ps and p >= first and p < max(ps)]
+        if miss:
+            out[c] = sorted(miss)
+    return out
+
 def load_surprise(keys):
     """Zacks EPS 서프라이즈 이력(scrape_surprise.py) -> {us:티커: [[회계분기 'YYYY-MM', %], ...]} — 2017-10 이후 최대 36칸."""
     st = {}
@@ -4400,6 +4428,7 @@ def build():
         # 숫자는 monthlyNum 에 따로 있다(못 읽은 종목은 거기 없다).
         "monthly": monthly,
         "monthlyNum": monthly_nums,
+        "monNone": mon_none(monthly_nums),
     }
 
     try:
@@ -6348,10 +6377,12 @@ function renderMonthly() {
       return '<tr data-mrow="' + esc(x.code) + '"><th scope="row"><button class="mncompany" data-mcode="' + esc(x.code) + '" title="' + esc(x.orig + ' · ' + (n.scope || basis)) + '">' + esc(x.ko) + '<small><span class="mnticker">' + esc(x.code) + '</span><span class="mnmeta">' + esc(basis + ' · ' + x.sect) + '</span></small></button></th><td class="mncapcell">' + (x.cap ? capJo(x.cap).toFixed(1) + '조 원' : '—') + '</td><td class="mncoverage">' + '<strong>' + x.coverage + '</strong> / 24<small>개월 수집</small></td>' + months.map((p,i) => {
         const value = mnHeatValue(x.series.get(p));
         const rounded = value === null ? null : Math.round(value);
-        const label = rounded === null ? '—' : (rounded > 0 ? '+' : '') + rounded + '%';
+        // TDnet·JPX 공시 목록을 다 훑어 그 달 월차 공시가 **실제로 없었던** 칸은 「없음」(회원님 11/04: 더블체크해서 없다고 표기)
+        const none = value === null && (D.monNone || {})[x.code] && D.monNone[x.code].includes(p);
+        const label = rounded === null ? (none ? '없음' : '—') : (rounded > 0 ? '+' : '') + rounded + '%';
         const color = value === null ? '#526980' : rounded === 0 ? '#9aaabd' : value > 0 ? '#ffaaa5' : '#72d8bd';
         const bg = value === null ? 'transparent' : 'rgba(' + (value >= 0 ? '191,92,91,' : '32,150,120,') + (.06 + Math.min(Math.abs(value),40) / 40 * .46).toFixed(3) + ')';
-        const tip = x.ko + ' · ' + p + ' · ' + basis + ' · ' + (n.scope || '') + ' · ' + (value === null ? mnHeatReason(x.code,p) : '전년동월비 ' + (Math.round(value*10)/10) + '%');
+        const tip = x.ko + ' · ' + p + ' · ' + basis + ' · ' + (n.scope || '') + ' · ' + (value === null ? (none ? '이 달은 월차 공시가 없음(TDnet·JPX 공시 목록 확인)' : mnHeatReason(x.code,p)) : '전년동월비 ' + (Math.round(value*10)/10) + '%');
         return '<td class="' + (i === 23 ? 'mnlatestcol ' : '') + (p.endsWith('-01') ? 'mnyear' : '') + '" style="color:' + color + ';background:' + bg + '"><button class="mncell" data-mcode="' + esc(x.code) + '" data-mperiod="' + p + '" title="' + esc(tip) + '" aria-label="' + esc(tip) + '">' + label + '</button></td>';
       }).join('') + '</tr>';
     }).join('') + '</tbody></table></div>';
