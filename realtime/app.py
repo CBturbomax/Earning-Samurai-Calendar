@@ -912,7 +912,7 @@ def pending_loop():
 
 # **한 회사 · 한 발표일 = 텔레그램 한 번.** 보도자료(와이어)로 먼저 보내고 8-K 가 뒤에 오면 PR_SENT 가 막았는데, 그 표는 메모리에만
 # 있어 서버를 다시 올리면 사라졌다 — 켤 때 지난 공시를 다시 훑으면서 같은 실적을 「(90분 늦게 잡음)」으로 또 보냈다(11/03). 볼륨에 남긴다.
-LATE_MAX_H = float(os.environ.get("LATE_MAX_H", "6"))   # 공개 뒤 이 시간이 지나면 텔레그램은 안 보낸다(사이트엔 싣는다)
+LATE_MAX_H = float(os.environ.get("LATE_MAX_H", "240"))  # 늦어도 찾은 건 보낸다(회원님 11/04: "늦더라도 무조건 다 보내되, 늦지 않게") — 열흘 넘은 것만 접는다
 TGDAY_PATH = DATA / "tg_day.json"
 try:
     TGDAY = set(json.loads(TGDAY_PATH.read_text(encoding="utf-8")))
@@ -2954,6 +2954,64 @@ def jp_pre_process(row, day, replay=False):
     finish(ev, None)
 
 
+MONRT_PATH = DATA / "mon_rt.json"
+try:
+    MONRT = json.loads(MONRT_PATH.read_text(encoding="utf-8"))
+except (OSError, ValueError):
+    MONRT = {}
+MONRT_LOCK = threading.Lock()
+
+
+def monrt_put(code, name, day, url, rows, label):
+    """방금 읽은 월차를 사이트로 — 3분 루프가 /api/mon 을 받아 data/monthly_rt_jp.json 으로, 빌드가 합친다(11/04 "월매출 실시간으로")."""
+    with MONRT_LOCK:
+        rec = MONRT.setdefault(code, {"name": name, "months": {}, "yoy_label": label})
+        for r in rows:
+            if r.get("yoy") is None and r.get("rev") is None:
+                continue
+            e = {"day": day, "doc": url, "metric": r.get("metric") or label or "売上高"}
+            for k in ("yoy", "rev", "unit"):
+                if r.get(k) is not None:
+                    e[k] = r[k]
+            cur = rec["months"].get(r["period"])
+            if not cur or cur.get("day", "") <= day:
+                rec["months"][r["period"]] = e
+        MONRT_PATH.write_text(json.dumps(MONRT, ensure_ascii=False), encoding="utf-8")
+
+
+def mon_ai_rows(blob, code, name, day, title):
+    """표 규칙이 못 읽은 월차 PDF 를 그 자리에서 AI 로 — 글자만 넘기고, 돌려받은 숫자가 원문에 그대로 있을 때만(ai_mon 과 같은 검산)."""
+    import ai_mon
+    try:
+        tx = "\n".join(pdftext.extract_lines(blob, 4))[:ai_mon.CHARS]
+    except Exception:                                            # noqa: BLE001
+        return []
+    if len(tx) < 60:
+        return []
+    items = f"### 공시번호 1 — {code} {name} · 공시일 {day} · {title}\n{tx}"
+    try:
+        ans = brief._ask_plain(ai_mon.PROMPT.format(items=items), 90)
+    except Exception as e:                                       # noqa: BLE001
+        log("월차 AI 실패", code, repr(e)[:120])
+        return []
+    m = re.search(r"\{.*\}", ans or "", re.S)
+    try:
+        r = (json.loads(m.group(0)) if m else {}).get("1") or {}
+    except ValueError:
+        return []
+    out = []
+    for p, v in (r.get("months") or {}).items():
+        if not re.fullmatch(r"20\d\d-(0[1-9]|1[0-2])", p or "") or p >= day[:7]:
+            continue
+        yoy, rev = v.get("yoy"), v.get("rev")
+        ok_y = isinstance(yoy, (int, float)) and 30 <= yoy <= 300 and ai_mon.num_in(tx, yoy)
+        ok_r = isinstance(rev, (int, float)) and rev > 0 and ai_mon.num_in(tx, rev)
+        if ok_y or ok_r:
+            out.append({"period": p, "yoy": float(yoy) if ok_y else None, "rev": rev if ok_r else None,
+                        "metric": (r.get("metric") or "") + ("" if "売上" in (r.get("metric") or "") else "売上高")})
+    return out
+
+
 def jp_mon_process(row, day, replay=False):
     """월차 — 표를 읽어 최근 달의 전년비. 기존점 우선. +10% 이상이면 알림(회원님 10/30)."""
     code = row["code"]
@@ -2961,15 +3019,24 @@ def jp_mon_process(row, day, replay=False):
         return
     url = "https://www.release.tdnet.info/inbs/" + row["pdf"]
     try:
-        got = montable.read(http_get(url, ua=BROWSER_UA, timeout=30, binary=True), day, title=row["title"])
+        blob = http_get(url, ua=BROWSER_UA, timeout=30, binary=True)
+        got = montable.read(blob, day, title=row["title"])
     except Exception as e:                                       # noqa: BLE001
         log("월차 PDF 실패", code, repr(e)[:120])
         return
     rows = [r for r in (got or {}).get("rows") or []
             if r.get("yoy") is not None and (not r.get("metric") or re.search(r"売上|営業収益|営業収入|取扱高|販売高|月商|前年|昨対", r["metric"]))]
     if not rows:
-        log("월차 표 못 읽음", code, row["title"][:40])
-        return
+        # 표 규칙이 못 읽으면 **그 자리에서** AI 로 — 예전엔 GitHub 의 AI 판독 줄(30분 바퀴)에 서서 숫자가 한참 늦었다(11/04)
+        rows = mon_ai_rows(blob, code, row["name"], day, row["title"])
+        got = {"yoy_label": rows[0]["metric"] if rows else ""}
+        log("월차 표 못 읽음 → AI", code, row["title"][:40], f"{len(rows)}달" if rows else "실패")
+        if not rows:
+            return
+    try:
+        monrt_put(code, row["name"], day, url, rows, (got or {}).get("yoy_label") or "")
+    except Exception:                                            # noqa: BLE001
+        log("월차 보관 실패", code, traceback.format_exc(limit=1))
     last = max(r["period"] for r in rows)
     now = [r for r in rows if r["period"] == last]
     lab = lambda r: (r.get("metric") or "") + " " + (got.get("yoy_label") or "")     # noqa: E731
@@ -3500,6 +3567,10 @@ class Handler(BaseHTTPRequestHandler):
             POOL.submit(safe, finish, ev, {"label": "3Q26", "rev": 18085e6, "opi": 5900e6, "ni": 5065e6, "eps": 1.98})
             self.head()
             self.wfile.write(b'{"ok":true}')
+        elif path == "/api/mon":                                 # 방금 읽은 월차 — 3분 루프가 받아 data/monthly_rt_jp.json 으로
+            self.head()
+            with MONRT_LOCK:
+                self.wfile.write(json.dumps({"codes": MONRT}, ensure_ascii=False).encode())
         elif path == "/api/segs":                                # 수집 루프가 받아 data/segments_ai.json 으로
             self.head()
             with SEGAI_LOCK:
