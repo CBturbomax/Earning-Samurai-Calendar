@@ -68,6 +68,13 @@ def main():
             except (OSError, ValueError):
                 pass
     nums = json.loads((HERE / "data" / "monthly_nums_jp.json").read_text(encoding="utf-8"))
+    try:                                                     # 3분 루프가 막 못 읽은 새 공시도 — 가장 먼저 읽는다
+        fr = json.loads((HERE / "data" / "monthly_nums_fresh_jp.json").read_text(encoding="utf-8"))
+        nums["skip"] = {**(nums.get("skip") or {}), **(fr.get("skip") or {})}
+        for c, r in (fr.get("codes") or {}).items():
+            nums["codes"].setdefault(c, r)
+    except (OSError, ValueError):
+        pass
     rows = json.loads((HERE / "data" / "monthly_jp.json").read_text(encoding="utf-8")).get("rows", [])
     meta = {r["doc"]: (r["code"], r["date"], r.get("name", ""), r.get("title", "")) for r in rows if r.get("doc")}
     try:
@@ -105,7 +112,9 @@ def main():
             have[c] = len(r.get("months") or {})
     for c, r in db["codes"].items():
         have[c] = have.get(c, 0) + len(r.get("months") or {})
-    todo.sort(key=lambda x: (min(have.get(x[1], 0), 24) // 6, -(caps.get("jp:" + x[1]) or 0), -int(x[2].replace("-", "") or 0)))
+    from datetime import timedelta as _td
+    fresh_cut = (date.today() - _td(days=3)).isoformat()
+    todo.sort(key=lambda x: (x[2] < fresh_cut, min(have.get(x[1], 0), 24) // 6, -(caps.get("jp:" + x[1]) or 0), -int(x[2].replace("-", "") or 0)))
     print(f"월매출 AI 판독: 남은 {len(todo)}건")
     t0, calls, got = time.time(), 0, 0
     for i in range(0, len(todo), BATCH):
