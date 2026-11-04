@@ -78,7 +78,7 @@ BIG = set()                                          # 시총 상위 — main �
 BIG_N = int(os.environ.get("AIFILL_BIG", "0"))       # 사업부 기록이 아예 없는 회사(단일 부문 — 키엔스·닌텐도·다케다)는 안 묻는다(11/02)
 RECENT_DAYS = int(os.environ.get("AIFILL_RECENT", "0") or 0)   # >0 이면 그 날수 안의 빈칸만
 DOC_LIMIT = int(os.environ.get("AIFILL_DOC", "20000"))   # 원문 길이 상한 — 길수록 한도를 많이 먹는다
-EMPTY_VER = 3                   # 2: 일본 PDF 이름을 목록에서(미국 기준 회사 — 도요타·고마쓰)
+EMPTY_VER = 4                   # 2: 일본 PDF 이름을 목록에서(미국 기준 회사 — 도요타·고마쓰)  # 11/04: 암호 PDF 를 pdftotext 로
 DRY_N = 4                       # 연달아 이만큼 읽어 맞은 것이 없으면 그 회사는 넉 달 쉰다
 KEYS = re.compile(r"segment|geograph|region|countr|americas|europe|asia|china|japan|emea|international|domestic|"
                   r"backlog|remaining performance|bookings|new orders|order intake|orders received|disaggregat|"
