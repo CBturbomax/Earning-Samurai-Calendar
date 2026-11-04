@@ -3550,6 +3550,12 @@ def apply_reviewed_monthly(monthly, nums):
             evidence[period] = item
         if not history:
             continue
+        # 대조표가 최근 2년에 몇 달 없는데 자동 수집이 훨씬 촘촘하면 대조표로 덮지 않는다(11/04 2311: 대조표 1달 · PDF 45달)
+        recent = (date.today() - timedelta(days=730)).strftime('%Y-%m')
+        old0 = nums.get(code, {})
+        if (sum(1 for r in history if r[0] >= recent) < 6
+                and sum(1 for r in old0.get('m', []) if r[0] >= recent and r[2] is not None) >= 12):
+            continue
         base = labels[metric]
         # Only append later automatic observations when both scope and metric
         # match an explicitly reviewed series. Never replace reviewed history.
@@ -3558,10 +3564,12 @@ def apply_reviewed_monthly(monthly, nums):
         overlap = [r for r in old.get('m', []) if r[0] in reviewed and r[2] is not None]
         same_history = (len(overlap) >= 3 and
                         all(abs(r[2] - reviewed[r[0]]) < 0.15 for r in overlap))
-        if (old.get('historyVerified') and old.get('historyBase') == base
-                and (old.get('scope') == company['scope'] or same_history)):
-            history.extend(r for r in old.get('m', [])
-                           if r[0] > board['endMonth'] and r[0] not in evidence)
+        # **자동으로 모은 달로 빈 달을 메운다**(11/04 회원님 "일본 월매출 빈 곳이 너무 많다"). 예전엔 대조표가 있는 회사의 자동 수집분을
+        # 대조표 끝 달 뒤로만 붙이고 그 앞은 통째로 버려서, PDF·AI 판독으로 채운 달이 대조표의 빈 달에 들어오지 못했다(134곳).
+        # 겹치는 달이 맞거나(같은 계열) 기준이 같을 때 **빈 달만** 채운다 — 대조표 값은 절대 덮지 않는다.
+        if (old.get('historyBase') == base or same_history) and (
+                same_history or len(overlap) < 3 or old.get('scope') == company['scope']):
+            history.extend(r for r in old.get('m', []) if r[0] not in evidence and r[2] is not None)
             history.sort(key=lambda r: r[0])
         latest = history[-1]
         item = evidence.get(latest[0], {})
