@@ -160,6 +160,12 @@ jobs:
             # 오늘·어제·그제 것만, 따로 파일에(본 파일은 monthly.yml 몫). 못 읽은 것은 AI 판독(ai_mon)이 가장 먼저 읽는다.
             MON_OUT=data/monthly_nums_fresh_jp.json MON_RECENT_DAYS=3 MON_SECS=45 MON_PDF_PER_RUN=15 \
               timeout 70 python scrape_mon_jp.py || true
+            # 실시간 서버가 공시 즉시 읽은 월차(표 규칙 실패분은 그 자리에서 AI) — 빌드가 합친다
+            if [ -s realtime/URL ]; then
+              curl -sf -m 20 "$(cat realtime/URL)/api/mon" -o /tmp/mon_rt.json \
+                && python -c "import json;json.load(open('/tmp/mon_rt.json'))" \
+                && cp /tmp/mon_rt.json data/monthly_rt_jp.json || true
+            fi
             # 미국 발표 속보 — 오늘·어제 발표 종목의 8-K 접수(실제 시각)와 실제 EPS.
             # 회원님: "실적 나온 지 3시간이 지났는데 왜 반영이 안 되냐"(EAT).
             # 예전에는 8-K 를 30분에 한 번, EPS 는 하루 한 번 봤다.
