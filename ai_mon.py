@@ -23,8 +23,9 @@ import pdftext
 import scrape_mon_jp as M
 
 HERE = Path(__file__).parent
-OUT = HERE / "data" / "monthly_ai_jp.json"
-BATCH = int(os.environ.get("AIMON_BATCH", "4"))
+SHARD = os.environ.get("AIMON_SHARD", "")              # "0/3" — 갈래마다 제 파일(커밋이 안 부딪힌다)
+OUT = HERE / "data" / (f"monthly_ai_jp_s{SHARD.split('/')[0]}.json" if SHARD else "monthly_ai_jp.json")
+BATCH = int(os.environ.get("AIMON_BATCH", "6"))
 MAX_CALLS = int(os.environ.get("AIMON_MAX", "40"))
 SECS = int(os.environ.get("AIMON_SECS", "1500"))
 CHARS = 2500
@@ -59,6 +60,13 @@ def main():
         db = {}
     db.setdefault("codes", {})
     asked = db.setdefault("asked", {})
+    asked_all = dict(asked)
+    for f in (HERE / "data").glob("monthly_ai_jp*.json"):       # 다른 갈래·옛 파일이 이미 물은 공시는 건너뛴다
+        if f != OUT:
+            try:
+                asked_all.update(json.loads(f.read_text(encoding="utf-8")).get("asked", {}))
+            except (OSError, ValueError):
+                pass
     nums = json.loads((HERE / "data" / "monthly_nums_jp.json").read_text(encoding="utf-8"))
     rows = json.loads((HERE / "data" / "monthly_jp.json").read_text(encoding="utf-8")).get("rows", [])
     meta = {r["doc"]: (r["code"], r["date"], r.get("name", ""), r.get("title", "")) for r in rows if r.get("doc")}
@@ -73,7 +81,7 @@ def main():
         hist = {}
     todo = []
     for url, why in (nums.get("skip") or {}).items():
-        if why != "표없음" or url in asked:
+        if why != "표없음" or url in asked_all:
             continue
         m = re.search(r"/disc/(\w{4})0/", url)
         if url in meta:
@@ -84,7 +92,20 @@ def main():
         else:
             continue
         todo.append((url, code, day, name, title))
-    todo.sort(key=lambda x: (-(caps.get("jp:" + x[1]) or 0), x[2]))
+    import zlib
+    from markets import excluded
+    todo = [t for t in todo if not excluded("jp", t[3] or (nums["codes"].get(t[1]) or {}).get("name", ""))]   # 리츠·은행 등은 월매출 화면 밖
+    if SHARD:
+        i_sh, n_sh = (int(x) for x in SHARD.split("/"))
+        todo = [t for t in todo if zlib.crc32(t[0].encode()) % n_sh == i_sh]
+    # **빈 달이 많은 회사부터**(회원님 11/04: "일본 월매출이 다 엉망") — 이미 가진 달 수가 적은 회사, 그다음 시총 큰 순, 최근 공시부터.
+    have = {}
+    for src in (nums.get("codes") or {}, ):
+        for c, r in src.items():
+            have[c] = len(r.get("months") or {})
+    for c, r in db["codes"].items():
+        have[c] = have.get(c, 0) + len(r.get("months") or {})
+    todo.sort(key=lambda x: (min(have.get(x[1], 0), 24) // 6, -(caps.get("jp:" + x[1]) or 0), -int(x[2].replace("-", "") or 0)))
     print(f"월매출 AI 판독: 남은 {len(todo)}건")
     t0, calls, got = time.time(), 0, 0
     for i in range(0, len(todo), BATCH):
