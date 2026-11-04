@@ -2943,7 +2943,11 @@ def pack_seg(rec, fin_rec):
             if len(nb) < 3:
                 continue
             mid = sorted(nb)[len(nb) // 2]
-            if mid > 0 and abs(rat[l] / mid - 1) > 0.12:
+            # 합이 총매출과 거의 같은 칸(0.93~1.12배)은 멀쩡하다 — 앞뒤가 이상해서 걸린 것이다(11/04 MRNA).
+            # 상계 전 총액으로 내는 회사(평소 1.3배↑, CVX 2.1배)는 유가 폭락 분기처럼 비율이 출렁인다 — 25% 까지 둔다.
+            if 0.93 <= rat[l] <= 1.12:
+                continue
+            if mid > 0 and abs(rat[l] / mid - 1) > (0.25 if mid >= 1.3 else 0.12):
                 bad.add(l)
         if bad and len(bad) < len(rat) / 3:
             rows = [r for r in rows if r[0] not in bad]
