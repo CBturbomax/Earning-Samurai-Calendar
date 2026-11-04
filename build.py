@@ -1717,8 +1717,9 @@ def _sums_to_rev(key, rec):
 
 
 def _one_line(rec):
-    """최근 네 칸이 모두 값 하나 이하 — 쪼갠 것이 아니다."""
-    pts = [r for r in (rec.get("pts") or []) if any(v for v in r[1:])][-4:]
+    """**한 번도** 두 부문 이상을 낸 적이 없다 — 쪼갠 것이 아니다(LLY 'Reportable'). 최근 몇 칸만 보면 GOOG 처럼
+    다른 소스의 반쪽 칸이 꼬리에 붙은 멀쩡한 37분기가 통째로 갈려 나간다(11/04)."""
+    pts = [r for r in (rec.get("pts") or []) if any(v for v in r[1:])]
     return bool(pts) and all(sum(1 for v in r[1:] if v) <= 1 for r in pts)
 
 
@@ -1803,8 +1804,12 @@ def splice(base, fresh):
                 patched += 1
             continue
         # 열은 늘 **헌 기록의 이름 차례**를 따른다. 새 기록에 없는 부문은 빈칸이다.
-        add.append([p[0]] + [(p[i + 1] if i is not None and i + 1 < len(p) else None)
-                             for i in hit])
+        row_new = [p[0]] + [(p[i + 1] if i is not None and i + 1 < len(p) else None) for i in hit]
+        # **반쪽 행은 붙이지 않는다**(11/04 GOOG: stockanalysis 는 부문 이름이 달라 클라우드 한 줄만 맞았고, 그 한 줄짜리
+        # 칸이 최근 분기로 붙었다). 지금 쓰는 부문의 절반 이상이 차야 붙인다.
+        if sum(1 for i in liveb if row_new[i + 1] is not None) * 2 < len(liveb):
+            continue
+        add.append(row_new)
     if not add:
         return patched
     base["pts"] = sorted(base["pts"] + add, key=lambda r: str(r[0]))
