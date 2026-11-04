@@ -139,8 +139,18 @@ def main():
     except (OSError, ValueError):
         ind = {}
     # 시총 큰 순(화면에서 보는 회사부터) · 은행·리츠 등 화면에 안 싣는 업종은 뺀다(첫 판이 은행·리츠부터 읽었다)
+    # **이번 주(앞뒤 열흘) 발표 회사가 맨 앞**(11/04 회원님: SN 사업부에 3Q25·4Q25·2024 이전이 비었는데 시총 순 줄에서
+    # 아직 차례가 안 왔다). 그다음 시총.
+    hot = set()
+    try:
+        from datetime import timedelta
+        eu = json.loads((HERE / "data" / "earnings_us.json").read_text(encoding="utf-8"))
+        lo, hi = (date.today() - timedelta(days=10)).isoformat(), (date.today() + timedelta(days=10)).isoformat()
+        hot = {r.get("code") for r in (eu.get("rows") or []) if lo <= (r.get("date") or "") <= hi}
+    except (OSError, ValueError):
+        pass
     cands = only or sorted((t for t in gp if t in caps and not excluded("us", "", "", (ind.get("us:" + t) or "").replace("-", ""))),
-                           key=lambda t: -(caps.get(t) or 0))
+                           key=lambda t: (t not in hot, -(caps.get(t) or 0)))
     todo, seen_cik = [], set()
     for t in cands:
         cik = ss.CIK_ALIAS.get(t) or cikmap.get(t) or cikmap.get(t.replace(".", "-"))
