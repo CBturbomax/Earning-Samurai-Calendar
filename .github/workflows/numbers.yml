@@ -204,17 +204,8 @@ jobs:
                 # 충돌 없이 merge 가 실패했다(잠금 파일 따위). 다음 바퀴에서 다시.
                 echo "merge 실패(충돌 아님), 재시도"; sleep $((2**i)); continue
               fi
-              others=$(echo "$stuck" | grep -v -e '^index\.html$' -e '^version\.txt$' -e '^data/audit_gaps\.json$' || true)  # audit_gaps 는 빌드 생성물(11/02 이 충돌로 실적 수치를 버렸다)
-              if [ -n "$others" ]; then
-                echo "원본 데이터 또는 코드 충돌 — 자동으로 덮어쓰지 않는다:"; echo "$others"; exit 1
-              fi
-              # shellcheck disable=SC2086
-              git checkout --ours -- $stuck
-              git add $stuck
-              if git diff --name-only --diff-filter=U | grep -q .; then
-                echo "충돌을 못 풀었다:"; git diff --name-only --diff-filter=U; exit 1
-              fi
-              git commit --no-edit
+              # 제 파일은 우리 것, 남의 data/ 는 저쪽 것, 코드는 실패(11/04 남의 파일 충돌로 저장이 끊겼다)
+              bash .github/scripts/resolve_merge.sh '^data/(financials|financials_intl|financials_hk_em|segments|segments_pr|segments_hk|desc)\.json$' || exit 1
             fi
 
             # **데이터부터 민다 — 빌드는 그다음.** 예전에는 재시도마다 페이지를 다시
