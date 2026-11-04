@@ -169,7 +169,31 @@ def ask(sym, raw, rec, last, pend):
 def check(segs, prior, tot_now, tot_prior):
     """AI 답 -> {부문: 이번 분기 값} 또는 (None, 까닭). 규칙 수집기 read() 와 같은 잣대."""
     want = [n for n, v in prior.items() if v]
-    got = {s.get("name"): dict(s) for s in segs if s.get("name") in prior}
+
+    def _num(x):
+        """'$30,897' · '(1,234)' · '30.9' 처럼 글자로 온 숫자도 읽는다(11/04 — 전년 0개 탈락의 다수)."""
+        if isinstance(x, (int, float)):
+            return float(x)
+        if isinstance(x, str):
+            t = x.strip().replace(",", "").replace("$", "").replace(" ", "")
+            neg = t.startswith("(") and t.endswith(")")
+            t = t.strip("()")
+            try:
+                return -float(t) if neg else float(t)
+            except ValueError:
+                return None
+        return None
+    keyn = {sp.key(n): n for n in prior}
+    got = {}
+    for s0 in segs:
+        if not isinstance(s0, dict):
+            continue
+        n = s0.get("name")
+        n = n if n in prior else keyn.get(sp.key(n or ""))       # 대소문자·띄어쓰기만 다른 이름
+        if not n:
+            continue
+        g = {"prior": _num(s0.get("prior", s0.get("prior_year"))), "current": _num(s0.get("current"))}
+        got[n] = g
     # 단위 맞춤(11/04): AI 가 '백만 달러' 표를 달러로 안 바꾸고 1,234 그대로 주는 일이 잦아 전년 값이
     # 하나도 안 맞고 통째로 떨어졌다(40곳 물어 5곳 통과). 1·천·백만·십억 배 중 전년 값이 가장 많이 맞는 배수를
     # 이번·전년 둘 다에 똑같이 곱한다 — 맞춤의 근거가 SEC 전년 값이라 지어내는 것이 아니다.
@@ -218,8 +242,8 @@ def main():
         db = {}
     st = db.setdefault("stocks", {})
     asked = db.setdefault("asked", {})
-    if db.get("v") != 2:                                     # 1: 단위 안 맞춘 검산 — 떨어진 공시를 다시 묻는다
-        asked.clear(); db["v"] = 2
+    if db.get("v") != 3:                                     # 1: 단위 안 맞춤 · 2: 글자로 온 숫자를 못 읽음 — 떨어진 공시를 다시 묻는다
+        asked.clear(); db["v"] = 3
     cik_of = lu.cik_map_cached()
     # 이번 주 발표 회사가 먼저(11/04 회원님: "이번주 실적발표 회사들 다 점검") — 그다음 시총
     recent = {}
@@ -305,7 +329,7 @@ def main():
         if only:
             print(sym, json.dumps(segs, ensure_ascii=False)[:600])
         if not vals:
-            print(f"  {sym} 검산 탈락: {why}")
+            print(f"  {sym} 검산 탈락: {why} | 우리 전년 {json.dumps({k: v for k, v in list(prior.items())[:3]})} | AI {json.dumps(segs[:3], ensure_ascii=False)}"[:600])
             return
         names = [n for n in rec["names"] if n in vals]
         with lock:
