@@ -30,6 +30,7 @@ import sys
 import threading
 import time
 import traceback
+import urllib.error
 import urllib.parse
 import urllib.request
 from concurrent.futures import ThreadPoolExecutor
@@ -472,16 +473,50 @@ class Telegram:
             if cid.lstrip("-").isdigit():
                 self.subs.add(int(cid))
         self.offset = 0
+        self._gates, self._gl = {}, threading.Lock()
 
     def api(self, method, data=None, files=None, timeout=60):
+        """**한도에 걸리면 기다렸다 다시 보낸다**(11/04 회원님: 채널에만 몇 개 빠진다). 텔레그램은 채널·그룹에 1분 20건쯤만 받고
+        넘으면 429(retry_after 초)를 준다 — 예전엔 그 실패를 적기만 하고 버렸다. 개인 대화방은 한도가 넉넉해 안 빠졌다.
+        대화방마다 보내기를 줄 세우고(채널은 3초 간격), 429 면 retry_after 만큼 쉬고 다섯 번까지 다시."""
         url = f"https://api.telegram.org/bot{TG_TOKEN}/{method}"
         if files:
             body, ctype = multipart(data or {}, files)
         else:
             body, ctype = urllib.parse.urlencode(data or {}).encode(), "application/x-www-form-urlencoded"
-        req = urllib.request.Request(url, data=body, headers={"Content-Type": ctype})
-        with urllib.request.urlopen(req, timeout=timeout) as r:
-            return json.loads(r.read())
+        cid = (data or {}).get("chat_id")
+        gate = self._gate(cid) if cid is not None and method.startswith("send") else None
+        for attempt in range(6):
+            if gate:
+                with gate[0]:
+                    w = gate[2] - (time.time() - gate[1][0])
+                    if w > 0:
+                        time.sleep(w)
+                    gate[1][0] = time.time()
+            req = urllib.request.Request(url, data=body, headers={"Content-Type": ctype})
+            try:
+                with urllib.request.urlopen(req, timeout=timeout) as r:
+                    return json.loads(r.read())
+            except urllib.error.HTTPError as e:
+                raw = e.read() or b"{}"
+                try:
+                    ra = int((json.loads(raw).get("parameters") or {}).get("retry_after") or 0)
+                except ValueError:
+                    ra = 0
+                if e.code == 429 and attempt < 5:
+                    log("텔레그램 한도 — 기다렸다 다시", cid, f"{ra or 5}초")
+                    time.sleep((ra or 5) + 1)
+                    continue
+                raise RuntimeError(f"HTTP {e.code} {raw[:200]!r}")
+        raise RuntimeError("텔레그램 다시 보내기 다섯 번 실패")
+
+    def _gate(self, cid):
+        """대화방마다 [잠금, [마지막 보낸 때], 간격]. 채널·그룹(음수 id)은 3초, 개인은 0.5초."""
+        with self._gl:
+            g = self._gates.get(cid)
+            if not g:
+                g = self._gates[cid] = (threading.Lock(), [0.0], 3.0 if str(cid).startswith("-") else 0.5)
+            return g
 
     def save(self):
         self.path.write_text(json.dumps(sorted(self.subs)))
@@ -1578,7 +1613,14 @@ def jp_old_points(key):
                 q[en] = {k: (row[k] - prev[1][k]) if row.get(k) is not None and prev[1].get(k) is not None else None
                          for k in ("rev", "opi")}
             prev = (en, row)
-    return [[f"{(int(en[5:7]) + 2) // 3}Q{en[2:4]}", q[en]["rev"], q[en].get("opi")]
+    # 분기 이름은 **기간 한가운데 달**로 매긴다 — 사이트(build.py q_label)와 같은 규칙. 끝난 달로 매기면 1월 결산 회사의 5~7월 분기가
+    # 「3Q26」이 되어 사이트의 「2Q26」(같은 분기) 옆에 한 칸 더 섰다(11/04 재팬아이웨어 3Q26 = 2Q26).
+    def lab(en):
+        y, m = int(en[:4]), int(en[5:7]) - 1
+        if m == 0:
+            y, m = y - 1, 12
+        return f"{(m + 2) // 3}Q{y % 100:02d}"
+    return [[lab(en), q[en]["rev"], q[en].get("opi")]
             for en in sorted(q) if q[en].get("rev") and q[en]["rev"] > 0]
 
 
