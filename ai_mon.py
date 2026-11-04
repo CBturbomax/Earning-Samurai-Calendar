@@ -99,6 +99,31 @@ def main():
         else:
             continue
         todo.append((url, code, day, name, title))
+    # 회사 IR 페이지의 월차 PDF 중 표 규칙이 못 읽은 것(monthly_ir_jp.json 의 skip) — 주소의 도메인으로 회사를 잇는다.
+    # 2023년 이전으로 보이는 파일은 뺀다(화면은 최근 2년). 발표일을 모르니 오늘로 두고, 달은 PDF 가 말하는 대로 받되 오늘보다 앞이어야 한다.
+    try:
+        irj = json.loads((HERE / "data" / "monthly_ir_jp.json").read_text(encoding="utf-8"))
+        import urllib.parse as _up
+        host = {}
+        for c, r in (irj.get("codes") or {}).items():
+            if r.get("page"):
+                host.setdefault(_up.urlparse(r["page"]).netloc, (c, r.get("name", "")))
+        for c, r in (irj.get("sites") or {}).items():
+            if isinstance(r, str):
+                host.setdefault(_up.urlparse(r).netloc, (c, ""))
+        today_s = date.today().isoformat()
+        for url, why in (irj.get("skip") or {}).items():
+            w = why.get("reason") if isinstance(why, dict) else why
+            if w != "표없음" or url in asked_all:
+                continue
+            ys = [int(y) for y in re.findall(r"(20[0-3]\d)", url)]
+            if ys and max(ys) < 2023:
+                continue
+            hit = host.get(_up.urlparse(url).netloc)
+            if hit:
+                todo.append((url, hit[0], today_s, hit[1], "IR 월차 PDF"))
+    except (OSError, ValueError):
+        pass
     import zlib
     from markets import excluded
     todo = [t for t in todo if not excluded("jp", t[3] or (nums["codes"].get(t[1]) or {}).get("name", ""))]   # 리츠·은행 등은 월매출 화면 밖
@@ -114,7 +139,7 @@ def main():
         have[c] = have.get(c, 0) + len(r.get("months") or {})
     from datetime import timedelta as _td
     fresh_cut = (date.today() - _td(days=3)).isoformat()
-    todo.sort(key=lambda x: (x[2] < fresh_cut, min(have.get(x[1], 0), 24) // 6, -(caps.get("jp:" + x[1]) or 0), -int(x[2].replace("-", "") or 0)))
+    todo.sort(key=lambda x: (x[4] == "IR 월차 PDF" or x[2] < fresh_cut, min(have.get(x[1], 0), 24) // 6, -(caps.get("jp:" + x[1]) or 0), -int(x[2].replace("-", "") or 0)))
     print(f"월매출 AI 판독: 남은 {len(todo)}건")
     t0, calls, got = time.time(), 0, 0
     for i in range(0, len(todo), BATCH):
