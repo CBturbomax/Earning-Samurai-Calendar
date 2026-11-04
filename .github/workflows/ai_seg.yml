@@ -15,6 +15,7 @@ on:
 
 permissions:
   contents: write
+  actions: write
 
 concurrency:
   group: aiseg-${{ github.ref_name }}
@@ -45,6 +46,7 @@ jobs:
           mkdir -p ~/.codex && printf '%s' "$CODEX_AUTH_JSON" > ~/.codex/auth.json && chmod 600 ~/.codex/auth.json
           npm install -g @openai/codex >/dev/null 2>&1 && codex --version
       - name: 🤖 AI 사업부 판독
+        id: ai
         if: env.CODEX_AUTH_JSON != ''
         continue-on-error: true
         timeout-minutes: 12
@@ -62,3 +64,9 @@ jobs:
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           rm -f ai.log
           bash .github/scripts/save_owned.sh "AI 사업부 판독 $(date -u +%F' '%H:%M) [skip ci]" data/segments_aipr.json
+      # 다 못 봤으면 바로 다음 실행을 건다(11/04) — 20분 크론이 이틀 반에 14번밖에 안 떴다.
+      - name: 다음 실행(남은 회사가 있으면 이어달리기)
+        if: always() && steps.ai.outputs.more == '1'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh workflow run ai_seg.yml --repo "${{ github.repository }}" --ref main || true
