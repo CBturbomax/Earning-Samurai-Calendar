@@ -578,3 +578,24 @@ def extract_text(data: bytes, max_pages: int = 40) -> str:
 if __name__ == "__main__":
     import sys
     print(extract_text(open(sys.argv[1], "rb").read()))
+
+
+def layout_lines(data: bytes, max_pages: int = 40):
+    """**poppler 의 pdftotext -layout 으로 읽는다**(11/04). 우리 해석기는 암호 걸린 PDF(열람은 되고 복사만 막은 것 —
+    고마쓰·TDK 결산단신)를 못 풀어 빈 글을 넘겼고, AI 빈칸 메우기가 '표 없음'으로 끝났다(시험 24장 중 7장). pdftotext 는
+    그 암호를 풀고 칸 정렬까지 지켜 준다. 없으면(로컬·러너에 poppler 가 없으면) 빈 목록 — 부르는 쪽이 원래 길로 간다."""
+    import shutil
+    import subprocess
+    import tempfile
+    if not data or not shutil.which("pdftotext"):
+        return []
+    with tempfile.NamedTemporaryFile(suffix=".pdf") as f:
+        f.write(data)
+        f.flush()
+        try:
+            r = subprocess.run(["pdftotext", "-layout", "-q", "-l", str(max_pages), f.name, "-"],
+                               capture_output=True, timeout=60)
+        except (OSError, subprocess.SubprocessError):
+            return []
+    txt = r.stdout.decode("utf-8", "replace")
+    return [re.sub(r"[ \t]{2,}", " | ", ln.strip()) for ln in txt.splitlines() if ln.strip()]
