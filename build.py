@@ -7492,7 +7492,15 @@ function segRender(id) {
   let label = null;
   if (visJ.length > 4) {
     const recent = j => pts.slice(-4).reduce((a, r) => a + (r[j + 1] || 0), 0);
-    label = new Set(visJ.sort((a, b) => recent(b) - recent(a)).slice(0, 3));
+    // 개수는 정하지 않는다 — 큰 순으로 담다가 합이 매출의 70% 를 넘으면 멈춘다(한 부문이 70% 면 하나, 고르게 나뉘면 셋까지).
+    // 그래도 매출의 20% 넘는 부문은 빠뜨리지 않는다.
+    const srt = visJ.sort((a, b) => recent(b) - recent(a)), tot = srt.reduce((a, j) => a + Math.max(0, recent(j)), 0) || 1;
+    label = new Set();
+    let acc = 0;
+    for (const j of srt) {
+      const sh = Math.max(0, recent(j)) / tot;
+      if ((acc < 0.7 && label.size < 3) || sh >= 0.2) { label.add(j); acc += sh; }
+    }
   }
   const bot = segLines(names, pts, vis, { vals: yoy, fmt: pcS, pct: true, H: 300, label });
   const ax = esc(sg.ax || '사업부');
