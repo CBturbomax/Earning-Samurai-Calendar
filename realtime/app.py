@@ -870,6 +870,7 @@ def pending_loop():
 
 # **한 회사 · 한 발표일 = 텔레그램 한 번.** 보도자료(와이어)로 먼저 보내고 8-K 가 뒤에 오면 PR_SENT 가 막았는데, 그 표는 메모리에만
 # 있어 서버를 다시 올리면 사라졌다 — 켤 때 지난 공시를 다시 훑으면서 같은 실적을 「(90분 늦게 잡음)」으로 또 보냈다(11/03). 볼륨에 남긴다.
+LATE_MAX_H = float(os.environ.get("LATE_MAX_H", "6"))   # 공개 뒤 이 시간이 지나면 텔레그램은 안 보낸다(사이트엔 싣는다)
 TGDAY_PATH = DATA / "tg_day.json"
 try:
     TGDAY = set(json.loads(TGDAY_PATH.read_text(encoding="utf-8")))
@@ -1047,6 +1048,17 @@ def finish(ev, point=None):
                 log("이미 발표된 분기 — 안 보냄", key, tl)
     ev["tg"], ev["tgWhy"] = send, why
     ids = {}
+    # **너무 늦은 알림은 텔레그램으로 안 보낸다**(11/04 BBB푸즈 「1875분 늦게 잡음」 — 하루 반 지난 실적이 속보처럼 나갔다).
+    # 공개된 지 6시간이 넘었으면 사이트에만 싣는다. 텔레그램은 '방금 나온 실적'만.
+    if send and not replay:
+        try:
+            late_h = (datetime.now(timezone.utc) - datetime.fromisoformat(ev["published"])).total_seconds() / 3600
+        except (KeyError, ValueError):
+            late_h = 0
+        if late_h > LATE_MAX_H:
+            send, why = False, f"너무 늦음({late_h:.0f}시간)"
+            ev["tg"], ev["tgWhy"] = send, why
+            log("너무 늦은 실적 — 텔레그램 안 보냄", key, f"{late_h:.1f}시간")
     if send and not replay:
         # **보내기 직전에 한 번 더, 잠금 안에서 확인하고 바로 적는다** — 숫자 대기 중이던 같은 회사 사건 셋이 한꺼번에 풀려
         # 톰슨로이터가 같은 순간 세 번 나갔다(11/03). 셋 다 '아직 안 보냄'을 본 뒤 보냈기 때문이다.
