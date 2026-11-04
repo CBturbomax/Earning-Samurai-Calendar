@@ -54,16 +54,6 @@ jobs:
           set -o pipefail
           W=$PWD; (cd /tmp && python "$W/ai_seg.py") | tee ai.log     # 저장소 밖에서 — AGENTS.md·CLAUDE.md 가 프롬프트에 붙지 않게
           { echo '### AI 사업부 판독'; echo '```'; tail -40 ai.log; echo '```'; } >> "$GITHUB_STEP_SUMMARY"
-      - name: 🤖 월매출 AI 판독(표 규칙이 못 읽은 PDF 만)
-        if: env.CODEX_AUTH_JSON != ''
-        continue-on-error: true
-        timeout-minutes: 11
-        env:
-          AIMON_SECS: '540'
-          AIMON_MAX: '30'
-        run: |
-          set -o pipefail
-          W=$PWD; (cd /tmp && python "$W/ai_mon.py") | tail -5
       - name: 저장소에 반영
         if: env.CODEX_AUTH_JSON != ''
         run: |
@@ -71,7 +61,7 @@ jobs:
           git config user.name  "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           rm -f ai.log
-          git add data/segments_aipr.json data/monthly_ai_jp.json 2>/dev/null || true
+          git add data/segments_aipr.json 2>/dev/null || true
           git diff --cached --quiet && { echo "달라진 게 없다."; exit 0; }
           git commit -m "AI 사업부 판독 $(date -u +%F' '%H:%M) [skip ci]"
           for i in $(seq 1 25); do
