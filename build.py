@@ -3339,6 +3339,21 @@ def load_monthly_nums(monthly):
     except (ValueError, OSError):
         got = {"codes": {}}
 
+    # 3분 루프가 막 읽은 공시(monthly_nums_fresh_jp.json) — 본 파일보다 새 공시면 그 달을 이긴다
+    try:
+        fr = json.loads((HERE / "data" / "monthly_nums_fresh_jp.json").read_text(encoding="utf-8")).get("codes") or {}
+        gc = got.setdefault("codes", {})
+        for c, r in fr.items():
+            cur = gc.setdefault(c, {k: v for k, v in r.items() if k != "months"})
+            cm = cur.setdefault("months", {})
+            for p_, v in (r.get("months") or {}).items():
+                if p_ not in cm or v.get("day", "") >= cm[p_].get("day", ""):
+                    cm[p_] = v
+            for k in ("amount_label", "yoy_label"):
+                if r.get(k) and not cur.get(k):
+                    cur[k] = r[k]
+    except (ValueError, OSError):
+        pass
     ir_c, web_c = load_monthly_ir(), load_monthly_web()
     try:
         ai_c = {}
