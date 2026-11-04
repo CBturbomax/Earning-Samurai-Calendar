@@ -7289,8 +7289,6 @@ function tgGuide(gh, title, mkt, key) {
   if (!a && !b && !c) return '';
   return '<div class="finwrap"><div class="finhead">' + title + ' 가이던스 변천' +
     '<span class="dim"><b style="color:#5B9BD5">■</b> 가이던스 <b style="color:#F28C28">■</b> 수정 공시 <b style="color:#d7dde3">■</b> 실제 <b style="color:#FFCB05">■</b> 최신</span></div>' +
-    '<p class="finnote" style="margin:0 0 6px">막대 하나 = 그 분기 실적 발표 때 회사가 내놓은 <b>회계연도 전체(12개월)</b> 전망 · ' +
-    '아래 「1Q24」 = 1Q24 실적 발표 때 낸 값 · 회색 「실제」 = 그 해 실제 결과</p>' +
     a + b + c + '<p class="finnote" style="text-align:right">자료: ' + (mkt === 'us' ? '회사 실적 보도자료(SEC 8-K, AI 판독)' : '회사 결산단신(TDnet·JPX)') + '</p></div>';
 }
 let GH = null;
@@ -7442,7 +7440,7 @@ function segLines(names, pts, vis, opt) {
       const yy = y(v), x = cx(i);
       body += '<circle class="dot" cx="' + x.toFixed(1) + '" cy="' + yy.toFixed(1) + '" r="3.8" fill="' + c + '"><title>' +
         esc(nm) + ' ' + pts[i][0] + ' ' + opt.fmt(v) + '</title></circle>';
-      if (tiny) return;
+      if (tiny || (opt.label && !opt.label.has(j))) return;   // 부문이 많으면 핵심 부문만 숫자를 적는다(선·점은 다 그린다)
       const txt = opt.fmt(v), w = txt.length * 13 * 0.6;
       // 실적 YoY 와 같은 자리 규칙: 기본은 점 위, 음수·위로 넘친 점은 점 아래. 막히면 반대쪽·한 칸 더.
       const down = opt.pct && ((v < 0 && v >= lo) || v > hi);
@@ -7488,7 +7486,15 @@ function segRender(id) {
   const yoy = (i, j) => { const a = pts[i][j + 1], pr = byLab[prevLab(pts[i][0])], b = pr ? pr[j + 1] : null;
     return (a != null && b != null && b > 0) ? a / b - 1 : null; };
   const pcS = pcN;
-  const bot = segLines(names, pts, vis, { vals: yoy, fmt: pcS, pct: true, H: 300 });
+  // **부문이 넷을 넘으면 성장률 숫자는 매출을 끄는 핵심 셋만**(회원님 11/04: "숫자가 너무 많아 지저분하면 키팩터 2~3개만").
+  // 핵심 = 보이는 부문 중 최근 네 분기 매출 합이 큰 셋. 범례로 끄고 켜면 남은 것 중에서 다시 고른다. 나머지는 선·점만(짚으면 숫자).
+  const visJ = names.map((_, j) => j).filter(vis);
+  let label = null;
+  if (visJ.length > 4) {
+    const recent = j => pts.slice(-4).reduce((a, r) => a + (r[j + 1] || 0), 0);
+    label = new Set(visJ.sort((a, b) => recent(b) - recent(a)).slice(0, 3));
+  }
+  const bot = segLines(names, pts, vis, { vals: yoy, fmt: pcS, pct: true, H: 300, label });
   const ax = esc(sg.ax || '사업부');
   // 수주 지표(수주고·수주잔고·RPO)는 '…별 매출'이 아니다 — 제목을 따로 단다.
   const ttl = sg.ax === '수주' ? '수주 · 수주잔고' : ax + '별 매출';
@@ -7497,7 +7503,7 @@ function segRender(id) {
     '<span class="dim">(단위: ' + esc(U.ko) +
     (sg.cov ? ' · 총매출의 ' + sg.cov + '%' + (sg.cov > 105 ? ' — 부문끼리 주고받은 것 포함' : '') : '') + ')</span></div>' +
     top +
-    (bot ? '<div class="finhead sub">' + ttlY + '<span class="dim">(전년 같은 ' + (back === 2 ? '반기' : '분기') + ' 대비)</span></div>' + bot : '') +
+    (bot ? '<div class="finhead sub">' + ttlY + '</div>' + bot : '') +
     '<div class="finlegend">' + names.map((nm, j) => !has(j) ? '' :
       '<span class="lg seglg' + (off.has(j) ? ' off' : '') + '" data-sid="' + id + '" data-j="' + j + '" style="--c:' +
       SEG_COLORS[j % SEG_COLORS.length] + '">' + esc(nm) + '</span>').join('') +
