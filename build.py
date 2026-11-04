@@ -3341,7 +3341,14 @@ def load_monthly_nums(monthly):
 
     ir_c, web_c = load_monthly_ir(), load_monthly_web()
     try:
-        ai_c = json.loads((HERE / "data" / "monthly_ai_jp.json").read_text(encoding="utf-8")).get("codes") or {}
+        ai_c = {}
+        for f in sorted((HERE / "data").glob("monthly_ai_jp*.json")):       # 갈래마다 제 파일(monthly_ai_jp_s0.json …)
+            for c, r in (json.loads(f.read_text(encoding="utf-8")).get("codes") or {}).items():
+                cur = ai_c.setdefault(c, {"name": r.get("name", ""), "months": {}, "yoy_label": r.get("yoy_label", ""),
+                                          "amount_label": r.get("amount_label", "")})
+                for p_, v in (r.get("months") or {}).items():
+                    if p_ not in cur["months"] or v.get("day", "") > cur["months"][p_].get("day", ""):
+                        cur["months"][p_] = v
     except (ValueError, OSError):
         ai_c = {}
     all_codes = set(target) | set((got.get("codes") or {})) | set(ir_c) | set(web_c) | set(ai_c)
@@ -4084,6 +4091,10 @@ def build():
     monthly_nums = load_monthly_nums(monthly)
     monthly, monthly_nums = apply_reviewed_monthly(monthly, monthly_nums)
     monthly, monthly_nums = apply_ledger_fill(monthly, monthly_nums)
+    # 리츠·은행 등(markets.excluded)은 월매출 화면 밖 — 투자법인의 월차는 임대·호텔 가동 지표다(11/04 8963·8985)
+    nm_of = {r[2]: r[4] for r in monthly}
+    for c in [c for c in monthly_nums if excluded("jp", nm_of.get(c, "") or (monthly_nums[c].get("name") or ""))]:
+        monthly_nums.pop(c, None)
     # 마지막 거름 — 손으로 대조한 표·월차 원장 보충까지 합친 뒤에도 마지막 달이 가장 새 달보다 석 달 넘게 뒤면 카드를 안 낸다(11/04)
     stale = [c for c, v in monthly_nums.items() if v.get("m") and NEWEST_MON and _mon_key(max(r[0] for r in v["m"])) < NEWEST_MON - 3]
     for c in stale:
