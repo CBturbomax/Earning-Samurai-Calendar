@@ -33,7 +33,11 @@ import pdftext
 
 HERE = Path(__file__).resolve().parent
 SRC = HERE / "data" / "monthly_jp.json"
-OUT = HERE / "data" / "monthly_nums_jp.json"
+MAIN_OUT = HERE / "data" / "monthly_nums_jp.json"
+# 3분 루프(fresh.yml)는 **오늘 막 나온 공시만** 따로 파일에 읽는다(11/04 회원님: "알람만 뜨고 숫자가 안 채워진다"). 파일 주인을
+# 가르려고 경로를 나눈다 — 본 파일은 monthly.yml, 이 파일은 fresh.yml. 빌드가 둘을 합친다.
+OUT = Path(os.environ["MON_OUT"]) if os.environ.get("MON_OUT") else MAIN_OUT
+RECENT_DAYS = int(os.environ.get("MON_RECENT_DAYS", "0"))
 
 # 뜯는 규칙이 바뀌면 올린다. **본 공시 기록만** 비우고 모아둔 값은 남긴다 —
 # 창 밖으로 밀려난 공시는 다시 못 받으므로 값을 버리면 영영 잃는다.
@@ -174,6 +178,17 @@ def main():
         caps = caps.get("caps", caps)
     except (ValueError, OSError):
         caps = {}
+    if OUT != MAIN_OUT:                                   # 본 파일이 이미 읽은 공시는 건너뛴다
+        try:
+            m0 = json.loads(MAIN_OUT.read_text(encoding="utf-8"))
+            done |= set(m0.get("done") or [])
+            skip = {**(m0.get("skip") or {}), **skip}
+        except (OSError, ValueError):
+            pass
+    if RECENT_DAYS:
+        from datetime import date as _d, timedelta as _td
+        cut = (_d.today() - _td(days=RECENT_DAYS)).isoformat()
+        rows = [r for r in rows if (r.get("date") or "") >= cut]
     todo = [r for r in rows
             if r.get("doc") and r["doc"] not in done and r["doc"] not in skip]
     todo.sort(key=lambda r: (-(caps.get("jp:" + r["code"]) or 0), r["date"]),
