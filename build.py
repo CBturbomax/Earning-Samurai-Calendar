@@ -8412,8 +8412,11 @@ function rtApply(ev) {
   if (ev.point && ev.point[1] != null) {
     const f = D.fin[key] = D.fin[key] || { freq: 'Q', cur: ev.cur, points: [] };
     const pt = [ev.point[0], ev.point[1], ev.point[2]];
+    // 이미 가진 다른 분기와 매출·영업이익이 똑같으면 같은 분기를 다음 분기로 잘못 붙인 것이다 — 싣지 않는다(11/04 재팬아이웨어 3Q26=2Q26)
+    const same = (f.points || []).some(p => p[0] !== pt[0] && p[1] && pt[1] && Math.abs(p[1] - pt[1]) <= Math.abs(p[1]) * 0.001 &&
+      (pt[2] == null || (p[2] != null && Math.abs(p[2] - pt[2]) <= Math.abs(p[2]) * 0.001 + 1)));
     const i = (f.points || []).findIndex(p => p[0] === pt[0]);
-    if (i >= 0) f.points[i] = pt; else (f.points = f.points || []).push(pt);
+    if (same) {} else if (i >= 0) f.points[i] = pt; else (f.points = f.points || []).push(pt);
   }
   return true;
 }
