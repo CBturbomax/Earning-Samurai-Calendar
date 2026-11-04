@@ -77,12 +77,29 @@ def gaps_by_ticker():
         except (OSError, ValueError):
             return {}
     fin = stocks("financials.json")
+    revs = {}
+    for k, f in fin.items():
+        revs[k.replace("us:", "")] = [(date.fromisoformat(p["end"]), p["rev"]) for p in f.get("points") or []
+                                     if p.get("end") and p.get("rev")]
+
+    def full(t, p):
+        """**반쪽 칸은 빈칸이다**(11/04). CAT 2018~2021 은 벌크에 금융 부문 한 줄만, COST 결산 분기는 회비 한 줄만
+        있었는데 '값이 있다'로 쳐서 이 수집기가 받을 게 없다고 보고 그 회사를 끝냄으로 적었다(끝낸 1,986곳 중 자료를
+        남긴 곳 681). 부문 합이 그 분기 총매출의 70% 이상일 때만 채워진 칸이다."""
+        vals = [x for x in p[1:] if x]
+        if not vals or not str(p[0])[:4].isdigit() or len(str(p[0])) != 10:
+            return False
+        d0 = date.fromisoformat(str(p[0]))
+        near = [r for e, r in revs.get(t, []) if abs((e - d0).days) <= 20]
+        if not near:
+            return len(vals) >= 2
+        return sum(vals) >= 0.7 * near[0]
     have = {}
     for name in ("segments_sec.json", "segments_edgar.json"):    # segments.json(stockanalysis)은 이름이 달라 화면 기록과 안 이어진다 — 덮인 걸로 안 친다
         for k, v in stocks(name).items():
             t = k.replace("us:", "")
             for p in v.get("pts") or []:
-                if any(x for x in p[1:]):
+                if full(t, p):
                     have.setdefault(t, set()).add(str(p[0]))
     out = {}
     for k, f in fin.items():
@@ -129,6 +146,8 @@ def main():
         db = {}
     st = db.setdefault("stocks", {})
     done_co = db.setdefault("done_co", {})
+    if db.get("gv") != 2:                                    # 1: 반쪽 칸을 채워진 칸으로 셌다 — 끝낸 회사를 다시 본다
+        done_co.clear(); db["gv"] = 2
     caps = ss.want_tickers()
     cikmap = ss.cik_map()
     gp = gaps_by_ticker()
