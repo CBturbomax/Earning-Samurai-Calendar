@@ -127,7 +127,7 @@ jobs:
           IR_PAUSE: '0.8'
           IR_PDF_PER_COMPANY: '36'
           IR_PDF_PER_RUN: '260'
-          IR_ARCHIVE_PER_COMPANY: '6'
+          IR_ARCHIVE_PER_COMPANY: '30'
           IR_HOME_PER_RUN: '48'
           IR_GIVE_UP: '30'
           IR_PARSE_MISS_HOURS: '2'
