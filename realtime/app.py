@@ -62,7 +62,7 @@ SEC_UA = os.environ.get("SEC_UA", "Earning Samurai Calendar (cbpark@wisdomasset.
 SITE = os.environ.get("SITE_URL", "https://cbturbomax.github.io/Earning-Samurai-Calendar/")
 RAW = "https://raw.githubusercontent.com/CBturbomax/Earning-Samurai-Calendar/main/data/"
 PORT = int(os.environ.get("PORT", "8080"))
-US_EVERY = float(os.environ.get("US_EVERY", "2"))
+US_EVERY = float(os.environ.get("US_EVERY", "4"))
 JP_EVERY = float(os.environ.get("JP_EVERY", "3"))
 HK_EVERY = float(os.environ.get("HK_EVERY", "10"))
 QUIET = os.environ.get("QUIET_START", "1") == "1"   # 켤 때 이미 떠 있던 공시는 알리지 않는다
@@ -104,15 +104,29 @@ _SEC_LAST = [0.0]
 _urlopen0 = urllib.request.urlopen
 
 
+SEC_TROUBLE = [0.0]                                   # 마지막으로 SEC 가 막히거나 시간을 넘긴 때 — 옛 이력 메우기는 그 뒤 30분 쉰다
+
+
 def _urlopen_paced(req, *a, **k):
     url = req.full_url if isinstance(req, urllib.request.Request) else str(req)
-    if "sec.gov" in url:
-        with _SEC_GATE:
-            w = 0.2 - (time.time() - _SEC_LAST[0])
-            if w > 0:
-                time.sleep(w)
-            _SEC_LAST[0] = time.time()
-    return _urlopen0(req, *a, **k)
+    if "sec.gov" not in url:
+        return _urlopen0(req, *a, **k)
+    with _SEC_GATE:
+        w = 0.34 - (time.time() - _SEC_LAST[0])          # 초당 3건 — 5건에서도 IP 가 느려지며 시간 초과가 이어졌다(11/04)
+        if w > 0:
+            time.sleep(w)
+        _SEC_LAST[0] = time.time()
+    try:
+        return _urlopen0(req, *a, **k)
+    except Exception as e:                                # noqa: BLE001
+        if "429" in str(e) or "timed out" in str(e):
+            SEC_TROUBLE[0] = time.time()
+        raise
+
+
+def sec_busy():
+    """SEC 가 최근 30분 안에 막히거나 느려졌나 — 옛 이력 메우기(급하지 않은 일)는 그동안 SEC 를 안 두드린다."""
+    return time.time() - SEC_TROUBLE[0] < 1800
 
 
 urllib.request.urlopen = _urlopen_paced
@@ -775,6 +789,55 @@ def pend_add(ev):
         PEND_PATH.write_text(json.dumps(PEND, ensure_ascii=False, default=str))
 
 
+def gh_live_watch():
+    """**GitHub 수집기의 8-K 결과를 1분마다 받아 쓴다**(11/04 SM에너지 450분). 이 서버의 IP 는 SEC 가 자주 느리게 만들어(시간 초과가
+    몇 시간씩) 8-K 를 늦게 보거나 숫자를 못 읽는다. GitHub 의 3분 루프(scrape_live_us)는 다른 IP 에서 같은 8-K 를 보고 손익 표까지
+    읽어 data/live_us.json 에 적는다 — 거기 새 접수·숫자가 생기면 바로 사건을 만들거나 숫자 대기를 푼다. 중복은 한 회사·한 날 기록이 막는다."""
+    seen = {}
+    while True:
+        try:
+            d = json.loads(http_get(RAW + "live_us.json?t=" + str(int(time.time())), ua="es-rt", timeout=30))
+            st = d.get("stocks", d)
+            today = datetime.now(ET).date()
+            for sym, v in st.items():
+                if not isinstance(v, dict) or not v.get("acc") or not v.get("accepted"):
+                    continue
+                if abs((date.fromisoformat(v["accepted"][:10]) - today).days) > 1:
+                    continue
+                pr = v.get("pr") or {}
+                sig = (v["acc"], pr.get("rev"))
+                if seen.get(sym) == sig:
+                    continue
+                seen[sym] = sig
+                key = "us:" + sym.replace("-", ".")
+                point = None
+                if pr.get("rev") and pr.get("end"):
+                    point = {"label": label_of(us_period(key, v["accepted"][:10])), "rev": pr["rev"], "opi": pr.get("opi"),
+                             "ni": pr.get("ni"), "eps": pr.get("eps")}
+                # 숫자 대기 중인 같은 회사 사건이 있으면 그것을 푼다
+                with PEND_LOCK:
+                    pend = [(eid, ev) for eid, ev in PEND.items() if ev.get("key") == key]
+                if pend and point:
+                    for eid, ev in pend:
+                        with PEND_LOCK:
+                            PEND.pop(eid, None)
+                            PEND_PATH.write_text(json.dumps(PEND, ensure_ascii=False, default=str))
+                    log("GitHub 수집기 숫자로 대기 풀림", key, point["label"], point["rev"])
+                    POOL.submit(safe, finish, dict(pend[0][1], _pend=True), point)
+                    continue
+                if H.skip("us", sym.replace("-", "."), sym):
+                    continue
+                url = v.get("url") or ""
+                ev = base_event("us", sym.replace("-", "."), sym, v["accepted"][:16], ET, "SEC 실적 공시(8-K) · 수집 서버", url)
+                if S.get(ev["id"]) or _tg_already(ev):
+                    continue
+                log("GitHub 수집기로 잡음", key, v["accepted"], "숫자 있음" if point else "숫자 없음")
+                POOL.submit(safe, finish, ev, point)
+        except Exception as e:                                   # noqa: BLE001
+            log("GitHub 수집기 결과 받기 실패:", repr(e)[:120])
+        time.sleep(60)
+
+
 def pending_loop():
     """숫자 대기 공시 — 이력(사이트 payload 를 20분마다 다시 받는다)에 그 분기가 생기면 그 숫자로 보낸다. 사흘 지나면 접는다."""
     while True:
@@ -1288,6 +1351,9 @@ def seg_ai_try(ev, b, seg, point=None):
 def segfill(n, only=None):
     """이미 이번 분기를 발표했는데 부문이 뒤처진 미국 회사 — 보도자료를 다시 읽어 메운다. **시총 큰 순**(인텔이 뒤로 밀렸다, 10/30).
     only: 이 종목들만(예: {"us:INTC"}) — 이미 있어도 다시 읽는다."""
+    if sec_busy():
+        log("SEC 가 느림 — 옛 이력 메우기 쉰다", 'segfill')
+        return
     import scrape_pr_us as pr
     with H.lock:
         fin, segs = dict(H.D.get("fin", {})), dict(H.D.get("seg", {}))
@@ -1341,6 +1407,9 @@ def segfill(n, only=None):
 
 def serfill(n, back=4):
     """기준이 달라 못 이은 미국 회사 — 지난 실적 보도자료 네 장을 읽어 지금 기준 시계열(8분기)을 만든다."""
+    if sec_busy():
+        log("SEC 가 느림 — 옛 이력 메우기 쉰다", 'serfill')
+        return
     import scrape_pr_us as pr
     with H.lock:
         fin = dict(H.D.get("fin", {}))
@@ -1393,6 +1462,9 @@ def serfill(n, back=4):
 
 def guidefill_us(n, back=8):
     """미국 — 지난 실적 보도자료 여덟 장의 연간 전망을 한 번에 읽어 가이던스 변천을 쌓는다(시총 큰 순)."""
+    if sec_busy():
+        log("SEC 가 느림 — 옛 이력 메우기 쉰다", 'guidefill_us')
+        return
     import scrape_pr_us as pr
     with H.lock:
         rows = dict(H.rows_by_key)
@@ -3494,7 +3566,7 @@ def main():
     log("시작 — 판", os.environ.get("RAILWAY_GIT_COMMIT_SHA", "")[:7], "· 텔레그램", "켜짐" if TG_TOKEN else "꺼짐(TG_BOT_TOKEN 없음)", "· 구독", len(TG.subs))
     H.refresh()
     shot.start(lambda: H.html)
-    for fn in (TG.poll, us_watch, pr_watch, pending_loop, jp_watch, hk_watch, history_loop, llm_selftest, replay_loop, segko_loop, fill_loop, biz_loop):
+    for fn in (TG.poll, us_watch, pr_watch, gh_live_watch, pending_loop, jp_watch, hk_watch, history_loop, llm_selftest, replay_loop, segko_loop, fill_loop, biz_loop):
         threading.Thread(target=fn, daemon=True, name=fn.__name__).start()
     ThreadingHTTPServer(("0.0.0.0", PORT), Handler).serve_forever()
 
