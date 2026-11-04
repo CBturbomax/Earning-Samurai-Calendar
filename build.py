@@ -2442,6 +2442,32 @@ def load_acq(fin_packed):
                 out.setdefault("us:" + t, []).append([lab[round(p["rev"])], amt])
     return out
 
+
+HK_NOT_RESULT = re.compile(r"CONVEN|CONFERENCE CALL|BRIEFING|WEBCAST|DATE OF BOARD MEETING|BOARD MEETING|NOTIFICATION OF|SUBSIDIARY", re.I)
+
+
+def dedupe_moved(rows):
+    """**날짜를 옮긴 회사가 두 번 서지 않게** — 같은 회사 · 같은 결산기가 20일 안에 두 줄이면 하나만 남긴다(11/04: 미국 46곳).
+    나스닥은 앞날을 여섯 시간마다 다시 받지만 지나간 날은 굳히므로, 예정일이 지난 뒤 회사가 날짜를 옮기면 옛 줄이 남았다.
+    실제 공시 시각이 있는 줄(정확도 1)을 먼저, 없으면 가장 늦게 잡힌(=가장 새로 다시 잡은) 날을 남긴다."""
+    by = {}
+    for r in rows:
+        by.setdefault((r[1], r[3]), []).append(r)
+    drop = set()
+    for (code, fy), rs in by.items():
+        if len(rs) < 2 or not fy:
+            continue
+        rs = sorted(rs, key=lambda r: r[0])
+        for a_, b_ in zip(rs, rs[1:]):
+            if (date.fromisoformat(b_[0]) - date.fromisoformat(a_[0])).days > 20:
+                continue
+            ka, kb = (a_[14] == 1), (b_[14] == 1)
+            loser = a_ if (kb and not ka) or (ka == kb) else b_
+            drop.add(id(loser))
+    if drop:
+        print(f"  us: 날짜를 옮긴 회사의 옛 줄 {len(drop):,}건 뺌")
+    return [r for r in rows if id(r) not in drop]
+
 def load_surprise(keys):
     """Zacks EPS 서프라이즈 이력(scrape_surprise.py) -> {us:티커: [[회계분기 'YYYY-MM', %], ...]} — 2017-10 이후 최대 36칸."""
     st = {}
@@ -3996,7 +4022,16 @@ def build():
         rows, n_out = drop_banks_reits(m, rows)
         if n_out:
             print(f"  {m}: 은행·리츠 {n_out:,}종목 뺌")
-        packed += [pack_jp(r) if m == "jp" else pack_en(r, m) for r in rows]
+        if m == "hk":
+            # 실적 발표가 아니라 '설명회·컨퍼런스콜 개최 안내'인 공시 — 실제 실적 공시보다 며칠 앞서 와서 같은 분기가 두 날짜에 섰다(11/04 평안보험 10/20·10/28)
+            n0 = len(rows)
+            rows = [r for r in rows if not HK_NOT_RESULT.search(r.get("fy") or "")]
+            if len(rows) < n0:
+                print(f"  hk: 설명회·콜 안내 공시 {n0 - len(rows):,}건 뺌")
+        got = [pack_jp(r) if m == "jp" else pack_en(r, m) for r in rows]
+        if m == "us":
+            got = dedupe_moved(got)
+        packed += got
         ok_days[m] = raw["ok_days"] if raw else []
         if raw:
             sources.append({
