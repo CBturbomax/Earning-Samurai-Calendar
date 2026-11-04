@@ -72,6 +72,15 @@ def main():
     rows = json.loads((HERE / "data" / "monthly_jp.json").read_text(encoding="utf-8")).get("rows", [])
     names = {r["code"]: r.get("name", "") for r in rows}
     want = set(names) | set(by)
+    # IR·기사·대조표·원장에만 있는 회사도 — 예전에 TDnet 으로 월차를 냈으면 JPX 보관소에 있다(11/04 2792·2502·7604·3544…)
+    for f in ("monthly_ir_jp.json", "monthly_web_jp.json", "monthly_ledger_jp.json", "monthly_reviewed_jp.json"):
+        try:
+            d = json.loads((HERE / "data" / f).read_text(encoding="utf-8"))
+            cs = d.get("codes") or d.get("companies") or {}
+            want |= set(cs if isinstance(cs, dict) else [c.get("code") for c in cs if isinstance(c, dict)])
+        except (OSError, ValueError):
+            pass
+    want = {c for c in want if c and len(c) == 4}
     try:
         caps = json.loads((HERE / "data" / "caps.json").read_text(encoding="utf-8"))
         caps = caps.get("caps", caps)
