@@ -46,6 +46,9 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: '3.12'
+      # 암호 걸린 결산단신 PDF(고마쓰·TDK)는 우리 해석기가 못 연다 — poppler pdftotext 로 읽는다(11/04)
+      - name: pdftotext
+        run: command -v pdftotext || (sudo apt-get update -qq && sudo apt-get install -y -qq poppler-utils) || true
       - name: 엔진 고르기
         run: |
           has() { case $1 in claude1) [ -n "$TOK1" ];; claude2) [ -n "$TOK2" ];; codex) [ -n "$CODEX_AUTH_JSON" ];; esac; }

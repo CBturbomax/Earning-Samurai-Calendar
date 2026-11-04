@@ -153,7 +153,7 @@ def main():
             if not data:
                 continue
             try:
-                tx = "\n".join(pdftext.extract_lines(data, 4))[:CHARS]
+                tx = "\n".join(pdftext.extract_lines(data, 4) or pdftext.layout_lines(data, 4))[:CHARS]   # 암호 PDF 는 pdftotext
             except Exception:                                # noqa: BLE001
                 continue
             if len(tx) < 60:

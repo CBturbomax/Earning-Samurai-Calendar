@@ -331,6 +331,11 @@ def jp_text(code, fn, pn=""):
         except Exception:                              # noqa: BLE001 — 암호·깨진 PDF
             lines = []
         rows = [" | ".join(re.sub(r"\s+", " ", t).strip() for _x, t in sorted(c) if t.strip()) for c in lines]
+        if not rows and pdf:                           # 암호 걸린 PDF(고마쓰·TDK) — pdftotext 로 다시
+            try:
+                rows = pdftext.layout_lines(pdf, 40)
+            except Exception:                          # noqa: BLE001
+                rows = []
         keep = set()
         for i, r in enumerate(rows):
             if KEYS_JP.search(r) and len(r) < 90:
