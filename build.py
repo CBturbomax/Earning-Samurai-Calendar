@@ -4084,6 +4084,12 @@ def build():
     monthly_nums = load_monthly_nums(monthly)
     monthly, monthly_nums = apply_reviewed_monthly(monthly, monthly_nums)
     monthly, monthly_nums = apply_ledger_fill(monthly, monthly_nums)
+    # 마지막 거름 — 손으로 대조한 표·월차 원장 보충까지 합친 뒤에도 마지막 달이 가장 새 달보다 석 달 넘게 뒤면 카드를 안 낸다(11/04)
+    stale = [c for c, v in monthly_nums.items() if v.get("m") and NEWEST_MON and _mon_key(max(r[0] for r in v["m"])) < NEWEST_MON - 3]
+    for c in stale:
+        monthly_nums.pop(c, None)
+    if stale:
+        print(f"  월매출: 석 달 넘게 끊긴 카드 {len(stale)}곳 뺌 — {' '.join(stale[:12])}")
     per_day = Counter(p[0] for p in packed)
     notable_hits = sum(1 for p in packed if p[9] + ":" + p[1] in notable)
     all_ok = sorted({d for m in ok_days for d in ok_days[m]})
