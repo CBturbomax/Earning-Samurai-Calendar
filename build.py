@@ -1770,7 +1770,8 @@ def splice(base, fresh):
     # 다만 **이름을 바꾼 경우**는 예외다. 그때는 덜 겹치는 게 당연하고
     # (콜게이트 'Pet Nutrition' -> 'Hills Pet Nutrition'), 뒤에서 current_basis 가
     # 정리한다. 하나도 안 겹치면 그건 이름 변경이 아니라 **다른 축**이다.
-    if not (cov == len(liveb) or (cov and newborn)):
+    tail_ok = cov == len(liveb) or (cov and newborn)      # 새 분기를 덧붙여도 되나(반쪽 칸 채우기는 이름이 같기만 하면 된다)
+    if not any(h is not None for h in hit):
         return 0
     # 뒤만이 아니라 **가운데 빈 분기도** 채운다(회원님 11/01: "비어 있으면 안 된다"). 도요타는 EDINET 이력이
     # 2024-03 · 2024-12 를 갖고 2024-06 · 2024-09 가 비어 있었는데, '마지막 뒤만' 이으니 TDnet 이 가진 두 분기가
@@ -1802,6 +1803,8 @@ def splice(base, fresh):
                 for j, v in fill.items():
                     row[j] = v
                 patched += 1
+            continue
+        if not tail_ok:
             continue
         # 열은 늘 **헌 기록의 이름 차례**를 따른다. 새 기록에 없는 부문은 빈칸이다.
         row_new = [p[0]] + [(p[i + 1] if i is not None and i + 1 < len(p) else None) for i in hit]
