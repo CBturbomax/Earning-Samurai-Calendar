@@ -438,6 +438,17 @@ def fin_rev(B, key, st, en, jspans):
     return sum(p["rev"] for p in inside)
 
 
+def _num(x):
+    """'30,897' · '$1,234' · '(12)' 처럼 글자로 온 숫자도 읽는다(11/04 — float() 에서 ValueError 로 조용히 버려졌다)."""
+    if isinstance(x, (int, float)):
+        return float(x)
+    t = str(x).strip().replace(",", "").replace("$", "").replace("¥", "").replace("円", "").replace(" ", "")
+    neg = t.startswith("(") and t.endswith(")")
+    t = t.strip("()")
+    v = float(t)                                       # 못 읽으면 ValueError — 부르는 쪽이 그 줄을 건너뛴다
+    return -v if neg else v
+
+
 def accept(B, key, items, rec, jspans):
     """검산 통과분만 rec 에 담는다. 반환: 담은 기간 수."""
     starts = sorted({k.split("/")[0] for kind in ("seg", "geo") for k in rec.get(kind, {})})
@@ -446,7 +457,7 @@ def accept(B, key, items, rec, jspans):
     for it in items or []:
         try:
             k, nm, en, m = it["k"], str(it["name"]).strip(), str(it["end"])[:10], int(it.get("m") or 0)
-            v = float(it["v"]) * float(it.get("u") or 1)
+            v = _num(it["v"]) * _num(it.get("u") or 1)
             _d(en)
         except (KeyError, TypeError, ValueError):
             continue
@@ -626,6 +637,9 @@ def main():
     import zlib
     todo = []
     dry = db.setdefault("dry", {})
+    if db.get("dv") != 2:                                # 1: 글자로 온 숫자를 못 읽어 맞은 게 없다고 쉬게 한 회사 — 다시 묻는다
+        dry.clear(); db["dv"] = 2
+        db.get("asked", {}).clear(); db.get("empty", {}).clear()   # 그때 읽은 공시도 다시(빈칸이 남은 회사만 대상이 된다)
     tg = targets(B, set(only))
     for mk in ("us:", "jp:"):
         BIG.update([k for k in tg if k.startswith(mk)][:BIG_N])
