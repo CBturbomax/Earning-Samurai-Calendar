@@ -3341,7 +3341,15 @@ def load_monthly_nums(monthly):
 
     # 3분 루프가 막 읽은 공시(monthly_nums_fresh_jp.json) — 본 파일보다 새 공시면 그 달을 이긴다
     try:
-        fr = json.loads((HERE / "data" / "monthly_nums_fresh_jp.json").read_text(encoding="utf-8")).get("codes") or {}
+        fr = {}
+        for fn in ("monthly_nums_fresh_jp.json", "monthly_rt_jp.json"):     # 3분 루프 PDF · 실시간 서버(공시 즉시, AI 포함)
+            try:
+                for c, r in (json.loads((HERE / "data" / fn).read_text(encoding="utf-8")).get("codes") or {}).items():
+                    cur0 = fr.setdefault(c, {k: v for k, v in r.items() if k != "months"})
+                    cur0.setdefault("months", {}).update({p_: v for p_, v in (r.get("months") or {}).items()
+                                                          if p_ not in cur0.get("months", {}) or v.get("day", "") >= cur0["months"][p_].get("day", "")})
+            except (ValueError, OSError):
+                pass
         gc = got.setdefault("codes", {})
         for c, r in fr.items():
             cur = gc.setdefault(c, {k: v for k, v in r.items() if k != "months"})
