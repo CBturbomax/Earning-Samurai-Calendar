@@ -715,6 +715,13 @@ def _apply_point(ev, pts, point):
     if not point:
         return pts
     lab = point["label"]
+    # **이미 가진 분기와 숫자가 똑같은 '새 분기'는 싣지 않는다**(11/04 재팬아이웨어: 2Q26 의 매출·영업이익이 3Q26 으로 한 번 더 섰다 —
+    # 지난 분기 자료를 다음 분기로 잘못 이름 붙인 것). 매출과 영업이익이 0.1% 안에서 같은 다른 분기가 있으면 같은 분기다.
+    for p in pts:
+        if p[0] != lab and p[1] and point.get("rev") and abs(p[1] - point["rev"]) <= abs(p[1]) * 0.001 and \
+                (point.get("opi") is None or (len(p) > 2 and p[2] is not None and abs(p[2] - point["opi"]) <= abs(p[2]) * 0.001 + 1)):
+            log("같은 숫자가 이미 다른 분기로 있음 — 새 분기로 안 실음", ev.get("key"), lab, "=", p[0])
+            return pts
     pts = [p for p in pts if p[0] != lab] + [[lab, point["rev"], point.get("opi")]]
     ev["point"] = [lab, point["rev"], point.get("opi"), point.get("ni"), point.get("eps")]
     ev["yoy"] = yoy_of(pts, lab, point["rev"])
