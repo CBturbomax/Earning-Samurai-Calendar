@@ -22,7 +22,7 @@ on:
       max:
         description: '갈래당 최대 호출 수(시험은 작게)'
         required: false
-        default: '40'
+        default: '400'      # 11/04 밤: 이어달리기가 이 기본값(40)으로 걸려 실행마다 3분 만에 끝났다
       recent:
         description: '최근 며칠 안의 빈칸만(0 = 1Q18 부터 전부)'
         required: false
