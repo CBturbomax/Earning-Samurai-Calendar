@@ -28,7 +28,7 @@ OUT = HERE / "data" / (f"monthly_ai_jp_s{SHARD.split('/')[0]}.json" if SHARD els
 BATCH = int(os.environ.get("AIMON_BATCH", "6"))
 MAX_CALLS = int(os.environ.get("AIMON_MAX", "40"))
 SECS = int(os.environ.get("AIMON_SECS", "1500"))
-CHARS = 2500
+CHARS = 3200                  # 칸 구분자(|)만큼 늘렸다(11/04)
 
 PROMPT = """아래는 일본 상장회사의 월차(月次) 매출 공시 PDF 에서 꺼낸 글자다(표가 한 줄로 펴져 있어 칸이 섞여 있을 수 있다).
 공시마다 **회사 전체의 달별 매출 전년동월비(%)** 를 읽어라. 既存店(기존점)과 全店(전점)이 둘 다 있으면 全店, 全店이 없으면 既存店.
@@ -153,7 +153,10 @@ def main():
             if not data:
                 continue
             try:
-                tx = "\n".join(pdftext.extract_lines(data, 4))[:CHARS]
+                # 표를 칸 단위 마크다운 줄(| 칸 | 칸 |)로 — 띄어쓰기로 이은 줄은 어느 숫자가 어느 달 칸인지 흐려진다(11/04)
+                rows = [" | ".join(re.sub(r"\s+", " ", t).strip() for _, t in cells if t.strip())
+                        for cells in pdftext.extract_cells(data, 4)]
+                tx = "\n".join(r for r in rows if r)[:CHARS]
             except Exception:                                # noqa: BLE001
                 continue
             if len(tx) < 60:
