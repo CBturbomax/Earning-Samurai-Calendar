@@ -6668,7 +6668,9 @@ function coLoad(k) {
     if ((j.fin || []).length && (!f || f.freq === 'Q')) {
       const g = D.fin[k] = f || { freq: 'Q', cur: 'JPY', points: [] };
       const have = new Set((g.points || []).map(p => p[0]));
-      j.fin.forEach(p => { if (!have.has(p[0])) { g.points.push(p); ch = true; } });
+      // 이미 가진 다른 분기와 매출·영업이익이 똑같은 점은 같은 분기를 다른 이름으로 붙인 것 — 싣지 않는다(11/04 재팬아이웨어 3Q26)
+      const dup = p => (g.points || []).some(q => q[0] !== p[0] && q[1] && p[1] && Math.abs(q[1] - p[1]) <= Math.abs(q[1]) * 0.001);
+      j.fin.forEach(p => { if (!have.has(p[0]) && !dup(p)) { g.points.push(p); ch = true; } });
       g.points.sort((a, b) => qkey(a[0]) - qkey(b[0]));
     }
     if (ch && mdKey === k) {
