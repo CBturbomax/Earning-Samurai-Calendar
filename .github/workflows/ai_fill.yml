@@ -50,8 +50,8 @@ jobs:
           # tok = 이번 실행 토큰 상한. claude2(회원님이 지금 채팅하는 계정)는 작게 — 채팅까지 막히면 안 된다
           - {shard: 0, want: claude1, tok: '150000'}
           - {shard: 1, want: claude2, tok: '60000'}
-          - {shard: 2, want: codex, tok: '300000', w: '2'}
-          - {shard: 3, want: codex, tok: '300000', w: '2'}
+          - {shard: 2, want: codex, tok: '800000', w: '3'}   # 11/04 밤: 30만이 먼저 막아 한 실행에 공시 33건뿐이었다
+          - {shard: 3, want: codex, tok: '800000', w: '3'}
     env:
       TOK1: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
       TOK2: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN_2 }}
