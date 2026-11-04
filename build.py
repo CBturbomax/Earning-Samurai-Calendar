@@ -2116,7 +2116,24 @@ def _ai_fill_one(base, add):
     # 있는 값과 섞이지 않는다. 그 줄은 최근에 값이 없어 그림이 '옛 기준' 칸으로 가른다.
     extra = {}
     for r in add["pts"]:
-        if near(r[0], bpts):
+        br = near(r[0], bpts)
+        if br:
+            # **반쪽 칸은 AI 값으로 채운다**(11/04). 벌크에 한두 부문만 있는 분기(CAT 금융 부문 한 줄 등)는 '있는 칸'이라
+            # AI 가 원문에서 검산까지 통과한 값(5,244칸)을 읽어 놓고도 1,836칸만 들어갔다. 짝이 맞는 이름의 빈칸만 채우고
+            # 있는 값은 안 바꾼다 — 채운 뒤 합이 원래의 1.4배를 넘을 때만(=정말 반쪽이었다).
+            fill = {mp[j] + 1: r[j + 1] for j in mp if r[j + 1] is not None
+                    and (mp[j] + 1 >= len(br) or br[mp[j] + 1] is None)}
+            old_sum = sum(abs(v) for v in br[1:] if v)
+            new_sum = old_sum + sum(abs(v) for v in fill.values())
+            ai_sum = sum(abs(v) for v in r[1:] if v)          # AI 한 줄은 검산(합 = 총매출)을 통과한 값이다
+            # 채운 합이 AI 합과 맞아야 한다 — CAT 은 'ME&T 합계' 칸 위에 건설·자원·에너지를 채워 두 배가 됐다
+            if fill and new_sum > 1.4 * old_sum and 0.9 * ai_sum <= new_sum <= 1.1 * ai_sum:
+                i = next(i for i, x in enumerate(rows) if x[0] == br[0])
+                row = list(rows[i]) + [None] * (len(names) + 1 - len(rows[i]))
+                for jj, v in fill.items():
+                    row[jj] = v
+                rows[i] = row
+                n += 1
             continue
         tot = sum(abs(v) for v in r[1:] if v)
         if tot and sum(abs(r[j + 1]) for j in mp if r[j + 1]) < tot * 0.5:
@@ -2757,6 +2774,8 @@ def seg_unannual(pts, aligned):
         if not rev:
             out_p.append(r); out_a.append((lab, rev)); continue
         base = base_at(i)
+        if 0.93 <= sum(v or 0 for v in r[1:]) / rev <= 1.12:   # 합이 총매출과 거의 같다 — 멀쩡한 칸이다(평소 비율이 반쪽 칸에
+            out_p.append(r); out_a.append((lab, rev)); continue  # 끌려 내려간 회사에서 멀쩡한 칸이 '튄 칸'으로 빠졌다, 11/04 CAT)
         k = sum(v or 0 for v in r[1:]) / rev / base
         if k < 0.25:                         # 합이 총매출의 4분의 1도 안 되는 칸 — 단위가 어긋난 칸이다
             SEG_FIXED["dropped"] += 1
