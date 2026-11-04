@@ -2032,12 +2032,37 @@ def _ai_fill_one(base, add):
         rows = [[r[0]] + [None] * len(bnames) + list(r[1:]) for r in add["pts"]]
         rows += [list(r) + [None] * len(anames) for r in base["pts"]]
         return dict(base, names=names, pts=sorted(rows, key=lambda r: r[0])), len(add["pts"])
+    # **기준이 다른 표를 섞지 않는다**(11/04 SN: SEC 는 North America·Europe, AI 는 Domestic·International 이라
+    # 한 그림에 분기마다 번갈아 서서 차트가 깨졌다). 짝이 하나도 없는데 같은 분기가 겹치면 다른 축이다 —
+    # 섞지 말고 분기가 더 많은 쪽 하나만 쓴다(AI 쪽도 분기 합이 총매출 3% 안이라는 검산을 이미 통과했다).
+    if not mp and overlap:
+        return (add, len(add["pts"])) if len(add["pts"]) > len(bpts) and len(add["pts"]) >= 4 and \
+            sorted((date.fromisoformat(b[0]) - date.fromisoformat(a[0])).days
+                   for a, b in zip(sorted(add["pts"]), sorted(add["pts"])[1:]))[(len(add["pts"]) - 1) // 2] <= 120 \
+            else (base, 0)
+    # 짝이 일부만 있을 때(SN: 2022 년은 North America·Europe, 2023 년부터는 Domestic·International) — 짝 없는
+    # 이름이 대부분인 분기들이 따로 한 기준이다. 그 기준의 분기가 나머지 전부보다 많으면 그쪽 하나만 쓴다.
+    def _mapped_share(r):
+        tot = sum(abs(v) for v in r[1:] if v)
+        return (sum(abs(r[j + 1]) for j in mp if r[j + 1]) / tot) if tot else 1
+    um = [r for r in add["pts"] if _mapped_share(r) < 0.5]
+    def _dense(rows):                                   # 띄엄띄엄한 분기를 통째로 쓰면 반기로 읽혀 이름이 틀어진다(SN 1Q23 -> 2H22)
+        ds = sorted(date.fromisoformat(r[0]) for r in rows)
+        gaps = sorted((b - a).days for a, b in zip(ds, ds[1:]))
+        return bool(gaps) and gaps[len(gaps) // 2] <= 120
+    if um and len(um) > len(bpts) + len(add["pts"]) - len(um) and _dense(um):
+        keep = [j for j in range(len(anames)) if j not in mp and any(r[j + 1] for r in um)]
+        alt = {"names": [anames[j] for j in keep], "pts": [[r[0]] + [r[j + 1] for j in keep] for r in um]}
+        return dict(base, **alt), len(um)
     # 짝이 없는 이름(그해에만 쓴 지역 구분 — 엔비디아 'Other Asia Pacific')은 새 줄로 붙인다. 빈 분기 칸만 채우므로
     # 있는 값과 섞이지 않는다. 그 줄은 최근에 값이 없어 그림이 '옛 기준' 칸으로 가른다.
     extra = {}
     for r in add["pts"]:
         if near(r[0], bpts):
             continue
+        tot = sum(abs(v) for v in r[1:] if v)
+        if tot and sum(abs(r[j + 1]) for j in mp if r[j + 1]) < tot * 0.5:
+            continue                                      # 그 분기 값 대부분이 짝 없는 이름 — 다른 기준의 표라 안 섞는다
         new = [r[0]] + [None] * len(names)
         for j, an in enumerate(anames):
             v = r[j + 1]
