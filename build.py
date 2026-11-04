@@ -1776,20 +1776,39 @@ def splice(base, fresh):
     # 영영 안 들어갔다. 종료일이 열흘 안이면 같은 분기로 본다(있는 칸은 건드리지 않는다).
     have = [date.fromisoformat(p[0]) for p in base["pts"] if re.match(r"\d{4}-\d\d-\d\d$", str(p[0]))]
     add = []
+    patched = 0
     for p in sorted(fresh["pts"]):
         try:
             d = date.fromisoformat(p[0])
         except (ValueError, TypeError):
             continue
         if any(abs((d - h).days) <= 10 for h in have):
+            # **반쪽 칸은 채운다**(11/04). 벌크의 CAT 2018~2021 은 금융 부문 한 줄, COST 결산 분기는 회비 한 줄만 있어
+            # '있는 칸'으로 쳐서 10-Q 를 다 읽은 이력이 들어와도 안 채웠다 — 그 칸들이 화면에서 통째로 빠졌다.
+            # 비어 있는 부문 칸만 채우고(있는 값은 안 바꾼다), 채운 뒤 합이 원래의 1.4배를 넘을 때만(=정말 반쪽이었다).
+            row = next(r for r in base["pts"] if re.match(r"\d{4}-\d\d-\d\d$", str(r[0]))
+                       and abs((date.fromisoformat(r[0]) - d).days) <= 10)
+            fill = {}
+            for bi, fi_ in enumerate(hit):
+                if fi_ is None or fi_ + 1 >= len(p) or p[fi_ + 1] is None:
+                    continue
+                if bi + 1 >= len(row) or row[bi + 1] is None:
+                    fill[bi + 1] = p[fi_ + 1]
+            old_sum = sum(abs(v) for v in row[1:] if v)
+            if fill and old_sum + sum(abs(v) for v in fill.values()) > 1.4 * old_sum:
+                while len(row) < len(base["names"]) + 1:
+                    row.append(None)
+                for j, v in fill.items():
+                    row[j] = v
+                patched += 1
             continue
         # 열은 늘 **헌 기록의 이름 차례**를 따른다. 새 기록에 없는 부문은 빈칸이다.
         add.append([p[0]] + [(p[i + 1] if i is not None and i + 1 < len(p) else None)
                              for i in hit])
     if not add:
-        return 0
+        return patched
     base["pts"] = sorted(base["pts"] + add, key=lambda r: str(r[0]))
-    return len(add)
+    return len(add) + patched
 
 
 SEG = load_seg()
