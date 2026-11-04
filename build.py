@@ -2851,9 +2851,18 @@ def pack_seg(rec, fin_rec):
     revs = {lab: rv for lab, rv in aligned if rv}
     rat = {r[0]: sum(v for v in r[1:] if v) / revs[r[0]] for r in rows if revs.get(r[0])}
     if len(rat) >= 4:
-        mid = sorted(rat.values())[len(rat) // 2]
-        bad = {l for l, x in rat.items() if mid > 0 and abs(x / mid - 1) > 0.12}
-        if bad and len(bad) < len(rat) / 2:
+        # 잣대는 **그 칸 앞뒤 넉 분기의 중앙값**(11/04) — 회사 전체 중앙값으로 재면 공시 방식을 바꾼 뒤(ADM·에머슨·차터가 부문 매출을
+        # 상계 전 총액으로 바꾼 뒤)의 최근 분기가 통째로 '어긋난 칸'이 되어 지워져, 사업부 그림이 2023년에서 끊겼다.
+        labs = [r[0] for r in rows if r[0] in rat]
+        bad = set()
+        for i, l in enumerate(labs):
+            nb = [rat[labs[j]] for j in range(max(0, i - 4), min(len(labs), i + 5)) if j != i]
+            if len(nb) < 3:
+                continue
+            mid = sorted(nb)[len(nb) // 2]
+            if mid > 0 and abs(rat[l] / mid - 1) > 0.12:
+                bad.add(l)
+        if bad and len(bad) < len(rat) / 3:
             rows = [r for r in rows if r[0] not in bad]
             SEG_ODD[0] += len(bad)
     # 값이 하나도 없는 부문은 범례에도 안 낸다
