@@ -3298,7 +3298,13 @@ def segko_loop():
 
 def audit_fill():
     """빌드가 적은 빈칸 점검(data/audit_gaps.json)의 '사업부가 실적보다 뒤처진' 미국 회사를 보도자료로 다시 읽는다.
-    회원님(11/01): "내가 일일이 말하지 않아도 빠진 회사를 다 잡아내게." 시총 5천억 원 이상, 한 번에 80곳."""
+    회원님(11/01): "내가 일일이 말하지 않아도 빠진 회사를 다 잡아내게." 시총 5천억 원 이상, 한 번에 80곳.
+
+    **실시간 서버에서는 돌리지 않는다**(11/04) — 80곳의 8-K 를 SEC 에서 한꺼번에 받다 보니 이 서버 IP 가 SEC 에 막혀(429·시간 초과)
+    정작 속보(8-K 피드)를 몇 시간씩 못 봤다. 같은 빈칸은 GitHub 의 AI 빈칸 메우기(ai_fill)·사업부 판독(ai_seg)이 다른 IP 에서 메운다.
+    이 서버의 SEC 몫은 속보 피드와 그 공시 한 장 읽기뿐이다. 꼭 돌려야 하면 Railway 변수 RT_SEC_FILL=1."""
+    if os.environ.get("RT_SEC_FILL") != "1":
+        return
     try:
         j = json.loads(http_get(RAW + "audit_gaps.json", timeout=30))
     except Exception as e:                                       # noqa: BLE001
