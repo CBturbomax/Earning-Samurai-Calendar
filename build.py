@@ -3339,6 +3339,21 @@ def load_monthly_nums(monthly):
     except (ValueError, OSError):
         got = {"codes": {}}
 
+    # 3분 루프가 막 읽은 공시(monthly_nums_fresh_jp.json) — 본 파일보다 새 공시면 그 달을 이긴다
+    try:
+        fr = json.loads((HERE / "data" / "monthly_nums_fresh_jp.json").read_text(encoding="utf-8")).get("codes") or {}
+        gc = got.setdefault("codes", {})
+        for c, r in fr.items():
+            cur = gc.setdefault(c, {k: v for k, v in r.items() if k != "months"})
+            cm = cur.setdefault("months", {})
+            for p_, v in (r.get("months") or {}).items():
+                if p_ not in cm or v.get("day", "") >= cm[p_].get("day", ""):
+                    cm[p_] = v
+            for k in ("amount_label", "yoy_label"):
+                if r.get(k) and not cur.get(k):
+                    cur[k] = r[k]
+    except (ValueError, OSError):
+        pass
     ir_c, web_c = load_monthly_ir(), load_monthly_web()
     try:
         ai_c = {}
@@ -6668,7 +6683,9 @@ function coLoad(k) {
     if ((j.fin || []).length && (!f || f.freq === 'Q')) {
       const g = D.fin[k] = f || { freq: 'Q', cur: 'JPY', points: [] };
       const have = new Set((g.points || []).map(p => p[0]));
-      j.fin.forEach(p => { if (!have.has(p[0])) { g.points.push(p); ch = true; } });
+      // 이미 가진 다른 분기와 매출·영업이익이 똑같은 점은 같은 분기를 다른 이름으로 붙인 것 — 싣지 않는다(11/04 재팬아이웨어 3Q26)
+      const dup = p => (g.points || []).some(q => q[0] !== p[0] && q[1] && p[1] && Math.abs(q[1] - p[1]) <= Math.abs(q[1]) * 0.001);
+      j.fin.forEach(p => { if (!have.has(p[0]) && !dup(p)) { g.points.push(p); ch = true; } });
       g.points.sort((a, b) => qkey(a[0]) - qkey(b[0]));
     }
     if (ch && mdKey === k) {

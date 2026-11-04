@@ -1613,7 +1613,14 @@ def jp_old_points(key):
                 q[en] = {k: (row[k] - prev[1][k]) if row.get(k) is not None and prev[1].get(k) is not None else None
                          for k in ("rev", "opi")}
             prev = (en, row)
-    return [[f"{(int(en[5:7]) + 2) // 3}Q{en[2:4]}", q[en]["rev"], q[en].get("opi")]
+    # 분기 이름은 **기간 한가운데 달**로 매긴다 — 사이트(build.py q_label)와 같은 규칙. 끝난 달로 매기면 1월 결산 회사의 5~7월 분기가
+    # 「3Q26」이 되어 사이트의 「2Q26」(같은 분기) 옆에 한 칸 더 섰다(11/04 재팬아이웨어 3Q26 = 2Q26).
+    def lab(en):
+        y, m = int(en[:4]), int(en[5:7]) - 1
+        if m == 0:
+            y, m = y - 1, 12
+        return f"{(m + 2) // 3}Q{y % 100:02d}"
+    return [[lab(en), q[en]["rev"], q[en].get("opi")]
             for en in sorted(q) if q[en].get("rev") and q[en]["rev"] > 0]
 
 

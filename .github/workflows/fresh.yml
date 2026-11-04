@@ -10,7 +10,7 @@
 # 페이지를 다시 만들어 푸시한다.
 #
 # **여기가 이 파일들의 주인이다** (numbers.yml·collect.yml 에서 옮겨 왔다):
-#   data/earnings_jp_past.json · data/monthly_jp.json
+#   data/earnings_jp_past.json · data/monthly_jp.json · data/monthly_nums_fresh_jp.json
 #   data/financials_jp.json · data/segments_jp.json
 #   data/briefs_jp.json · data/briefs_us.json · data/live_us.json
 # 다른 워크플로는 읽기만 한다. 두 워크플로가 같은 파일에 쓰면 한쪽 수집분이
@@ -156,6 +156,10 @@ jobs:
             # 여러 바퀴에 나눠 끝났다. 날마다 써두므로 잘려도 잃지는 않지만,
             # 고친 규칙이 화면에 닿는 것은 한 바퀴로 끝나는 편이 낫다.
             timeout 150 python scrape_jp_tdnet.py || true
+            # 월매출 — 방금 목록에 오른 공시의 첨부 PDF 를 이 바퀴에 바로 읽는다(11/04 "알람만 뜨고 숫자가 안 채워진다").
+            # 오늘·어제·그제 것만, 따로 파일에(본 파일은 monthly.yml 몫). 못 읽은 것은 AI 판독(ai_mon)이 가장 먼저 읽는다.
+            MON_OUT=data/monthly_nums_fresh_jp.json MON_RECENT_DAYS=3 MON_SECS=45 MON_PDF_PER_RUN=15 \
+              timeout 70 python scrape_mon_jp.py || true
             # 미국 발표 속보 — 오늘·어제 발표 종목의 8-K 접수(실제 시각)와 실제 EPS.
             # 회원님: "실적 나온 지 3시간이 지났는데 왜 반영이 안 되냐"(EAT).
             # 예전에는 8-K 를 30분에 한 번, EPS 는 하루 한 번 봤다.
