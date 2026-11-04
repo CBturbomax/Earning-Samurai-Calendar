@@ -861,6 +861,7 @@ def merge_fin(a, b):
 
 FIN = load_fin()
 FIN_PK = {}
+NEWEST_MON = 0
 
 
 def load_live():
@@ -3344,6 +3345,11 @@ def load_monthly_nums(monthly):
     except (ValueError, OSError):
         ai_c = {}
     all_codes = set(target) | set((got.get("codes") or {})) | set(ir_c) | set(web_c) | set(ai_c)
+    global NEWEST_MON
+    ms = [k for src in ((got.get("codes") or {}), ir_c, web_c, ai_c) for rec in src.values() if isinstance(rec, dict)
+          for part in ("months", "pdf") for k in (rec.get(part) or {}) if re.fullmatch(r"20\d\d-\d\d", str(k))]
+    ms = [m for m in ms if m <= date.today().isoformat()[:7]]
+    NEWEST_MON = _mon_key(max(ms)) if ms else 0
     out = {}
 
     for code in sorted(all_codes):
@@ -3378,6 +3384,9 @@ def load_monthly_nums(monthly):
                 cand.append((3, "AI 판독", rows, _base_of(rec.get("amount_label", "") + rec.get("yoy_label", "")),
                              _tdnet_trusted(rows, want), rec))
 
+        # **낡은 소스는 버린다**(11/04 H2O 리테일링: IR 페이지의 2020~21년 PDF 만 읽혀 「최근 24개월」 카드에 2021년 3월이 최신으로 섰다).
+        # 잣대는 오늘이 아니라 **모든 회사·소스 가운데 가장 새 달** — 거기서 석 달 넘게 뒤처진 계열은 그 회사의 지금을 말하지 않는다.
+        cand = [c for c in cand if c[2] and _mon_key(max(r[0] for r in c[2])) >= NEWEST_MON - 3]
         if not cand:
             continue
 
@@ -4075,6 +4084,12 @@ def build():
     monthly_nums = load_monthly_nums(monthly)
     monthly, monthly_nums = apply_reviewed_monthly(monthly, monthly_nums)
     monthly, monthly_nums = apply_ledger_fill(monthly, monthly_nums)
+    # 마지막 거름 — 손으로 대조한 표·월차 원장 보충까지 합친 뒤에도 마지막 달이 가장 새 달보다 석 달 넘게 뒤면 카드를 안 낸다(11/04)
+    stale = [c for c, v in monthly_nums.items() if v.get("m") and NEWEST_MON and _mon_key(max(r[0] for r in v["m"])) < NEWEST_MON - 3]
+    for c in stale:
+        monthly_nums.pop(c, None)
+    if stale:
+        print(f"  월매출: 석 달 넘게 끊긴 카드 {len(stale)}곳 뺌 — {' '.join(stale[:12])}")
     per_day = Counter(p[0] for p in packed)
     notable_hits = sum(1 for p in packed if p[9] + ":" + p[1] in notable)
     all_ok = sorted({d for m in ok_days for d in ok_days[m]})
