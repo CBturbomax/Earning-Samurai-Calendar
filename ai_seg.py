@@ -40,7 +40,8 @@ HERE = Path(__file__).parent
 OUT = HERE / "data" / "segments_aipr.json"
 SECS = int(os.environ.get("AISEG_SECS", "1200"))
 PER_CALL = int(os.environ.get("AISEG_TIMEOUT", "240"))
-MAX_CALLS = int(os.environ.get("AISEG_MAX", "40"))       # 한 실행에 묻는 횟수 — 구독 한도를 아낀다
+WORKERS = int(os.environ.get("AISEG_WORKERS", "4"))   # 동시에 묻는 수 — 실적 시즌 한 실행에 40곳으로는 517곳을 못 따라간다
+MAX_CALLS = int(os.environ.get("AISEG_MAX", "160"))       # 한 실행에 묻는 횟수 — 구독 한도를 아낀다
 LIMIT_HINT = re.compile(r"usage limit|rate limit|rate_limit|limit reached|quota|try again later|overloaded|"
                         r'"api_error_status":\s*(429|529)', re.I)
 
@@ -168,7 +169,19 @@ def ask(sym, raw, rec, last, pend):
 def check(segs, prior, tot_now, tot_prior):
     """AI 답 -> {부문: 이번 분기 값} 또는 (None, 까닭). 규칙 수집기 read() 와 같은 잣대."""
     want = [n for n, v in prior.items() if v]
-    got = {s.get("name"): s for s in segs if s.get("name") in prior}
+    got = {s.get("name"): dict(s) for s in segs if s.get("name") in prior}
+    # 단위 맞춤(11/04): AI 가 '백만 달러' 표를 달러로 안 바꾸고 1,234 그대로 주는 일이 잦아 전년 값이
+    # 하나도 안 맞고 통째로 떨어졌다(40곳 물어 5곳 통과). 1·천·백만·십억 배 중 전년 값이 가장 많이 맞는 배수를
+    # 이번·전년 둘 다에 똑같이 곱한다 — 맞춤의 근거가 SEC 전년 값이라 지어내는 것이 아니다.
+    def _hits(k):
+        return sum(1 for n in want if n in got and isinstance(got[n].get("prior"), (int, float))
+                   and abs(got[n]["prior"] * k - prior[n]) <= abs(prior[n]) * 0.006)
+    k = max((1, 1e3, 1e6, 1e9), key=_hits)
+    if k != 1 and _hits(k) > _hits(1):
+        for g in got.values():
+            for f in ("prior", "current"):
+                if isinstance(g.get(f), (int, float)):
+                    g[f] = g[f] * k
     ok = [n for n in want if n in got and isinstance(got[n].get("prior"), (int, float))
           and abs(got[n]["prior"] - prior[n]) <= abs(prior[n]) * 0.006]
     if len(ok) < 2:
@@ -205,7 +218,20 @@ def main():
         db = {}
     st = db.setdefault("stocks", {})
     asked = db.setdefault("asked", {})
+    if db.get("v") != 2:                                     # 1: 단위 안 맞춘 검산 — 떨어진 공시를 다시 묻는다
+        asked.clear(); db["v"] = 2
     cik_of = lu.cik_map_cached()
+    # 이번 주 발표 회사가 먼저(11/04 회원님: "이번주 실적발표 회사들 다 점검") — 그다음 시총
+    recent = {}
+    try:
+        eu = json.loads((HERE / "data" / "earnings_us.json").read_text(encoding="utf-8"))
+        lo = (date.today() - timedelta(days=10)).isoformat()
+        hi = date.today().isoformat()
+        for r in (eu.get("rows") or []):
+            if lo <= (r.get("date") or "") <= hi:
+                recent[r.get("code")] = max(recent.get(r.get("code"), ""), r["date"])
+    except (OSError, ValueError):
+        pass
     todo = []
     for sym, f in fin.items():
         sym = sym.replace("us:", "")
@@ -222,59 +248,83 @@ def main():
         if any(abs((date.fromisoformat(e) - date.fromisoformat(last["end"])).days) <= 12 for e in ends
                if re.match(r"\d{4}-\d\d-\d\d$", str(e))):
             continue                                        # 그 분기 부문이 이미 있다(규칙·SEC 가 읽었다)
-        todo.append((-(f.get("cap") or 0), sym, last, rec))
-    todo.sort(key=lambda x: x[0])
-    print(f"AI 부문 판독 대상 {len(todo)}종목 (규칙으로 못 읽은 것)")
-    t0, calls, got = time.time(), 0, 0
-    for _c, sym, last, rec in todo:
-        if not only and (time.time() - t0 > SECS or calls >= MAX_CALLS):
-            break
+        todo.append((0 if sym in recent else 1, -(f.get("cap") or 0), sym, last, rec))
+    todo.sort(key=lambda x: x[:2])
+    print(f"AI 부문 판독 대상 {len(todo)}종목 (규칙으로 못 읽은 것 · 이번 주 발표 {sum(1 for t in todo if not t[0])})")
+    import threading
+    from concurrent.futures import ThreadPoolExecutor
+    lock = threading.Lock()
+    t0 = time.time()
+    cnt = {"calls": 0, "got": 0, "stop": False}
+
+    def one(item):
+        _p, _c, sym, last, rec = item
+        with lock:
+            if cnt["stop"] or (not only and (time.time() - t0 > SECS or cnt["calls"] >= MAX_CALLS)):
+                return
         cik = cik_of.get(sym) or cik_of.get(sym.replace(".", "-"))
         if not cik:
-            continue
+            return
         try:
             hit = pr.latest_earnings_8k(int(cik))
         except Exception as e:                              # noqa: BLE001
             print(f"  ! {sym} 8-K 목록 {e!r}"[:140])
-            continue
+            return
         if not hit or asked.get(sym) == hit[0]:
-            continue
+            return
         raw = lu.ex99_html(int(cik), hit[0])
         if not raw:
-            continue
+            return
         pend = (date.fromisoformat(last["end"]) - timedelta(days=365)).isoformat()
         prior = {n: sp.value_at(srcs, sym, pend, n) for n in rec["names"]}
         fp = [p for p in (fin.get(sym) or fin.get("us:" + sym))["points"] if p.get("rev")
               and abs((date.fromisoformat(p["end"]) - date.fromisoformat(pend)).days) <= 12]
         if not fp or sum(1 for v in prior.values() if v) < 2:
-            continue
+            return
+        with lock:
+            if cnt["stop"] or (not only and cnt["calls"] >= MAX_CALLS):
+                return
+            cnt["calls"] += 1
         try:
-            calls += 1
             segs, why = ask(sym, raw, rec, last, pend)
         except Limited as e:
             print(f"  ! 구독 한도·과부하 — 이번 실행은 여기서 멈춘다: {e}")
-            db["limited"] = datetime.now(timezone.utc).isoformat(timespec="minutes")
-            break
+            with lock:
+                db["limited"] = datetime.now(timezone.utc).isoformat(timespec="minutes")
+                cnt["stop"] = True
+            return
         except Exception as e:                              # noqa: BLE001
             print(f"  ! {sym} {e!r}"[:200])
-            continue
-        asked[sym] = hit[0]
+            return
+        with lock:
+            asked[sym] = hit[0]
         if segs is None:
             print(f"  {sym} 못 읽음: {why}")
-            continue
+            return
         vals, why = check(segs, prior, last["rev"], fp[0]["rev"])
         if only:
             print(sym, json.dumps(segs, ensure_ascii=False)[:600])
         if not vals:
             print(f"  {sym} 검산 탈락: {why}")
-            continue
+            return
         names = [n for n in rec["names"] if n in vals]
-        old = st.get(sym) if (st.get(sym) or {}).get("names") == names else {"names": names, "pts": []}
-        old["pts"] = [p for p in old.get("pts", []) if p[0] != last["end"]] + [[last["end"]] + [vals[n] for n in names]]
-        old["acc"], old["axis"] = hit[0], rec.get("axis")
-        st[sym] = old
-        got += 1
+        with lock:
+            old = st.get(sym) if (st.get(sym) or {}).get("names") == names else {"names": names, "pts": []}
+            old["pts"] = [p for p in old.get("pts", []) if p[0] != last["end"]] + [[last["end"]] + [vals[n] for n in names]]
+            old["acc"], old["axis"] = hit[0], rec.get("axis")
+            st[sym] = old
+            cnt["got"] += 1
         print(f"  ✓ {sym} {last['end']} " + " · ".join(f"{n} {vals[n]/1e9:.2f}B" for n in names))
+
+    with ThreadPoolExecutor(WORKERS) as ex:
+        list(ex.map(one, todo))
+    calls, got = cnt["calls"], cnt["got"]
+    more = calls >= MAX_CALLS or time.time() - t0 > SECS      # 다 못 봤다 — 워크플로가 이어달리기를 건다
+    print(f"이어달리기 {'필요' if more and not cnt['stop'] else '없음'}")
+    try:
+        Path(os.environ.get("GITHUB_OUTPUT", "/dev/null")).open("a").write(f"more={1 if more and not cnt['stop'] else 0}\n")
+    except OSError:
+        pass
     db["count"] = len(st)
     db["ts"] = datetime.now(timezone.utc).isoformat(timespec="minutes")
     OUT.write_text(json.dumps(db, ensure_ascii=False, separators=(",", ":")), encoding="utf-8")
