@@ -7289,8 +7289,6 @@ function tgGuide(gh, title, mkt, key) {
   if (!a && !b && !c) return '';
   return '<div class="finwrap"><div class="finhead">' + title + ' 가이던스 변천' +
     '<span class="dim"><b style="color:#5B9BD5">■</b> 가이던스 <b style="color:#F28C28">■</b> 수정 공시 <b style="color:#d7dde3">■</b> 실제 <b style="color:#FFCB05">■</b> 최신</span></div>' +
-    '<p class="finnote" style="margin:0 0 6px">막대 하나 = 그 분기 실적 발표 때 회사가 내놓은 <b>회계연도 전체(12개월)</b> 전망 · ' +
-    '아래 「1Q24」 = 1Q24 실적 발표 때 낸 값 · 회색 「실제」 = 그 해 실제 결과</p>' +
     a + b + c + '<p class="finnote" style="text-align:right">자료: ' + (mkt === 'us' ? '회사 실적 보도자료(SEC 8-K, AI 판독)' : '회사 결산단신(TDnet·JPX)') + '</p></div>';
 }
 let GH = null;
@@ -7497,7 +7495,7 @@ function segRender(id) {
     '<span class="dim">(단위: ' + esc(U.ko) +
     (sg.cov ? ' · 총매출의 ' + sg.cov + '%' + (sg.cov > 105 ? ' — 부문끼리 주고받은 것 포함' : '') : '') + ')</span></div>' +
     top +
-    (bot ? '<div class="finhead sub">' + ttlY + '<span class="dim">(전년 같은 ' + (back === 2 ? '반기' : '분기') + ' 대비)</span></div>' + bot : '') +
+    (bot ? '<div class="finhead sub">' + ttlY + '</div>' + bot : '') +
     '<div class="finlegend">' + names.map((nm, j) => !has(j) ? '' :
       '<span class="lg seglg' + (off.has(j) ? ' off' : '') + '" data-sid="' + id + '" data-j="' + j + '" style="--c:' +
       SEG_COLORS[j % SEG_COLORS.length] + '">' + esc(nm) + '</span>').join('') +
