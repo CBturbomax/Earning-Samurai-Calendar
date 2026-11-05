@@ -78,6 +78,7 @@ BIG = set()                                          # 시총 상위 — main �
 BIG_N = int(os.environ.get("AIFILL_BIG", "0"))       # 사업부 기록이 아예 없는 회사(단일 부문 — 키엔스·닌텐도·다케다)는 안 묻는다(11/02)
 RECENT_DAYS = int(os.environ.get("AIFILL_RECENT", "0") or 0)   # >0 이면 그 날수 안의 빈칸만
 DOC_LIMIT = int(os.environ.get("AIFILL_DOC", "20000"))   # 원문 길이 상한 — 길수록 한도를 많이 먹는다
+CHECK_VER = 2                   # 검산 규칙 판 — 바뀌면 버렸던 답(rej)을 AI 를 다시 안 부르고 다시 검산한다(2: 단위·소계 고침)
 EMPTY_VER = 4                   # 2: 일본 PDF 이름을 목록에서(미국 기준 회사 — 도요타·고마쓰)  # 11/04: 암호 PDF 를 pdftotext 로
 DRY_N = 4                       # 연달아 이만큼 읽어 맞은 것이 없으면 그 회사는 넉 달 쉰다
 KEYS = re.compile(r"segment|geograph|region|countr|americas|europe|asia|china|japan|emea|international|domestic|"
@@ -500,9 +501,34 @@ def accept(B, key, items, rec, jspans):
         if len(parts) < 2:
             why["부문<2"] = why.get("부문<2", 0) + 1
             continue
+        def _ok(parts, elim, tot):
+            s = sum(parts.values())
+            return abs(s / rev - 1) <= 0.02 or (elim and abs((s + elim) / rev - 1) <= 0.02) \
+                or (tot and abs(s / tot - 1) <= 0.01 and abs(tot / rev - 1) <= 0.02)
+        ok = _ok(parts, elim, tot)
+        # **단위를 틀리게 적은 표**(11/05 LVWR '합/매출 0.0' — 천 달러 표를 1 로 적었다)는 10 의 거듭제곱 하나로 맞으면 그 배수로 고친다.
+        # 2% 안으로 맞는 거듭제곱이 우연히 나올 일은 드물다. 같은 공시의 다른 기간도 같은 배수일 것이라 따로 따로 본다.
+        if not ok:
+            s0 = sum(parts.values())
+            for e in (3, 6, -3, -6, 9, -9, 2, -2, 1, -1, 4, -4, 5, -5, 8, -8, 7, -7):
+                f = 10.0 ** e
+                if abs(s0 * f / rev - 1) <= 0.02 or (tot and abs(tot * f / rev - 1) <= 0.02 and abs(s0 / tot - 1) <= 0.01):
+                    parts = {nm: v * f for nm, v in parts.items()}
+                    elim, tot = elim * f, tot * f
+                    ok = True
+                    why["단위고침"] = why.get("단위고침", 0) + 1
+                    break
+        # **합계 줄이 이름 없이 섞인 표**(11/05 jp:9929 '합/매출 1.94')는 나머지의 합과 같은 줄 하나를 빼서 맞으면 뺀다.
+        if not ok and len(parts) >= 3:
+            s0 = sum(parts.values())
+            for nm, v in sorted(parts.items(), key=lambda x: -x[1]):
+                if abs(v / (s0 - v) - 1) <= 0.01:
+                    p2 = {a: b for a, b in parts.items() if a != nm}
+                    if _ok(p2, elim, tot):
+                        parts, ok = p2, True
+                        why["소계뺌"] = why.get("소계뺌", 0) + 1
+                    break
         s = sum(parts.values())
-        ok = abs(s / rev - 1) <= 0.02 or (elim and abs((s + elim) / rev - 1) <= 0.02) \
-            or (tot and abs(s / tot - 1) <= 0.01 and abs(tot / rev - 1) <= 0.02)
         if not ok:
             r = round(s / rev, 2)
             why[f"합/매출{r}"] = why.get(f"합/매출{r}", 0) + 1
@@ -533,7 +559,7 @@ def one(B, key, miss, db, bud, t0, verbose):
     m, code = key.split(":")
     asked = set(db["asked"].get(key, []))
     rec = json.loads(json.dumps(db["stocks"].get(key) or {}))     # 갈래마다 제 사본 — 저장과 부딪히지 않게
-    new_asked, new_empty = [], []
+    new_asked, new_empty, new_rej = [], [], {}
     asked |= set(db.get("empty", {}).get(key, []))
     f = B.FIN.get(key) or {}
     cur = f.get("cur") or ("JPY" if m == "jp" else "USD")
@@ -546,7 +572,7 @@ def one(B, key, miss, db, bud, t0, verbose):
         import scrape_live_us as lu
         cik = lu.cik_map_cached().get(code) or lu.cik_map_cached().get(code.replace(".", "-"))
         if not cik:
-            return key, 0, 0, ["CIK 없음"], rec, (new_asked, new_empty), 0
+            return key, 0, 0, ["CIK 없음"], rec, (new_asked, new_empty, new_rej), 0
         files = us_filings(int(cik))
         docs = [(f"{a}", f"{fm} {rd}", (int(cik), a, nm)) for rd, fm, a, nm in us_pick(files, miss)]
     else:
@@ -600,6 +626,8 @@ def one(B, key, miss, db, bud, t0, verbose):
             log.append(f"{label} 답 깨짐")
             continue
         n = accept(B, key, items, rec, jspans)
+        if not n and items:
+            new_rej[did] = {"items": items, "js": {f"{a}/{b}": v for (a, b), v in (jspans or {}).items()}}
         got += n
         dry_n = 0 if n else dry_n + 1
         if dry_n >= DRY_N:
@@ -610,7 +638,7 @@ def one(B, key, miss, db, bud, t0, verbose):
         wy = getattr(WHY, "c", {}) or {}
         log.append(f"{label} 항목 {len(items)} · 맞은 기간 {n}" + (" · 버림 " + ",".join(f"{a}×{b}" for a, b in
                    sorted(wy.items(), key=lambda x: -x[1])[:4]) if wy and not n else ""))
-    return key, tried, got, log, rec, (new_asked, new_empty), dry_n
+    return key, tried, got, log, rec, (new_asked, new_empty, new_rej), dry_n
 
 
 def main():
@@ -655,6 +683,18 @@ def main():
     if db.get("dv") != 2:                                # 1: 글자로 온 숫자를 못 읽어 맞은 게 없다고 쉬게 한 회사 — 다시 묻는다
         dry.clear(); db["dv"] = 2
         db.get("asked", {}).clear(); db.get("empty", {}).clear()   # 그때 읽은 공시도 다시(빈칸이 남은 회사만 대상이 된다)
+    if db.get("dv") != 3:                                # 3: 단위를 틀리게 적은 표·합계 줄 섞인 표로 쉬게 한 회사 — 다시 묻는다
+        dry.clear(); db["dv"] = 3
+    if db.get("cv") != CHECK_VER:                        # 검산 규칙이 바뀌었다 — 버렸던 답을 AI 없이 다시 본다
+        nre = 0
+        for key, docs in (db.get("rej") or {}).items():
+            rec = db["stocks"].setdefault(key, {})
+            for did, a in list(docs.items()):
+                js = {tuple(k.split("/")): v for k, v in (a.get("js") or {}).items()} or None
+                if accept(B, key, a.get("items"), rec, js):
+                    docs.pop(did); nre += 1
+        db["cv"] = CHECK_VER
+        print(f"검산 규칙 {CHECK_VER}판: 버렸던 답에서 다시 살린 공시 {nre}")
     tg = targets(B, set(only))
     for mk in ("us:", "jp:"):
         BIG.update([k for k in tg if k.startswith(mk)][:BIG_N])
@@ -696,6 +736,8 @@ def main():
                     db["stocks"][key] = rec
                 db["asked"].setdefault(key, []).extend(new_asked[0])
                 db["empty"].setdefault(key, []).extend(new_asked[1])
+                if new_asked[2]:
+                    db.setdefault("rej", {}).setdefault(key, {}).update(new_asked[2])
                 if tr:
                     dry[key] = {"n": dn, "ts": date.today().isoformat()}
                 done_keys += 1
