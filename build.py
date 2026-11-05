@@ -3279,6 +3279,7 @@ def drop_part_totals(rec):
     if len(names) < 4 or len(names) > 12:
         return rec
     col = lambda j: [r[j + 1] if j + 1 < len(r) else None for r in pts]   # noqa: E731
+    changed = False
     for _ in range(2):
         drop = None
         for j in range(len(names)):
@@ -3295,6 +3296,7 @@ def drop_part_totals(rec):
                         hit += abs(sum(parts) - v) <= abs(v) * 0.005
                     if tot >= 4 and hit / tot >= 0.6:
                         drop = j
+                        dsub = sub
                         break
                 if drop is not None:
                     break
@@ -3302,9 +3304,19 @@ def drop_part_totals(rec):
                 break
         if drop is None:
             break
+        # **세부 칸이 없는 분기의 소계는 남긴다**(11/05 레즈메드 2018~2021: 'Devices and Masks' 한 칸만 있는 분기에서 그 칸까지
+        # 지워 열두 분기가 SaaS 한 줄만 남았다). 세부가 하나라도 있는 분기에서만 소계를 비우고, 다 비면 줄째 뺀다.
+        pts = [list(r) for r in pts]
+        for r in pts:
+            if drop + 1 < len(r) and r[drop + 1] is not None and \
+                    any(o + 1 < len(r) and r[o + 1] is not None for o in dsub):
+                r[drop + 1] = None
+        if any(drop + 1 < len(r) and r[drop + 1] is not None for r in pts):
+            changed = True
+            break                                           # 남긴 소계가 있으면 더 찾지 않는다(같은 칸을 또 소계로 잡지 않게)
         names = names[:drop] + names[drop + 1:]
         pts = [r[:drop + 1] + r[drop + 2:] for r in pts]
-    if len(names) == len(rec.get("names") or []):
+    if len(names) == len(rec.get("names") or []) and not changed:
         return rec
     return dict(rec, names=names, pts=pts)
 
