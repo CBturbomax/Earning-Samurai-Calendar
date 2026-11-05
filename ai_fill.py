@@ -118,17 +118,34 @@ def gaps(B, key):
     since = SINCE
     if RECENT_DAYS and key not in SOON:               # 곧 발표할 회사는 1Q18 부터 전부                                    # 최근 칸부터(같은 토큰으로 눈에 보이는 빈칸이 가장 많이 준다)
         since = max(SINCE, (date.today() - timedelta(days=RECENT_DAYS)).isoformat())
+    sh = HOLES.get(key, set()) if HOLES else None
     def scan(since):
         out = []
         for p in f.get("points") or []:
             e = p.get("end")
             if not e or e < since or not p.get("rev"):
                 continue
-            if (segc and not covered(B.SEG.get(key), e)) or (geoc and not covered(B.GEO.get(key), e)) or (ordc and not covered(B.ORD.get(key), e)):
+            # 사업부는 **화면 기준 빈칸**(빌드가 남긴 data/seg_holes.json)을 먼저 본다 — 원자료에는 있지만 틀려서 화면에서 지워진
+            # 분기도 빈칸이다(11/05). 목록이 없으면 예전처럼 원자료로.
+            seg_miss = (e in sh) if sh is not None else not covered(B.SEG.get(key), e)
+            if (segc and seg_miss) or (geoc and not covered(B.GEO.get(key), e)) or (ordc and not covered(B.ORD.get(key), e)):
                 out.append(e)
         return out
     # 최근 두 해가 다 찬 회사는 1Q18 까지 거슬러 간다(11/05 — 최근 창만 보던 시절엔 옛 빈칸이 영영 대상이 안 됐다)
     return scan(since) or (scan(SINCE) if since != SINCE else [])
+
+
+def _load_holes():
+    try:
+        j = json.loads((HERE / "data" / "seg_holes.json").read_text(encoding="utf-8"))
+        if (date.today() - date.fromisoformat(j["ts"][:10])).days <= 3:
+            return {k: set(v) for k, v in (j.get("holes") or {}).items()}
+    except (OSError, ValueError, KeyError):
+        pass
+    return {}
+
+
+HOLES = _load_holes()           # 화면 기준 빈 분기(빌드가 남긴 것). 회사가 없으면 None 취급 → 원자료 기준
 
 
 SOON = set()                    # 지난 7일 ~ 앞으로 21일 안에 발표하는 회사(targets 가 채운다)

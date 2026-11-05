@@ -2332,6 +2332,10 @@ def _ai_fill_one(base, add):
     return (dict(base, names=names, pts=sorted(rows, key=lambda x: x[0])), n) if n else (base, 0)
 
 
+AI_SEG_REC = {}
+AI_POST = [0, 0]
+
+
 def load_ai_fill():
     raw = {}
     for f in ["ai_fill.json"] + sorted(x.name for x in (HERE / "data").glob("ai_fill_s*.json")):   # 갈래마다 제 파일
@@ -2382,6 +2386,8 @@ def load_ai_fill():
                 rec.pop("axis", None)
                 if SEG.get(k, {}).get("axis"):
                     rec["axis"] = SEG[k]["axis"]
+            if kind == "seg":
+                AI_SEG_REC[k] = rec
             got, n = _ai_fill_one(store.get(k), rec)
             if n:
                 store[k] = got
@@ -2743,7 +2749,7 @@ def dedupe_moved(rows):
     return [r for r in rows if id(r) not in drop]
 
 
-def write_seg_holes():
+def write_seg_holes(screen=None):
     """**다 채운 회사·분기는 다시 안 본다**(회원님 11/05: "이미 완성한 기업은 과거 데이터는 건들 필요 없으니 더 가벼워지는 거 아님?").
     1Q18 이후 총매출이 있는데 사업부가 빈 분기 종료일을 data/seg_holes.json 에 적는다. 옛 이력 수집기(일본·미국)가 이 목록에 있는
     회사의, 그 분기를 담은 공시만 받는다. 빈칸이 없는 회사는 아예 안 건드린다."""
@@ -2754,11 +2760,18 @@ def write_seg_holes():
                 return True
         return False
     out = {}
+    # **화면 기준**(11/05): 원자료에 칸이 있어도 틀려서 화면 직전에 지워진 분기는 빈칸이다 — 원자료 기준으로 적었더니 AI 메우기가
+    # 그 분기를 '있다'고 보고 영영 안 물었다.
+    shown = {k: {r[0] for r in v.get("pts") or [] if any(x is not None for x in r[1:])} for k, v in (screen or {}).items()}
     for key, f in FIN.items():
         if f.get("freq") not in ("Q", "H"):
             continue
-        miss = [p["end"] for p in f.get("points") or []
-                if p.get("end") and p["end"] >= "2018-01-01" and p.get("rev") and not cov(SEG.get(key), p["end"])]
+        if screen is not None and key in shown:
+            miss = [p["end"] for p in f.get("points") or []
+                    if p.get("end") and p["end"] >= "2018-01-01" and p.get("rev") and p.get("label") not in shown[key]]
+        else:
+            miss = [p["end"] for p in f.get("points") or []
+                    if p.get("end") and p["end"] >= "2018-01-01" and p.get("rev") and not cov(SEG.get(key), p["end"])]
         if miss:
             out[key] = sorted(set(miss))
     (HERE / "data" / "seg_holes.json").write_text(json.dumps({"ts": datetime.now(timezone.utc).isoformat()[:16], "holes": out},
@@ -3399,6 +3412,69 @@ def pack_seg(rec, fin_rec):
     if med is not None and (med < 0.95 or med > 1.05):
         out["cov"] = round(med * 100)
     return out
+
+
+def ai_post_fill(packed, rec, fin_rec):
+    """**화면에서 빈 분기에 AI 값을 넣는다**(11/05). AI 메우기는 원자료 기준 빈칸만 채웠다 — 원자료에는 칸이 있지만 틀려서(두 배로
+    쌓였거나 한 부문뿐이라) 화면 직전에 지워진 분기는 AI 가 원문에서 맞게 읽어 놓고도 못 들어갔다(AI 7,833분기 중 2,478칸만 쓰임).
+    화면 그림의 첫·끝 분기 사이에서 빈 분기만, AI 줄의 이름이 화면 이름과 90% 넘게(값 기준) 짝지어질 때만 넣는다."""
+    if not packed or not rec or not rec.get("pts"):
+        return 0
+    al = seg_align(rec["pts"], fin_rec)
+    names = packed["names"]
+    idx = {n: i for i, n in enumerate(names)}
+    have = {r[0] for r in packed["pts"] if any(v is not None for v in r[1:])}
+    keys = sorted(lab_key(l) for l in have if lab_key(l) != (0, 0))
+    if len(keys) < 2:
+        return 0
+    lo, hi = keys[0], keys[-1]
+    # 이름 짝: 한글 표기가 같으면 그것, 아니면 **겹치는 분기의 값**으로(일본어 'パワーデバイス' 와 화면의 'Power Device' 처럼
+    # 소스마다 표기가 다르다) — 겹치는 분기에서 1.5% 안으로 맞고 5% 넘게 어긋나는 분기가 없는 화면 줄이 하나뿐일 때.
+    byl = {r[0]: r for r in packed["pts"]}
+    amap = {}
+    for ai, an in enumerate(rec["names"]):
+        j = idx.get(seg_ko(an))
+        if j is not None:
+            amap[ai] = j
+            continue
+        cand = {}
+        for r, (lab, _rev) in zip(rec["pts"], al):
+            pr = byl.get(lab)
+            v = r[ai + 1] if ai + 1 < len(r) else None
+            if not pr or not v:
+                continue
+            for jj in range(len(names)):
+                pv = pr[jj + 1] if jj + 1 < len(pr) else None
+                if pv:
+                    d = abs(v / pv - 1)
+                    c = cand.setdefault(jj, [0, 0])
+                    c[0] += d <= 0.015
+                    c[1] += d > 0.05
+        ok = [jj for jj, (g, b_) in cand.items() if g >= 1 and not b_]
+        if len(ok) == 1 and ok[0] not in amap.values():
+            amap[ai] = ok[0]
+    add = []
+    for r, (lab, _rev) in zip(rec["pts"], al):
+        if not lab or lab in have or not (lo < lab_key(lab) < hi):
+            continue
+        row = [lab] + [None] * len(names)
+        tot = got = 0
+        for ai, v in enumerate(r[1:]):
+            if not v:
+                continue
+            tot += abs(v)
+            j = amap.get(ai)
+            if j is not None and row[j + 1] is None:
+                row[j + 1] = int(v)
+                got += abs(v)
+        if tot and got >= 0.9 * tot and sum(1 for v in row[1:] if v) >= 2:
+            add.append(row)
+            have.add(lab)
+    if add:
+        packed["pts"] = sorted(packed["pts"] + add, key=lambda x: lab_key(x[0]))
+        AI_POST[0] += len(add)
+        AI_POST[1] += 1
+    return len(add)
 
 
 def pack_ord(rec, fin_rec):
@@ -4725,9 +4801,12 @@ def build():
             continue
         got = pack_seg(rec, FIN.get(s))
         if got:
+            if s in AI_SEG_REC:
+                ai_post_fill(got, AI_SEG_REC[s], FIN.get(s))
             seg[s] = got
         else:
             tossed.append(s.split(":")[-1])
+    print(f"  AI 값을 화면에서 빈 분기에 넣음: {AI_POST[0]:,}칸 · {AI_POST[1]:,}곳")
     print(f"  부문 한 칸만 몇 배로 튄 것(연간·누계가 분기 칸에): 고침 {SEG_FIXED['fixed']:,} · 뺌 {SEG_FIXED['dropped']:,}")
     print(f"  한 부문만 빈 칸을 '총매출 − 나머지 부문'으로 채움: {SEG_RESID[0]:,}칸")
     print(f"  한 축에 나눔이 둘 겹친 회사에서 총매출과 맞는 나눔만 남김: {SEG_PART[0]:,}곳")
@@ -4961,7 +5040,7 @@ def build():
     }
 
     try:                                          # 수집기들이 '이미 채운 분기'를 다시 안 보게 — 회사별 빈 분기 종료일(11/05)
-        write_seg_holes()
+        write_seg_holes(payload["seg"])
     except Exception as e:                        # noqa: BLE001
         print(f"  ! 빈 분기 목록 실패: {e!r}")
     try:
