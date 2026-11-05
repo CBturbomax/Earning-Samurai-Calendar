@@ -1,5 +1,4 @@
-# 소스를 떠보는 자리. 결과만 로그로 보고 아무것도 커밋하지 않는다.
-# **dispatch 전용이다.**
+# 소스를 떠보는 자리. 결과만 probe-out 가지에 남기고 아무것도 커밋하지 않는다. **dispatch 전용이다.**
 name: 소스 접근 확인
 
 on:
@@ -11,60 +10,19 @@ jobs:
     timeout-minutes: 20
     permissions:
       contents: write
+    env:
+      SEC_UA: 'Earning Samurai Calendar (cbpark@wisdomasset.co.kr)'
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
         with:
           python-version: '3.12'
-
-      - name: 🔎 Railway 실시간 서버 확인
-        run: |
-          U=https://earning-samurai-calendar-production.up.railway.app
-          { python3 tools/ai/probe_us.py "$(TZ=Asia/Seoul date +%F)"
-          } > /tmp/probe.txt 2>&1
-          echo "== stream" >> /tmp/probe.txt; timeout 8 curl -sSN $U/stream | head -c 400 >> /tmp/probe.txt 2>&1 || true
-
-      - name: 🔎 홍콩 긴 이력 수집기 시험
+      - name: 🔎 사업부 빈칸 — 서류 속 매출 문맥(11/05)
         continue-on-error: true
-        run: python scrape_fin_hk_em.py 00700 03750 09992 01211 02020 00992 >> /tmp/probe.txt 2>&1
+        run: python tools/ai/probe_seg.py CAT:2021-06-30 CAT:2022-06-30 COST:2023-09-03 MRNA:2020-06-30 AON:2020-09-30 ATRC:2026-09-30 > /tmp/probe.txt 2>&1
       - name: 결과를 probe-out 가지에
         if: always()
         run: |
           cd /tmp && rm -rf po && mkdir po && cd po && git init -q
           cp /tmp/probe.txt . ; git add . && git -c user.name=bot -c user.email=b@b commit -qm probe
           git push -f "https://x-access-token:${{ github.token }}@github.com/${{ github.repository }}" HEAD:refs/heads/probe-out
-
-      # 95차 — eir.js 가 주소를 어떻게 짓는가. 94차에서 `ssl4.eir-parts.net`
-      # 과 `/Custom/public/v5parts/` 까지는 봤다. 회사 번호를 어디서 가져오는지,
-      # 그리고 **지난 공시 목록**을 주는 자리가 있는지 본다.
-      - name: 🔎 eir.js 를 통째로 (95차)
-        timeout-minutes: 12
-        run: |
-          python - <<'EOF'
-          import re, urllib.error, urllib.request
-
-          UA = {"User-Agent": ("Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
-                               "AppleWebKit/537.36 (KHTML, like Gecko) "
-                               "Chrome/131.0.0.0 Safari/537.36")}
-
-          def get(u):
-              try:
-                  with urllib.request.urlopen(
-                          urllib.request.Request(u, headers=UA), timeout=20) as r:
-                      return r.status, r.read(900_000).decode("utf-8", "ignore")
-              except urllib.error.HTTPError as e:
-                  return e.code, ""
-              except Exception as e:
-                  return type(e).__name__, ""
-
-          st, js = get("https://www.park24.co.jp/ir/eir/eir.js")
-          print("eir.js", st, len(js), "bytes")
-          txt = re.sub(r"[ \t]+", " ", js)
-          for line in txt.splitlines():
-              line = line.strip()
-              if not line or line.startswith("//"):
-                  continue
-              if re.search(r"(eirUrl|eirPass|Custom|v5parts|qir|uniCode|"
-                           r"\.html|\.aspx|\.js|src|href|append)", line):
-                  print("  ", line[:150])
-          EOF
