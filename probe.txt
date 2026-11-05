@@ -1,0 +1,82 @@
+=== CGNX cik 851205 · 2024-12-31 · 서류 [('2024-12-31', '10-K', '0000851205-25-000012', '2025-02-13')]
+   url https://www.sec.gov/Archives/edgar/data/851205/000085120525000012/cgnx-20241231_htm.xml bytes 1967644
+   매출 태그: {'RevenuePaymentTerms': 3, 'RevenueFromContractWithCustomerExcludingAssessedTax': 45, 'OtherComprehensiveIncomeAvailableforsaleSecuritiesAdjustmentNetOfTaxPortionAttributableToParent': 3, 'AvailableForSaleSecuritiesDebtSecuritiesCurrent': 12, 'OtherComprehensiveIncomeLossAvailableForSaleSecuritiesAdjustmentNetOfTax': 3, 'AvailableforsaleSecuritiesDebtMaturitiesEffectiveTermMaximum': 1, 'RevenueRecognitionPolicyTextBlock': 1, 'AccumulatedOtherComprehensiveIncomeLossAvailableForSaleSecuritiesAdjustmentNetOfTax': 2, 'AvailableForSaleSecuritiesDebtSecuritiesNoncurrent': 8, 'ScheduleOfAvailableForSaleSecuritiesReconciliationTableTextBlock': 1, 'AvailableForSaleSecuritiesDebtSecurities': 21, 'AvailableForSaleSecuritiesDebtMaturitiesWithinOneYearFairValue': 5, 'AvailableForSaleSecuritiesDebtMaturitiesAfterOneYearBeforeTwoYearsFairValue': 5, 'AvailableForSaleSecuritiesDebtMaturitiesAfterTwoYearsBeforeThreeYearsFairValue': 5, 'AvailableForSaleSecuritiesDebtMaturitiesAfterThreeYearsBeforeFourYearsFairValue': 5, 'AvailableForSaleSecuritiesDebtMaturitiesAfterFourYearsBeforeFiveYearsFairValue': 5, 'AvailableForSaleSecuritiesDebtMaturitiesAfterFiveYearsBeforeSevenYearsFairValue': 5, 'RevenueFromContractWithCustomerTextBlock': 1, 'DisaggregationOfRevenueTableTextBlock': 1, 'ContractWithCustomerLiabilityCurrentAndPriorPeriodRevenueRecognized': 2, 'DeferredRevenueRefundPayments1': 1, 'ScheduleOfRevenuesFromExternalCustomersAndLongLivedAssetsByGeographicalAreasTableTextBlock': 1, 'IncentiveCompensationExpenseBonusAndSalesCommissions': 6}
+   RevenuePaymentTerms | RangeAxis=MinimumMember | 2024-01-01~2024-12-31 | P30D
+   RevenuePaymentTerms | RangeAxis=MinimumMember | 2024-01-01~2024-12-31 | P30D
+   RevenuePaymentTerms | RangeAxis=MaximumMember | 2024-01-01~2024-12-31 | P90D
+   RevenueFromContractWithCustomerExcludingAssessedTax | StatementGeographicalAxis=AmericasMember | 2024-01-01~2024-12-31 | 350155000
+   RevenueFromContractWithCustomerExcludingAssessedTax | StatementGeographicalAxis=EuropeMember | 2024-01-01~2024-12-31 | 217880000
+   RevenueFromContractWithCustomerExcludingAssessedTax | StatementGeographicalAxis=GreaterChinaMember | 2024-01-01~2024-12-31 | 164147000
+   RevenueFromContractWithCustomerExcludingAssessedTax | StatementGeographicalAxis=OtherAsiaMember | 2024-01-01~2024-12-31 | 182333000
+   RevenueFromContractWithCustomerExcludingAssessedTax | ProductOrServiceAxis=StandardProductandServicesMember | 2024-01-01~2024-12-31 | 795319000
+   RevenueFromContractWithCustomerExcludingAssessedTax | ProductOrServiceAxis=ApplicationofCustomerSpecificSolutionsMember | 2024-01-01~2024-12-31 | 119196000
+   RevenueFromContractWithCustomerExcludingAssessedTax | StatementGeographicalAxis=US | 2024-01-01~2024-12-31 | 306766000
+   RevenueFromContractWithCustomerExcludingAssessedTax | StatementGeographicalAxis=EuropeMember | 2024-01-01~2024-12-31 | 217880000
+   RevenueFromContractWithCustomerExcludingAssessedTax | StatementGeographicalAxis=GreaterChinaMember | 2024-01-01~2024-12-31 | 164147000
+   RevenueFromContractWithCustomerExcludingAssessedTax | StatementGeographicalAxis=OtherGeographicAreaMember | 2024-01-01~2024-12-31 | 225722000
+   IncentiveCompensationExpenseBonusAndSalesCommissions | StatementBusinessSegmentsAxis=ResearchDevelopmentAndEngineeringExpensesMember | 2024-01-01~2024-12-31 | 4711000
+   IncentiveCompensationExpenseBonusAndSalesCommissions | StatementBusinessSegmentsAxis=SegmentGeneralAndEngineeringExpenseMember | 2024-01-01~2024-12-31 | 45565000
+=== COST cik 909832 · 2024-09-01 · 서류 [('2024-09-01', '10-K', '0000909832-24-000049', '2024-10-09')]
+   url https://www.sec.gov/Archives/edgar/data/909832/000090983224000049/cost-20240901_htm.xml bytes 1139821
+   매출 태그: {'RevenueFromContractWithCustomerExcludingAssessedTax': 24, 'DeferredRevenueCurrent': 4, 'RevenueRecognitionPolicyTextBlock': 1, 'ReductionInSales': 3, 'CostOfSalesPolicyTextBlock': 1, 'AvailableForSaleSecuritiesDebtSecurities': 3, 'AvailableForSaleSecuritiesAndHeldToMaturitySecuritiesAtCostBasis': 2, 'AvailableForSaleSecuritiesDebtMaturitiesWithinOneYearAmortizedCost': 1, 'AvailableForSaleSecuritiesDebtMaturitiesWithinOneYearFairValue': 1, 'AvailableForSaleSecuritiesDebtMaturitiesAfterOneThroughFiveYearsAmortizedCost': 1, 'AvailableForSaleSecuritiesDebtMaturitiesAfterOneThroughFiveYearsFairValue': 1, 'AvailableForSaleSecuritiesDebtMaturitiesAfterFiveThroughTenYearsAmortizedCost': 1, 'AvailableForSaleSecuritiesDebtMaturitiesAfterFiveThroughTenYearsFairValue': 1, 'Revenues': 12, 'DisaggregationOfRevenueTableTextBlock': 1}
+   RevenueFromContractWithCustomerExcludingAssessedTax | ProductOrServiceAxis=ProductMember | 2023-09-04~2024-09-01 | 249625000000
+   RevenueFromContractWithCustomerExcludingAssessedTax | ProductOrServiceAxis=MembershipMember | 2023-09-04~2024-09-01 | 4828000000
+   RevenueFromContractWithCustomerExcludingAssessedTax | ProductOrServiceAxis=FoodandSundriesMember | 2023-09-04~2024-09-01 | 101463000000
+   RevenueFromContractWithCustomerExcludingAssessedTax | ProductOrServiceAxis=NonFoodsMember | 2023-09-04~2024-09-01 | 63973000000
+   RevenueFromContractWithCustomerExcludingAssessedTax | ProductOrServiceAxis=FreshFoodMember | 2023-09-04~2024-09-01 | 34220000000
+   RevenueFromContractWithCustomerExcludingAssessedTax | ProductOrServiceAxis=OtherMember | 2023-09-04~2024-09-01 | 49969000000
+   RevenueFromContractWithCustomerExcludingAssessedTax | ProductOrServiceAxis=ProductMember | 2023-09-04~2024-09-01 | 249625000000
+   Revenues | ConsolidationItemsAxis=OperatingSegmentsMember;StatementGeographicalAxis=US | 2023-09-04~2024-09-01 | 184143000000
+   Revenues | ConsolidationItemsAxis=OperatingSegmentsMember;StatementGeographicalAxis=CA | 2023-09-04~2024-09-01 | 34874000000
+   Revenues | ConsolidationItemsAxis=OperatingSegmentsMember;StatementGeographicalAxis=OtherInternationalMember | 2023-09-04~2024-09-01 | 35436000000
+=== ROKU cik 1428439 · 2024-12-31 · 서류 [('2024-12-31', '10-K', '0001428439-25-000013', '2025-02-14')]
+   url https://www.sec.gov/Archives/edgar/data/1428439/000142843925000013/roku-20241231_htm.xml bytes 1652965
+   매출 태그: {'RevenueFromContractWithCustomerExcludingAssessedTax': 9, 'PaymentsToAcquireAvailableForSaleSecuritiesDebt': 6, 'ScheduleOfValuationAllowanceForSalesReturnsTableTextBlock': 1, 'ScheduleOfValuationAllowanceForSalesIncentivesTableTextBlock': 1, 'RevenueRecognitionPolicyTextBlock': 1, 'RevenueFromContractWithCustomerPolicyTextBlock': 1, 'RevenueFromContractWithCustomerTextBlock': 1, 'ContractWithCustomerLiabilityRevenueRecognized': 2, 'RevenueRemainingPerformanceObligation': 1, 'RevenueRemainingPerformanceObligationPercentage': 1, 'RevenueRemainingPerformanceObligationExpectedTimingOfSatisfactionPeriod1': 1, 'AccruedCostOfRevenueCurrent': 2, 'AvailableForSaleSecuritiesDebtSecuritiesNoncurrent': 1, 'AvailableForSaleSecuritiesDebtSecurities': 6, 'ScheduleOfRevenueByMajorCustomersByReportingSegmentsTableTextBlock': 1}
+   RevenueFromContractWithCustomerExcludingAssessedTax | ProductOrServiceAxis=ServiceMember;StatementBusinessSegmentsAxis=PlatformSegmentMember | 2024-01-01~2024-12-31 | 3522776000
+   RevenueFromContractWithCustomerExcludingAssessedTax | ProductOrServiceAxis=ProductMember;StatementBusinessSegmentsAxis=DeviceSegmentMember | 2024-01-01~2024-12-31 | 590122000
+=== ZTS cik 1555280 · 2024-12-31 · 서류 [('2024-12-31', '10-K', '0001555280-25-000102', '2025-02-13')]
+   url https://www.sec.gov/Archives/edgar/data/1555280/000155528025000102/zts-20241231_htm.xml bytes 3083736
+   매출 태그: {'Revenues': 165, 'GainLossOnSalesOfAssetsAndAssetImpairmentCharges': 3, 'RevenueRecognitionPolicyTextBlock': 1, 'RevenuePerformanceObligationDescriptionOfCustomerPaymentTerms': 2, 'AccrualsforSalesDeductions': 4, 'ContractWithCustomerLiabilityRevenueRecognized': 1, 'DeferredRevenueDisclosureTextBlock': 1, 'RevenueFromExternalCustomersByGeographicAreasTableTextBlock': 1, 'RevenueByCountryExceeded': 2, 'RevenueByCountryExceededNumberOfCountries': 3, 'RevenuefromExternalCustomersbyMajorSpeciesTableTextBlock': 1, 'RevenuefromExternalCustomersbySpeciesTableTextBlock': 1, 'ScheduleOfEntityWideInformationRevenueFromExternalCustomersByProductsAndServicesTextBlock': 1}
+   Revenues | StatementGeographicalAxis=US | 2024-01-01~2024-12-31 | 5074000000
+   Revenues | StatementGeographicalAxis=AU | 2024-01-01~2024-12-31 | 319000000
+   Revenues | StatementGeographicalAxis=BR | 2024-01-01~2024-12-31 | 414000000
+   Revenues | StatementGeographicalAxis=CA | 2024-01-01~2024-12-31 | 277000000
+   Revenues | StatementGeographicalAxis=CL | 2024-01-01~2024-12-31 | 123000000
+   Revenues | StatementGeographicalAxis=CN | 2024-01-01~2024-12-31 | 270000000
+   Revenues | StatementGeographicalAxis=FR | 2024-01-01~2024-12-31 | 156000000
+   Revenues | StatementGeographicalAxis=DE | 2024-01-01~2024-12-31 | 225000000
+   Revenues | StatementGeographicalAxis=IT | 2024-01-01~2024-12-31 | 129000000
+   Revenues | StatementGeographicalAxis=JP | 2024-01-01~2024-12-31 | 147000000
+   Revenues | StatementGeographicalAxis=MX | 2024-01-01~2024-12-31 | 169000000
+   Revenues | StatementGeographicalAxis=ES | 2024-01-01~2024-12-31 | 130000000
+   Revenues | StatementGeographicalAxis=GB | 2024-01-01~2024-12-31 | 314000000
+   Revenues | StatementGeographicalAxis=OtherDevelopedMarketsMember | 2024-01-01~2024-12-31 | 564000000
+   Revenues | StatementGeographicalAxis=OtherEmergingMarketsMember | 2024-01-01~2024-12-31 | 865000000
+   Revenues | StatementGeographicalAxis=TotalGeographicalAreaMember | 2024-01-01~2024-12-31 | 9176000000
+   Revenues | ProductOrServiceAxis=ContractManufacturingandHumanHealthDiagnosticsMember | 2024-01-01~2024-12-31 | 80000000
+   Revenues | ProductOrServiceAxis=CompanionAnimalMember;StatementBusinessSegmentsAxis=UnitedStatesSegmentMember | 2024-01-01~2024-12-31 | 4054000000
+   Revenues | ProductOrServiceAxis=LivestockMember;StatementBusinessSegmentsAxis=UnitedStatesSegmentMember | 2024-01-01~2024-12-31 | 1020000000
+   Revenues | ConsolidationItemsAxis=OperatingSegmentsMember;StatementBusinessSegmentsAxis=UnitedStatesSegmentMember | 2024-01-01~2024-12-31 | 5074000000
+   Revenues | ProductOrServiceAxis=CompanionAnimalMember;StatementBusinessSegmentsAxis=InternationalSegmentMember | 2024-01-01~2024-12-31 | 2224000000
+   Revenues | ProductOrServiceAxis=LivestockMember;StatementBusinessSegmentsAxis=InternationalSegmentMember | 2024-01-01~2024-12-31 | 1878000000
+   Revenues | ConsolidationItemsAxis=OperatingSegmentsMember;StatementBusinessSegmentsAxis=InternationalSegmentMember | 2024-01-01~2024-12-31 | 4102000000
+   Revenues | ProductOrServiceAxis=CompanionAnimalMember | 2024-01-01~2024-12-31 | 6278000000
+   Revenues | ProductOrServiceAxis=LivestockMember | 2024-01-01~2024-12-31 | 2898000000
+   Revenues | ProductOrServiceAxis=ContractManufacturingandHumanHealthDiagnosticsMember | 2024-01-01~2024-12-31 | 80000000
+   Revenues | ProductOrServiceAxis=HorsesMember | 2024-01-01~2024-12-31 | 5993000000
+   Revenues | ProductOrServiceAxis=DogsAndCatsMember | 2024-01-01~2024-12-31 | 285000000
+   Revenues | ProductOrServiceAxis=CompanionAnimalMember | 2024-01-01~2024-12-31 | 6278000000
+   Revenues | ProductOrServiceAxis=CattleMember | 2024-01-01~2024-12-31 | 1531000000
+   Revenues | ProductOrServiceAxis=PoultryMember | 2024-01-01~2024-12-31 | 527000000
+   Revenues | ProductOrServiceAxis=SwineMember | 2024-01-01~2024-12-31 | 516000000
+   Revenues | ProductOrServiceAxis=FishMember | 2024-01-01~2024-12-31 | 242000000
+   Revenues | ProductOrServiceAxis=ManufacturedProductOtherMember | 2024-01-01~2024-12-31 | 82000000
+   Revenues | ProductOrServiceAxis=LivestockMember | 2024-01-01~2024-12-31 | 2898000000
+   Revenues | ProductOrServiceAxis=ContractManufacturingandHumanHealthDiagnosticsMember | 2024-01-01~2024-12-31 | 80000000
+   Revenues | ProductOrServiceAxis=ParasiticidesMember | 2024-01-01~2024-12-31 | 2153000000
+   Revenues | ProductOrServiceAxis=VaccinesMember | 2024-01-01~2024-12-31 | 1827000000
+   Revenues | ProductOrServiceAxis=DermatologyMember | 2024-01-01~2024-12-31 | 1655000000
+   Revenues | ProductOrServiceAxis=AntiInfectiveProductsMember | 2024-01-01~2024-12-31 | 1100000000
+   Revenues | ProductOrServiceAxis=PainSedationMember | 2024-01-01~2024-12-31 | 851000000
+   RevenuePerformanceObligationDescriptionOfCustomerPaymentTerms | RangeAxis=MinimumMember | 2024-01-01~2024-12-31 | P30D
+   RevenuePerformanceObligationDescriptionOfCustomerPaymentTerms | RangeAxis=MaximumMember | 2024-01-01~2024-12-31 | P90D
