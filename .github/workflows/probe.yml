@@ -19,7 +19,7 @@ jobs:
           python-version: '3.12'
       - name: 🔎 사업부 빈칸 — 서류 속 매출 문맥(11/05)
         continue-on-error: true
-        run: python tools/ai/probe_seg.py CAT:2021-06-30 CAT:2022-06-30 COST:2023-09-03 MRNA:2020-06-30 AON:2020-09-30 ATRC:2026-09-30 > /tmp/probe.txt 2>&1
+        run: python tools/ai/probe_seg.py --all CGNX:2024-12-31 CGNX:2024-09-29 ROKU:2024-12-31 MAR:2023-12-31 COST:2024-09-01 > /tmp/probe.txt 2>&1
       - name: 결과를 probe-out 가지에
         if: always()
         run: |

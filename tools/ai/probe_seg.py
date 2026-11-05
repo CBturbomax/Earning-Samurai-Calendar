@@ -13,6 +13,7 @@ import scrape_seg_hist_us as hu
 import scrape_seg_sec as ss
 
 REV = re.compile(r"Revenue|Sales", re.I)
+ALL = False
 
 
 def local(t):
@@ -56,7 +57,7 @@ def dump(t, end):
             if not dims or not e or abs((date.fromisoformat(e) - d0).days) > 10:
                 continue
             days = (date.fromisoformat(e) - date.fromisoformat(s)).days if s else 0
-            if days > 100:
+            if days > 100 and not ALL:
                 continue
             print(f"   {tag} | {';'.join(dims)} | {s}~{e} | {v}")
             shown += 1
@@ -65,6 +66,9 @@ def dump(t, end):
 
 
 for a in sys.argv[1:]:
+    if a == "--all":
+        ALL = True
+        continue
     t, _, e = a.partition(":")
     try:
         dump(t, e)
