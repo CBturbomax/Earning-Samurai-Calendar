@@ -955,7 +955,7 @@ def _last_at(pts, val, i):
     return -1
 
 
-def current_basis(rec, lenient=True):
+def current_basis(rec, lenient=True, selective=False):
     """지금 쓰는 부문 기준만 남긴다. 남길 게 없으면 None."""
     names, pts = rec.get("names") or [], rec.get("pts") or []
     if len(names) < 2 or not pts:
@@ -1109,7 +1109,19 @@ def current_basis(rec, lenient=True):
     # 가르므로(회원님 10/30 "둘 다 보여줘, 옛 기준은 최대한"), 여기서는 새 기준 분기에서 옛 이름만 비우고 앞은 그대로 넘긴다.
     if os.environ.get("SEG_CUT_OLD") != "1":
         live_s = set(live)
-        rows = [[r[0]] + [(val(r, i) if (j < start or i in live_s) else None) for i in keep] for j, r in enumerate(pts)]
+        born_s = set(born)
+        # 새 기준 분기에서 옛 이름을 비우는 것은 **그 칸에 같은 매출이 두 기준으로 함께 실렸을 때만**(옛 이름들의 합과 새 이름들의
+        # 합이 ±20% 안)이다(11/05 퀀타: 'Underground and Infrastructure' 가 2020 년에 이름만 바뀌어 '새 이름'으로 잡히자
+        # 2020~2023 칸의 전력 부문 값이 통째로 지워져 그 열두 분기가 반쪽이 됐고, 그래서 화면에서 빠졌다).
+        def _blank(j, r):
+            if j < start:
+                return False
+            if not selective:
+                return True
+            d_ = sum(val(r, i) or 0 for i in dead)
+            b_ = sum(val(r, i) or 0 for i in born_s) or sum(val(r, i) or 0 for i in live)
+            return not d_ or not b_ or 0.8 <= d_ / b_ <= 1.25
+        rows = [[r[0]] + [(val(r, i) if (i in live_s or not _blank(j, r)) else None) for i in keep] for j, r in enumerate(pts)]
         rows = [r for r in rows if any(v is not None for v in r[1:])]
         if len(rows) < 2:
             return None
@@ -1728,6 +1740,7 @@ def load_seg():
     if one:
         print(f"  사업부가 한 줄뿐(=총매출)이라 그림을 안 내는 종목 {len(one):,}")
     print(f"  개편으로 새로 생긴 부문을 새 칸으로 이은 종목: {SPLICE_NEW[0]:,}")
+    print(f"  새 기준 칸에서 옛 이름을 두 번 실렸을 때만 비운 판을 고른 종목: {SEG_SELECT[0]:,}")
     return out
 
 
@@ -1771,11 +1784,36 @@ def _pick_basis(key, rec):
     a = current_basis(rec, True)
     b = current_basis(json.loads(json.dumps(rec)), False)
     if a is None or b is None:
-        return a if b is None else b
-    fa, fb = _basis_fit(key, a), _basis_fit(key, b)
-    if fa is None or fb is None:
-        return b
-    return a if fa < fb - 0.01 else b
+        best = a if b is None else b
+    else:
+        fa, fb = _basis_fit(key, a), _basis_fit(key, b)
+        best = b if (fa is None or fb is None) else (a if fa < fb - 0.01 else b)
+    # **새 기준 칸에서 옛 이름을 비우는 것은 같은 매출이 두 번 실렸을 때만**(selective) 판도 만들어, 총매출과 ±12% 안으로 맞는
+    # 분기가 더 많을 때만 그 판을 쓴다(11/05 퀀타 2020~2023 전력 부문 · 반대로 포드·HPE 는 예전 판이 맞다).
+    c = current_basis(json.loads(json.dumps(rec)), True, True)
+    if best is not None and c is not None and _good_rows(key, c) > _good_rows(key, best):
+        SEG_SELECT[0] += 1
+        return c
+    return best
+
+
+SEG_SELECT = [0]
+
+
+def _good_rows(key, rec):
+    """부문 합이 그 분기 총매출의 0.88~1.12 배인 분기 수."""
+    pts = [p for p in (FIN.get(key) or {}).get("points") or [] if p.get("end") and p.get("rev")]
+    ends = [(date.fromisoformat(p["end"]), p["rev"]) for p in pts]
+    n = 0
+    for r in rec.get("pts") or []:
+        if not re.match(r"\d{4}-\d\d-\d\d$", str(r[0])):
+            continue
+        d = date.fromisoformat(r[0])
+        rv = next((v for e, v in ends if abs((e - d).days) <= 20), None)
+        sm = sum(v for v in r[1:] if v and v > 0)
+        if rv and rv > 0 and 0.88 <= sm / rv <= 1.12:
+            n += 1
+    return n
 
 
 def _one_line(rec):
@@ -3023,6 +3061,38 @@ def seg_partition(names, pts, aligned):
 
 
 SEG_ROWDUP = [0]
+SEG_COLDUP = [0]
+
+
+def seg_col_dedupe(names, pts):
+    """**나란히 실리는 거의 같은 두 줄은 한 줄로**(11/05 레즈메드 'Software As Service' 와 '…Before Deferred Revenue
+    Adjustment' 는 분기마다 1~2% 차이로 함께 실린다). 함께 실린 분기가 셋 이상이고 그 모든 분기에서 2% 안이면 값이 적은
+    쪽 줄을 지우고, 그 줄에만 있던 분기는 남는 줄의 빈칸에 옮긴다."""
+    n = len(names)
+    col = lambda j: [r[j + 1] if j + 1 < len(r) else None for r in pts]   # noqa: E731
+    gone = set()
+    for a in range(n):
+        for b in range(a + 1, n):
+            if a in gone or b in gone:
+                continue
+            ca, cb = col(a), col(b)
+            both = [(x, y) for x, y in zip(ca, cb) if x and y and x > 0 and y > 0]
+            if len(both) < 3 or any(abs(x - y) > 0.02 * max(x, y) for x, y in both):
+                continue
+            na, nb = sum(1 for x in ca if x), sum(1 for y in cb if y)
+            keep, drop = (a, b) if na >= nb else (b, a)
+            for r in pts:
+                while len(r) < n + 1:
+                    r.append(None)
+                if r[keep + 1] is None and r[drop + 1] is not None:
+                    r[keep + 1] = r[drop + 1]
+                r[drop + 1] = None
+            gone.add(drop)
+    if not gone:
+        return names, pts
+    SEG_COLDUP[0] += 1
+    ks = [j for j in range(n) if j not in gone]
+    return [names[j] for j in ks], [[r[0]] + [r[j + 1] if j + 1 < len(r) else None for j in ks] for r in pts]
 
 
 def seg_row_dedupe(pts, aligned):
@@ -3045,7 +3115,7 @@ def seg_row_dedupe(pts, aligned):
     for r, (_l, rev) in zip(pts, aligned):
         vals = {j: v for j, v in enumerate(r[1:]) if v and v > 0}
         s = sum(vals.values())
-        if not rev or rev <= 0 or len(vals) < 3 or s / rev <= max(1.15, med * 1.15):
+        if not rev or rev <= 0 or len(vals) < 3 or s / rev <= max(1.04, med * 1.04):
             out.append(r)
             continue
         drop = set()
@@ -3069,7 +3139,7 @@ def seg_row_dedupe(pts, aligned):
             if hit:
                 drop.add(j)
         s2 = sum(v for j, v in vals.items() if j not in drop)
-        if drop and abs(s2 / rev - med) <= 0.05:              # 걷어낸 뒤 그 회사 평소 비율로 정확히 돌아올 때만
+        if drop and abs(s2 / rev - med) <= 0.05 and abs(s2 / rev - med) < abs(s / rev - med):   # 걷어낸 뒤 평소 비율로 돌아올 때만
             r = [r[0]] + [None if (j in drop) else v for j, v in enumerate(r[1:])]
             SEG_ROWDUP[0] += 1
         out.append(r)
@@ -3151,6 +3221,7 @@ def seg_fit(rec, fin_rec):
         aligned = [(lab, None) for lab, _rev in aligned]
         SEG_BADREV[0] += 1
     names, pts = seg_partition(names, pts, aligned)
+    names, pts = seg_col_dedupe(names, pts)
     pts = seg_row_dedupe(pts, aligned)
     pts = seg_residual(pts, aligned)
     pts, aligned = seg_unannual(pts, aligned)
@@ -4648,6 +4719,7 @@ def build():
     print(f"  부문 한 칸만 몇 배로 튄 것(연간·누계가 분기 칸에): 고침 {SEG_FIXED['fixed']:,} · 뺌 {SEG_FIXED['dropped']:,}")
     print(f"  한 부문만 빈 칸을 '총매출 − 나머지 부문'으로 채움: {SEG_RESID[0]:,}칸")
     print(f"  한 축에 나눔이 둘 겹친 회사에서 총매출과 맞는 나눔만 남김: {SEG_PART[0]:,}곳")
+    print(f"  거의 같은 값으로 나란히 실리는 두 줄을 한 줄로: {SEG_COLDUP[0]:,}곳")
     print(f"  한 분기에 같은 부문이 두 번(이름 두 개)·소계가 섞인 칸을 걷어냄: {SEG_ROWDUP[0]:,}칸")
     print(f"  총매출이 틀려(부문 합의 2.5배 넘게 작고 널뜀) 총매출 대조를 건너뛴 회사: {SEG_BADREV[0]:,}곳")
     geo_out, ord_out = {}, {}
