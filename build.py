@@ -1839,7 +1839,9 @@ def splice(base, fresh):
                         ok += 1
                     elif abs(a / b - 1) > 0.02:
                         bad += 1
-                if ok >= 2 and not bad:
+                # 한 분기가 틀린 소스(인텔 4Q23 벌크는 연간값이 섞였다)에 짝짓기가 통째로 막히지 않게, 맞는 분기가 넷 넘고
+                # 틀린 분기가 맞는 것의 5분의 1 이하면 짝으로 본다(11/05 — 인텔 2022 네 분기가 이것 때문에 안 붙었다).
+                if (ok >= 2 and not bad) or (ok >= 4 and bad * 5 <= ok):
                     cands.append(j)
             if len(cands) == 1:
                 hit[i] = cands[0]

@@ -626,7 +626,9 @@ def one(B, key, miss, db, bud, t0, verbose):
             log.append(f"{label} 답 깨짐")
             continue
         n = accept(B, key, items, rec, jspans)
-        if not n and items:
+        if not items:                                   # 원문을 읽었는데 사업부·지역 표가 아예 없다 — 화면에 「공시 없음」으로 적을 근거
+            new_rej.setdefault("_none", []).append(label)
+        elif not n:
             new_rej[did] = {"items": items, "js": {f"{a}/{b}": v for (a, b), v in (jspans or {}).items()}}
         got += n
         dry_n = 0 if n else dry_n + 1
@@ -736,6 +738,10 @@ def main():
                     db["stocks"][key] = rec
                 db["asked"].setdefault(key, []).extend(new_asked[0])
                 db["empty"].setdefault(key, []).extend(new_asked[1])
+                nn = new_asked[2].pop("_none", None)
+                if nn:
+                    have = db.setdefault("none", {}).setdefault(key, [])
+                    have.extend(x for x in nn if x not in have)
                 if new_asked[2]:
                     db.setdefault("rej", {}).setdefault(key, {}).update(new_asked[2])
                 if tr:
