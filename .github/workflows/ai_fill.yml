@@ -22,7 +22,7 @@ on:
       max:
         description: '갈래당 최대 호출 수(시험은 작게)'
         required: false
-        default: '400'      # 11/04 밤: 이어달리기가 이 기본값(40)으로 걸려 실행마다 3분 만에 끝났다
+        default: '900'      # 11/05: 토큰 300만이면 공시 600건 넘게 읽는다 · 11/04 밤: 이어달리기가 이 기본값(40)으로 걸려 실행마다 3분 만에 끝났다
       recent:
         description: '최근 며칠 안의 빈칸만(0 = 1Q18 부터 전부)'
         required: false
@@ -50,8 +50,8 @@ jobs:
           # tok = 이번 실행 토큰 상한. claude2(회원님이 지금 채팅하는 계정)는 작게 — 채팅까지 막히면 안 된다
           - {shard: 0, want: claude1, tok: '150000'}
           - {shard: 1, want: claude2, tok: '60000'}
-          - {shard: 2, want: codex, tok: '1600000', w: '4'}   # 11/04 밤: 30만이 먼저 막아 한 실행에 공시 33건뿐이었다
-          - {shard: 3, want: codex, tok: '1600000', w: '4'}   # 11/05: 80만이 먼저 막았다(공시 179건에서 멈춤) — 두 배로
+          - {shard: 2, want: codex, tok: '3000000', w: '6'}   # 11/04 밤: 30만이 먼저 막아 한 실행에 공시 33건뿐이었다
+          - {shard: 3, want: codex, tok: '3000000', w: '6'}   # 11/05: 80만이 먼저 막았다(공시 179건에서 멈춤) — 두 배로
     env:
       TOK1: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
       TOK2: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN_2 }}
@@ -59,7 +59,7 @@ jobs:
       AIFILL_RETRY: '1'
       AIFILL_TOKENS: ${{ matrix.tok }}
       AI_MODEL: haiku          # 가장 가벼운 모델 — 합계 검산이 틀린 답을 거른다
-      AIFILL_MAX: "${{ github.event.inputs.max || '120' }}"        # 갈래당 한 번에 120건까지(토큰 상한 tok 이 먼저 막는다)
+      AIFILL_MAX: "${{ github.event.inputs.max || '900' }}"        # 갈래당 한 번에 120건까지(토큰 상한 tok 이 먼저 막는다)
       AIFILL_DOC: '20000'
       AIFILL_RECENT: "${{ github.event.inputs.recent || '730' }}"
       CODEX_EFFORT: low
