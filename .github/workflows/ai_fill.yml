@@ -48,8 +48,9 @@ jobs:
       matrix:
         include:
           # tok = 이번 실행 토큰 상한. claude2(회원님이 지금 채팅하는 계정)는 작게 — 채팅까지 막히면 안 된다
-          - {shard: 0, want: claude1, tok: '150000'}
-          - {shard: 1, want: claude2, tok: '60000'}
+          # 11/05 밤: 0·1 갈래(회사 절반)가 Claude 토큰 6만~15만이라 1분 만에 끝나 사실상 안 돌았다 — Codex 로 같은 크기
+          - {shard: 0, want: codex, tok: '3000000', w: '6'}
+          - {shard: 1, want: codex, tok: '3000000', w: '6'}
           - {shard: 2, want: codex, tok: '3000000', w: '6'}   # 11/04 밤: 30만이 먼저 막아 한 실행에 공시 33건뿐이었다
           - {shard: 3, want: codex, tok: '3000000', w: '6'}   # 11/05: 80만이 먼저 막았다(공시 179건에서 멈춤) — 두 배로
     env:
