@@ -60,7 +60,7 @@ jobs:
   segments:
     runs-on: ubuntu-latest
     if: github.ref_name == 'main'
-    timeout-minutes: 112
+    timeout-minutes: 150
     steps:
       - name: 시작 시각
         run: echo "T0=$(date +%s)" >> "$GITHUB_ENV"
@@ -81,8 +81,8 @@ jobs:
           python-version: '3.12'
 
       - name: 🧩 SEC 벌크에서 부문별 매출
-        # 1Q18 부터라 묶음이 서른아홉 개다(열두 개일 때 15분이었다) — 넉넉히
-        timeout-minutes: 35
+        # 1Q18 부터라 묶음이 서른아홉 개다(열두 개일 때 15분이었다) — 넉넉히. 판(SEG_SEC_VER)을 올리면 통째로 다시 훑는다
+        timeout-minutes: 75
         env:
           SEC_UA: 'Earning Samurai Calendar (cbpark@wisdomasset.co.kr)'
         run: |

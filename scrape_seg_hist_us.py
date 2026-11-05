@@ -146,8 +146,8 @@ def main():
         db = {}
     st = db.setdefault("stocks", {})
     done_co = db.setdefault("done_co", {})
-    if db.get("gv") != 2:                                    # 1: 반쪽 칸을 채워진 칸으로 셌다 — 끝낸 회사를 다시 본다
-        done_co.clear(); db["gv"] = 2
+    if db.get("gv") != 3:                                    # 1: 반쪽 칸을 채워진 칸으로 셌다 · 2: ReportableSubsegments 행을 버렸다(CAT) — 다시 본다
+        done_co.clear(); db["gv"] = 3
     caps = ss.want_tickers()
     cikmap = ss.cik_map()
     gp = gaps_by_ticker()
