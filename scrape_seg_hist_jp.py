@@ -14,6 +14,7 @@ import json
 import os
 import sys
 import time
+import re
 import zlib
 from datetime import date, timedelta
 from pathlib import Path
@@ -44,16 +45,49 @@ def gaps():
                     if p.get("end", "") >= "2018-01-01" and p.get("rev"):
                         fin.setdefault(k[3:], set()).add(p["end"])
     have = {}
-    for k, v in stocks("segments_jp.json").items():
-        for p in v.get("pts") or []:
-            if any(x for x in p[1:]):
-                have.setdefault(k[3:], []).append(date.fromisoformat(p[0]))
+    # **이미 채운 분기는 다시 안 본다**(11/05 회원님: "다 완성한 기업은 과거 데이터는 건들 필요 없다"). TDnet 것만 보던 시절에는
+    # 우리가 옛 이력으로 이미 채운 회사도 '빈칸'으로 쳐서 공시 40장을 처음부터 다시 받았다(소니 40장 -> 새로 얻은 것 0).
+    srcs = [stocks("segments_jp.json")] + [stocks(p.name) for p in sorted((HERE / "data").glob("segments_hist_jp_s*.json"))]
+    for src in srcs:
+        for k, v in src.items():
+            for p in v.get("pts") or []:
+                if any(x for x in p[1:]) and re.match(r"\d{4}-\d\d-\d\d$", str(p[0])):
+                    have.setdefault(k[3:] if ":" in k else k, []).append(date.fromisoformat(p[0]))
+    # 빌드가 남긴 회사별 빈 분기(data/seg_holes.json — 모든 소스를 합친 뒤 남은 것)가 있으면 그것과 겹치는 분기만 본다.
+    # EDINET 이력·AI 메우기로 이미 찬 분기까지 여기서 다시 받지 않게(11/05).
+    holes = None
+    try:
+        hj = json.loads((HERE / "data" / "seg_holes.json").read_text(encoding="utf-8"))
+        if (date.today() - date.fromisoformat(hj["ts"][:10])).days <= 3:
+            holes = hj.get("holes") or {}
+    except (OSError, ValueError, KeyError):
+        pass
     out = {}
     for c, ends in fin.items():
         hd = have.get(c, [])
-        miss = sum(1 for e in ends if not any(abs((date.fromisoformat(e) - d).days) <= 20 for d in hd))
+        miss = sorted(e for e in ends if not any(abs((date.fromisoformat(e) - d).days) <= 20 for d in hd))
+        if holes is not None:
+            hs = [date.fromisoformat(e) for e in holes.get("jp:" + c, [])]
+            miss = [e for e in miss if any(abs((date.fromisoformat(e) - h).days) <= 20 for h in hs)]
         if miss:
             out[c] = miss
+    return out
+
+
+def wanted(items, miss):
+    """빈 분기를 채울 공시만 — 그 분기의 결산단신, 앞 분기 누계(빼서 분기를 만든다), 한 해 뒤 공시(전년 칸에 그 분기가 실린다)."""
+    md = [date.fromisoformat(e) for e in miss]
+    out = []
+    for it in items:
+        try:
+            p = date.fromisoformat((it.get("pubdate") or "")[:10])
+        except ValueError:
+            continue
+        for e in md:
+            d = (p - e).days
+            if 15 <= d <= 100 or 15 <= d - 91 <= 100 or 380 <= d <= 470:
+                out.append(it)
+                break
     return out
 
 
@@ -191,6 +225,9 @@ def main():
             continue
         raw = rawdb.setdefault(c, {})
         complete = True
+        if not only:
+            n_all = len(items)
+            items = wanted(items, gp.get(c) or [])
         for it in items:
             if not only and time.time() - t0 > SECS - 60:
                 complete = False

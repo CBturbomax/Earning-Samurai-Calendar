@@ -2663,13 +2663,36 @@ def dedupe_moved(rows):
     return [r for r in rows if id(r) not in drop]
 
 
+def write_seg_holes():
+    """**다 채운 회사·분기는 다시 안 본다**(회원님 11/05: "이미 완성한 기업은 과거 데이터는 건들 필요 없으니 더 가벼워지는 거 아님?").
+    1Q18 이후 총매출이 있는데 사업부가 빈 분기 종료일을 data/seg_holes.json 에 적는다. 옛 이력 수집기(일본·미국)가 이 목록에 있는
+    회사의, 그 분기를 담은 공시만 받는다. 빈칸이 없는 회사는 아예 안 건드린다."""
+    def cov(rec, e):
+        ed = date.fromisoformat(e)
+        for r in (rec or {}).get("pts") or []:
+            if re.match(r"\d{4}-\d\d-\d\d$", str(r[0])) and abs((date.fromisoformat(r[0]) - ed).days) <= 20 and any(v for v in r[1:]):
+                return True
+        return False
+    out = {}
+    for key, f in FIN.items():
+        if f.get("freq") not in ("Q", "H"):
+            continue
+        miss = [p["end"] for p in f.get("points") or []
+                if p.get("end") and p["end"] >= "2018-01-01" and p.get("rev") and not cov(SEG.get(key), p["end"])]
+        if miss:
+            out[key] = sorted(set(miss))
+    (HERE / "data" / "seg_holes.json").write_text(json.dumps({"ts": datetime.now(timezone.utc).isoformat()[:16], "holes": out},
+                                                             ensure_ascii=False, separators=(",", ":")), encoding="utf-8")
+    print(f"  빈 분기 목록: {len(out):,}곳 · {sum(map(len, out.values())):,}분기")
+
+
 def seg_none(on_screen, seg):
     """**없는 숫자는 없다고 쓴다**(회원님 11/05: "전혀 없는 숫자는 없다고 쓰고"). 근거가 있는 것만 —
     일본 결산단신의 「単一セグメント…記載を省略」(scrape_seg_hist_jp 의 single) · AI 가 원문을 읽었는데 사업부·지역 표가
     아예 없던 공시(ai_fill 의 none). 키 -> {"s": 1(단일 사업부)} 또는 {"d": [원문을 본 공시 이름…]}."""
     out = {}
-    for i in range(4):
-        for name in (f"segments_hist_jp_s{i}.json",):
+    for name in sorted(p.name for p in (HERE / "data").glob("segments_hist_jp_s*.json")):
+        if True:
             try:
                 j = json.loads((HERE / "data" / name).read_text(encoding="utf-8"))
             except (OSError, ValueError):
@@ -4745,6 +4768,10 @@ def build():
         "monNone": mon_none(monthly_nums),
     }
 
+    try:                                          # 수집기들이 '이미 채운 분기'를 다시 안 보게 — 회사별 빈 분기 종료일(11/05)
+        write_seg_holes()
+    except Exception as e:                        # noqa: BLE001
+        print(f"  ! 빈 분기 목록 실패: {e!r}")
     try:
         audit_gaps(packed, payload["fin"], payload["seg"])
     except Exception as e:                        # noqa: BLE001 — 점검이 실패해도 페이지는 만든다
