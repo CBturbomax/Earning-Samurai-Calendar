@@ -1,5 +1,5 @@
-# 일본 사업부 옛 분기 이력(네 갈래 · 빈 분기의 공시만) — 사업부 빈칸 있는 회사의 JPX 보관소 결산단신(2016~)을 **한 번만** 전부 읽는다(scrape_seg_hist_jp.py).
-# AI 없음 · 돈 안 듦. 네 갈래가 각자 제 파일(data/segments_hist_jp_s{0..3}.json)의 주인. 다 읽은 회사는 다시 안 본다.
+# 일본 사업부 옛 분기 이력(여섯 갈래 · 빈 분기의 공시만) — 사업부 빈칸 있는 회사의 JPX 보관소 결산단신(2016~)을 **한 번만** 전부 읽는다(scrape_seg_hist_jp.py).
+# AI 없음 · 돈 안 듦. 여섯 갈래가 각자 제 파일(data/segments_hist_jp_s{0..5}.json)의 주인. 다 읽은 회사는 다시 안 본다.
 # 남은 회사가 있으면 끝날 때 다음 실행을 건다(이어달리기). 다 읽으면 "남은 회사 0" 으로 저절로 멈춘다.
 name: 일본 사업부 옛 이력 (JPX 보관소 한 번에)
 
@@ -27,9 +27,9 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        shard: [0, 1, 2, 3]
+        shard: [0, 1, 2, 3, 4, 5]
     env:
-      HIST_SHARD: '${{ matrix.shard }}/4'
+      HIST_SHARD: '${{ matrix.shard }}/6'
       HIST_SECS: '1500'
     outputs:
       left: ${{ steps.run.outputs.left }}
