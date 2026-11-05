@@ -454,8 +454,12 @@ def _num(x):
     return -v if neg else v
 
 
+WHY = threading.local()          # 마지막 accept 가 기간을 버린 까닭(로그용, 11/05 — 'ATRC 항목 52 · 맞은 기간 0' 이 왜인지 몰랐다)
+
+
 def accept(B, key, items, rec, jspans):
     """검산 통과분만 rec 에 담는다. 반환: 담은 기간 수."""
+    why = WHY.c = {}
     starts = sorted({k.split("/")[0] for kind in ("seg", "geo") for k in rec.get(kind, {})})
     groups = {}
     n_ord = 0
@@ -482,6 +486,7 @@ def accept(B, key, items, rec, jspans):
         st, en = span_of(en, m, starts)
         rev = fin_rev(B, key, st, en, jspans)
         if not rev:
+            why["매출없음"] = why.get("매출없음", 0) + 1
             continue
         parts = {}
         elim = tot = 0.0
@@ -493,11 +498,14 @@ def accept(B, key, items, rec, jspans):
             elif v > 0:
                 parts.setdefault(nm, v)
         if len(parts) < 2:
+            why["부문<2"] = why.get("부문<2", 0) + 1
             continue
         s = sum(parts.values())
         ok = abs(s / rev - 1) <= 0.02 or (elim and abs((s + elim) / rev - 1) <= 0.02) \
             or (tot and abs(s / tot - 1) <= 0.01 and abs(tot / rev - 1) <= 0.02)
         if not ok:
+            r = round(s / rev, 2)
+            why[f"합/매출{r}"] = why.get(f"합/매출{r}", 0) + 1
             continue
         rec.setdefault(k, {})[f"{st}/{en}"] = {nm: round(v) for nm, v in parts.items()}
         starts.append(st)
@@ -599,7 +607,9 @@ def one(B, key, miss, db, bud, t0, verbose):
             break
         if verbose:
             print(key, label, json.dumps(items, ensure_ascii=False)[:800])
-        log.append(f"{label} 항목 {len(items)} · 맞은 기간 {n}")
+        wy = getattr(WHY, "c", {}) or {}
+        log.append(f"{label} 항목 {len(items)} · 맞은 기간 {n}" + (" · 버림 " + ",".join(f"{a}×{b}" for a, b in
+                   sorted(wy.items(), key=lambda x: -x[1])[:4]) if wy and not n else ""))
     return key, tried, got, log, rec, (new_asked, new_empty), dry_n
 
 
