@@ -1727,6 +1727,7 @@ def load_seg():
         del out[k]
     if one:
         print(f"  사업부가 한 줄뿐(=총매출)이라 그림을 안 내는 종목 {len(one):,}")
+    print(f"  개편으로 새로 생긴 부문을 새 칸으로 이은 종목: {SPLICE_NEW[0]:,}")
     return out
 
 
@@ -1791,6 +1792,9 @@ def seg_key(name: str) -> str:
     """부문 이름을 맞춰 보는 열쇠. 대소문자·띄어쓰기·'and' 를 지운다.
     수집기 쪽 `norm_name` 과 같은 규칙이다 — 한쪽만 고치면 안 붙는다."""
     return SEG_NORM.sub("", name.lower())
+
+
+SPLICE_NEW = [0]
 
 
 def splice(base, fresh):
@@ -1872,6 +1876,20 @@ def splice(base, fresh):
     have = [date.fromisoformat(p[0]) for p in base["pts"] if re.match(r"\d{4}-\d\d-\d\d$", str(p[0]))]
     add = []
     patched = 0
+    base_last = max(have) if have else date(1900, 1, 1)
+    mapped = {h for h in hit if h is not None}
+    newcols, used_new = [], [False]
+    fresh_last = max((date.fromisoformat(r[0]) for r in fresh["pts"] if re.match(r"\d{4}-\d\d-\d\d$", str(r[0]))),
+                     default=date(1900, 1, 1))
+    # 헌 기록이 거의 최근까지 오면(두 분기 안) 개편이 아니라 같은 부문의 다른 표기다(마이크론 CMBU = Cloud Memory) — 새 칸을 안 만든다
+    if have and (fresh_last - base_last).days >= 150:
+        for j, nm in enumerate(fresh["names"]):
+            if j in mapped:
+                continue
+            ds = [date.fromisoformat(r[0]) for r in fresh["pts"] if re.match(r"\d{4}-\d\d-\d\d$", str(r[0]))
+                  and j + 1 < len(r) and r[j + 1]]
+            if ds and min(ds) >= base_last - timedelta(days=400) and max(ds) > base_last + timedelta(days=10):
+                newcols.append(j)
     for p in sorted(fresh["pts"]):
         try:
             d = date.fromisoformat(p[0])
@@ -1901,6 +1919,19 @@ def splice(base, fresh):
             continue
         # 열은 늘 **헌 기록의 이름 차례**를 따른다. 새 기록에 없는 부문은 빈칸이다.
         row_new = [p[0]] + [(p[i + 1] if i is not None and i + 1 < len(p) else None) for i in hit]
+        # **개편으로 새로 생긴 부문은 칸을 새로 만들어 잇는다**(11/05 커티스라이트: 2020 까지 벌크의 옛 세 부문, 2021 부터
+        # 이력의 새 세 부문 — 새 이름이 헌 칸에 안 맞는다고 다섯 해가 통째로 버려졌다. 이번 주 미국 빈칸의 큰 몫).
+        # 헌 기록이 끝난 뒤의 칸이고, 그 이름이 새 기록에서도 헌 기록 끝 무렵(1년 안) 이후에 처음 나올 때만 — 처음부터
+        # 이름만 다른 소스(stockanalysis 의 구글)를 새 기준으로 잘못 보고 옛 이력을 자르지 않게.
+        if newcols and d > base_last + timedelta(days=10):
+            ext = [p[j + 1] if j + 1 < len(p) else None for j in newcols]
+            if any(ext):
+                row_new = row_new + [None] * (len(base["names"]) + 1 - len(row_new)) + ext
+                fs = sum(v for v in p[1:] if v and v > 0)
+                if fs and sum(v for v in row_new[1:] if v and v > 0) >= 0.9 * fs:
+                    add.append(row_new)
+                    used_new[0] = True
+                    continue
         # **반쪽 행은 붙이지 않는다**(11/04 GOOG: stockanalysis 는 부문 이름이 달라 클라우드 한 줄만 맞았고, 그 한 줄짜리
         # 칸이 최근 분기로 붙었다). 지금 쓰는 부문의 절반 이상이 차야 붙인다.
         if sum(1 for i in liveb if row_new[i + 1] is not None) * 2 < len(liveb):
@@ -1908,6 +1939,17 @@ def splice(base, fresh):
         add.append(row_new)
     if not add:
         return patched
+    if used_new[0]:
+        n0 = len(base["names"])
+        base["names"] = list(base["names"]) + [fresh["names"][j] for j in newcols]
+        for r in base["pts"]:
+            while len(r) < len(base["names"]) + 1:
+                r.append(None)
+        for r in add:
+            if len(r) < len(base["names"]) + 1:            # 옛 칸만 있는 줄 — 새 칸을 빈칸으로
+                r.extend([None] * (len(base["names"]) + 1 - len(r)))
+        SPLICE_NEW[0] += 1
+        del n0
     base["pts"] = sorted(base["pts"] + add, key=lambda r: str(r[0]))
     return len(add) + patched
 
@@ -2943,6 +2985,7 @@ def seg_unannual(pts, aligned):
 
 
 SEG_PART = [0]
+SEG_BADREV = [0]
 
 
 def seg_partition(names, pts, aligned):
@@ -3045,6 +3088,14 @@ def seg_fit(rec, fin_rec):
         return None
 
     aligned = seg_align(pts, fin_rec)
+    # **총매출이 틀린 회사는 총매출로 사업부를 거르지 않는다**(11/05 휴매나: 우리 총매출이 분기 10~40억 달러로 널뛰는데
+    # 사업부는 300억대로 고르다 — 보험료가 빠진 '고객 계약 매출'만 잡혔다). 부문 합 ÷ 총매출이 2.5 배를 넘고 분기마다
+    # 1.8 배 넘게 흔들리면 대볼 잣대가 망가진 것이라, 그 잣대로 칸을 지우던 뒤 단계(한 칸 튐·국소 비율)에 총매출을 안 넘긴다.
+    _rs = sorted(sum(v for v in r[1:] if v and v > 0) / rev for r, (_l, rev) in zip(pts, aligned)
+                 if rev and rev > 0 and any(v for v in r[1:]))
+    if len(_rs) >= 6 and _rs[len(_rs) // 2] > 2.5 and _rs[-2] / max(_rs[1], 1e-9) > 1.8:
+        aligned = [(lab, None) for lab, _rev in aligned]
+        SEG_BADREV[0] += 1
     names, pts = seg_partition(names, pts, aligned)
     pts = seg_residual(pts, aligned)
     pts, aligned = seg_unannual(pts, aligned)
@@ -4542,6 +4593,7 @@ def build():
     print(f"  부문 한 칸만 몇 배로 튄 것(연간·누계가 분기 칸에): 고침 {SEG_FIXED['fixed']:,} · 뺌 {SEG_FIXED['dropped']:,}")
     print(f"  한 부문만 빈 칸을 '총매출 − 나머지 부문'으로 채움: {SEG_RESID[0]:,}칸")
     print(f"  한 축에 나눔이 둘 겹친 회사에서 총매출과 맞는 나눔만 남김: {SEG_PART[0]:,}곳")
+    print(f"  총매출이 틀려(부문 합의 2.5배 넘게 작고 널뜀) 총매출 대조를 건너뛴 회사: {SEG_BADREV[0]:,}곳")
     geo_out, ord_out = {}, {}
     for s_, rec in GEO.items():
         if s_ in on_screen:
