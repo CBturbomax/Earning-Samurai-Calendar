@@ -2663,6 +2663,33 @@ def dedupe_moved(rows):
     return [r for r in rows if id(r) not in drop]
 
 
+def seg_none(on_screen, seg):
+    """**없는 숫자는 없다고 쓴다**(회원님 11/05: "전혀 없는 숫자는 없다고 쓰고"). 근거가 있는 것만 —
+    일본 결산단신의 「単一セグメント…記載を省略」(scrape_seg_hist_jp 의 single) · AI 가 원문을 읽었는데 사업부·지역 표가
+    아예 없던 공시(ai_fill 의 none). 키 -> {"s": 1(단일 사업부)} 또는 {"d": [원문을 본 공시 이름…]}."""
+    out = {}
+    for i in range(4):
+        for name in (f"segments_hist_jp_s{i}.json",):
+            try:
+                j = json.loads((HERE / "data" / name).read_text(encoding="utf-8"))
+            except (OSError, ValueError):
+                continue
+            for c, ends in (j.get("single") or {}).items():
+                k = "jp:" + c
+                if k in on_screen and ends:
+                    out[k] = {"s": 1, "e": max(ends)}
+    for i in range(4):
+        try:
+            j = json.loads((HERE / "data" / f"ai_fill_s{i}.json").read_text(encoding="utf-8"))
+        except (OSError, ValueError):
+            continue
+        for k, labs in (j.get("none") or {}).items():
+            if k in on_screen and k not in out and labs:
+                out[k] = {"d": sorted(set(labs))[-6:]}
+    # 단일 사업부라 적혀 있는데 사업부 그림이 있으면(옛날엔 나눴던 회사) 그림이 이긴다 — 그때는 적지 않는다
+    return {k: v for k, v in out.items() if not (v.get("s") and k in seg)}
+
+
 def mon_none(nums):
     """회사마다 **월차 공시가 실제로 없던 달**(최근 2년, 값 없는 칸만) — scrape_mon_hist 가 yanoshin 목록 전체에서 읽은 '낸 달'
     (data/monthly_hist_jp.json 의 periods)에 없는 달. 목록을 못 본 회사(IR 전용)는 비워 둔다 — 확인 못 한 것을 없다고 쓰지 않는다."""
@@ -4706,6 +4733,7 @@ def build():
         # 합이 총매출과 안 맞는 종목은 여기서 걸러진다(seg_fit).
         "seg": seg,
         "segNow": seg_now,
+        "segNone": seg_none(on_screen, seg),
         # 지역별 매출 · 수주(수주고·수주잔고·RPO) — 사업부 그림과 같은 꼴로 그린다(회원님 11/02).
         "geo": geo_out,
         "ord": ord_out,
@@ -7406,6 +7434,11 @@ function finBlock(m, code) {
   }
   // 사업부별은 매출·성장률 아래에 붙인다. 큰 그림을 먼저 보고 쪼개 보는 순서다.
   if (sg) html += segChart(sg, f.cur || 'USD');
+  const sn = D.segNone && D.segNone[key];
+  if (!sg && sn && sn.s) html += '<p class="finnote">이 회사는 <b>사업부를 나누지 않습니다</b> — 결산단신에 「単一セグメント」' +
+    '(단일 사업부라 세그먼트 정보 생략)로 적혀 있어 사업부별 매출이 공시되지 않습니다.</p>';
+  else if (!sg && sn && sn.d) html += '<p class="finnote">사업부별 매출 <b>공시 없음</b> — 원문(' + sn.d.map(esc).join(' · ') +
+    ')에 사업부·지역 표가 없었습니다.</p>';
   // 지역별 매출 · 수주 — 사업부 그림과 같은 꼴(숫자 + YoY, 범례로 끄고 켬). 회원님 11/02.
   const gg = D.geo && D.geo[key], og = D.ord && D.ord[key];
   if (gg) html += segChart(gg, f.cur || 'USD');
