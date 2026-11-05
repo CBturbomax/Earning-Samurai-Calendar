@@ -42,7 +42,9 @@ SECS = int(os.environ.get("AISEG_SECS", "1200"))
 PER_CALL = int(os.environ.get("AISEG_TIMEOUT", "240"))
 WORKERS = int(os.environ.get("AISEG_WORKERS", "4"))   # 동시에 묻는 수 — 실적 시즌 한 실행에 40곳으로는 517곳을 못 따라간다
 MAX_CALLS = int(os.environ.get("AISEG_MAX", "160"))       # 한 실행에 묻는 횟수 — 구독 한도를 아낀다
-LIMIT_HINT = re.compile(r"usage limit|rate limit|rate_limit|limit reached|quota|try again later|overloaded|"
+# 403·401 도 멈춤 신호다(11/05 밤: 동시 24건으로 늘렸더니 Codex 가 '403 Forbidden' 으로 전부 거절했는데, 한도로 안 보고
+# 공시마다 다시 두드려 세 실행(1시간 반)을 0건으로 헛돌았다). 멈추면 25분 쉬고 다시 — 한도가 풀리면 저절로 잇는다.
+LIMIT_HINT = re.compile(r"usage limit|rate limit|rate_limit|limit reached|quota|try again later|overloaded|403 Forbidden|401 Unauthorized|"
                         r'"api_error_status":\s*(429|529)', re.I)
 
 
