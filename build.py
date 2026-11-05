@@ -955,7 +955,7 @@ def _last_at(pts, val, i):
     return -1
 
 
-def current_basis(rec):
+def current_basis(rec, lenient=True):
     """지금 쓰는 부문 기준만 남긴다. 남길 게 없으면 None."""
     names, pts = rec.get("names") or [], rec.get("pts") or []
     if len(names) < 2 or not pts:
@@ -1039,7 +1039,24 @@ def current_basis(rec):
         # 코히어런트가 그랬다. 새 부문(Datacenter…)이 재표시된 3Q24 에 이미 값이
         # 있어 개편으로 못 보고 두 기준을 같이 쌓았고, 그 두 칸의 막대가 두 배였다.
         first_dead = min((sp[0] for i in dead if (sp := span(i))), default=0)
-        born = [i for i in live if (sp := span(i)) and sp[0] >= first_dead + 4]
+        last_dead = max((sp[1] for i in dead if (sp := span(i))), default=0)
+        # 옛 기준과 **한 해 넘게 나란히 있던** 이름은 후신이 아니다(11/05 CAT: 건설 부문이 벌크 초기 칸에 빠져 2017 년부터
+        # 나오는 바람에 '새 이름'으로 잡혀, 그 뒤 몇 년을 같이 있던 에너지 부문 값이 옛 기준으로 지워졌다). 재표시 비교치가
+        # 겹치는 건 넉 분기 안이다(코히어런트).
+        born_old = [i for i in live if (sp := span(i)) and sp[0] >= first_dead + 4]
+        born = [i for i in born_old if span(i)[0] >= last_dead - 4] if lenient else born_old
+        if born != born_old:
+            # 겹친 기간에 끊긴 이름들의 합이 남은 이름들의 합과 같으면(±15%) **같은 매출을 두 기준으로 나눈 것**이다(로우스) —
+            # 그때는 예전 규칙대로 자른다. 다르면 서로 다른 부문이 나란히 있던 것이다(CAT).
+            rat = []
+            for r in pts:
+                d_ = sum(val(r, i) or 0 for i in dead)
+                l_ = sum(val(r, i) or 0 for i in live)
+                if d_ and l_ and all(val(r, i) is not None for i in dead if span(i)):
+                    rat.append(d_ / l_)
+            rat.sort()
+            if rat and 0.85 <= rat[len(rat) // 2] <= 1.15:
+                born = born_old
         if not born:
             # 개편이 아니다(수집 구멍이거나 판 사업). 끊긴 부문도 그대로 둔다 —
             # 뒤가 빈 막대는 '그 사업이 거기서 끝났다'는 사실이고, 지우면 그
@@ -1695,7 +1712,7 @@ def load_seg():
     # '최근 두 분기'가 실제 최근이 된다.
     cut = gone = 0
     for k in list(out):
-        got = current_basis(out[k])
+        got = _pick_basis(k, out[k])
         if got is None:
             del out[k]; gone += 1
         elif got is not out[k]:
@@ -1725,6 +1742,39 @@ def _sums_to_rev(key, rec):
     if abs((date.fromisoformat(p["end"]) - d).days) > 20:
         return False
     return 0.97 <= sum(v for v in last[1:] if v) / p["rev"] <= 1.1
+
+
+def _basis_fit(key, rec):
+    """부문 합이 그 분기 총매출에서 얼마나 벗어나나(로그 차이의 중앙값). 대볼 총매출이 없으면 None."""
+    import math
+    pts = [p for p in (FIN.get(key) or {}).get("points") or [] if p.get("end") and p.get("rev")]
+    if not rec or not pts:
+        return None
+    ends = [(date.fromisoformat(p["end"]), p["rev"]) for p in pts]
+    errs = []
+    for r in rec.get("pts") or []:
+        if not re.match(r"\d{4}-\d\d-\d\d$", str(r[0])):
+            continue
+        d = date.fromisoformat(r[0])
+        rv = next((v for e, v in ends if abs((e - d).days) <= 20), None)
+        sm = sum(v for v in r[1:] if v)
+        if rv and rv > 0 and sm > 0:
+            errs.append(abs(math.log(sm / rv)))
+    errs.sort()
+    return errs[len(errs) // 2] if errs else None
+
+
+def _pick_basis(key, rec):
+    """옛 기준을 자르는 두 판(넉넉한 판 · 예전 판)을 다 만들어 **총매출에 더 맞는 쪽**을 고른다(11/05).
+    넉넉한 판은 CAT 처럼 옛 기준과 나란히 있던 부문을 살리고, 예전 판은 로우스처럼 합계·세부 줄이 겹친 회사를 막는다."""
+    a = current_basis(rec, True)
+    b = current_basis(json.loads(json.dumps(rec)), False)
+    if a is None or b is None:
+        return a if b is None else b
+    fa, fb = _basis_fit(key, a), _basis_fit(key, b)
+    if fa is None or fb is None:
+        return b
+    return a if fa < fb - 0.01 else b
 
 
 def _one_line(rec):
