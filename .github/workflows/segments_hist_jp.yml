@@ -70,12 +70,21 @@ jobs:
     if: always() && github.ref_name == 'main'
     runs-on: ubuntu-latest
     steps:
+      - uses: actions/checkout@v4
       - name: 남은 회사가 있으면 다음 실행을 건다(이어달리기)
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          # 갈래 셋 중 하나라도 남았으면 건다(matrix outputs 는 마지막 갈래 값이라 0 이 아니면 건다 — 다 끝나면 저절로 멈춘다)
-          L='${{ needs.hist.outputs.left }}'
-          echo "남은 회사(마지막 갈래): ${L:-?}"
-          [ "${L:-1}" = "0" ] && { echo "다 읽었다."; exit 0; }
+          # 갈래 여섯의 남은 회사를 **저장소에서 직접 센다**(11/05 — matrix outputs 는 마지막에 끝난 갈래 값 하나뿐이라,
+          # 그 갈래가 0 이면 다른 갈래에 185곳이 남았는데도 09:26 에 멈췄다).
+          git fetch -q --depth=1 origin main && git reset -q --hard FETCH_HEAD
+          L=$(python3 -c "
+          import json,glob
+          import scrape_seg_hist_jp as H
+          done=set()
+          for f in glob.glob('data/segments_hist_jp_s*.json'):
+              done|=set(json.load(open(f)).get('done_co',{}))
+          print(sum(1 for c in H.gaps() if c not in done))" 2>/dev/null || echo 1)
+          echo "남은 회사(여섯 갈래 합): $L"
+          [ "$L" = "0" ] && { echo "다 읽었다."; exit 0; }
           gh workflow run segments_hist_jp.yml --repo "${{ github.repository }}" --ref main || true
