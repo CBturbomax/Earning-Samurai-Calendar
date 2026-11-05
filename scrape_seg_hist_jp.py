@@ -15,7 +15,7 @@ import os
 import sys
 import time
 import zlib
-from datetime import date
+from datetime import date, timedelta
 from pathlib import Path
 
 import scrape_fin_jp as F
@@ -108,6 +108,28 @@ def pdf_segments(c, fn, it, blob, raw):
     return n
 
 
+SINGLE = re.compile(r"単一(の)?(報告)?セグメント|単一事業セグメント|セグメント情報(の記載|については記載)?を?省略")
+
+
+def single_seg(blob):
+    """**사업부를 나누지 않는 회사인가**(11/05) — 결산단신 첨부에 「単一セグメントであるため…記載を省略」이 적혀 있으면 그 공시의 끝 날을
+    돌려준다. 화면이 빈칸을 '못 가져온 것'이 아니라 「단일 사업부 — 공시 없음」으로 적는 근거다(없는 숫자는 없다고 쓴다)."""
+    import io
+    import zipfile
+    try:
+        z = zipfile.ZipFile(io.BytesIO(blob))
+    except zipfile.BadZipFile:
+        return None
+    for n in z.namelist():
+        if not n.lower().endswith((".htm", ".html")) or "summary" in n.lower():
+            continue
+        t = re.sub(r"<[^>]+>|\s", "", z.read(n).decode("utf-8", "replace"))
+        if SINGLE.search(t):
+            sp = G.spans_of(F.read_summary(blob))
+            return max((e for (_s, e) in sp), default=None) or "?"
+    return None
+
+
 def main():
     only = [a.zfill(4) for a in sys.argv[1:]]
     try:
@@ -117,6 +139,8 @@ def main():
     st = db.setdefault("stocks", {})
     rawdb = db.setdefault("raw", {})
     done_co = db.setdefault("done_co", {})
+    single = db.setdefault("single", {})                   # 코드 -> [「単一セグメント」이라 적힌 공시의 끝 날]
+    single_chk = db.setdefault("single_chk", {})
     if db.get("pv") != 2:                                  # 2: zip 에 태그가 없는 옛 공시는 PDF 사업부 표를 읽는다 — 다 읽은 회사도 다시
         done_co.clear(); db["pv"] = 2
     try:
@@ -188,6 +212,12 @@ def main():
                     n_p = pdf_segments(c, fn, it, blob, raw)
                     if n_p:
                         print(f"  {c} {fn} PDF 사업부 {n_p}기간", flush=True)
+                    else:
+                        e1 = single_seg(blob)
+                        if e1:
+                            lst = single.setdefault(c, [])
+                            if e1 not in lst:
+                                lst.append(e1)
             except Exception as e:                             # noqa: BLE001 — 깨진 공시 하나가 실행을 죽이지 않게
                 print(f"  {c} {fn} 읽기 실패 {e!r}"[:140])
             time.sleep(G.PAUSE)
@@ -203,6 +233,31 @@ def main():
             nd += 1
         if got % 10 == 0:
             OUT.write_text(json.dumps(db, ensure_ascii=False, separators=(",", ":")), encoding="utf-8")
+    # **남은 시간에 사업부 기록이 아예 없는 회사의 최근 결산단신 한 장만 본다** — 단일 사업부라 안 나누는 회사인지(11/05).
+    # 옛 이력을 처음부터 다시 읽지 않고 공시 한 장으로 가른다. 한 번 본 회사는 석 달 뒤에 다시 본다.
+    nchk = nsing = 0
+    if not only:
+        for c in cands:
+            if time.time() - t0 > SECS - 60:
+                break
+            if "jp:" + c in st or (single_chk.get(c) or "") > (date.today() - timedelta(days=90)).isoformat() \
+                    or zlib.crc32(c.encode()) % n_sh != i_sh:
+                continue
+            try:
+                items = G.listing(c)
+                blob = G.get(f"https://www2.jpx.co.jp/disc/{c}0/{items[-1]['url_xbrl'].rsplit('/', 1)[-1]}", timeout=60) if items else None
+            except (F.Throttled, KeyError, IndexError):
+                continue
+            single_chk[c] = date.today().isoformat()
+            nchk += 1
+            e1 = single_seg(blob) if blob else None
+            if e1:
+                lst = single.setdefault(c, [])
+                if e1 not in lst:
+                    lst.append(e1)
+                nsing += 1
+            time.sleep(G.PAUSE)
+        print(f"단일 사업부 확인: 본 회사 {nchk} · 「単一セグメント」 {nsing} · 누적 {len(single)}")
     db["count"] = len(st)
     db["ts"] = date.today().isoformat()
     OUT.write_text(json.dumps(db, ensure_ascii=False, separators=(",", ":")), encoding="utf-8")
