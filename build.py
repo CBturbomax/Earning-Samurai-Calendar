@@ -1659,9 +1659,20 @@ def load_seg():
             # 꼬리를 못 붙였으면(이름이 안 맞거나 새로 낼 분기가 없으면) **긴
             # 쪽을 남긴다.** 무턱대고 이력으로 갈아치우면 TDnet 이 방금 받아 온
             # 최근 분기가 사라진다.
-            if splice(base, tail) or len(base["pts"]) > len(tail.get("pts") or []):
+            if splice(base, tail):
                 out[k] = base
                 grew += 1
+            else:
+                # 이력 쪽으로 못 이었으면 **거꾸로** 해 본다 — 꼬리(최근 분기가 촘촘한 쪽)를 뼈대로 이력의 옛 분기를 잇는다.
+                # 예전에는 길이만 보고 이력을 남겨 꼬리가 가진 분기(미쓰비시상사 2024 년 두 분기)가 사라졌다(11/05).
+                t2 = json.loads(json.dumps(tail))
+                splice(t2, base)
+                if len(t2.get("pts") or []) >= len(base["pts"]):
+                    out[k] = t2
+                    grew += 1
+                elif len(base["pts"]) > len(tail.get("pts") or []):
+                    out[k] = base
+                    grew += 1
         else:
             out[k] = base
             seeded += 1
@@ -1753,6 +1764,36 @@ def splice(base, fresh):
         return seg_key(n) or ("\x00" + n)
     fi = {sk(n): i for i, n in enumerate(fresh["names"])}
     hit = [fi.get(sk(n)) for n in base["names"]]
+    # **이름이 안 맞으면 값으로 짝짓는다**(11/05 미쓰비시상사: 같은 부문이 소스마다 '金属資源'·'Mineral Resources' 로 달라
+    # 옛 이력의 2024 년 두 분기가 영영 안 붙었다). 겹치는 분기 둘 이상에서 0.5% 안으로 같고, 2% 넘게 어긋나는 분기가 없을 때만.
+    if None in hit:
+        def _rows(rec):
+            return {str(r[0]): r for r in rec.get("pts") or [] if re.match(r"\d{4}-\d\d-\d\d$", str(r[0]))}
+        br, fr = _rows(base), _rows(fresh)
+        common = sorted(set(br) & set(fr))
+        taken = {h for h in hit if h is not None}
+        for i, h in enumerate(hit):
+            if h is not None or not common:
+                continue
+            cands = []
+            for j in range(len(fresh["names"])):
+                if j in taken:
+                    continue
+                ok = bad = 0
+                for d in common:
+                    a = br[d][i + 1] if i + 1 < len(br[d]) else None
+                    b = fr[d][j + 1] if j + 1 < len(fr[d]) else None
+                    if not a or not b:
+                        continue
+                    if abs(a / b - 1) <= 0.005:
+                        ok += 1
+                    elif abs(a / b - 1) > 0.02:
+                        bad += 1
+                if ok >= 2 and not bad:
+                    cands.append(j)
+            if len(cands) == 1:
+                hit[i] = cands[0]
+                taken.add(cands[0])
     # **잣대는 헌 기록의 이름 전부가 아니라 '지금 쓰는 것'이다.** 벌크 기록에는
     # 옛 이름이 같이 실려 있는 일이 흔해서(아이하트미디어는 같은 부문 셋이 옛
     # 이름으로도 들어 있어 여섯 줄이었다), 전부를 분모로 삼으면 멀쩡한 짝이
