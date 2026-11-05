@@ -79,6 +79,35 @@ def quarters(raw):
     return {"axis": "사업부문", "names": order, "pts": [[e] + [q[e].get(n) for n in order] for e in ends], "src": "jpx-hist"}
 
 
+def pdf_segments(c, fn, it, blob, raw):
+    """**zip 에 사업부 태그가 없으면 같은 공시의 PDF 표를 읽는다**(11/05). 2021 년 이전 결산단신은 본문이 PDF 에만 있어 미쓰비시전기·
+    도쿄일렉트론의 결산 분기가 해마다 비었다. 칸마다 '부문 합 = 計'·'連結合計 = 요약의 누계 매출(0.3% 안)'을 맞춰야 싣는다(geojp)."""
+    import geojp
+    from datetime import date as _d
+    spans = G.spans_of(F.read_summary(blob))
+    if not spans:
+        return 0
+    pn = it.get("pdf_name") or ""
+    if not pn.lower().endswith(".pdf"):
+        pn = fn.replace("0812", "1401", 1) if fn.startswith("0812") else ""
+    if not pn:
+        return 0
+    pdf = G.get(f"https://www2.jpx.co.jp/disc/{c}0/{pn}", timeout=60)
+    if not pdf:
+        return 0
+    got = geojp.seg_from_pdf(pdf, spans)
+    # XBRL 쪽과 같은 뜻으로 — 누계(회계연도 첫날부터)만 싣는다. 3개월치 칸은 quarters() 가 누계와 섞어 두 번 셀 수 있다
+    longs = {s for (s, e) in spans if (_d.fromisoformat(e) - _d.fromisoformat(s)).days > 100}
+    n = 0
+    for (s, e), row in got.items():
+        if longs and s not in longs and (_d.fromisoformat(e) - _d.fromisoformat(s)).days <= 100 and \
+                not any(abs((_d.fromisoformat(s) - _d.fromisoformat(x)).days) <= 3 for x in longs):
+            continue
+        raw.setdefault(f"{s}/{e}", row)                    # XBRL 이 있으면 그쪽이 이긴다
+        n += 1
+    return n
+
+
 def main():
     only = [a.zfill(4) for a in sys.argv[1:]]
     try:
@@ -88,6 +117,8 @@ def main():
     st = db.setdefault("stocks", {})
     rawdb = db.setdefault("raw", {})
     done_co = db.setdefault("done_co", {})
+    if db.get("pv") != 2:                                  # 2: zip 에 태그가 없는 옛 공시는 PDF 사업부 표를 읽는다 — 다 읽은 회사도 다시
+        done_co.clear(); db["pv"] = 2
     try:
         caps = json.loads((HERE / "data" / "caps.json").read_text(encoding="utf-8"))
         caps = caps.get("caps") or caps
@@ -102,7 +133,22 @@ def main():
     except (OSError, ValueError):
         sect = {}
     # 시총 큰 순 · 은행 등 화면에 안 싣는 업종은 뺀다
-    cands = only or sorted((c for c in gp if not excluded("jp", "", sect.get("jp:" + c) or "")), key=lambda c: -(cap(c) or 0))
+    # 이번 주(앞뒤 열흘) 발표 회사가 맨 앞 — 그다음 시총(11/05)
+    hot = set()
+    try:
+        from datetime import timedelta
+        lo, hi = (date.today() - timedelta(days=10)).isoformat(), (date.today() + timedelta(days=10)).isoformat()
+        for f in ("earnings.json", "earnings_jp_past.json", "earnings_jp_sched.json"):
+            try:
+                ej = json.loads((HERE / "data" / f).read_text(encoding="utf-8"))
+            except (OSError, ValueError):
+                continue
+            rows = ej.get("rows") or [r for v in (ej.get("days") or {}).values() if isinstance(v, list) for r in v]
+            hot |= {str(r.get("code")) for r in rows if isinstance(r, dict) and lo <= (r.get("date") or "") <= hi}
+    except Exception:                                      # noqa: BLE001
+        pass
+    cands = only or sorted((c for c in gp if not excluded("jp", "", sect.get("jp:" + c) or "")),
+                           key=lambda c: (c not in hot, -(cap(c) or 0)))
     todo = [c for c in cands if only or (c not in done_co and zlib.crc32(c.encode()) % n_sh == i_sh)]
     print(f"이력 받을 일본 회사 {len(todo):,} (사업부 빈칸 있는 회사 {len(gp):,} · 이 갈래 다 읽은 회사 {len(done_co):,})")
     G.T0 = time.time()
@@ -134,8 +180,14 @@ def main():
             if not blob:
                 continue
             try:
+                n_x = 0
                 for s_, e_, row in F.read_segments(blob):
                     raw[f"{s_}/{e_}"] = row                    # 나중에 낸 공시(재표시)가 이긴다 — 목록이 발표 차례다
+                    n_x += 1
+                if not n_x:
+                    n_p = pdf_segments(c, fn, it, blob, raw)
+                    if n_p:
+                        print(f"  {c} {fn} PDF 사업부 {n_p}기간", flush=True)
             except Exception as e:                             # noqa: BLE001 — 깨진 공시 하나가 실행을 죽이지 않게
                 print(f"  {c} {fn} 읽기 실패 {e!r}"[:140])
             time.sleep(G.PAUSE)

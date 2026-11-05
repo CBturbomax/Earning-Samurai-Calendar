@@ -585,3 +585,93 @@ def _selftest():
 
 if __name__ == "__main__":
     _selftest()
+
+
+# ── 사업부(PDF) ──────────────────────────────────────────────────────
+# 2021 년 이전 결산단신 zip 에는 본문이 없어 사업부 표가 PDF 에만 있다(미쓰비시전기·도쿄일렉트론의 결산 분기가 해마다 빈
+# 까닭, 11/05). 표 생김새: 줄마다 사업부, 칸은 [전년 매출 | 전년 이익 | 올해 매출 | 올해 이익 | 증감…], 아래에 「計」(부문 합)와
+# 「連結合計」(연결 매출). **칸 하나를 두 번 검산**한다 — 부문 합 = 「計」(원 단위), 「連結合計」 = 그 기간 연결 매출(1.5% 안).
+SEG_HEAD = re.compile(r"セグメント|事業の種類別|事業別|部門別")
+SEG_SKIP = re.compile(r"消\s*去|全\s*社|調\s*整|本社|内部|振替|セグメント間")
+SEG_GROSS = re.compile(r"^(計|小計|セグメント計|報告セグメント計)$")
+SEG_CONS = re.compile(r"^連結(合計|計)?$|^(合\s*計|総\s*計)$")
+
+
+def seg_lines(pdf):
+    """PDF -> 칸으로 나눈 줄들. 우리 해석기가 못 열면(암호) pdftotext."""
+    import pdftext
+    # pdftotext 가 먼저다 — 우리 해석기는 숫자 글꼴을 못 푸는 PDF(미쓰비시전기 2019)에서 숫자를 통째로 빠뜨린다
+    try:
+        rows = [[c.strip() for c in ln.split(" | ")] for ln in pdftext.layout_lines(pdf, 40)]
+    except Exception:                                   # noqa: BLE001
+        rows = []
+    if not rows:
+        try:
+            for cells in pdftext.extract_cells(pdf, max_pages=40):
+                rows.append([re.sub(r"\s+", " ", t).strip() for _x, t in sorted(cells) if t.strip()])
+        except Exception:                               # noqa: BLE001
+            rows = []
+    out = []
+    for r in rows:
+        k = next((i for i, c in enumerate(r) if num(c) is not None), len(r))
+        if k > 1:                                       # 「家 | 庭 | 電 | 器」 -> 「家庭電器」
+            r = ["".join(r[:k])] + r[k:]
+        if r:
+            r[0] = re.sub(r"(?<=[^\x00-\x7f]) +(?=[^\x00-\x7f])", "", r[0])
+            out.append(r)
+    return out
+
+
+def seg_from_pdf(pdf, spans):
+    """결산단신 PDF + {(시작, 종료): 누계 매출} -> {(시작, 종료): {부문: 값(엔)}}. 검산을 못 넘으면 그 칸은 버린다."""
+    rows = seg_lines(pdf)
+    got = {}
+    for i, r in enumerate(rows):
+        txt = " ".join(r)
+        if len(txt) > 60 or not SEG_HEAD.search(txt) or GEO_HEAD.search(txt):
+            continue
+        body = rows[i + 1:i + 30]
+        segs, gross, cons = [], None, None
+        for b in body:
+            name, vals = b[0], [num(c) for c in b[1:]]
+            if not any(v is not None for v in vals):
+                continue
+            if SEG_GROSS.match(name):
+                gross = vals
+                continue
+            if SEG_CONS.match(name):
+                cons = vals
+                break
+            if SEG_SKIP.search(name) or num(name) is not None:
+                continue
+            if gross is None:
+                segs.append((name, vals))
+        if len(segs) < 2 or not cons:
+            continue
+        width = min(len(cons), max(len(v) for _, v in segs))
+        for k in range(width):
+            c = cons[k]
+            if not c or c <= 0:
+                continue
+            leaf = [(n, v[k]) for n, v in segs if k < len(v) and v[k] is not None]
+            if len(leaf) < 2 or len(leaf) != len(segs) or any(v <= 0 for _, v in leaf):
+                continue
+            s = sum(v for _, v in leaf)
+            if gross and k < len(gross) and gross[k] is not None:
+                if abs(s - gross[k]) > max(3, abs(gross[k]) * 2e-5):
+                    continue                            # 부문 합이 「計」와 안 맞는 칸(이익·증감 칸)
+            elif abs(s - c) > max(3, abs(c) * 2e-5):
+                continue                                # 「計」가 없으면 부문 합 = 연결 매출이어야 한다
+            best = None
+            for span, rev in spans.items():
+                if not rev:
+                    continue
+                for sc in SCALES:
+                    err = abs(c * sc - rev) / rev
+                    if err <= 0.003 and (best is None or err < best[0]):   # 연결 매출은 요약과 같은 숫자 — 넉넉하면 전년 칸이 올해에 앉는다
+                        best = (err, span, sc)
+            if best:
+                err, span, sc = best
+                if span not in got or err < got[span][0]:
+                    got[span] = (err, {n: v * sc for n, v in leaf})
+    return {k: v[1] for k, v in got.items()}

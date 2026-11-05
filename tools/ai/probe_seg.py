@@ -39,8 +39,8 @@ def dump(t, end):
     for ev, el in ET.iterparse(io.BytesIO(blob), events=("end",)):
         n = local(el.tag)
         if n == "context":
-            dims = [f"{local(m.get('dimension') or '').split(':')[-1]}={(m.text or '').split(':')[-1]}"
-                    for m in el.iter() if local(m.tag) == "explicitMember"]
+            dims = [f"{local(m.get('dimension') or '').split(':')[-1]}={(m.text or '').split(':')[-1] or ''.join(x.text or '' for x in m)}"
+                    for m in el.iter() if local(m.tag) in ("explicitMember", "typedMember")]
             s = e = ""
             for p in el.iter():
                 if local(p.tag) == "startDate":
@@ -48,8 +48,9 @@ def dump(t, end):
                 if local(p.tag) == "endDate":
                     e = p.text
             ctx[el.get("id")] = (tuple(dims), s, e)
-        elif REV.search(n) and el.get("contextRef") and (el.text or "").strip():
+        elif (REV.search(n) or n.startswith("Revenue")) and el.get("contextRef") and (el.text or "").strip():
             facts[n].append((el.get("contextRef"), el.text.strip()))
+    print("   매출 태그:", {t: len(r) for t, r in facts.items()})
     for tag, rows in facts.items():
         shown = 0
         for cref, v in rows:
