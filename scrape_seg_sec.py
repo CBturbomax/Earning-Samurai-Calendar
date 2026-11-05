@@ -93,7 +93,7 @@ TICKERS = "https://www.sec.gov/files/company_tickers.json"
 # 3: 한 축짜리 행이 몇 줄 섞여 있어도 두 축 행을 버리지 않는다(엑슨)
 # 4: 더 잘게 쪼갠 쪽을 쓴다 · '부문 합계' 줄을 뺀다(셰브런)
 # 5: 지주회사로 갈아탄 티커를 옛 CIK 에 이어 붙인다(엑슨)
-SEG_SEC_VER = 8      # 8: 결산 분기를 태그를 넘어 메움(에스티로더·메리어트)
+SEG_SEC_VER = 9      # 9: ReportableSubsegments 표시도 부문 값(CAT) · 8: 결산 분기를 태그를 넘어 메움(에스티로더·메리어트)
 # 열두 분기(3년)면 화면에 그리는 스물두 칸의 절반을 넘고, 큰 종목은
 # stockanalysis 가 스무 분기를 채워 준다. 한 분기 zip 이 85MB 라 열여섯으로
 # 늘리면 한 번에 1.4GB 다 — 남의 서버에서 그만큼 받을 이유가 없다.
@@ -250,7 +250,9 @@ def parse_seg(segments):
         # 이름('Operating Segments')으로 화면에 오를 뻔했다.
         if k.endswith("ConsolidationItems"):
             # 부문 값이라고 못 박은 것만 받는다. 상계·조정 줄은 여기서 걸린다.
-            if v.split(":")[-1] != "OperatingSegments":
+            # **'보고 부문' 표시도 부문 값이다**(11/05 CAT: 사업부 매출에 `SubsegmentsConsolidationItems=
+            # ReportableSubsegments` 가 한 겹 더 붙어 와서 건설·자원·에너지가 2018~2022 통째로 버려졌다).
+            if not re.fullmatch(r"OperatingSegments|Reportable(Sub)?[Ss]egments?(Member)?", v.split(":")[-1]):
                 return None
             continue
         pairs.append((k, v.split(":")[-1]))
