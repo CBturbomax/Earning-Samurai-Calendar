@@ -2799,6 +2799,43 @@ def seg_unannual(pts, aligned):
     return out_p, out_a
 
 
+SEG_RESID = [0]
+
+
+def seg_residual(pts, aligned):
+    """**한 부문만 빈 칸은 '총매출 − 나머지 부문'으로 채운다**(11/05 AMD: 해마다 4분기에 두 부문 중 하나만 있었다 — 결산 분기를
+    '연간 − 앞 세 분기'로 되살리다 한 부문만 실패한다). 회사가 낸 두 값(총매출·나머지 부문)의 뺄셈이라 지어낸 값이 아니다.
+    조건을 좁게 건다 — 앞·뒤 분기가 둘 다 '부문 합 = 총매출'(0.6% 안)이고, 그 두 분기에 값이 있던 부문 중 이 칸에 빈 것이 정확히
+    하나, 계산한 값이 앞·뒤 값의 0.5~2배일 때만. 상계·기타가 따로 있는 회사는 앞·뒤 합이 총매출과 안 맞아 저절로 빠진다."""
+    out = [list(r) for r in pts]
+    revs = [rv for _l, rv in aligned]
+    def full(i):
+        if i < 0 or i >= len(out) or not revs[i]:
+            return None
+        sm = sum(v for v in out[i][1:] if v)
+        return {j for j, v in enumerate(out[i][1:]) if v} if abs(sm / revs[i] - 1) <= 0.006 else None
+    for i, r in enumerate(out):
+        rev = revs[i]
+        if not rev:
+            continue
+        a, b = full(i - 1), full(i + 1)
+        if a is None or b is None or a != b:
+            continue
+        have = {j for j, v in enumerate(r[1:]) if v}
+        miss = a - have
+        if len(miss) != 1 or not have or not have <= a:
+            continue
+        j = miss.pop()
+        v = rev - sum(r[k + 1] for k in have)
+        nb = [out[i - 1][j + 1], out[i + 1][j + 1]]
+        if v > 0 and all(0.5 * x <= v <= 2 * x for x in nb):
+            while len(r) <= j + 1:
+                r.append(None)
+            r[j + 1] = v
+            SEG_RESID[0] += 1
+    return out
+
+
 def seg_fit(rec, fin_rec):
     """부문 합을 총매출과 대보고, **두 배로 부푼 것만** 걸러낸다.
 
@@ -2828,6 +2865,7 @@ def seg_fit(rec, fin_rec):
         return None
 
     aligned = seg_align(pts, fin_rec)
+    pts = seg_residual(pts, aligned)
     pts, aligned = seg_unannual(pts, aligned)
     shared = [(r, rev) for r, (_lab, rev) in zip(pts, aligned) if rev]
     if len(shared) < 4:
@@ -4321,6 +4359,7 @@ def build():
         else:
             tossed.append(s.split(":")[-1])
     print(f"  부문 한 칸만 몇 배로 튄 것(연간·누계가 분기 칸에): 고침 {SEG_FIXED['fixed']:,} · 뺌 {SEG_FIXED['dropped']:,}")
+    print(f"  한 부문만 빈 칸을 '총매출 − 나머지 부문'으로 채움: {SEG_RESID[0]:,}칸")
     geo_out, ord_out = {}, {}
     for s_, rec in GEO.items():
         if s_ in on_screen:
