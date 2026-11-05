@@ -3022,6 +3022,60 @@ def seg_partition(names, pts, aligned):
     return [names[j] for j in sub], [[r[0]] + [r[j + 1] if j + 1 < len(r) else None for j in sub] for r in pts]
 
 
+SEG_ROWDUP = [0]
+
+
+def seg_row_dedupe(pts, aligned):
+    """**한 분기에 같은 부문이 두 번 실린 칸**을 그 칸 안에서 걷어낸다(11/05). 퀀타 3Q20 은 'Electric Power Infrastructure
+    Services' 와 '…Solutions' 가 둘 다 2,108 — 이름만 바뀐 같은 부문이 한 분기에 나란히 실려 합이 매출의 2배가 됐고,
+    그래서 칸째 지워졌다(레즈메드 'Devices and Masks' 660 = 'Sleep and Respiratory' 660). 같은 값 두 줄(0.5% 안)이나
+    '다른 칸 둘 이상의 합'과 같은 소계 칸을 빼서, 합이 총매출의 0.9~1.15배로 들어올 때만 뺀다. 총매출을 모르면 손대지 않는다."""
+    from itertools import combinations
+    colsz = {}
+    for r in pts:
+        for j, v in enumerate(r[1:]):
+            if v:
+                colsz[j] = colsz.get(j, 0) + 1
+    # 부문을 상계 전 총액으로 내는 회사(평소에도 합이 매출보다 큰 HPE·버크셔·길리어드)는 손대지 않는다 — 평소 비율이 1.1 밑인 회사만
+    rs = sorted(sum(v for v in r[1:] if v and v > 0) / rev for r, (_l, rev) in zip(pts, aligned) if rev and rev > 0 and any(r[1:]))
+    if not rs or rs[len(rs) // 2] > 1.1:
+        return pts
+    med = rs[len(rs) // 2]
+    out = []
+    for r, (_l, rev) in zip(pts, aligned):
+        vals = {j: v for j, v in enumerate(r[1:]) if v and v > 0}
+        s = sum(vals.values())
+        if not rev or rev <= 0 or len(vals) < 3 or s / rev <= max(1.15, med * 1.15):
+            out.append(r)
+            continue
+        drop = set()
+        js = sorted(vals, key=lambda j: colsz.get(j, 0))       # 값이 적은(잠깐 쓴) 이름부터 버린다
+        for a, b in combinations(js, 2):
+            if a in drop or b in drop:
+                continue
+            if abs(vals[a] - vals[b]) <= 0.005 * max(vals[a], vals[b]):
+                drop.add(a if colsz.get(a, 0) <= colsz.get(b, 0) else b)
+        rest = [j for j in vals if j not in drop]
+        for j in sorted(rest, key=lambda j: -vals[j]):           # 소계: 남은 다른 칸 몇 개의 합과 0.5% 안
+            others = [o for o in rest if o != j and o not in drop]
+            hit = False
+            for k in range(2, min(len(others), 6) + 1):
+                for sub in combinations(others, k):
+                    if abs(sum(vals[o] for o in sub) - vals[j]) <= 0.005 * vals[j]:
+                        hit = True
+                        break
+                if hit:
+                    break
+            if hit:
+                drop.add(j)
+        s2 = sum(v for j, v in vals.items() if j not in drop)
+        if drop and abs(s2 / rev - med) <= 0.05:              # 걷어낸 뒤 그 회사 평소 비율로 정확히 돌아올 때만
+            r = [r[0]] + [None if (j in drop) else v for j, v in enumerate(r[1:])]
+            SEG_ROWDUP[0] += 1
+        out.append(r)
+    return out
+
+
 SEG_RESID = [0]
 
 
@@ -3097,6 +3151,7 @@ def seg_fit(rec, fin_rec):
         aligned = [(lab, None) for lab, _rev in aligned]
         SEG_BADREV[0] += 1
     names, pts = seg_partition(names, pts, aligned)
+    pts = seg_row_dedupe(pts, aligned)
     pts = seg_residual(pts, aligned)
     pts, aligned = seg_unannual(pts, aligned)
     shared = [(r, rev) for r, (_lab, rev) in zip(pts, aligned) if rev]
@@ -4593,6 +4648,7 @@ def build():
     print(f"  부문 한 칸만 몇 배로 튄 것(연간·누계가 분기 칸에): 고침 {SEG_FIXED['fixed']:,} · 뺌 {SEG_FIXED['dropped']:,}")
     print(f"  한 부문만 빈 칸을 '총매출 − 나머지 부문'으로 채움: {SEG_RESID[0]:,}칸")
     print(f"  한 축에 나눔이 둘 겹친 회사에서 총매출과 맞는 나눔만 남김: {SEG_PART[0]:,}곳")
+    print(f"  한 분기에 같은 부문이 두 번(이름 두 개)·소계가 섞인 칸을 걷어냄: {SEG_ROWDUP[0]:,}칸")
     print(f"  총매출이 틀려(부문 합의 2.5배 넘게 작고 널뜀) 총매출 대조를 건너뛴 회사: {SEG_BADREV[0]:,}곳")
     geo_out, ord_out = {}, {}
     for s_, rec in GEO.items():
