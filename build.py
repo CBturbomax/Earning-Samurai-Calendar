@@ -2890,6 +2890,43 @@ def seg_unannual(pts, aligned):
     return out_p, out_a
 
 
+SEG_PART = [0]
+
+
+def seg_partition(names, pts, aligned):
+    """**한 축에 나눔이 둘 겹친 회사**는 총매출과 맞는 나눔 하나만 남긴다(11/05). 조에티스는 제품 축 아래 축종별(반려동물·가축)과
+    치료군별(구충제·백신…)이 함께 실려 합이 총매출의 몇 배였고, 로우스는 '제품' 합계와 그 아래 품목이 나란히 있었다.
+    부문 합이 평소 총매출의 1.6배를 넘는 회사만 — 이름 조합 가운데 분기마다 합이 총매출과 2% 안으로 맞는(70% 이상의 분기)
+    조합을 찾아, 맞는 분기가 가장 많고 같으면 더 잘게 나눈 조합을 쓴다. 못 찾으면 그대로 둔다(뒤의 검사가 거른다)."""
+    from itertools import combinations
+    n = len(names)
+    rows = [(r, rev) for r, (_l, rev) in zip(pts, aligned) if rev and rev > 0]
+    if n < 3 or n > 12 or len(rows) < 4:
+        return names, pts
+    rat = sorted(sum(v for v in r[1:] if v) / rev for r, rev in rows)
+    if rat[len(rat) // 2] <= 1.6:
+        return names, pts
+    best = None
+    for size in range(2, n):
+        for sub in combinations(range(n), size):
+            hit = tot = 0
+            for r, rev in rows:
+                vals = [r[j + 1] if j + 1 < len(r) else None for j in sub]
+                if sum(1 for v in vals if v) < 2:
+                    continue
+                tot += 1
+                hit += abs(sum(v for v in vals if v) / rev - 1) <= 0.02
+            if tot >= 4 and hit >= 0.7 * tot:
+                key = (hit, size)
+                if best is None or key > best[0]:
+                    best = (key, sub)
+    if not best:
+        return names, pts
+    sub = best[1]
+    SEG_PART[0] += 1
+    return [names[j] for j in sub], [[r[0]] + [r[j + 1] if j + 1 < len(r) else None for j in sub] for r in pts]
+
+
 SEG_RESID = [0]
 
 
@@ -2956,6 +2993,7 @@ def seg_fit(rec, fin_rec):
         return None
 
     aligned = seg_align(pts, fin_rec)
+    names, pts = seg_partition(names, pts, aligned)
     pts = seg_residual(pts, aligned)
     pts, aligned = seg_unannual(pts, aligned)
     shared = [(r, rev) for r, (_lab, rev) in zip(pts, aligned) if rev]
@@ -4451,6 +4489,7 @@ def build():
             tossed.append(s.split(":")[-1])
     print(f"  부문 한 칸만 몇 배로 튄 것(연간·누계가 분기 칸에): 고침 {SEG_FIXED['fixed']:,} · 뺌 {SEG_FIXED['dropped']:,}")
     print(f"  한 부문만 빈 칸을 '총매출 − 나머지 부문'으로 채움: {SEG_RESID[0]:,}칸")
+    print(f"  한 축에 나눔이 둘 겹친 회사에서 총매출과 맞는 나눔만 남김: {SEG_PART[0]:,}곳")
     geo_out, ord_out = {}, {}
     for s_, rec in GEO.items():
         if s_ in on_screen:
