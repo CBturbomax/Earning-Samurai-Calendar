@@ -82,8 +82,8 @@ def codex(prompt):
         # 꼬리는 되읊은 프롬프트라 까닭이 안 보였다(11/10) — 오류 줄만 골라 적는다
         errs = [l.strip()[:200] for l in out.splitlines() if re.match(r"\s*(\[?\d{4}-\d\d-\d\dT[^ ]* )?(ERROR|Error|error|WARN|stream error|unexpected status)", l)]
         why = " ‖ ".join(errs[-3:]) or out[:200]
-        if re.search(r"(?i)401|unauthorized|refresh|sign in|log ?in|expired|403|forbidden", why):
-            raise Limited("codex 로그인·권한: " + why[:260])     # 로그인이 풀렸으면 한 건씩 계속 실패하지 말고 멈춘다
+        if re.search(r"(?i)401|unauthorized|refresh|sign in|log ?in|expired|403|forbidden|out of credits|add credits", why):
+            raise Limited("codex 로그인·권한·크레딧: " + why[:260])     # 로그인이 풀렸으면 한 건씩 계속 실패하지 말고 멈춘다
         raise RuntimeError(f"codex 실패 {r.returncode}: {why[:300]}")
     m = re.search(r"tokens used\D{0,5}([\d,]+)", out, re.I)
     if m:
