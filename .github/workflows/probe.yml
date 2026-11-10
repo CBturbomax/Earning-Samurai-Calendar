@@ -17,9 +17,9 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: '3.12'
-      - name: 🔎 사업부 빈칸 — 서류 속 매출 문맥(11/05)
+      - name: 🔎 ai_fpi — 캐나다 회사 6-K 에서 실적 표를 왜 못 고르나(11/10)
         continue-on-error: true
-        run: python tools/ai/probe_seg.py --all CGNX:2024-12-31 COST:2024-09-01 ROKU:2024-12-31 ZTS:2024-12-31 > /tmp/probe.txt 2>&1
+        run: python tools/ai/probe_fpi.py CNQ SU 2>&1 | grep -v '^  [a-z_0-9]*\.json' > /tmp/probe.txt
       - name: 결과를 probe-out 가지에
         if: always()
         run: |
