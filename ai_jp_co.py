@@ -231,14 +231,24 @@ def one(B, key, db, verbose=False):
             out.append(f"    {e} ✗ 그 분기 누계가 없다")
             continue
         months = round((_d(me[1]) - _d(me[0])).days / 30.4)
+        tight = False
         if months <= 4:
             q = dict(cum[me])
         else:
             pv = next((k for k in cum if abs((_d(k[0]) - _d(me[0])).days) <= 6 and 75 <= (_d(me[1]) - _d(k[1])).days <= 105), None)
-            if not pv:
-                out.append(f"    {e} ✗ 앞 분기 누계가 없다({months}개월 누계만)")
-                continue
-            a, b = ren(cum[me]), ren(cum[pv])
+            if pv:
+                a, b = ren(cum[me]), ren(cum[pv])
+            else:
+                # 앞 분기 누계가 없으면 **화면에 이미 있는 그 회계연도 앞 분기들**을 뺀다(같은 이름일 때만 · 검산은 더 좁게 3%)
+                a = ren(cum[me])
+                prior = [r for r in seg.get("pts") or [] if re.match(r"\d{4}-\d\d-\d\d$", str(r[0]))
+                         and _d(me[0]) < _d(r[0]) and (_d(e) - _d(r[0])).days > 60 and any(v for v in r[1:])]
+                if len(prior) != round(months / 3) - 1 or not set(a) <= set(names):
+                    out.append(f"    {e} ✗ 앞 분기 누계가 없다({months}개월 누계만 · 화면 앞 분기 {len(prior)}칸)")
+                    continue
+                b = {n: sum((r[1 + names.index(n)] or 0) for r in prior) for n in a}
+                tight = True
+
             if set(a) != set(b):
                 out.append(f"    {e} ✗ 두 누계의 부문 이름이 다르다 {sorted(set(a) ^ set(b))[:4]}")
                 continue
@@ -248,7 +258,7 @@ def one(B, key, db, verbose=False):
         r = tot / rev[near]
         over = len([n for n in q if n in names]) * 2 >= len(q) if names else True
         neg = any(v < -0.02 * abs(tot) for v in q.values())
-        good = fits(r, base) and over and not neg
+        good = (abs(r - (base or 1)) <= 0.03 if months > 4 and tight else fits(r, base)) and over and not neg
         out.append(f"    {e} {'✓' if good else '✗'} 분기 합÷매출 {r:.2f} · " + " / ".join(f"{n} {round(v / 1e8):,}" for n, v in q.items())[:150] +
                    ("" if good else f"  ← {'이름 안 겹침 ' if not over else ''}{'음수 부문 ' if neg else ''}{'비율' if not fits(r, base) else ''}"))
         if good:
