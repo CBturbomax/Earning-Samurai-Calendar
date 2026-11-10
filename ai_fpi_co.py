@@ -36,7 +36,7 @@ MAX_PROMPT = 110000
 PROMPT = """You are building a clean QUARTERLY revenue-by-segment time series for one company from its own quarterly reports.
 
 Company: {code}. Reporting currency: {cur}. Segment names we already use for recent quarters: {segs}.
-Below are table excerpts from {n} quarterly filings, oldest first. Each starts with "### FILING filed YYYY-MM-DD".
+{anchors}Below are table excerpts from {n} quarterly filings, oldest first. Each starts with "### FILING filed YYYY-MM-DD".
 
 For every quarter end from {a} to {z} that the filings cover, give:
 - "rev": total revenue of the whole company for the THREE months (the headline revenue line; the same definition in every quarter).
@@ -46,8 +46,11 @@ For every quarter end from {a} to {z} that the filings cover, give:
 Rules:
 1. Three-month (quarter) values only. Never six-, nine-, twelve-month or year-to-date values, never percentages or volumes.
    Do not compute anything (no subtracting year-to-date). If a quarter has no three-month column anywhere, leave it out.
-2. Use ONE consistent set of segment names and ONE consistent measure across all quarters (for example always "gross revenues
-   including intersegment" or always "external revenues"). State it in "basis". Reuse our existing names when the segment is the same thing.
+2. Use ONE consistent set of segment names and ONE consistent measure across all quarters. If VERIFIED VALUES are given above,
+   use exactly the measure that reproduces them. Otherwise prefer the measure that reconciles to total revenue (external revenues,
+   or gross segment revenues together with the eliminations line). State it in "basis". Reuse our existing names when the segment is the same thing.
+   A line "[before table: ...]" is the text printed just above that table (often the segment's name). If you cannot tell which
+   segment a table belongs to, leave it out — never assign names by position.
 3. When a later filing reprints an earlier quarter (prior-year or trailing-quarter column), prefer the later filing's value.
 4. If segments were reorganised, use the newest structure wherever restated numbers are printed; for older quarters with no
    restated numbers keep the names printed then. Never guess a mapping.
@@ -77,7 +80,15 @@ def _tables(raw):
     부문마다 표가 따로인 회사(MT: 'NAFTA … Sales')도 같은 꼴로 줄어든다. 부문이 세로로 놓인 표(줄마다 부문)는 통째로(2,500자)."""
     import pr_table as pt
     out = []
-    for i, t in enumerate(pt.tables(raw)):
+    tabs = pt.tables(raw)
+    # 표 바로 앞 글(부문 이름이 표 밖 제목에 있는 회사 — MT: 'NAFTA' 다음에 표). 표 수가 <table> 수와 같을 때만 믿는다(겹친 표면 어긋난다).
+    pos = [m.start() for m in re.finditer(r"(?i)<table\b", raw)]
+    cap = {}
+    if len(pos) == len(tabs):
+        for i, p0 in enumerate(pos):
+            c = re.sub(r"\s+", " ", re.sub(r"<[^>]+>|&nbsp;|&#160;", " ", raw[max(0, p0 - 1500):p0])).strip()
+            cap[i] = c[-90:]
+    for i, t in enumerate(tabs):
         rows = [" | ".join(c for c in r if c and c.strip() and c.strip() != "$") for r in t]
         rows = [r for r in rows if r.strip()]
         if len(rows) < 2:
@@ -105,10 +116,10 @@ def _tables(raw):
         if revrows:
             keep = sorted(set(revrows) | {k for k, r in enumerate(rows) if isnum[k] and
                                            re.search(r"(?i)eliminat|inter-?segment|royalt|^total", r.split(" | ")[0])})[:12]
-            txt = "\n".join(head + [rows[k] for k in keep])[:1800]
+            txt = (f"[before table: {cap[i]}]\n" if cap.get(i) else "") + "\n".join(head + [rows[k] for k in keep])[:1800]
             out.append(((2 if seg else 0) + (1 if q else 0) + (1 if len(head) >= 1 else 0), i, txt))
         elif (seg or REVTERM.search(htxt)) and not NOTREV.search(htxt):
-            out.append(((2 if seg else 0) + (1 if q else 0), i, blob[:2500]))       # 줄마다 부문인 표
+            out.append(((2 if seg else 0) + (1 if q else 0), i, (f"[before table: {cap[i]}]\n" if cap.get(i) else "") + blob[:2500]))       # 줄마다 부문인 표
     return out
 
 
@@ -188,7 +199,7 @@ def ask(prompt):
     return j.get("result") or ""
 
 
-def check(B, key, ans, pr_q):
+def check(B, key, ans, pr_q, all_ends=()):
     """모델 답 -> (받아들인 분기 {종료일: {...}}, 보고 줄들). 검산 (가)~(라)."""
     fin = B.FIN.get(key) or {}
     have = {p["end"]: p["rev"] for p in fin.get("points") or [] if p.get("end") and p.get("rev")}
@@ -199,13 +210,19 @@ def check(B, key, ans, pr_q):
             d = _d(e)
         except ValueError:
             continue
-        near = min(have, key=lambda h: abs((_d(h) - d).days), default=None)
-        if not near or abs((_d(near) - d).days) > 20 or not isinstance(x, dict):
+        if not isinstance(x, dict):
             continue
+        near = min(have, key=lambda h: abs((_d(h) - d).days), default=None)
+        mrev = float(x["rev"]) * u if isinstance(x.get("rev"), (int, float)) and x["rev"] > 0 else None
+        pend = not near or abs((_d(near) - d).days) > 20
+        if pend:                                         # 우리에게 총매출이 없는 분기 — 모델의 총매출로 임시 검산, 빌드가 연간 합으로 확인한 뒤에만 싣는다
+            near = min(all_ends, key=lambda h: abs((_d(h) - d).days), default=None)
+            if not near or abs((_d(near) - d).days) > 20 or not mrev:
+                continue
         seg = {str(n).strip()[:60]: float(v) * u for n, v in (x.get("seg") or {}).items() if isinstance(v, (int, float)) and v}
         rev = float(x["rev"]) * u if isinstance(x.get("rev"), (int, float)) else None
         elim = float(x["elim"]) * u if isinstance(x.get("elim"), (int, float)) else 0.0
-        rows[near] = {"rev": rev, "seg": seg, "elim": elim, "src": x.get("src"), "have": have[near]}
+        rows[near] = {"rev": rev, "seg": seg, "elim": elim, "src": x.get("src"), "have": mrev if pend else have[near], "pend": pend, "mrev": mrev}
     ends = sorted(rows)
     ratio = {e: sum(rows[e]["seg"].values()) / rows[e]["have"] for e in ends if len(rows[e]["seg"]) >= 2}
     # 화면에 이미 있는 사업부(닻) — 겹치는 분기에서 부문마다 견준다
@@ -258,10 +275,10 @@ def check(B, key, ans, pr_q):
                 if len(bad) > len(both) / 2:
                     why.append("가진 값과 다름")
         good = bool(grade) and not ({"가진 값과 다름", "부문 빠짐"} & set(why))
-        rep.append(f"    {e} {'✓' if good else '✗'} 매출 {round(r['have'] / 1e6):>7,} · 합÷매출 {ratio.get(e, 0):.2f} · {grade or '-'} {anchor} "
+        rep.append(f"    {e} {'✓' if good else '✗'}{'?' if r['pend'] else ' '}매출 {round(r['have'] / 1e6):>7,} · 합÷매출 {ratio.get(e, 0):.2f} · {grade or '-'} {anchor} "
                    f"· {' / '.join(f'{n} {round(v / 1e6):,}' for n, v in r['seg'].items())[:170]}" + (f"  ← {'; '.join(why)}" if why else ""))
         if good:
-            ok[e] = {"seg": r["seg"], "elim": r["elim"], "src": r["src"], "grade": grade}
+            ok[e] = {"seg": r["seg"], "elim": r["elim"], "src": r["src"], "grade": grade, **({"rev": r["mrev"], "pend": 1} if r["pend"] else {})}
     return ok, rep
 
 
@@ -290,7 +307,23 @@ def one(B, key, db):
     docs.sort()
     body = "\n\n".join(f"### FILING filed {fd}\n{txt}" for fd, _a, txt in docs)
     names = (B.SEG.get(key) or {}).get("names") or []
-    prompt = PROMPT.format(code=code, cur=fin.get("cur") or "USD", segs=json.dumps(names[:12], ensure_ascii=False),
+    pr_q = {}
+    if (HERE / "data" / "fpi_pr.json").exists():
+        pr_q = ((json.loads((HERE / "data" / "fpi_pr.json").read_text(encoding="utf-8")).get("stocks") or {}).get(key) or {}).get("q") or {}
+    anc = {}
+    for r in (B.SEG.get(key) or {}).get("pts") or []:   # 화면에 이미 있는 분기(검산을 거친 값)
+        if re.match(r"\d{4}-\d\d-\d\d$", str(r[0])) and A <= str(r[0]) <= Z:
+            anc[str(r[0])] = {n: v for n, v in zip(names, r[1:]) if v}
+    for e, lst in pr_q.items():
+        x = next((r for r in reversed(lst) if r.get("seg")), None)
+        if x and A <= e <= Z:
+            anc[e] = x["seg"]
+    pick = sorted(anc)[::max(1, len(anc) // 3)][:3] if anc else []
+    anchors = ""
+    if pick:
+        anchors = "VERIFIED VALUES we already hold (absolute currency units) — your series must reproduce these:\n" + "\n".join(
+            f"  {e}: " + ", ".join(f"{n} {v:,.0f}" for n, v in anc[e].items()) for e in pick) + "\n\n"
+    prompt = PROMPT.format(anchors=anchors, code=code, cur=fin.get("cur") or "USD", segs=json.dumps(names[:12], ensure_ascii=False),
                            n=len(docs), a=A, z=Z, docs=body[:MAX_PROMPT])
     out = [f"  공시 {len(docs)}장 · 글 {len(body):,}자 · 고르는 데 {time.time() - t0:.0f}초"]
     raw = ask(prompt)
@@ -299,12 +332,11 @@ def one(B, key, db):
         ans = json.loads(mm.group(0)) if mm else {}
     except ValueError:
         return out + ["  답이 JSON 이 아니다: " + (raw or "")[:300]]
-    pr_q = ((json.loads((HERE / "data" / "fpi_pr.json").read_text(encoding="utf-8")).get("stocks") or {}).get(key) or {}).get("q") \
-        if (HERE / "data" / "fpi_pr.json").exists() else {}
-    ok, rep = check(B, key, ans, pr_q)
+    ok, rep = check(B, key, ans, pr_q, ends)
     db["stocks"][key] = {"cur": fin.get("cur") or "USD", "basis": str(ans.get("basis"))[:200], "q": ok,
                          "docs": [a for _f, a, _t in docs], "ts": date.today().isoformat()}
     was = sum(1 for r in (B.SEG.get(key) or {}).get("pts") or [] if A <= str(r[0]) <= Z and any(v for v in r[1:]))
+    out.append(f"  닻으로 준 분기: {pick}")
     return out + [f"  기준: {str(ans.get('basis'))[:160]}"] + rep + \
         [f"  → 사업부 통과 {len(ok)}/{len(ends)}분기 (지금 화면 {was}분기)"]
 

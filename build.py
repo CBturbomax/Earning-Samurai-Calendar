@@ -680,9 +680,18 @@ def load_fpi_pr(out):
     except (ValueError, OSError) as e:
         print(f"  ! fpi_pr.json 읽기 실패: {e}")
         return
+    try:
+        co = json.loads((HERE / "data" / "fpi_co.json").read_text(encoding="utf-8")).get("stocks") or {}
+    except (ValueError, OSError):
+        co = {}
     n_fin = n_co = 0
-    for key, st in stocks.items():
-        q = {e: lst for e, lst in (st.get("q") or {}).items() if lst}
+    for key in list(stocks) + [k for k in co if k not in stocks]:
+        st = stocks.get(key) or {"cur": co[key].get("cur"), "q": {}}
+        q = {e: list(lst) for e, lst in (st.get("q") or {}).items() if lst}
+        # 회사 단위로 읽은 쪽(fpi_co)이 본 총매출 — 장마다 읽은 값이 없는 분기에만 후보로 넣는다. 싣는 조건은 아래와 같다(연간 합·두 번 같은 값).
+        for e, x in ((co.get(key) or {}).get("q") or {}).items():
+            if x.get("pend") and x.get("rev") and e not in q and (co[key].get("cur") or "") == (st.get("cur") or ""):
+                q[e] = [{"a": "co", "d": "", "rev": x["rev"]}]
         if not q:
             continue
         f = out.get(key) or {}
@@ -732,6 +741,28 @@ def load_fpi_pr(out):
                 segs[e] = x["seg"]
         if len(segs) >= 2:
             FPI_SEG[key] = segs
+    # **회사 단위로 한 번에 읽은 사업부**(ai_fpi_co.py → fpi_co.json, 11/10). 한 이름 체계·한 기준으로 정리된 줄이라 장마다 읽은 것보다 앞선다.
+    # 수집기가 '부문 합 ÷ 총매출이 분기마다 고른가'로 걸렀다. 여기서는 **그 분기 총매출을 우리가 가졌을 때만** 싣는다(pend = 수집기 때는 없던 분기).
+    n_co = 0
+    for key, st in co.items():
+        f = out.get(key) or {}
+        if (f.get("cur") or "") != (st.get("cur") or "") or len(st.get("q") or {}) < 4:
+            continue
+        ends = [(date.fromisoformat(x["end"]), x["rev"]) for x in f.get("points") or [] if x.get("end") and x.get("rev")]
+        segs = dict(FPI_SEG.get(key) or {})
+        for e, x in st["q"].items():
+            d = date.fromisoformat(e)
+            hit = min(ends, key=lambda t: abs((t[0] - d).days), default=None)
+            if not hit or abs((hit[0] - d).days) > 20 or len(x.get("seg") or {}) < 2:
+                continue
+            if x.get("pend") and abs(x["rev"] / hit[1] - 1) > 0.02:      # 임시 총매출로 검산한 분기 — 나중에 얻은 총매출과 맞아야
+                continue
+            segs[e] = x["seg"]
+            n_co += 1
+        if len(segs) >= 2:
+            FPI_SEG[key] = segs
+    if n_co:
+        print(f"  외국 기업 사업부(회사 단위로 읽은 것): {n_co:,}칸 · {len(co):,}곳")
     if n_fin or FPI_SEG:
         print(f"  외국 기업 6-K 보도자료: 옛 분기 총매출 {n_fin:,}칸({n_co:,}곳) · 사업부를 읽은 회사 {len(FPI_SEG):,}")
 
