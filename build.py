@@ -3184,6 +3184,7 @@ def load_fpi_seg():
             rec = _as_rec(segs, "사업부")
             if rec:
                 rec.pop("axis", None)
+                rec["fpiq"] = 1                              # 전 줄이 보도자료 석 달 칸(pack_seg 가 반기로 오해하지 않게)
                 SEG[k] = rec
                 n += len(rec["pts"])
             continue
@@ -3808,6 +3809,13 @@ def pack_seg(rec, fin_rec):
     try:
         ends = sorted(date.fromisoformat(r[0]) for r in pts if re.match(r"\d{4}-\d\d-\d\d$", str(r[0])))
         gaps = sorted((b - a).days for a, b in zip(ends, ends[1:]))
+        # **띄엄띄엄 있는 분기 줄을 반기·연간으로 오해하지 않는다**(11/10 선코 SU: 보도자료에서 읽은 여섯 분기가 1Q18~1Q21 에 흩어져
+        # 간격 가운뎃값이 183일 → 「1H18」 같은 반기 이름을 받아 분기 실적 차트와 짝이 안 맞았다). 간격만으로는 '반기 값'과 '구멍 난 분기 값'을
+        # 못 가른다. **보도자료 줄(load_fpi_seg 가 `fpiq` 로 표시)만** 믿는다 — 석 달 칸에서 읽었고 합이 그 분기 총매출과 맞은 줄이다.
+        # 모든 줄에 넓히면 안 된다(해 봤다: 137곳이 바뀌고 반기·연간 값이 분기 이름을 받았다). 줄마다 합이 그 분기 총매출의 ±10% 일 때만.
+        rat = [sum(v for v in r[1:] if v) / rev for r, (_l, rev) in zip(pts, aligned) if rev and rev > 0]
+        if rec.get("fpiq") and len(rat) == len(pts) and all(0.9 <= x <= 1.1 for x in rat):
+            gaps = []
         if len(gaps) >= 2 and gaps[len(gaps) // 2] > 250:
             return None
         if len(gaps) >= 2 and 150 <= gaps[len(gaps) // 2] <= 220 and not all(re.search("H", l or "") for l, _ in aligned):

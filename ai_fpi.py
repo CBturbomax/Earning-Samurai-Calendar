@@ -43,6 +43,7 @@ JP_ADR = {"TM", "SONY", "HMC", "TAK", "IX", "NMR", "MUFG", "SMFG", "MFG", "NTDOY
 DOC_LIMIT = int(os.environ.get("FPI_DOC", "14000"))
 DRY_N, DRY_DAYS = 3, 180
 KW = re.compile(r"revenue|net sales|turnover|sales|segment", re.I)
+REVROW = re.compile(r"(?im)^\s*(total\s+)?(net\s+)?(operating\s+)?(revenues?|net sales|sales|product sales|turnover)\b[^\n]*\d{3}")
 QHINT = re.compile(r"three months|three-month|quarter|3 months|\b[1-4]Q\s?\d\d|\bQ[1-4]\b|six months|half[- ]year", re.I)
 
 PROMPT = """You are extracting numbers from a company's quarterly earnings press release. Read ONLY the text below.
@@ -88,7 +89,8 @@ def quarter_ends(fin):
     pts = sorted(p["end"] for p in fin.get("points") or [] if p.get("end"))
     if len(pts) < 4:
         return []
-    step = 6 if fin.get("freq") == "H" else 3
+    import build as B
+    step = 6 if is_half(B, fin) else 3
     out, e = set(pts), _d(pts[-1])
     while True:
         e = _back(e, step)
@@ -97,6 +99,11 @@ def quarter_ends(fin):
         if not any(abs((_d(x) - e).days) <= 20 for x in pts):
             out.add(e.isoformat())
     return sorted(x for x in out if x >= SINCE)
+
+
+def is_half(B, fin):
+    """반기만 내는 회사인가 — freq 가 'H' 거나 점 사이 간격의 가운뎃값이 반년쯤(build.half_yearly)."""
+    return fin.get("freq") == "H" or B.half_yearly(B.dedup_points(fin.get("points") or []))
 
 
 def is_fpi(code, raw_us):
@@ -168,22 +175,34 @@ def release_html(cik, acc):
         items = json.loads(blob)["directory"]["item"] if blob else []
     except (ValueError, KeyError):
         items = []
+    def small(it):                                      # 표지·짧은 알림(2만 자 안팎)에는 실적 표가 없다 — 열지 않는다
+        try:
+            return 0 < int(it.get("size") or 0) < 25000
+        except ValueError:
+            return False
     htm = sorted(it["name"] for it in items if it["name"].lower().endswith((".htm", ".html"))
-                 and not re.match(r"index|.*-index", it["name"], re.I))
+                 and not re.match(r"index|.*-index", it["name"], re.I) and not small(it))
     ex = [n for n in htm if re.search(r"ex[-_]?99|99[-_.]?[1-3]\b|991|992|press|earnings|result", n, re.I)]
-    for name in (ex or htm)[:3]:
+    # **이름이 맞는 첫 장에서 멈추지 않는다**(11/10 CNQ — probe 실측): 캐나다 회사의 실적 6-K 는 `…pressrelease.htm`(생산량 표뿐, 매출 표 0) ·
+    # `…fs.htm`(재무제표 — 손익·부문 표) · `…mda.htm` 세 장이다. 'press' 가 든 한 장만 열고 끝내 66장이 전부 빈손이었다.
+    # 이름이 맞는 것을 먼저, 나머지를 뒤에 열고 **총매출 줄이 있는 표가 든 첫 장**을 쓴다. 없으면 표가 있는 첫 장.
+    first = ""
+    for name in (ex + [n for n in htm if n not in ex])[:4]:
         raw = af.sec(lu.DOC.format(cik=cik, acc=acc, name=name), binary=True)
         txt = text_of(raw.decode("utf-8", "replace")) if raw else ""
-        if txt:
+        if txt and REVROW.search(txt):
             return txt
-    return ""
+        first = first or txt
+    return first
 
 
 def text_of(raw):
     """보도자료 -> AI 에 넘길 글: 첫머리(무슨 분기인지) + 매출·사업부 낱말이 든 표만."""
     import pr_table as pt
     plain = re.sub(r"\s+", " ", re.sub(r"<[^>]+>", " ", raw[:60000]))
-    if not (QHINT.search(plain) and KW.search(plain)):
+    # 첫머리에서는 '분기 자료인가'만 본다. 매출 낱말은 아래에서 **표마다** 본다 — 첫 6만 자가 서식뿐인 문서(CNQ 재무제표: 글 5천 자)는
+    # 첫머리에 매출 낱말이 없어 통째로 버려졌다(11/10).
+    if not QHINT.search(plain):
         return ""
     out = []
     for t in pt.tables(raw):
@@ -194,6 +213,8 @@ def text_of(raw):
             out.append(blob)
     if not out:
         return ""
+    # 총매출 줄이 있는 표를 앞에 — 글자 상한(DOC_LIMIT)에 생산량·단가 표가 먼저 차서 손익·부문 표가 잘리지 않게(SU: 표 37장 중 12번째가 부문 표).
+    out.sort(key=lambda b: 0 if REVROW.search(b) else 1)
     # 단위 문구는 표 밖에 있는 일이 많다("(RMB in thousands, except per share data)") — 첫 시험에서 AI 가 단위를 1 로 적었다. 찾아서 같이 넘긴다.
     units = sorted({m.group(0)[:90] for m in re.finditer(
         r"(?i)\(?[^().]{0,40}\b(in|expressed in)\s+(thousands|millions|billions)\b[^().]{0,40}\)?", plain)})[:4]
@@ -265,7 +286,7 @@ def one(B, key, miss, db, t0, verbose):
     if not cik:
         return "CIK 없음", 0
     fin = B.FIN.get(key) or {}
-    m_want = 6 if fin.get("freq") == "H" else 3
+    m_want = 6 if is_half(B, fin) else 3
     ends = quarter_ends(fin)
     files = six_k(int(cik))
     if not files:                                        # 6-K 를 안 내는 회사(국내 기업인데 SEC 분기 재무가 비어 있을 뿐) — 반년 뒤에나 다시 본다
@@ -369,6 +390,12 @@ def main():
     db.setdefault("v", 1)
     db.setdefault("stocks", {})
     db.setdefault("asked", {})
+    if db["v"] < 2:
+        # 판 2(11/10): 첨부 고르기를 고쳤다. **AI 에 한 번도 못 물어본 회사**(검산 통과 0 — CNQ 66장)의 '열어 본 공시' 기록만 비워 다시 연다.
+        # 값을 얻은 회사의 기록은 그대로 둔다(이미 물은 공시를 다시 묻지 않게).
+        for k in [k for k in db["asked"] if not (db["stocks"].get(k) or {}).get("q") and k not in (db.get("dry") or {})]:
+            db["asked"][k] = []
+        db["v"] = 2
     db["calls"] = 0
     lim = db.get("limited")
     if lim and not only and not plan and (datetime.now(timezone.utc) - datetime.fromisoformat(lim)).total_seconds() < 1500:
@@ -383,7 +410,7 @@ def main():
     except (OSError, ValueError):
         raw_us = {}
     holes = af.HOLES or {}
-    todo = []
+    todo, n_half = [], 0
     for key in tg:
         if not key.startswith("us:") or not is_fpi(key[3:], raw_us) or (key[3:] in JP_ADR and key not in only):
             continue
@@ -393,11 +420,16 @@ def main():
             d = (db.get("dry") or {}).get(key)
             if d and (date.today() - _d(d)).days < DRY_DAYS:
                 continue
+        # **반기만 내는 회사는 뺀다**(11/10 BHP: 석 달 칸을 물었는데 표에는 여섯 달 칸뿐 — 세 장 빈손, 2.4만 토큰). 화면 기록의 freq 는
+        # 반기 회사도 'Q' 로 적혀 있어(반기 이름은 pack_fin 이 붙인다) 여기서 점 간격으로 가른다. 손으로 종목을 주면 읽는다(여섯 달 칸).
+        if key not in only and is_half(B, B.FIN.get(key) or {}):
+            n_half += 1
+            continue
         miss = need(B, key, db, holes)
         if miss:
             todo.append((key, miss))
     soon = sum(1 for k, _ in todo if k in af.SOON)
-    print(f"외국 기업 보도자료 읽기: 대상 {len(todo):,}곳(곧 발표 {soon}) · 빈 분기 {sum(len(m) for _, m in todo):,}")
+    print(f"외국 기업 보도자료 읽기: 대상 {len(todo):,}곳(곧 발표 {soon}) · 빈 분기 {sum(len(m) for _, m in todo):,} · 반기 회사라 뺀 곳 {n_half}")
     if plan:
         for k, m in todo[:60]:
             print(f"  {k:<10} 시총 {af.CAPS.get(k) or 0:>7.1f} · 빈 분기 {len(m):>2} ({m[0]} ~ {m[-1]})")

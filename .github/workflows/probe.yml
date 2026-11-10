@@ -19,7 +19,7 @@ jobs:
           python-version: '3.12'
       - name: 🔎 ai_fpi — 캐나다 회사 6-K 에서 실적 표를 왜 못 고르나(11/10)
         continue-on-error: true
-        run: python tools/ai/probe_fpi.py 1017413:000101741319000025:a03312019q1fs.htm 1017413:000101741319000025:a03312019q1mda.htm 311337:000104746919004364:a2239090zex-99_1.htm 2>&1 | grep -v '^  [a-z_0-9]*\.json' > /tmp/probe.txt
+        run: python tools/ai/probe_fpi.py 1017413:000101741319000025 1017413:000101741319000012 1017413:000101741319000002 2>&1 | grep -v '^  [a-z_0-9]*\.json' > /tmp/probe.txt
       - name: 결과를 probe-out 가지에
         if: always()
         run: |
