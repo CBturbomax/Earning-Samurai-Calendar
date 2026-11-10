@@ -743,7 +743,7 @@ def load_fpi_pr(out):
             FPI_SEG[key] = segs
     # **회사 단위로 한 번에 읽은 사업부**(ai_fpi_co.py → fpi_co.json, 11/10). 한 이름 체계·한 기준으로 정리된 줄이라 장마다 읽은 것보다 앞선다.
     # 수집기가 '부문 합 ÷ 총매출이 분기마다 고른가'로 걸렀다. 여기서는 **그 분기 총매출을 우리가 가졌을 때만** 싣는다(pend = 수집기 때는 없던 분기).
-    n_co = 0
+    n_cos = 0
     for key, st in co.items():
         f = out.get(key) or {}
         if (f.get("cur") or "") != (st.get("cur") or "") or len(st.get("q") or {}) < 4:
@@ -758,11 +758,11 @@ def load_fpi_pr(out):
             if x.get("pend") and abs(x["rev"] / hit[1] - 1) > 0.02:      # 임시 총매출로 검산한 분기 — 나중에 얻은 총매출과 맞아야
                 continue
             segs[e] = x["seg"]
-            n_co += 1
+            n_cos += 1
         if len(segs) >= 2:
             FPI_SEG[key] = segs
-    if n_co:
-        print(f"  외국 기업 사업부(회사 단위로 읽은 것): {n_co:,}칸 · {len(co):,}곳")
+    if n_cos:
+        print(f"  외국 기업 사업부(회사 단위로 읽은 것): {n_cos:,}칸 · {len(co):,}곳")
     if n_fin or FPI_SEG:
         print(f"  외국 기업 6-K 보도자료: 옛 분기 총매출 {n_fin:,}칸({n_co:,}곳) · 사업부를 읽은 회사 {len(FPI_SEG):,}")
 
