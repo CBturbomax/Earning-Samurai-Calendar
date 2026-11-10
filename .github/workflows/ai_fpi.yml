@@ -69,6 +69,9 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: '3.12'
+      - name: pdftotext(일본 결산단신 PDF 쪽 읽기)
+        if: github.event.inputs.mode == 'jp'
+        run: command -v pdftotext || (sudo apt-get update -qq && sudo apt-get install -y -qq poppler-utils) || true
       - name: 엔진 고르기
         run: |
           if [ "${{ github.event.inputs.engine }}" = "codex" ] && [ -n "$CODEX_AUTH_JSON" ]; then
