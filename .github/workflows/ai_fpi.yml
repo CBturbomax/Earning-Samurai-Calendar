@@ -28,6 +28,14 @@ on:
         description: 'codex 면 Codex 로(기본은 Claude 1번 계정)'
         required: false
         default: ''
+      mode:
+        description: 'co = 회사 하나를 한 번에 읽는 시험판(ai_fpi_co.py — only 에 종목을 줄 것)'
+        required: false
+        default: ''
+      model:
+        description: '모델(기본 haiku · co 시험판은 sonnet 권장)'
+        required: false
+        default: ''
 
 permissions:
   contents: write
@@ -44,7 +52,7 @@ jobs:
     env:
       TOK1: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
       CODEX_AUTH_JSON: ${{ secrets.CODEX_AUTH_JSON }}
-      AI_MODEL: haiku            # 표 읽기 — 검산(합계·연간 합)이 틀린 답을 거른다
+      AI_MODEL: "${{ github.event.inputs.model || 'haiku' }}"   # 표 읽기 — 검산(합계·연간 합)이 틀린 답을 거른다
       CODEX_EFFORT: low
       FPI_TOKENS: "${{ github.event.inputs.tokens || '300000' }}"
       FPI_MAX: '80'
@@ -83,11 +91,12 @@ jobs:
         timeout-minutes: 45
         run: |
           set -o pipefail
-          python ai_fpi.py ${{ github.event.inputs.only }} | { grep -v '^  [a-z_0-9]*\.json\|번역 받기\|받기 실패' || true; } | tee fpi.log
-          { echo '```'; tail -40 fpi.log; echo '```'; } >> "$GITHUB_STEP_SUMMARY"
+          PY=ai_fpi.py; [ "${{ github.event.inputs.mode }}" = "co" ] && PY=ai_fpi_co.py
+          python $PY ${{ github.event.inputs.only }} | { grep -v '^  [a-z_0-9]*\.json\|번역 받기\|받기 실패' || true; } | tee fpi.log
+          { echo '```'; tail -120 fpi.log; echo '```'; } >> "$GITHUB_STEP_SUMMARY"
       - name: 저장소에 반영
         if: env.AI_READY == '1'
         run: |
           rm -f fpi.log
           [ -f data/fpi_pr.json ] || { echo "파일이 없다."; exit 0; }
-          bash .github/scripts/save_owned.sh "외국 기업 보도자료 읽기 $(date -u +%F' '%H:%M) [skip ci]" data/fpi_pr.json
+          bash .github/scripts/save_owned.sh "외국 기업 보도자료 읽기 $(date -u +%F' '%H:%M) [skip ci]" data/fpi_pr.json data/fpi_co.json
