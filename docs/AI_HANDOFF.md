@@ -210,3 +210,11 @@
   ① build `load_ai_fill` 끝에서 옛 분기 이력(`segments_hist_*_s*.json` 의 stocks + more)을 **AI 값과 같은 길(fits 검산 → `_ai_fill_one`)로 화면 빈칸에** 넣는다
   (첫 빌드 1,233칸 — splice·prepend_old 는 이름이 다르면 뼈대 안쪽 빈칸을 못 채웠다). ② `scrape_seg_hist_us` 대상에 화면 기준 빈칸(seg_holes.json)을 더하고
   gv 4 로 done_co 를 한 번 비워 다시 읽는다. 다시 읽을 때 앞 기록은 `more` 에 남긴다. **순서: XBRL 이력이 다 돈 뒤에 남는 칸만 AI.** 그동안 ai_fill.yml 은 꺼 둔다.
+
+## 어느 모델을 쓰나 (11/10 — Anthropic 모델 고르기 글을 이 저장소에 적용)
+- **이 저장소 작업(채팅 세션)**: 기본은 Opus 5.5 · 보통(medium). Fable 은 토큰 값이 Opus 의 두 배라 큰 구조 변경·어려운 원인 찾기에만. 글자·설정 고치기는 Sonnet 5.5 로 충분.
+  모델을 올리기 전에 먼저 **스스로 확인할 수단**(빌드·probe·로그)을 주고, 그다음 effort 한 단계, 그래도 안 되면 모델을 올린다.
+- **찾기·로그 읽기는 Haiku 하위 에이전트로**: `.claude/agents/Explore.md` · `log-reader.md`(둘 다 `model: haiku`). 큰 로그·build.py 훑기를 본 세션이 직접 읽지 않는다.
+- **파이프라인의 AI 호출은 Haiku**(분류·표 읽기·요약 — 검산이 틀린 답을 거른다): ai_fill·ai_desc·ai_mon `AI_MODEL: haiku`, 실시간 서버 `CLAUDE_MODEL` 기본 haiku.
+  이름 옮기기(ai_names)만 sonnet. **검산을 통과 못 한 것만** 위 모델로 다시 묻는 것은 괜찮지만, 처음부터 큰 모델로 돌리지 말 것.
+- 긴 대화는 토큰이 매 턴 다시 든다 — 주제가 바뀌면 새 세션으로(이 문서가 인수인계다).
