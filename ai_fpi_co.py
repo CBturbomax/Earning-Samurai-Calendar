@@ -10,7 +10,7 @@ ai_fpi.py(공시 한 장 = 한 번 묻기 · 사업부 합이 총매출과 1% �
   · 분기마다 실적 공시 한 장씩 골라 **부문 표만** 추려 한 프롬프트에 차례대로 싣고(회사당 한 번),
   · 모델이 **한 이름 체계·한 기준**으로 전 분기를 정리한다(나중 공시의 재표시 값 우선, 상계 줄은 따로),
   · 검산은 코드가 한다 — 합이 총매출과 같을 필요는 없다. 대신
-      (가) 총매출: 가진 분기와 2% 안
+      (가) 잣대는 **우리가 이미 검산해 가진 분기 총매출**이다(모델이 고른 총매출 줄은 안 믿는다 — SU 는 장마다 '기타 수익 포함' 줄을 집었다)
       (나) 부문 합(+상계) = 총매출 1% 안이면 '맞아떨어짐'
       (다) 아니면 **부문 합 ÷ 총매출이 분기마다 고른가**(앞뒤 가운뎃값의 ±12%, 1.3배 넘는 회사는 ±25% — build.pack_seg 와 같은 잣대)
       (라) 이미 검산을 통과해 가진 분기(fpi_pr · 화면 SEG)와 겹치면 부문마다 3% 안.
@@ -30,7 +30,7 @@ from pathlib import Path
 HERE = Path(__file__).parent
 OUT = HERE / "data" / "fpi_co.json"
 A, Z = "2018-03-31", "2021-12-31"                       # 읽을 분기 범위(끝은 이미 가진 분기 하나 — 닻)
-PER_DOC = int(os.environ.get("FPICO_DOC", "6000"))
+PER_DOC = int(os.environ.get("FPICO_DOC", "3200"))
 MAX_PROMPT = 110000
 
 PROMPT = """You are building a clean QUARTERLY revenue-by-segment time series for one company from its own quarterly reports.
@@ -65,28 +65,68 @@ def _d(s):
     return date.fromisoformat(s)
 
 
-def seg_text(raw):
-    """실적 공시 한 장 -> 부문 표 위주의 글(PER_DOC 자). 부문 낱말 + 매출 줄이 다 있는 표가 맨 앞, 그다음 부문 표, 그다음 손익 표."""
-    import ai_fpi as P
+REVTERM = re.compile(r"(?i)\b(revenues?|sales|turnover)\b")
+NOTREV = re.compile(r"(?i)price|volume|per (share|unit|boe|bbl|tonne)|cost of|bbl|boe|mmcf|margin|days|growth|change")
+SEGWORD = re.compile(r"(?i)segment|divisions?\b|business (unit|area|line)|by (business|product|division)")
+UNITS = re.compile(r"(?i)bbl|boe|mmcf|tonnes?\b|\bkt\b|per share|headcount|\$/")
+
+
+def _tables(raw):
+    """공시 한 장 -> [(점수, 글)] — **표를 통째로 싣지 않고 머리줄 + 매출 줄만** 남긴다(11/10 시험 1차: 표 전체를 실어 회사당 5만 토큰,
+    그러고도 상한에 잘려 MT 의 ACIS 가 빠졌다). 부문이 가로로 놓인 표(CNQ·SU: 칸마다 부문)는 머리줄 + '…sales/revenue' 줄,
+    부문마다 표가 따로인 회사(MT: 'NAFTA … Sales')도 같은 꼴로 줄어든다. 부문이 세로로 놓인 표(줄마다 부문)는 통째로(2,500자)."""
     import pr_table as pt
-    plain = re.sub(r"\s+", " ", re.sub(r"<[^>]+>", " ", raw[:60000]))
-    if not P.QHINT.search(plain):
-        return ""
-    got = []
+    out = []
     for i, t in enumerate(pt.tables(raw)):
         rows = [" | ".join(c for c in r if c and c.strip() and c.strip() != "$") for r in t]
         rows = [r for r in rows if r.strip()]
-        blob = "\n".join(rows)
-        if len(rows) < 2 or not P.KW.search(blob) or not re.search(r"\d{3,}", blob):
+        if len(rows) < 2:
             continue
-        if re.search(r"(?i)bbl|boe|mmcf|tonnes?\b|\bkt\b|per share|headcount|\$/|%", rows[0] + rows[1]):
-            continue                                     # 물량·단가 표
-        s = (2 if re.search(r"(?i)segment|divisions?\b|business (unit|area|line)", blob) else 0) + (1 if P.REVROW.search(blob) else 0)
-        if re.search(r"(?i)three months|quarter", blob[:400]):
-            s += 1
-        if s:
-            got.append((-s, i, blob[:3000]))
-    if not got or not any(P.REVROW.search(b) for _s, _i, b in got):
+        def numrow(r):                                   # 값 줄인가 — 연도·날짜만 든 줄(머리줄)은 아니다
+            rest = r.split(" | ", 1)[1] if " | " in r else ""
+            if re.search(r"(?i)\b(jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec)[a-z]*\.? ?\d|months|quarter|ended|\b[1-4]Q ?\d\d|\bQ[1-4]\b|\bFY ?\d\d|\b[12]H ?\d\d|\b\d{1,2}M ?\d\d\b", rest):
+                return False
+            toks = re.findall(r"\d[\d,.]*\d|\d", rest.replace("\u00a0", " "))
+            if len(toks) < 2 or all(re.fullmatch(r"(19|20)\d\d", t) for t in toks):
+                return False
+            return bool(re.search(r"\d{3}|\d[ ,]\d", rest))
+        isnum = [numrow(r) for r in rows]
+        if not any(isnum):
+            continue
+        first = isnum.index(True)
+        head = rows[:min(first, 5)]
+        htxt = " ".join(head)
+        if UNITS.search(htxt) or UNITS.search(rows[first].split(" | ")[0]):
+            continue
+        blob = "\n".join(rows)
+        revrows = [k for k, r in enumerate(rows) if isnum[k] and REVTERM.search(r.split(" | ")[0]) and not NOTREV.search(r.split(" | ")[0])]
+        seg = bool(SEGWORD.search(blob))
+        q = bool(re.search(r"(?i)three months|quarter|\b[1-4]Q ?\d\d|\bQ[1-4]\b", htxt + rows[first]))
+        if revrows:
+            keep = sorted(set(revrows) | {k for k, r in enumerate(rows) if isnum[k] and
+                                           re.search(r"(?i)eliminat|inter-?segment|royalt|^total", r.split(" | ")[0])})[:12]
+            txt = "\n".join(head + [rows[k] for k in keep])[:1800]
+            out.append(((2 if seg else 0) + (1 if q else 0) + (1 if len(head) >= 1 else 0), i, txt))
+        elif (seg or REVTERM.search(htxt)) and not NOTREV.search(htxt):
+            out.append(((2 if seg else 0) + (1 if q else 0), i, blob[:2500]))       # 줄마다 부문인 표
+    return out
+
+
+def seg_text(raws):
+    """실적 공시 한 건의 첨부들 -> 부문 표 글(PER_DOC 자). 첨부를 가리지 않고 표를 한데 모아 점수 순으로 싣는다
+    (CNQ: 부문 표는 재무제표 장에, 분기 요약은 MD&A 에 있다)."""
+    import ai_fpi as P
+    got, seen, plain0 = [], set(), ""
+    for raw in raws:
+        plain = re.sub(r"\s+", " ", re.sub(r"<[^>]+>", " ", raw[:60000]))
+        if not P.QHINT.search(plain):
+            continue
+        plain0 = plain0 or plain
+        for s_, i, txt in _tables(raw):
+            if txt not in seen:
+                seen.add(txt)
+                got.append((-s_, len(got), txt))
+    if not got or not any(REVTERM.search(t) for _s, _i, t in got):
         return ""
     out, n = [], 0
     for _s, _i, b in sorted(got):
@@ -95,12 +135,12 @@ def seg_text(raw):
         out.append(b)
         n += len(b)
     units = sorted({m.group(0)[:80] for m in re.finditer(
-        r"(?i)\(?[^().]{0,30}\b(in|expressed in)\s+(thousands|millions|billions)\b[^().]{0,30}\)?", plain)})[:2]
+        r"(?i)\(?[^().]{0,30}\b(in|expressed in)\s+(thousands|millions|billions)\b[^().]{0,30}\)?", plain0)})[:2]
     return ("UNIT NOTES: " + " | ".join(units) + "\n" if units else "") + "\n--- table ---\n".join(out)
 
 
 def filing_text(cik, acc):
-    """6-K 한 건 -> 부문 표 글. 첨부를 이름 맞는 것 먼저 네 장까지 열어 가장 알찬 장(부문 표가 든 장)을 쓴다."""
+    """6-K 한 건 -> 부문 표 글. 2.5만 자 넘는 첨부를 이름 맞는 것 먼저 네 장까지 열어 표를 한데 모은다."""
     import ai_fill as af
     import scrape_live_us as lu
     blob = af.sec(lu.FILES.format(cik=cik, acc=acc))
@@ -117,15 +157,12 @@ def filing_text(cik, acc):
     htm = sorted(it["name"] for it in items if it["name"].lower().endswith((".htm", ".html"))
                  and not re.match(r"index|.*-index", it["name"], re.I) and not 0 < size(it) < 25000)
     ex = [n for n in htm if re.search(r"ex[-_]?99|99[-_.]?[1-3]\b|991|992|press|earnings|result", n, re.I)]
-    best = ""
+    raws = []
     for name in (ex + [n for n in htm if n not in ex])[:4]:
         raw = af.sec(lu.DOC.format(cik=cik, acc=acc, name=name), binary=True)
-        txt = seg_text(raw.decode("utf-8", "replace")) if raw else ""
-        if re.search(r"(?i)segment", txt) and len(txt) > len(best):
-            best = txt
-        elif not best:
-            best = txt
-    return best
+        if raw:
+            raws.append(raw.decode("utf-8", "replace"))
+    return seg_text(raws)
 
 
 def ask(prompt):
@@ -180,22 +217,35 @@ def check(B, key, ans, pr_q):
         x = next((r for r in reversed(lst) if r.get("seg")), None)
         if x:
             old[e] = {B.seg_key(n): v for n, v in x["seg"].items()}
+    # 뼈대 부문 — 절반 넘는 분기에 나오는 이름. 그중 하나가 빠진 분기는 '부문 빠짐'(상한에 잘렸거나 못 읽은 칸 — 합이 줄어든 채 실리면 안 된다)
+    cnt = {}
+    for e in ratio:
+        for n in rows[e]["seg"]:
+            cnt[B.seg_key(n)] = cnt.get(B.seg_key(n), 0) + 1
+    core = {k for k, c in cnt.items() if c > len(ratio) / 2}
     ok, rep = {}, []
     for i, e in enumerate(ends):
         r = rows[e]
         why = []
-        rev_ok = r["rev"] is not None and abs(r["rev"] / r["have"] - 1) <= 0.02
-        if not rev_ok:
-            why.append(f"총매출 {None if r['rev'] is None else round(r['rev'] / 1e6)} ≠ 가진 값 {round(r['have'] / 1e6)}")
         grade = ""
         if e in ratio:
-            exact = abs((sum(r["seg"].values()) + r["elim"]) / r["have"] - 1) <= 0.01
+            exact = abs((sum(r["seg"].values()) + r["elim"]) / r["have"] - 1) <= 0.01 or abs(ratio[e] - 1) <= 0.01
             nb = [ratio[x] for x in ends[max(0, i - 4):i + 5] if x != e and x in ratio]
             mid = sorted(nb)[len(nb) // 2] if len(nb) >= 3 else None
-            steady = mid is not None and abs(ratio[e] / mid - 1) <= (0.25 if mid >= 1.3 else 0.12)
+            steady = mid is not None and abs(ratio[e] / mid - 1) <= (0.25 if mid >= 1.3 else 0.12) and 0.8 <= ratio[e] <= 2.6
             grade = "맞아떨어짐" if exact else ("비율 고름" if steady else "")
             if not grade:
                 why.append(f"합÷총매출 {ratio[e]:.2f} (앞뒤 {None if mid is None else round(mid, 2)})")
+            mine_k = {B.seg_key(n) for n in r["seg"]}
+            miss = core - mine_k
+            if miss and not exact:
+                # 앞뒤 분기에는 있는 부문이 이 분기에만 없다
+                nbk = set()
+                for x in ends[max(0, i - 1):i + 2]:
+                    if x != e and x in ratio:
+                        nbk |= {B.seg_key(n) for n in rows[x]["seg"]}
+                if miss & nbk:
+                    why.append("부문 빠짐")
         else:
             why.append("부문 없음")
         anchor = ""
@@ -207,9 +257,9 @@ def check(B, key, ans, pr_q):
                 anchor = f"닻 {len(both) - len(bad)}/{len(both)}"
                 if len(bad) > len(both) / 2:
                     why.append("가진 값과 다름")
-        good = rev_ok and grade and "가진 값과 다름" not in why
+        good = bool(grade) and not ({"가진 값과 다름", "부문 빠짐"} & set(why))
         rep.append(f"    {e} {'✓' if good else '✗'} 매출 {round(r['have'] / 1e6):>7,} · 합÷매출 {ratio.get(e, 0):.2f} · {grade or '-'} {anchor} "
-                   f"· {' / '.join(f'{n} {round(v / 1e6):,}' for n, v in r['seg'].items())[:150]}" + (f"  ← {'; '.join(why)}" if why else ""))
+                   f"· {' / '.join(f'{n} {round(v / 1e6):,}' for n, v in r['seg'].items())[:170]}" + (f"  ← {'; '.join(why)}" if why else ""))
         if good:
             ok[e] = {"seg": r["seg"], "elim": r["elim"], "src": r["src"], "grade": grade}
     return ok, rep

@@ -581,6 +581,22 @@ def half_yearly(pts):
     return 150 <= gaps[len(gaps) // 2] <= 220
 
 
+FPI_HALF_SKIP = [0]
+
+
+def _coarser_than_base(v, base):
+    """6-K 기록(v)의 점 간격이 반년 이상인데 이미 가진 줄(base)은 분기인가."""
+    if not base or base.get("freq") != "Q":
+        return False
+    b = sorted(p["end"] for p in base.get("points") or [] if p.get("end") and p.get("rev"))
+    e = sorted(p["end"] for p in v.get("points") or [] if p.get("end") and p.get("rev"))
+    if len(b) < 8 or len(e) < 2:
+        return False
+    gap = lambda xs: sorted((date.fromisoformat(y) - date.fromisoformat(x)).days for x, y in zip(xs, xs[1:]))
+    gb, ge = gap(b), gap(e)
+    return gb[len(gb) // 2] <= 125 and ge[len(ge) // 2] >= 150
+
+
 def load_fin():
     """따로 받아둔 실적 수치(매출·영업이익 시계열, 발표 완료 여부).
 
@@ -610,7 +626,16 @@ def load_fin():
         for k, v in got.items():
             # 예전 financials.json 은 열쇠가 'AAPL' 이었다. 'us:' 를 붙여 옮긴다.
             key = k if ":" in k else prefix + k
+            # **반기 값을 분기 줄에 끼우지 않는다**(11/10 MT 2Q21 = 355억 — 상반기 누계가 분기 칸에 앉아 있었다. BUD·NAT·CRNT 도).
+            # financials_fpi 에는 '분기가 하나도 안 나오는 회사'의 상반기·하반기 점이 들어 있는데(scrape_seg_sec.quarterly), 같은 회사를
+            # stockanalysis 는 분기로 준다. merge_fin 은 '없는 종료일'만 메우므로 stockanalysis 20분기 앞의 반기 값이 그대로 분기 칸에 섰다.
+            # 6-K 쪽 점 간격이 반년 이상이고 이미 가진 줄이 분기면 그 기록은 안 합친다. 틀린 값보다 빈칸.
+            if name == "financials_fpi.json" and _coarser_than_base(v, out.get(key)):
+                FPI_HALF_SKIP[0] += 1
+                continue
             out[key] = merge_fin(out.get(key), v)
+    if FPI_HALF_SKIP[0]:
+        print(f"  financials_fpi.json: 분기 회사에 반기·연간 간격 점이라 안 합친 종목 {FPI_HALF_SKIP[0]:,}")
     for key, v in jp_old_fin().items():          # 1Q18 부터 — 비어 있는 옛 분기만 메운다(rank 가 가장 낮다)
         out[key] = merge_fin(out.get(key), v)
     try:
