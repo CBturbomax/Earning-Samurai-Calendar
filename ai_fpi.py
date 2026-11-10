@@ -191,7 +191,11 @@ def text_of(raw):
             out.append(blob)
     if not out:
         return ""
-    return (plain[:500] + "\n\n=== TABLE ===\n" + "\n\n=== TABLE ===\n".join(out))[:DOC_LIMIT]
+    # 단위 문구는 표 밖에 있는 일이 많다("(RMB in thousands, except per share data)") — 첫 시험에서 AI 가 단위를 1 로 적었다. 찾아서 같이 넘긴다.
+    units = sorted({m.group(0)[:90] for m in re.finditer(
+        r"(?i)\(?[^().]{0,40}\b(in|expressed in)\s+(thousands|millions|billions)\b[^().]{0,40}\)?", plain)})[:4]
+    head = plain[:500] + ("\nUNIT NOTES FOUND IN THE DOCUMENT: " + " | ".join(units) if units else "")
+    return (head + "\n\n=== TABLE ===\n" + "\n\n=== TABLE ===\n".join(out))[:DOC_LIMIT]
 
 
 def _num(x):

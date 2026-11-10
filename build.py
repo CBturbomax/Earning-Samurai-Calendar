@@ -665,6 +665,19 @@ def load_fpi_pr(out):
             continue
         step = 6 if f.get("freq") == "H" else 3
         have = {x["end"]: x["rev"] for x in f.get("points") or [] if x.get("end") and x.get("rev")}
+        ann = raw_us.get(key.split(":")[1]) or {}
+        ann_ok = ann.get("freq") == "A" and (ann.get("cur") or "") == (st.get("cur") or "")
+        # **단위를 놓친 답을 바로잡는다**(11/10 첫 시험: 핀둬둬·넷이즈 표는 '천 위안'인데 AI 가 단위 1 로 적어 1000배 작았다 — 단위 문구가
+        # 표 밖에 있었다). 다시 묻지 않고, 1·천·백만 배 가운데 **20-F 연간 매출과 자릿수가 맞는 것**을 고른다. 맞는 것이 없으면 그대로(검산이 버린다).
+        if ann_ok:
+            ys = {a["end"][:4]: a["rev"] for a in ann.get("points") or [] if a.get("end") and a.get("rev")}
+            pairs = [(lst[-1]["rev"], ys[e[:4]]) for e, lst in q.items() if e not in have and e[:4] in ys]
+            if pairs:
+                sc = max((1, 1e3, 1e6), key=lambda k_: sum(1 for v, a in pairs if 0.1 <= v * k_ / a <= 0.5))
+                if sc != 1 and sum(1 for v, a in pairs if 0.1 <= v * sc / a <= 0.5) >= 0.8 * len(pairs):
+                    q = {e: ([dict(x, rev=x["rev"] * sc, **({"opi": x["opi"] * sc} if x.get("opi") is not None else {}),
+                                   **({"seg": {n: v * sc for n, v in x["seg"].items()}} if x.get("seg") else {})) for x in lst]
+                             if e not in have else lst) for e, lst in q.items()}
         val = {e: lst[-1]["rev"] for e, lst in q.items()}            # 나중 공시(재표시) 값
         ok = set()
         for e, lst in q.items():
@@ -673,8 +686,7 @@ def load_fpi_pr(out):
                     ok.add(e)
             elif len(lst) >= 2 and abs(lst[0]["rev"] / lst[-1]["rev"] - 1) <= 0.005:
                 ok.add(e)
-        ann = raw_us.get(key.split(":")[1]) or {}
-        if ann.get("freq") == "A" and (ann.get("cur") or "") == (st.get("cur") or ""):
+        if ann_ok:
             for a in ann.get("points") or []:
                 if not (a.get("end") and a.get("rev")):
                     continue
