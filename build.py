@@ -2908,7 +2908,120 @@ def load_desc():
     return out
 
 
+def seg_repair():
+    """**분기마다 '합이 총매출과 맞는 조합'을 골라 쓴다(11/10).** 숫자는 받아 놓고도 화면이 비던 까닭이 이것이었다 —
+      · AMD 2Q21: 나중 공시의 재표시 비교치(새 부문 둘만 — 합이 매출의 22%)가 그 칸을 차지해, 제대로 된 옛 기준 줄(합 = 매출)이 못 들어갔다
+      · 맥도날드 2018: 옛 기준 넷 + 재표시 새 기준 둘이 한 칸에 섞여 합이 1.7배 → '튄 칸'으로 통째로 빠졌다
+      · 코노코필립스 4분기: 연간 − 9개월이 일부 부문만 되살아나 반쪽
+    회원님: "채팅에서 물으면 빈칸 없이 다 알려주면서 이건 왜 못 하냐" — 채팅의 나는 공시 표를 놓고 합이 맞는 줄을 고른다. 그 규칙을 그대로 옮긴다.
+    후보 = 지금 칸 + 옛 분기 이력(segments_hist_* 의 stocks·more)의 같은 분기 줄. 줄 전체가 맞으면 그것, 아니면 그 줄의 이름 부분집합(10개 이하) 중
+    합이 그 회사 평소 비율(대개 1.0)×총매출의 1.5% 안인 것. 앞 분기에서 쓴 이름과 많이 겹치는 쪽(같은 기준이 이어지게) → 이름이 많은 쪽 차례로 고른다.
+    지금 칸이 멀쩡하면(평소 비율 ±5%) 손대지 않는다. 평소 비율을 못 잡는 회사(멀쩡한 칸 6개 미만)는 건드리지 않는다."""
+    from itertools import combinations
+    hist = {}
+    for name in sorted(p.name for p in (HERE / "data").glob("segments_hist_*_s*.json")):
+        hj = _read_stocks(name)
+        for k0, v in list((hj.get("stocks") or {}).items()) + [(k0, v) for k0, lst in (hj.get("more") or {}).items() for v in lst]:
+            hist.setdefault(k0 if ":" in k0 else "us:" + k0, []).append(v)
+    fixed = cos = 0
+    for k, f in FIN.items():
+        base = SEG.get(k)
+        if not base or f.get("freq") not in ("Q", "H"):
+            continue
+        bpts = [r for r in base.get("pts") or [] if re.match(r"\d{4}-\d\d-\d\d$", str(r[0]))]
+        if len(bpts) != len(base.get("pts") or []) or len(bpts) < 6:
+            continue
+        fin = [(date.fromisoformat(p["end"]), p["end"], p["rev"]) for p in f.get("points") or [] if p.get("end") and p.get("rev")]
+
+        def rev_at(e):
+            d = date.fromisoformat(e)
+            c = min(fin, key=lambda x: abs((x[0] - d).days), default=None)
+            return c if c and abs((c[0] - d).days) <= 20 else None
+        names = list(base["names"])
+        rat = []
+        for r in bpts:
+            c = rev_at(r[0])
+            sm = sum(v for v in r[1:] if v)
+            if c and sm:
+                rat.append(sm / c[2])
+        good = sorted(x for x in rat if 0.9 <= x <= 1.7)
+        if len(good) < 6:
+            continue
+        m = good[len(good) // 2]
+        if sum(1 for x in good if abs(x / m - 1) <= 0.05) < 0.6 * len(good):
+            continue                                   # 비율이 고르지 않은 회사 — 맞춰 볼 잣대가 없다
+        rows = {r[0]: r for r in bpts}
+
+        def row_near(e):
+            d = date.fromisoformat(e)
+            return next((r for r in bpts if abs((date.fromisoformat(r[0]) - d).days) <= 20), None)
+        prev_names, changed = set(), 0
+        for _d, e, rev in sorted(fin):
+            if e < "2017-01-01":
+                continue
+            cur = row_near(e)
+            cur_d = {names[i]: v for i, v in enumerate(cur[1:]) if v} if cur else {}
+            if cur_d and abs(sum(cur_d.values()) / rev / m - 1) <= 0.05:
+                prev_names = set(cur_d)
+                continue
+            cands = [cur_d] if cur_d else []
+            for h in hist.get(k, []):
+                for r in h.get("pts") or []:
+                    if re.match(r"\d{4}-\d\d-\d\d$", str(r[0])) and abs((date.fromisoformat(r[0]) - _d).days) <= 20:
+                        cands.append({n: v for n, v in zip(h.get("names") or [], r[1:]) if v})
+            best = None
+            for c in cands:
+                items = [(n, v) for n, v in c.items() if v and v > 0]
+                opts = []
+                if len(items) >= 2 and abs(sum(v for _n, v in items) / rev / m - 1) <= 0.015:
+                    opts.append(dict(items))
+                elif 3 <= len(items) <= 10:
+                    for size in range(len(items) - 1, 1, -1):
+                        for sub in combinations(items, size):
+                            if abs(sum(v for _n, v in sub) / rev / m - 1) <= 0.015:
+                                opts.append(dict(sub))
+                for o in opts:
+                    key_ = (len({seg_key(n) for n in o} & {seg_key(n) for n in prev_names}), len(o))
+                    if best is None or key_ > best[0]:
+                        best = (key_, o)
+            if not best:
+                if cur_d:
+                    prev_names = prev_names or set(cur_d)
+                continue
+            pick = best[1]
+            # 이름을 뼈대 이름에 맞춘다(같은 열쇠면 그 줄)
+            for n in list(pick):
+                hit = next((bn for bn in names if seg_key(bn) == seg_key(n)), None)
+                if hit and hit != n:
+                    pick[hit] = pick.pop(n)
+            for n in pick:
+                if n not in names:
+                    names.append(n)
+                    for r in bpts:
+                        r.append(None)
+            if cur is None:
+                cur = [e] + [None] * len(names)
+                bpts.append(cur)
+            for i, n in enumerate(names):
+                while len(cur) < len(names) + 1:
+                    cur.append(None)
+                cur[i + 1] = pick.get(n)
+            prev_names = set(pick)
+            changed += 1
+        if changed:
+            bpts.sort(key=lambda r: r[0])
+            base["names"], base["pts"] = names, bpts
+            fixed += changed
+            cos += 1
+    if fixed:
+        print(f"  사업부 칸 바로잡기(합이 총매출과 맞는 조합으로): {fixed:,}칸 · {cos:,}곳")
+
+
 load_ai_fill()                 # 부문 이름 옮기기(seg_ko)가 정의된 뒤에 — 같은 지역의 두 표기(TW·Taiwan)를 한 줄로
+try:
+    seg_repair()
+except Exception as _e:                      # noqa: BLE001 — 바로잡기가 죽어도 빌드는 간다
+    print(f"  ! 사업부 칸 바로잡기 실패: {_e!r}")
 DESC = load_desc()
 
 
