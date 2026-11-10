@@ -1,0 +1,84 @@
+# 외국 기업(10-Q 를 안 내는 미국 상장사 — SE·누홀딩스·페트로브라스·알콘…)의 분기 총매출·사업부를 6-K 보도자료 표에서 읽는다(ai_fpi.py).
+# 이 파일의 주인은 data/fpi_pr.json 하나다. 곧 발표할 회사(지난 7일~앞으로 21일) 먼저, 그다음 시총 큰 순.
+# 헛돌지 않게: 공시 하나는 한 번만 묻고 · 연달아 셋이 빈손이면 반년 쉬고 · 실행마다 토큰 상한 · 한도에 걸리면 그 자리에서 멈춘다.
+# 이어달리기 없음 — 두 시간마다 한 번. 다 차면 몇 초 만에 끝난다.
+name: 외국 기업 보도자료 읽기
+
+on:
+  schedule:
+    - cron: '41 */2 * * *'
+  workflow_dispatch:
+    inputs:
+      only:
+        description: '몇 종목만 (예: us:SE us:NU) — 비우면 대기줄대로'
+        required: false
+        default: ''
+      tokens:
+        description: '이번 실행 토큰 상한'
+        required: false
+        default: '300000'
+      engine:
+        description: 'codex 면 Codex 로(기본은 Claude 1번 계정)'
+        required: false
+        default: ''
+
+permissions:
+  contents: write
+
+concurrency:
+  group: aifpi-${{ github.ref_name }}
+  cancel-in-progress: false
+
+jobs:
+  read:
+    runs-on: ubuntu-latest
+    if: github.ref_name == 'main'
+    timeout-minutes: 55
+    env:
+      TOK1: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
+      CODEX_AUTH_JSON: ${{ secrets.CODEX_AUTH_JSON }}
+      AI_MODEL: haiku            # 표 읽기 — 검산(합계·연간 합)이 틀린 답을 거른다
+      CODEX_EFFORT: low
+      FPI_TOKENS: "${{ github.event.inputs.tokens || '300000' }}"
+      FPI_MAX: '80'
+      FPI_SECS: '2400'
+      SEC_UA: 'Earning Samurai Calendar (cbpark@wisdomasset.co.kr)'
+    steps:
+      - uses: actions/checkout@v4
+      - name: 최신 main 으로 맞춘다
+        run: |
+          git fetch --depth=1 origin main
+          git reset --hard FETCH_HEAD
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: 엔진 고르기
+        run: |
+          if [ "${{ github.event.inputs.engine }}" = "codex" ] && [ -n "$CODEX_AUTH_JSON" ]; then
+            mkdir -p ~/.codex && printf '%s' "$CODEX_AUTH_JSON" > ~/.codex/auth.json && chmod 600 ~/.codex/auth.json
+            echo "AI_ENGINE=codex" >> "$GITHUB_ENV"; echo "AI_READY=1" >> "$GITHUB_ENV"
+          elif [ -n "$TOK1" ]; then
+            echo "CLAUDE_CODE_OAUTH_TOKEN=$TOK1" >> "$GITHUB_ENV"; echo "AI_ENGINE=claude" >> "$GITHUB_ENV"; echo "AI_READY=1" >> "$GITHUB_ENV"
+          else
+            echo "열쇠가 없다 — 쉰다"
+          fi
+      - name: Claude Code CLI
+        if: env.AI_ENGINE == 'claude'
+        run: npm install -g @anthropic-ai/claude-code >/dev/null 2>&1 && claude --version
+      - name: Codex CLI
+        if: env.AI_ENGINE == 'codex'
+        run: npm install -g @openai/codex >/dev/null 2>&1 && codex --version
+      - name: 📰 보도자료 읽기
+        if: env.AI_READY == '1'
+        continue-on-error: true
+        timeout-minutes: 45
+        run: |
+          set -o pipefail
+          python ai_fpi.py ${{ github.event.inputs.only }} | { grep -v '^  [a-z_0-9]*\.json\|번역 받기\|받기 실패' || true; } | tee fpi.log
+          { echo '```'; tail -40 fpi.log; echo '```'; } >> "$GITHUB_STEP_SUMMARY"
+      - name: 저장소에 반영
+        if: env.AI_READY == '1'
+        run: |
+          rm -f fpi.log
+          [ -f data/fpi_pr.json ] || { echo "파일이 없다."; exit 0; }
+          bash .github/scripts/save_owned.sh "외국 기업 보도자료 읽기 $(date -u +%F' '%H:%M) [skip ci]" data/fpi_pr.json
