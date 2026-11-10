@@ -746,7 +746,8 @@ def load_fpi_pr(out):
     n_cos = 0
     for key, st in co.items():
         f = out.get(key) or {}
-        if (f.get("cur") or "") != (st.get("cur") or "") or len(st.get("q") or {}) < 4:
+        # fill = 화면에 이미 사업부가 있는 회사의 빈 분기만 메운 것(일본 — ai_jp_co.py). 한 칸이어도 싣는다.
+        if (f.get("cur") or "") != (st.get("cur") or "") or len(st.get("q") or {}) < (1 if st.get("fill") else 4):
             continue
         ends = [(date.fromisoformat(x["end"]), x["rev"]) for x in f.get("points") or [] if x.get("end") and x.get("rev")]
         segs = dict(FPI_SEG.get(key) or {})

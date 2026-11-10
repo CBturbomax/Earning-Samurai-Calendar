@@ -29,7 +29,7 @@ on:
         required: false
         default: ''
       mode:
-        description: 'co = 회사 하나를 한 번에 읽는 시험판(ai_fpi_co.py — only 에 종목을 줄 것)'
+        description: 'co = 외국 기업을 회사 단위로(ai_fpi_co.py) · jp = 일본 빈칸을 회사 단위로(ai_jp_co.py). only 에 종목 또는 --days 시작 끝'
         required: false
         default: ''
       model:
@@ -92,6 +92,7 @@ jobs:
         run: |
           set -o pipefail
           PY=ai_fpi.py; [ "${{ github.event.inputs.mode }}" = "co" ] && { PY=ai_fpi_co.py; export FPI_SECS=4800; }
+          [ "${{ github.event.inputs.mode }}" = "jp" ] && { PY=ai_jp_co.py; export FPI_SECS=4800; }
           python $PY ${{ github.event.inputs.only }} | { grep -v '^  [a-z_0-9]*\.json\|번역 받기\|받기 실패' || true; } | tee fpi.log
           { echo '```'; tail -400 fpi.log; echo '```'; } >> "$GITHUB_STEP_SUMMARY"
       - name: 저장소에 반영
