@@ -79,6 +79,40 @@ def seg_excerpt(blob):
     return "\n--- table ---\n".join(out)
 
 
+def pdf_excerpt(code, fn, pn):
+    """zip 에 첨부가 없던 시절(대략 2022년 이전)과 미국 기준 회사 — 결산단신 PDF 에서 '外部顧客への売上高' 줄과 그 위 머리줄을 추린다."""
+    import ai_fill as af
+    import scrape_geo_jp as G
+    pn = pn if pn.lower().endswith(".pdf") else (fn.replace("0812", "1401", 1) if fn.startswith("0812") else "")
+    if not pn:
+        return ""
+    try:
+        import pdftext
+        pdf = af._patient(lambda: G.get(f"https://www2.jpx.co.jp/disc/{code}0/{pn}", timeout=60))
+        lines = pdftext.extract_cells(pdf, max_pages=40) if pdf else []
+        rows = [" | ".join(re.sub(r"\s+", " ", t).strip() for _x, t in sorted(c) if t.strip()) for c in lines]
+        if not rows and pdf:
+            rows = pdftext.layout_lines(pdf, 40)
+    except Exception:                                  # noqa: BLE001 — 암호·깨진 PDF
+        return ""
+    hits = [i for i, r in enumerate(rows) if re.search(r"外部顧客|セグメント間", r) and re.search(r"\d{2,}", r)]
+    keep = set()
+    for i in hits:
+        keep.update(range(max(0, i - 7), min(len(rows), i + 3)))
+        for j in range(max(0, i - 16), i):               # 기간 줄(自 20xx年 … 至 …)
+            if re.search(r"自.{0,12}年|累計期間|会計年度", rows[j]):
+                keep.add(j)
+    out, n, last = [], 0, -9
+    for i in sorted(keep):
+        r = rows[i][:420]
+        if n + len(r) > PER_DOC:
+            break
+        out.append(("--- table ---\n" if i - last > 1 and out else "") + r)
+        n += len(r)
+        last = i
+    return "\n".join(out)
+
+
 def ask(prompt):
     import ai_fpi_co as C
     return C.ask(prompt)
@@ -123,24 +157,33 @@ def one(B, key, db, verbose=False):
     def doc_for(e):
         c = [x for x in docs if 10 <= (_d(x[0]) - _d(e)).days <= 75]
         return c[0] if c else None
+    trace = []
     picked, spans, t0 = {}, {}, time.time()            # zip 이름 -> (공시일, 글, 그 공시의 기간들)
     for e in holes:
         import ai_fpi as P
         for ee in (e, P._back(_d(e), 3).isoformat()):
             x = doc_for(ee)
-            if not x or x[1] in picked or len(picked) >= MAX_DOCS:
+            if not x:
+                trace.append(f"{ee}:공시없음")
+                continue
+            if x[1] in picked or len(picked) >= MAX_DOCS:
                 continue
             blob = af._patient(lambda: G.get(f"https://www2.jpx.co.jp/disc/{code}0/{x[1]}", timeout=60))
             if not blob:
                 continue
             sp = G.spans_of(F.read_summary(blob))
             txt = seg_excerpt(blob)
+            how = "zip"
+            if not txt:
+                txt, how = pdf_excerpt(code, x[1], x[2]), "pdf"
             if sp:
                 spans.update(sp)
             if txt and sp:
                 picked[x[1]] = (x[0], txt, sorted(sp))
+            trace.append(f"{ee}:{how if txt else '표없음'}{'' if sp else '·기간없음'}")
     out = [f"  빈 분기 {len(holes)}({holes[-1]}~{holes[0]}) · 평소 비율 {None if base is None else round(base, 2)} · "
            f"세그먼트 표가 든 공시 {len(picked)}장 · 글 {sum(len(v[1]) for v in picked.values()):,}자 · {time.time() - t0:.0f}초"]
+    out.append("  공시 찾기: " + " ".join(trace)[:300])
     if not picked:
         with LOCK:
             db.setdefault("none", {})[key] = date.today().isoformat()
