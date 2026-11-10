@@ -110,7 +110,7 @@ def pdf_excerpt(code, fn, pn):
         out.append(("--- table ---\n" if i - last > 1 and out else "") + r)
         n += len(r)
         last = i
-    return "\n".join(out)
+    return re.sub(r"[\x00-\x08\x0b-\x1f\x7f]", " ", "\n".join(out))
 
 
 def ask(prompt):
@@ -307,8 +307,8 @@ def main():
         with LOCK:
             res[key] = n
             print(f"== {key}")
-            for line in lines:
-                print(line)
+            for line in lines:                           # PDF 글에 제어 문자가 섞여 워크플로의 grep 이 출력을 통째로 삼켰다(11/10)
+                print(re.sub(r"[\x00-\x08\x0b-\x1f\x7f]", " ", line))
             db["ts"] = datetime.now(timezone.utc).isoformat(timespec="minutes")
             OUT.write_text(json.dumps(db, ensure_ascii=False, separators=(",", ":")), encoding="utf-8")
             sys.stdout.flush()
