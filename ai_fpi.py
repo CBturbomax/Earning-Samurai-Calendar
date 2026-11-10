@@ -33,7 +33,10 @@ SINCE = "2018-01-01"
 SECS = int(os.environ.get("FPI_SECS", "2400"))
 MAX_CALLS = int(os.environ.get("FPI_MAX", "80"))
 MAX_TOK = int(os.environ.get("FPI_TOKENS", "200000"))      # 이번 실행 토큰 상한 — 넘으면 멈춘다
-MIN_CAP = float(os.environ.get("FPI_MIN_CAP", "0.7"))       # 십억 달러 — 0.7 ≈ 1조 원
+MIN_CAP = float(os.environ.get("FPI_MIN_CAP", "7"))         # 십억 달러 — 7 ≈ 10조 원(11/10 회원님: "3천만 토큰은 너무 심하다" — 큰 회사부터)
+# 무엇을 읽나(11/10 — 범위를 좁혔다). rev: 총매출부터 없는 옛 분기만(기본) · seg: + 총매출은 있는데 사업부가 빈 분기 ·
+# all: + 사업부 줄이 흩어진 회사는 있는 분기까지 다시. 넓힐수록 토큰이 몇 배로 든다 — 실측을 보고 넓힐 것.
+SCOPE = os.environ.get("FPI_SCOPE", "rev")
 DOC_LIMIT = int(os.environ.get("FPI_DOC", "14000"))
 DRY_N, DRY_DAYS = 3, 180
 KW = re.compile(r"revenue|net sales|turnover|sales|segment", re.I)
@@ -117,7 +120,7 @@ def need(B, key, db, holes):
     fresh = (date.today() - timedelta(days=12)).isoformat()   # 막 끝난 분기는 아직 발표 전
     seg = B.SEG.get(key)
     sh = holes.get(key)
-    frag = fragmented(seg)
+    frag = SCOPE == "all" and fragmented(seg)
     out = []
     for e in quarter_ends(fin):
         if e > fresh:
@@ -128,7 +131,7 @@ def need(B, key, db, holes):
         no_seg = frag or ((e in sh) if sh is not None else not seg)
         if e not in have and not g:
             out.append(e)                               # 총매출부터 없다
-        elif no_seg and not (key in db.get("noseg", {})):
+        elif SCOPE != "rev" and no_seg and not (key in db.get("noseg", {})):
             out.append(e)                               # 총매출은 있는데 사업부가 빈다
     return out
 

@@ -1255,7 +1255,7 @@ HPE 가 Compute·Storage·Intelligent Edge 를 Cloud&AI·Networking 으로 바�
 | `segments_hist.yml` | 하루 1번 | `data/segments_jp_hist.json` (EDINETDB_KEY 있을 때만) |
 | `geo_jp.yml` | 30분 + 이어달리기 | `data/geo_jp.json` (일본 지역별 매출·수주 — 최근 TDnet + 옛 JPX 보관소 거슬러 받기, 세 갈래) |
 | `ai_seg.yml` | 30분 | `data/segments_aipr.json` (AI 사업부 판독 — 최근 분기 보도자료) |
-| `ai_fpi.yml` | 2시간 | `data/fpi_pr.json` (외국 기업 6-K 보도자료 — 분기 총매출·사업부) |
+| `ai_fpi.yml` | **손으로만**(자동 꺼 둠) | `data/fpi_pr.json` (외국 기업 6-K 보도자료 — 분기 총매출·사업부) |
 | `ai_fill.yml` | 이어달리기 + 30분 | `data/ai_fill_s{0..3}.json` (AI 빈칸 메우기 1Q18~ — **네 갈래 동시**, 갈래마다 제 파일. 옛 `ai_fill.json` 은 읽기만) |
 
 **작업 제한은 단계 제한의 합보다 커야 한다**(11/02). `numbers.yml` 은 단계 합이 35분인데 작업 제한이 29분이라 마지막 「저장소에

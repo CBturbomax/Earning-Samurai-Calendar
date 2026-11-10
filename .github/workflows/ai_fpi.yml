@@ -1,12 +1,11 @@
 # 외국 기업(10-Q 를 안 내는 미국 상장사 — SE·누홀딩스·페트로브라스·알콘…)의 분기 총매출·사업부를 6-K 보도자료 표에서 읽는다(ai_fpi.py).
 # 이 파일의 주인은 data/fpi_pr.json 하나다. 곧 발표할 회사(지난 7일~앞으로 21일) 먼저, 그다음 시총 큰 순.
 # 헛돌지 않게: 공시 하나는 한 번만 묻고 · 연달아 셋이 빈손이면 반년 쉬고 · 실행마다 토큰 상한 · 한도에 걸리면 그 자리에서 멈춘다.
-# 이어달리기 없음 — 두 시간마다 한 번. 다 차면 몇 초 만에 끝난다.
+# **자동 실행은 꺼 두었다(11/10 회원님: "3천만 토큰은 너무 심하다").** 손으로 부를 때만 돈다 — 두 종목 시험으로 장당 토큰을 잰 뒤 범위를 정한다.
+# 기본 범위: 시총 10조 원 이상 · 총매출부터 없는 옛 분기만(scope=rev). 다 차면 몇 초 만에 끝난다.
 name: 외국 기업 보도자료 읽기
 
 on:
-  schedule:
-    - cron: '41 */2 * * *'
   workflow_dispatch:
     inputs:
       only:
@@ -17,6 +16,14 @@ on:
         description: '이번 실행 토큰 상한'
         required: false
         default: '300000'
+      scope:
+        description: 'rev = 총매출 없는 옛 분기만(기본) · seg = + 사업부만 빈 분기 · all = + 흩어진 회사 다시 읽기'
+        required: false
+        default: 'rev'
+      mincap:
+        description: '시총 하한(십억 달러 — 7 ≈ 10조 원)'
+        required: false
+        default: '7'
       engine:
         description: 'codex 면 Codex 로(기본은 Claude 1번 계정)'
         required: false
@@ -41,6 +48,8 @@ jobs:
       CODEX_EFFORT: low
       FPI_TOKENS: "${{ github.event.inputs.tokens || '300000' }}"
       FPI_MAX: '80'
+      FPI_SCOPE: "${{ github.event.inputs.scope || 'rev' }}"
+      FPI_MIN_CAP: "${{ github.event.inputs.mincap || '7' }}"
       FPI_SECS: '2400'
       SEC_UA: 'Earning Samurai Calendar (cbpark@wisdomasset.co.kr)'
     steps:
