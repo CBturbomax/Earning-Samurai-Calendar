@@ -2437,6 +2437,27 @@ def load_ai_fill():
             base["pts"].sort(key=lambda r: r[0])
     if raw:
         print(f"  AI 빈칸 메우기: 사업부 {nseg:,}칸 · 지역 {ngeo:,}칸 · 수주 {nord:,}칸")
+    # **옛 분기 이력(XBRL·JPX 보관소 — 이미 받아 둔 공짜 자료)도 같은 길로 빈칸에 넣는다(11/10).** load_seg 의 splice·prepend_old 는
+    # 이름이 다르면(개편 전 기준) 뼈대 **안쪽** 빈칸을 못 채웠다 — AMD 2Q21 은 XBRL 이력에 있는데 화면이 비어, AI 가 같은 공시를
+    # 글로 다시 읽고 있었다(회원님: "그냥 물어보면 토큰도 안 쓰고 바로 나오는데 그 원리대로 하라"). 검산(fits)·빈칸만 채우기는 AI 값과 같다.
+    nh = 0
+    for name in sorted(p.name for p in (HERE / "data").glob("segments_hist_*_s*.json")):
+        hj = _read_stocks(name)
+        recs = list((hj.get("stocks") or {}).items()) + [(k0, v) for k0, lst in (hj.get("more") or {}).items() for v in lst]
+        for k0, v in recs:
+            k = k0 if ":" in k0 else "us:" + k0
+            rows = {str(r[0]): {n: x for n, x in zip(v.get("names") or [], r[1:]) if x}
+                    for r in v.get("pts") or [] if re.match(r"\d{4}-\d\d-\d\d$", str(r[0]))}
+            rec = _as_rec(fits(k, {e: row for e, row in rows.items() if len(row) >= 1}, "seg"), "사업부")
+            if not rec:
+                continue
+            rec.pop("axis", None)
+            got, n = _ai_fill_one(SEG.get(k), rec)
+            if n:
+                SEG[k] = got
+                nh += n
+    if nh:
+        print(f"  옛 분기 이력으로 화면 빈칸을 채움: 사업부 {nh:,}칸")
 
 
 # ── 부문 이름 한글 표기 ──────────────────────────────────────────

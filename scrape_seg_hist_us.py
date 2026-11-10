@@ -146,11 +146,23 @@ def main():
         db = {}
     st = db.setdefault("stocks", {})
     done_co = db.setdefault("done_co", {})
-    if db.get("gv") != 3:                                    # 1: 반쪽 칸을 채워진 칸으로 셌다 · 2: ReportableSubsegments 행을 버렸다(CAT) — 다시 본다
+    if (db.get("gv") or 0) < 4:                              # 4(11/10): 대상에 **화면 기준 빈칸**(seg_holes.json)을 더했다 — 한 번 다시 본다
+        done_co.clear(); db["gv"] = 4
+    if False:                                    # 1: 반쪽 칸을 채워진 칸으로 셌다 · 2: ReportableSubsegments 행을 버렸다(CAT) — 다시 본다
         done_co.clear(); db["gv"] = 3
     caps = ss.want_tickers()
     cikmap = ss.cik_map()
     gp = gaps_by_ticker()
+    # **화면에서 빈 분기도 대상이다(11/10).** 원자료에는 값이 있어도 이름이 안 맞거나 틀려서 화면에서 빠진 분기(AMD 2Q21·3Q21)는
+    # 위 셈에 안 잡혀, 공짜로 읽을 수 있는 XBRL 을 두고 AI 가 같은 공시를 글로 읽고 있었다. 빌드가 남긴 목록을 합친다.
+    try:
+        sh = json.loads((HERE / "data" / "seg_holes.json").read_text(encoding="utf-8")).get("holes") or {}
+    except (OSError, ValueError):
+        sh = {}
+    for k, ends in sh.items():
+        if k.startswith("us:") and ends:
+            t = k[3:]
+            gp[t] = sorted(set(gp.get(t) or []) | {e for e in ends if e >= "2018-01-01"})
     i_sh, n_sh = (int(x) for x in SHARD.split("/")) if SHARD else (0, 1)
     from markets import excluded
     try:
@@ -222,6 +234,11 @@ def main():
             if rec.get("geo"):
                 rec["geo"] = ss.dedupe_names(rec["geo"])
             rec["src"] = "edgar-hist"
+            # 앞서 읽은 기록을 버리지 않는다 — 이번엔 빈 분기를 덮는 서류만 읽어 기록이 짧다. 옛 기록은 more 에 남겨 빌드가 둘 다 본다.
+            if st.get(t) and st[t].get("pts") != rec.get("pts"):
+                more = db.setdefault("more", {}).setdefault(t, [])
+                more.append({k: st[t][k] for k in ("names", "pts", "axis") if k in st[t]})
+                del more[:-4]
             st[t] = rec
             got += 1
             print(f"  {t}: 빈 분기 {len(gp.get(t) or [])} · 서류 {n} · 부문 {len(rec.get('pts') or [])}분기 {rec['pts'][0][0] if rec.get('pts') else ''}~"
