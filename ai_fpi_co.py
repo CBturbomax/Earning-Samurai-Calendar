@@ -113,7 +113,10 @@ def _tables(raw):
         revrows = [k for k, r in enumerate(rows) if isnum[k] and REVTERM.search(r.split(" | ")[0]) and not NOTREV.search(r.split(" | ")[0])]
         seg = bool(SEGWORD.search(blob))
         q = bool(re.search(r"(?i)three months|quarter|\b[1-4]Q ?\d\d|\bQ[1-4]\b", htxt + rows[first]))
-        if revrows:
+        tot_last = [k for k in revrows if re.match(r"(?i)\s*(total|net)\b", rows[k]) and sum(isnum[:k]) >= 2]
+        if tot_last and len(rows) <= 40 and not NOTREV.search(htxt):
+            out.append(((2 if seg else 1) + (1 if q else 0), i, (f"[before table: {cap[i]}]\n" if cap.get(i) else "") + blob[:2500]))
+        elif revrows:
             keep = sorted(set(revrows) | {k for k, r in enumerate(rows) if isnum[k] and
                                            re.search(r"(?i)eliminat|inter-?segment|royalt|^total", r.split(" | ")[0])})[:12]
             txt = (f"[before table: {cap[i]}]\n" if cap.get(i) else "") + "\n".join(head + [rows[k] for k in keep])[:1800]
@@ -199,7 +202,7 @@ def ask(prompt):
     return j.get("result") or ""
 
 
-def check(B, key, ans, pr_q, all_ends=()):
+def check(B, key, ans, pr_q, all_ends=(), mine_before=()):
     """모델 답 -> (받아들인 분기 {종료일: {...}}, 보고 줄들). 검산 (가)~(라)."""
     fin = B.FIN.get(key) or {}
     have = {p["end"]: p["rev"] for p in fin.get("points") or [] if p.get("end") and p.get("rev")}
@@ -228,7 +231,7 @@ def check(B, key, ans, pr_q, all_ends=()):
     # 화면에 이미 있는 사업부(닻) — 겹치는 분기에서 부문마다 견준다
     old = {}
     for r in (B.SEG.get(key) or {}).get("pts") or []:
-        if re.match(r"\d{4}-\d\d-\d\d$", str(r[0])):
+        if re.match(r"\d{4}-\d\d-\d\d$", str(r[0])) and str(r[0]) not in mine_before:
             old[str(r[0])] = {B.seg_key(n): v for n, v in zip(B.SEG[key]["names"], r[1:]) if v}
     for e, lst in (pr_q or {}).items():
         x = next((r for r in reversed(lst) if r.get("seg")), None)
@@ -311,8 +314,9 @@ def one(B, key, db):
     if (HERE / "data" / "fpi_pr.json").exists():
         pr_q = ((json.loads((HERE / "data" / "fpi_pr.json").read_text(encoding="utf-8")).get("stocks") or {}).get(key) or {}).get("q") or {}
     anc = {}
+    mine_before = set(((db["stocks"].get(key) or {}).get("q") or {}))
     for r in (B.SEG.get(key) or {}).get("pts") or []:   # 화면에 이미 있는 분기(검산을 거친 값)
-        if re.match(r"\d{4}-\d\d-\d\d$", str(r[0])) and A <= str(r[0]) <= Z:
+        if re.match(r"\d{4}-\d\d-\d\d$", str(r[0])) and A <= str(r[0]) <= Z and str(r[0]) not in mine_before:
             anc[str(r[0])] = {n: v for n, v in zip(names, r[1:]) if v}
     for e, lst in pr_q.items():
         x = next((r for r in reversed(lst) if r.get("seg")), None)
@@ -332,7 +336,7 @@ def one(B, key, db):
         ans = json.loads(mm.group(0)) if mm else {}
     except ValueError:
         return out + ["  답이 JSON 이 아니다: " + (raw or "")[:300]]
-    ok, rep = check(B, key, ans, pr_q, ends)
+    ok, rep = check(B, key, ans, pr_q, ends, mine_before)
     db["stocks"][key] = {"cur": fin.get("cur") or "USD", "basis": str(ans.get("basis"))[:200], "q": ok,
                          "docs": [a for _f, a, _t in docs], "ts": date.today().isoformat()}
     was = sum(1 for r in (B.SEG.get(key) or {}).get("pts") or [] if A <= str(r[0]) <= Z and any(v for v in r[1:]))
