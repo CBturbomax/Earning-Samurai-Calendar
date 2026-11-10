@@ -48,7 +48,7 @@ jobs:
   read:
     runs-on: ubuntu-latest
     if: github.ref_name == 'main'
-    timeout-minutes: 55
+    timeout-minutes: 110
     env:
       TOK1: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
       CODEX_AUTH_JSON: ${{ secrets.CODEX_AUTH_JSON }}
@@ -88,12 +88,12 @@ jobs:
       - name: 📰 보도자료 읽기
         if: env.AI_READY == '1'
         continue-on-error: true
-        timeout-minutes: 45
+        timeout-minutes: 95
         run: |
           set -o pipefail
-          PY=ai_fpi.py; [ "${{ github.event.inputs.mode }}" = "co" ] && PY=ai_fpi_co.py
+          PY=ai_fpi.py; [ "${{ github.event.inputs.mode }}" = "co" ] && { PY=ai_fpi_co.py; export FPI_SECS=4800; }
           python $PY ${{ github.event.inputs.only }} | { grep -v '^  [a-z_0-9]*\.json\|번역 받기\|받기 실패' || true; } | tee fpi.log
-          { echo '```'; tail -120 fpi.log; echo '```'; } >> "$GITHUB_STEP_SUMMARY"
+          { echo '```'; tail -400 fpi.log; echo '```'; } >> "$GITHUB_STEP_SUMMARY"
       - name: 저장소에 반영
         if: env.AI_READY == '1'
         run: |

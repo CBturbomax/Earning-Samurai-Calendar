@@ -23,13 +23,13 @@ import re
 import subprocess
 import sys
 import tempfile
+import threading
 import time
 from datetime import date, datetime, timezone
 from pathlib import Path
 
 HERE = Path(__file__).parent
 OUT = HERE / "data" / "fpi_co.json"
-A, Z = "2018-03-31", "2021-12-31"                       # 읽을 분기 범위(끝은 이미 가진 분기 하나 — 닻)
 PER_DOC = int(os.environ.get("FPICO_DOC", "3200"))
 MAX_PROMPT = 110000
 
@@ -196,9 +196,10 @@ def ask(prompt):
     if j.get("is_error"):
         raise RuntimeError(str(j.get("result"))[:400])
     u = j.get("usage") or {}
-    ai_seg.USED["in"] += (u.get("input_tokens") or 0) + (u.get("cache_creation_input_tokens") or 0) + (u.get("cache_read_input_tokens") or 0)
-    ai_seg.USED["out"] += u.get("output_tokens") or 0
-    ai_seg.USED["n"] += 1
+    with LOCK:
+        ai_seg.USED["in"] += (u.get("input_tokens") or 0) + (u.get("cache_creation_input_tokens") or 0) + (u.get("cache_read_input_tokens") or 0)
+        ai_seg.USED["out"] += u.get("output_tokens") or 0
+        ai_seg.USED["n"] += 1
     return j.get("result") or ""
 
 
@@ -285,88 +286,203 @@ def check(B, key, ans, pr_q, all_ends=(), mine_before=()):
     return ok, rep
 
 
+LOCK = threading.Lock()
+MAX_TOK = int(os.environ.get("FPI_TOKENS", "1500000"))
+SECS = int(os.environ.get("FPI_SECS", "4500"))
+CHUNK = 14                                              # 한 번에 묻는 빈 분기 수(+ 닻 분기 둘)
+T0 = time.time()
+
+
+def spent():
+    import ai_seg
+    return ai_seg.USED["in"] + ai_seg.USED["out"]
+
+
+def _seg_dates(B, key):
+    return [str(r[0]) for r in (B.SEG.get(key) or {}).get("pts") or []
+            if any(v for v in r[1:]) and re.match(r"\d{4}-\d\d-\d\d$", str(r[0]))]
+
+
+def missing(B, key):
+    """사업부가 빈 분기(1Q18~, 막 끝난 분기 제외) — 최근 것부터."""
+    import ai_fpi as P
+    fin = B.FIN.get(key) or {}
+    fresh = date.fromordinal(date.today().toordinal() - 12).isoformat()
+    ends = [e for e in P.quarter_ends(fin) if "2018-03-31" <= e <= fresh]
+    have = _seg_dates(B, key)
+    return ends, sorted((e for e in ends if not any(abs((_d(h) - _d(e)).days) <= 20 for h in have)), reverse=True)
+
+
 def one(B, key, db):
-    import ai_fill as af
     import ai_fpi as P
     import scrape_live_us as lu
     code = key.split(":")[1]
     cik = lu.cik_map_cached().get(code) or lu.cik_map_cached().get(code.replace(".", "-"))
     if not cik:
-        return ["  CIK 없음"]
+        return ["  CIK 없음"], 0
     fin = B.FIN.get(key) or {}
-    ends = [e for e in P.quarter_ends(fin) if A <= e <= Z]
+    all_ends, miss = missing(B, key)
+    if len(miss) < 4:
+        return [f"  사업부 빈 분기 {len(miss)} — 할 일 없음"], 0
     files = P.six_k(int(cik))
-    docs, t0 = [], time.time()
-    for e in ends:
-        for fd, acc in [f for f in files if 10 <= (_d(f[0]) - _d(e)).days <= 100][:10]:
-            if any(acc == a for _f, a, _t in docs):
-                break
-            txt = filing_text(int(cik), acc)
-            if txt:
-                docs.append((fd, acc, txt))
-                break
-    if len(docs) < 3:
-        return [f"  실적 공시를 {len(docs)}장밖에 못 골랐다 — 안 묻는다"]
-    docs.sort()
-    body = "\n\n".join(f"### FILING filed {fd}\n{txt}" for fd, _a, txt in docs)
+    if not files:
+        with LOCK:
+            db.setdefault("none", {})[key] = date.today().isoformat()
+        return ["  6-K 없음(외국 기업이 아니다)"], 0
     names = (B.SEG.get(key) or {}).get("names") or []
     pr_q = {}
     if (HERE / "data" / "fpi_pr.json").exists():
         pr_q = ((json.loads((HERE / "data" / "fpi_pr.json").read_text(encoding="utf-8")).get("stocks") or {}).get(key) or {}).get("q") or {}
-    anc = {}
     mine_before = set(((db["stocks"].get(key) or {}).get("q") or {}))
-    for r in (B.SEG.get(key) or {}).get("pts") or []:   # 화면에 이미 있는 분기(검산을 거친 값)
-        if re.match(r"\d{4}-\d\d-\d\d$", str(r[0])) and A <= str(r[0]) <= Z and str(r[0]) not in mine_before:
+    anc = {}                                            # 닻: 화면에 이미 있는 분기(이 수집기가 넣은 것 제외) + 장마다 읽어 검산한 값
+    for r in (B.SEG.get(key) or {}).get("pts") or []:
+        if re.match(r"\d{4}-\d\d-\d\d$", str(r[0])) and str(r[0]) not in mine_before and any(v for v in r[1:]):
             anc[str(r[0])] = {n: v for n, v in zip(names, r[1:]) if v}
     for e, lst in pr_q.items():
         x = next((r for r in reversed(lst) if r.get("seg")), None)
-        if x and A <= e <= Z:
+        if x:
             anc[e] = x["seg"]
-    pick = sorted(anc)[::max(1, len(anc) // 3)][:3] if anc else []
-    anchors = ""
-    if pick:
-        anchors = "VERIFIED VALUES we already hold (absolute currency units) — your series must reproduce these:\n" + "\n".join(
-            f"  {e}: " + ", ".join(f"{n} {v:,.0f}" for n, v in anc[e].items()) for e in pick) + "\n\n"
-    prompt = PROMPT.format(anchors=anchors, code=code, cur=fin.get("cur") or "USD", segs=json.dumps(names[:12], ensure_ascii=False),
-                           n=len(docs), a=A, z=Z, docs=body[:MAX_PROMPT])
-    out = [f"  공시 {len(docs)}장 · 글 {len(body):,}자 · 고르는 데 {time.time() - t0:.0f}초"]
-    raw = ask(prompt)
-    mm = re.search(r"\{.*\}", raw or "", re.S)
+    out, total = [], 0
+    got_all = dict((db["stocks"].get(key) or {}).get("q") or {})
+    basis = ""
+    for ci in range(0, min(len(miss), 2 * CHUNK), CHUNK):
+        chunk = miss[ci:ci + CHUNK]
+        if time.time() - T0 > SECS or spent() >= MAX_TOK:
+            out.append("  상한 — 여기서 멈춤")
+            break
+        # 닻 분기: 이 묶음과 가장 가까운 것 셋(값을 프롬프트에 주고, 그 분기 공시도 둘까지 같이 싣는다)
+        src = anc or {e: x["seg"] for e, x in got_all.items()}      # 가진 값이 없으면 앞 묶음의 제 답(같은 기준으로 잇게)
+        mid = chunk[len(chunk) // 2]
+        pick = sorted(sorted(src, key=lambda a_: abs((_d(a_) - _d(mid)).days))[:3])
+        ends = sorted(set(chunk) | set(pick[:2]))
+        docs, t0 = [], time.time()
+        for e in ends:
+            for fd, acc in [f for f in files if 10 <= (_d(f[0]) - _d(e)).days <= 100][:10]:
+                if any(acc == a for _f, a, _t in docs):
+                    break
+                txt = filing_text(int(cik), acc)
+                if txt:
+                    docs.append((fd, acc, txt))
+                    break
+        segdocs = sum(1 for _f, _a, t in docs if SEGWORD.search(t) or "[before table:" in t and t.count("--- table ---") >= 2)
+        out.append(f"  묶음 {ci // CHUNK + 1}: 빈 분기 {len(chunk)}({chunk[-1]}~{chunk[0]}) · 공시 {len(docs)}장(부문 표 {segdocs}장) · "
+                   f"글 {sum(len(t) for _f, _a, t in docs):,}자 · 고르는 데 {time.time() - t0:.0f}초")
+        if len(docs) < 3 or segdocs < max(2, len(docs) // 3):
+            out.append("  부문 표가 든 공시가 모자라다(단일 사업부이거나 실적 공시가 6-K 에 없다) — 안 묻는다(토큰 0)")
+            if ci == 0:
+                with LOCK:
+                    db.setdefault("none", {})[key] = date.today().isoformat()
+            break
+        docs.sort()
+        body = "\n\n".join(f"### FILING filed {fd}\n{txt}" for fd, _a, txt in docs)
+        anchors = ""
+        if pick:
+            anchors = "VERIFIED VALUES we already hold (absolute currency units) — your series must reproduce these:\n" + "\n".join(
+                f"  {e}: " + ", ".join(f"{n} {v:,.0f}" for n, v in src[e].items()) for e in pick) + "\n\n"
+        prompt = PROMPT.format(anchors=anchors, code=code, cur=fin.get("cur") or "USD", segs=json.dumps(names[:12], ensure_ascii=False),
+                               n=len(docs), a=ends[0], z=ends[-1], docs=body[:MAX_PROMPT])
+        raw = ask(prompt)
+        mm = re.search(r"\{.*\}", raw or "", re.S)
+        try:
+            ans = json.loads(mm.group(0)) if mm else {}
+        except ValueError:
+            out.append("  답이 JSON 이 아니다: " + (raw or "")[:200])
+            break
+        ok, rep = check(B, key, ans, pr_q, all_ends, mine_before)
+        ok = {e: x for e, x in ok.items() if e in chunk}             # 닻 분기는 이미 가진 값 — 다시 담지 않는다
+        basis = basis or str(ans.get("basis"))[:200]
+        out.append(f"  닻 {pick} · 기준: {str(ans.get('basis'))[:140]}")
+        out += [r for r in rep if r[4:14] in chunk]
+        out.append(f"  → 통과 {len(ok)}/{len(chunk)}분기")
+        got_all.update(ok)
+        total += len(ok)
+        with LOCK:
+            db["stocks"][key] = {"cur": fin.get("cur") or "USD", "basis": basis, "q": got_all, "ts": date.today().isoformat()}
+        if len(ok) < 4:
+            break                                         # 첫 묶음이 안 되면 옛 분기는 안 묻는다
+    return out, total
+
+
+def week(B, d1, d2, mincap):
+    """d1~d2 에 발표하는 미국 상장 외국 기업(10-Q 없음 · 분기 회사 · 은행·리츠·일본 ADR 제외) — 시총 큰 순."""
+    import ai_fill as af
+    import ai_fpi as P
+    from markets import excluded
+    af.targets(B, set())                                 # af.CAPS 를 채운다
     try:
-        ans = json.loads(mm.group(0)) if mm else {}
-    except ValueError:
-        return out + ["  답이 JSON 이 아니다: " + (raw or "")[:300]]
-    ok, rep = check(B, key, ans, pr_q, ends, mine_before)
-    db["stocks"][key] = {"cur": fin.get("cur") or "USD", "basis": str(ans.get("basis"))[:200], "q": ok,
-                         "docs": [a for _f, a, _t in docs], "ts": date.today().isoformat()}
-    was = sum(1 for r in (B.SEG.get(key) or {}).get("pts") or [] if A <= str(r[0]) <= Z and any(v for v in r[1:]))
-    out.append(f"  닻으로 준 분기: {pick}")
-    return out + [f"  기준: {str(ans.get('basis'))[:160]}"] + rep + \
-        [f"  → 사업부 통과 {len(ok)}/{len(ends)}분기 (지금 화면 {was}분기)"]
+        raw_us = json.loads((HERE / "data" / "financials.json").read_text(encoding="utf-8")).get("stocks", {})
+    except (OSError, ValueError):
+        raw_us = {}
+    codes = set()
+    for name in ("earnings_us.json", "earnings_us_fpi.json"):
+        try:
+            rows = json.loads((HERE / "data" / name).read_text(encoding="utf-8")).get("rows", [])
+        except (OSError, ValueError):
+            rows = []
+        codes |= {r["code"] for r in rows if isinstance(r, dict) and d1 <= str(r.get("date")) <= d2}
+    out = []
+    for c in codes:
+        k = "us:" + c
+        f = B.FIN.get(k)
+        if not f or not P.is_fpi(c, raw_us) or c in P.JP_ADR or P.is_half(B, f) or (af.CAPS.get(k) or 0) < mincap:
+            continue
+        if excluded("us", "", B.SECTORS.get(k, ""), (B.INDUSTRIES.get(k, "") or "").replace("-", "")):
+            continue
+        if len(missing(B, k)[1]) >= 4:
+            out.append((-(af.CAPS.get(k) or 0), k))
+    return [k for _c, k in sorted(out)], len(codes)
 
 
 def main():
-    keys = [a for a in sys.argv[1:] if ":" in a]
-    if not keys:
-        print("종목을 줄 것 — python ai_fpi_co.py us:SU us:CNQ")
-        return
+    args = sys.argv[1:]
+    keys = [a for a in args if ":" in a]
     import ai_seg
     try:
         db = json.loads(OUT.read_text(encoding="utf-8"))
     except (OSError, ValueError):
         db = {"v": 1, "stocks": {}}
+    db.setdefault("stocks", {})
     import build as B
-    for key in keys:
-        print(f"== {key}")
+    import scrape_live_us as lu
+    lu.cik_map_cached()
+    if "--days" in args:
+        i = args.index("--days")
+        mincap = float(os.environ.get("FPI_MIN_CAP", "0.7"))
+        keys, n_all = week(B, args[i + 1], args[i + 2], mincap)
+        skip = [k for k in keys if k in (db.get("none") or {})]
+        keys = [k for k in keys if k not in skip]
+        print(f"{args[i + 1]}~{args[i + 2]} 미국 발표 {n_all:,}곳 중 외국 기업·시총 {mincap}B$↑·사업부 빈 분기 4↑: {len(keys)}곳"
+              f"(전에 '부문 표 없음'으로 적어 둔 {len(skip)}곳 제외)")
+    if not keys:
+        print("종목을 줄 것 — python ai_fpi_co.py us:SU us:CNQ  또는  --days 2026-11-11 2026-11-13")
+        return
+    res = {}
+
+    def run(key):
+        if time.time() - T0 > SECS or spent() >= MAX_TOK:
+            return
         try:
-            for line in one(B, key, db):
-                print(line)
+            lines, n = one(B, key, db)
         except Exception as ex:                          # noqa: BLE001
-            print(f"  실패 {ex!r}"[:400])
-        db["ts"] = datetime.now(timezone.utc).isoformat(timespec="minutes")
-        OUT.write_text(json.dumps(db, ensure_ascii=False, separators=(",", ":")), encoding="utf-8")
-        u = ai_seg.USED
-        print(f"  누적 토큰: 호출 {u['n']} · 입력 {u['in']:,} · 출력 {u['out']:,}")
+            lines, n = [f"  실패 {ex!r}"[:300]], 0
+        with LOCK:
+            res[key] = n
+            print(f"== {key}")
+            for line in lines:
+                print(line)
+            db["ts"] = datetime.now(timezone.utc).isoformat(timespec="minutes")
+            OUT.write_text(json.dumps(db, ensure_ascii=False, separators=(",", ":")), encoding="utf-8")
+            sys.stdout.flush()
+
+    from concurrent.futures import ThreadPoolExecutor
+    with ThreadPoolExecutor(max_workers=int(os.environ.get("FPICO_PAR", "5"))) as ex:
+        list(ex.map(run, keys))
+    u = ai_seg.USED
+    filled = [k for k, n in res.items() if n >= 4]
+    print(f"요약: 본 회사 {len(res)}/{len(keys)} · 사업부가 찬 회사(4분기↑) {len(filled)} · 통과 분기 {sum(res.values())} · "
+          f"토큰 호출 {u['n']} · 입력 {u['in']:,} · 출력 {u['out']:,}")
+    print("찬 회사: " + " ".join(f"{k[3:]}({res[k]})" for k in filled))
+    print("안 찬 회사: " + " ".join(k[3:] for k in res if k not in filled))
 
 
 if __name__ == "__main__":
