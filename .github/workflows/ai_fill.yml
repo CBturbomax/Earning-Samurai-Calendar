@@ -22,6 +22,14 @@ on:
         description: '갈래당 최대 호출 수(시험은 작게)'
         required: false
         default: '900'      # 11/05: 토큰 300만이면 공시 600건 넘게 읽는다 · 11/04 밤: 이어달리기가 이 기본값(40)으로 걸려 실행마다 3분 만에 끝났다
+      acct:
+        description: '1 이면 두 갈래 다 Claude 1번 계정(회원님 채팅 계정인 2번을 안 쓴다)'
+        required: false
+        default: ''
+      ctok:
+        description: 'Claude 로 돌 때 갈래당 토큰 상한(비우면 15만·10만)'
+        required: false
+        default: ''
       recent:
         description: '최근 며칠 안의 빈칸만(0 = 1Q18 부터 전부)'
         required: false
@@ -86,11 +94,12 @@ jobs:
           # 기본은 그 갈래의 Claude 계정. 손으로 engine=codex 를 주면 Codex. 열쇠가 없으면 그 갈래는 쉰다(다른 계정으로 넘어가지 않는다).
           if [ "${{ github.event_name }}" = "schedule" ] && [ "${{ matrix.sched }}" = "off" ]; then echo "정시 실행에서는 쉬는 갈래";
           elif [ "${{ github.event.inputs.engine }}" = "codex" ]; then if has codex; then pick=codex; fi;
+          elif [ "${{ github.event.inputs.acct }}" = "1" ]; then if has claude1; then pick=claude1; fi;
           elif has "${{ matrix.alt }}"; then pick="${{ matrix.alt }}"; fi
           echo "엔진: ${pick:-없음}"
           case $pick in
-            claude1) echo "CLAUDE_CODE_OAUTH_TOKEN=$TOK1" >> "$GITHUB_ENV"; echo "AI_ENGINE=claude" >> "$GITHUB_ENV"; echo "CLAUDE_TOK=${{ matrix.ctok }}" >> "$GITHUB_ENV";;
-            claude2) echo "CLAUDE_CODE_OAUTH_TOKEN=$TOK2" >> "$GITHUB_ENV"; echo "AI_ENGINE=claude" >> "$GITHUB_ENV"; echo "CLAUDE_TOK=${{ matrix.ctok }}" >> "$GITHUB_ENV";;
+            claude1) echo "CLAUDE_CODE_OAUTH_TOKEN=$TOK1" >> "$GITHUB_ENV"; echo "AI_ENGINE=claude" >> "$GITHUB_ENV"; echo "CLAUDE_TOK=${{ github.event.inputs.ctok || matrix.ctok }}" >> "$GITHUB_ENV";;
+            claude2) echo "CLAUDE_CODE_OAUTH_TOKEN=$TOK2" >> "$GITHUB_ENV"; echo "AI_ENGINE=claude" >> "$GITHUB_ENV"; echo "CLAUDE_TOK=${{ github.event.inputs.ctok || matrix.ctok }}" >> "$GITHUB_ENV";;
             codex)   mkdir -p ~/.codex && printf '%s' "$CODEX_AUTH_JSON" > ~/.codex/auth.json && chmod 600 ~/.codex/auth.json
                      echo "AI_ENGINE=codex" >> "$GITHUB_ENV";;
           esac
