@@ -617,7 +617,86 @@ def load_fin():
         hk_long_fin(out)
     except Exception as e:                        # noqa: BLE001  — 이것 때문에 페이지가 안 만들어지면 안 된다
         print(f"  ! 홍콩 긴 이력 붙이기 실패: {e!r}")
+    try:
+        load_fpi_pr(out)
+    except Exception as e:                        # noqa: BLE001
+        print(f"  ! 외국 기업 보도자료 수치 붙이기 실패: {e!r}")
     return out
+
+
+FPI_SEG = {}                    # 열쇠 -> {종료일: {사업부: 값}} — 검산을 통과한 분기만(load_fpi_seg 가 SEG 에 싣는다)
+
+
+def _fy_quarters(end, step=3):
+    """회계연도 끝 날짜 -> 그 해의 분기(반기) 종료일 넷(둘)."""
+    e, out = date.fromisoformat(end), []
+    for i in range(12 // step):
+        y, m = e.year, e.month - step * i
+        while m <= 0:
+            y, m = y - 1, m + 12
+        last = (date(y + (m == 12), m % 12 + 1, 1) - timedelta(days=1))
+        out.append(last if e.day >= 28 else date(y, m, min(e.day, last.day)))
+    return out
+
+
+def load_fpi_pr(out):
+    """미국 상장 **외국 기업**의 옛 분기 — 6-K 보도자료 표에서 읽은 총매출·사업부(ai_fpi.py → data/fpi_pr.json).
+
+    회원님(11/10): SE 가 "거의 다 빈칸". 10-Q 를 안 내는 회사는 stockanalysis 20분기(3Q21~)가 전부라 그 앞은 총매출부터 없었다.
+    **검산을 통과한 분기만** 싣는다 — 있는 값은 안 덮는다.
+      · 이미 가진 분기 총매출과 2% 안(수집기가 이미 걸렀다 — 여기서 한 번 더)
+      · 없는 분기는 그 회계연도 **네 분기 합 = 20-F 연간 매출(1.5% 안)** 이거나 **두 공시가 같은 값(0.5% 안)**일 때만"""
+    p = HERE / "data" / "fpi_pr.json"
+    if not p.exists():
+        return
+    try:
+        stocks = json.loads(p.read_text(encoding="utf-8")).get("stocks") or {}
+        raw_us = json.loads((HERE / "data" / "financials.json").read_text(encoding="utf-8")).get("stocks", {})
+    except (ValueError, OSError) as e:
+        print(f"  ! fpi_pr.json 읽기 실패: {e}")
+        return
+    n_fin = n_co = 0
+    for key, st in stocks.items():
+        q = {e: lst for e, lst in (st.get("q") or {}).items() if lst}
+        if not q:
+            continue
+        f = out.get(key) or {}
+        if f and (f.get("freq") not in ("Q", "H") or (f.get("cur") or "") != (st.get("cur") or "")):
+            continue
+        step = 6 if f.get("freq") == "H" else 3
+        have = {x["end"]: x["rev"] for x in f.get("points") or [] if x.get("end") and x.get("rev")}
+        val = {e: lst[-1]["rev"] for e, lst in q.items()}            # 나중 공시(재표시) 값
+        ok = set()
+        for e, lst in q.items():
+            if e in have:
+                if abs(val[e] / have[e] - 1) <= 0.02:
+                    ok.add(e)
+            elif len(lst) >= 2 and abs(lst[0]["rev"] / lst[-1]["rev"] - 1) <= 0.005:
+                ok.add(e)
+        ann = raw_us.get(key.split(":")[1]) or {}
+        if ann.get("freq") == "A" and (ann.get("cur") or "") == (st.get("cur") or ""):
+            for a in ann.get("points") or []:
+                if not (a.get("end") and a.get("rev")):
+                    continue
+                qs = [d.isoformat() for d in _fy_quarters(a["end"], step)]
+                vals = [have.get(e, val.get(e)) for e in qs]
+                if all(vals) and abs(sum(vals) / a["rev"] - 1) <= 0.015:
+                    ok.update(e for e in qs if e in q)
+        add = [{"end": e, "rev": val[e], "opi": q[e][-1].get("opi")} for e in sorted(ok) if e not in have]
+        if add:
+            out[key] = merge_fin(f or None, {"v": 1, "freq": f.get("freq") or "Q", "cur": st.get("cur") or "USD",
+                                             "src": "pr", "points": add})
+            n_fin += len(add)
+            n_co += 1
+        segs = {}
+        for e in ok:
+            x = next((r for r in reversed(q[e]) if r.get("seg")), None)   # 나중 공시 것(지금 기준으로 재표시된 값)
+            if x:
+                segs[e] = x["seg"]
+        if len(segs) >= 2:
+            FPI_SEG[key] = segs
+    if n_fin or FPI_SEG:
+        print(f"  외국 기업 6-K 보도자료: 옛 분기 총매출 {n_fin:,}칸({n_co:,}곳) · 사업부를 읽은 회사 {len(FPI_SEG):,}")
 
 
 def hk_long_fin(out):
@@ -3080,10 +3159,163 @@ def seg_repair():
 
 
 load_ai_fill()                 # 부문 이름 옮기기(seg_ko)가 정의된 뒤에 — 같은 지역의 두 표기(TW·Taiwan)를 한 줄로
+
+
+def load_fpi_seg():
+    """외국 기업 보도자료에서 읽은 사업부(FPI_SEG)를 SEG 에. 보도자료 줄이 더 길면 그쪽이 뼈대고(한 회사가 제 손으로 낸 한 가지 표기 —
+    stockanalysis 는 SE 의 옛·새 이름을 일곱 줄로 흩었다), 헌 기록은 빈 분기만 메운다. 짧으면 헌 기록의 빈 분기만 채운다."""
+    n = 0
+    for k, segs in FPI_SEG.items():
+        rec = _as_rec(segs, "사업부")
+        if not rec:
+            continue
+        rec.pop("axis", None)
+        old = SEG.get(k)
+        old_n = sum(1 for r in (old or {}).get("pts") or [] if any(v for v in r[1:]))
+        if old and old.get("axis"):
+            rec["axis"] = old["axis"]
+        if not old or len(rec["pts"]) >= max(8, old_n):
+            got, _ = _ai_fill_one(rec, old) if old else (rec, 0)
+            SEG[k] = got or rec
+            n += len(rec["pts"])
+        else:
+            got, c = _ai_fill_one(old, rec)
+            if c:
+                SEG[k] = got
+                n += c
+    if n:
+        print(f"  외국 기업 6-K 보도자료 사업부: {n:,}칸 · {len(FPI_SEG):,}곳")
+
+
+try:
+    load_fpi_seg()
+except Exception as _e:                      # noqa: BLE001
+    print(f"  ! 외국 기업 사업부 싣기 실패: {_e!r}")
 try:
     seg_repair()
 except Exception as _e:                      # noqa: BLE001 — 바로잡기가 죽어도 빌드는 간다
     print(f"  ! 사업부 칸 바로잡기 실패: {_e!r}")
+
+
+def seg_fy_fix():
+    """**결산 분기(4분기)를 '연간 − 9개월 누계'로 다시 만든다 — 검산은 그 해 9개월치의 비율로**(11/10 회원님: "4분기만 비는 오류가 미국에 유독 많다").
+
+    원자료(segments_hist_us_* 의 cum — 연간·9개월 누계 줄)는 이미 있었다. 캐터필러 4Q22: 연간 − 9개월 = 건설 68.5 · 자원 34.4 ·
+    **에너지·운송 68.2억**(회사 발표 그대로)인데 화면 칸에는 100.8억이 앉아 합이 안 맞았고 `seg_unannual` 이 그 칸을 통째로 뺐다.
+    `seg_repair` 도 같은 뺄셈을 후보로 만들지만 **'평소 비율'이 고른 회사만** 본다 — 캐터필러는 상계 전 총액 줄이 섞여 비율이 두 갈래
+    (1.02·1.10)라 통째로 건너뛰었다. 여기서는 평소 비율 대신 **같은 해 9개월치의 '부문 합 ÷ 총매출'**과 견준다(2% 안) — 같은 표의
+    같은 줄들이라 해마다 기준이 달라도 맞는다. 소계 줄(다른 줄들의 합과 원 단위까지 같은 줄)은 뺀다. 지금 칸이 이미 그 비율이면 안 건드린다.
+    총매출 쪽이 틀린 4분기는 비율이 안 맞아 저절로 빠진다(지어 넣지 않는다)."""
+    fixed = cos = 0
+    for name in sorted(p.name for p in (HERE / "data").glob("segments_hist_us_s*.json")):
+        for k0, h in (_read_stocks(name).get("stocks") or {}).items():
+            k = k0 if ":" in k0 else "us:" + k0
+            base, f = SEG.get(k), FIN.get(k)
+            if not base or not f or not h.get("cum") or f.get("freq") != "Q":
+                continue
+            bpts = base.get("pts") or []
+            if not bpts or not all(re.match(r"\d{4}-\d\d-\d\d$", str(r[0])) for r in bpts):
+                continue
+            names = list(base["names"])
+            bkeys = {seg_key(n) for n in names}
+            fin = [(date.fromisoformat(p["end"]), p["rev"]) for p in f.get("points") or [] if p.get("end") and p.get("rev")]
+
+            def rev_at(d):
+                c = min(fin, key=lambda x: abs((x[0] - d).days), default=None)
+                return c[1] if c and abs((c[0] - d).days) <= 20 and c[1] > 0 else None
+            changed = 0
+            for _ax, rows_c in h["cum"].items():
+                for ck, arow in rows_c.items():
+                    ce, _, cq = ck.partition("|")
+                    if cq != "4" or ce < "2018-01-01":
+                        continue
+                    d4 = date.fromisoformat(ce)
+                    yrow = next((v for ck2, v in rows_c.items() if ck2.endswith("|3")
+                                 and 70 <= (d4 - date.fromisoformat(ck2[:10])).days <= 115), None)
+                    if not yrow:
+                        continue
+                    a = {seg_key(n): (n, v) for n, v in arow.items() if v}
+                    tot = sum(v for _n, v in a.values())
+                    for kk in [kk for kk, (_n, v) in a.items()               # 소계: 나머지 전부의 합, 또는 나머지에서 한 줄 뺀 합
+                               if len(a) >= 3 and any(abs(v - (tot - v - x)) < 1 for x in [0] + [w for k2, (_m, w) in a.items() if k2 != kk])]:
+                        a.pop(kk)
+                    y = {seg_key(n): v for n, v in yrow.items() if v}
+                    # 같은 값이 두 이름으로(이름을 바꾼 해 — 캐터필러 2023: Energy&Transportation = Power&Energy) — 9개월 줄에 있는 이름을 남긴다
+                    for kk in [kk for kk, (_n, v) in a.items() if kk not in y
+                               and any(k2 != kk and abs(w - v) < 1 for k2, (_m, w) in a.items())]:
+                        a.pop(kk)
+                    # 이름만 바꾼 부문 하나(연간에만 있는 큰 줄 하나 ↔ 9개월에만 있는 큰 줄 하나) — 짝지어 뺀다. 아래 비율 검산이 지킨다.
+                    big = 0.02 * sum(v for _n, v in a.values())
+                    only_a = [kk for kk, (_n, v) in a.items() if kk not in y and v >= big]
+                    only_y = [kk for kk, v in y.items() if kk not in a and v >= 0.02 * sum(y.values())]
+                    if len(only_a) == 1 and len(only_y) == 1:                 # 이름은 그 해 분기들이 쓰던 쪽(9개월 줄)을 따른다 — 이웃 분기와 이어지게
+                        yn = next(n for n in yrow if seg_key(n) == only_y[0])
+                        a[only_y[0]] = (yn, a.pop(only_a[0])[1])
+                    # 자잘한 줄(연간의 2% 미만)이 9개월 줄에 없거나 뺀 값이 0 이하면 그 줄만 양쪽에서 뺀다(연간에만 실리는 'Other' · 재분류된 'All Other')
+                    for kk in [kk for kk, (_n, v) in a.items() if v < big and (kk not in y or v - y[kk] <= 0)]:
+                        a.pop(kk)
+                    if len(a) < 2 or not set(a) <= set(y) or 2 * len(set(a) & bkeys) < len(a):
+                        continue                                              # 9개월 줄과 이름이 안 맞거나, 화면과 다른 축
+                    d = {n: v - y[kk] for kk, (n, v) in a.items()}
+                    if any(v <= 0 for v in d.values()):
+                        continue
+                    rev4 = rev_at(d4)
+                    rev9 = [rev_at(d4 - timedelta(days=back)) for back in (91, 182, 273)]
+                    if not rev4 or not all(rev9):
+                        continue
+                    r9 = sum(y[kk] for kk in a) / sum(rev9)
+                    if abs(sum(d.values()) / rev4 / r9 - 1) > 0.02:
+                        continue
+                    # **앞(또는 뒤) 분기와 같은 부문 구성일 때만** 넣는다 — 다른 층위·다른 표기의 줄(에머슨의 그룹 합계, 시스코의 옛 표기)을
+                    # 끼우면 뒤 단계가 이웃 분기를 '옛 기준'으로 보고 지운다(시험 빌드에서 97칸을 잃었다). 이웃에만 있는 줄은 자잘할 때(3% 미만)만 봐준다.
+                    def same_basis(days):
+                        nb = next((r for r in bpts if abs((d4 - date.fromisoformat(r[0])).days - days) <= 20), None)
+                        if not nb:
+                            return False
+                        nd = {seg_key(names[i]): v for i, v in enumerate(nb[1:]) if v and v > 0}
+                        dk = {seg_key(n): v for n, v in d.items()}
+                        if not nd or not set(dk) <= set(nd) or sum(v for kk, v in nd.items() if kk not in dk) > 0.03 * sum(nd.values()):
+                            return False
+                        # 부문마다도 이웃 분기의 0.4~2.5배 안 — 합은 맞는데 연간 줄에서 두 부문이 뒤바뀐 회사가 있다(필립스66 4Q19 정유 344억)
+                        if not all(0.4 * nd[kk] <= v <= 2.5 * nd[kk] for kk, v in dk.items() if nd[kk] >= 0.05 * sum(nd.values())):
+                            return False
+                        # 화면의 이웃 분기와 같은 기준(합 ÷ 총매출이 3% 안) — 누계 줄만 상계 전 총액인 회사(필립스66)는 넣으면 그 칸만 튄다
+                        nrev = rev_at(date.fromisoformat(nb[0]))
+                        return bool(nrev) and abs((sum(dk.values()) / rev4) / (sum(nd.values()) / nrev) - 1) <= 0.03
+                    if not (same_basis(91) or same_basis(-91)):
+                        continue
+                    cur = next((r for r in bpts if abs((date.fromisoformat(r[0]) - d4).days) <= 20), None)
+                    cur_d = {names[i]: v for i, v in enumerate(cur[1:]) if v} if cur else {}
+                    if cur_d and len(cur_d) >= len(d) and abs(sum(cur_d.values()) / rev4 / r9 - 1) <= 0.02:
+                        continue                                              # 지금 칸이 멀쩡하다
+                    pick = {}
+                    for n, v in d.items():
+                        pick[next((bn for bn in names if seg_key(bn) == seg_key(n)), n)] = v
+                    for n in pick:
+                        if n not in names:
+                            names.append(n)
+                    if cur is None:
+                        cur = [ce]
+                        bpts.append(cur)
+                    for r in bpts:
+                        while len(r) < len(names) + 1:
+                            r.append(None)
+                    for i, n in enumerate(names):
+                        cur[i + 1] = pick.get(n)
+                    changed += 1
+            if changed:
+                bpts.sort(key=lambda r: r[0])
+                base["names"], base["pts"] = names, bpts
+                fixed += changed
+                cos += 1
+    if fixed:
+        print(f"  결산 분기를 '연간 − 9개월'로 다시 만든 칸(그 해 9개월 비율로 검산): {fixed:,}칸 · {cos:,}곳")
+
+
+try:
+    seg_fy_fix()
+except Exception as _e:                      # noqa: BLE001
+    print(f"  ! 결산 분기 다시 만들기 실패: {_e!r}")
 DESC = load_desc()
 
 

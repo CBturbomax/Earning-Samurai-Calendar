@@ -106,6 +106,8 @@ python scrape_desc.py                       # 사업 설명 원문
 | 미국 실적 수치를 더 받는다 | `scrape_fin.py` — 매출 태그는 `REV_TAGS` |
 | 일본·홍콩 실적 수치 | `scrape_fin_intl.py`, 일본 당일치는 `scrape_fin_jp.py` |
 | 부문별 매출 | 미국 `scrape_seg_sec.py`(뼈대)·`scrape_seg_edgar.py`(최근 분기)·`scrape_seg_fpi.py`(외국 기업) · 일본 `scrape_fin_jp.py` · 홍콩 `scrape_seg_hk.py` |
+| 미국 상장 **외국 기업**(10-Q 없음 — SE·NU·PBR…)의 옛 분기 총매출·사업부 | `ai_fpi.py`(6-K 보도자료 표, 검산은 코드가) → `data/fpi_pr.json` → `build.py` 의 `load_fpi_pr`/`load_fpi_seg` · 워크플로 `ai_fpi.yml` |
+| 미국 **4분기(결산 분기)** 사업부 빈칸 | `build.py` 의 `seg_fy_fix`(연간 − 9개월 누계, 그 해 9개월 비율로 검산) |
 | 일본 부문 **연간** 이력(수집만, 화면엔 안 냄) | `scrape_seg_jp_edinetdb.py` |
 | **지역별 매출** · **수주(수주고·수주잔고·RPO)** | 미국 `scrape_seg_sec.py`(벌크의 지역 축 `geo` · `RPO_TAGS`)·`scrape_seg_edgar.py`(최근 분기) · 일본 `scrape_geo_jp.py` + 표 읽기 `geojp.py` → `data/geo_jp.json` · 화면 `build.py` 의 `load_geo`/`load_ord`/`pack_ord` → `D.geo`/`D.ord`, 그림은 사업부와 같은 `segChart` |
 | 일본 **월매출(月次)** 공시 | 수집은 `scrape_jp_tdnet.py` 의 `is_monthly`/`monthly_period`, 화면은 `build.py` 의 `load_monthly`/`renderMonthly` |
@@ -1253,6 +1255,7 @@ HPE 가 Compute·Storage·Intelligent Edge 를 Cloud&AI·Networking 으로 바�
 | `segments_hist.yml` | 하루 1번 | `data/segments_jp_hist.json` (EDINETDB_KEY 있을 때만) |
 | `geo_jp.yml` | 30분 + 이어달리기 | `data/geo_jp.json` (일본 지역별 매출·수주 — 최근 TDnet + 옛 JPX 보관소 거슬러 받기, 세 갈래) |
 | `ai_seg.yml` | 30분 | `data/segments_aipr.json` (AI 사업부 판독 — 최근 분기 보도자료) |
+| `ai_fpi.yml` | 2시간 | `data/fpi_pr.json` (외국 기업 6-K 보도자료 — 분기 총매출·사업부) |
 | `ai_fill.yml` | 이어달리기 + 30분 | `data/ai_fill_s{0..3}.json` (AI 빈칸 메우기 1Q18~ — **네 갈래 동시**, 갈래마다 제 파일. 옛 `ai_fill.json` 은 읽기만) |
 
 **작업 제한은 단계 제한의 합보다 커야 한다**(11/02). `numbers.yml` 은 단계 합이 35분인데 작업 제한이 29분이라 마지막 「저장소에
