@@ -50,7 +50,8 @@ jobs:
           # (ai_fill.gaps — 시총 1조 원 이상 · 사업부를 내는 회사 · 기록이 시작된 뒤의 구멍). 한 번 실행에 계정당 ctok 토큰까지.
           # 손으로 engine=codex 를 주면 두 갈래 다 Codex(tok).
           - {shard: 0, alt: claude1, tok: '3000000', ctok: '150000', w: '2'}
-          - {shard: 1, alt: claude2, tok: '3000000', ctok: '100000', w: '2'}
+          # claude2 = 회원님이 채팅하는 계정. 11/10 주간 한도 77%(금요일 초기화)라 **정시 실행에서는 쉰다**(sched: off) — 손으로 부를 때만 돈다.
+          - {shard: 1, alt: claude2, tok: '3000000', ctok: '100000', w: '2', sched: 'off'}
     env:
       TOK1: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
       TOK2: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN_2 }}
@@ -83,7 +84,8 @@ jobs:
           has() { case $1 in claude1) [ -n "$TOK1" ];; claude2) [ -n "$TOK2" ];; codex) [ -n "$CODEX_AUTH_JSON" ];; esac; }
           pick=""
           # 기본은 그 갈래의 Claude 계정. 손으로 engine=codex 를 주면 Codex. 열쇠가 없으면 그 갈래는 쉰다(다른 계정으로 넘어가지 않는다).
-          if [ "${{ github.event.inputs.engine }}" = "codex" ]; then if has codex; then pick=codex; fi;
+          if [ "${{ github.event_name }}" = "schedule" ] && [ "${{ matrix.sched }}" = "off" ]; then echo "정시 실행에서는 쉬는 갈래";
+          elif [ "${{ github.event.inputs.engine }}" = "codex" ]; then if has codex; then pick=codex; fi;
           elif has "${{ matrix.alt }}"; then pick="${{ matrix.alt }}"; fi
           echo "엔진: ${pick:-없음}"
           case $pick in
