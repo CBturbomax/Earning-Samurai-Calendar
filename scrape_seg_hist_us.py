@@ -115,6 +115,41 @@ def gaps_by_ticker():
     return out
 
 
+def cum_rows(by_axis, by_pair):
+    """누계 줄을 그대로 남긴다 — {축: {"종료일|분기수": {부문: 값}}} (분기수 2·3·4 = 반기·9개월·연간).
+
+    **결산 분기는 따로 신고되지 않는다**(10-K 에는 연간만). 수집기의 '연간 − 9개월'은 부문마다 따로 빼는데, 이름·태그가 한 해 사이에
+    바뀐 부문은 못 빼서 그 분기가 반쪽이 됐다(코노코필립스 4분기 — 다섯 부문 중 셋만). 누계 줄을 통째로 넘기면 빌드(seg_repair)가
+    '연간 − 9개월' 또는 '연간 − 앞 세 분기'를 **줄 단위로** 해 보고, 합이 그 분기 총매출과 맞을 때만 쓴다."""
+    out = {}
+
+    def put(axis, member, slot):
+        for key, v in slot.items():
+            ddate, qtrs = key[-2], key[-1]
+            if qtrs not in (2, 3, 4):
+                continue
+            val = v[0] if isinstance(v, (tuple, list)) else v
+            if not val or val <= 0:
+                continue
+            row = out.setdefault(axis, {}).setdefault(f"{ss.iso(ddate)}|{qtrs}", {})
+            nm = ss.pretty(member)
+            row[nm] = max(row.get(nm) or 0, val)             # 태그가 둘이면 큰 쪽(매출 태그 변형)
+    for axis, members in (by_axis or {}).items():
+        if ss.axis_rank(axis) < 2:                            # 사업부문·제품 축만(지역은 지역 그림 몫)
+            continue
+        for member, by_tag in members.items():
+            for _tag, slot in by_tag.items():
+                put(axis, member, slot)
+    for axis, subs in (by_pair or {}).items():
+        if ss.axis_rank(axis) < 2 or axis in out:
+            continue
+        sub = max(subs, key=lambda s_: len(subs[s_]), default=None)   # 아래 축 하나만(다 더하면 곱절)
+        for member, by_tag in (subs.get(sub) or {}).items():
+            for _tag, slot in by_tag.items():
+                put(axis, member, slot)
+    return out
+
+
 def pick(fl, miss):
     """빈 종료일을 덮는 서류만 — 그 분기에 끝난 서류(없으면 한 해 뒤 서류: 전년 같은 분기 비교치), 결산 분기면 3분기 10-Q 도
     (연간 − 9개월). 회사마다 37장을 다 읽던 첫 판이 회사당 3분 반이라(11/02 실측) 이렇게 좁힌다."""
@@ -146,7 +181,9 @@ def main():
         db = {}
     st = db.setdefault("stocks", {})
     done_co = db.setdefault("done_co", {})
-    if (db.get("gv") or 0) < 4:                              # 4(11/10): 대상에 **화면 기준 빈칸**(seg_holes.json)을 더했다 — 한 번 다시 본다
+    if (db.get("gv") or 0) < 5:                              # 5(11/10): 누계(연간·9개월·반기) 줄을 같이 남긴다 — 결산 분기를 빌드가 되살린다
+        done_co.clear(); db["gv"] = 5
+    if False:                              # 4(11/10): 대상에 **화면 기준 빈칸**(seg_holes.json)을 더했다 — 한 번 다시 본다
         done_co.clear(); db["gv"] = 4
     if False:                                    # 1: 반쪽 칸을 채워진 칸으로 셌다 · 2: ReportableSubsegments 행을 버렸다(CAT) — 다시 본다
         done_co.clear(); db["gv"] = 3
@@ -228,12 +265,15 @@ def main():
                 break
             continue
         rec = ss.build_stock(facts.get(cik, {}), pairs.get(cik, {}))
+        cum = cum_rows(facts.get(cik, {}), pairs.get(cik, {}))
         done_co[t] = date.today().isoformat()
         if rec:
             rec = ss.dedupe_names(rec)
             if rec.get("geo"):
                 rec["geo"] = ss.dedupe_names(rec["geo"])
             rec["src"] = "edgar-hist"
+            if cum:
+                rec["cum"] = cum
             # 앞서 읽은 기록을 버리지 않는다 — 이번엔 빈 분기를 덮는 서류만 읽어 기록이 짧다. 옛 기록은 more 에 남겨 빌드가 둘 다 본다.
             if st.get(t) and st[t].get("pts") != rec.get("pts"):
                 more = db.setdefault("more", {}).setdefault(t, [])

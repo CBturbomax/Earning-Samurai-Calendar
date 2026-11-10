@@ -2965,6 +2965,28 @@ def seg_repair():
                 prev_names = set(cur_d)
                 continue
             cands = [cur_d] if cur_d else []
+            # **결산 분기 되살리기**: 누계 줄(연간·9개월)이 있으면 '연간 − 9개월', 없으면 '연간 − 지금 화면의 앞 세 분기'를 줄 단위로.
+            # 이름은 열쇠(seg_key)로 맞추고, 아래 합 검산을 통과해야 쓴다.
+            for h in hist.get(k, []):
+                for _ax, rows_c in (h.get("cum") or {}).items():
+                    for ck, arow in rows_c.items():
+                        ce, _, cq = ck.partition("|")
+                        if cq != "4" or abs((date.fromisoformat(ce) - _d).days) > 20:
+                            continue
+                        ak = {seg_key(n): (n, v) for n, v in arow.items()}
+                        for ck2, yrow in rows_c.items():          # 연간 − 9개월
+                            e2, _, q2 = ck2.partition("|")
+                            if q2 == "3" and 70 <= (_d - date.fromisoformat(e2)).days <= 115:
+                                yk = {seg_key(n): v for n, v in yrow.items()}
+                                if set(ak) <= set(yk):
+                                    cands.append({n: v - yk[kk] for kk, (n, v) in ak.items() if v - yk[kk] > 0})
+                        q3 = []                                      # 연간 − 앞 세 분기(화면 값)
+                        for back in (91, 182, 273):
+                            pr = next((r for r in bpts if abs((_d - date.fromisoformat(r[0])).days - back) <= 20), None)
+                            if pr:
+                                q3.append({seg_key(names[i]): v for i, v in enumerate(pr[1:]) if v})
+                        if len(q3) == 3 and all(set(ak) <= set(q) for q in q3):
+                            cands.append({n: v - sum(q[kk] for q in q3) for kk, (n, v) in ak.items() if v - sum(q[kk] for q in q3) > 0})
             for h in hist.get(k, []):
                 for r in h.get("pts") or []:
                     if re.match(r"\d{4}-\d\d-\d\d$", str(r[0])) and abs((date.fromisoformat(r[0]) - _d).days) <= 20:
