@@ -2908,6 +2908,9 @@ def load_desc():
     return out
 
 
+REVFIX = [0]
+
+
 def seg_repair():
     """**분기마다 '합이 총매출과 맞는 조합'을 골라 쓴다(11/10).** 숫자는 받아 놓고도 화면이 비던 까닭이 이것이었다 —
       · AMD 2Q21: 나중 공시의 재표시 비교치(새 부문 둘만 — 합이 매출의 22%)가 그 칸을 차지해, 제대로 된 옛 기준 줄(합 = 매출)이 못 들어갔다
@@ -2932,6 +2935,7 @@ def seg_repair():
         if len(bpts) != len(base.get("pts") or []) or len(bpts) < 6:
             continue
         fin = [(date.fromisoformat(p["end"]), p["end"], p["rev"]) for p in f.get("points") or [] if p.get("end") and p.get("rev")]
+        pobj = {p["end"]: p for p in f.get("points") or [] if p.get("end")}
 
         def rev_at(e):
             d = date.fromisoformat(e)
@@ -2955,15 +2959,7 @@ def seg_repair():
         def row_near(e):
             d = date.fromisoformat(e)
             return next((r for r in bpts if abs((date.fromisoformat(r[0]) - d).days) <= 20), None)
-        prev_names, changed = set(), 0
-        for _d, e, rev in sorted(fin):
-            if e < "2017-01-01":
-                continue
-            cur = row_near(e)
-            cur_d = {names[i]: v for i, v in enumerate(cur[1:]) if v} if cur else {}
-            if cur_d and abs(sum(cur_d.values()) / rev / m - 1) <= 0.05:
-                prev_names = set(cur_d)
-                continue
+        def cand_rows(_d, cur_d):
             cands = [cur_d] if cur_d else []
             # **결산 분기 되살리기**: 누계 줄(연간·9개월)이 있으면 '연간 − 9개월', 없으면 '연간 − 지금 화면의 앞 세 분기'를 줄 단위로.
             # 이름은 열쇠(seg_key)로 맞추고, 아래 합 검산을 통과해야 쓴다.
@@ -2991,6 +2987,47 @@ def seg_repair():
                 for r in h.get("pts") or []:
                     if re.match(r"\d{4}-\d\d-\d\d$", str(r[0])) and abs((date.fromisoformat(r[0]) - _d).days) <= 20:
                         cands.append({n: v for n, v in zip(h.get("names") or [], r[1:]) if v})
+            return cands
+
+        prev_names, changed = set(), 0
+        recent, revfix = [], 0
+        # q 프레임은 SEC 자료에만 있다 — 일본·홍콩·stockanalysis 점에는 아예 없어 전부 '되살린 분기'로 보였다(시험 빌드에서 일본 빈칸이 늘었다)
+        us_q = k.startswith("us:") and sum(1 for p in f.get("points") or [] if p.get("q")) >= 6
+        for _d, e, rev in sorted(fin):
+            if e < "2017-01-01":
+                continue
+            cur = row_near(e)
+            cur_d = {names[i]: v for i, v in enumerate(cur[1:]) if v} if cur else {}
+            # **결산 분기 총매출이 틀린 회사**(11/10): 10-K 에는 연간만 있어 4분기 총매출을 '연간 − 9개월'로 만드는데, 두 값의 매출 항목이
+            # 다르면 엉뚱한 값이 된다(코노코필립스 4Q21 38.8억 — 실제 약 150억 · 엑셀론 −82억 · AIG −148억). 그러면 사업부 합 검산도
+            # 영영 못 통과해 4분기 사업부가 비었다. 앞 세 분기 가운뎃값의 0.6배 밑·1.7배 위(또는 음수)인 **되살린** 4분기(q 프레임 없음)에
+            # 한해, 앞 분기와 **부문 이름이 똑같은** 줄이 있으면 그 합 ÷ 평소 비율을 4분기 총매출로 쓴다(매출·사업부 두 그림을 같이 고친다).
+            po = pobj.get(e)
+            med3 = sorted(recent[-3:])[1] if len(recent) >= 3 else None
+            if us_q and po is not None and not po.get("q") and med3 and prev_names and (rev <= 0 or rev / med3 < 0.6 or rev / med3 > 1.7):
+                pk = {seg_key(n) for n in prev_names}
+                fixrow = None
+                for c in cand_rows(_d, cur_d):
+                    c = {n: v for n, v in c.items() if v and v > 0}
+                    if len(c) >= 2 and {seg_key(n) for n in c} == pk and 0.5 <= sum(c.values()) / m / med3 <= 2.2:
+                        fixrow = c
+                        break
+                if fixrow:
+                    if len(REVFIX) < 14:
+                        REVFIX.append(f"{k} {e} {rev / 1e9:.2f}→{sum(fixrow.values()) / m / 1e9:.2f}B")
+                    po["rev"] = rev = sum(fixrow.values()) / m
+                    po["revfix"] = 1
+                    revfix += 1
+                    cur_d = {}                      # 아래에서 이 줄을 후보로 다시 고르게(이름 맞추기·열 넣기)
+                    if cur is not None:
+                        for i in range(1, len(cur)):
+                            cur[i] = None
+                    hist.setdefault(k, []).append({"names": list(fixrow), "pts": [[e] + list(fixrow.values())]})
+            recent.append(rev)
+            if cur_d and abs(sum(cur_d.values()) / rev / m - 1) <= 0.05:
+                prev_names = set(cur_d)
+                continue
+            cands = cand_rows(_d, cur_d)
             best = None
             for c in cands:
                 items = [(n, v) for n, v in c.items() if v and v > 0]
@@ -3030,13 +3067,16 @@ def seg_repair():
                 cur[i + 1] = pick.get(n)
             prev_names = set(pick)
             changed += 1
+        REVFIX[0] += revfix
         if changed:
             bpts.sort(key=lambda r: r[0])
             base["names"], base["pts"] = names, bpts
             fixed += changed
             cos += 1
     if fixed:
-        print(f"  사업부 칸 바로잡기(합이 총매출과 맞는 조합으로): {fixed:,}칸 · {cos:,}곳")
+        print(f"  사업부 칸 바로잡기(합이 총매출과 맞는 조합으로): {fixed:,}칸 · {cos:,}곳 · 틀린 결산 분기 총매출을 고친 칸 {REVFIX[0]:,}")
+        if len(REVFIX) > 1:
+            print("    총매출 고친 예: " + " / ".join(REVFIX[1:]))
 
 
 load_ai_fill()                 # 부문 이름 옮기기(seg_ko)가 정의된 뒤에 — 같은 지역의 두 표기(TW·Taiwan)를 한 줄로
