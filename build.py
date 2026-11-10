@@ -3174,27 +3174,46 @@ load_ai_fill()                 # 부문 이름 옮기기(seg_ko)가 정의된 �
 
 
 def load_fpi_seg():
-    """외국 기업 보도자료에서 읽은 사업부(FPI_SEG)를 SEG 에. 보도자료 줄이 더 길면 그쪽이 뼈대고(한 회사가 제 손으로 낸 한 가지 표기 —
-    stockanalysis 는 SE 의 옛·새 이름을 일곱 줄로 흩었다), 헌 기록은 빈 분기만 메운다. 짧으면 헌 기록의 빈 분기만 채운다."""
+    """외국 기업 보도자료에서 읽은 사업부(FPI_SEG)를 SEG 에 — **헌 기록에 없는 분기만** 줄째 더한다(있는 분기는 안 건드린다).
+    이름은 열쇠(seg_key)가 같으면 같은 줄, 아니면 새 줄이다(회사가 표기를 바꾼 옛 기준 — 그림이 가른다).
+    처음에는 `_ai_fill_one` 에 맡겼는데 이름이 안 겹치는 옛 분기를 통째로 흘렸다(11/10 알리바바 2018~21 열세 분기 · 핀둬둬 1Q18~2Q19)."""
     n = 0
     for k, segs in FPI_SEG.items():
-        rec = _as_rec(segs, "사업부")
-        if not rec:
-            continue
-        rec.pop("axis", None)
         old = SEG.get(k)
-        old_n = sum(1 for r in (old or {}).get("pts") or [] if any(v for v in r[1:]))
-        if old and old.get("axis"):
-            rec["axis"] = old["axis"]
-        if not old or len(rec["pts"]) >= max(8, old_n):
-            got, _ = _ai_fill_one(rec, old) if old else (rec, 0)
-            SEG[k] = got or rec
-            n += len(rec["pts"])
-        else:
-            got, c = _ai_fill_one(old, rec)
-            if c:
-                SEG[k] = got
-                n += c
+        if not old:
+            rec = _as_rec(segs, "사업부")
+            if rec:
+                rec.pop("axis", None)
+                SEG[k] = rec
+                n += len(rec["pts"])
+            continue
+        pts = [list(r) for r in old.get("pts") or []]
+        if not all(re.match(r"\d{4}-\d\d-\d\d$", str(r[0])) for r in pts):
+            continue
+        names = list(old["names"])
+        have = [date.fromisoformat(r[0]) for r in pts if any(v for v in r[1:])]
+        add = 0
+        for e in sorted(segs):
+            d = date.fromisoformat(e)
+            if any(abs((h - d).days) <= 20 for h in have):
+                continue
+            row = {}
+            for nm, v in segs[e].items():
+                hit = next((bn for bn in names if seg_key(bn) and seg_key(bn) == seg_key(nm)), None)
+                if hit is None:
+                    names.append(nm)
+                    hit = nm
+                row[hit] = v
+            pts = [r for r in pts if abs((date.fromisoformat(r[0]) - d).days) > 20]     # 값 없는 빈 줄이 그 자리에 있으면 갈아 끼운다
+            pts.append([e] + [row.get(x) for x in names])
+            add += 1
+        if add:
+            for r in pts:
+                while len(r) < len(names) + 1:
+                    r.append(None)
+            pts.sort(key=lambda r: r[0])
+            SEG[k] = dict(old, names=names, pts=pts)
+            n += add
     if n:
         print(f"  외국 기업 6-K 보도자료 사업부: {n:,}칸 · {len(FPI_SEG):,}곳")
 
