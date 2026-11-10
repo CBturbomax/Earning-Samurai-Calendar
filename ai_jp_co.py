@@ -28,7 +28,7 @@ LOCK = threading.Lock()
 MAX_TOK = int(os.environ.get("FPI_TOKENS", "1000000"))
 SECS = int(os.environ.get("FPI_SECS", "4500"))
 PER_DOC = int(os.environ.get("JPCO_DOC", "2200"))
-MAX_DOCS = 10
+MAX_DOCS = 8
 T0 = time.time()
 
 SEGTAB = re.compile(r"セグメント|部門別|事業別|事業の種類")
@@ -77,6 +77,40 @@ def seg_excerpt(blob):
         out.append(txt)
         n += len(txt)
     return "\n--- table ---\n".join(out)
+
+
+def pdf_pages(code, fn, pn):
+    """결산단신 PDF 에서 **세그먼트 정보가 실린 쪽을 통째로**(pdftotext -layout — 칸 모양이 살아 있다) 둘까지.
+    11/11: 줄 단위로 '外部顧客' 을 찾던 pdf_excerpt 는 공시 342장을 '표없음'으로 놓쳤다. 웹 검색으로 떠보니 숫자는 기사에 없고
+    바로 이 PDF 안에 있었다 — 표를 우리가 가르지 말고 쪽째 넘겨 모델이 읽게 한다."""
+    import subprocess
+    import ai_fill as af
+    import scrape_geo_jp as G
+    pn = pn if pn.lower().endswith(".pdf") else (fn.replace("0812", "1401", 1) if fn.startswith("0812") else "")
+    if not pn:
+        return ""
+    try:
+        pdf = af._patient(lambda: G.get(f"https://www2.jpx.co.jp/disc/{code}0/{pn}", timeout=60))
+        if not pdf:
+            return ""
+        r = subprocess.run(["pdftotext", "-layout", "-l", "45", "-", "-"], input=pdf, capture_output=True, timeout=60)
+        pages = r.stdout.decode("utf-8", "replace").split("\f")
+    except Exception:                                  # noqa: BLE001 — pdftotext 없음·암호 PDF
+        return ""
+    scored = []
+    for i, pg in enumerate(pages):
+        flat = re.sub(r"[ \u3000]", "", pg)
+        if not re.search(r"セグメント", flat) or not re.search(r"\d{1,3},\d{3}", pg):
+            continue
+        sc = (3 if re.search(r"外部顧客", flat) else 0) + (2 if re.search(r"報告セグメント", flat) else 0) + \
+             (1 if re.search(r"セグメント情報", flat) else 0)
+        if sc >= 2:
+            scored.append((-sc, i))
+    out = []
+    for _sc, i in sorted(sorted(scored)[:2], key=lambda t: t[1]):
+        pg = "\n".join(re.sub(r" {3,}", "   ", ln.rstrip()) for ln in pages[i].splitlines() if ln.strip())
+        out.append(f"[PDF page {i + 1}]\n" + pg[:3200])
+    return re.sub(r"[\x00-\x08\x0b-\x1f\x7f]", " ", "\n--- page ---\n".join(out))
 
 
 def pdf_excerpt(code, fn, pn):
@@ -144,7 +178,8 @@ def one(B, key, db, verbose=False):
     import scrape_geo_jp as G
     code = key.split(":")[1]
     fin, seg = B.FIN.get(key) or {}, B.SEG.get(key) or {}
-    holes = sorted(af.gaps(B, key), reverse=True)
+    done = set(((db["stocks"].get(key) or {}).get("q") or {}))          # 앞 실행이 채운 칸(af.gaps 는 마지막 정식 빌드 기준이라 아직 빈칸으로 센다)
+    holes = sorted((e for e in af.gaps(B, key) if e not in done), reverse=True)
     if not holes:
         return ["  빈칸 없음"], 0
     base = base_ratio(B, key)
@@ -174,6 +209,8 @@ def one(B, key, db, verbose=False):
             sp = G.spans_of(F.read_summary(blob))
             txt = seg_excerpt(blob)
             how = "zip"
+            if not txt:
+                txt, how = pdf_pages(code, x[1], x[2]), "pdf쪽"
             if not txt:
                 txt, how = pdf_excerpt(code, x[1], x[2]), "pdf"
             if sp:
