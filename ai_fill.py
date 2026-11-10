@@ -76,11 +76,13 @@ def jp_sector(code):
 SINCE = "2018-01-01"
 BIG = set()                                          # 시총 상위 — main 이 채운다
 BIG_N = int(os.environ.get("AIFILL_BIG", "0"))       # 사업부 기록이 아예 없는 회사(단일 부문 — 키엔스·닌텐도·다케다)는 안 묻는다(11/02)
-RECENT_DAYS = int(os.environ.get("AIFILL_RECENT", "0") or 0)   # >0 이면 그 날수 안의 빈칸만
+RECENT_DAYS = int(os.environ.get("AIFILL_RECENT", "0") or 0)   # (옛 설정 — 11/10 부터 안 쓴다)
+MIN_CAP = float(os.environ.get("AIFILL_MIN_CAP", "0.7"))        # 시총 하한(십억 달러 — 0.7 ≈ 1조 원). 0 이면 전부
+CAPS = {}                                                       # 열쇠 -> 시총(십억 달러) — targets 가 채운다
 DOC_LIMIT = int(os.environ.get("AIFILL_DOC", "20000"))   # 원문 길이 상한 — 길수록 한도를 많이 먹는다
 CHECK_VER = 2                   # 검산 규칙 판 — 바뀌면 버렸던 답(rej)을 AI 를 다시 안 부르고 다시 검산한다(2: 단위·소계 고침)
 EMPTY_VER = 4                   # 2: 일본 PDF 이름을 목록에서(미국 기준 회사 — 도요타·고마쓰)  # 11/04: 암호 PDF 를 pdftotext 로
-DRY_N = 4                       # 연달아 이만큼 읽어 맞은 것이 없으면 그 회사는 넉 달 쉰다
+DRY_N = 3                       # 연달아 이만큼 읽어 맞은 것이 없으면 그 회사는 한 해 쉰다(11/10: 넷·넉 달 -> 셋·한 해)
 KEYS = re.compile(r"segment|geograph|region|countr|americas|europe|asia|china|japan|emea|international|domestic|"
                   r"backlog|remaining performance|bookings|new orders|order intake|orders received|disaggregat|"
                   r"revenue by|revenues by|net sales by|sales by", re.I)
@@ -104,35 +106,35 @@ def covered(rec, end, tol=20):
 
 
 def gaps(B, key):
-    """총매출이 있는 1Q18 이후 분기 중 사업부·지역이 빈 종료일들."""
+    """AI 가 읽을 값어치가 있는 빈 분기 — **채울 수 있는 것만**(11/10 구조를 바꿨다).
+
+    예전에는 '총매출은 있는데 사업부·지역·수주가 빈 분기'를 전부 대상으로 삼았다(7만 4천 칸). 뜯어 보니 대부분 회사가 애초에
+    안 내는 숫자였고(수주 지표를 내기 전 분기 · 보험사·단일 부문 · 사업부 공시를 시작하기 전), AI 가 그걸 찾느라 공시를 읽고
+    빈손으로 나왔다 — 회원님: "토큰을 너무 많이, 헛된 곳에 쓴다." 지금은 다음만 묻는다.
+      · **사업부만**(지역·수주는 안 묻는다 — 낸 회사는 규칙 수집기가 이미 받는다)
+      · 사업부 기록이 4분기 이상 있는 회사만(없는 회사는 단일 부문·보험사)
+      · 시총 하한(MIN_CAP) 이상만
+      · 그 회사 사업부 기록이 **시작된 뒤**의 구멍만(시작 전은 공시를 안 하던 때다)
+      · 빈칸이 전체의 6할을 넘는 회사는 뺀다(기록이 우연히 몇 칸 있을 뿐, 분기 사업부를 안 내는 회사다)
+      · 끝난 지 100일 안 된 분기는 뺀다(10-Q·결산단신이 나오면 수집기가 채운다)"""
     f = B.FIN.get(key) or {}
     if f.get("freq") not in ("Q", "H"):
         return []
-    m, code = key.split(":")
-    # **한도 아끼기(11/02 실측)**: 지역·수주는 그 회사가 낸 적이 있을 때만 묻는다. 빈칸 18만 칸 중 대부분이 '분기 지역 매출을
-    # 아예 안 내는 회사'였고, AI 가 그걸 찾느라 공시를 읽고 빈손으로 나왔다. 낸 적이 있는 회사의 구멍만 판다.
-    ordc = len((B.ORD.get(key) or {}).get("pts") or []) >= 2
-    geoc = len((B.GEO.get(key) or {}).get("pts") or []) >= 4
-    # 사업부 기록이 아예 없는 회사는 대개 '단일 부문'이다 — 시총 상위(BIG)만 묻는다(우리 수집기가 놓친 큰 회사를 찾으려고)
-    segc = len((B.SEG.get(key) or {}).get("pts") or []) >= 4 or key in BIG or key in SOON
-    since = SINCE
-    if RECENT_DAYS and key not in SOON:               # 곧 발표할 회사는 1Q18 부터 전부                                    # 최근 칸부터(같은 토큰으로 눈에 보이는 빈칸이 가장 많이 준다)
-        since = max(SINCE, (date.today() - timedelta(days=RECENT_DAYS)).isoformat())
+    seg = B.SEG.get(key) or {}
+    spts = [str(r[0]) for r in seg.get("pts") or [] if re.match(r"\d{4}-\d\d-\d\d$", str(r[0])) and any(v for v in r[1:])]
+    if len(spts) < 4:
+        return []
+    if MIN_CAP and (CAPS.get(key) or 0) < MIN_CAP:
+        return []
+    first = min(spts)
+    fresh = (date.today() - timedelta(days=100)).isoformat()
     sh = HOLES.get(key, set()) if HOLES else None
-    def scan(since):
-        out = []
-        for p in f.get("points") or []:
-            e = p.get("end")
-            if not e or e < since or not p.get("rev"):
-                continue
-            # 사업부는 **화면 기준 빈칸**(빌드가 남긴 data/seg_holes.json)을 먼저 본다 — 원자료에는 있지만 틀려서 화면에서 지워진
-            # 분기도 빈칸이다(11/05). 목록이 없으면 예전처럼 원자료로.
-            seg_miss = (e in sh) if sh is not None else not covered(B.SEG.get(key), e)
-            if (segc and seg_miss) or (geoc and not covered(B.GEO.get(key), e)) or (ordc and not covered(B.ORD.get(key), e)):
-                out.append(e)
-        return out
-    # 최근 두 해가 다 찬 회사는 1Q18 까지 거슬러 간다(11/05 — 최근 창만 보던 시절엔 옛 빈칸이 영영 대상이 안 됐다)
-    return scan(since) or (scan(SINCE) if since != SINCE else [])
+    ends = [p["end"] for p in f.get("points") or [] if p.get("end") and p["end"] >= SINCE and p.get("rev")]
+    miss = [e for e in ends if first < e < fresh and ((e in sh) if sh is not None else not covered(seg, e))]
+    inside = [e for e in ends if first < e < fresh]
+    if not miss or len(miss) > 0.6 * max(len(inside), 1):
+        return []
+    return miss
 
 
 def _load_holes():
@@ -192,6 +194,13 @@ def targets(B, only):
             us.append((first, -(ucap.get(key) or 0), key))
         elif m == "jp":
             jp.append((first, -(B.CAPS.get(key) or 0), key))
+    try:
+        cj = json.loads((HERE / "data" / "caps.json").read_text(encoding="utf-8")).get("caps") or {}
+    except (OSError, ValueError):
+        cj = {}
+    CAPS.update({k: v for k, v in cj.items() if isinstance(v, (int, float))})
+    for k, v in ucap.items():
+        CAPS[k] = max(CAPS.get(k) or 0, v or 0)
     us.sort()
     jp.sort()
     out = []
@@ -393,6 +402,18 @@ TABLES:
 {tables}
 """
 
+
+# **사업부만 묻는다(11/10).** 지역·수주까지 적게 하면 답이 길어져 출력 토큰이 3할을 차지했다 — 대상(gaps)이 사업부뿐이니 물음도 사업부만.
+if os.environ.get("AIFILL_KINDS", "seg") == "seg":
+    for _l in ('- "geo": revenue by geographic region or country.\n',
+               '- "oh": order intake / new orders / bookings / 受注高 (company total only).\n',
+               '- "ob": order backlog / 受注残高 (company total only).\n',
+               '- "rpo": remaining performance obligations (company total only).\n'):
+        assert _l in PROMPT
+        PROMPT = PROMPT.replace(_l, "")
+    PROMPT = PROMPT.replace("k (seg|geo|oh|ob|rpo)", "k (always seg)").replace("; regions: {geos}", "{geos:.0s}") \
+                   .replace('{{"k": "geo", "name": "Americas"', '{{"k": "seg", "name": "Cloud"') \
+                   .replace("Read ONLY the tables below.", "Read ONLY the tables below. Ignore geographic, order and backlog tables.")
 
 _PAUSE = [0.0]
 _PLOCK = threading.Lock()
@@ -698,6 +719,22 @@ def main():
         for k, lst in (old.get("asked") or {}).items():
             have = db["asked"].setdefault(k, [])
             have.extend(x for x in lst if x not in have)
+    # **다른 갈래 파일의 기억도 읽는다(11/10).** 갈래 수를 바꾸면 회사가 다른 파일로 옮겨 가는데, 제 파일만 보면 이미 물은 공시를 또 묻는다.
+    for other in sorted((HERE / "data").glob("ai_fill_s*.json")):
+        if other == OUT:
+            continue
+        try:
+            oj = json.loads(other.read_text(encoding="utf-8"))
+        except (OSError, ValueError):
+            continue
+        for fld in ("asked", "empty", "none"):
+            for k, lst in (oj.get(fld) or {}).items():
+                have = db.setdefault(fld, {}).setdefault(k, [])
+                have.extend(x for x in lst if x not in have)
+        for k, v in (oj.get("dry") or {}).items():
+            cur = db.setdefault("dry", {}).get(k)
+            if not cur or (v.get("ts", "") > cur.get("ts", "")):
+                db["dry"][k] = v
     i_sh, n_sh = (int(x) for x in SHARD.split("/")) if SHARD else (0, 1)
     import zlib
     todo = []
@@ -728,7 +765,7 @@ def main():
         if zlib.crc32(key.encode()) % n_sh != i_sh:
             continue
         d = dry.get(key) or {}
-        if not only and d.get("n", 0) >= DRY_N and (date.today() - _d(d.get("ts", "2000-01-01"))).days < 120:
+        if not only and d.get("n", 0) >= DRY_N and (date.today() - _d(d.get("ts", "2000-01-01"))).days < 365:
             continue                                  # 공시를 넷 읽어도 하나도 안 맞은 회사 — 넉 달 쉰다(안 내는 회사)
         miss = gaps(B, key)
         if miss:

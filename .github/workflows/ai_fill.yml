@@ -1,22 +1,17 @@
 # AI 빈칸 메우기 — 1Q18 부터 사업부·지역·수주가 빈 분기를 공시 원문에서 읽는다(ai_fill.py).
-# **네 갈래가 동시에** 돌고(회사를 열쇠 해시로 나눔) 갈래마다 제 파일(data/ai_fill_s{0..3}.json)의 주인이다 — 커밋이 안 부딪힌다.
-# 30분 크론으로 돈다(이어달리기는 11/10 껐다). 구독 한도에 걸린 갈래는 25분 쉰다. **기본은 전부 Codex — Claude 계정은 손으로 claude=1 일 때만.**
+# 두 갈래가 동시에 돌고(회사를 열쇠 해시로 나눔) 갈래마다 제 파일(data/ai_fill_s{0,1}.json)의 주인이다. 옛 s2·s3 은 읽기만(빌드·기억).
+# 세 시간마다 두 갈래(Claude 두 계정)로 돈다. 대상은 '채울 수 있는 사업부 빈칸'뿐이라 다 차면 저절로 할 일이 없어진다. 이어달리기는 껐다.
 # 키: GitHub Secrets 의 CLAUDE_CODE_OAUTH_TOKEN · CLAUDE_CODE_OAUTH_TOKEN_2 · CODEX_AUTH_JSON(있는 것만 쓴다).
 # 한도에 한 번 걸리면 그 갈래는 곧장 멈춘다(AIFILL_RETRY=1). 추가 결제는 각 계정 설정에서 꺼 둘 것.
 name: AI 빈칸 메우기
 
 on:
-  # 정시 실행은 Codex 갈래만 돈다(11/02) — Claude 계정은 회원님이 쓰는 한도·추가 결제 걱정이 있어 손으로 부를 때만.
   schedule:
-    - cron: '23,53 * * * *'
+    - cron: '17 */3 * * *'     # 세 시간마다(하루 8번 · 계정당 한 번에 10~15만 토큰까지) — 대상이 다 차면 몇 초 만에 끝난다
   workflow_dispatch:
     inputs:
-      claude:
-        description: '1 이면 0·1 갈래를 Claude 계정으로(손으로 부를 때만 — 기본은 전부 Codex)'
-        required: false
-        default: ''
-      codex_only:
-        description: '(옛 입력 — 이제 기본이 Codex 만이라 안 쓴다)'
+      engine:
+        description: 'codex 면 두 갈래 다 Codex 로(기본은 Claude 두 계정)'
         required: false
         default: ''
       only:
@@ -51,13 +46,11 @@ jobs:
       #   claude1 = CLAUDE_CODE_OAUTH_TOKEN · claude2 = CLAUDE_CODE_OAUTH_TOKEN_2 · codex = CODEX_AUTH_JSON(~/.codex/auth.json 내용)
       matrix:
         include:
-          # tok = 이번 실행 토큰 상한. claude2(회원님이 지금 채팅하는 계정)는 작게 — 채팅까지 막히면 안 된다
-          # 11/05 밤: 동시 6×4=24 로 Codex 가 403 으로 전부 거절 — 갈래마다 3(합 12, 정상이던 수)으로. 0·1 갈래(회사 절반)가 Claude 토큰 6만~15만이라 1분 만에 끝나 사실상 안 돌았다 — Codex 로 같은 크기
-          # 11/10: 네 갈래 전부 Codex(갈래마다 2줄, 합 8). alt 는 손으로 claude=1 을 줬을 때만 쓰는 Claude 계정이고 그때 토큰 상한은 ctok.
-          - {shard: 0, want: codex, alt: claude1, tok: '3000000', ctok: '150000', w: '2'}
-          - {shard: 1, want: codex, alt: claude2, tok: '3000000', ctok: '60000', w: '2'}
-          - {shard: 2, want: codex, tok: '3000000', w: '2'}
-          - {shard: 3, want: codex, tok: '3000000', w: '2'}
+          # **11/10 구조를 바꿨다**: 두 갈래 · 기본은 Claude 두 계정(회원님: "Codex 아니어도 Claude 계정들로") · 대상은 '채울 수 있는 사업부 빈칸'만
+          # (ai_fill.gaps — 시총 1조 원 이상 · 사업부를 내는 회사 · 기록이 시작된 뒤의 구멍). 한 번 실행에 계정당 ctok 토큰까지.
+          # 손으로 engine=codex 를 주면 두 갈래 다 Codex(tok).
+          - {shard: 0, alt: claude1, tok: '3000000', ctok: '150000', w: '2'}
+          - {shard: 1, alt: claude2, tok: '3000000', ctok: '100000', w: '2'}
     env:
       TOK1: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
       TOK2: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN_2 }}
@@ -69,7 +62,7 @@ jobs:
       AIFILL_DOC: '20000'
       AIFILL_RECENT: "${{ github.event.inputs.recent || '730' }}"
       CODEX_EFFORT: low
-      AIFILL_SHARD: '${{ matrix.shard }}/4'
+      AIFILL_SHARD: '${{ matrix.shard }}/2'
       AIFILL_SECS: '2700'
       AIFILL_WORKERS: "${{ matrix.w || '1' }}"   # Codex 갈래는 두 줄
       SEC_UA: 'Earning Samurai Calendar (cbpark@wisdomasset.co.kr)'
@@ -89,10 +82,9 @@ jobs:
         run: |
           has() { case $1 in claude1) [ -n "$TOK1" ];; claude2) [ -n "$TOK2" ];; codex) [ -n "$CODEX_AUTH_JSON" ];; esac; }
           pick=""
-          # **Claude 계정은 손으로 claude=1 을 줄 때만 쓴다(11/10).** 예전에는 codex_only 입력을 아무도 안 읽어, 이어달리기·정시 실행이
-          # 6분마다 Claude 두 계정을 썼다(1회 21만 토큰). 지금은 기본이 전부 Codex 이고, Codex 열쇠가 없으면 그 갈래는 쉰다.
-          if [ "${{ github.event.inputs.claude }}" = "1" ] && [ -n "${{ matrix.alt }}" ] && has "${{ matrix.alt }}"; then pick="${{ matrix.alt }}";
-          elif has codex; then pick=codex; fi
+          # 기본은 그 갈래의 Claude 계정. 손으로 engine=codex 를 주면 Codex. 열쇠가 없으면 그 갈래는 쉰다(다른 계정으로 넘어가지 않는다).
+          if [ "${{ github.event.inputs.engine }}" = "codex" ]; then if has codex; then pick=codex; fi;
+          elif has "${{ matrix.alt }}"; then pick="${{ matrix.alt }}"; fi
           echo "엔진: ${pick:-없음}"
           case $pick in
             claude1) echo "CLAUDE_CODE_OAUTH_TOKEN=$TOK1" >> "$GITHUB_ENV"; echo "AI_ENGINE=claude" >> "$GITHUB_ENV"; echo "CLAUDE_TOK=${{ matrix.ctok }}" >> "$GITHUB_ENV";;
