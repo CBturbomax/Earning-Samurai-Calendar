@@ -37,6 +37,9 @@ MIN_CAP = float(os.environ.get("FPI_MIN_CAP", "7"))         # 십억 달러 — 
 # 무엇을 읽나(11/10 — 범위를 좁혔다). rev: 총매출부터 없는 옛 분기만(기본) · seg: + 총매출은 있는데 사업부가 빈 분기 ·
 # all: + 사업부 줄이 흩어진 회사는 있는 분기까지 다시. 넓힐수록 토큰이 몇 배로 든다 — 실측을 보고 넓힐 것.
 SCOPE = os.environ.get("FPI_SCOPE", "rev")
+# 일본 회사의 미국 상장분 — 같은 회사 숫자가 일본 시장(jp:) 쪽에 이미 1Q16 부터 있다. 여기서 또 읽으면 중복이다(11/10 회원님과 정함:
+# 중국계 미국 상장사는 읽고, 일본 중복은 뺀다).
+JP_ADR = {"TM", "SONY", "HMC", "TAK", "IX", "NMR", "MUFG", "SMFG", "MFG", "NTDOY", "CAJ"}
 DOC_LIMIT = int(os.environ.get("FPI_DOC", "14000"))
 DRY_N, DRY_DAYS = 3, 180
 KW = re.compile(r"revenue|net sales|turnover|sales|segment", re.I)
@@ -382,7 +385,7 @@ def main():
     holes = af.HOLES or {}
     todo = []
     for key in tg:
-        if not key.startswith("us:") or not is_fpi(key[3:], raw_us):
+        if not key.startswith("us:") or not is_fpi(key[3:], raw_us) or (key[3:] in JP_ADR and key not in only):
             continue
         if not only:
             if (af.CAPS.get(key) or 0) < MIN_CAP:
