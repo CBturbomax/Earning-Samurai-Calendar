@@ -206,3 +206,7 @@
   물음도 사업부만(AIFILL_KINDS=seg — 지역·수주 줄을 프롬프트에서 뺐다). 연달아 3공시 빈손이면 한 해 쉰다(DRY_N 3 · 365일). 다른 갈래 파일의
   asked·empty·none·dry 도 읽는다(갈래 수가 바뀌어도 다시 안 묻게). 워크플로: 두 갈래 · 기본 Claude 두 계정(15만·10만 토큰/회) · 세 시간마다 ·
   이어달리기 없음 · 손으로 engine=codex 면 Codex. **대상 규칙을 다시 넓히지 말 것 — 넓히면 다시 수천만 토큰이 든다.**
+- 11/10 **공짜 자료를 먼저 다 쓴다(회원님: "그냥 물어보면 토큰도 안 쓰고 바로 나오는데 그 원리대로")**. 확인: AMD 2Q21 사업부는 10-Q XBRL 에 그대로 있다.
+  ① build `load_ai_fill` 끝에서 옛 분기 이력(`segments_hist_*_s*.json` 의 stocks + more)을 **AI 값과 같은 길(fits 검산 → `_ai_fill_one`)로 화면 빈칸에** 넣는다
+  (첫 빌드 1,233칸 — splice·prepend_old 는 이름이 다르면 뼈대 안쪽 빈칸을 못 채웠다). ② `scrape_seg_hist_us` 대상에 화면 기준 빈칸(seg_holes.json)을 더하고
+  gv 4 로 done_co 를 한 번 비워 다시 읽는다. 다시 읽을 때 앞 기록은 `more` 에 남긴다. **순서: XBRL 이력이 다 돈 뒤에 남는 칸만 AI.** 그동안 ai_fill.yml 은 꺼 둔다.
