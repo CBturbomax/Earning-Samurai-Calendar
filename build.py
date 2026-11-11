@@ -3271,7 +3271,10 @@ def load_fpi_seg():
                 pts = [r for r in pts if r is not oldrow]
             row = {}
             for nm, v in segs[e].items():
-                hit = next((bn for bn in names if seg_key(bn) and seg_key(bn) == seg_key(nm)), None)
+                # **이름이 글자 그대로 같으면 같은 줄**(11/12 삿포로 2501): seg_key 는 일본어를 통째로 지워 빈 글자가 되므로 일본 이름은 늘 '새 줄'로
+                # 붙었고, 같은 이름의 줄이 여럿 생겨 그 줄마다 같은 값이 들어가 합이 3~4배가 됐다. 글자가 같으면 먼저 그 줄을 쓴다.
+                hit = next((bn for bn in names if bn == nm), None) or \
+                    next((bn for bn in names if seg_key(bn) and seg_key(bn) == seg_key(nm)), None)
                 if hit is None:
                     names.append(nm)
                     hit = nm
