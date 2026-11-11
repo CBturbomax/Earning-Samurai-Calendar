@@ -330,7 +330,7 @@ def one(B, key, db):
     if dom:
         import ai_fill as af
         done0 = set(((db["stocks"].get(key) or {}).get("q") or {}))
-        miss = sorted((e for e in af.gaps(B, key) if e not in done0), reverse=True)
+        miss = [e for e in miss if e not in done0]       # 11/12: 화면 구멍(af.gaps)만이 아니라 **사업부가 빈 분기 전부**(회원님: "모든 빈칸")
         if not miss:
             return ["  빈칸 없음"], 0
         ufiles = [f for f in af.us_filings(int(cik)) if f[1] in ("10-Q", "10-K")]
@@ -491,6 +491,9 @@ def week(B, d1, d2, mincap):
             continue
         if excluded("us", "", B.SECTORS.get(k, ""), (B.INDUSTRIES.get(k, "") or "").replace("-", "")):
             continue
+        from markets import extractive
+        if extractive("us", "", B.INDUSTRIES.get(k, "") or "", k):
+            continue                                     # 캐는 회사는 맨 뒷줄 — 여기서는 안 본다
         if len(missing(B, k)[1]) >= 4:
             out.append((-(af.CAPS.get(k) or 0), k))
     return [k for _c, k in sorted(out)], len(codes)
@@ -520,9 +523,12 @@ def main():
             except (OSError, ValueError):
                 rows = []
             ks |= {"us:" + r["code"] for r in rows if isinstance(r, dict) and args[i + 1] <= str(r.get("date")) <= args[i + 2]}
+        from markets import extractive
         tg = af.targets(B, ks)
         keys = [k for k in tg if k.startswith("us:") and
-                [e for e in af.gaps(B, k) if e not in ((db["stocks"].get(k) or {}).get("q") or {})]]
+                [e for e in missing(B, k)[1] if e not in ((db["stocks"].get(k) or {}).get("q") or {})]
+                and (af.CAPS.get(k) or 0) >= float(os.environ.get("FPI_MIN_CAP", "0.7"))
+                and not extractive("us", "", B.INDUSTRIES.get(k, "") or "", k)]
         print(f"{args[i + 1]}~{args[i + 2]} 미국 발표 회사 중 사업부 구멍이 있는 곳: {len(keys)}")
     if "--days" in args:
         i = args.index("--days")
