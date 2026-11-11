@@ -580,8 +580,16 @@ _EXTRACT_IND = _re.compile(
 _EXTRACT_JP = {"鉱業", "石油", "石油・石炭製品", "非鉄金属", "非鉄金属製品", "金属製品", "鉄鋼", "ガス", "광업", "석유", "석유·석탄제품", "비철금속", "비철금속제품", "금속제품", "철강", "가스"}
 
 
-def extractive(mkt, sector="", industry=""):
-    """광산·석유가스 생산·정유·석탄 회사인가(세부 업종이 있으면 그것으로, 일본은 업종으로)."""
+# **업종은 비철금속이지만 AI 수혜주라 빼지 않는 회사**(회원님 11/11: "스미토모전공 같은 회사는 광케이블이 있잖아 — 제외해야지").
+# 전선·광섬유: 스미토모전공 5802 · 후루카와전공 5801 · 후지쿠라 5803 · SWCC 5805 / 반도체·AI 서버 소재: JX금속 5016 · 미쓰이금속 5706.
+# 더 넣고 빼려면 이 목록과 realtime/app.py 의 TG_KEEP 을 같이 고친다.
+EXTRACT_KEEP = {"jp:5802", "jp:5801", "jp:5803", "jp:5805", "jp:5016", "jp:5706"}
+
+
+def extractive(mkt, sector="", industry="", key=""):
+    """광산·석유가스 생산·정유·석탄 회사인가(세부 업종이 있으면 그것으로, 일본은 업종으로). key 가 EXTRACT_KEEP 에 있으면 아니다."""
+    if key and key in EXTRACT_KEEP:
+        return False
     if mkt == "jp":
         return (sector or "") in _EXTRACT_JP
     return bool(industry) and bool(_EXTRACT_IND.search(industry))

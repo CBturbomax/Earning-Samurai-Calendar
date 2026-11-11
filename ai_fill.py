@@ -191,7 +191,7 @@ def targets(B, only):
         seen.add(sig)
         first = 0 if key in soon else 1
         from markets import extractive
-        if extractive(m, sect, B.INDUSTRIES.get(key, "") or ""):
+        if extractive(m, sect, B.INDUSTRIES.get(key, "") or "", key):
             first = 2                                 # 캐는 회사(광산·석유가스·정유·석탄)는 맨 뒷줄 — 회원님 11/11
         if m == "us":
             us.append((first, -(ucap.get(key) or 0), key))
