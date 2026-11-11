@@ -23,6 +23,7 @@ from datetime import date, datetime, timezone
 from pathlib import Path
 
 HERE = Path(__file__).parent
+IR_TRACE = []                   # IR 자료 찾기 자취(로그용 — 0장일 때 어디서 막혔는지)
 NAMES = {}                      # 열쇠 -> 회사 이름(검색에 쓴다) — main 이 채운다
 OUT = HERE / "data" / "fpi_co.json"
 LOCK = threading.Lock()
@@ -190,8 +191,10 @@ def ir_pages(code, name, ends):
             ai_seg.USED["n"] += 1
         mm = re.search(r"\{.*\}", j.get("result") or "", re.S)
         docs = (json.loads(mm.group(0)).get("docs") or []) if mm else []
-    except Exception:                                  # noqa: BLE001
+    except Exception as ex:                            # noqa: BLE001
+        IR_TRACE.append(f"검색 실패 {ex!r}"[:160])
         return []
+    IR_TRACE.append(f"검색이 준 주소 {len(docs)}: " + " ".join(str((d or {}).get('url'))[-50:] for d in docs[:8]))
     out = []
     for d in docs[:8]:
         url = str((d or {}).get("url") or "")
@@ -203,10 +206,12 @@ def ir_pages(code, name, ends):
             with urllib.request.urlopen(req, timeout=40) as resp:
                 pdf = resp.read(30_000_000)
             if not pdf.startswith(b"%PDF"):
+                IR_TRACE.append(f"PDF 아님 {url[-40:]}")
                 continue
             pr = subprocess.run(["pdftotext", "-layout", "-l", "80", "-", "-"], input=pdf, capture_output=True, timeout=90)
             pages = pr.stdout.decode("utf-8", "replace").split("\f")
-        except Exception:                              # noqa: BLE001 — 403·시간 초과·깨진 PDF
+        except Exception as ex:                        # noqa: BLE001 — 403·시간 초과·깨진 PDF
+            IR_TRACE.append(f"내려받기 실패 {url[-40:]} {ex!r}"[:150])
             continue
         scored = []
         for i, pg in enumerate(pages):
@@ -219,6 +224,7 @@ def ir_pages(code, name, ends):
         for _sc, i in sorted(sorted(scored)[:3], key=lambda t: t[1]):
             pg = "\n".join(re.sub(r" {3,}", "   ", ln.rstrip()) for ln in pages[i].splitlines() if ln.strip())
             txt.append(f"[PDF page {i + 1}]\n" + pg[:2600])
+        IR_TRACE.append(f"{url[-40:]} 쪽 {len(pages)} · 세그먼트 쪽 {len(scored)}")
         if txt:
             out.append((url, re.sub(r"[\x00-\x08\x0b-\x1f\x7f]", " ", "\n--- page ---\n".join(txt))))
         if len(out) >= 4:
@@ -323,6 +329,8 @@ def one(B, key, db, verbose=False, tried=None):
         if lack:
             irs = ir_pages(code, NAMES.get(key) or code, lack)
             out.append(f"  IR 자료(웹): 못 구한 분기 {len(lack)} → 내려받은 PDF {len(irs)}장 " + " ".join(u.rsplit('/', 1)[-1][:28] for u, _t in irs))
+            out += ["    · " + t for t in IR_TRACE[-10:]]
+            del IR_TRACE[:]
     if not picked and not irs:
         with LOCK:
             db.setdefault("none", {})[key] = date.today().isoformat()
