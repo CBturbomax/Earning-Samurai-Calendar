@@ -126,14 +126,14 @@ def _tables(raw):
     return out
 
 
-def seg_text(raws):
+def seg_text(raws, annual=False):
     """실적 공시 한 건의 첨부들 -> 부문 표 글(PER_DOC 자). 첨부를 가리지 않고 표를 한데 모아 점수 순으로 싣는다
     (CNQ: 부문 표는 재무제표 장에, 분기 요약은 MD&A 에 있다)."""
     import ai_fpi as P
     got, seen, plain0 = [], set(), ""
     for raw in raws:
         plain = re.sub(r"\s+", " ", re.sub(r"<[^>]+>", " ", raw[:60000]))
-        if not P.QHINT.search(plain):
+        if not annual and not P.QHINT.search(plain):
             continue
         plain0 = plain0 or plain
         for s_, i, txt in _tables(raw):
@@ -322,13 +322,20 @@ def one(B, key, db):
         return ["  CIK 없음"], 0
     fin = B.FIN.get(key) or {}
     all_ends, miss = missing(B, key)
-    if len(miss) < 4:
-        return [f"  사업부 빈 분기 {len(miss)} — 할 일 없음"], 0
     files = P.six_k(int(cik))
-    if not files:
-        with LOCK:
-            db.setdefault("none", {})[key] = date.today().isoformat()
-        return ["  6-K 없음(외국 기업이 아니다)"], 0
+    dom = not files                                     # 6-K 가 없다 = 미국 국내 기업(10-Q·10-K) — 화면에 사업부가 있는 회사의 구멍만 메운다
+    ufiles = []
+    if dom:
+        import ai_fill as af
+        done0 = set(((db["stocks"].get(key) or {}).get("q") or {}))
+        miss = sorted((e for e in af.gaps(B, key) if e not in done0), reverse=True)
+        if not miss:
+            return ["  빈칸 없음"], 0
+        ufiles = [f for f in af.us_filings(int(cik)) if f[1] in ("10-Q", "10-K")]
+        if not ufiles:
+            return ["  10-Q·10-K 없음"], 0
+    elif len(miss) < 4:
+        return [f"  사업부 빈 분기 {len(miss)} — 할 일 없음"], 0
     names = (B.SEG.get(key) or {}).get("names") or []
     pr_q = {}
     if (HERE / "data" / "fpi_pr.json").exists():
@@ -357,6 +364,17 @@ def one(B, key, db):
         ends = sorted(set(chunk) | set(pick[:2]))
         docs, t0 = [], time.time()
         for e in ends:
+            if dom:                                      # 그 날 끝난 10-Q(석 달 칸) 또는 10-K(연간 칸 — 결산 분기는 코드가 뺀다)
+                import ai_fill as af
+                f = next((f for f in ufiles if abs((_d(f[0]) - _d(e)).days) <= 12), None)
+                if f and not any(f[2] == a for _f, a, _t in docs):
+                    raw_ = af.sec(af.DOC.format(cik=int(cik), acc=f[2], name=f[3]), binary=True)
+                    txt = seg_text([raw_.decode("utf-8", "replace")], annual=f[1] == "10-K") if raw_ else ""
+                    if txt:
+                        head = (f"ANNUAL REPORT (10-K), fiscal year ended {f[0]} — twelve-month columns" if f[1] == "10-K"
+                                else f"quarterly report (10-Q), quarter ended {f[0]}")
+                        docs.append((f[0] + " " + head, f[2], txt))
+                continue
             for fd, acc in [f for f in files if 10 <= (_d(f[0]) - _d(e)).days <= 100][:10]:
                 if any(acc == a for _f, a, _t in docs):
                     break
@@ -367,7 +385,7 @@ def one(B, key, db):
         segdocs = sum(1 for _f, _a, t in docs if SEGWORD.search(t) or "[before table:" in t and t.count("--- table ---") >= 2)
         out.append(f"  묶음 {ci // CHUNK + 1}: 빈 분기 {len(chunk)}({chunk[-1]}~{chunk[0]}) · 공시 {len(docs)}장(부문 표 {segdocs}장) · "
                    f"글 {sum(len(t) for _f, _a, t in docs):,}자 · 고르는 데 {time.time() - t0:.0f}초")
-        if len(docs) < 3 or segdocs < max(2, len(docs) // 3):
+        if (not docs or not segdocs) if dom else (len(docs) < 3 or segdocs < max(2, len(docs) // 3)):
             out.append("  부문 표가 든 공시가 모자라다(단일 사업부이거나 실적 공시가 6-K 에 없다) — 안 묻는다(토큰 0)")
             if ci == 0:
                 with LOCK:
@@ -379,6 +397,10 @@ def one(B, key, db):
         if pick:
             anchors = "VERIFIED VALUES we already hold (absolute currency units) — your series must reproduce these:\n" + "\n".join(
                 f"  {e}: " + ", ".join(f"{n} {v:,.0f}" for n, v in src[e].items()) for e in pick) + "\n\n"
+        if dom:
+            anchors += ("ANNUAL REPORTS: for a filing marked ANNUAL REPORT give the TWELVE-month segment revenues of that fiscal year under "
+                        '"y": {"<fiscal year end YYYY-MM-DD>": {"seg": {...}, "elim": ...}} (same names, same measure). '
+                        'Do not put twelve-month values under "q".\n\n')
         prompt = PROMPT.format(anchors=anchors, code=code, cur=fin.get("cur") or "USD", segs=json.dumps(names[:12], ensure_ascii=False),
                                n=len(docs), a=ends[0], z=ends[-1], docs=body[:MAX_PROMPT])
         raw = ask(prompt)
@@ -390,6 +412,37 @@ def one(B, key, db):
             break
         ok, rep = check(B, key, ans, pr_q, all_ends, mine_before)
         ok = {e: x for e, x in ok.items() if e in chunk}             # 닻 분기는 이미 가진 값 — 다시 담지 않는다
+        if dom:                                          # 결산 분기 = 연간 − 앞 세 분기(이 답 또는 화면) — 합÷매출이 그 세 분기의 비율과 4% 안일 때만
+            have = {p["end"]: p["rev"] for p in fin.get("points") or [] if p.get("end") and p.get("rev")}
+            scr = {str(r[0]): {B.seg_key(n): v for n, v in zip(names, r[1:]) if v} for r in (B.SEG.get(key) or {}).get("pts") or []
+                   if re.match(r"\d{4}-\d\d-\d\d$", str(r[0]))}
+            u_ = float(ans.get("u") or 1)
+            for fe, x in (ans.get("y") or {}).items():
+                e4 = next((e for e in chunk if abs((_d(e) - _d(fe)).days) <= 12), None) if re.match(r"\d{4}-\d\d-\d\d$", str(fe)) else None
+                yr = {B.seg_key(n): (n, float(v) * u_) for n, v in ((x or {}).get("seg") or {}).items() if isinstance(v, (int, float)) and v}
+                if not e4 or e4 in ok or len(yr) < 2:
+                    continue
+                prev, rats = [], []
+                for d0 in sorted(all_ends):
+                    if 60 <= (_d(e4) - _d(d0)).days <= 300:
+                        row = {B.seg_key(n): v for n, v in (ok.get(d0) or {}).get("seg", {}).items()} or \
+                            next((v for dd, v in scr.items() if abs((_d(dd) - _d(d0)).days) <= 20), None)
+                        hv = next((have[h] for h in have if abs((_d(h) - _d(d0)).days) <= 20), None)
+                        if row and hv:
+                            prev.append(row)
+                            rats.append(sum(row.values()) / hv)
+                hv4 = next((have[h] for h in have if abs((_d(h) - _d(e4)).days) <= 20), None)
+                if len(prev) != 3 or not hv4 or any(set(yr) != set(r) for r in prev):
+                    out.append(f"    {e4} ✗ 연간 − 앞 세 분기: 앞 분기 {len(prev)}칸 또는 이름이 다르다")
+                    continue
+                q4 = {yr[k_][0]: yr[k_][1] - sum(r[k_] for r in prev) for k_ in yr}
+                tot = sum(q4.values())
+                r4, mid = tot / hv4, sorted(rats)[1]
+                good = abs(r4 / mid - 1) <= 0.04 and all(v > -0.02 * abs(tot) for v in q4.values())
+                out.append(f"    {e4} {'✓' if good else '✗'} 연간 − 앞 세 분기: 합÷매출 {r4:.2f}(앞 분기 {mid:.2f}) · " +
+                           " / ".join(f"{n} {round(v / 1e6):,}" for n, v in q4.items())[:150])
+                if good:
+                    ok[e4] = {"seg": q4, "elim": 0.0, "src": fe, "grade": "연간−3분기"}
         basis = basis or str(ans.get("basis"))[:200]
         out.append(f"  닻 {pick} · 기준: {str(ans.get('basis'))[:140]}")
         out += [r for r in rep if r[4:14] in chunk]
@@ -397,8 +450,9 @@ def one(B, key, db):
         got_all.update(ok)
         total += len(ok)
         with LOCK:
-            db["stocks"][key] = {"cur": fin.get("cur") or "USD", "basis": basis, "q": got_all, "ts": date.today().isoformat()}
-        if len(ok) < 4:
+            db["stocks"][key] = {"cur": fin.get("cur") or "USD", "basis": basis, "q": got_all, "ts": date.today().isoformat(),
+                                 **({"fill": 1} if dom else {})}
+        if len(ok) < 4 and not dom:
             break                                         # 첫 묶음이 안 되면 옛 분기는 안 묻는다
     return out, total
 
@@ -445,6 +499,20 @@ def main():
     import build as B
     import scrape_live_us as lu
     lu.cik_map_cached()
+    if "--usdays" in args:                               # 그 사흘에 발표하는 미국 국내 기업 중 사업부 구멍이 있는 곳
+        import ai_fill as af
+        i = args.index("--usdays")
+        ks = set()
+        for name in ("earnings_us.json", "earnings_us_fpi.json"):
+            try:
+                rows = json.loads((HERE / "data" / name).read_text(encoding="utf-8")).get("rows", [])
+            except (OSError, ValueError):
+                rows = []
+            ks |= {"us:" + r["code"] for r in rows if isinstance(r, dict) and args[i + 1] <= str(r.get("date")) <= args[i + 2]}
+        tg = af.targets(B, ks)
+        keys = [k for k in tg if k.startswith("us:") and
+                [e for e in af.gaps(B, k) if e not in ((db["stocks"].get(k) or {}).get("q") or {})]]
+        print(f"{args[i + 1]}~{args[i + 2]} 미국 발표 회사 중 사업부 구멍이 있는 곳: {len(keys)}")
     if "--days" in args:
         i = args.index("--days")
         mincap = float(os.environ.get("FPI_MIN_CAP", "0.7"))
