@@ -187,7 +187,7 @@ def one(B, key, db, verbose=False):
     import scrape_geo_jp as G
     code = key.split(":")[1]
     fin, seg = B.FIN.get(key) or {}, B.SEG.get(key) or {}
-    done = set(((db["stocks"].get(key) or {}).get("q") or {}))          # 앞 실행이 채운 칸(af.gaps 는 마지막 정식 빌드 기준이라 아직 빈칸으로 센다)
+    done = {e for e, x in ((db["stocks"].get(key) or {}).get("q") or {}).items() if not x.get("uv")}          # 앞 실행이 채운 칸(af.gaps 는 마지막 정식 빌드 기준이라 아직 빈칸으로 센다)
     holes = sorted((e for e in af.gaps(B, key) if e not in done), reverse=True)
     if not holes:
         return ["  빈칸 없음"], 0
@@ -290,7 +290,13 @@ def one(B, key, db, verbose=False):
             nm = okey.get(k_) or seen_nm.setdefault(k_, n)
             out_[nm] = out_.get(nm, 0) + v
         return out_
-    got = {}
+    got, unv = {}, {}
+
+    def loose(q_, r_, over_):
+        """**검산은 못 통과했지만 '표시를 달고' 실을 만한가**(회원님 11/11: "일단 실어봐") — 합이 총매출의 0.85~1.15배 · 음수 부문 없음 ·
+        화면 이름과 절반↑ 겹침. 화면에는 분기 이름에 '?' 를 붙여 낸다(build 의 FPI_UV). 검산을 통과한 값이 있으면 그쪽이 이긴다."""
+        t_ = sum(q_.values())
+        return 0.85 <= r_ <= 1.15 and over_ and len(q_) >= 2 and all(v > -0.05 * abs(t_) for v in q_.values())
     for e in holes:
         me = next(((s, en) for (s, en) in cum if abs((_d(en) - _d(e)).days) <= 12), None)
         near = min(rev, key=lambda x: abs((_d(x) - _d(e)).days), default=None)
@@ -330,6 +336,8 @@ def one(B, key, db, verbose=False):
                    ("" if good else f"  ← {'이름 안 겹침 ' if not over else ''}{'음수 부문 ' if neg else ''}{'비율' if not fits(r, base) else ''}"))
         if good:
             got[e] = {"seg": {n: v for n, v in q.items() if v}, "grade": "맞아떨어짐" if abs(r - 1) <= 0.012 else "비율 고름"}
+        elif loose(q, r, over):
+            unv[e] = {"seg": {n: v for n, v in q.items() if v}, "grade": "검산 안 됨", "uv": 1, "r": round(r, 3)}
     # 코드가 못 뺀 칸(두 누계의 이름이 달랐거나 한쪽이 누계 검산에서 떨어진 칸) — **모델이 뺀 값**을 더 좁은 검산으로 받는다:
     # 합이 그 분기 총매출과 1.2% 안(또는 평소 비율 ±3%) · 화면 이름과 절반↑ · 음수 없음.
     for e, x in ((ans.get("q") or {}) if isinstance(ans.get("q"), dict) else {}).items():
@@ -347,9 +355,16 @@ def one(B, key, db, verbose=False):
         out.append(f"    {he} {'✓' if good else '✗'} (모델이 뺌) 합÷매출 {r:.2f} · " + " / ".join(f"{n} {round(v / 1e8):,}" for n, v in q.items())[:140])
         if good:
             got[he] = {"seg": {n: v for n, v in q.items() if v}, "grade": "모델이 뺌"}
-    if got or raw_keep:
+            unv.pop(he, None)
+        elif he not in unv and loose(q, r, len([n for n in q if n in names]) * 2 >= len(q) if names else True):
+            unv[he] = {"seg": {n: v for n, v in q.items() if v}, "grade": "검산 안 됨", "uv": 1, "r": round(r, 3)}
+    unv = {e: x for e, x in unv.items() if e not in got}
+    if unv:
+        out.append(f"  검산 안 된 채 표시 달고 싣는 칸: {sorted(unv)}")
+    if got or raw_keep or unv:
         with LOCK:
             st = db["stocks"].setdefault(key, {"cur": fin.get("cur") or "JPY", "fill": 1, "q": {}})
+            st["q"].update(unv)
             st["q"].update(got)
             st.setdefault("cum", {}).update(raw_keep)        # 검산을 통과한 누계 원값 — 규칙을 고치면 AI 없이 다시 뺄 수 있게
             st["ts"] = date.today().isoformat()

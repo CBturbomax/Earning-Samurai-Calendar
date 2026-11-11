@@ -649,6 +649,7 @@ def load_fin():
     return out
 
 
+FPI_UV = {}                     # 열쇠 -> {종료일} — **검산을 못 통과했지만 회원님 지시(11/11 "일단 실어봐")로 싣는 칸**. 화면이 분기 이름에 '?' 를 단다
 FPI_FILL = {}                   # 열쇠 -> {종료일: 그 분기 총매출} — 회사 단위로 읽어 빈칸을 메운 칸(ai_jp_co). 헌 줄이 어긋나 있으면 갈아 끼운다
 FPI_SEG = {}                    # 열쇠 -> {종료일: {사업부: 값}} — 검산을 통과한 분기만(load_fpi_seg 가 SEG 에 싣는다)
 
@@ -761,7 +762,9 @@ def load_fpi_pr(out):
                 continue
             segs[e] = x["seg"]
             n_cos += 1
-            if st.get("fill"):
+            if x.get("uv"):                                          # 검산 안 된 값 — 표시를 달아 싣고, 있는 줄은 안 갈아 끼운다
+                FPI_UV.setdefault(key, set()).add(e)
+            elif st.get("fill"):
                 FPI_FILL.setdefault(key, {})[e] = hit[1]             # 그 분기 총매출 — load_fpi_seg 가 헌 줄과 견줄 때 쓴다
         if len(segs) >= (1 if st.get("fill") else 2):               # fill 은 한 칸이어도(11/11: 한 칸짜리 회사 43칸이 여기서 통째로 빠졌다)
             FPI_SEG[key] = segs
@@ -5335,6 +5338,11 @@ def build():
         if s not in on_screen:
             continue
         got = pack_seg(rec, FIN.get(s))
+        if got and FPI_UV.get(s):                                    # 검산 안 된 분기의 이름(화면이 '?' 를 단다)
+            shown = {r[0] for r in got["pts"]}
+            uvl = sorted({lab for lab, _rv in seg_align([[d_] for d_ in FPI_UV[s]], FIN.get(s))} & shown)
+            if uvl:
+                got["uv"] = uvl
         if got:
             if s in AI_SEG_REC:
                 ai_post_fill(got, AI_SEG_REC[s], FIN.get(s))
@@ -8643,6 +8651,10 @@ function segDraw(sg, names, pts, cur, tag) {
   SEGR[id] = { sg, names, pts, cur, tag, off: new Set() };
   return '<div class="segwrap" data-sid="' + id + '">' + segRender(id) + '</div>';
 }
+// 검산을 못 통과한 채 실은 분기(회원님 11/11: "일단 실어봐") — 분기 이름을 주황으로 쓰고 '?' 를 붙인다. segRender 가 그 그림의 목록을 넣어 둔다.
+let SEG_UVSET = null;
+const uvS = l => SEG_UVSET && SEG_UVSET.has(l) ? ';fill:#f0a030' : '';
+const uvQ = l => SEG_UVSET && SEG_UVSET.has(l) ? '?' : '';
 function segLines(names, pts, vis, opt) {
   // 선 그림 하나 — opt: { vals(i,j) -> 값|null, fmt, pct, H }
   // 생김새는 finChart 와 똑같이(회원님 11/02): 칸 30px · 좁으면 분기 이름을 세워 쓰고 · 글씨 13px 굵게 · 해마다 칸막이.
@@ -8704,15 +8716,16 @@ function segLines(names, pts, vis, opt) {
       (cx(i) - step / 2).toFixed(1) + '" y2="' + (H - 2) + '" style="stroke:rgba(255,255,255,.22);stroke-width:1"/>' : '';
     const t = rot
       ? '<text class="fx' + (i === n - 1 ? ' now' : '') + '" transform="translate(' + (cx(i) + 4).toFixed(1) + ',' + (BASE + 8) +
-        ') rotate(-90)" text-anchor="end" style="font-size:13px">' + r[0] + '</text>'
+        ') rotate(-90)" text-anchor="end" style="font-size:13px' + uvS(r[0]) + '">' + r[0] + uvQ(r[0]) + '</text>'
       : '<text class="fx' + (i === n - 1 ? ' now' : '') + '" x="' + cx(i).toFixed(1) + '" y="' + (BASE + 20) +
-        '" text-anchor="middle" style="font-size:13px">' + r[0] + '</text>';
+        '" text-anchor="middle" style="font-size:13px' + uvS(r[0]) + '">' + r[0] + uvQ(r[0]) + '</text>';
     return sep + t;
   }).join('');
   return '<div class="finbox"><svg viewBox="0 0 ' + W + ' ' + H + '" class="finsvg">' + axis + body + xlab + '</svg></div>';
 }
 function segRender(id) {
   const { sg, names, pts, cur, tag, off } = SEGR[id];
+  SEG_UVSET = (sg.uv && sg.uv.length) ? new Set(sg.uv) : null;
   const has = j => pts.some(r => r[j + 1] != null);
   const vis = j => has(j) && !off.has(j);
   const allV = pts.flatMap(r => r.slice(1).filter(v => v != null));
@@ -8757,7 +8770,8 @@ function segRender(id) {
     '<div class="finlegend">' + names.map((nm, j) => !has(j) ? '' :
       '<span class="lg seglg' + (off.has(j) ? ' off' : '') + '" data-sid="' + id + '" data-j="' + j + '" style="--c:' +
       SEG_COLORS[j % SEG_COLORS.length] + '">' + esc(nm) + '</span>').join('') +
-    '<span class="src" style="font-size:13px">범례를 누르면 끄고 켭니다</span></div>';
+    '<span class="src" style="font-size:13px">범례를 누르면 끄고 켭니다' +
+    (SEG_UVSET && pts.some(r => SEG_UVSET.has(r[0])) ? ' · <span style="color:#f0a030">? 붙은 분기는 검산 안 된 값(원문과 총매출이 안 맞음)</span>' : '') + '</span></div>';
 }
 document.addEventListener('click', e => {
   const t = e.target.closest && e.target.closest('.seglg');
