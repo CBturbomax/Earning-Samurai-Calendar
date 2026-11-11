@@ -532,7 +532,8 @@ def one(B, key, db, verbose=False, tried=None):
             nm = okey.get(k_) or seen_nm.setdefault(k_, n)
             out_[nm] = out_.get(nm, 0) + v
         return out_
-    got, unv = {}, {}
+    got, unv, tail = {}, {}, {}
+    last_seg = max((str(r_[0]) for r_ in seg.get("pts") or [] if any(v for v in r_[1:]) and re.match(r"\d{4}-\d\d-\d\d$", str(r_[0]))), default="")
 
     def loose(q_, r_, over_):
         """**검산은 못 통과했지만 '표시를 달고' 실을 만한가**(회원님 11/11: "일단 실어봐") — 합이 총매출의 0.85~1.15배 · 음수 부문 없음 ·
@@ -573,6 +574,11 @@ def one(B, key, db, verbose=False, tried=None):
         r = tot / rev[near]
         over = len([n for n in q if n in names]) * 2 >= len(q) if names else True
         neg = any(v < -0.02 * abs(tot) for v in q.values())
+        # **맨 뒤(화면의 마지막 사업부 분기보다 뒤)의 빈칸은 이름이 달라도 받는다 — 회사가 사업부 기준을 바꾼 것이다**(11/12 도쿄오카 4186:
+        # 값은 총매출과 정확히 맞는데 화면 이름(材料·装置)과 새 이름(エレクトロニクス機能材料·高純度化学薬品)이 안 겹쳐 버려졌다).
+        # 가운데 구멍에 다른 이름이 끼면 그림이 '개편'으로 잘못 가르므로(CSCO) 맨 뒤만. 두 칸 이상 모였을 때만 싣는다(아래 tail).
+        if not over and last_seg and e > last_seg and fits(r, base) and not neg:
+            tail[e] = {"seg": {n: v for n, v in q.items() if v}, "grade": "새 기준(맨 뒤)"}
         good = (abs(r - (base or 1)) <= 0.03 if months > 4 and tight else fits(r, base)) and over and not neg
         out.append(f"    {e} {'✓' if good else '✗'} 분기 합÷매출 {r:.2f} · " + " / ".join(f"{n} {round(v / 1e8):,}" for n, v in q.items())[:150] +
                    ("" if good else f"  ← {'이름 안 겹침 ' if not over else ''}{'음수 부문 ' if neg else ''}{'비율' if not fits(r, base) else ''}"))
@@ -600,6 +606,16 @@ def one(B, key, db, verbose=False, tried=None):
             unv.pop(he, None)
         elif he not in unv and loose(q, r, len([n for n in q if n in names]) * 2 >= len(q) if names else True):
             unv[he] = {"seg": {n: v for n, v in q.items() if v}, "grade": "검산 안 됨", "uv": 1, "r": round(r, 3)}
+    # 새 기준(맨 뒤) 칸: 앞 실행분까지 합쳐 두 칸 이상이고 이름 묶음이 같을 때만 싣는다(한 칸뿐이면 그림이 사라진다)
+    prev_tail = {e_: x_ for e_, x_ in ((db["stocks"].get(key) or {}).get("q") or {}).items() if x_.get("grade") == "새 기준(맨 뒤)"}
+    all_tail = dict(prev_tail, **tail)
+    if tail and len(all_tail) >= 2 and len({frozenset(x_["seg"]) for x_ in all_tail.values()}) == 1:
+        out.append(f"  새 기준(맨 뒤) {sorted(tail)} — 이름이 화면과 다르지만 싣는다: {list(next(iter(tail.values()))['seg'])[:4]}")
+        got.update(tail)
+    elif tail:
+        with LOCK:                                       # 한 칸뿐이면 일단 적어만 둔다(다음 분기가 오면 같이 실린다) — 빌드는 hold 를 안 싣는다
+            st_ = db["stocks"].setdefault(key, {"cur": fin.get("cur") or "JPY", "fill": 1, "q": {}})
+            st_.setdefault("hold", {}).update(tail)
     gone = sorted(e for e in holes if e in omit_q and e not in got and e not in unv)
     if gone:
         out.append(f"  사업부를 안 내는 분기(공시가 '기재 생략') — 다시 안 본다: {gone}")
