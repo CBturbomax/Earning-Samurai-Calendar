@@ -661,6 +661,11 @@ TG_OUT_IND = re.compile(
     r"(?i)\bbanks?\b|savings institutions|insurance|insurers|investment bankers|brokers|capital markets|"
     r"finance|financial|credit services|asset management|investment managers|mortgage|"
     r"^chemicals$|chemicals|steel|real estate investment trusts|\breit\b|biotechnology")
+# 캐는 회사(광산·석유가스 생산·정유·석탄) — 회원님 11/11: "미국에 쓰잘데없는 회사가 너무 많다. 텔레로 쏴주지 마." (markets.extractive 와 같은 규칙)
+TG_OUT_EXTRACT = re.compile(
+    r"(?i)oil & gas (production|e&p|integrated|refining|drilling)|integrated oil|oil refining|precious metals|metal mining|\bmining\b|"
+    r"other metals and minerals|\bcoal\b|^gold$|^silver$|^copper$|uranium")
+TG_OUT_EXTRACT_JP = {"鉱業", "石油", "石油・石炭製品", "광업", "석유", "석유·석탄제품"}
 BIO_DESC = re.compile(r"創薬|新薬開発|バイオベンチャー|신약|바이오벤처|drug discovery|clinical[- ]stage|biopharmaceutical company",
                       re.I)
 MIN_KRW = float(os.environ.get("TG_MIN_KRW", "1e11"))      # 1,000억 원
@@ -692,6 +697,8 @@ def tg_pick(ev, pts):
     if ev["mkt"] == "jp" and re.search(r"銀行|銀$|投資法人|ＥＴＦ|ＥＴＮ|国債|社債|債券|リート|^Ｏｎｅ|^上場|^ｉ[ＳＦ]|^ＧＸ|^ＮＦ|^ＭＸ|ブル$|ベア$",
                                        (ev.get("orig") or "").strip()):
         return False, "ETF·채권·은행 제외"                     # 회원님 11/03 — 회사가 아니다
+    if TG_OUT_EXTRACT.search(H.ind.get(ev["key"], "") or "") or (ev["mkt"] == "jp" and (ev.get("sector") or "") in TG_OUT_EXTRACT_JP):
+        return False, "채굴·정유 제외"                          # 가이던스 급상향이어도 안 보낸다
     boom = guide_boom(ev)
     if boom:
         return True, boom

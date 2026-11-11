@@ -362,10 +362,14 @@ def main():
         # **본 지 오래된 종목부터.** 시총 순으로만 돌면 한 바퀴 100초에 앞의 120개쯤만
         # 보고 끝나서, 뒤쪽 종목(브링커 EAT)은 영영 차례가 안 왔다(첫 진단에서 드러남).
         # 이미 끝난 종목(8-K 와 EPS 가 다 있다)은 맨 뒤로 보낸다.
+        from markets import extractive
+        _ind = _caps_meta()[1]
+
         def order(r):
             rec = stocks.get(r["code"]) or {}
             done = bool(rec.get("acc") and (rec.get("eps") or not rec.get("period")) and rec.get("prv") == PR_V)
-            return (done, rec.get("chk", ""))
+            # 캐는 회사(광산·석유가스·정유·석탄)는 맨 뒤 — 회원님 11/11. 남는 시간에만 본다.
+            return (extractive("us", "", _ind.get("us:" + r["code"], "")), done, rec.get("chk", ""))
         tg.sort(key=order)
         st["stage"] = "종목 훑기"
         streak = 0

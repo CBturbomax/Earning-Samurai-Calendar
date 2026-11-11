@@ -570,6 +570,22 @@ _JP_NAME_OUT = _re.compile(r"投資法人|銀行|銀$|国債|社債|債券|^Ｏ�
                            r"^[ＪJ][ＲR]|メトロ|京急|小田急|京王|東武|名鉄|南海電|西鉄")       # TDnet 줄임 이름(ＪＲ東日本·東京メトロ)
 
 
+# **캐는 회사(광산·석유가스 생산·정유·석탄)는 맨 뒷줄**(회원님 11/11: "미국에 쓰잘데없는 회사가 너무 많다 — 광산이든 정유든 채굴하는 회사는
+# 텔레로 쏘지 말고 업데이트도 제일 후순위로"). 화면에서 빼지는 않는다 — 알림을 안 보내고, 수집 대기줄에서 맨 뒤에 선다.
+# 유전 서비스·파이프라인·가스 배급·금속 가공은 캐는 회사가 아니라 여기 안 든다.
+_EXTRACT_IND = _re.compile(
+    r"(?i)oil & gas (production|e&p|integrated|refining|drilling)|integrated oil|oil refining|precious metals|metal mining|\bmining\b|"
+    r"other metals and minerals|\bcoal\b|^gold$|^silver$|^copper$|uranium")
+_EXTRACT_JP = {"鉱業", "石油", "石油・石炭製品", "광업", "석유", "석유·석탄제품"}
+
+
+def extractive(mkt, sector="", industry=""):
+    """광산·석유가스 생산·정유·석탄 회사인가(세부 업종이 있으면 그것으로, 일본은 업종으로)."""
+    if mkt == "jp":
+        return (sector or "") in _EXTRACT_JP
+    return bool(industry) and bool(_EXTRACT_IND.search(industry))
+
+
 def excluded(mkt, name="", sector="", industry=""):
     """은행·리츠·부동산·도시가스·지역전력·임대업인가. 세부 업종(industry)이 있으면 그것만 보고, 없을 때만 이름을 본다."""
     if mkt == "jp":

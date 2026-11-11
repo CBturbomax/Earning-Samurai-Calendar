@@ -652,6 +652,13 @@ def queue(old, cand):
     recent = (datetime.now(timezone.utc) - timedelta(hours=NEAR_REFRESH_H)).strftime("%Y-%m-%dT%H:%M")
     picks = []
     hot = {k[3:] for k in audit_keys() if k.startswith("us:")}
+    try:
+        from markets import extractive
+        _ind = json.loads((HERE / "data" / "caps.json").read_text(encoding="utf-8")).get("industries", {})
+        low = {k[3:] for k, v in _ind.items() if k.startswith("us:") and extractive("us", "", v)}
+    except (OSError, ValueError, ImportError):
+        low = set()
+    hot -= low
     for sym, (cap, gap) in cand.items():
         rec = old.get(sym)
         # **빈칸 점검에 걸린 종목은 앞줄로**(두 시간에 한 번까지) — 발표했는데 그 분기가 없거나 가운데가 빈 회사.
@@ -687,6 +694,8 @@ def queue(old, cand):
                 pri = 2
             else:
                 continue          # 아직 싱싱하다. 건너뛴다.
+        if sym in low:                           # 캐는 회사(광산·석유가스·정유·석탄)는 맨 뒷줄 — 회원님 11/11
+            pri += 10
         picks.append((pri, -cap, sym))
     picks.sort()
     return [s for _, _, s in picks]
