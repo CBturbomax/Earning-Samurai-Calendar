@@ -149,6 +149,10 @@ def pdf_pages(code, fn, pn):
     # 세그먼트 주석은 '전기 표 → 당기 표' 순으로 두세 쪽에 걸친다. 점수 높은 두 쪽만 주면 전기 표만 가고 **당기 표가 빠졌다**(11/11 추적:
     # '그 분기 누계가 없다' 34칸의 태반). 가장 점수 높은 쪽에서 시작해 이어지는 쪽을 넷까지 싣는다.
     idx = sorted(i for _sc, i in scored)
+    # 단일 사업부 회사(레이즈넥스트 6379: 「エンジニアリング業の単一セグメント」)는 '세그먼트 정보' 제목과 주요 고객 표만 있어 쪽이 뽑히고,
+    # 모델은 빈 답을 내고, '생략' 표시도 안 돼 29칸을 매번 다시 봤다(11/12). 외부 고객 매출 표(3점)가 없고 단일 세그먼트라 적혔으면 쪽을 안 넘긴다. 3점짜리까지 막으면 리켄계기(7734)처럼 단일 사업부여도 제품별 표로 채워지던 회사를 잃는다.
+    if idx and min(scored)[0] > -3 and re.search(r"単一セグメント|単一の(報告)?セグメント|報告セグメント[はが][^。]{0,30}のみ(であ|のため)", re.sub(r"[ \u3000\n]", "", "".join(pages[:45]))):
+        idx = []
     if idx:
         best = min(scored)[1]
         run = [i for i in idx if best - 1 <= i <= best + 2][:3]
@@ -160,6 +164,8 @@ def pdf_pages(code, fn, pn):
         # 대신 숫자·세그먼트 낱말이 없는 긴 글줄(주석 문단)만 줄인다.
         lines_ = [ln if (re.search(r"\d", ln) or len(ln) < 60) else ln[:60] + "…" for ln in pg.splitlines()]
         out.append(f"[PDF page {i + 1}]\n" + "\n".join(lines_)[:6000])
+    if SINGLE_RE.search(re.sub(r"[ \u3000\n]", "", "".join(pages[:45]))):
+        SINGLE.add((code, pn))                           # 이 공시는 스스로 사업부가 하나라고 적었다(표가 있든 없든)
     if not out:
         out = narrative(pages)
     if not out and OMIT_RE.search(re.sub(r"[ \u3000\n]", "", "".join(pages[:45]))):
@@ -170,7 +176,9 @@ def pdf_pages(code, fn, pn):
 # **채울 수 없는 칸은 다시 안 본다**(회원님 11/12: "사업부 안 내는 회사는 다시는 검토 안 하게 하면 줄어드는 거 아니야?").
 # 그 분기 결산단신이 스스로 「単一セグメントであるため記載を省略」 라고 적었고 표도 문장도 없으면, 그 분기를 fpi_co.json 의 `skipq` 에 적어
 # 대기줄(all_holes)에서 영영 뺀다. 회사가 나중에 사업부를 내기 시작하면 그 뒤 분기는 그대로 본다(분기 단위로 적는다).
-OMIT_RE = re.compile(r"単一セグメント|単一の(報告)?セグメント|セグメント情報(等)?の?記載を省略|セグメント情報(等)?は?、?[^。]{0,40}省略")
+OMIT_RE = re.compile(r"単一セグメント|単一の(報告)?セグメント|報告セグメント[はが][^。]{0,30}のみ(であ|のため)|セグメント情報(等)?の?記載を省略|セグメント情報(等)?は?、?[^。]{0,40}省略")
+SINGLE_RE = re.compile(r"単一セグメント|単一の(報告)?セグメント|報告セグメント[はが][^。]{0,30}のみ(であ|のため)")
+SINGLE = set()                  # (코드, PDF 이름) — 스스로 단일 사업부라 적은 공시
 OMIT = set()                    # (코드, PDF 이름) — pdf_pages 가 채운다
 SKIPQ = {}                      # 열쇠 -> {종료일} — main 이 파일에서 읽어 채운다(all_holes 가 뺀다)
 SEG_SENT = re.compile(r"(売上高|売上収益|営業収益|営業収入|収益)は?[、,]?[^。]{0,40}?[\d,，.]+\s*(億|百万|千)円")
@@ -180,11 +188,12 @@ def narrative(pages):
     """**표가 없고 문장으로만 부문 매출을 적는 결산단신**(11/12 — 네트워크를 열고 산토리BF 2018년 1분기 단신을 직접 열어 보니 세그먼트 표는 없고
     본문에 「日本事業の売上収益は1,505億円」「欧州事業…518億円」이라고 적혀 있었다. '표없음'으로 넘기던 공시의 태반이 이 꼴이다).
     「経営成績に関する説明」 쪽에서 부문 머리말과 매출 문장만 추려 넘긴다 -> [쪽 글]"""
-    out = []
+    out, prev = [], -9
     for i, pg in enumerate(pages[:12]):
         flat = re.sub(r"[ \u3000\n]", "", pg)
         hits = SEG_SENT.findall(flat)
-        if len(hits) < 3 or not re.search(r"セグメント|事業|部門", flat):     # 낱말 'セグメント' 는 앞 쪽에만 있고 문장은 다음 쪽에 이어지는 공시가 있다(7157)
+        cont = prev == i - 1 and len(hits) >= 1          # 앞 쪽에서 이어지는 쪽(엘레컴 6750: 다섯 부문 중 셋이 다음 쪽에 있어 합이 매출의 45%였다)
+        if not cont and (len(hits) < 3 or not re.search(r"セグメント|事業|部門", flat)):     # 낱말 'セグメント' 는 앞 쪽에만 있고 문장은 다음 쪽에 이어지는 공시가 있다(7157)
             continue
         keep = []
         for sent in re.split(r"(?<=。)", flat):
@@ -193,7 +202,8 @@ def narrative(pages):
                 keep.append((" ".join(head[-1:]) + " " if head else "") + sent[-170:])
             elif head and len(sent) < 60:
                 keep.append(sent)
-        if len(keep) >= 3:
+        if len(keep) >= (1 if cont else 3):
+            prev = i
             out.append(f"[PDF page {i + 1} — narrative sentences, not a table]\n" + "\n".join(keep)[:3500])
         if len(out) >= 3:
             break
@@ -489,11 +499,34 @@ def one(B, key, db, verbose=False, tried=None):
                'cumulative itself). Only when both cumulative tables are in the excerpts. Same names as in "spans". '
                'Format: "q": {"2018-09-30": {"seg": {"日本": 12, "北米": 3}}}.')
     raw = ask(PROMPT.format(code=code, segs=json.dumps(names[:14], ensure_ascii=False), n=len(body), docs="\n\n".join(body)) + targets)
+    if os.environ.get("JPCO_RAW"):                        # 진단용 — 모델 답과 넘긴 글 앞머리를 그대로 본다
+        out.append("  [답] " + (raw or "")[:900].replace("\n", " "))
+        out += ["  [글] " + b_[:int(os.environ.get("JPCO_RAW") or 700)].replace("\n", " ⏎ ") for b_ in body[:3]]
     mm = re.search(r"\{.*\}", raw or "", re.S)
     try:
         ans = json.loads(mm.group(0)) if mm else {}
     except ValueError:
         return out + ["  답이 JSON 이 아니다: " + (raw or "")[:200]], 0
+    if not (ans.get("spans") or ans.get("q")) and any(SINGLE_RE.search(re.sub(r"[ \u3000\n]", "", b_)) for b_ in body) or \
+            (not (ans.get("spans") or ans.get("q")) and any((code, c_) in SINGLE for c_ in [p_[1] for p_ in pdfs])):
+        # 레이즈넥스트(6379): 「報告セグメントがエンジニアリング業のみ」 — 쪽은 뽑히는데 표가 없어 모델이 빈 답을 내고, 29칸을 매번 다시 봤다(11/12).
+        gone1 = []
+        for e_ in all_holes(B, key):
+            c_ = [x for x in pdfs if 10 <= (_d(x[0]) - _d(e_)).days <= 75]
+            if not c_:
+                continue
+            if (code, c_[0][1]) not in SINGLE:
+                try:
+                    pdf_pages(code, "", c_[0][1])
+                except Exception:                      # noqa: BLE001
+                    continue
+            if (code, c_[0][1]) in SINGLE:
+                gone1.append(e_)
+        if gone1:
+            with LOCK:
+                db.setdefault("skipq", {})[key] = sorted(set(db.get("skipq", {}).get(key, [])) | set(gone1))
+                SKIPQ.setdefault(key, set()).update(gone1)
+            return out + [f"  단일 사업부라 적은 공시뿐이고 읽을 표가 없다 — 다시 안 본다: {len(gone1)}칸"], 0
     u = float(ans.get("u") or 1)
     cum, raw_keep = {}, {}
     for k_, v_ in (((db["stocks"].get(key) or {}).get("cum")) or {}).items():      # 앞 실행이 읽어 둔 누계 — 다시 묻지 않고 짝으로 쓴다
@@ -520,10 +553,26 @@ def one(B, key, db, verbose=False, tried=None):
         if ok:
             cum[(s, e)] = sg
             raw_keep[f"{s}/{e}"] = sg
-    def nk(n):                                          # 이름 열쇠 — 띄어쓰기·'事業'·'関連'·'セグメント' 차이를 지운다(11/11: 장마다 조금씩 달리 적혀 21칸이 빼기에서 떨어졌다)
+    def nk0(n):                                         # 이름 열쇠 — 띄어쓰기·'事業'·'関連'·'セグメント' 차이를 지운다(11/11: 장마다 조금씩 달리 적혀 21칸이 빼기에서 떨어졌다)
         return B.seg_key(n) or re.sub(r"[\s\u3000・･·\-－—()（）]|事業|関連|セグメント|部門|グループ", "", str(n)).lower()
+    # **같은 부문을 장마다 길게·짧게 적는다**(엘레컴 6750: 「周辺機器」/「周辺機器・アクセサリ」 — 빼기에서 '이름이 다르다'로 떨어졌다, 11/12).
+    # 한 이름이 다른 이름의 앞머리이고 둘이 같은 기간에 함께 나온 적이 없으면 같은 부문이다 — 긴 쪽 열쇠로 모은다.
+    _rows = [set(nk0(n) for n in v_) for v_ in cum.values()]
+    _keys = sorted({k_ for r_ in _rows for k_ in r_} | {nk0(n) for n in names}, key=len)
+    alias = {}
+    for i_, sh in enumerate(_keys):
+        if len(sh) < 3:
+            continue
+        lg = [x for x in _keys[i_ + 1:] if x.startswith(sh) and x != sh]
+        if len(lg) == 1 and not any(sh in r_ and lg[0] in r_ for r_ in _rows):
+            alias[sh] = lg[0]
+
+    def nk(n):
+        k_ = nk0(n)
+        return alias.get(k_, k_)
     okey = {nk(n): n for n in names}
     seen_nm = {}
+    MINOR = re.compile(r"^(その他|その他の事業|その他事業|調整額?|全社|消去)")
 
     def ren(row):                                       # 화면 이름으로(같은 것이면) — 화면에 없으면 이 답에서 처음 나온 표기로
         out_ = {}
@@ -565,6 +614,12 @@ def one(B, key, db, verbose=False, tried=None):
                 b = {n: sum((r[1 + names.index(n)] or 0) for r in prior) for n in a}
                 tight = True
 
+            dif = set(a) ^ set(b)
+            if dif and all(MINOR.match(str(n)) for n in dif) and \
+                    sum(abs(a.get(n, 0)) + abs(b.get(n, 0)) for n in dif) <= 0.03 * abs(sum(a.values())):
+                for n in dif:                           # 한쪽에만 있는 작은 「その他」(연간 표에만 따로 서는 0.6%) — 없는 쪽을 0 으로 본다
+                    a.setdefault(n, 0)
+                    b.setdefault(n, 0)
             if set(a) != set(b):
                 out.append(f"    {e} ✗ 두 누계의 부문 이름이 다르다 {sorted(set(a) ^ set(b))[:4]}")
                 continue
@@ -609,7 +664,7 @@ def one(B, key, db, verbose=False, tried=None):
     # 새 기준(맨 뒤) 칸: 앞 실행분까지 합쳐 두 칸 이상이고 이름 묶음이 같을 때만 싣는다(한 칸뿐이면 그림이 사라진다)
     prev_tail = {e_: x_ for e_, x_ in ((db["stocks"].get(key) or {}).get("q") or {}).items() if x_.get("grade") == "새 기준(맨 뒤)"}
     all_tail = dict(prev_tail, **tail)
-    if tail and len(all_tail) >= 2 and len({frozenset(x_["seg"]) for x_ in all_tail.values()}) == 1:
+    if tail and len(all_tail) >= 2 and len({frozenset(nk(n) for n in x_["seg"] if not MINOR.match(str(n))) for x_ in all_tail.values()}) == 1:
         out.append(f"  새 기준(맨 뒤) {sorted(tail)} — 이름이 화면과 다르지만 싣는다: {list(next(iter(tail.values()))['seg'])[:4]}")
         got.update(tail)
     elif tail:
