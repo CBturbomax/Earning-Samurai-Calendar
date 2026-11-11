@@ -28,7 +28,7 @@ LOCK = threading.Lock()
 MAX_TOK = int(os.environ.get("FPI_TOKENS", "1000000"))
 SECS = int(os.environ.get("FPI_SECS", "4500"))
 PER_DOC = int(os.environ.get("JPCO_DOC", "2200"))
-MAX_DOCS = 6
+MAX_DOCS = 8
 T0 = time.time()
 
 SEGTAB = re.compile(r"セグメント|部門別|事業別|事業の種類")
@@ -184,14 +184,26 @@ def fits(r, base):
     return abs(r - 1) <= 0.012 or (base is not None and abs(r / base - 1) <= 0.12)
 
 
-def one(B, key, db, verbose=False):
+def all_holes(B, key):
+    """**사업부가 빈 분기 전부**(2018년부터 · 총매출이 있는 분기) — 최근 것부터. 회원님 11/12: "모든 빈칸 다 채운다 생각하라".
+    af.gaps 는 '기록이 시작된 뒤의 구멍'만 세지만 여기서는 기록 시작 전과 사업부가 아예 없는 회사까지 본다. 막 끝난 분기(45일)는 뺀다."""
+    fin, seg = B.FIN.get(key) or {}, B.SEG.get(key) or {}
+    have = [str(r[0]) for r in seg.get("pts") or [] if any(v for v in r[1:]) and re.match(r"\d{4}-\d\d-\d\d$", str(r[0]))]
+    fresh = date.fromordinal(date.today().toordinal() - 45).isoformat()
+    ends = [p["end"] for p in fin.get("points") or [] if p.get("end") and p.get("rev") and "2018-03-01" <= p["end"] <= fresh]
+    return sorted((e for e in ends if not any(abs((_d(h) - _d(e)).days) <= 20 for h in have)), reverse=True)
+
+
+def one(B, key, db, verbose=False, tried=None):
     import ai_fill as af
     import scrape_fin_jp as F
     import scrape_geo_jp as G
     code = key.split(":")[1]
     fin, seg = B.FIN.get(key) or {}, B.SEG.get(key) or {}
     done = {e for e, x in ((db["stocks"].get(key) or {}).get("q") or {}).items() if not x.get("uv")}          # 앞 실행이 채운 칸(af.gaps 는 마지막 정식 빌드 기준이라 아직 빈칸으로 센다)
-    holes = sorted((e for e in af.gaps(B, key) if e not in done), reverse=True)
+    tried = tried if tried is not None else set()
+    holes = [e for e in all_holes(B, key) if e not in done and e not in tried][:4]      # 한 번에 넷씩(공시 여덟 장) — 부른 쪽이 묶음을 돌린다
+    tried.update(holes)
     if not holes:
         return ["  빈칸 없음"], 0
     base = base_ratio(B, key)
@@ -385,7 +397,10 @@ def week(B, d1, d2):
             rows = []
         keys |= {"jp:" + str(r.get("code")) for r in rows if isinstance(r, dict) and d1 <= str(r.get("date")) <= d2}
     tg = af.targets(B, keys)                             # 은행·리츠 제외 · 시총 순 · af.CAPS 채움
-    return [k for k in tg if k.startswith("jp:") and af.gaps(B, k)]
+    from markets import extractive
+    mc = float(os.environ.get("FPI_MIN_CAP", "0.7"))       # 시총 하한(십억 달러 — 0.7 ≈ 1조 원)
+    return [k for k in tg if k.startswith("jp:") and (af.CAPS.get(k) or B.CAPS.get(k) or 0) >= mc and all_holes(B, k)
+            and not extractive("jp", B.SECTORS.get(k, "") or af.jp_sector(k[3:]), "", k)]
 
 
 def main():
@@ -402,7 +417,7 @@ def main():
     if "--days" in args:
         i = args.index("--days")
         keys = week(B, args[i + 1], args[i + 2])
-        print(f"{args[i + 1]}~{args[i + 2]} 일본 발표 회사 중 사업부 빈칸이 있는 곳: {len(keys)} · 빈칸 {sum(len(af.gaps(B, k)) for k in keys)}")
+        print(f"{args[i + 1]}~{args[i + 2]} 일본 발표 회사 중 사업부 빈칸이 있는 곳: {len(keys)} · 빈칸 {sum(len(all_holes(B, k)) for k in keys)}")
     else:
         af.targets(B, set(keys))
     if not keys:
@@ -414,7 +429,18 @@ def main():
         if time.time() - T0 > SECS or ai_seg.USED["in"] + ai_seg.USED["out"] >= MAX_TOK:
             return
         try:
-            lines, n = one(B, key, db, verbose=len(keys) <= 6)
+            lines, n, tried, zero = [], 0, set(), 0
+            for _b in range(int(os.environ.get("JPCO_BATCH", "4"))):      # 회사마다 네 묶음(빈칸 열여섯)까지 — 두 묶음 연달아 빈손이면 그만
+                if time.time() - T0 > SECS or ai_seg.USED["in"] + ai_seg.USED["out"] >= MAX_TOK:
+                    break
+                l2, n2 = one(B, key, db, verbose=len(keys) <= 6, tried=tried)
+                lines += l2
+                n += n2
+                if l2 and "빈칸 없음" in l2[0]:
+                    break
+                zero = 0 if n2 else zero + 1
+                if zero >= 2:
+                    break
         except Exception as ex:                          # noqa: BLE001
             lines, n = [f"  실패 {ex!r}"[:300]], 0
         with LOCK:
