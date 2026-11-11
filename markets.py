@@ -572,11 +572,12 @@ _JP_NAME_OUT = _re.compile(r"投資法人|銀行|銀$|国債|社債|債券|^Ｏ�
 
 # **캐는 회사(광산·석유가스 생산·정유·석탄)는 맨 뒷줄**(회원님 11/11: "미국에 쓰잘데없는 회사가 너무 많다 — 광산이든 정유든 채굴하는 회사는
 # 텔레로 쏘지 말고 업데이트도 제일 후순위로"). 화면에서 빼지는 않는다 — 알림을 안 보내고, 수집 대기줄에서 맨 뒤에 선다.
-# 유전 서비스·파이프라인·가스 배급·금속 가공은 캐는 회사가 아니라 여기 안 든다.
+# 11/11 넓힘(회원님: "유전 서비스·파이프라인·도시가스·금속 가공·구리 가공 이런 것도 싹 다, 모든 시장에서"): 유전 서비스·장비, 송유·가스관, 가스 배급,
+# 금속 가공, 철강, 알루미늄, 비철금속(일본 非鉄金属·金属製品·鉄鋼·ガス)까지. 일본 「電気・ガス業」은 전력회사가 섞여 있어 안 넣었다.
 _EXTRACT_IND = _re.compile(
-    r"(?i)oil & gas (production|e&p|integrated|refining|drilling)|integrated oil|oil refining|precious metals|metal mining|\bmining\b|"
-    r"other metals and minerals|\bcoal\b|^gold$|^silver$|^copper$|uranium")
-_EXTRACT_JP = {"鉱業", "石油", "石油・石炭製品", "광업", "석유", "석유·석탄제품"}
+    r"(?i)oil & gas|oil/gas|oil and gas|oilfield|integrated oil|oil refining|natural gas|regulated gas|precious metals|metal mining|\bmining\b|"
+    r"metals and minerals|metal fabrication|\bcoal\b|steel|aluminum|^gold$|^silver$|^copper$|uranium")
+_EXTRACT_JP = {"鉱業", "石油", "石油・石炭製品", "非鉄金属", "非鉄金属製品", "金属製品", "鉄鋼", "ガス", "광업", "석유", "석유·석탄제품", "비철금속", "비철금속제품", "금속제품", "철강", "가스"}
 
 
 def extractive(mkt, sector="", industry=""):
