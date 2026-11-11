@@ -666,6 +666,8 @@ TG_OUT_EXTRACT = re.compile(
     r"(?i)oil & gas|oil/gas|oil and gas|oilfield|integrated oil|oil refining|natural gas|regulated gas|precious metals|metal mining|\bmining\b|"
     r"metals and minerals|metal fabrication|\bcoal\b|steel|aluminum|^gold$|^silver$|^copper$|uranium")
 TG_OUT_EXTRACT_JP = {"鉱業", "石油", "石油・石炭製品", "非鉄金属", "非鉄金属製品", "金属製品", "鉄鋼", "ガス", "광업", "석유", "석유·석탄제품", "비철금속", "비철금속제품", "금속제품", "철강", "가스"}
+# 업종은 비철금속이지만 AI 수혜주(광케이블·반도체 소재)라 알림을 보내는 회사 — markets.EXTRACT_KEEP 과 같은 목록
+TG_KEEP = {"jp:5802", "jp:5801", "jp:5803", "jp:5805", "jp:5016", "jp:5706"}
 BIO_DESC = re.compile(r"創薬|新薬開発|バイオベンチャー|신약|바이오벤처|drug discovery|clinical[- ]stage|biopharmaceutical company",
                       re.I)
 MIN_KRW = float(os.environ.get("TG_MIN_KRW", "1e11"))      # 1,000억 원
@@ -697,7 +699,8 @@ def tg_pick(ev, pts):
     if ev["mkt"] == "jp" and re.search(r"銀行|銀$|投資法人|ＥＴＦ|ＥＴＮ|国債|社債|債券|リート|^Ｏｎｅ|^上場|^ｉ[ＳＦ]|^ＧＸ|^ＮＦ|^ＭＸ|ブル$|ベア$",
                                        (ev.get("orig") or "").strip()):
         return False, "ETF·채권·은행 제외"                     # 회원님 11/03 — 회사가 아니다
-    if TG_OUT_EXTRACT.search(H.ind.get(ev["key"], "") or "") or (ev["mkt"] == "jp" and (ev.get("sector") or "") in TG_OUT_EXTRACT_JP):
+    if ev["key"] not in TG_KEEP and (TG_OUT_EXTRACT.search(H.ind.get(ev["key"], "") or "") or
+                                     (ev["mkt"] == "jp" and (ev.get("sector") or "") in TG_OUT_EXTRACT_JP)):
         return False, "채굴·정유 제외"                          # 가이던스 급상향이어도 안 보낸다
     boom = guide_boom(ev)
     if boom:
