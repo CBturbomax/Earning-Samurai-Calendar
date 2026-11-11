@@ -8614,10 +8614,31 @@ function segChart(sg, cur) {
     if (!cut && lastDead >= 0 && pts.length - (lastDead + 1) >= 2) cut = lastDead + 1;
   }
   const onlyLive = r => [r[0]].concat(r.slice(1).map((v, j) => live.size >= 2 && !live.has(j) ? null : v));
-  const nowPts = pts.slice(cut).map(onlyLive);
+  let nowPts = pts.slice(cut).map(onlyLive);
   const oldPts = pts.slice(0, cut);
   const span = ps => { const r = ps.filter(q => q.slice(1).some(v => v != null)); return r[0][0] + '~' + r[r.length - 1][0]; };
-  let html = segDraw(sg, names, onAxis(nowPts, names.length), cur, cut ? '지금 기준 · ' + span(nowPts) : '');
+  const nowSpan = cut ? span(nowPts) : '';
+  // **기준이 바뀌어도 그대로 이어지는 사업부는 옛 분기까지 잇는다**(회원님 11/11: "핵심 둘은 그대로잖아 — 이어 줘").
+  // 이름이 같고(같은 칸) **바뀌는 자리에서 값도 이어질 때만**(앞뒤 두 분기 안의 값이 0.7~1.43배). 이름만 같고 내용이 바뀐 부문은 안 잇는다
+  // (젠쇼: 옛 '레스토랑' 1,820억 = 외식 전체, 새 '레스토랑' 360억 — 이으면 매출이 1/5 로 꺼진 것처럼 보인다. '소매' 190억은 그대로라 잇는다).
+  let carried = 0;
+  if (cut) {
+    const carry = new Set();
+    names.forEach((_, j) => {
+      if (live.size >= 2 && !live.has(j)) return;
+      const a = pts.slice(Math.max(0, cut - 2), cut).map(r => r[j + 1]).reverse().find(v => v != null && v > 0);
+      const b = pts.slice(cut, cut + 2).map(r => r[j + 1]).find(v => v != null && v > 0);
+      if (a && b && b / a >= 0.7 && b / a <= 1.43) carry.add(j);
+    });
+    if (carry.size) {
+      const head = pts.slice(0, cut).map(r => [r[0]].concat(r.slice(1).map((v, j) => carry.has(j) ? v : null)))
+        .filter(r => r.slice(1).some(v => v != null));
+      nowPts = head.concat(nowPts);
+      carried = carry.size;
+    }
+  }
+  let html = segDraw(sg, names, onAxis(nowPts, names.length), cur,
+    cut ? '지금 기준 · ' + nowSpan + (carried ? ' · 그대로 이어지는 ' + carried + '개는 앞 분기부터' : '') : '');
   if (cut && oldPts.length >= 2) html += segDraw(sg, names, onAxis(oldPts, names.length), cur, '옛 기준 · ' + span(oldPts));
   return html;
 }
