@@ -28,7 +28,7 @@ LOCK = threading.Lock()
 MAX_TOK = int(os.environ.get("FPI_TOKENS", "1000000"))
 SECS = int(os.environ.get("FPI_SECS", "4500"))
 PER_DOC = int(os.environ.get("JPCO_DOC", "2200"))
-MAX_DOCS = 8
+MAX_DOCS = 6
 T0 = time.time()
 
 SEGTAB = re.compile(r"セグメント|部門別|事業別|事業の種類")
@@ -108,9 +108,17 @@ def pdf_pages(code, fn, pn):
         if sc >= 2:
             scored.append((-sc, i))
     out = []
-    for _sc, i in sorted(sorted(scored)[:2], key=lambda t: t[1]):
+    # 세그먼트 주석은 '전기 표 → 당기 표' 순으로 두세 쪽에 걸친다. 점수 높은 두 쪽만 주면 전기 표만 가고 **당기 표가 빠졌다**(11/11 추적:
+    # '그 분기 누계가 없다' 34칸의 태반). 가장 점수 높은 쪽에서 시작해 이어지는 쪽을 넷까지 싣는다.
+    idx = sorted(i for _sc, i in scored)
+    if idx:
+        best = min(scored)[1]
+        run = [i for i in idx if best - 1 <= i <= best + 3][:4]
+    else:
+        run = []
+    for i in run:
         pg = "\n".join(re.sub(r" {3,}", "   ", ln.rstrip()) for ln in pages[i].splitlines() if ln.strip())
-        out.append(f"[PDF page {i + 1}]\n" + pg[:3200])
+        out.append(f"[PDF page {i + 1}]\n" + pg[:2800])
     return re.sub(r"[\x00-\x08\x0b-\x1f\x7f]", " ", "\n--- page ---\n".join(out))
 
 
