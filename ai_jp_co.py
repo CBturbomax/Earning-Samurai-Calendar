@@ -621,6 +621,52 @@ def one(B, key, db, verbose=False, tried=None):
     return out, len(got)
 
 
+def mark(B, key, db):
+    """**AI 를 안 부르고** 빈 분기의 제 결산단신을 열어 '기재 생략' 문구만 본다 — 채울 수 없는 칸을 skipq 에 적어 대기줄에서 뺀다(토큰 0).
+    빈 분기가 많으면 처음·가운데·끝 여섯 칸만 열어 보고, 본 칸이 전부 생략이면 그 회사의 빈 분기를 통째로 적는다(단일 사업부 회사)."""
+    import ai_fill as af
+    import scrape_fin_jp as F
+    import scrape_geo_jp as G
+    code = key.split(":")[1]
+    holes = all_holes(B, key)
+    if not holes:
+        return 0, 0
+    with G._YANO:
+        time.sleep(0.5)
+    try:
+        jl = json.loads(af._patient(lambda: G.get(f"https://webapi.yanoshin.jp/webapi/tdnet/list/{code}.json?limit=1000", binary=False,
+                                                  timeout=30)) or "{}")
+    except Exception:                                  # noqa: BLE001
+        return 0, 0
+    pdfs = []
+    for it in (jl.get("items") or []):
+        it = it.get("Tdnet", it)
+        du, ti = it.get("document_url") or "", it.get("title") or ""
+        if du.lower().endswith(".pdf") and F.TANSHIN.search(ti) and not F.NOT_TANSHIN.search(ti):
+            pdfs.append(((it.get("pubdate") or "")[:10], du.rsplit("/", 1)[-1]))
+    pdfs.sort()
+    n = len(holes)
+    pick = holes if n <= 6 else [holes[i] for i in sorted({0, 1, n // 3, n // 2, (2 * n) // 3, n - 1})]
+    seen, om = 0, []
+    for e in pick:
+        c = [x for x in pdfs if 10 <= (_d(x[0]) - _d(e)).days <= 75]
+        if not c:
+            continue
+        try:
+            txt = pdf_pages(code, "", c[0][1])
+        except Exception:                              # noqa: BLE001
+            continue
+        seen += 1
+        if not txt and (code, c[0][1]) in OMIT:
+            om.append(e)
+    gone = holes if (seen >= 2 and len(om) == seen and n > 6) else om
+    if gone:
+        with LOCK:
+            db.setdefault("skipq", {})[key] = sorted(set(db.get("skipq", {}).get(key, [])) | set(gone))
+            SKIPQ.setdefault(key, set()).update(gone)
+    return len(gone), seen
+
+
 def week(B, d1, d2):
     import ai_fill as af
     keys = set()
@@ -672,6 +718,26 @@ def main():
         af.targets(B, set(keys))
     if not keys:
         print("종목을 줄 것 — python ai_jp_co.py jp:1662  또는  --days 2026-11-11 2026-11-13")
+        return
+    if "--mark" in args:                                 # 토큰 0 — 채울 수 없는 칸만 적는다
+        from concurrent.futures import ThreadPoolExecutor
+        tot = [0, 0]
+
+        def mk(key):
+            try:
+                g, sn = mark(B, key, db)
+            except Exception as ex:                      # noqa: BLE001
+                print(f"== {key} 실패 {ex!r}"[:160])
+                return
+            with LOCK:
+                tot[0] += g
+                tot[1] += 1 if g else 0
+                if g:
+                    print(f"== {key} 채울 수 없는 분기 {g} (열어 본 공시 {sn})")
+                OUT.write_text(json.dumps(db, ensure_ascii=False, separators=(",", ":")), encoding="utf-8")
+        with ThreadPoolExecutor(max_workers=3) as ex:
+            list(ex.map(mk, keys))
+        print(f"요약(표시만): 회사 {len(keys)} 중 {tot[1]}곳 · 채울 수 없는 분기 {tot[0]} — 다음부터 안 본다")
         return
     res = {}
 
