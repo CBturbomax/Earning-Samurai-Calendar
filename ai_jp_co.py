@@ -23,6 +23,7 @@ from datetime import date, datetime, timezone
 from pathlib import Path
 
 HERE = Path(__file__).parent
+FYM = {}                        # 열쇠 -> 결산월(3월기 = 3) — main 이 채운다
 IR_TRACE = []                   # IR 자료 찾기 자취(로그용 — 0장일 때 어디서 막혔는지)
 NAMES = {}                      # 열쇠 -> 회사 이름(검색에 쓴다) — main 이 채운다
 OUT = HERE / "data" / "fpi_co.json"
@@ -290,7 +291,33 @@ def one(B, key, db, verbose=False, tried=None):
         c = [x for x in docs if 10 <= (_d(x[0]) - _d(e)).days <= 75]
         return c[0] if c else None
     trace = []
+    # **첨부 데이터(XBRL)가 붙은 공시 목록에 없는 옛 결산단신 PDF**(11/12 추적: 2018~2020년 구멍의 공시가 '공시없음·표없음'이었는데 거래소 보관소에는
+    # PDF 가 그대로 있었다 — 웹 검색이 가리킨 곳이 바로 거기였다). 전체 공시 목록에서 결산단신 PDF 를 날짜로 찾아 쪽째 읽는다.
+    pdfs = []
+    try:
+        with G._YANO:
+            time.sleep(0.4)
+        jl = json.loads(af._patient(lambda: G.get(f"https://webapi.yanoshin.jp/webapi/tdnet/list/{code}.json?limit=1000", binary=False,
+                                                  timeout=30)) or "{}")
+        for it in (jl.get("items") or []):
+            it = it.get("Tdnet", it)
+            du, ti = it.get("document_url") or "", it.get("title") or ""
+            if du.lower().endswith(".pdf") and F.TANSHIN.search(ti) and not F.NOT_TANSHIN.search(ti):
+                pdfs.append(((it.get("pubdate") or "")[:10], du.rsplit("/", 1)[-1]))
+    except Exception:                                  # noqa: BLE001
+        pdfs = []
+    pdfs.sort()
+
+    def fy_start(ee):
+        """그 분기가 든 회계연도의 첫날 — 요약 XBRL 에서 본 시작일의 달, 없으면 결산월(FYM)에서."""
+        sm = next((int(s_[0][5:7]) for s_ in spans), None) or ((FYM.get(key) or 3) % 12 + 1)
+        d = _d(ee)
+        st = date(d.year, sm, 1)
+        if st > d:
+            st = date(d.year - 1, sm, 1)
+        return st.isoformat()
     picked, spans, t0 = {}, {}, time.time()            # zip 이름 -> (공시일, 글, 그 공시의 기간들)
+    hit_ee = set()
     for e in holes:
         import ai_fpi as P
         for ee in (e, P._back(_d(e), 3).isoformat()):
@@ -318,12 +345,26 @@ def one(B, key, db, verbose=False, tried=None):
                 trace.append(f"{ee}{tag}:{how if txt else '표없음'}{'' if sp else '·기간없음'}")
                 if txt and sp:
                     picked[x[1]] = (x[0], txt, sorted(sp))
+                    hit_ee.add(ee)
                     break
+            if ee not in hit_ee and len(picked) < MAX_DOCS:          # 목록 밖의 옛 PDF
+                for tag, base_ee in (("", ee), ("+1y", _d(ee).replace(year=_d(ee).year + 1, day=min(_d(ee).day, 28)).isoformat())):
+                    c = [x for x in pdfs if 10 <= (_d(x[0]) - _d(base_ee)).days <= 75 and x[1] not in picked]
+                    if not c:
+                        continue
+                    txt = pdf_pages(code, "", c[0][1])
+                    trace.append(f"{ee}{tag}:{'옛pdf' if txt else '옛pdf·표없음'}")
+                    if txt:
+                        st = fy_start(base_ee)
+                        yb = lambda d_: _d(d_).replace(year=_d(d_).year - 1, day=min(_d(d_).day, 28)).isoformat()
+                        picked[c[0][1]] = (c[0][0], txt, sorted([(st, base_ee), (yb(st), yb(base_ee))]))
+                        hit_ee.add(ee)
+                        break
     out = [f"  빈 분기 {len(holes)}({holes[-1]}~{holes[0]}) · 평소 비율 {None if base is None else round(base, 2)} · "
            f"세그먼트 표가 든 공시 {len(picked)}장 · 글 {sum(len(v[1]) for v in picked.values()):,}자 · {time.time() - t0:.0f}초"]
     out.append("  공시 찾기: " + " ".join(trace)[:300])
     irs = []
-    if os.environ.get("JPCO_IR", "1") == "1":
+    if os.environ.get("JPCO_IR", "0") == "1":             # 11/12: 검색이 준 것은 거래소 PDF 였다(위에서 직접 읽는다) — 검색은 기본으로 끈다
         got_end = {s_[1] for v in picked.values() for s_ in v[2]}
         lack = [e for e in holes if not any(abs((_d(e) - _d(g)).days) <= 12 for g in got_end)] or (holes if not picked else [])
         if lack:
@@ -505,6 +546,14 @@ def main():
     import ai_fill as af
     import ai_web_co
     NAMES.update(ai_web_co.names_map())
+    for nm_ in ("earnings.json", "earnings_jp_sched.json", "earnings_jp_past.json"):
+        try:
+            for r_ in json.loads((HERE / "data" / nm_).read_text(encoding="utf-8")).get("rows", []):
+                m_ = re.search(r"(\d+)月期", str(r_.get("fy") or "")) if isinstance(r_, dict) else None
+                if m_:
+                    FYM.setdefault("jp:" + str(r_.get("code")), int(m_.group(1)))
+        except (OSError, ValueError):
+            pass
     if "--days" in args:
         i = args.index("--days")
         keys = week(B, args[i + 1], args[i + 2])
