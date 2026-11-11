@@ -534,6 +534,10 @@ def week(B, d1, d2):
 
 
 def main():
+    import shutil
+    if not shutil.which("pdftotext"):
+        print("pdftotext 가 없다 — PDF 를 못 읽으면 결과가 전부 '표없음'이 된다. 돌리지 않는다.")
+        sys.exit(1)
     args = sys.argv[1:]
     keys = [a for a in args if ":" in a]
     import ai_seg

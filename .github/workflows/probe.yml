@@ -20,7 +20,7 @@ jobs:
       - name: 🔎 일본 결산단신 PDF 의 세그먼트 쪽(11/12)
         continue-on-error: true
         run: |
-          command -v pdftotext || (sudo apt-get update -qq && sudo apt-get install -y -qq poppler-utils)
+          for i in 1 2 3; do command -v pdftotext && break; sudo apt-get update -qq || true; sudo apt-get install -y -qq poppler-utils || sleep 20; done
           python tools/ai/probe_jppdf.py 2587:140120180509430976.pdf 2587:140120180806492117.pdf 6750:140120240926589498.pdf > /tmp/probe.txt 2>&1
       - name: 결과를 probe-out 가지에
         if: always()
