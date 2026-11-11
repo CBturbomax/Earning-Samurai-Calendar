@@ -499,6 +499,8 @@ def main():
     import build as B
     import scrape_live_us as lu
     lu.cik_map_cached()
+    import ai_fill as af0
+    af0.targets(B, set(keys))                            # af.CAPS 를 채운다 — 안 채우면 af.gaps 가 시총 하한에 걸려 '빈칸 없음'이 된다
     if "--usdays" in args:                               # 그 사흘에 발표하는 미국 국내 기업 중 사업부 구멍이 있는 곳
         import ai_fill as af
         i = args.index("--usdays")
