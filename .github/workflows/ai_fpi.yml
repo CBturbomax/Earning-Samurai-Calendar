@@ -96,6 +96,7 @@ jobs:
           set -o pipefail
           PY=ai_fpi.py; [ "${{ github.event.inputs.mode }}" = "co" ] && { PY=ai_fpi_co.py; export FPI_SECS=4800; }
           [ "${{ github.event.inputs.mode }}" = "jp" ] && { PY=ai_jp_co.py; export FPI_SECS=4800; }
+          [ "${{ github.event.inputs.mode }}" = "web" ] && { PY=ai_web_co.py; export FPI_SECS=4800; }
           python $PY ${{ github.event.inputs.only }} | { grep -a -v '^  [a-z_0-9]*\.json\|번역 받기\|받기 실패' || true; } | tee fpi.log
           { echo '```'; tail -400 fpi.log; echo '```'; } >> "$GITHUB_STEP_SUMMARY"
       - name: 저장소에 반영
