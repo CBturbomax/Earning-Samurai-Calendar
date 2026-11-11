@@ -1051,7 +1051,7 @@ def finish(ev, point=None):
         except Exception:                                        # noqa: BLE001
             log("사이트 그림 실패", key, traceback.format_exc(limit=2))
     if not pngs:
-        log("사이트 그림 없음 — matplotlib 로", key)
+        log("사이트 그림 없음 — matplotlib 로", key, (shot.LAST_ERR[0] or "시간 초과").replace("\n", " ")[-200:])
         try:
             pngs = charts.render(ev, pts, seg, fin.get("freq", "Q"), ann, G, gh)
         except Exception:                                        # noqa: BLE001
