@@ -369,7 +369,7 @@ def main():
             rec = stocks.get(r["code"]) or {}
             done = bool(rec.get("acc") and (rec.get("eps") or not rec.get("period")) and rec.get("prv") == PR_V)
             # 캐는 회사(광산·석유가스·정유·석탄)는 맨 뒤 — 회원님 11/11. 남는 시간에만 본다.
-            return (extractive("us", "", _ind.get("us:" + r["code"], "")), done, rec.get("chk", ""))
+            return (extractive("us", "", _ind.get("us:" + r["code"], ""), "us:" + r["code"]), done, rec.get("chk", ""))
         tg.sort(key=order)
         st["stage"] = "종목 훑기"
         streak = 0
