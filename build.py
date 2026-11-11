@@ -8621,25 +8621,72 @@ function segChart(sg, cur) {
   // **기준이 바뀌어도 그대로 이어지는 사업부는 옛 분기까지 잇는다**(회원님 11/11: "핵심 둘은 그대로잖아 — 이어 줘").
   // 이름이 같고(같은 칸) **바뀌는 자리에서 값도 이어질 때만**(앞뒤 두 분기 안의 값이 0.7~1.43배). 이름만 같고 내용이 바뀐 부문은 안 잇는다
   // (젠쇼: 옛 '레스토랑' 1,820억 = 외식 전체, 새 '레스토랑' 360억 — 이으면 매출이 1/5 로 꺼진 것처럼 보인다. '소매' 190억은 그대로라 잇는다).
-  let carried = 0;
+  // 잇는 길 넷(바뀌는 자리의 마지막 옛 줄과 첫 새 줄을 견준다 — 회원님 11/11: "나머지도 다 이어줘"):
+  //  ① 같은 이름·값이 이어짐 → 그대로 잇는다(위)   ② 남은 옛 부문 하나 ↔ 남은 새 부문 하나 → 이름만 바뀐 것, 잇는다
+  //  ③ 남은 옛 부문 여럿 → 새 부문 하나(합쳐짐) → 새 부문 선을 옛 부문들의 합으로 앞까지 잇는다
+  //  ④ 남은 옛 부문 하나 → 새 부문 여럿(쪼개짐) → **옛 기준 그림**의 그 선을 새 부문들의 합으로 지금까지 잇는다(젠쇼: 외식 = 스키야+하마스시+…)
+  // ②~④는 '남은 것끼리의 매출 비중'이 앞뒤로 같을 때만(0.88~1.14배) — 비중이 다르면 다른 사업이 섞인 것이라 안 잇는다. 여럿↔여럿은 짝을 알 수 없어 안 잇는다.
+  let carried = 0, joinTag = '', fwd = null;
+  const carry = new Set();
   if (cut) {
-    const carry = new Set();
     names.forEach((_, j) => {
       if (live.size >= 2 && !live.has(j)) return;
       const a = pts.slice(Math.max(0, cut - 2), cut).map(r => r[j + 1]).reverse().find(v => v != null && v > 0);
       const b = pts.slice(cut, cut + 2).map(r => r[j + 1]).find(v => v != null && v > 0);
       if (a && b && b / a >= 0.7 && b / a <= 1.43) carry.add(j);
     });
-    if (carry.size) {
-      const head = pts.slice(0, cut).map(r => [r[0]].concat(r.slice(1).map((v, j) => carry.has(j) ? v : null)))
-        .filter(r => r.slice(1).some(v => v != null));
+    const lastOld = pts[cut - 1], firstNew = pts[cut];
+    const allJ = names.map((_, j) => j);
+    const sumRow = (r, js) => js.reduce((a, j) => a + (r[j + 1] > 0 ? r[j + 1] : 0), 0);
+    const oJ = allJ.filter(j => lastOld[j + 1] > 0), nJ = allJ.filter(j => firstNew[j + 1] > 0 && (live.size < 2 || live.has(j)));
+    const Ro = oJ.filter(j => !carry.has(j)), Rn = nJ.filter(j => !carry.has(j));
+    const tO = sumRow(lastOld, oJ), tN = sumRow(firstNew, nJ);
+    const near = (x, y) => x > 0 && y > 0 && x / y >= 0.88 && x / y <= 1.14;
+    let map = null;                                   // 옛 줄 -> 지금 기준 그림의 값(새 칸 n 에 넣을 값)
+    if (Ro.length && Rn.length && tO > 0 && tN > 0 && tN / tO >= 0.7 && tN / tO <= 1.43 &&
+        near(sumRow(lastOld, Ro) / tO, sumRow(firstNew, Rn) / tN)) {
+      if (Rn.length === 1) {                          // ② 이름만 바뀜 · ③ 합쳐짐
+        map = { n: Rn[0], from: Ro };
+        joinTag = Ro.length === 1 ? ' · ' + names[Rn[0]] + ' ← ' + names[Ro[0]] : ' · ' + names[Rn[0]] + ' = 옛 ' + Ro.length + '개 합';
+      } else if (Ro.length === 1)                     // ④ 쪼개짐 — 합에는 **나중에 생긴 새 부문도** 넣는다(젠쇼 즉석식품은 한 해 뒤 패스트푸드에서 갈라졌다 — 빼면 합이 꺼진다)
+        fwd = { o: Ro[0], ns: allJ.filter(j => !carry.has(j) && (live.size < 2 || live.has(j)) && pts.slice(cut).some(r => r[j + 1] != null)) };
+    }
+    if (carry.size || map) {
+      const head = pts.slice(0, cut).map(r => {
+        const row = [r[0]].concat(r.slice(1).map((v, j) => carry.has(j) ? v : null));
+        if (map) { const got = map.from.filter(j => r[j + 1] != null); if (got.length === map.from.length) row[map.n + 1] = sumRow(r, map.from); }
+        return row;
+      }).filter(r => r.slice(1).some(v => v != null));
       nowPts = head.concat(nowPts);
       carried = carry.size;
     }
   }
-  let html = segDraw(sg, names, onAxis(nowPts, names.length), cur,
-    cut ? '지금 기준 · ' + nowSpan + (carried ? ' · 그대로 이어지는 ' + carried + '개는 앞 분기부터' : '') : '');
-  if (cut && oldPts.length >= 2) html += segDraw(sg, names, onAxis(oldPts, names.length), cur, '옛 기준 · ' + span(oldPts));
+  // 합쳐 이은 줄이 있으면 YoY 는 그린 값끼리만 견준다(names 를 복사해 넘기면 segRender 가 원자료를 안 섞는다 — 섞으면 합친 첫 해 YoY 가 +96% 로 튄다)
+  let html = segDraw(sg, joinTag ? names.slice() : names, onAxis(nowPts, names.length), cur,
+    cut ? '지금 기준 · ' + nowSpan + (carried ? ' · 그대로 이어지는 ' + carried + '개는 앞 분기부터' : '') + joinTag : '');
+  if (cut && oldPts.length >= 2) {
+    // 옛 기준 그림: 안에서 이름만 바뀐 줄(끝난 다음 분기에 다른 이름이 같은 크기로 시작)은 한 줄로, 쪼개진 부문(④)은 새 부문들의 합으로 지금까지 잇는다.
+    let op = oldPts.map(r => r.slice());
+    const first = j => op.findIndex(r => r[j + 1] != null), last = j => { let k = -1; op.forEach((r, i) => { if (r[j + 1] != null) k = i; }); return k; };
+    names.forEach((_, q) => {
+      const fq = first(q);
+      if (fq <= 0) return;
+      const ps = names.map((_, p) => p).filter(p => p !== q && last(p) === fq - 1 && op[fq - 1][p + 1] > 0 && op[fq][q + 1] > 0 &&
+        op[fq][q + 1] / op[fq - 1][p + 1] >= 0.7 && op[fq][q + 1] / op[fq - 1][p + 1] <= 1.43);
+      if (ps.length === 1) op.forEach(r => { if (r[ps[0] + 1] != null) { r[q + 1] = r[ps[0] + 1]; r[ps[0] + 1] = null; } });
+    });
+    let tagO = '옛 기준 · ' + span(oldPts);
+    if (fwd) {
+      const tail = pts.slice(cut).map(r => {
+        const row = [r[0]].concat(r.slice(1).map((v, j) => carry.has(j) ? v : null));
+        const got = fwd.ns.filter(j => r[j + 1] != null);
+        if (got.length * 2 >= fwd.ns.length) row[fwd.o + 1] = got.reduce((a, j) => a + r[j + 1], 0);
+        return row;
+      }).filter(r => r[fwd.o + 1] != null);
+      if (tail.length) { op = op.concat(tail); tagO += ' · 그 뒤 ' + names[fwd.o] + ' = 지금 기준 ' + fwd.ns.length + '개 합'; }
+    }
+    html += segDraw(sg, names.slice(), onAxis(op, names.length), cur, tagO);
+  }
   return html;
 }
 
