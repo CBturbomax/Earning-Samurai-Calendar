@@ -73,13 +73,9 @@ jobs:
         if: github.event.inputs.mode == 'jp'
         # 11/12: 설치가 네트워크 오류로 실패했는데 `|| true` 로 지나가, 세 번의 시험이 PDF 를 한 장도 못 읽고 '0칸'으로 끝났다.
         # 세 번까지 다시 해 보고, 그래도 없으면 **멈춘다**(조용한 0건을 만들지 않는다).
+        # 11/12: apt 는 쓰지 않는다 — 러너의 apt 가 이름 풀이에 막히면 설치 단계에서만 13분을 매달렸다. pip 의 pdfplumber 는 몇 초다.
+        timeout-minutes: 3
         run: |
-          for i in 1 2 3; do
-            command -v pdftotext && break
-            sudo apt-get update -qq || true
-            sudo apt-get install -y -qq poppler-utils || sleep 20
-          done
-          # apt 가 막힌 날(11/12: security.ubuntu.com 이름 풀이 실패)에는 pip 의 pdfplumber 로 읽는다
           command -v pdftotext || pip install -q pdfplumber
           command -v pdftotext || python -c "import pdfplumber"
       - name: 엔진 고르기
