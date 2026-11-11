@@ -162,9 +162,17 @@ def pdf_pages(code, fn, pn):
         out.append(f"[PDF page {i + 1}]\n" + "\n".join(lines_)[:6000])
     if not out:
         out = narrative(pages)
+    if not out and OMIT_RE.search(re.sub(r"[ \u3000\n]", "", "".join(pages[:45]))):
+        OMIT.add((code, pn))                             # 이 공시는 '단일 세그먼트라 기재를 생략한다'고 적었다 — 채울 값이 없다
     return re.sub(r"[\x00-\x08\x0b-\x1f\x7f]", " ", "\n--- page ---\n".join(out))
 
 
+# **채울 수 없는 칸은 다시 안 본다**(회원님 11/12: "사업부 안 내는 회사는 다시는 검토 안 하게 하면 줄어드는 거 아니야?").
+# 그 분기 결산단신이 스스로 「単一セグメントであるため記載を省略」 라고 적었고 표도 문장도 없으면, 그 분기를 fpi_co.json 의 `skipq` 에 적어
+# 대기줄(all_holes)에서 영영 뺀다. 회사가 나중에 사업부를 내기 시작하면 그 뒤 분기는 그대로 본다(분기 단위로 적는다).
+OMIT_RE = re.compile(r"単一セグメント|単一の(報告)?セグメント|セグメント情報(等)?の?記載を省略|セグメント情報(等)?は?、?[^。]{0,40}省略")
+OMIT = set()                    # (코드, PDF 이름) — pdf_pages 가 채운다
+SKIPQ = {}                      # 열쇠 -> {종료일} — main 이 파일에서 읽어 채운다(all_holes 가 뺀다)
 SEG_SENT = re.compile(r"(売上高|売上収益|営業収益|営業収入|収益)は?[、,]?[^。]{0,40}?[\d,，.]+\s*(億|百万|千)円")
 
 
@@ -328,7 +336,8 @@ def all_holes(B, key):
     have = [str(r[0]) for r in seg.get("pts") or [] if any(v for v in r[1:]) and re.match(r"\d{4}-\d\d-\d\d$", str(r[0]))]
     fresh = date.fromordinal(date.today().toordinal() - 45).isoformat()
     ends = [p["end"] for p in fin.get("points") or [] if p.get("end") and p.get("rev") and "2018-03-01" <= p["end"] <= fresh]
-    return sorted((e for e in ends if not any(abs((_d(h) - _d(e)).days) <= 20 for h in have)), reverse=True)
+    skip = SKIPQ.get(key) or ()
+    return sorted((e for e in ends if e not in skip and not any(abs((_d(h) - _d(e)).days) <= 20 for h in have)), reverse=True)
 
 
 def one(B, key, db, verbose=False, tried=None):
@@ -381,6 +390,8 @@ def one(B, key, db, verbose=False, tried=None):
         return st.isoformat()
     picked, spans, t0 = {}, {}, time.time()            # zip 이름 -> (공시일, 글, 그 공시의 기간들)
     hit_ee = set()
+    omit_q = set()                                       # 제 공시가 '기재 생략'이라고 한 분기(종료일)
+
     def yb(d_, n=-1):
         return _d(d_).replace(year=_d(d_).year + n, day=min(_d(d_).day, 28)).isoformat()
 
@@ -405,6 +416,9 @@ def one(B, key, db, verbose=False, tried=None):
             txt, how = pdf_excerpt(code, x[1], pn), "pdf"
         if txt and sp:
             return (x[1], x[0], txt, sorted(sp)), how
+        if pn and (code, pn) in OMIT:
+            omit_q.add(base)
+            return None, "생략"
         return None, "표없음" if sp else "표없음·기간없음"
 
     def from_old_pdf(base):
@@ -414,6 +428,9 @@ def one(B, key, db, verbose=False, tried=None):
             return None, "옛pdf없음"
         txt = pdf_pages(code, "", c[0][1])
         if not txt:
+            if (code, c[0][1]) in OMIT:
+                omit_q.add(base)
+                return None, "옛pdf·생략"
             return None, "옛pdf·표없음"
         st = fy_start(base)
         return (c[0][1], c[0][0], txt, sorted([(st, base), (yb(st), yb(base))])), "옛pdf"
@@ -447,8 +464,14 @@ def one(B, key, db, verbose=False, tried=None):
             out += ["    · " + t for t in IR_TRACE[-10:]]
             del IR_TRACE[:]
     if not picked and not irs:
+        gone0 = sorted(e for e in holes if e in omit_q)
         with LOCK:
             db.setdefault("none", {})[key] = date.today().isoformat()
+            if gone0:
+                db.setdefault("skipq", {})[key] = sorted(set(db.get("skipq", {}).get(key, [])) | set(gone0))
+                SKIPQ.setdefault(key, set()).update(gone0)
+        if gone0:
+            out.append(f"  사업부를 안 내는 분기(공시가 '기재 생략') — 다시 안 본다: {gone0}")
         return out + ["  세그먼트 표를 못 찾았다(결산단신에도 IR 자료에도) — 안 묻는다"], 0
     body = []
     for _fn, (pub, txt, sps) in sorted(picked.items(), key=lambda kv: kv[1][0]):
@@ -577,6 +600,13 @@ def one(B, key, db, verbose=False, tried=None):
             unv.pop(he, None)
         elif he not in unv and loose(q, r, len([n for n in q if n in names]) * 2 >= len(q) if names else True):
             unv[he] = {"seg": {n: v for n, v in q.items() if v}, "grade": "검산 안 됨", "uv": 1, "r": round(r, 3)}
+    gone = sorted(e for e in holes if e in omit_q and e not in got and e not in unv)
+    if gone:
+        out.append(f"  사업부를 안 내는 분기(공시가 '기재 생략') — 다시 안 본다: {gone}")
+        with LOCK:
+            db.setdefault("skipq", {}).setdefault(key, [])
+            db["skipq"][key] = sorted(set(db["skipq"][key]) | set(gone))
+            SKIPQ.setdefault(key, set()).update(gone)
     unv = {e: x for e, x in unv.items() if e not in got}
     if unv:
         out.append(f"  검산 안 된 채 표시 달고 싣는 칸: {sorted(unv)}")
@@ -620,6 +650,8 @@ def main():
     except (OSError, ValueError):
         db = {"v": 1, "stocks": {}}
     db.setdefault("stocks", {})
+    for k_, v_ in (db.get("skipq") or {}).items():
+        SKIPQ[k_] = set(v_)
     import build as B
     import ai_fill as af
     import ai_web_co
