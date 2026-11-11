@@ -17,10 +17,11 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: '3.12'
-      - name: 🔎 실시간 서버 로그 — 텔레그램 그림이 왜 바뀌었나(11/11)
+      - name: 🔎 일본 결산단신 PDF 의 세그먼트 쪽(11/12)
         continue-on-error: true
         run: |
-          { echo "== health"; curl -sS -m 30 "https://earning-samurai-calendar-production.up.railway.app/health" | head -c 1500; echo; echo "== log"; curl -sS -m 60 "https://earning-samurai-calendar-production.up.railway.app/api/log" | head -c 60000; } > /tmp/probe.txt 2>&1
+          command -v pdftotext || (sudo apt-get update -qq && sudo apt-get install -y -qq poppler-utils)
+          python tools/ai/probe_jppdf.py 2587:140120180509430976.pdf 2587:140120180806492117.pdf 6750:140120240926589498.pdf > /tmp/probe.txt 2>&1
       - name: 결과를 probe-out 가지에
         if: always()
         run: |
