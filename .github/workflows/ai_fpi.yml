@@ -79,7 +79,9 @@ jobs:
             sudo apt-get update -qq || true
             sudo apt-get install -y -qq poppler-utils || sleep 20
           done
-          command -v pdftotext
+          # apt 가 막힌 날(11/12: security.ubuntu.com 이름 풀이 실패)에는 pip 의 pdfplumber 로 읽는다
+          command -v pdftotext || pip install -q pdfplumber
+          command -v pdftotext || python -c "import pdfplumber"
       - name: 엔진 고르기
         run: |
           if [ "${{ github.event.inputs.engine }}" = "codex" ] && [ -n "$CODEX_AUTH_JSON" ]; then

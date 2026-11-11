@@ -83,6 +83,36 @@ def seg_excerpt(blob):
     return "\n--- table ---\n".join(out)
 
 
+def page_texts(pdf, last=45):
+    """PDF -> 쪽마다의 글(칸 모양을 살려). pdftotext 가 있으면 그것, 없으면 pdfplumber(pip — 러너의 apt 가 막힌 날에도 된다. 11/12)."""
+    import shutil
+    import subprocess
+    if shutil.which("pdftotext"):
+        r = subprocess.run(["pdftotext", "-layout", "-l", str(last), "-", "-"], input=pdf, capture_output=True, timeout=90)
+        return r.stdout.decode("utf-8", "replace").split("\f")
+    import io
+    import pdfplumber
+    out = []
+    with pdfplumber.open(io.BytesIO(pdf)) as doc:
+        for pg in doc.pages[:last]:
+            try:
+                out.append(pg.extract_text(layout=True) or "")
+            except Exception:                          # noqa: BLE001
+                out.append("")
+    return out
+
+
+def pdf_tool():
+    import shutil
+    if shutil.which("pdftotext"):
+        return "pdftotext"
+    try:
+        import pdfplumber  # noqa: F401
+        return "pdfplumber"
+    except ImportError:
+        return ""
+
+
 def pdf_pages(code, fn, pn):
     """결산단신 PDF 에서 **세그먼트 정보가 실린 쪽을 통째로**(pdftotext -layout — 칸 모양이 살아 있다) 둘까지.
     11/11: 줄 단위로 '外部顧客' 을 찾던 pdf_excerpt 는 공시 342장을 '표없음'으로 놓쳤다. 웹 검색으로 떠보니 숫자는 기사에 없고
@@ -97,8 +127,7 @@ def pdf_pages(code, fn, pn):
         pdf = af._patient(lambda: G.get(f"https://www2.jpx.co.jp/disc/{code}0/{pn}", timeout=60))
         if not pdf:
             return ""
-        r = subprocess.run(["pdftotext", "-layout", "-l", "45", "-", "-"], input=pdf, capture_output=True, timeout=60)
-        pages = r.stdout.decode("utf-8", "replace").split("\f")
+        pages = page_texts(pdf, 45)
     except Exception:                                  # noqa: BLE001 — pdftotext 없음·암호 PDF
         return ""
     scored = []
@@ -209,8 +238,7 @@ def ir_pages(code, name, ends):
             if not pdf.startswith(b"%PDF"):
                 IR_TRACE.append(f"PDF 아님 {url[-40:]}")
                 continue
-            pr = subprocess.run(["pdftotext", "-layout", "-l", "80", "-", "-"], input=pdf, capture_output=True, timeout=90)
-            pages = pr.stdout.decode("utf-8", "replace").split("\f")
+            pages = page_texts(pdf, 80)
         except Exception as ex:                        # noqa: BLE001 — 403·시간 초과·깨진 PDF
             IR_TRACE.append(f"내려받기 실패 {url[-40:]} {ex!r}"[:150])
             continue
@@ -534,10 +562,10 @@ def week(B, d1, d2):
 
 
 def main():
-    import shutil
-    if not shutil.which("pdftotext"):
-        print("pdftotext 가 없다 — PDF 를 못 읽으면 결과가 전부 '표없음'이 된다. 돌리지 않는다.")
+    if not pdf_tool():
+        print("PDF 를 읽을 도구(pdftotext·pdfplumber)가 없다 — 결과가 전부 '표없음'이 된다. 돌리지 않는다.")
         sys.exit(1)
+    print("PDF 도구:", pdf_tool())
     args = sys.argv[1:]
     keys = [a for a in args if ":" in a]
     import ai_seg
