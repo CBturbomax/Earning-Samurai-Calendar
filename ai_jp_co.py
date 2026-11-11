@@ -48,7 +48,8 @@ For every filing, and for both CURRENT and PRIOR when printed, give:
 - "total": the consolidated total of that row (連結 / 合計) as printed.
 
 Rules: copy numbers exactly as printed (△ or brackets = negative). NEVER compute, subtract or estimate. If a period's table is not
-in the excerpt, leave that period out. Use one consistent set of segment names for the whole answer.
+in the excerpt, leave that period out. Use ONE consistent set of segment names for the whole answer: the same segment must
+have the identical name in every period (use our existing name if given, otherwise the Japanese name as printed in the latest filing).
 "u" = unit multiplier of the tables (百万円 -> 1000000, 千円 -> 1000, 億円 -> 100000000).
 
 Answer with ONLY JSON:
@@ -239,7 +240,10 @@ def one(B, key, db, verbose=False):
     except ValueError:
         return out + ["  답이 JSON 이 아니다: " + (raw or "")[:200]], 0
     u = float(ans.get("u") or 1)
-    cum = {}
+    cum, raw_keep = {}, {}
+    for k_, v_ in (((db["stocks"].get(key) or {}).get("cum")) or {}).items():      # 앞 실행이 읽어 둔 누계 — 다시 묻지 않고 짝으로 쓴다
+        s0, e0 = k_.split("/")
+        cum[(s0, e0)] = v_
     for k, x in (ans.get("spans") or {}).items():
         try:
             s, e = k.split("/")
@@ -256,10 +260,19 @@ def one(B, key, db, verbose=False):
                    " / ".join(f"{n} {round(v / 1e8):,}" for n, v in sg.items())[:150])
         if ok:
             cum[(s, e)] = sg
-    okey = {B.seg_key(n) or n: n for n in names}
+            raw_keep[f"{s}/{e}"] = sg
+    def nk(n):                                          # 이름 열쇠 — 띄어쓰기·'事業'·'関連'·'セグメント' 차이를 지운다(11/11: 장마다 조금씩 달리 적혀 21칸이 빼기에서 떨어졌다)
+        return B.seg_key(n) or re.sub(r"[\s\u3000・･·\-－—()（）]|事業|関連|セグメント|部門|グループ", "", str(n)).lower()
+    okey = {nk(n): n for n in names}
+    seen_nm = {}
 
-    def ren(row):                                       # 화면 이름으로(같은 것이면)
-        return {okey.get(B.seg_key(n) or n, n): v for n, v in row.items()}
+    def ren(row):                                       # 화면 이름으로(같은 것이면) — 화면에 없으면 이 답에서 처음 나온 표기로
+        out_ = {}
+        for n, v in row.items():
+            k_ = nk(n)
+            nm = okey.get(k_) or seen_nm.setdefault(k_, n)
+            out_[nm] = out_.get(nm, 0) + v
+        return out_
     got = {}
     for e in holes:
         me = next(((s, en) for (s, en) in cum if abs((_d(en) - _d(e)).days) <= 12), None)
@@ -300,10 +313,11 @@ def one(B, key, db, verbose=False):
                    ("" if good else f"  ← {'이름 안 겹침 ' if not over else ''}{'음수 부문 ' if neg else ''}{'비율' if not fits(r, base) else ''}"))
         if good:
             got[e] = {"seg": {n: v for n, v in q.items() if v}, "grade": "맞아떨어짐" if abs(r - 1) <= 0.012 else "비율 고름"}
-    if got:
+    if got or raw_keep:
         with LOCK:
             st = db["stocks"].setdefault(key, {"cur": fin.get("cur") or "JPY", "fill": 1, "q": {}})
             st["q"].update(got)
+            st.setdefault("cum", {}).update(raw_keep)        # 검산을 통과한 누계 원값 — 규칙을 고치면 AI 없이 다시 뺄 수 있게
             st["ts"] = date.today().isoformat()
     out.append(f"  → 빈 분기 {len(got)}/{len(holes)} 채움")
     return out, len(got)

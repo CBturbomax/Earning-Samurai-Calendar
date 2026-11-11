@@ -649,6 +649,7 @@ def load_fin():
     return out
 
 
+FPI_FILL = {}                   # 열쇠 -> {종료일: 그 분기 총매출} — 회사 단위로 읽어 빈칸을 메운 칸(ai_jp_co). 헌 줄이 어긋나 있으면 갈아 끼운다
 FPI_SEG = {}                    # 열쇠 -> {종료일: {사업부: 값}} — 검산을 통과한 분기만(load_fpi_seg 가 SEG 에 싣는다)
 
 
@@ -760,7 +761,9 @@ def load_fpi_pr(out):
                 continue
             segs[e] = x["seg"]
             n_cos += 1
-        if len(segs) >= 2:
+            if st.get("fill"):
+                FPI_FILL.setdefault(key, {})[e] = hit[1]             # 그 분기 총매출 — load_fpi_seg 가 헌 줄과 견줄 때 쓴다
+        if len(segs) >= (1 if st.get("fill") else 2):               # fill 은 한 칸이어도(11/11: 한 칸짜리 회사 43칸이 여기서 통째로 빠졌다)
             FPI_SEG[key] = segs
     if n_cos:
         print(f"  외국 기업 사업부(회사 단위로 읽은 것): {n_cos:,}칸 · {len(co):,}곳")
@@ -3254,7 +3257,15 @@ def load_fpi_seg():
         for e in sorted(segs):
             d = date.fromisoformat(e)
             if any(abs((h - d).days) <= 20 for h in have):
-                continue
+                # **그 자리에 헌 줄이 있어도, 어긋난 줄이면 갈아 끼운다**(11/11 — 화면이 버리는 줄이라 빈칸으로 보이던 자리 29칸).
+                # 새 값은 '합 ÷ 그 분기 총매출'이 검산을 통과한 칸이다. 헌 줄의 합이 새 값의 합과 5% 넘게 다를 때만(같으면 안 건드린다).
+                rv = (FPI_FILL.get(k) or {}).get(e)
+                oldrow = next((r for r in pts if abs((date.fromisoformat(r[0]) - d).days) <= 20 and any(v for v in r[1:])), None)
+                tot_new = sum(v for v in segs[e].values() if v)
+                tot_old = sum(v for v in oldrow[1:] if v) if oldrow else 0
+                if not rv or not oldrow or not tot_new or abs(tot_old / tot_new - 1) <= 0.05:
+                    continue
+                pts = [r for r in pts if r is not oldrow]
             row = {}
             for nm, v in segs[e].items():
                 hit = next((bn for bn in names if seg_key(bn) and seg_key(bn) == seg_key(nm)), None)
