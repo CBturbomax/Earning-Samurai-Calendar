@@ -136,10 +136,13 @@ def pdf_pages(code, fn, pn):
     scored = []
     for i, pg in enumerate(pages):
         flat = re.sub(r"[ \u3000]", "", pg)
-        if not re.search(r"セグメント", flat) or not re.search(r"\d{1,3},\d{3}", pg):
-            continue
-        sc = (3 if re.search(r"外部顧客", flat) else 0) + (2 if re.search(r"報告セグメント", flat) else 0) + \
-             (1 if re.search(r"セグメント情報", flat) else 0)
+        nums = len(re.findall(r"(?<![\d.])\d[\d,]*(?![\d.]*[%％])", pg))
+        if not re.search(r"セグメント", flat) or nums < 12:
+            continue                                     # 억 엔 단위 표는 쉼표 없는 숫자다(삿포로 2501: 512 · 126) — 쉼표가 아니라 숫자 수로 본다
+        # IFRS 회사는 '外部顧客' 대신 '外部収益·外部売上·セグメント収益' 이라 쓴다(11/12 아사히 2501 — 세그먼트 주석 쪽이 점수 1 로 떨어졌다)
+        sc = (3 if re.search(r"外部顧客|外部収益|外部売上|外部からの", flat) else 0) + (2 if re.search(r"報告セグメント|セグメント収益|セグメント売上", flat) else 0) + \
+             (1 if re.search(r"セグメント情報", flat) else 0) + \
+             (1 if re.search(r"売上(高|収益)|営業収益", flat) and nums >= 20 else 0)
         if sc >= 2:
             scored.append((-sc, i))
     out = []
@@ -173,7 +176,7 @@ def narrative(pages):
     for i, pg in enumerate(pages[:12]):
         flat = re.sub(r"[ \u3000\n]", "", pg)
         hits = SEG_SENT.findall(flat)
-        if len(hits) < 3 or not re.search(r"セグメント|事業別|部門別", flat):
+        if len(hits) < 3 or not re.search(r"セグメント|事業|部門", flat):     # 낱말 'セグメント' 는 앞 쪽에만 있고 문장은 다음 쪽에 이어지는 공시가 있다(7157)
             continue
         keep = []
         for sent in re.split(r"(?<=。)", flat):
