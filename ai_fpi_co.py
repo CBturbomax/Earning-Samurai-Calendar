@@ -529,7 +529,9 @@ def main():
                 [e for e in missing(B, k)[1] if e not in ((db["stocks"].get(k) or {}).get("q") or {})]
                 and (af.CAPS.get(k) or 0) >= float(os.environ.get("FPI_MIN_CAP", "0.7"))
                 and not extractive("us", "", B.INDUSTRIES.get(k, "") or "", k)]
-        print(f"{args[i + 1]}~{args[i + 2]} 미국 발표 회사 중 사업부 구멍이 있는 곳: {len(keys)}")
+        n0 = len(keys)
+        keys = [k for k in keys if (date.today() - _d((db.get("tried") or {}).get(k, "2000-01-01"))).days > 30]
+        print(f"{args[i + 1]}~{args[i + 2]} 미국 발표 회사 중 사업부 구멍이 있는 곳: {n0} · 이미 본 {n0 - len(keys)}곳 제외 → {len(keys)}")
     if "--days" in args:
         i = args.index("--days")
         mincap = float(os.environ.get("FPI_MIN_CAP", "0.7"))
@@ -551,6 +553,7 @@ def main():
         except Exception as ex:                          # noqa: BLE001
             lines, n = [f"  실패 {ex!r}"[:300]], 0
         with LOCK:
+            db.setdefault("tried", {})[key] = date.today().isoformat()     # 본 회사 — 대기줄(--days·--usdays)이 30일 안에는 다시 안 세운다
             res[key] = n
             print(f"== {key}")
             for line in lines:
