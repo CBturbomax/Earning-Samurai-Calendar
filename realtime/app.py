@@ -667,7 +667,9 @@ TG_OUT_EXTRACT = re.compile(
     r"metals and minerals|metal fabrication|\bcoal\b|steel|aluminum|^gold$|^silver$|^copper$|uranium")
 TG_OUT_EXTRACT_JP = {"鉱業", "石油", "石油・石炭製品", "非鉄金属", "非鉄金属製品", "金属製品", "鉄鋼", "ガス", "광업", "석유", "석유·석탄제품", "비철금속", "비철금속제품", "금속제품", "철강", "가스"}
 # 업종은 비철금속이지만 AI 수혜주(광케이블·반도체 소재)라 알림을 보내는 회사 — markets.EXTRACT_KEEP 과 같은 목록
-TG_KEEP = {"jp:5802", "jp:5801", "jp:5803", "jp:5805", "jp:5016", "jp:5706"}
+TG_KEEP = {"jp:5802", "jp:5801", "jp:5803", "jp:5805", "jp:5016", "jp:5706",
+     "jp:3436", "jp:3445", "jp:3433", "jp:5991",
+     "us:PH", "us:HWM", "us:GNRC", "us:ATI", "us:CRS", "us:BKR", "us:XE"}
 BIO_DESC = re.compile(r"創薬|新薬開発|バイオベンチャー|신약|바이오벤처|drug discovery|clinical[- ]stage|biopharmaceutical company",
                       re.I)
 MIN_KRW = float(os.environ.get("TG_MIN_KRW", "1e11"))      # 1,000억 원

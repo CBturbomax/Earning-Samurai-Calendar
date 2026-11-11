@@ -655,7 +655,7 @@ def queue(old, cand):
     try:
         from markets import extractive
         _ind = json.loads((HERE / "data" / "caps.json").read_text(encoding="utf-8")).get("industries", {})
-        low = {k[3:] for k, v in _ind.items() if k.startswith("us:") and extractive("us", "", v)}
+        low = {k[3:] for k, v in _ind.items() if k.startswith("us:") and extractive("us", "", v, k)}
     except (OSError, ValueError, ImportError):
         low = set()
     hot -= low
