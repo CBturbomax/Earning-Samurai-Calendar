@@ -414,6 +414,13 @@ def one(B, key, db):
             break
         ok, rep = check(B, key, ans, pr_q, all_ends, mine_before)
         ok = {e: x for e, x in ok.items() if e in chunk}             # 닻 분기는 이미 가진 값 — 다시 담지 않는다
+        if dom:
+            # **화면의 사업부 이름과 절반도 안 겹치는 답은 버린다**(11/11 CSCO: 화면은 제품군인데 답은 Product/Service — 다른 축이 섞여
+            # 빌드가 '개편'으로 보고 멀쩡한 네 분기를 잘랐다). 구멍을 메우는 것이지 축을 바꾸는 게 아니다.
+            pre = {B.seg_key(n) for n in names}
+            for e_ in [e_ for e_, x_ in ok.items() if len({B.seg_key(n) for n in x_["seg"]} & pre) * 2 < len(x_["seg"])]:
+                out.append(f"    {e_} ✗ 화면 이름과 안 겹친다 — 버림")
+                ok.pop(e_)
         if dom:                                          # 결산 분기 = 연간 − 앞 세 분기(이 답 또는 화면) — 합÷매출이 그 세 분기의 비율과 4% 안일 때만
             have = {p["end"]: p["rev"] for p in fin.get("points") or [] if p.get("end") and p.get("rev")}
             scr = {str(r[0]): {B.seg_key(n): v for n, v in zip(names, r[1:]) if v} for r in (B.SEG.get(key) or {}).get("pts") or []
