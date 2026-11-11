@@ -17,9 +17,10 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: '3.12'
-      - name: 🔎 ai_fpi — 캐나다 회사 6-K 에서 실적 표를 왜 못 고르나(11/10)
+      - name: 🔎 실시간 서버 로그 — 텔레그램 그림이 왜 바뀌었나(11/11)
         continue-on-error: true
-        run: python tools/ai/probe_fpi.py 1017413:000101741319000025 1017413:000101741319000012 1017413:000101741319000002 2>&1 | grep -v '^  [a-z_0-9]*\.json' > /tmp/probe.txt
+        run: |
+          { echo "== health"; curl -sS -m 30 "https://earning-samurai-calendar-production.up.railway.app/health" | head -c 1500; echo; echo "== log"; curl -sS -m 60 "https://earning-samurai-calendar-production.up.railway.app/api/log" | head -c 60000; } > /tmp/probe.txt 2>&1
       - name: 결과를 probe-out 가지에
         if: always()
         run: |
