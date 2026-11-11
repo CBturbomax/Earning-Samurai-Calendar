@@ -113,12 +113,15 @@ def pdf_pages(code, fn, pn):
     idx = sorted(i for _sc, i in scored)
     if idx:
         best = min(scored)[1]
-        run = [i for i in idx if best - 1 <= i <= best + 3][:4]
+        run = [i for i in idx if best - 1 <= i <= best + 2][:3]
     else:
         run = []
     for i in run:
         pg = "\n".join(re.sub(r" {3,}", "   ", ln.rstrip()) for ln in pages[i].splitlines() if ln.strip())
-        out.append(f"[PDF page {i + 1}]\n" + pg[:2800])
+        # 쪽을 자르지 않는다(11/11: 한 쪽에 전기·당기 표가 같이 있으면 2,800자에서 당기 표나 전기 표가 잘렸다 — 3769·2587 의 전기 누계가 안 왔다).
+        # 대신 숫자·세그먼트 낱말이 없는 긴 글줄(주석 문단)만 줄인다.
+        lines_ = [ln if (re.search(r"\d", ln) or len(ln) < 60) else ln[:60] + "…" for ln in pg.splitlines()]
+        out.append(f"[PDF page {i + 1}]\n" + "\n".join(lines_)[:6000])
     return re.sub(r"[\x00-\x08\x0b-\x1f\x7f]", " ", "\n--- page ---\n".join(out))
 
 
