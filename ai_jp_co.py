@@ -53,7 +53,10 @@ For every filing, and for both CURRENT and PRIOR when printed, give:
 Rules: copy numbers exactly as printed (△ or brackets = negative). NEVER compute, subtract or estimate. If a period's table is not
 in the excerpt, leave that period out. Use ONE consistent set of segment names for the whole answer: the same segment must
 have the identical name in every period (use our existing name if given, otherwise the Japanese name as printed in the latest filing).
-"u" = unit multiplier of the tables (百万円 -> 1000000, 千円 -> 1000, 億円 -> 100000000).
+Some excerpts are NARRATIVE SENTENCES instead of tables (e.g. 「日本事業の売上収益は1,505億円」): use those numbers for the segment named
+in the sentence or its heading; they are cumulative for the filing's CURRENT period unless the sentence says otherwise.
+Report EVERY number in million yen and set "u": 1000000 — convert 億円 by ×100 (1,505億円 -> 150500) and 千円 by ÷1000. This unit
+conversion is the only arithmetic allowed.
 
 Answer with ONLY JSON:
 {{"u": 1000000, "spans": {{"2024-04-01/2024-09-30": {{"seg": {{"日本": 1234, "北米": 567}}, "adj": -12, "total": 1789}}}}}}
@@ -154,7 +157,36 @@ def pdf_pages(code, fn, pn):
         # 대신 숫자·세그먼트 낱말이 없는 긴 글줄(주석 문단)만 줄인다.
         lines_ = [ln if (re.search(r"\d", ln) or len(ln) < 60) else ln[:60] + "…" for ln in pg.splitlines()]
         out.append(f"[PDF page {i + 1}]\n" + "\n".join(lines_)[:6000])
+    if not out:
+        out = narrative(pages)
     return re.sub(r"[\x00-\x08\x0b-\x1f\x7f]", " ", "\n--- page ---\n".join(out))
+
+
+SEG_SENT = re.compile(r"(売上高|売上収益|営業収益|営業収入|収益)は?[、,]?[^。]{0,40}?[\d,，.]+\s*(億|百万|千)円")
+
+
+def narrative(pages):
+    """**표가 없고 문장으로만 부문 매출을 적는 결산단신**(11/12 — 네트워크를 열고 산토리BF 2018년 1분기 단신을 직접 열어 보니 세그먼트 표는 없고
+    본문에 「日本事業の売上収益は1,505億円」「欧州事業…518億円」이라고 적혀 있었다. '표없음'으로 넘기던 공시의 태반이 이 꼴이다).
+    「経営成績に関する説明」 쪽에서 부문 머리말과 매출 문장만 추려 넘긴다 -> [쪽 글]"""
+    out = []
+    for i, pg in enumerate(pages[:12]):
+        flat = re.sub(r"[ \u3000\n]", "", pg)
+        hits = SEG_SENT.findall(flat)
+        if len(hits) < 3 or not re.search(r"セグメント|事業別|部門別", flat):
+            continue
+        keep = []
+        for sent in re.split(r"(?<=。)", flat):
+            head = re.findall(r"[\[［【<＜〔][^\]］】>＞〕。]{2,20}[\]］】>＞〕]", sent)
+            if SEG_SENT.search(sent):
+                keep.append((" ".join(head[-1:]) + " " if head else "") + sent[-170:])
+            elif head and len(sent) < 60:
+                keep.append(sent)
+        if len(keep) >= 3:
+            out.append(f"[PDF page {i + 1} — narrative sentences, not a table]\n" + "\n".join(keep)[:3500])
+        if len(out) >= 3:
+            break
+    return out
 
 
 def pdf_excerpt(code, fn, pn):
@@ -346,48 +378,59 @@ def one(B, key, db, verbose=False, tried=None):
         return st.isoformat()
     picked, spans, t0 = {}, {}, time.time()            # zip 이름 -> (공시일, 글, 그 공시의 기간들)
     hit_ee = set()
+    def yb(d_, n=-1):
+        return _d(d_).replace(year=_d(d_).year + n, day=min(_d(d_).day, 28)).isoformat()
+
+    def from_listed(base):
+        """XBRL 목록의 공시(zip 첨부 표 → PDF 쪽·문장 → PDF 줄) -> (이름, 공시일, 글, 기간들) 또는 None"""
+        x = doc_for(base)
+        if not x:
+            return None, "공시없음"
+        if x[1] in picked:
+            return None, "이미"
+        blob = af._patient(lambda: G.get(f"https://www2.jpx.co.jp/disc/{code}0/{x[1]}", timeout=60))
+        if not blob:
+            return None, "못받음"
+        sp = G.spans_of(F.read_summary(blob))
+        if sp:
+            spans.update(sp)
+        pn = x[2] or next((p_[1] for p_ in pdfs if p_[0] == x[0]), "")       # 짝 PDF 이름 — 목록이 못 줬으면 같은 날 결산단신 PDF
+        txt, how = seg_excerpt(blob), "zip"
+        if not txt:
+            txt, how = pdf_pages(code, x[1], pn), "pdf쪽"
+        if not txt:
+            txt, how = pdf_excerpt(code, x[1], pn), "pdf"
+        if txt and sp:
+            return (x[1], x[0], txt, sorted(sp)), how
+        return None, "표없음" if sp else "표없음·기간없음"
+
+    def from_old_pdf(base):
+        """XBRL 목록에 없는 옛 결산단신 PDF(표 쪽 또는 문장) — 기간은 결산월로 셈한다."""
+        c = [x for x in pdfs if 10 <= (_d(x[0]) - _d(base)).days <= 75 and x[1] not in picked]
+        if not c:
+            return None, "옛pdf없음"
+        txt = pdf_pages(code, "", c[0][1])
+        if not txt:
+            return None, "옛pdf·표없음"
+        st = fy_start(base)
+        return (c[0][1], c[0][0], txt, sorted([(st, base), (yb(st), yb(base))])), "옛pdf"
+
     for e in holes:
         import ai_fpi as P
         for ee in (e, P._back(_d(e), 3).isoformat()):
-            # 그 분기 공시에 표가 없으면 **한 해 뒤 같은 분기 공시**(전기 칸에 같은 누계가 실린다 — 11/11: 2018년 구멍의 태반이 이 길로 열린다)
-            for tag, x in (("", doc_for(ee)), ("+1y", doc_for(_d(ee).replace(year=_d(ee).year + 1, day=min(_d(ee).day, 28)).isoformat()))):
-                if not x:
-                    trace.append(f"{ee}{tag}:공시없음")
-                    continue
-                if x[1] in picked:
-                    break
-                if len(picked) >= MAX_DOCS:
-                    break
-                blob = af._patient(lambda: G.get(f"https://www2.jpx.co.jp/disc/{code}0/{x[1]}", timeout=60))
-                if not blob:
-                    continue
-                sp = G.spans_of(F.read_summary(blob))
-                txt = seg_excerpt(blob)
-                how = "zip"
-                if not txt:
-                    txt, how = pdf_pages(code, x[1], x[2]), "pdf쪽"
-                if not txt:
-                    txt, how = pdf_excerpt(code, x[1], x[2]), "pdf"
-                if sp:
-                    spans.update(sp)
-                trace.append(f"{ee}{tag}:{how if txt else '표없음'}{'' if sp else '·기간없음'}")
-                if txt and sp:
-                    picked[x[1]] = (x[0], txt, sorted(sp))
+            # 차례(11/12): 그 분기 공시(목록) → 그 분기의 옛 PDF(표가 없으면 **문장**) → 한 해 뒤 공시의 전기 칸 → 한 해 뒤 옛 PDF.
+            # 예전에는 '한 해 뒤 공시'가 먼저 잡히면 그 분기 제 공시를 안 열었는데, 전기 표가 없는 회사(3769)는 그 길로 영영 못 얻었다.
+            if len(picked) >= MAX_DOCS:
+                break
+            if ee in hit_ee:
+                continue
+            for tag, fn_, bd in (("", from_listed, ee), ("", from_old_pdf, ee), ("+1y", from_listed, yb(ee, 1)), ("+1y", from_old_pdf, yb(ee, 1))):
+                got_, how = fn_(bd)
+                trace.append(f"{ee}{tag}:{how}")
+                if got_:
+                    picked[got_[0]] = got_[1:]
                     hit_ee.add(ee)
                     break
-            if ee not in hit_ee and len(picked) < MAX_DOCS:          # 목록 밖의 옛 PDF
-                for tag, base_ee in (("", ee), ("+1y", _d(ee).replace(year=_d(ee).year + 1, day=min(_d(ee).day, 28)).isoformat())):
-                    c = [x for x in pdfs if 10 <= (_d(x[0]) - _d(base_ee)).days <= 75 and x[1] not in picked]
-                    if not c:
-                        continue
-                    txt = pdf_pages(code, "", c[0][1])
-                    trace.append(f"{ee}{tag}:{'옛pdf' if txt else '옛pdf·표없음'}")
-                    if txt:
-                        st = fy_start(base_ee)
-                        yb = lambda d_: _d(d_).replace(year=_d(d_).year - 1, day=min(_d(d_).day, 28)).isoformat()
-                        picked[c[0][1]] = (c[0][0], txt, sorted([(st, base_ee), (yb(st), yb(base_ee))]))
-                        hit_ee.add(ee)
-                        break
     out = [f"  빈 분기 {len(holes)}({holes[-1]}~{holes[0]}) · 평소 비율 {None if base is None else round(base, 2)} · "
            f"세그먼트 표가 든 공시 {len(picked)}장 · 글 {sum(len(v[1]) for v in picked.values()):,}자 · {time.time() - t0:.0f}초"]
     out.append("  공시 찾기: " + " ".join(trace)[:300])
