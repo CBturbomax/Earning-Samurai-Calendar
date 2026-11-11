@@ -351,3 +351,9 @@
   옛 기준 그림 안에서 이름만 바뀐 줄(끝난 다음 분기에 같은 크기로 시작 — 젠쇼 레스토랑→외식)도 한 줄로. ④의 합에는 나중에 생긴 새 부문도 넣는다(젠쇼 즉석식품).
   합쳐 이은 그림은 YoY 를 그린 값끼리만 견준다(`names.slice()` — 원자료를 섞으면 합친 첫 해가 +96% 로 튄다).
   수: 기준이 바뀐 2,744종목 중 ① 1,875 · ② 73 · ③ 131 · ④ 61 · JS 오류 0. 눈으로 본 것은 젠쇼·BSX·GPC·유니티 넷뿐 — 이상하게 이어진 종목이 보이면 비중 띠(0.88~1.14)부터 볼 것.
+- 11/11 **캐는 회사(광산·석유가스 생산·정유·석탄)는 텔레그램에 안 보내고 수집도 맨 뒷줄**(회원님: "미국에 쓰잘데없는 회사가 너무 많다 — 광산이든 정유든 채굴하는 회사").
+  판별은 `markets.extractive(mkt, sector, industry)` — 미국 나스닥 industry(Oil & Gas Production · Integrated oil Companies · Oil Refining/Marketing · Precious Metals ·
+  Metal Mining · Mining & Quarrying… · Other Metals and Minerals · Coal Mining), 홍콩 야후 industry(Gold·Copper·Coal·Oil & Gas E&P/Integrated/Refining…), 일본 업종(鉱業·石油·石油・石炭製品).
+  미국 326곳 · 홍콩 100곳. **엑슨·셰브런·셸·코노코 같은 큰 회사도 든다**(회원님이 '정유든'이라 하셨다 — 빼 달라 하시면 Integrated oil 만 풀 것). 유전 서비스·파이프라인·가스 배급·금속 가공은 안 든다.
+  쓰는 자리: 실시간 서버 `tg_pick`(가이던스 급상향이어도 안 보냄 — 서버는 같은 정규식을 `TG_OUT_EXTRACT` 로 따로 가진다, railway 가지에 app.py 만 얹어 배포) ·
+  `scrape_fin.queue`(순위 +10 · 빈칸 점검 새치기에서도 뺌) · `scrape_live_us` 순서(맨 뒤) · `ai_fill.targets`(first=2). 화면에서 빼지는 않는다.
