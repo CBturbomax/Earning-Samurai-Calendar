@@ -179,6 +179,7 @@ def pdf_pages(code, fn, pn):
 OMIT_RE = re.compile(r"単一セグメント|単一の(報告)?セグメント|報告セグメント[はが][^。]{0,30}のみ(であ|のため)|セグメント情報(等)?の?記載を省略|セグメント情報(等)?は?、?[^。]{0,40}省略")
 SINGLE_RE = re.compile(r"単一セグメント|単一の(報告)?セグメント|報告セグメント[はが][^。]{0,30}のみ(であ|のため)")
 SINGLE = set()                  # (코드, PDF 이름) — 스스로 단일 사업부라 적은 공시
+NOTAB_VER = 1                   # 표·문장 고르기(pdf_pages·narrative·seg_excerpt)를 고치면 올린다 — fpi_co.json 의 notab 을 비우고 다시 본다
 OMIT = set()                    # (코드, PDF 이름) — pdf_pages 가 채운다
 SKIPQ = {}                      # 열쇠 -> {종료일} — main 이 파일에서 읽어 채운다(all_holes 가 뺀다)
 SEG_SENT = re.compile(r"(売上高|売上収益|営業収益|営業収入|収益)は?[、,]?[^。]{0,40}?[\d,，.]+\s*(億|百万|千)円")
@@ -403,7 +404,11 @@ def one(B, key, db, verbose=False, tried=None):
     omit_q = set()                                       # 제 공시가 '기재 생략'이라고 한 분기(종료일)
 
     def yb(d_, n=-1):
-        return _d(d_).replace(year=_d(d_).year + n, day=min(_d(d_).day, 28)).isoformat()
+        d0 = _d(d_)                                     # 월말은 월말로(3/31 -> 3/31) — 28일로 깎았더니 같은 기간이 '3-28'·'3-31' 두 벌로 섰다
+        try:
+            return d0.replace(year=d0.year + n).isoformat()
+        except ValueError:
+            return d0.replace(year=d0.year + n, day=28).isoformat()
 
     def from_listed(base):
         """XBRL 목록의 공시(zip 첨부 표 → PDF 쪽·문장 → PDF 줄) -> (이름, 공시일, 글, 기간들) 또는 None"""
@@ -445,6 +450,7 @@ def one(B, key, db, verbose=False, tried=None):
         st = fy_start(base)
         return (c[0][1], c[0][0], txt, sorted([(st, base), (yb(st), yb(base))])), "옛pdf"
 
+    att = {}
     for e in holes:
         import ai_fpi as P
         for ee in (e, P._back(_d(e), 3).isoformat()):
@@ -457,10 +463,20 @@ def one(B, key, db, verbose=False, tried=None):
             for tag, fn_, bd in (("", from_listed, ee), ("", from_old_pdf, ee), ("+1y", from_listed, yb(ee, 1)), ("+1y", from_old_pdf, yb(ee, 1))):
                 got_, how = fn_(bd)
                 trace.append(f"{ee}{tag}:{how}")
+                att.setdefault(ee, []).append(how)
                 if got_:
                     picked[got_[0]] = got_[1:]
                     hit_ee.add(ee)
                     break
+    # **제 공시를 열었는데 세그먼트 표도 문장도 없는 분기는 다시 안 본다**(11/12 — 보험사 도쿄해상 8766·다이이치 8750·솜포 8630 은 1~3분기 단신에
+    # 세그먼트를 안 싣는다. 그 칸들이 '그 분기 누계가 없다'로 매번 되돌아와 79곳 943칸의 태반을 차지했다). 표 고르기를 고치면 NOTAB_VER 를 올려 다시 본다.
+    nt = sorted(e for e in holes if e not in hit_ee and att.get(e) and not any(h in ("이미", "못받음") for h in att[e])
+                and (any("표없음" in h for h in att[e]) or (pdfs and docs)))   # 공시 자체가 보관소에 없는 분기(상장 전)도 같다 — 목록을 받았을 때만
+    if nt:
+        with LOCK:
+            db["notab_v"] = NOTAB_VER
+            db.setdefault("notab", {})[key] = sorted(set(db.get("notab", {}).get(key, [])) | set(nt))
+            SKIPQ.setdefault(key, set()).update(nt)
     out = [f"  빈 분기 {len(holes)}({holes[-1]}~{holes[0]}) · 평소 비율 {None if base is None else round(base, 2)} · "
            f"세그먼트 표가 든 공시 {len(picked)}장 · 글 {sum(len(v[1]) for v in picked.values()):,}자 · {time.time() - t0:.0f}초"]
     out.append("  공시 찾기: " + " ".join(trace)[:300])
@@ -769,6 +785,10 @@ def main():
     db.setdefault("stocks", {})
     for k_, v_ in (db.get("skipq") or {}).items():
         SKIPQ[k_] = set(v_)
+    if db.get("notab_v") != NOTAB_VER:
+        db.pop("notab", None)
+    for k_, v_ in (db.get("notab") or {}).items():
+        SKIPQ.setdefault(k_, set()).update(v_)
     import build as B
     import ai_fill as af
     import ai_web_co
