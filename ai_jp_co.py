@@ -198,27 +198,31 @@ def one(B, key, db, verbose=False):
     for e in holes:
         import ai_fpi as P
         for ee in (e, P._back(_d(e), 3).isoformat()):
-            x = doc_for(ee)
-            if not x:
-                trace.append(f"{ee}:공시없음")
-                continue
-            if x[1] in picked or len(picked) >= MAX_DOCS:
-                continue
-            blob = af._patient(lambda: G.get(f"https://www2.jpx.co.jp/disc/{code}0/{x[1]}", timeout=60))
-            if not blob:
-                continue
-            sp = G.spans_of(F.read_summary(blob))
-            txt = seg_excerpt(blob)
-            how = "zip"
-            if not txt:
-                txt, how = pdf_pages(code, x[1], x[2]), "pdf쪽"
-            if not txt:
-                txt, how = pdf_excerpt(code, x[1], x[2]), "pdf"
-            if sp:
-                spans.update(sp)
-            if txt and sp:
-                picked[x[1]] = (x[0], txt, sorted(sp))
-            trace.append(f"{ee}:{how if txt else '표없음'}{'' if sp else '·기간없음'}")
+            # 그 분기 공시에 표가 없으면 **한 해 뒤 같은 분기 공시**(전기 칸에 같은 누계가 실린다 — 11/11: 2018년 구멍의 태반이 이 길로 열린다)
+            for tag, x in (("", doc_for(ee)), ("+1y", doc_for(_d(ee).replace(year=_d(ee).year + 1, day=min(_d(ee).day, 28)).isoformat()))):
+                if not x:
+                    trace.append(f"{ee}{tag}:공시없음")
+                    continue
+                if x[1] in picked:
+                    break
+                if len(picked) >= MAX_DOCS:
+                    break
+                blob = af._patient(lambda: G.get(f"https://www2.jpx.co.jp/disc/{code}0/{x[1]}", timeout=60))
+                if not blob:
+                    continue
+                sp = G.spans_of(F.read_summary(blob))
+                txt = seg_excerpt(blob)
+                how = "zip"
+                if not txt:
+                    txt, how = pdf_pages(code, x[1], x[2]), "pdf쪽"
+                if not txt:
+                    txt, how = pdf_excerpt(code, x[1], x[2]), "pdf"
+                if sp:
+                    spans.update(sp)
+                trace.append(f"{ee}{tag}:{how if txt else '표없음'}{'' if sp else '·기간없음'}")
+                if txt and sp:
+                    picked[x[1]] = (x[0], txt, sorted(sp))
+                    break
     out = [f"  빈 분기 {len(holes)}({holes[-1]}~{holes[0]}) · 평소 비율 {None if base is None else round(base, 2)} · "
            f"세그먼트 표가 든 공시 {len(picked)}장 · 글 {sum(len(v[1]) for v in picked.values()):,}자 · {time.time() - t0:.0f}초"]
     out.append("  공시 찾기: " + " ".join(trace)[:300])
@@ -233,7 +237,12 @@ def one(B, key, db, verbose=False):
         body.append(f"### FILING published {pub} — CURRENT = {cur[0]}/{cur[1]}" + (f" · PRIOR = {pri[0][0]}/{pri[0][1]}" if pri else "") + "\n" + txt)
     if verbose:
         out.append("  ---- 첫 공시 발췌 ----\n" + body[0][:1500])
-    raw = ask(PROMPT.format(code=code, segs=json.dumps(names[:14], ensure_ascii=False), n=len(body), docs="\n\n".join(body)))
+    targets = ("\n\nTARGET QUARTERS (three-month periods we want, by quarter end date): " + ", ".join(sorted(holes)) +
+               '\nAfter "spans", also add "q": for each target quarter the THREE-MONTH external sales per segment = cumulative to that '
+               "quarter end minus cumulative to the previous quarter end of the same fiscal year (for the first fiscal quarter, the "
+               'cumulative itself). Only when both cumulative tables are in the excerpts. Same names as in "spans". '
+               'Format: "q": {"2018-09-30": {"seg": {"日本": 12, "北米": 3}}}.')
+    raw = ask(PROMPT.format(code=code, segs=json.dumps(names[:14], ensure_ascii=False), n=len(body), docs="\n\n".join(body)) + targets)
     mm = re.search(r"\{.*\}", raw or "", re.S)
     try:
         ans = json.loads(mm.group(0)) if mm else {}
@@ -313,6 +322,23 @@ def one(B, key, db, verbose=False):
                    ("" if good else f"  ← {'이름 안 겹침 ' if not over else ''}{'음수 부문 ' if neg else ''}{'비율' if not fits(r, base) else ''}"))
         if good:
             got[e] = {"seg": {n: v for n, v in q.items() if v}, "grade": "맞아떨어짐" if abs(r - 1) <= 0.012 else "비율 고름"}
+    # 코드가 못 뺀 칸(두 누계의 이름이 달랐거나 한쪽이 누계 검산에서 떨어진 칸) — **모델이 뺀 값**을 더 좁은 검산으로 받는다:
+    # 합이 그 분기 총매출과 1.2% 안(또는 평소 비율 ±3%) · 화면 이름과 절반↑ · 음수 없음.
+    for e, x in ((ans.get("q") or {}) if isinstance(ans.get("q"), dict) else {}).items():
+        he = next((h for h in holes if h not in got and re.match(r"\d{4}-\d\d-\d\d$", str(e)) and abs((_d(h) - _d(e)).days) <= 12), None)
+        sg = {str(n).strip()[:40]: float(v) * u for n, v in ((x or {}).get("seg") or {}).items() if isinstance(v, (int, float)) and v} \
+            if isinstance(x, dict) else {}
+        near = min(rev, key=lambda y: abs((_d(y) - _d(he)).days), default=None) if he else None
+        if not he or len(sg) < 2 or not near or abs((_d(near) - _d(he)).days) > 20:
+            continue
+        q = ren(sg)
+        tot = sum(q.values())
+        r = tot / rev[near]
+        good = (abs(r - 1) <= 0.012 or (base is not None and abs(r - base) <= 0.03)) and \
+            (len([n for n in q if n in names]) * 2 >= len(q) if names else True) and all(v > -0.02 * abs(tot) for v in q.values())
+        out.append(f"    {he} {'✓' if good else '✗'} (모델이 뺌) 합÷매출 {r:.2f} · " + " / ".join(f"{n} {round(v / 1e8):,}" for n, v in q.items())[:140])
+        if good:
+            got[he] = {"seg": {n: v for n, v in q.items() if v}, "grade": "모델이 뺌"}
     if got or raw_keep:
         with LOCK:
             st = db["stocks"].setdefault(key, {"cur": fin.get("cur") or "JPY", "fill": 1, "q": {}})
