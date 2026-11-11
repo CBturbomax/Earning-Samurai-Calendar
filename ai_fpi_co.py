@@ -244,6 +244,8 @@ def check(B, key, ans, pr_q, all_ends=(), mine_before=()):
         for n in rows[e]["seg"]:
             cnt[B.seg_key(n)] = cnt.get(B.seg_key(n), 0) + 1
     core = {k for k, c in cnt.items() if c > len(ratio) / 2}
+    import ai_jp_co
+    base0 = ai_jp_co.base_ratio(B, key)
     ok, rep = {}, []
     for i, e in enumerate(ends):
         r = rows[e]
@@ -252,7 +254,7 @@ def check(B, key, ans, pr_q, all_ends=(), mine_before=()):
         if e in ratio:
             exact = abs((sum(r["seg"].values()) + r["elim"]) / r["have"] - 1) <= 0.01 or abs(ratio[e] - 1) <= 0.01
             nb = [ratio[x] for x in ends[max(0, i - 4):i + 5] if x != e and x in ratio]
-            mid = sorted(nb)[len(nb) // 2] if len(nb) >= 3 else None
+            mid = sorted(nb)[len(nb) // 2] if len(nb) >= 3 else base0      # 이 답에 이웃이 모자라면 화면의 평소 비율(구멍 한두 칸만 메울 때)
             steady = mid is not None and abs(ratio[e] / mid - 1) <= (0.25 if mid >= 1.3 else 0.12) and 0.8 <= ratio[e] <= 2.6
             grade = "맞아떨어짐" if exact else ("비율 고름" if steady else "")
             if not grade:
