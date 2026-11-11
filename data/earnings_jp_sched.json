@@ -1,13 +1,13 @@
 {
  "source": "JPX 결산발표 예정일",
  "source_url": "https://www.jpx.co.jp/listing/event-schedules/financial-announcement/index.html",
- "fetched": "2026-11-11T16:36+09:00",
+ "fetched": "2026-11-11T18:56+09:00",
  "files": [
   "kessan09_1106.xlsx",
   "kessan10_1106.xlsx",
   "kessan.xlsx"
  ],
- "count": 3177,
+ "count": 3179,
  "ok_days": [
   "2026-11-11",
   "2026-11-12",
@@ -15729,6 +15729,15 @@
   },
   {
    "date": "2026-11-12",
+   "code": "1981",
+   "name": "協和日成",
+   "fy": "3月期",
+   "kind": "第２",
+   "sector": "建設業",
+   "market": "東証"
+  },
+  {
+   "date": "2026-11-12",
    "code": "2114",
    "name": "フジ日本",
    "fy": "3月期",
@@ -18737,6 +18746,15 @@
    "date": "2026-11-12",
    "code": "8101",
    "name": "ＧＳＩクレオス",
+   "fy": "3月期",
+   "kind": "第２",
+   "sector": "卸売業",
+   "market": "東証"
+  },
+  {
+   "date": "2026-11-12",
+   "code": "8105",
+   "name": "Ｂｉｔｃｏｉｎ　Ｊａｐａｎ",
    "fy": "3月期",
    "kind": "第２",
    "sector": "卸売業",
