@@ -181,38 +181,56 @@ window.tgBuild = function (ev, gh) {
 """
 
 
+LAST_ERR = [""]                 # 마지막 실패 까닭 — app 이 로그에 같이 적는다(예전엔 stderr 로만 가서 /api/log 에 안 보였다)
+
+
 def _worker(get_html):
+    """사이트를 띄워 두고 그림을 찍는다. **브라우저가 죽으면 새로 띄운다**(11/11 — 크로미움이 한 번 죽은 뒤 모든 알림이
+    예비 그림(matplotlib)으로 나갔다. 예전 루프는 죽은 브라우저를 붙들고 new_page 만 되풀이했다). 연달아 두 번 실패하면 통째로 다시."""
+    import time
     from playwright.sync_api import sync_playwright
-    with sync_playwright() as pw:
-        exe = os.environ.get("CHROMIUM_PATH") or None
-        br = pw.chromium.launch(args=["--no-sandbox"], executable_path=exe)
-        page, ver = None, -1
-        while True:
-            job = JOBS.get()
-            if job is None:
-                return
-            ev, gh, box, done = job
-            try:
-                if page is None or ver != _page["ver"]:
-                    if page:
-                        page.close()
-                    page = br.new_page(viewport={"width": 960, "height": 1200}, device_scale_factor=2)
-                    # 사이트가 열리며 실시간 서버에 다시 붙지 않게 막는다.
-                    page.route("**/*railway.app/**", lambda r: r.abort())
-                    page.set_content(get_html(), wait_until="domcontentloaded", timeout=120000)
-                    page.add_script_tag(content=GUIDE_JS)
-                    page.wait_for_timeout(800)
-                    ver = _page["ver"]
-                if ev is None:                                   # 미리 띄워 두기만
-                    continue
-                n = page.evaluate("([ev, gh]) => tgBuild(ev, gh)", [ev, gh])
-                page.add_style_tag(content=".finbox{overflow:visible!important}.finsvg{min-width:0!important;width:100%!important}")
-                box["pngs"] = [el.screenshot(type="png") for el in page.query_selector_all("#tgshot .tgpart")][:n]
-            except Exception:                                    # noqa: BLE001
-                traceback.print_exc(limit=3)
-                page = None
-            finally:
-                done.set()
+    while True:
+        try:
+            with sync_playwright() as pw:
+                exe = os.environ.get("CHROMIUM_PATH") or None
+                br = pw.chromium.launch(args=["--no-sandbox"], executable_path=exe)
+                page, ver, fails = None, -1, 0
+                while fails < 2:
+                    job = JOBS.get()
+                    if job is None:
+                        return
+                    ev, gh, box, done = job
+                    try:
+                        if page is None or ver != _page["ver"]:
+                            if page:
+                                page.close()
+                            page = br.new_page(viewport={"width": 960, "height": 1200}, device_scale_factor=2)
+                            # 사이트가 열리며 실시간 서버에 다시 붙지 않게 막는다.
+                            page.route("**/*railway.app/**", lambda r: r.abort())
+                            page.set_content(get_html(), wait_until="domcontentloaded", timeout=120000)
+                            page.add_script_tag(content=GUIDE_JS)
+                            page.wait_for_timeout(800)
+                            ver = _page["ver"]
+                        if ev is not None:                               # None = 미리 띄워 두기만
+                            n = page.evaluate("([ev, gh]) => tgBuild(ev, gh)", [ev, gh])
+                            page.add_style_tag(content=".finbox{overflow:visible!important}.finsvg{min-width:0!important;width:100%!important}")
+                            box["pngs"] = [el.screenshot(type="png") for el in page.query_selector_all("#tgshot .tgpart")][:n]
+                        fails = 0
+                    except Exception:                                    # noqa: BLE001
+                        LAST_ERR[0] = traceback.format_exc(limit=2)[-400:]
+                        traceback.print_exc(limit=3)
+                        page = None
+                        fails += 1
+                    finally:
+                        done.set()
+                try:
+                    br.close()
+                except Exception:                                        # noqa: BLE001
+                    pass
+        except Exception:                                                # noqa: BLE001 — 브라우저를 못 띄움
+            LAST_ERR[0] = traceback.format_exc(limit=2)[-400:]
+            traceback.print_exc(limit=3)
+        time.sleep(5)
 
 
 def start(get_html):
