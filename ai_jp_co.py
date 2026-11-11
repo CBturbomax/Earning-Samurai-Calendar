@@ -23,6 +23,7 @@ from datetime import date, datetime, timezone
 from pathlib import Path
 
 HERE = Path(__file__).parent
+NAMES = {}                      # 열쇠 -> 회사 이름(검색에 쓴다) — main 이 채운다
 OUT = HERE / "data" / "fpi_co.json"
 LOCK = threading.Lock()
 MAX_TOK = int(os.environ.get("FPI_TOKENS", "1000000"))
@@ -159,6 +160,72 @@ def pdf_excerpt(code, fn, pn):
     return re.sub(r"[\x00-\x08\x0b-\x1f\x7f]", " ", "\n".join(out))
 
 
+def ir_pages(code, name, ends):
+    """**회사 IR 자료를 웹에서 찾아 우리가 직접 내려받는다**(회원님 11/12: "수단과 방법을 가리지 말고 다 동원").
+    결산단신에 그 분기 세그먼트 표가 없을 때의 다음 수단 — 決算説明資料·決算補足資料·四半期報告書 PDF 에는 분기 부문 매출이 실려 있는 일이 많다.
+    모델의 열람 도구(WebFetch)는 일본 IR 사이트에서 403 을 받으므로(11/11 실측) **검색으로 주소만 받고**(WebSearch) 내려받기·글 펴기는 러너가 한다.
+    -> [(주소, 쪽 글)]"""
+    import subprocess
+    import tempfile
+    import urllib.request
+    q = ("Find direct PDF URLs of this Japanese listed company's own investor-relations documents that print QUARTERLY segment sales "
+         "(セグメント別売上高) for the periods listed. Good documents: 決算説明資料, 決算補足資料 / データブック / ファクトブック, 四半期報告書, 決算短信. "
+         f"Company: {name} (TSE code {code}). Quarter ends needed: {', '.join(sorted(ends))}.\n"
+         "Use web search only. Prefer PDFs on the company's own site or its IR host (eir-parts.net, xj-storage.jp, irpocket.com, pronexus). "
+         'Answer with ONLY JSON: {"docs": [{"url": "https://...pdf", "covers": "2018-06-30", "kind": "決算説明資料"}]} — at most 8 URLs, '
+         "direct .pdf links only, no search-result pages.")
+    cmd = ["claude", "-p", "--output-format", "json", "--max-turns", "12", "--tools", "WebSearch", "--allowedTools", "WebSearch",
+           "--system-prompt", "You find primary-source documents with web search and reply with JSON only.",
+           "--strict-mcp-config", "--disable-slash-commands"]
+    if os.environ.get("AI_MODEL"):
+        cmd += ["--model", os.environ["AI_MODEL"]]
+    import ai_seg
+    try:
+        r = subprocess.run(cmd, input=q, cwd=tempfile.gettempdir(), capture_output=True, text=True, timeout=600)
+        j = json.loads(r.stdout)
+        u = j.get("usage") or {}
+        with LOCK:
+            ai_seg.USED["in"] += (u.get("input_tokens") or 0) + (u.get("cache_creation_input_tokens") or 0) + (u.get("cache_read_input_tokens") or 0)
+            ai_seg.USED["out"] += u.get("output_tokens") or 0
+            ai_seg.USED["n"] += 1
+        mm = re.search(r"\{.*\}", j.get("result") or "", re.S)
+        docs = (json.loads(mm.group(0)).get("docs") or []) if mm else []
+    except Exception:                                  # noqa: BLE001
+        return []
+    out = []
+    for d in docs[:8]:
+        url = str((d or {}).get("url") or "")
+        if not url.lower().startswith("http") or ".pdf" not in url.lower():
+            continue
+        try:
+            req = urllib.request.Request(url, headers={"User-Agent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 Chrome/126 Safari/537.36",
+                                                       "Accept-Language": "ja,en;q=0.8"})
+            with urllib.request.urlopen(req, timeout=40) as resp:
+                pdf = resp.read(30_000_000)
+            if not pdf.startswith(b"%PDF"):
+                continue
+            pr = subprocess.run(["pdftotext", "-layout", "-l", "80", "-", "-"], input=pdf, capture_output=True, timeout=90)
+            pages = pr.stdout.decode("utf-8", "replace").split("\f")
+        except Exception:                              # noqa: BLE001 — 403·시간 초과·깨진 PDF
+            continue
+        scored = []
+        for i, pg in enumerate(pages):
+            flat = re.sub(r"[ \u3000]", "", pg)
+            if not re.search(r"セグメント|事業別|部門別|事業区分", flat) or not re.search(r"売上|収益", flat) or len(re.findall(r"\d{1,3},\d{3}|\d{3,}", pg)) < 6:
+                continue
+            sc = (2 if re.search(r"四半期|[1-4]Q|Q[1-4]|3ヶ月|３ヶ月|3か月", flat) else 0) + (1 if re.search(r"セグメント", flat) else 0)
+            scored.append((-sc, i))
+        txt = []
+        for _sc, i in sorted(sorted(scored)[:3], key=lambda t: t[1]):
+            pg = "\n".join(re.sub(r" {3,}", "   ", ln.rstrip()) for ln in pages[i].splitlines() if ln.strip())
+            txt.append(f"[PDF page {i + 1}]\n" + pg[:2600])
+        if txt:
+            out.append((url, re.sub(r"[\x00-\x08\x0b-\x1f\x7f]", " ", "\n--- page ---\n".join(txt))))
+        if len(out) >= 4:
+            break
+    return out
+
+
 def ask(prompt):
     import ai_fpi_co as C
     return C.ask(prompt)
@@ -249,15 +316,25 @@ def one(B, key, db, verbose=False, tried=None):
     out = [f"  빈 분기 {len(holes)}({holes[-1]}~{holes[0]}) · 평소 비율 {None if base is None else round(base, 2)} · "
            f"세그먼트 표가 든 공시 {len(picked)}장 · 글 {sum(len(v[1]) for v in picked.values()):,}자 · {time.time() - t0:.0f}초"]
     out.append("  공시 찾기: " + " ".join(trace)[:300])
-    if not picked:
+    irs = []
+    if os.environ.get("JPCO_IR", "1") == "1":
+        got_end = {s_[1] for v in picked.values() for s_ in v[2]}
+        lack = [e for e in holes if not any(abs((_d(e) - _d(g)).days) <= 12 for g in got_end)] or (holes if not picked else [])
+        if lack:
+            irs = ir_pages(code, NAMES.get(key) or code, lack)
+            out.append(f"  IR 자료(웹): 못 구한 분기 {len(lack)} → 내려받은 PDF {len(irs)}장 " + " ".join(u.rsplit('/', 1)[-1][:28] for u, _t in irs))
+    if not picked and not irs:
         with LOCK:
             db.setdefault("none", {})[key] = date.today().isoformat()
-        return out + ["  세그먼트 표를 못 찾았다(zip 에 첨부가 없던 시절이거나 표가 그림) — 안 묻는다(토큰 0)"], 0
+        return out + ["  세그먼트 표를 못 찾았다(결산단신에도 IR 자료에도) — 안 묻는다"], 0
     body = []
     for _fn, (pub, txt, sps) in sorted(picked.items(), key=lambda kv: kv[1][0]):
         cur = max(sps, key=lambda s: s[1])
         pri = [s for s in sps if s != cur and abs((_d(cur[1]) - _d(s[1])).days - 365) <= 6]
         body.append(f"### FILING published {pub} — CURRENT = {cur[0]}/{cur[1]}" + (f" · PRIOR = {pri[0][0]}/{pri[0][1]}" if pri else "") + "\n" + txt)
+    for url, txt in irs:
+        body.append(f"### FILING (company IR material from the web: {url}) — its periods are NOT given: read each table's period from "
+                    "the page itself. Three-month (quarter-only) tables are welcome: report them with their own start and end dates.\n" + txt)
     if verbose:
         out.append("  ---- 첫 공시 발췌 ----\n" + body[0][:1500])
     targets = ("\n\nTARGET QUARTERS (three-month periods we want, by quarter end date): " + ", ".join(sorted(holes)) +
@@ -286,6 +363,10 @@ def one(B, key, db, verbose=False, tried=None):
         if len(sg) < 2:
             continue
         crev = next((v for (s2, e2), v in spans.items() if abs((_d(s2) - _d(s)).days) <= 6 and abs((_d(e2) - _d(e)).days) <= 6), None)
+        if crev is None:                                # IR 자료에서 읽은 기간 — 우리 분기 매출을 더해 잣대로(그 기간의 분기가 다 있을 때만)
+            inq = [v for d0, v in rev.items() if _d(s) < _d(d0) <= _d(e) + (date.resolution * 12)]
+            need_n = max(1, round((_d(e) - _d(s)).days / 91.3))
+            crev = sum(inq) if len(inq) == need_n else None
         r = sum(sg.values()) / crev if crev else None
         ok = r is not None and fits(r, base)
         out.append(f"    누계 {s}~{e} {'✓' if ok else '✗'} 합÷매출 {None if r is None else round(r, 2)} · " +
@@ -414,6 +495,8 @@ def main():
     db.setdefault("stocks", {})
     import build as B
     import ai_fill as af
+    import ai_web_co
+    NAMES.update(ai_web_co.names_map())
     if "--days" in args:
         i = args.index("--days")
         keys = week(B, args[i + 1], args[i + 2])
