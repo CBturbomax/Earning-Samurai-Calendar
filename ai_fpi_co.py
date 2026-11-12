@@ -201,6 +201,40 @@ def filing_text(cik, acc, geo=False, names=()):
     return seg_text(raws, geo=geo, names=names)
 
 
+def six_k_rich(cik):
+    """[(접수일, 접수번호, 본문 파일 이름, 크기)] — 6-K 전부(2018-04 이후). **분기마다 6-K 를 30~40건 내는 회사**(페트로브라스 31·브라스켐 41)는
+    날짜순 앞 열 건 안에 실적 공시가 없다(11/13: 재무제표가 열두 번째라 한 번도 못 열었다). 제출 목록의 이름·크기로 고른다."""
+    import ai_fill as af
+    j = json.loads(af.sec(af.SUBS.format(cik=cik)) or "{}")
+    blocks = [j.get("filings", {}).get("recent", {})]
+    for f in j.get("filings", {}).get("files", []) or []:
+        if (f.get("filingTo") or "") >= "2018-04-01":
+            try:
+                blocks.append(json.loads(af.sec(af.SUBS_OLD.format(name=f["name"])) or "{}"))
+            except ValueError:
+                pass
+    out = {}
+    for r in blocks:
+        for i, form in enumerate(r.get("form", [])):
+            if form == "6-K" and r["filingDate"][i] >= "2018-04-01":
+                acc = r["accessionNumber"][i].replace("-", "")
+                out[acc] = (r["filingDate"][i], acc, (r.get("primaryDocument") or [""] * (i + 1))[i] or "",
+                            int((r.get("size") or [0] * (i + 1))[i] or 0))
+    return sorted(out.values())
+
+
+RESULT_NAME = re.compile(r"(?i)(fs|itr|dfp|ifrs|pr|er|earn|result|release|interim|report|[1-4]q\d\d|q[1-4]|\dq)")
+
+
+def pick_six(rich, e, n=3):
+    """분기 끝 e 의 실적 6-K 후보 n건 — 분기 끝 뒤 10~100일, 이름에 실적 낱말이 있는 것 먼저, 그다음 큰 것부터."""
+    c = [f for f in rich if 10 <= (_d(f[0]) - _d(e)).days <= 100]
+    if len(c) <= n:
+        return c
+    c.sort(key=lambda f: (0 if RESULT_NAME.search(re.sub(r"(?i)_?6-?k\d*\.htm.*$|\d{6,8}", "", f[2])) else 1, -f[3]))
+    return c[:n]
+
+
 def ask(prompt):
     """claude -p 한 번(프롬프트는 표준입력으로 — 10만 자가 넘으면 인자 길이 제한에 걸린다)."""
     import ai_seg
@@ -405,6 +439,7 @@ def one(B, key, db):
     fin = B.FIN.get(key) or {}
     all_ends, miss = missing(B, key)
     files = P.six_k(int(cik))
+    rich = six_k_rich(int(cik)) if files else []
     dom = not files                                     # 6-K 가 없다 = 미국 국내 기업(10-Q·10-K) — 화면에 사업부가 있는 회사의 구멍만 메운다
     ufiles = []
     if dom:
@@ -464,13 +499,18 @@ def one(B, key, db):
                 if len(docs) > n_before:
                     doc_ends.add(e)
                 continue
-            for fd, acc in [f for f in files if 10 <= (_d(f[0]) - _d(e)).days <= 100][:10]:
+            best = None                                  # 후보 셋을 다 열어 **부문 표가 가장 많이 든 것**을 쓴다(처음 열리는 것이 아니라)
+            for fd, acc, _nm_, _sz in pick_six(rich, e):
                 if any(acc == a for _f, a, _t in docs):
+                    best = None
                     break
                 txt = filing_text(int(cik), acc, geo, names)
                 if txt:
-                    docs.append((fd, acc, txt))
-                    break
+                    sc_ = (len(SEGWORD.findall(txt)) * 400 + len(txt), fd, acc, txt)
+                    if best is None or sc_ > best:
+                        best = sc_
+            if best:
+                docs.append(best[1:])
             if len(docs) > n_before:
                 doc_ends.add(e)
         segdocs = sum(1 for _f, _a, t in docs if SEGWORD.search(t) or "[before table:" in t and t.count("--- table ---") >= 2)
