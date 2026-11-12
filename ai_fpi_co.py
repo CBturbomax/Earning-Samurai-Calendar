@@ -70,11 +70,12 @@ def _d(s):
 
 REVTERM = re.compile(r"(?i)\b(revenues?|sales|turnover)\b")
 NOTREV = re.compile(r"(?i)price|volume|per (share|unit|boe|bbl|tonne)|cost of|bbl|boe|mmcf|margin|days|growth|change")
+GEOWORD = re.compile(r"(?i)americas?\b|europe|emea|asia|pacific|china|japan|united states|international|rest of|geograph|region")
 SEGWORD = re.compile(r"(?i)segment|divisions?\b|business (unit|area|line)|by (business|product|division)")
 UNITS = re.compile(r"(?i)bbl|boe|mmcf|tonnes?\b|\bkt\b|per share|headcount|\$/")
 
 
-def _tables(raw):
+def _tables(raw, geo=False):
     """공시 한 장 -> [(점수, 글)] — **표를 통째로 싣지 않고 머리줄 + 매출 줄만** 남긴다(11/10 시험 1차: 표 전체를 실어 회사당 5만 토큰,
     그러고도 상한에 잘려 MT 의 ACIS 가 빠졌다). 부문이 가로로 놓인 표(CNQ·SU: 칸마다 부문)는 머리줄 + '…sales/revenue' 줄,
     부문마다 표가 따로인 회사(MT: 'NAFTA … Sales')도 같은 꼴로 줄어든다. 부문이 세로로 놓인 표(줄마다 부문)는 통째로(2,500자)."""
@@ -107,26 +108,28 @@ def _tables(raw):
         first = isnum.index(True)
         head = rows[:min(first, 5)]
         htxt = " ".join(head)
+        # 머리줄의 「% Change」「Growth %」 칸은 매출 표가 아니라는 신호가 아니다(11/12 온홀딩: 지역별 매출 표가 그 칸 하나 때문에 '합계 줄만' 남았다)
+        hn = re.sub(r"(?i)%\s*(change|growth)|(change|growth)\s*(in\s*)?(%|\(%\))|constant currency\s*(change|growth)?|\b(change|growth)\b", " ", htxt)
         if UNITS.search(htxt) or UNITS.search(rows[first].split(" | ")[0]):
             continue
         blob = "\n".join(rows)
         revrows = [k for k, r in enumerate(rows) if isnum[k] and REVTERM.search(r.split(" | ")[0]) and not NOTREV.search(r.split(" | ")[0])]
-        seg = bool(SEGWORD.search(blob))
+        seg = bool(SEGWORD.search(blob)) or (geo and bool(GEOWORD.search(blob + " " + cap.get(i, ""))))
         q = bool(re.search(r"(?i)three months|quarter|\b[1-4]Q ?\d\d|\bQ[1-4]\b", htxt + rows[first]))
         tot_last = [k for k in revrows if re.match(r"(?i)\s*(total|net)\b", rows[k]) and sum(isnum[:k]) >= 2]
-        if tot_last and len(rows) <= 40 and not NOTREV.search(htxt):
+        if tot_last and len(rows) <= 40 and not NOTREV.search(hn):
             out.append(((2 if seg else 1) + (1 if q else 0), i, (f"[before table: {cap[i]}]\n" if cap.get(i) else "") + blob[:2500]))
         elif revrows:
             keep = sorted(set(revrows) | {k for k, r in enumerate(rows) if isnum[k] and
                                            re.search(r"(?i)eliminat|inter-?segment|royalt|^total", r.split(" | ")[0])})[:12]
             txt = (f"[before table: {cap[i]}]\n" if cap.get(i) else "") + "\n".join(head + [rows[k] for k in keep])[:1800]
             out.append(((2 if seg else 0) + (1 if q else 0) + (1 if len(head) >= 1 else 0), i, txt))
-        elif (seg or REVTERM.search(htxt)) and not NOTREV.search(htxt):
+        elif (seg or REVTERM.search(htxt)) and not NOTREV.search(hn):
             out.append(((2 if seg else 0) + (1 if q else 0), i, (f"[before table: {cap[i]}]\n" if cap.get(i) else "") + blob[:2500]))       # 줄마다 부문인 표
     return out
 
 
-def seg_text(raws, annual=False):
+def seg_text(raws, annual=False, geo=False):
     """실적 공시 한 건의 첨부들 -> 부문 표 글(PER_DOC 자). 첨부를 가리지 않고 표를 한데 모아 점수 순으로 싣는다
     (CNQ: 부문 표는 재무제표 장에, 분기 요약은 MD&A 에 있다)."""
     import ai_fpi as P
@@ -136,7 +139,7 @@ def seg_text(raws, annual=False):
         if not annual and not P.QHINT.search(plain):
             continue
         plain0 = plain0 or plain
-        for s_, i, txt in _tables(raw):
+        for s_, i, txt in _tables(raw, geo):
             if txt not in seen:
                 seen.add(txt)
                 got.append((-s_, len(got), txt))
@@ -153,7 +156,7 @@ def seg_text(raws, annual=False):
     return ("UNIT NOTES: " + " | ".join(units) + "\n" if units else "") + "\n--- table ---\n".join(out)
 
 
-def filing_text(cik, acc):
+def filing_text(cik, acc, geo=False):
     """6-K 한 건 -> 부문 표 글. 2.5만 자 넘는 첨부를 이름 맞는 것 먼저 네 장까지 열어 표를 한데 모은다."""
     import ai_fill as af
     import scrape_live_us as lu
@@ -176,7 +179,7 @@ def filing_text(cik, acc):
         raw = af.sec(lu.DOC.format(cik=cik, acc=acc, name=name), binary=True)
         if raw:
             raws.append(raw.decode("utf-8", "replace"))
-    return seg_text(raws)
+    return seg_text(raws, geo=geo)
 
 
 def ask(prompt):
@@ -397,6 +400,9 @@ def one(B, key, db):
     elif len(miss) < 4:
         return [f"  사업부 빈 분기 {len(miss)} — 할 일 없음"], 0
     names = (B.SEG.get(key) or {}).get("names") or []
+    # **화면의 사업부가 지역인 회사**(온홀딩 ONON: Americas·EMEA·Asia Pacific)는 지역 표를 부문 표로 쳐 준다 — 안 그러면 손익계산서 표들이
+    # 글자 상한을 먼저 채워 지역 표가 빠지고, 모델은 '부문 없음'이라 답한다(11/12: 2021~2023년 여섯 분기가 그렇게 비었다).
+    geo = bool(names) and sum(1 for n in names if GEOWORD.search(str(n))) * 2 >= len(names)
     pr_q = {}
     if (HERE / "data" / "fpi_pr.json").exists():
         pr_q = ((json.loads((HERE / "data" / "fpi_pr.json").read_text(encoding="utf-8")).get("stocks") or {}).get(key) or {}).get("q") or {}
@@ -431,7 +437,7 @@ def one(B, key, db):
                 f = next((f for f in ufiles if abs((_d(f[0]) - _d(e)).days) <= 12), None)
                 if f and not any(f[2] == a for _f, a, _t in docs):
                     raw_ = af.sec(af.DOC.format(cik=int(cik), acc=f[2], name=f[3]), binary=True)
-                    txt = seg_text([raw_.decode("utf-8", "replace")], annual=f[1] == "10-K") if raw_ else ""
+                    txt = seg_text([raw_.decode("utf-8", "replace")], annual=f[1] == "10-K", geo=geo) if raw_ else ""
                     if txt:
                         head = (f"ANNUAL REPORT (10-K), fiscal year ended {f[0]} — twelve-month columns" if f[1] == "10-K"
                                 else f"quarterly report (10-Q), quarter ended {f[0]}")
@@ -442,7 +448,7 @@ def one(B, key, db):
             for fd, acc in [f for f in files if 10 <= (_d(f[0]) - _d(e)).days <= 100][:10]:
                 if any(acc == a for _f, a, _t in docs):
                     break
-                txt = filing_text(int(cik), acc)
+                txt = filing_text(int(cik), acc, geo)
                 if txt:
                     docs.append((fd, acc, txt))
                     break
