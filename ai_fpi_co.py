@@ -458,7 +458,7 @@ def missing(B, key):
 
 
 SKIPQ = {}                      # key -> 채울 수 없다고 적어 둔 분기(fpi_co.json 의 notab·skipq) — main 이 채운다
-SINGLE_US = re.compile(r"(one|a single|single)\s+(reportable|operating|business|reporting)\s+(and\s+(reportable|operating)\s+)?segment|"
+SINGLE_US = re.compile(r"(one|a single|single)\s+(consolidated\s+)?(reportable|operating|business|reporting)\s+(and\s+(reportable|operating)\s+)?segment|"
                        r"(operates?|managed?|organized)\s+(in|as|its business as|our business as)\s+(one|a single)\s+(reportable\s+|operating\s+|business\s+)?segment", re.I)
 
 
@@ -546,7 +546,7 @@ def one(B, key, db):
     out, total = [], 0
     got_all = dict((db["stocks"].get(key) or {}).get("q") or {})
     basis = ""
-    for ci in range(0, min(len(miss), 2 * CHUNK), CHUNK):
+    for ci in range(0, min(len(miss), int(os.environ.get("FPICO_CHUNKS", "2")) * CHUNK), CHUNK):
         chunk = miss[ci:ci + CHUNK]
         if time.time() - T0 > SECS or spent() >= MAX_TOK:
             out.append("  상한 — 여기서 멈춤")
