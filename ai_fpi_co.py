@@ -359,7 +359,7 @@ def confirm_pend(B, key, db):
     cik = lu.cik_map_cached().get(code) or lu.cik_map_cached().get(code.replace(".", "-"))
     st = (db["stocks"].get(key) or {})
     todo = [e for e, x in (st.get("q") or {}).items() if x.get("pend") and x.get("rev") and not x.get("rev2")]
-    if not cik or not todo:
+    if not cik or not todo or key in (db.get("noconfirm") or []):     # noconfirm: 확인한 총매출을 넣으면 화면 칸이 줄어드는 회사(IX — 반기·분기가 섞여 있다)
         return 0
     cik = int(cik)
     rich = six_k_rich(cik)
