@@ -177,7 +177,7 @@ def pdf_pages(code, fn, pn):
 # 그 분기 결산단신이 스스로 「単一セグメントであるため記載を省略」 라고 적었고 표도 문장도 없으면, 그 분기를 fpi_co.json 의 `skipq` 에 적어
 # 대기줄(all_holes)에서 영영 뺀다. 회사가 나중에 사업부를 내기 시작하면 그 뒤 분기는 그대로 본다(분기 단위로 적는다).
 OMIT_RE = re.compile(r"単一セグメント|単一の(報告)?セグメント|報告セグメント[はが][^。]{0,30}のみ(であ|のため)|セグメント情報(等)?の?記載を省略|セグメント情報(等)?は?、?[^。]{0,40}省略")
-SINGLE_RE = re.compile(r"単一セグメント|単一の(報告)?セグメント|報告セグメント[はが][^。]{0,30}のみ(であ|のため)")
+SINGLE_RE = re.compile(r"事業(は|の)?単一で|単一セグメント|単一の(報告)?セグメント|報告セグメント[はが][^。]{0,30}のみ(であ|のため)")
 SINGLE = set()                  # (코드, PDF 이름) — 스스로 단일 사업부라 적은 공시
 NOTAB_VER = 1                   # 표·문장 고르기(pdf_pages·narrative·seg_excerpt)를 고치면 올린다 — fpi_co.json 의 notab 을 비우고 다시 본다
 OMIT = set()                    # (코드, PDF 이름) — pdf_pages 가 채운다
@@ -597,6 +597,20 @@ def one(B, key, db, verbose=False, tried=None):
             nm = okey.get(k_) or seen_nm.setdefault(k_, n)
             out_[nm] = out_.get(nm, 0) + v
         return out_
+    # **제 공시의 글을 넘겼는데 그 분기 표를 모델이 못 읽은 칸도 다시 안 본다**(11/12 재실행: '그 분기 누계가 없다' 201칸 중 133칸이 이 꼴 —
+    # 맥도날드 2702 「ハンバーガーレストラン事業単一」 는 부문이 하나라 답이 한 줄, 소프트뱅크G 9984 는 넘긴 쪽에 표가 없다). notab 에 적는다.
+    ends_read = set()
+    for k_, x_ in (ans.get("spans") or {}).items():
+        if isinstance(x_, dict) and len([v for v in (x_.get("seg") or {}).values() if isinstance(v, (int, float)) and v]) >= 2:
+            ends_read.add(str(k_).split("/")[-1])
+    ends_read |= {en for (_s, en) in cum}
+    nr = sorted(e for e in holes if e in hit_ee and not any(re.match(r"\d{4}-\d\d-\d\d$", g_) and abs((_d(g_) - _d(e)).days) <= 12 for g_ in ends_read))
+    if nr:
+        with LOCK:
+            db["notab_v"] = NOTAB_VER
+            db.setdefault("notab", {})[key] = sorted(set(db.get("notab", {}).get(key, [])) | set(nr))
+            SKIPQ.setdefault(key, set()).update(nr)
+        out.append(f"  글은 넘겼는데 그 분기 표가 없다 — 다시 안 본다: {nr}")
     got, unv, tail = {}, {}, {}
     last_seg = max((str(r_[0]) for r_ in seg.get("pts") or [] if any(v for v in r_[1:]) and re.match(r"\d{4}-\d\d-\d\d$", str(r_[0]))), default="")
 
