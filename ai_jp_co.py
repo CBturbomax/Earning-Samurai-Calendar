@@ -675,6 +675,8 @@ def one(B, key, db, verbose=False, tried=None):
         r = tot / rev[near]
         over = len([n for n in q if n in names]) * 2 >= len(q) if names else True
         neg = any(v < -0.02 * abs(tot) for v in q.values())
+        if os.environ.get("JPCO_RAW") and not over:
+            out.append(f"  [이름] 화면 {names[:14]} / 답 {list(q)[:14]}")
         # **맨 뒤(화면의 마지막 사업부 분기보다 뒤)의 빈칸은 이름이 달라도 받는다 — 회사가 사업부 기준을 바꾼 것이다**(11/12 도쿄오카 4186:
         # 값은 총매출과 정확히 맞는데 화면 이름(材料·装置)과 새 이름(エレクトロニクス機能材料·高純度化学薬品)이 안 겹쳐 버려졌다).
         # 가운데 구멍에 다른 이름이 끼면 그림이 '개편'으로 잘못 가르므로(CSCO) 맨 뒤만. 두 칸 이상 모였을 때만 싣는다(아래 tail).
