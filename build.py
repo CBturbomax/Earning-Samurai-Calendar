@@ -692,8 +692,11 @@ def load_fpi_pr(out):
         q = {e: list(lst) for e, lst in (st.get("q") or {}).items() if lst}
         # 회사 단위로 읽은 쪽(fpi_co)이 본 총매출 — 장마다 읽은 값이 없는 분기에만 후보로 넣는다. 싣는 조건은 아래와 같다(연간 합·두 번 같은 값).
         for e, x in ((co.get(key) or {}).get("q") or {}).items():
-            if x.get("pend") and x.get("rev") and e not in q and (co[key].get("cur") or "") == (st.get("cur") or ""):
-                q[e] = [{"a": "co", "d": "", "rev": x["rev"]}]
+            if x.get("pend") and x.get("rev") and (co[key].get("cur") or "") == (st.get("cur") or "") and \
+                    (e not in q or (x.get("rev2") and not any(r_.get("seg") for r_ in q[e])
+                                    and abs((q[e][-1].get("rev") or 0) / x["rev"] - 1) > 0.05)):   # 두 공시로 확인된 값은 옛 수집기 값(단위 틀림 — 넷이즈)을 이긴다
+                # rev2 = 1년 뒤 공시의 '전년 동기' 칸에서 같은 값을 다시 찾았다(ai_fpi_co.confirm_pend) — '두 공시가 같은 값' 규칙에 걸리게 두 벌로 넣는다
+                q[e] = [{"a": "co", "d": "", "rev": x["rev"]}] * (2 if x.get("rev2") else 1)
         if not q:
             continue
         f = out.get(key) or {}
@@ -731,6 +734,11 @@ def load_fpi_pr(out):
                 if all(vals) and abs(sum(vals) / a["rev"] - 1) <= 0.015:
                     ok.update(e for e in qs if e in q)
         add = [{"end": e, "rev": val[e], "opi": q[e][-1].get("opi")} for e in sorted(ok) if e not in have]
+        # **외톨이 분기는 안 싣는다**(11/13 TK·IX: 옛 분기 총매출이 띄엄띄엄 들어오자 점 사이 간격이 반년으로 읽혀 분기 회사가 반기로 바뀌고
+        # 멀쩡한 칸이 사라졌다). 바로 앞이나 뒤 분기(80~100일)가 우리에게 있거나 같이 들어올 때만.
+        if step == 3:
+            allp = sorted(set(have) | {x_["end"] for x_ in add})
+            add = [x_ for x_ in add if any(75 <= abs((date.fromisoformat(o_) - date.fromisoformat(x_["end"])).days) <= 100 for o_ in allp)]
         if add:
             out[key] = merge_fin(f or None, {"v": 1, "freq": f.get("freq") or "Q", "cur": st.get("cur") or "USD",
                                              "src": "pr", "points": add})
