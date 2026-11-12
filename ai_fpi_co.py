@@ -292,6 +292,109 @@ def pick_six(rich, e, n=3):
     return c[:n]
 
 
+REVLAB = re.compile(r"(?i)^\W*(total |net |consolidated |operating )*(operating )?(revenues?|net sales|sales|turnover|net revenues?)\b")
+
+
+def _rev_rows(cik, acc, name=""):
+    """공시 한 건에서 '총매출 줄'로 보이는 글 줄들(표의 Revenue/Net sales/Total 줄 + OCR 쪽의 매출 문장)."""
+    import ai_fill as af
+    import scrape_live_us as lu
+    import pr_table as pt
+    out = []
+    if name:                                             # 10-Q·10-K 본문
+        names = [name]
+        items = []
+    else:
+        blob = af.sec(lu.FILES.format(cik=cik, acc=acc))
+        try:
+            items = json.loads(blob)["directory"]["item"] if blob else []
+        except (ValueError, KeyError):
+            items = []
+        names = sorted(it["name"] for it in items if it["name"].lower().endswith((".htm", ".html"))
+                       and not re.match(r"index|.*-index", it["name"], re.I))[:5]
+    for n in names:
+        raw = af.sec(lu.DOC.format(cik=cik, acc=acc, name=n), binary=True)
+        if not raw:
+            continue
+        for t in pt.tables(raw.decode("utf-8", "replace")):
+            for r in t:
+                cells = [c for c in r if c and c.strip() and c.strip() != "$"]
+                if cells and (REVLAB.search(cells[0]) or re.match(r"(?i)\W*total\b", cells[0])):
+                    out.append(" | ".join(cells)[:400])
+    cf = OCR_DIR / f"{acc}.json"
+    if not out and items:
+        ocr_text(cik, acc, items)                        # 그림 공시 — OCR 캐시를 만든다
+    if cf.exists():
+        try:
+            for pg in json.loads(cf.read_text(encoding="utf-8")):
+                out += [ln[:300] for ln in pg.splitlines() if re.search(r"(?i)revenues?|net sales", ln) and re.search(r"\d{3}", ln)]
+        except (OSError, ValueError):
+            pass
+    return out
+
+
+def _num_forms(v):
+    """값 v 가 표에 찍혔을 법한 꼴들(단위 1·천·백만·십억 · 정수/소수 한 자리) — 숫자 넷 이상일 때만(우연히 맞는 것을 막는다)."""
+    out = set()
+    for sc in (1, 1e3, 1e6, 1e9):
+        n = v / sc
+        if n < 100:
+            continue
+        a = f"{round(n):,}"
+        if len(a.replace(",", "")) >= 4:
+            out |= {a, a.replace(",", ".")}
+        b = f"{n:,.1f}"
+        if len(re.sub(r"\D", "", b)) >= 5:
+            out |= {b, b.replace(",", "§").replace(".", ",").replace("§", ".")}
+    return out
+
+
+def confirm_pend(B, key, db):
+    """**총매출이 없는 옛 분기(pend)를 두 번째 공시로 확인한다 — 토큰 0**(회원님 11/13: "총매출이 없단 게 뭔 소리야"). 한 분기의 총매출은 그 분기 공시와
+    **1년 뒤 공시의 '전년 동기' 칸** 두 군데에 찍힌다. 모델이 그 분기 공시에서 읽은 값이 1년 뒤 공시의 매출 줄에 그대로 있으면 `rev2` 를 단다.
+    빌드는 이미 '두 공시가 같은 값'이면 싣는 규칙을 갖고 있다(load_fpi_pr). -> 확인한 칸 수"""
+    import ai_fill as af
+    import scrape_live_us as lu
+    code = key.split(":")[1]
+    cik = lu.cik_map_cached().get(code) or lu.cik_map_cached().get(code.replace(".", "-"))
+    st = (db["stocks"].get(key) or {})
+    todo = [e for e, x in (st.get("q") or {}).items() if x.get("pend") and x.get("rev") and not x.get("rev2")]
+    if not cik or not todo:
+        return 0
+    cik = int(cik)
+    rich = six_k_rich(cik)
+    per = [f for f in af.us_filings(cik) if f[1] in ("10-Q", "10-K")]
+    cache, n = {}, 0
+    for e in sorted(todo):
+        d1 = _d(e)
+        try:
+            e1 = d1.replace(year=d1.year + 1).isoformat()
+        except ValueError:
+            e1 = d1.replace(year=d1.year + 1, day=28).isoformat()
+        srcs = [("d", f[2], f[3]) for f in per if abs((_d(f[0]) - _d(e1)).days) <= 12][:1] if not rich else \
+            [("s", f[1], "") for f in pick_six(rich, e1)]
+        forms = _num_forms(float(st["q"][e]["rev"]))
+        hit = False
+        for _k, acc, nm in srcs:
+            if acc not in cache:
+                try:
+                    cache[acc] = _rev_rows(cik, acc, nm)
+                except Exception:                        # noqa: BLE001
+                    cache[acc] = []
+            for row in cache[acc]:
+                toks = set(re.findall(r"\d[\d,.]*\d", row))
+                if forms & toks:
+                    hit = True
+                    break
+            if hit:
+                break
+        if hit:
+            with LOCK:
+                st["q"][e]["rev2"] = 1
+            n += 1
+    return n
+
+
 def ask(prompt):
     """claude -p 한 번(프롬프트는 표준입력으로 — 10만 자가 넘으면 인자 길이 제한에 걸린다)."""
     import ai_seg
@@ -785,6 +888,27 @@ def main():
         keys = [k for k in keys if k not in skip]
         print(f"{args[i + 1]}~{args[i + 2]} 미국 발표 {n_all:,}곳 중 외국 기업·시총 {mincap}B$↑·사업부 빈 분기 4↑: {len(keys)}곳"
               f"(전에 '부문 표 없음'으로 적어 둔 {len(skip)}곳 제외)")
+    if "--confirm" in args:                              # 토큰 0 — pend 분기의 총매출을 1년 뒤 공시로 확인
+        from concurrent.futures import ThreadPoolExecutor
+        ks_ = keys or [k for k, st_ in db["stocks"].items() if k.startswith("us:") and any(x.get("pend") and not x.get("rev2") for x in (st_.get("q") or {}).values())]
+        tot = [0, 0]
+
+        def cf_(key):
+            try:
+                g = confirm_pend(B, key, db)
+            except Exception as ex:                      # noqa: BLE001
+                print(f"== {key} 실패 {ex!r}"[:160])
+                return
+            with LOCK:
+                tot[1] += 1
+                if g:
+                    tot[0] += g
+                    print(f"== {key} 총매출 확인 {g}칸")
+                    OUT.write_text(json.dumps(db, ensure_ascii=False, separators=(",", ":")), encoding="utf-8")
+        with ThreadPoolExecutor(max_workers=4) as ex:
+            list(ex.map(cf_, ks_))
+        print(f"요약(총매출 확인): 회사 {len(ks_)} · 확인한 칸 {tot[0]}")
+        return
     if "--mark" in args and keys and "--usdays" not in args:     # 종목을 직접 줘도 표시만(11/13: 예전에는 실제 수집이 돌았다) — 토큰 0
         from concurrent.futures import ThreadPoolExecutor
         tot = [0, 0]
