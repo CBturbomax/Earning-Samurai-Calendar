@@ -7,3 +7,4 @@ __pycache__/
 # 스크래퍼가 저장 중 쓰는 임시 파일
 data/*.tmp
 data/_snapshot_*.json
+.cache/

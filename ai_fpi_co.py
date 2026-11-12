@@ -175,6 +175,63 @@ def seg_text(raws, annual=False, geo=False, names=()):
     return ("UNIT NOTES: " + " | ".join(units) + "\n" if units else "") + "\n--- table ---\n".join(out)
 
 
+OCR_DIR = HERE / ".cache" / "ocr"
+
+
+def ocr_text(cik, acc, items):
+    """**표가 그림으로 실린 6-K**(브라질·아르헨티나 회사 — 엠브라에르·브라스켐·텔레콤아르헨티나는 보도자료 쪽마다 JPG 한 장이다. 글자 방식으로는
+    한 글자도 안 나와 34분기가 통째로 비었다, 11/13). tesseract 로 쪽마다 글자를 뽑아 **매출 문장·줄이 많은 쪽 셋**을 넘긴다. 검산은 그대로
+    (부문 합 = 총매출) — OCR 이 숫자를 잘못 읽으면 합이 안 맞아 버려진다. tesseract 가 없으면 아무것도 안 한다."""
+    import shutil
+    import subprocess
+    import ai_fill as af
+    import scrape_live_us as lu
+    if not shutil.which("tesseract"):
+        return ""
+    imgs = sorted(it["name"] for it in items if re.search(r"\.(jpe?g|png|gif)$", it["name"], re.I))
+    if len(imgs) < 4 or len(imgs) > 60:                  # 60장 넘는 것은 재무제표 원본(ITR·DFP) — 보도자료만 읽는다
+        return ""
+    OCR_DIR.mkdir(parents=True, exist_ok=True)
+    cf = OCR_DIR / f"{acc}.json"
+    try:
+        pages = json.loads(cf.read_text(encoding="utf-8"))
+    except (OSError, ValueError):
+        # 앞 16쪽만·네 쪽씩 한꺼번에(11/13: 재무제표 원본 수백 쪽을 한 줄로 읽혔더니 20분에 공시 석 장이었다 — 부문 문단은 보도자료 앞쪽에 있다)
+        from concurrent.futures import ThreadPoolExecutor
+
+        def one_pg(n):
+            b = af.sec(lu.DOC.format(cik=cik, acc=acc, name=n), binary=True)
+            if not b:
+                return ""
+            tmp = OCR_DIR / f"{acc}_{n}"
+            tmp.write_bytes(b)
+            try:
+                return subprocess.run(["tesseract", str(tmp), "-", "--psm", "6"], capture_output=True, text=True, timeout=60,
+                                      env=dict(os.environ, OMP_THREAD_LIMIT="1")).stdout
+            except Exception:                            # noqa: BLE001
+                return ""
+            finally:
+                tmp.unlink(missing_ok=True)
+        with ThreadPoolExecutor(max_workers=4) as ex_:
+            pages = list(ex_.map(one_pg, imgs[:16]))
+        cf.write_text(json.dumps(pages, ensure_ascii=False), encoding="utf-8")
+    scored = []
+    for i, pg in enumerate(pages):
+        ln = [x.strip() for x in pg.splitlines() if x.strip()]
+        hits = [k for k, x in enumerate(ln) if re.search(r"(?i)\b(net )?(revenues?|sales)\b", x) and re.search(r"\d{2}", x)]
+        if len(hits) >= 2:
+            keep = sorted({j for k in hits for j in (k - 1, k, k + 1) if 0 <= j < len(ln)})
+            scored.append((-len(hits), i, "\n".join(ln[j][:200] for j in keep)[:1800]))
+    if not scored:
+        return ""
+    best = sorted(scored)[:4]
+    nxt = [x for x in scored if any(x[1] == b_[1] + 1 for b_ in best[:2]) and x not in best]     # 부문 문단이 다음 쪽으로 이어진다(엠브라에르: 6쪽 셋 + 7쪽 둘)
+    top = sorted(best + nxt[:2], key=lambda x: x[1])
+    return ("UNIT NOTES: read each sentence for its own unit (US$ million, R$ million …)\n" +
+            "\n--- table ---\n".join(f"[OCR page {i + 1} — text read from a page IMAGE: revenue sentences/lines by segment, not a table. "
+                                       f"Digits may be misread; use only numbers that are clearly stated]\n{t}" for _s, i, t in top))
+
+
 def filing_text(cik, acc, geo=False, names=()):
     """6-K 한 건 -> 부문 표 글. 2.5만 자 넘는 첨부를 이름 맞는 것 먼저 네 장까지 열어 표를 한데 모은다."""
     import ai_fill as af
@@ -198,7 +255,7 @@ def filing_text(cik, acc, geo=False, names=()):
         raw = af.sec(lu.DOC.format(cik=cik, acc=acc, name=name), binary=True)
         if raw:
             raws.append(raw.decode("utf-8", "replace"))
-    return seg_text(raws, geo=geo, names=names)
+    return seg_text(raws, geo=geo, names=names) or ocr_text(cik, acc, items)
 
 
 def six_k_rich(cik):
@@ -313,6 +370,9 @@ def check(B, key, ans, pr_q, all_ends=(), mine_before=()):
     core = {k for k, c in cnt.items() if c > len(ratio) / 2}
     import ai_jp_co
     base0 = ai_jp_co.base_ratio(B, key)
+    # 공시 안에서 '부문 합 = 공시 총매출'이 맞는 분기의 (공시 총매출 ÷ 우리 총매출) — 통화가 다른 회사의 환율 구실. 값을 고치기 전에 미리 잰다.
+    fxq = {e: rows[e]["rev"] / rows[e]["have"] for e in ratio
+           if rows[e]["rev"] and abs((sum(rows[e]["seg"].values()) + rows[e]["elim"]) / rows[e]["rev"] - 1) <= 0.01}
     ok, rep = {}, []
     for i, e in enumerate(ends):
         r = rows[e]
@@ -324,11 +384,23 @@ def check(B, key, ans, pr_q, all_ends=(), mine_before=()):
             mid = sorted(nb)[len(nb) // 2] if len(nb) >= 3 else base0      # 이 답에 이웃이 모자라면 화면의 평소 비율(구멍 한두 칸만 메울 때)
             steady = mid is not None and abs(ratio[e] / mid - 1) <= (0.25 if mid >= 1.3 else 0.12) and 0.8 <= ratio[e] <= 2.6
             grade = "맞아떨어짐" if exact else ("비율 고름" if steady else "")
+            # **공시 통화가 우리 총매출 통화와 다른 회사**(엠브라에르: 보도자료는 달러, 우리 매출은 헤알 — 합이 0.18 로 고르게 나와 전부 버려졌다, 11/13).
+            # 공시 안에서 '부문 합 = 공시의 총매출'(1%)이고, 공시 총매출 ÷ 우리 총매출(환율)이 앞뒤 분기와 15% 안에서 고르면
+            # **비중 × 우리 총매출**로 싣는다 — 홍콩 부문과 같은 규칙(회사가 낸 두 값의 산술이지 지어낸 값이 아니다).
+            if not grade and e in fxq:
+                fx = fxq[e]
+                near4 = sorted((x for x in fxq if x != e), key=lambda x: abs((_d(x) - _d(e)).days))[:4]   # 가까운 넷(사이에 못 읽은 분기가 끼어도)
+                nfx = [fxq[x] for x in near4]
+                mfx = sorted(nfx)[len(nfx) // 2] if len(nfx) >= 3 else None
+                if mfx and not 0.8 <= fx <= 1.25 and abs(fx / mfx - 1) <= 0.15:
+                    r["seg"] = {n: v / fx for n, v in r["seg"].items()}
+                    r["elim"] = r["elim"] / fx
+                    grade = "비중×매출(통화 다름)"
             if not grade:
                 why.append(f"합÷총매출 {ratio[e]:.2f} (앞뒤 {None if mid is None else round(mid, 2)})")
             mine_k = {B.seg_key(n) for n in r["seg"]}
             miss = core - mine_k
-            if miss and not exact:
+            if miss and not exact and grade != "비중×매출(통화 다름)":
                 # 앞뒤 분기에는 있는 부문이 이 분기에만 없다
                 nbk = set()
                 for x in ends[max(0, i - 1):i + 2]:
@@ -348,7 +420,9 @@ def check(B, key, ans, pr_q, all_ends=(), mine_before=()):
                 if len(bad) > len(both) / 2:
                     why.append("가진 값과 다름")
         good = bool(grade) and not ({"가진 값과 다름", "부문 빠짐"} & set(why))
-        rep.append(f"    {e} {'✓' if good else '✗'}{'?' if r['pend'] else ' '}매출 {round(r['have'] / 1e6):>7,} · 합÷매출 {ratio.get(e, 0):.2f} · {grade or '-'} {anchor} "
+        rep.append(f"    {e} {'✓' if good else '✗'}{'?' if r['pend'] else ' '}매출 {round(r['have'] / 1e6):>7,} · 합÷매출 {ratio.get(e, 0):.2f}"
+                   + (f"(공시 총매출 {round(r['rev'] / 1e6):,} · 합÷그것 {sum(r['seg'].values()) / r['rev']:.3f})" if r["rev"] and e in ratio and not 0.8 <= ratio[e] <= 2.6 else "")
+                   + f" · {grade or '-'} {anchor} "
                    f"· {' / '.join(f'{n} {round(v / 1e6):,}' for n, v in r['seg'].items())[:170]}" + (f"  ← {'; '.join(why)}" if why else ""))
         if good:
             ok[e] = {"seg": r["seg"], "elim": r["elim"], "src": r["src"], "grade": grade, **({"rev": r["mrev"], "pend": 1} if r["pend"] else {})}
@@ -513,7 +587,7 @@ def one(B, key, db):
                 docs.append(best[1:])
             if len(docs) > n_before:
                 doc_ends.add(e)
-        segdocs = sum(1 for _f, _a, t in docs if SEGWORD.search(t) or "[before table:" in t and t.count("--- table ---") >= 2)
+        segdocs = sum(1 for _f, _a, t in docs if SEGWORD.search(t) or "[OCR page" in t or "[before table:" in t and t.count("--- table ---") >= 2)
         out.append(f"  묶음 {ci // CHUNK + 1}: 빈 분기 {len(chunk)}({chunk[-1]}~{chunk[0]}) · 공시 {len(docs)}장(부문 표 {segdocs}장) · "
                    f"글 {sum(len(t) for _f, _a, t in docs):,}자 · 고르는 데 {time.time() - t0:.0f}초")
         if (not docs or not segdocs) if dom else (len(docs) < 3 or segdocs < max(2, len(docs) // 3)):
