@@ -450,7 +450,7 @@
 - **`python ai_fpi_co.py --confirm`(토큰 0)** — pend 분기(사업부는 읽었는데 그 분기 총매출이 우리에게 없음: 외국 기업은 stockanalysis 20분기뿐)의
   총매출을 **1년 뒤 공시의 '전년 동기' 칸**에서 다시 찾는다(`confirm_pend` · `_rev_rows` · `_num_forms`). 찾으면 `rev2:1`.
   빌드(`load_fpi_pr`)는 '두 공시가 같은 값' 규칙으로 싣는다. pend 521칸 중 434칸 확인 → 화면 +196칸(웨이보 1Q18~, PBR +17, OR +13 …).
-  - 외톨이 분기는 안 싣는다(앞뒤 분기가 없으면 분기 회사가 반기로 읽혀 멀쩡한 칸이 사라졌다 — TK). 그래도 줄어드는 회사는 `noconfirm`(IX·HBM).
+  - 외톨이 분기는 안 싣는다(앞뒤 분기가 없으면 분기 회사가 반기로 읽혀 멀쩡한 칸이 사라졌다 — TK). 그래도 줄어드는 회사는 `noconfirm`(IX).
   - 확인된 값은 옛 수집기의 단위 틀린 값(넷이즈)을 이긴다 — 그 분기에 사업부 값이 없고 5% 넘게 다를 때만.
 - **한 주 분량을 돌리는 순서**(다다음 주에 그대로 썼다): ① `--mark --usdays A B`(토큰 0) ② `FPICO_RETRY=1 FPICO_CHUNKS=4 … --usdays A B`
   ③ `--confirm` ④ `ai_jp_co.py --mark --days A B` ⑤ `ai_jp_co.py --days A B`. 스크립트는 세션 scratchpad 의 next_week.sh 꼴.
