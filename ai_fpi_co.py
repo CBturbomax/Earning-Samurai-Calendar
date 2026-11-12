@@ -785,6 +785,26 @@ def main():
         keys = [k for k in keys if k not in skip]
         print(f"{args[i + 1]}~{args[i + 2]} 미국 발표 {n_all:,}곳 중 외국 기업·시총 {mincap}B$↑·사업부 빈 분기 4↑: {len(keys)}곳"
               f"(전에 '부문 표 없음'으로 적어 둔 {len(skip)}곳 제외)")
+    if "--mark" in args and keys and "--usdays" not in args:     # 종목을 직접 줘도 표시만(11/13: 예전에는 실제 수집이 돌았다) — 토큰 0
+        from concurrent.futures import ThreadPoolExecutor
+        tot = [0, 0]
+
+        def mk2(key):
+            try:
+                g, why = mark(B, key, db)
+            except Exception as ex:                      # noqa: BLE001
+                print(f"== {key} 실패 {ex!r}"[:160])
+                return
+            with LOCK:
+                if g:
+                    tot[0] += g
+                    tot[1] += 1
+                    print(f"== {key} 채울 수 없는 분기 {g} ({why})")
+                    OUT.write_text(json.dumps(db, ensure_ascii=False, separators=(",", ":")), encoding="utf-8")
+        with ThreadPoolExecutor(max_workers=4) as ex:
+            list(ex.map(mk2, keys))
+        print(f"요약(표시만): 회사 {len(keys)} 중 {tot[1]}곳 · 채울 수 없는 분기 {tot[0]}")
+        return
     if not keys:
         print("종목을 줄 것 — python ai_fpi_co.py us:SU us:CNQ  또는  --days 2026-11-11 2026-11-13")
         return
