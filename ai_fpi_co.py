@@ -30,7 +30,7 @@ from pathlib import Path
 
 HERE = Path(__file__).parent
 OUT = HERE / "data" / "fpi_co.json"
-PER_DOC = int(os.environ.get("FPICO_DOC", "3200"))
+PER_DOC = int(os.environ.get("FPICO_DOC", "4000"))
 MAX_PROMPT = 110000
 
 PROMPT = """You are building a clean QUARTERLY revenue-by-segment time series for one company from its own quarterly reports.
@@ -75,12 +75,20 @@ SEGWORD = re.compile(r"(?i)segment|divisions?\b|business (unit|area|line)|by (bu
 UNITS = re.compile(r"(?i)bbl|boe|mmcf|tonnes?\b|\bkt\b|per share|headcount|\$/")
 
 
-def _tables(raw, geo=False):
+def _nm(s_):
+    return re.sub(r"[^a-z]", "", str(s_).lower())
+
+
+def _tables(raw, geo=False, names=()):
     """공시 한 장 -> [(점수, 글)] — **표를 통째로 싣지 않고 머리줄 + 매출 줄만** 남긴다(11/10 시험 1차: 표 전체를 실어 회사당 5만 토큰,
     그러고도 상한에 잘려 MT 의 ACIS 가 빠졌다). 부문이 가로로 놓인 표(CNQ·SU: 칸마다 부문)는 머리줄 + '…sales/revenue' 줄,
     부문마다 표가 따로인 회사(MT: 'NAFTA … Sales')도 같은 꼴로 줄어든다. 부문이 세로로 놓인 표(줄마다 부문)는 통째로(2,500자)."""
     import pr_table as pt
     out = []
+    # 흔한 낱말(Other·Product·Service·Corporate…)은 재무상태표의 「Other」 줄에도 걸린다(레드캣: 대차대조표가 맨 앞에 실렸다) — 이름으로 안 친다
+    nkeys = [k for k in (_nm(n) for n in names) if len(k) >= 6 and k not in
+             ("allother", "others", "product", "products", "service", "services", "corporate", "corporateandother", "reportable",
+              "reportableandother", "otherrevenue", "unallocated", "eliminations", "intersegment")]
     tabs = pt.tables(raw)
     # 표 바로 앞 글(부문 이름이 표 밖 제목에 있는 회사 — MT: 'NAFTA' 다음에 표). 표 수가 <table> 수와 같을 때만 믿는다(겹친 표면 어긋난다).
     pos = [m.start() for m in re.finditer(r"(?i)<table\b", raw)]
@@ -105,6 +113,17 @@ def _tables(raw, geo=False):
         isnum = [numrow(r) for r in rows]
         if not any(isnum):
             continue
+        # **화면에 이미 있는 사업부 이름이 든 표를 맨 먼저 싣는다**(11/13 — '부문 없음' 36곳을 원문과 대조하니 15곳은 원문 표에 그 이름이 있는데
+        # 발췌에 없었다: 다른 표가 글자 상한을 먼저 채우거나 머리줄 규칙에 걸려 빠졌다. BBWI·VOD·VRTS·BTDR·RGTI…). 이름이 둘 이상(이름이 둘뿐이면 하나)
+        # 첫 칸·머리줄에 있으면 규칙을 안 따지고 통째로 싣는다.
+        if nkeys:
+            cells = {_nm(r.split(" | ")[0]) for r in rows} | {_nm(c) for r in rows[:4] for c in r.split(" | ")}
+            hit = sum(1 for n in nkeys if any(n[:14] in c or (len(c) >= 5 and c in n) for c in cells if c))
+            if hit >= min(2, len(nkeys)) and not UNITS.search(" ".join(rows[:3])) and \
+                    (REVTERM.search("\n".join(rows) + " " + cap.get(i, "")) or SEGWORD.search("\n".join(rows) + " " + cap.get(i, ""))) and \
+                    not re.search(r"(?i)total assets|total liabilities|cash and cash equivalents|stockholders|shareholders", "\n".join(rows)):
+                out.append((6 + hit, i, (f"[before table: {cap[i]}]\n" if cap.get(i) else "") + "\n".join(rows)[:2500]))
+                continue
         first = isnum.index(True)
         head = rows[:min(first, 5)]
         htxt = " ".join(head)
@@ -129,7 +148,7 @@ def _tables(raw, geo=False):
     return out
 
 
-def seg_text(raws, annual=False, geo=False):
+def seg_text(raws, annual=False, geo=False, names=()):
     """실적 공시 한 건의 첨부들 -> 부문 표 글(PER_DOC 자). 첨부를 가리지 않고 표를 한데 모아 점수 순으로 싣는다
     (CNQ: 부문 표는 재무제표 장에, 분기 요약은 MD&A 에 있다)."""
     import ai_fpi as P
@@ -139,7 +158,7 @@ def seg_text(raws, annual=False, geo=False):
         if not annual and not P.QHINT.search(plain):
             continue
         plain0 = plain0 or plain
-        for s_, i, txt in _tables(raw, geo):
+        for s_, i, txt in _tables(raw, geo, names):
             if txt not in seen:
                 seen.add(txt)
                 got.append((-s_, len(got), txt))
@@ -156,7 +175,7 @@ def seg_text(raws, annual=False, geo=False):
     return ("UNIT NOTES: " + " | ".join(units) + "\n" if units else "") + "\n--- table ---\n".join(out)
 
 
-def filing_text(cik, acc, geo=False):
+def filing_text(cik, acc, geo=False, names=()):
     """6-K 한 건 -> 부문 표 글. 2.5만 자 넘는 첨부를 이름 맞는 것 먼저 네 장까지 열어 표를 한데 모은다."""
     import ai_fill as af
     import scrape_live_us as lu
@@ -179,7 +198,7 @@ def filing_text(cik, acc, geo=False):
         raw = af.sec(lu.DOC.format(cik=cik, acc=acc, name=name), binary=True)
         if raw:
             raws.append(raw.decode("utf-8", "replace"))
-    return seg_text(raws, geo=geo)
+    return seg_text(raws, geo=geo, names=names)
 
 
 def ask(prompt):
@@ -437,7 +456,7 @@ def one(B, key, db):
                 f = next((f for f in ufiles if abs((_d(f[0]) - _d(e)).days) <= 12), None)
                 if f and not any(f[2] == a for _f, a, _t in docs):
                     raw_ = af.sec(af.DOC.format(cik=int(cik), acc=f[2], name=f[3]), binary=True)
-                    txt = seg_text([raw_.decode("utf-8", "replace")], annual=f[1] == "10-K", geo=geo) if raw_ else ""
+                    txt = seg_text([raw_.decode("utf-8", "replace")], annual=f[1] == "10-K", geo=geo, names=names) if raw_ else ""
                     if txt:
                         head = (f"ANNUAL REPORT (10-K), fiscal year ended {f[0]} — twelve-month columns" if f[1] == "10-K"
                                 else f"quarterly report (10-Q), quarter ended {f[0]}")
@@ -448,7 +467,7 @@ def one(B, key, db):
             for fd, acc in [f for f in files if 10 <= (_d(f[0]) - _d(e)).days <= 100][:10]:
                 if any(acc == a for _f, a, _t in docs):
                     break
-                txt = filing_text(int(cik), acc, geo)
+                txt = filing_text(int(cik), acc, geo, names)
                 if txt:
                     docs.append((fd, acc, txt))
                     break
