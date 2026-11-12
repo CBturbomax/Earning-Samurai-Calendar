@@ -312,7 +312,54 @@ def missing(B, key):
     fresh = date.fromordinal(date.today().toordinal() - 12).isoformat()
     ends = [e for e in P.quarter_ends(fin) if "2018-03-31" <= e <= fresh]
     have = _seg_dates(B, key)
-    return ends, sorted((e for e in ends if not any(abs((_d(h) - _d(e)).days) <= 20 for h in have)), reverse=True)
+    skip = SKIPQ.get(key) or ()
+    return ends, sorted((e for e in ends if e not in skip and not any(abs((_d(h) - _d(e)).days) <= 20 for h in have)), reverse=True)
+
+
+SKIPQ = {}                      # key -> 채울 수 없다고 적어 둔 분기(fpi_co.json 의 notab·skipq) — main 이 채운다
+SINGLE_US = re.compile(r"(one|a single|single)\s+(reportable|operating|business|reporting)\s+(and\s+(reportable|operating)\s+)?segment|"
+                       r"(operates?|managed?|organized)\s+(in|as|its business as|our business as)\s+(one|a single)\s+(reportable\s+|operating\s+|business\s+)?segment", re.I)
+
+
+def mark(B, key, db):
+    """**토큰 0** — 미국 회사의 채울 수 없는 분기를 notab 에 적는다(11/12: 이번 주·다음 주 319곳 7,617칸을 뜯어 보니 태반이 이 둘이었다).
+    ① 그 분기의 공시가 SEC 에 없다(상장 전 — 코어위브·바이킹·로켓랩의 2018~2021년 매출은 S-1 에서 온 것이라 10-Q 가 없다)
+    ② 사업부가 화면에 한 칸도 없고, 이미 한 번 물어 못 얻었고, 최근 연차보고서가 스스로 'one reportable segment' 라 적었다 -> (적은 칸, 까닭)"""
+    import ai_fpi as P
+    import ai_fill as af
+    import scrape_live_us as lu
+    code = key.split(":")[1]
+    cik = lu.cik_map_cached().get(code) or lu.cik_map_cached().get(code.replace(".", "-"))
+    _ends, miss = missing(B, key)
+    miss = [e for e in miss if e not in ((db["stocks"].get(key) or {}).get("q") or {})]
+    if not cik or not miss:
+        return 0, ""
+    uf = af.us_filings(int(cik))
+    six = P.six_k(int(cik))
+    per = [f for f in uf if f[1] in ("10-Q", "10-K")]
+    if not per and not six:
+        return 0, ""                                     # 목록을 못 받았다 — 아무것도 적지 않는다
+    if six and not [f for f in per if f[1] == "10-Q"]:   # 외국 기업: 분기 끝 뒤 10~100일에 낸 6-K 가 하나도 없으면 그 분기는 공시가 없다
+        gone = [e for e in miss if not any(10 <= (_d(fd) - _d(e)).days <= 100 for fd, _a in six)]
+    else:
+        gone = [e for e in miss if not any(abs((_d(f[0]) - _d(e)).days) <= 12 for f in per)]
+    why = "공시없음" if gone else ""
+    rest = [e for e in miss if e not in gone]
+    if rest and not _seg_dates(B, key) and (key in (db.get("tried") or {}) or key in (db.get("none") or {})):
+        ann = [f for f in per if f[1] == "10-K"]
+        if ann:
+            raw = af.sec(af.DOC.format(cik=int(cik), acc=ann[-1][2], name=ann[-1][3]), binary=True) or b""
+            txt = re.sub(r"<[^>]+>", " ", raw.decode("utf-8", "replace"))
+            txt = re.sub(r"&nbsp;|&#160;|\s+", " ", txt)
+            if SINGLE_US.search(txt):
+                gone += rest
+                why = (why + "+" if why else "") + "단일사업부"
+    if gone:
+        with LOCK:
+            db["notab_us_v"] = 1
+            db.setdefault("notab", {})[key] = sorted(set(db.get("notab", {}).get(key, [])) | set(gone))
+            SKIPQ.setdefault(key, set()).update(gone)
+    return len(gone), why
 
 
 def one(B, key, db):
@@ -508,6 +555,10 @@ def main():
     except (OSError, ValueError):
         db = {"v": 1, "stocks": {}}
     db.setdefault("stocks", {})
+    for nm_ in ("skipq", "notab"):
+        for k_, v_ in (db.get(nm_) or {}).items():
+            if k_.startswith("us:"):
+                SKIPQ.setdefault(k_, set()).update(v_)
     import build as B
     import scrape_live_us as lu
     lu.cik_map_cached()
@@ -528,7 +579,30 @@ def main():
         keys = [k for k in tg if k.startswith("us:") and
                 [e for e in missing(B, k)[1] if e not in ((db["stocks"].get(k) or {}).get("q") or {})]
                 and (af.CAPS.get(k) or 0) >= float(os.environ.get("FPI_MIN_CAP", "0.7"))
-                and not extractive("us", "", B.INDUSTRIES.get(k, "") or "", k)]
+                and not extractive("us", "", B.INDUSTRIES.get(k, "") or "", k)
+                and "Banks" not in (B.INDUSTRIES.get(k, "") or "")]       # 은행은 사업부 그림을 안 본다(회원님 10/29) — 'Commercial Banks' 가 섞여 있었다
+        if "--mark" in args:                             # 토큰 0 — 채울 수 없는 칸만 적는다
+            from concurrent.futures import ThreadPoolExecutor
+            tot = [0, 0]
+
+            def mk(key):
+                try:
+                    g, why = mark(B, key, db)
+                except Exception as ex:                  # noqa: BLE001
+                    print(f"== {key} 실패 {ex!r}"[:160])
+                    return
+                with LOCK:
+                    if g:
+                        tot[0] += g
+                        tot[1] += 1
+                        print(f"== {key} 채울 수 없는 분기 {g} ({why})")
+                        OUT.write_text(json.dumps(db, ensure_ascii=False, separators=(",", ":")), encoding="utf-8")
+            with ThreadPoolExecutor(max_workers=4) as ex:
+                list(ex.map(mk, keys))
+            left = [k for k in keys if [e for e in missing(B, k)[1] if e not in ((db["stocks"].get(k) or {}).get("q") or {})]]
+            print(f"요약(표시만): 회사 {len(keys)} 중 {tot[1]}곳 · 채울 수 없는 분기 {tot[0]} — 남은 회사 {len(left)} · "
+                  f"칸 {sum(len([e for e in missing(B, k)[1] if e not in ((db['stocks'].get(k) or {}).get('q') or {})]) for k in left)}")
+            return
         n0 = len(keys)
         keys = [k for k in keys if (date.today() - _d((db.get("tried") or {}).get(k, "2000-01-01"))).days > 30]
         print(f"{args[i + 1]}~{args[i + 2]} 미국 발표 회사 중 사업부 구멍이 있는 곳: {n0} · 이미 본 {n0 - len(keys)}곳 제외 → {len(keys)}")
