@@ -203,6 +203,17 @@ def ask(prompt):
     return j.get("result") or ""
 
 
+def pr_sane(B, key, x):
+    """옛 수집기(fpi_pr.json)의 값이 닻으로 쓸 만한가 — **단위가 맞는 것만**(11/12 넷이즈: 천 위안 단위 그대로 적힌 값을 닻으로 삼아, 총매출과
+    정확히 맞는 새 값 8분기를 '가진 값과 다름'으로 전부 버렸다). 그 값의 총매출이 우리 분기 매출 가운뎃값의 1/20~20배 안일 때만."""
+    revs = sorted(p_["rev"] for p_ in (B.FIN.get(key) or {}).get("points") or [] if p_.get("rev") and p_["rev"] > 0)
+    if not revs or not x.get("seg"):
+        return False
+    med = revs[len(revs) // 2]
+    tot = x.get("rev") or sum(v for v in x["seg"].values() if isinstance(v, (int, float)))
+    return bool(tot) and med / 20 <= tot <= med * 20
+
+
 def check(B, key, ans, pr_q, all_ends=(), mine_before=()):
     """모델 답 -> (받아들인 분기 {종료일: {...}}, 보고 줄들). 검산 (가)~(라)."""
     fin = B.FIN.get(key) or {}
@@ -236,7 +247,7 @@ def check(B, key, ans, pr_q, all_ends=(), mine_before=()):
             old[str(r[0])] = {B.seg_key(n): v for n, v in zip(B.SEG[key]["names"], r[1:]) if v}
     for e, lst in (pr_q or {}).items():
         x = next((r for r in reversed(lst) if r.get("seg")), None)
-        if x:
+        if x and pr_sane(B, key, x):
             old[e] = {B.seg_key(n): v for n, v in x["seg"].items()}
     # 뼈대 부문 — 절반 넘는 분기에 나오는 이름. 그중 하나가 빠진 분기는 '부문 빠짐'(상한에 잘렸거나 못 읽은 칸 — 합이 줄어든 채 실리면 안 된다)
     cnt = {}
@@ -396,7 +407,7 @@ def one(B, key, db):
             anc[str(r[0])] = {n: v for n, v in zip(names, r[1:]) if v}
     for e, lst in pr_q.items():
         x = next((r for r in reversed(lst) if r.get("seg")), None)
-        if x:
+        if x and pr_sane(B, key, x):
             anc[e] = x["seg"]
     out, total = [], 0
     got_all = dict((db["stocks"].get(key) or {}).get("q") or {})
@@ -412,7 +423,9 @@ def one(B, key, db):
         pick = sorted(sorted(src, key=lambda a_: abs((_d(a_) - _d(mid)).days))[:3])
         ends = sorted(set(chunk) | set(pick[:2]))
         docs, t0 = [], time.time()
+        doc_ends = set()
         for e in ends:
+            n_before = len(docs)
             if dom:                                      # 그 날 끝난 10-Q(석 달 칸) 또는 10-K(연간 칸 — 결산 분기는 코드가 뺀다)
                 import ai_fill as af
                 f = next((f for f in ufiles if abs((_d(f[0]) - _d(e)).days) <= 12), None)
@@ -423,6 +436,8 @@ def one(B, key, db):
                         head = (f"ANNUAL REPORT (10-K), fiscal year ended {f[0]} — twelve-month columns" if f[1] == "10-K"
                                 else f"quarterly report (10-Q), quarter ended {f[0]}")
                         docs.append((f[0] + " " + head, f[2], txt))
+                if len(docs) > n_before:
+                    doc_ends.add(e)
                 continue
             for fd, acc in [f for f in files if 10 <= (_d(f[0]) - _d(e)).days <= 100][:10]:
                 if any(acc == a for _f, a, _t in docs):
@@ -431,6 +446,8 @@ def one(B, key, db):
                 if txt:
                     docs.append((fd, acc, txt))
                     break
+            if len(docs) > n_before:
+                doc_ends.add(e)
         segdocs = sum(1 for _f, _a, t in docs if SEGWORD.search(t) or "[before table:" in t and t.count("--- table ---") >= 2)
         out.append(f"  묶음 {ci // CHUNK + 1}: 빈 분기 {len(chunk)}({chunk[-1]}~{chunk[0]}) · 공시 {len(docs)}장(부문 표 {segdocs}장) · "
                    f"글 {sum(len(t) for _f, _a, t in docs):,}자 · 고르는 데 {time.time() - t0:.0f}초")
@@ -461,6 +478,20 @@ def one(B, key, db):
             break
         ok, rep = check(B, key, ans, pr_q, all_ends, mine_before)
         ok = {e: x for e, x in ok.items() if e in chunk}             # 닻 분기는 이미 가진 값 — 다시 담지 않는다
+        # **그 분기 공시를 넘겼는데 모델이 '부문이 하나뿐/없다'고 답한 칸은 다시 안 본다**(11/12 — 다이콤 DY 는 2025년 전까지 Communications 하나,
+        # 마라 MARA 2021~23·KKR 2018~19·플라워스 FLO 개편 뒤가 그렇다. 156곳이 '이미 본 회사'인데도 이 칸들이 빈칸으로 계속 세어졌다).
+        one_seg = []
+        for e_ in chunk:
+            xq = next((x_ for k_, x_ in (ans.get("q") or {}).items() if re.match(r"\d{4}-\d\d-\d\d$", str(k_))
+                       and abs((_d(k_) - _d(e_)).days) <= 20), None)
+            nseg = len([v for v in ((xq or {}).get("seg") or {}).values() if isinstance(v, (int, float)) and v]) if isinstance(xq, dict) else 0
+            if e_ in doc_ends and e_ not in ok and xq is not None and nseg <= 1:
+                one_seg.append(e_)
+        if one_seg:
+            with LOCK:
+                db.setdefault("notab", {})[key] = sorted(set(db.get("notab", {}).get(key, [])) | set(one_seg))
+                SKIPQ.setdefault(key, set()).update(one_seg)
+            out.append(f"  그 분기 공시에 부문이 하나뿐이거나 없다 — 다시 안 본다: {len(one_seg)}칸")
         if dom:
             # **화면의 사업부 이름과 절반도 안 겹치는 답은 버린다**(11/11 CSCO: 화면은 제품군인데 답은 Product/Service — 다른 축이 섞여
             # 빌드가 '개편'으로 보고 멀쩡한 네 분기를 잘랐다). 구멍을 메우는 것이지 축을 바꾸는 게 아니다.
@@ -604,7 +635,8 @@ def main():
                   f"칸 {sum(len([e for e in missing(B, k)[1] if e not in ((db['stocks'].get(k) or {}).get('q') or {})]) for k in left)}")
             return
         n0 = len(keys)
-        keys = [k for k in keys if (date.today() - _d((db.get("tried") or {}).get(k, "2000-01-01"))).days > 30]
+        if os.environ.get("FPICO_RETRY") != "1":             # 규칙을 고친 뒤 한 번 더 볼 때만 FPICO_RETRY=1
+            keys = [k for k in keys if (date.today() - _d((db.get("tried") or {}).get(k, "2000-01-01"))).days > 30]
         print(f"{args[i + 1]}~{args[i + 2]} 미국 발표 회사 중 사업부 구멍이 있는 곳: {n0} · 이미 본 {n0 - len(keys)}곳 제외 → {len(keys)}")
     if "--days" in args:
         i = args.index("--days")
