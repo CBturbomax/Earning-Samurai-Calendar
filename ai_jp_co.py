@@ -544,7 +544,7 @@ def one(B, key, db, verbose=False, tried=None):
                 SKIPQ.setdefault(key, set()).update(gone1)
             return out + [f"  단일 사업부라 적은 공시뿐이고 읽을 표가 없다 — 다시 안 본다: {len(gone1)}칸"], 0
     u = float(ans.get("u") or 1)
-    cum, raw_keep = {}, {}
+    cum, raw_keep, rej = {}, {}, []
     for k_, v_ in (((db["stocks"].get(key) or {}).get("cum")) or {}).items():      # 앞 실행이 읽어 둔 누계 — 다시 묻지 않고 짝으로 쓴다
         s0, e0 = k_.split("/")
         cum[(s0, e0)] = v_
@@ -569,6 +569,22 @@ def one(B, key, db, verbose=False, tried=None):
         if ok:
             cum[(s, e)] = sg
             raw_keep[f"{s}/{e}"] = sg
+        elif r is not None:
+            rej.append((s, e, sg, r))
+    # **화면에 사업부가 없어 잣대(평소 비율)가 없는 회사** — 읽은 누계들의 '합 ÷ 매출'이 저희끼리 고르면 그것을 잣대로 삼는다(11/12 오릭스 8591:
+    # 네 기간이 0.76~0.77 로 고른데 잣대가 없어 '1.0 이 아니다'로 전부 버려졌다. 회원님이 허락한 '비율 고름' 검산과 같은 규칙).
+    if base is None and len(rej) >= 3:
+        byset = {}
+        for s, e, sg, r in rej:
+            byset.setdefault(frozenset(sg), []).append((s, e, sg, r))
+        grp = max(byset.values(), key=len)
+        rs_ = sorted(x[3] for x in grp)
+        if len(grp) >= 3 and rs_[-1] / rs_[0] <= 1.05 and 0.6 <= rs_[len(rs_) // 2] <= 1.6:
+            base = rs_[len(rs_) // 2]
+            out.append(f"    잣대 없음 → 읽은 누계 {len(grp)}개의 비율이 고르다({rs_[0]:.2f}~{rs_[-1]:.2f}) — 평소 비율 {base:.2f} 로 삼는다")
+            for s, e, sg, r in grp:
+                cum[(s, e)] = sg
+                raw_keep[f"{s}/{e}"] = sg
     def nk0(n):                                         # 이름 열쇠 — 띄어쓰기·'事業'·'関連'·'セグメント' 차이를 지운다(11/11: 장마다 조금씩 달리 적혀 21칸이 빼기에서 떨어졌다)
         return B.seg_key(n) or re.sub(r"[\s\u3000・･·\-－—()（）]|事業|関連|セグメント|部門|グループ", "", str(n)).lower()
     # **같은 부문을 장마다 길게·짧게 적는다**(엘레컴 6750: 「周辺機器」/「周辺機器・アクセサリ」 — 빼기에서 '이름이 다르다'로 떨어졌다, 11/12).
