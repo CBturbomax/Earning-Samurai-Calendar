@@ -523,8 +523,11 @@ def one(B, key, db, verbose=False, tried=None):
         ans = json.loads(mm.group(0)) if mm else {}
     except ValueError:
         return out + ["  답이 JSON 이 아니다: " + (raw or "")[:200]], 0
-    if not (ans.get("spans") or ans.get("q")) and any(SINGLE_RE.search(re.sub(r"[ \u3000\n]", "", b_)) for b_ in body) or \
-            (not (ans.get("spans") or ans.get("q")) and any((code, c_) in SINGLE for c_ in [p_[1] for p_ in pdfs])):
+    # 답이 비었거나 **기간마다 부문이 하나뿐**이면(맥도날드 2702: 「ハンバーガーレストラン事業」 한 줄 — 빈 답이 아니라서 표시가 안 되고 22칸이 남았다)
+    multi = any(isinstance(x_, dict) and len([v for v in (x_.get("seg") or {}).values() if isinstance(v, (int, float)) and v]) >= 2
+                for x_ in list((ans.get("spans") or {}).values()) + list((ans.get("q") or {}).values() if isinstance(ans.get("q"), dict) else []))
+    if not multi and (any(SINGLE_RE.search(re.sub(r"[ \u3000\n]", "", b_)) for b_ in body)
+                      or any((code, c_) in SINGLE for c_ in [p_[1] for p_ in pdfs])):
         # 레이즈넥스트(6379): 「報告セグメントがエンジニアリング業のみ」 — 쪽은 뽑히는데 표가 없어 모델이 빈 답을 내고, 29칸을 매번 다시 봤다(11/12).
         gone1 = []
         for e_ in all_holes(B, key):
