@@ -32,6 +32,7 @@ HOLES = int(os.environ.get("AGENT_HOLES", "12"))
 TURNS = int(os.environ.get("AGENT_TURNS", "40"))
 MAX_TOK = int(os.environ.get("FPI_TOKENS", "1500000"))
 USED = {"in": 0, "out": 0, "n": 0, "usd": 0.0, "turns": 0}
+LAST = {}                       # 스레드 -> 방금 호출의 (토큰, 뒤진 횟수)
 
 
 def to_text(raw):
@@ -95,14 +96,19 @@ def fetch_docs(key, ends):
                     out.append((fn, f"6-K filed {fd} (results for the quarter ended about {e})"))
         else:
             f = next((f for f in per if abs((C._d(f[0]) - C._d(e)).days) <= 12), None)
-            if not f or f[2] in seen:
+            if not f:
                 continue
-            seen.add(f[2])
-            raw = af.sec(af.DOC.format(cik=cik, acc=f[2], name=f[3]), binary=True)
-            if raw:
-                fn = f"{f[0]}_{f[1].replace('-', '')}.txt"
-                (d / fn).write_text(to_text(raw.decode("utf-8", "replace"))[:3_000_000], encoding="utf-8")
-                out.append((fn, ("ANNUAL report (10-K/20-F), fiscal year ended " if f[1] == "10-K" else "quarterly report (10-Q), quarter ended ") + f[0]))
+            # 결산 분기는 10-K 에 연간 값뿐이다 — **바로 앞 3분기 10-Q(9개월 누계)**를 같이 줘야 AI 가 뺄 수 있다(래드넷: 못 줘서 0칸이었다)
+            fs = [f] + ([g for g in per if g[1] == "10-Q" and 75 <= (C._d(f[0]) - C._d(g[0])).days <= 105][:1] if f[1] == "10-K" else [])
+            for f in fs:
+                if f[2] in seen:
+                    continue
+                seen.add(f[2])
+                raw = af.sec(af.DOC.format(cik=cik, acc=f[2], name=f[3]), binary=True)
+                if raw:
+                    fn = f"{f[0]}_{f[1].replace('-', '')}.txt"
+                    (d / fn).write_text(to_text(raw.decode("utf-8", "replace"))[:3_000_000], encoding="utf-8")
+                    out.append((fn, ("ANNUAL report (10-K/20-F), fiscal year ended " if f[1] == "10-K" else "quarterly report (10-Q), quarter ended ") + f[0]))
     return out
 
 
@@ -152,11 +158,14 @@ def ask_agent(prompt, cwd):
     except ValueError:
         raise RuntimeError("claude 답이 JSON 이 아니다: " + ((r.stdout or "") + (r.stderr or ""))[-400:])
     u = j.get("usage") or {}
-    USED["in"] += (u.get("input_tokens") or 0) + (u.get("cache_creation_input_tokens") or 0) + (u.get("cache_read_input_tokens") or 0)
-    USED["out"] += u.get("output_tokens") or 0
-    USED["n"] += 1
-    USED["usd"] += float(j.get("total_cost_usd") or 0)
-    USED["turns"] += int(j.get("num_turns") or 0)
+    tk = (u.get("input_tokens") or 0) + (u.get("cache_creation_input_tokens") or 0) + (u.get("cache_read_input_tokens") or 0) + (u.get("output_tokens") or 0)
+    with C.LOCK:
+        USED["in"] += tk - (u.get("output_tokens") or 0)
+        USED["out"] += u.get("output_tokens") or 0
+        USED["n"] += 1
+        USED["usd"] += float(j.get("total_cost_usd") or 0)
+        USED["turns"] += int(j.get("num_turns") or 0)
+    LAST[__import__("threading").get_ident()] = (tk, int(j.get("num_turns") or 0))
     if j.get("is_error"):
         raise RuntimeError(str(j.get("result"))[:400])
     return j.get("result") or ""
@@ -188,9 +197,9 @@ def one(B, key, db):
     code = key.split(":")[1]
     prompt = PROMPT.format(code=code, cur=fin.get("cur") or "USD", files="\n".join(f"- {fn}: {ds}" for fn, ds in files),
                            holes=", ".join(sorted(miss)), segs=json.dumps(names[:12], ensure_ascii=False), anchors=anchors)
-    u0 = (USED["in"] + USED["out"], USED["turns"])
     raw = ask_agent(prompt, WORK / code.replace(".", "_"))
-    out.append(f"  AI: {USED['turns'] - u0[1]}번 뒤짐 · 토큰 {USED['in'] + USED['out'] - u0[0]:,} · {time.time() - t0:.0f}초")
+    tk_, tn_ = LAST.get(__import__("threading").get_ident(), (0, 0))
+    out.append(f"  AI: {tn_}번 뒤짐 · 토큰 {tk_:,} · {time.time() - t0:.0f}초")
     mm = re.search(r"\{.*\}", raw or "", re.S)
     try:
         ans = json.loads(mm.group(0)) if mm else {}
@@ -229,7 +238,43 @@ def one(B, key, db):
 
 
 def main():
-    keys = [a for a in sys.argv[1:] if ":" in a]
+    args = sys.argv[1:]
+    keys = [a for a in args if ":" in a]
+    db0 = json.loads(C.OUT.read_text(encoding="utf-8"))
+    if "--days" in args:                                 # 그 기간에 발표하는 미국 회사 중 사업부 빈칸이 남은 곳(시총 큰 순 · 은행·채굴·건설 제외)
+        import io
+        import contextlib
+        import build as B0
+        import ai_fill as af
+        from markets import extractive
+        for nm_ in ("skipq", "notab"):
+            for k_, v_ in (db0.get(nm_) or {}).items():
+                if k_.startswith("us:"):
+                    C.SKIPQ.setdefault(k_, set()).update(v_)
+        i = args.index("--days")
+        ks = set()
+        for name in ("earnings_us.json", "earnings_us_fpi.json"):
+            try:
+                rows = json.loads((HERE / "data" / name).read_text(encoding="utf-8")).get("rows", [])
+            except (OSError, ValueError):
+                rows = []
+            ks |= {"us:" + r["code"] for r in rows if isinstance(r, dict) and args[i + 1] <= str(r.get("date")) <= args[i + 2]}
+        with contextlib.redirect_stdout(io.StringIO()):
+            af.targets(B0, ks)
+        mincap = float(os.environ.get("FPI_MIN_CAP", "0.7"))
+        cand = []
+        for k in ks:
+            ind = B0.INDUSTRIES.get(k, "") or ""
+            if k not in B0.FIN or (af.CAPS.get(k) or 0) < mincap or "Banks" in ind or extractive("us", "", ind, k):
+                continue
+            q0 = (db0["stocks"].get(k) or {}).get("q") or {}
+            n = len([e for e in C.missing(B0, k)[1] if e not in q0])
+            if n and k not in (db0.get("agent_tried") or {}):
+                cand.append((-(af.CAPS.get(k) or 0), k, n))
+        keys = [k for _c, k, _n in sorted(cand)]
+        print(f"{args[i + 1]}~{args[i + 2]} 미국 발표 회사 중 사업부 빈칸이 남은 곳: {len(keys)} · 빈칸 {sum(n for _c, _k, n in cand)}")
+        if "--count" in args:
+            return
     if not keys:
         print("종목을 줄 것 — python ai_agent_co.py us:GDS us:FUTU")
         return
@@ -241,18 +286,27 @@ def main():
     import build as B
     import scrape_live_us as lu
     lu.cik_map_cached()
-    tot = 0
-    for key in keys:
-        if USED["in"] + USED["out"] >= MAX_TOK:
-            print("토큰 상한 — 멈춤")
-            break
+    tot = [0]
+    T0 = time.time()
+    SECS = int(os.environ.get("FPI_SECS", "3000"))
+    from concurrent.futures import ThreadPoolExecutor
+
+    def run(key):
+        if USED["in"] + USED["out"] >= MAX_TOK or time.time() - T0 > SECS:
+            return
         try:
             lines, n = one(B, key, db)
         except Exception as ex:                          # noqa: BLE001
             lines, n = [f"  실패 {ex!r}"[:300]], 0
-        tot += n
-        print("== " + key)
-        print("\n".join(lines), flush=True)
+        with C.LOCK:
+            tot[0] += n
+            db.setdefault("agent_tried", {})[key] = date.today().isoformat()
+            C.OUT.write_text(json.dumps(db, ensure_ascii=False, separators=(",", ":")), encoding="utf-8")
+            print("== " + key)
+            print("\n".join(lines), flush=True)
+    with ThreadPoolExecutor(max_workers=int(os.environ.get("AGENT_PAR", "4"))) as ex:
+        list(ex.map(run, keys))
+    tot = tot[0]
     print(f"요약(전문 방식): 회사 {len(keys)} · 통과 분기 {tot} · AI 호출 {USED['n']} · 뒤진 횟수 {USED['turns']} · "
           f"토큰 {USED['in'] + USED['out']:,} (입력 {USED['in']:,} · 출력 {USED['out']:,})")
 
