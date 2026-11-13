@@ -34,3 +34,9 @@ the names already on our chart. These standing rules apply to every company. Tex
   report it as "elim". If a quarter does not reconcile after re-reading, leave it out. A wrong number is worse than a blank.
 - No estimates, no analyst numbers, no percentages turned into amounts by guessing.
 - Final message: JSON only, in the format the task asks for.
+
+## Japan (決算短信 · 決算説明資料)
+- Segment tables in 決算短信 are cumulative (累計). Three-month value = this cumulative − previous cumulative of the same fiscal year.
+- Use 外部顧客への売上高 (external customers). 調整額 goes to "elim". Units are usually 百万円.
+- Many companies put the breakdown only in sentences (「日本事業の売上収益は1,505億円」) or only in the presentation deck: read both files.
+- 「単一セグメントであるため記載を省略」 with no product/region breakdown anywhere → answer "none".
