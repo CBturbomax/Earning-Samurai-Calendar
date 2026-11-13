@@ -112,6 +112,71 @@ def fetch_docs(key, ends):
     return out
 
 
+def fetch_docs_jp(key, ends):
+    """일본: 그 분기(와 누계를 빼는 데 필요한 바로 앞 분기)의 **결산단신 PDF 전문**과 같은 날 결산설명자료를 글 파일로 -> [(파일, 설명)]"""
+    import ai_fill as af
+    import ai_jp_co as J
+    import scrape_fin_jp as F
+    import scrape_geo_jp as G
+    code = key.split(":")[1]
+    d = WORK / ("jp_" + code)
+    shutil.rmtree(d, ignore_errors=True)
+    d.mkdir(parents=True, exist_ok=True)
+    with G._YANO:
+        time.sleep(0.4)
+    try:
+        jl = json.loads(af._patient(lambda: G.get(f"https://webapi.yanoshin.jp/webapi/tdnet/list/{code}.json?limit=1000", binary=False, timeout=30)) or "{}")
+    except Exception:                                    # noqa: BLE001
+        return []
+    tan, pres = [], []
+    for it in (jl.get("items") or []):
+        it = it.get("Tdnet", it)
+        du, ti, pd_ = it.get("document_url") or "", it.get("title") or "", (it.get("pubdate") or "")[:10]
+        if not du.lower().endswith(".pdf"):
+            continue
+        if F.TANSHIN.search(ti) and not F.NOT_TANSHIN.search(ti):
+            tan.append((pd_, du.rsplit("/", 1)[-1], ti))
+        elif re.search(r"決算説明|説明資料|補足資料|決算補足|データブック|ファクト", ti):
+            pres.append((pd_, du.rsplit("/", 1)[-1], ti))
+    want = set(ends)
+    for e in ends:                                       # 누계를 빼려면 바로 앞 분기 공시가 있어야 한다
+        dd = C._d(e)
+        m = dd.month - 3
+        y = dd.year + (0 if m > 0 else -1)
+        m = m if m > 0 else m + 12
+        import calendar
+        want.add(date(y, m, calendar.monthrange(y, m)[1]).isoformat())
+    out, seen = [], set()
+    for e in sorted(want):
+        c = sorted(x for x in tan if 10 <= (C._d(x[0]) - C._d(e)).days <= 75)
+        if not c or c[0][1] in seen:
+            continue
+        seen.add(c[0][1])
+        for kind, (pd_, fn, ti) in [("tanshin", c[0])] + [("presentation", x) for x in pres if x[0] == c[0][0]][:1]:
+            try:
+                pdf = af._patient(lambda: G.get(f"https://www2.jpx.co.jp/disc/{code}0/{fn}", timeout=60))
+                pages = J.page_texts(pdf, 60) if pdf else []
+            except Exception:                            # noqa: BLE001
+                pages = []
+            txt = "\n".join(f"===== page {i + 1} =====\n{pg}" for i, pg in enumerate(pages))
+            if len(txt) > 1500:
+                name = f"{e}_{kind}_pub{pd_}.txt"
+                (d / name).write_text(txt[:1_500_000], encoding="utf-8")
+                out.append((name, f"{'決算短信' if kind == 'tanshin' else '決算説明資料'} published {pd_} for the period ended {e}: {ti[:60]}"))
+    return out
+
+
+JP_NOTE = """
+JAPAN NOTES: these are 決算短信 (earnings releases) and 決算説明資料 (results presentations) as plain text extracted from PDF.
+Segment tables in 決算短信 are YEAR-TO-DATE (累計): 第1四半期 = 3 months, 第2四半期/中間期 = 6 months, 第3四半期 = 9 months, 通期 = 12 months.
+We need THREE-month values, so subtract the previous cumulative period of the same fiscal year (the earlier files are included for that)
+and set "calc": true. Use 外部顧客への売上高 / 外部収益 (external sales) when the table splits external and intersegment sales.
+Presentations often print quarterly (3か月) segment sales directly — those are fine and need no subtraction.
+Numbers are usually in 百万円: copy as printed and set "u" to 1000000 (億円 -> convert ×100 into 百万円). Keep Japanese segment names as printed
+unless our chart names are the same segments.
+"""
+
+
 PROMPT = """You are a financial analyst building a QUARTERLY revenue-by-segment series for one company from its own SEC filings.
 
 Company ticker: {code}. Reporting currency of our revenue data: {cur}.
@@ -183,7 +248,7 @@ def ask_agent(prompt, cwd):
 
 PROMPT_WEB = """You are a financial analyst. Find a listed company's QUARTERLY revenue by segment on the internet and report it as JSON.
 
-Company: {name} (ticker {code}). Reporting currency of our revenue data: {cur}.
+Company: {name} (ticker/code {code}, market {mkt}). Reporting currency of our revenue data: {cur}.
 Segment names already on our chart: {segs}
 {anchors}Quarters we need — quarter-end date : the company's TOTAL revenue for that three-month quarter, which we already hold (use it to check yourself):
 {wants}
@@ -249,9 +314,14 @@ def one_web(B, key, db):
     """**공시에서 못 찾은 회사를 인터넷에서 찾는다**(회원님 11/13: "공시 말고도 인터넷에서 가져올 수 있는 건 가져와야 한다"). 검산은 같다.
     여기서도 못 찾으면 그 분기들은 notab 에 적어 **다시는 안 본다**("진짜 없으면 그 종목은 안 해도 돼")."""
     fin = B.FIN.get(key) or {}
-    all_ends, miss = C.missing(B, key)
     q0 = (db["stocks"].get(key) or {}).get("q") or {}
-    miss = [e for e in miss if e not in q0][:HOLES]
+    if key.startswith("jp:"):
+        import ai_jp_co as J
+        all_ends = [p_["end"] for p_ in fin.get("points") or [] if p_.get("end")]
+        miss = [e for e in J.all_holes(B, key) if e not in q0 or q0[e].get("uv")][:HOLES]
+    else:
+        all_ends, miss = C.missing(B, key)
+        miss = [e for e in miss if e not in q0][:HOLES]
     if not miss:
         return ["  빈칸 없음"], 0
     names = (B.SEG.get(key) or {}).get("names") or []
@@ -274,7 +344,7 @@ def one_web(B, key, db):
     shutil.rmtree(d, ignore_errors=True)
     d.mkdir(parents=True, exist_ok=True)
     t0 = time.time()
-    raw = ask_web(PROMPT_WEB.format(name=NAMES.get(key) or code, code=code, cur=fin.get("cur") or "USD",
+    raw = ask_web(PROMPT_WEB.format(name=NAMES.get(key) or code, code=code, mkt="Tokyo Stock Exchange (Japan)" if key.startswith("jp:") else "US", cur=fin.get("cur") or "USD",
                                     segs=json.dumps(names[:12], ensure_ascii=False), anchors=anchors, wants=wants,
                                     why=(" (" + why[:200] + ")") if why else ""), d)
     tk_, tn_ = LAST.get(__import__("threading").get_ident(), (0, 0))
@@ -315,6 +385,8 @@ def one_web(B, key, db):
             out.append(f"  {tn_}번만 뒤지고 '없다'고 했다 — 표시하지 않는다(다음에 다시)")
         else:                                            # 공시에도 웹에도 없다 — 다시 안 본다
             db.setdefault("notab", {})[key] = sorted(set(db.get("notab", {}).get(key, [])) | set(miss))
+            if key.startswith("jp:"):
+                db["notab_v"] = db.get("notab_v") or __import__("ai_jp_co").NOTAB_VER
             C.SKIPQ.setdefault(key, set()).update(miss)
             out.append(f"  공시에도 웹에도 없다 — 이 {len(miss)}칸은 다시 안 본다")
         db.setdefault("web_tried", {})[key] = date.today().isoformat()
@@ -323,9 +395,15 @@ def one_web(B, key, db):
 
 def one(B, key, db):
     fin = B.FIN.get(key) or {}
-    all_ends, miss = C.missing(B, key)
+    jp = key.startswith("jp:")
     q0 = (db["stocks"].get(key) or {}).get("q") or {}
-    miss = [e for e in miss if e not in q0][:HOLES]
+    if jp:
+        import ai_jp_co as J
+        all_ends = [p_["end"] for p_ in fin.get("points") or [] if p_.get("end")]
+        miss = [e for e in J.all_holes(B, key) if e not in q0 or q0[e].get("uv")][:HOLES]
+    else:
+        all_ends, miss = C.missing(B, key)
+        miss = [e for e in miss if e not in q0][:HOLES]
     if not miss:
         return ["  빈칸 없음"], 0
     names = (B.SEG.get(key) or {}).get("names") or []
@@ -336,7 +414,7 @@ def one(B, key, db):
     mid = miss[len(miss) // 2]
     pick = sorted(sorted(anc, key=lambda a_: abs((C._d(a_) - C._d(mid)).days))[:3])
     t0 = time.time()
-    files = fetch_docs(key, sorted(set(miss) | set(pick[:2])))
+    files = fetch_docs_jp(key, sorted(set(miss) | set(pick[:1]))) if jp else fetch_docs(key, sorted(set(miss) | set(pick[:2])))
     out = [f"  빈 분기 {len(miss)}({miss[-1]}~{miss[0]}) · 공시 전문 {len(files)}장 · 받는 데 {time.time() - t0:.0f}초"]
     if not files:
         return out + ["  공시를 못 받았다"], 0
@@ -347,7 +425,12 @@ def one(B, key, db):
     code = key.split(":")[1]
     prompt = PROMPT.format(code=code, cur=fin.get("cur") or "USD", files="\n".join(f"- {fn}: {ds}" for fn, ds in files),
                            holes=", ".join(sorted(miss)), segs=json.dumps(names[:12], ensure_ascii=False), anchors=anchors)
-    raw = ask_agent(prompt, WORK / code.replace(".", "_"))
+    if jp:
+        rev_ = {p_["end"]: p_["rev"] for p_ in fin.get("points") or [] if p_.get("end") and p_.get("rev")}
+        prompt = prompt.replace("from its own SEC filings", "from its own Japanese earnings documents") + JP_NOTE + \
+            "Our total revenue for each needed quarter (three months, in yen) — check yourself against it:\n" + \
+            "\n".join(f"  {e}: {rev_[e]:,.0f}" for e in sorted(miss) if e in rev_) + "\n"
+    raw = ask_agent(prompt, WORK / (("jp_" + code) if jp else code.replace(".", "_")))
     tk_, tn_ = LAST.get(__import__("threading").get_ident(), (0, 0))
     out.append(f"  AI: {tn_}번 뒤짐 · 토큰 {tk_:,} · {time.time() - t0:.0f}초")
     mm = re.search(r"\{.*\}", raw or "", re.S)
@@ -363,9 +446,11 @@ def one(B, key, db):
     ok = {e: x for e, x in ok.items() if e in miss}
     dom = bool(names)                                    # 화면에 사업부가 이미 있는 회사 = 구멍 메우기(빌드가 한 칸씩도 싣는다)
     if names:                                            # 화면 이름과 절반도 안 겹치면 다른 축이다 — 버린다(CSCO 사고)
-        pre = {B.seg_key(n) for n in names}
+        def kk(n):                                       # 일본어 이름은 seg_key 가 빈 글자다 — 띄어쓰기·'事業' 등을 지운 열쇠로
+            return B.seg_key(n) or re.sub(r"[\s\u3000・･·\-－—()（）]|事業|関連|セグメント|部門|グループ", "", str(n)).lower()
+        pre = {kk(n) for n in names}
         last_seg = max(anc, default="")
-        off = [e_ for e_, x_ in ok.items() if len({B.seg_key(n) for n in x_["seg"]} & pre) * 2 < len(x_["seg"])]
+        off = [e_ for e_, x_ in ok.items() if len({kk(n) for n in x_["seg"]} & pre) * 2 < len(x_["seg"])]
         # 화면의 마지막 사업부 분기보다 **뒤**이고 두 칸 이상이면 회사가 기준을 바꾼 것이다 — 싣는다(코핀: 2019년 Kopin/Industrial → 지금은 용도별).
         # 가운데 구멍에 다른 축이 끼면 그림이 멀쩡한 칸을 자른다(CSCO) — 그쪽은 버린다.
         tail = [e_ for e_ in off if e_ > last_seg]
@@ -429,14 +514,35 @@ def main():
         print(f"{args[i + 1]}~{args[i + 2]} 미국 발표 회사 중 사업부 빈칸이 남은 곳: {len(keys)} · 빈칸 {sum(n for _c, _k, n in cand)}")
         if "--count" in args:
             return
+    if "--jpdays" in args:                               # 그 기간에 발표하는 일본 회사 중 사업부 빈칸이 남은 곳
+        import io
+        import contextlib
+        import build as B0
+        import ai_jp_co as J
+        for nm_ in ("skipq", "notab"):
+            for k_, v_ in (db0.get(nm_) or {}).items():
+                J.SKIPQ.setdefault(k_, set()).update(v_)
+        i = args.index("--jpdays")
+        with contextlib.redirect_stdout(io.StringIO()):
+            ks = J.week(B0, args[i + 1], args[i + 2])
+        tried = db0.get("web_tried" if "--web" in args else "agent_tried") or {}
+        cand = [(k, len([e for e in J.all_holes(B0, k) if e not in ((db0["stocks"].get(k) or {}).get("q") or {})
+                         or ((db0["stocks"].get(k) or {}).get("q") or {})[e].get("uv")])) for k in ks]
+        keys = [k for k, n in cand if n and k not in tried and ("--web" not in args or k in (db0.get("agent_tried") or {}))]
+        print(f"{args[i + 1]}~{args[i + 2]} 일본 발표 회사 중 사업부 빈칸이 남은 곳: {len(keys)} · 빈칸 {sum(n for k, n in cand if k in keys)}")
+        if "--count" in args:
+            return
     if not keys:
         print("종목을 줄 것 — python ai_agent_co.py us:GDS us:FUTU")
         return
     db = json.loads(C.OUT.read_text(encoding="utf-8"))
+    import ai_jp_co as J_
     for nm_ in ("skipq", "notab"):
         for k_, v_ in (db.get(nm_) or {}).items():
             if k_.startswith("us:"):
                 C.SKIPQ.setdefault(k_, set()).update(v_)
+            else:
+                J_.SKIPQ.setdefault(k_, set()).update(v_)
     import build as B
     import scrape_live_us as lu
     lu.cik_map_cached()
