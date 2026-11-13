@@ -206,7 +206,9 @@ How to decide what the segments are (use judgement, every company is different):
 
 Finish with ONLY this JSON as your final message (no prose around it):
 {{"basis": "which breakdown and measure you used", "u": 1000000,
-  "q": {{"2019-06-30": {{"rev": 10098, "seg": {{"A": 5140, "B": 5626}}, "elim": -668, "src": "file name", "calc": false}}}}}}
+  "q": {{"2019-06-30": {{"rev": 10098, "seg": {{"A": 5140, "B": 5626}}, "elim": -668, "src": "file name", "calc": false}}}},
+  "missing": {{"2019-09-30": "why this requested quarter is not in q"}}}}
+Every requested quarter must appear either in "q" or in "missing" — none may be dropped.
 """
 
 
@@ -438,6 +440,26 @@ def one(B, key, db):
         ans = json.loads(mm.group(0)) if mm else {}
     except ValueError:
         return out + ["  답이 JSON 이 아니다: " + (raw or "")[-300:]], 0
+    # **말없이 빠뜨린 분기는 한 번 더 묻는다**(회원님이 보여 준 조언 11/13: "검증을 강하게 걸어야 — 자꾸 말하다가 누락한다"). 요청한 분기가
+    # 답의 q 에도 missing(까닭)에도 없으면 그 분기만 콕 집어 다시 시킨다. 검산은 여전히 코드가 한다.
+    def _near(dic):
+        return {h for h in miss for k_ in (dic or {}) if re.match(r"\d{4}-\d\d-\d\d$", str(k_)) and abs((C._d(k_) - C._d(h)).days) <= 20}
+    dropped = sorted(set(miss) - _near(ans.get("q")) - _near(ans.get("missing")))
+    if dropped and not ans.get("none") and os.environ.get("AGENT_RECHECK", "1") == "1":
+        try:
+            raw2 = ask_agent(prompt + "\n\nSECOND PASS. Your previous answer used this basis: " + str(ans.get("basis"))[:300] +
+                             "\nBut it silently DROPPED these requested quarters (neither in \"q\" nor in \"missing\"): " + ", ".join(dropped) +
+                             "\nLook for exactly these quarters now, same breakdown and names. Answer with the same JSON format containing ONLY these "
+                             "quarters, each either in \"q\" or in \"missing\" with the reason.", WORK / (("jp_" + code) if jp else code.replace(".", "_")))
+            m2 = re.search(r"\{.*\}", raw2 or "", re.S)
+            a2 = json.loads(m2.group(0)) if m2 else {}
+            add = {k_: v_ for k_, v_ in (a2.get("q") or {}).items() if isinstance(v_, dict)}
+            if add and float(a2.get("u") or 1) == float(ans.get("u") or 1):
+                ans.setdefault("q", {}).update(add)
+            tk2, tn2 = LAST.get(__import__("threading").get_ident(), (0, 0))
+            out.append(f"  빠뜨린 {len(dropped)}분기를 다시 물음 → {len(add)}분기 답 · 토큰 {tk2:,}")
+        except Exception as ex:                          # noqa: BLE001
+            out.append(f"  다시 묻기 실패 {ex!r}"[:160])
     if ans.get("none"):
         out.append("  AI: 매출 분해가 없다 — " + str(ans["none"])[:160])
         with C.LOCK:
