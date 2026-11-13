@@ -576,13 +576,13 @@ _JP_NAME_OUT = _re.compile(r"投資法人|銀行|銀$|国債|社債|債券|^Ｏ�
 # 금속 가공, 철강, 알루미늄, 비철금속(일본 非鉄金属·金属製品·鉄鋼·ガス)까지. 일본 「電気・ガス業」은 전력회사가 섞여 있어 안 넣었다.
 _EXTRACT_IND = _re.compile(
     r"(?i)oil & gas|oil/gas|oil and gas|oilfield|integrated oil|oil refining|natural gas|regulated gas|precious metals|metal mining|\bmining\b|"
-    r"metals and minerals|metal fabrication|\bcoal\b|steel|aluminum|^gold$|^silver$|^copper$|uranium")
+    r"metals and minerals|metal fabrication|\bcoal\b|steel|aluminum|^gold$|^silver$|^copper$|uranium|\bpaper\b|pulp|forest products|lumber & wood|farming/seeds|farm products|agricultural inputs|agricultural chemicals|meat/poultry/fish")
 # **미국 EPC·건설·주택 건설사도 같은 대우**(회원님 11/13: "미국에서 EPC 건설 주택 이런 회사들 다 빼버려 알림에서, 업데이트도 가장 후순위").
 # 미국에만 건다 — 일본 建設業 은 수주 지표를 보는 업종이라 그대로 둔다. realtime/app.py 의 TG_OUT_BUILD_US 와 같이 고친다.
 _BUILD_US = _re.compile(r"(?i)homebuilding|engineering & construction|line construction|bldg contractors|building materials|building products")
 # 나스닥이 'Military/Government/Technical' 로 묶어 업종으로는 안 걸리는 EPC·토목 회사 — 플루어·KBR·제이콥스·에이콤·그래닛·스탠텍·테트라텍 등
 BUILD_ADD = {"us:FLR", "us:KBR", "us:J", "us:ACM", "us:GVA", "us:STN", "us:TTEK", "us:ROAD", "us:ORN", "us:SHIM", "us:SLND", "us:CDNL", "us:WLDN", "us:MWH"}
-_EXTRACT_JP = {"鉱業", "石油", "石油・石炭製品", "非鉄金属", "非鉄金属製品", "金属製品", "鉄鋼", "ガス", "광업", "석유", "석유·석탄제품", "비철금속", "비철금속제품", "금속제품", "철강", "가스"}
+_EXTRACT_JP = {"水産", "水産・農林業", "수산", "수산·농림", "パルプ・紙", "펄프·종이", "鉱業", "石油", "石油・石炭製品", "非鉄金属", "非鉄金属製品", "金属製品", "鉄鋼", "ガス", "광업", "석유", "석유·석탄제품", "비철금속", "비철금속제품", "금속제품", "철강", "가스"}
 
 
 # **업종은 비철금속이지만 AI 수혜주라 빼지 않는 회사**(회원님 11/11: "스미토모전공 같은 회사는 광케이블이 있잖아 — 제외해야지").

@@ -668,10 +668,10 @@ TG_OUT_IND = re.compile(
 # 캐는 회사(광산·석유가스 생산·정유·석탄) — 회원님 11/11: "미국에 쓰잘데없는 회사가 너무 많다. 텔레로 쏴주지 마." (markets.extractive 와 같은 규칙)
 TG_OUT_EXTRACT = re.compile(
     r"(?i)oil & gas|oil/gas|oil and gas|oilfield|integrated oil|oil refining|natural gas|regulated gas|precious metals|metal mining|\bmining\b|"
-    r"metals and minerals|metal fabrication|\bcoal\b|steel|aluminum|^gold$|^silver$|^copper$|uranium")
+    r"metals and minerals|metal fabrication|\bcoal\b|steel|aluminum|^gold$|^silver$|^copper$|uranium|\bpaper\b|pulp|forest products|lumber & wood|farming/seeds|farm products|agricultural inputs|agricultural chemicals|meat/poultry/fish")
 TG_OUT_BUILD_US = re.compile(r"(?i)homebuilding|engineering & construction|line construction|bldg contractors|building materials|building products")   # 미국 EPC·건설·주택(11/13) — markets._BUILD_US
 TG_OUT_BUILD_ADD = {"us:FLR", "us:KBR", "us:J", "us:ACM", "us:GVA", "us:STN", "us:TTEK", "us:ROAD", "us:ORN", "us:SHIM", "us:SLND", "us:CDNL", "us:WLDN", "us:MWH"}      # 업종으로 안 걸리는 EPC·토목(markets.BUILD_ADD)
-TG_OUT_EXTRACT_JP = {"鉱業", "石油", "石油・石炭製品", "非鉄金属", "非鉄金属製品", "金属製品", "鉄鋼", "ガス", "광업", "석유", "석유·석탄제품", "비철금속", "비철금속제품", "금속제품", "철강", "가스"}
+TG_OUT_EXTRACT_JP = {"水産", "水産・農林業", "수산", "수산·농림", "パルプ・紙", "펄프·종이", "鉱業", "石油", "石油・石炭製品", "非鉄金属", "非鉄金属製品", "金属製品", "鉄鋼", "ガス", "광업", "석유", "석유·석탄제품", "비철금속", "비철금속제품", "금속제품", "철강", "가스"}
 # 업종은 비철금속이지만 AI 수혜주(광케이블·반도체 소재)라 알림을 보내는 회사 — markets.EXTRACT_KEEP 과 같은 목록
 TG_KEEP = {"jp:5802", "jp:5801", "jp:5803", "jp:5805", "jp:5016", "jp:5706",
      "jp:3436", "jp:3445", "jp:3433", "jp:5991",
