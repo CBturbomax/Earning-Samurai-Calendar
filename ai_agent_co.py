@@ -194,6 +194,9 @@ YOUR JOB — use Grep and Read on these files (they are large; search first, e.g
 
 How to decide what the segments are (use judgement, every company is different):
 1. If verified values are given above, use the SAME breakdown and measure that reproduces them, and the same names.
+   EXCEPTION — if the needed quarters are all EARLIER (or all LATER) than the verified ones and the filings of that time used a DIFFERENT
+   segment structure (the company reorganised), report that period's own structure with its own names for those quarters and say so in
+   "basis". Do not answer "none" just because the old structure differs from the chart.
 2. Otherwise prefer reportable business segments; if the company has a single reportable segment, use its revenue disaggregation
    (by product / service line / brand), and only if nothing else exists, by geography. Never mix two breakdowns.
 3. Three-month values. If a filing prints only year-to-date or annual values for a quarter, you MAY compute the quarter by subtracting
@@ -490,9 +493,15 @@ def one(B, key, db):
         # 화면의 마지막 사업부 분기보다 **뒤**이고 두 칸 이상이면 회사가 기준을 바꾼 것이다 — 싣는다(코핀: 2019년 Kopin/Industrial → 지금은 용도별).
         # 가운데 구멍에 다른 축이 끼면 그림이 멀쩡한 칸을 자른다(CSCO) — 그쪽은 버린다.
         tail = [e_ for e_ in off if e_ > last_seg]
+        # 화면의 첫 사업부 분기보다 **앞**이고 두 칸 이상이면 옛 기준이다(SAIC 2018~19: 고객별 → 지금은 Defense/Civilian · 11/13). 그림이 기준을 가른다.
+        first_seg = min(anc, default="")
+        head = [e_ for e_ in off if first_seg and e_ < first_seg]
         for e_ in off:
             if e_ in tail and len(tail) >= 2:
                 ok[e_]["grade"] = ok[e_].get("grade", "") + "·새 기준"
+                continue
+            if e_ in head and len(head) >= 2:
+                ok[e_]["grade"] = ok[e_].get("grade", "") + "·옛 기준"
                 continue
             out.append(f"    {e_} ✗ 화면 이름과 안 겹친다 — 버림")
             ok.pop(e_)
