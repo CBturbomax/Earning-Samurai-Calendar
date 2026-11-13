@@ -172,7 +172,11 @@ class History:
             try:
                 b = http_get(RAW + fn, ua="Mozilla/5.0", timeout=120, binary=True)
                 json.loads(b)
-                (ROOT / "data" / fn).write_bytes(b)
+                # 통째로 갈아끼운다(11/13 나카니시 7716: 이 파일을 쓰는 도중에 결산단신 처리 쪽이 읽어 '앞 분기 없음'이 됐고,
+                # 3분기 숫자를 못 만들어 속보가 보류됐다). 임시 파일에 쓰고 이름을 바꾸면 읽는 쪽은 늘 온전한 파일을 본다.
+                tmp_ = ROOT / "data" / (fn + ".part")
+                tmp_.write_bytes(b)
+                os.replace(tmp_, ROOT / "data" / fn)
             except Exception as e:                               # noqa: BLE001
                 log("이력:", fn, "실패", e)
         lu._FIN = None                                          # sec_prior 캐시 비우기
@@ -2914,6 +2918,11 @@ def jp_process(row, day, replay=False):
             mark_noguide(code, vals, ev.get("guide") or ev.get("guideQ"))
             prior = fj.base_series().get(f"jp:{code}", {})
             q = fj.quarter_from(vals, prior) if vals else None
+            if vals and not q and not prior:                  # 이력 파일을 못 읽었다 — 잠깐 뒤 한 번 더
+                time.sleep(3)
+                prior = fj.base_series().get(f"jp:{code}", {})
+                q = fj.quarter_from(vals, prior)
+                log("일본 앞 분기 다시 읽음", code, "분기", len(prior), "→", "수치" if q else "수치 없음")
             if q:
                 point = {"label": q["label"], "rev": q["rev"], "opi": q.get("opi"), "ni": q.get("ni")}
                 with H.lock:
