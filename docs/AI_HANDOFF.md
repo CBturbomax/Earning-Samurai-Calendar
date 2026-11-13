@@ -507,3 +507,6 @@
 ### 11/13 — 제지 업종: 세 시장 모두 알림 제외 + 업데이트 맨 뒤 (회원님 지시)
 - `markets._EXTRACT_IND` · `realtime/app.py` 의 `TG_OUT_EXTRACT` 에 `\bpaper\b|pulp`(미국 Paper · 홍콩 Paper & Paper Products), 일본은 업종 「パルプ・紙」.
   'Newspapers/Magazines' 는 안 걸린다. 임업(Forest Products)은 안 건드렸다.
+- 11/13 추가(회원님: "임업 광업 농업 이런 회사들 다 빼버려"): 임업(Forest Products · Lumber & Wood Production) · 농업(Farming/Seeds/Milling ·
+  Farm Products · Agricultural Inputs · Agricultural Chemicals) · 축수산(Meat/Poultry/Fish), 일본 「水産・農林業」「水産」 — 알림 제외 + 업데이트 맨 뒤.
+  농기계(Farm & Heavy Construction Machinery)는 안 걸린다.
