@@ -577,6 +577,11 @@ _JP_NAME_OUT = _re.compile(r"投資法人|銀行|銀$|国債|社債|債券|^Ｏ�
 _EXTRACT_IND = _re.compile(
     r"(?i)oil & gas|oil/gas|oil and gas|oilfield|integrated oil|oil refining|natural gas|regulated gas|precious metals|metal mining|\bmining\b|"
     r"metals and minerals|metal fabrication|\bcoal\b|steel|aluminum|^gold$|^silver$|^copper$|uranium")
+# **미국 EPC·건설·주택 건설사도 같은 대우**(회원님 11/13: "미국에서 EPC 건설 주택 이런 회사들 다 빼버려 알림에서, 업데이트도 가장 후순위").
+# 미국에만 건다 — 일본 建設業 은 수주 지표를 보는 업종이라 그대로 둔다. realtime/app.py 의 TG_OUT_BUILD_US 와 같이 고친다.
+_BUILD_US = _re.compile(r"(?i)homebuilding|engineering & construction|line construction|bldg contractors")
+# 나스닥이 'Military/Government/Technical' 로 묶어 업종으로는 안 걸리는 EPC·토목 회사 — 플루어·KBR·제이콥스·에이콤·그래닛·스탠텍·테트라텍 등
+BUILD_ADD = {"us:FLR", "us:KBR", "us:J", "us:ACM", "us:GVA", "us:STN", "us:TTEK", "us:ROAD", "us:ORN", "us:SHIM", "us:SLND", "us:CDNL", "us:WLDN", "us:MWH"}
 _EXTRACT_JP = {"鉱業", "石油", "石油・石炭製品", "非鉄金属", "非鉄金属製品", "金属製品", "鉄鋼", "ガス", "광업", "석유", "석유·석탄제품", "비철금속", "비철금속제품", "금속제품", "철강", "가스"}
 
 
@@ -587,7 +592,9 @@ _EXTRACT_JP = {"鉱業", "石油", "石油・石炭製品", "非鉄金属", "非
 # 더 넣고 빼려면 이 목록과 realtime/app.py 의 TG_KEEP 을 같이 고친다.
 EXTRACT_KEEP = {"jp:5802", "jp:5801", "jp:5803", "jp:5805", "jp:5016", "jp:5706",
      "jp:3436", "jp:3445", "jp:3433", "jp:5991",
-     "us:PH", "us:HWM", "us:GNRC", "us:ATI", "us:CRS", "us:BKR", "us:XE"}
+     "us:PH", "us:HWM", "us:GNRC", "us:ATI", "us:CRS", "us:BKR", "us:XE",
+     # 11/13: 건설 업종이지만 데이터센터·전력망을 짓는 회사 — 콴타 PWR · 컴포트시스템즈 FIX · 엠코 EME · IES · 마스텍 MTZ · 프리모리스 PRIM · MYR · 스털링 STRL
+     "us:PWR", "us:FIX", "us:EME", "us:IESC", "us:MTZ", "us:PRIM", "us:MYRG", "us:STRL"}
 
 
 def extractive(mkt, sector="", industry="", key=""):
@@ -596,7 +603,9 @@ def extractive(mkt, sector="", industry="", key=""):
         return False
     if mkt == "jp":
         return (sector or "") in _EXTRACT_JP
-    return bool(industry) and bool(_EXTRACT_IND.search(industry))
+    if key in BUILD_ADD:
+        return True
+    return bool(industry) and bool(_EXTRACT_IND.search(industry) or (mkt == "us" and _BUILD_US.search(industry)))
 
 
 def excluded(mkt, name="", sector="", industry=""):

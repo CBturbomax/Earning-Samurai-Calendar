@@ -455,3 +455,11 @@
 - **한 주 분량을 돌리는 순서**(다다음 주에 그대로 썼다): ① `--mark --usdays A B`(토큰 0) ② `FPICO_RETRY=1 FPICO_CHUNKS=4 … --usdays A B`
   ③ `--confirm` ④ `ai_jp_co.py --mark --days A B` ⑤ `ai_jp_co.py --days A B`. 스크립트는 세션 scratchpad 의 next_week.sh 꼴.
 - 다다음 주 결과: 미국 24곳 — 토큰 없이 245칸 정리, 화면 177 → 259칸(빌리빌리 +33·CAAP +16·니오 +12·오토데스크 +11), 남은 177칸. 일본은 그 주 해당 회사 0.
+
+### 11/13 — 미국 EPC·건설·주택 건설사: 알림 제외 + 업데이트 맨 뒤 (회원님 지시)
+- `markets.py` 의 `_BUILD_US`(Homebuilding · Engineering & Construction · …Line Construction · Bldg Contractors) + `BUILD_ADD`(나스닥이
+  'Military/Government/Technical' 로 묶은 플루어·KBR·제이콥스·에이콤·그래닛·스탠텍·테트라텍 등 14곳) → `extractive()` 가 참. **미국에만** 건다.
+- 알림은 `realtime/app.py` 의 `TG_OUT_BUILD_US`·`TG_OUT_BUILD_ADD`(같은 목록 — 둘을 같이 고칠 것). 업데이트 순서는 `extractive()` 를 쓰는
+  scrape_fin·scrape_live_us·ai_fill 이 저절로 맨 뒤로 보낸다.
+- **살려 둔 회사**(데이터센터·전력망을 짓는 곳 — 스미토모전공 때와 같은 이유, 회원님 확인 필요): PWR·FIX·EME·IESC·MTZ·PRIM·MYRG·STRL.
+- 건자재(Building Products/Materials)·주택 용품은 안 건드렸다.
