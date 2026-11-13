@@ -312,6 +312,20 @@ def ask_web(prompt, cwd):
 NAMES = {}
 
 
+MAXR = int(os.environ.get("AGENT_MAXR", "4"))
+
+
+def again(db0, k):
+    """공시 방식을 한 번 더 돌릴 회사인가 — 처음이거나, 기록이 없는 옛 회사(누락 다시 묻기를 한 번도 못 받았다)이거나, 지난번에 한 칸이라도 얻었고
+    MAXR 번을 안 넘겼을 때. 두 번 연달아 0 이면 그만두고 웹으로 넘긴다(회원님 11/14: "다 채울 때까지" — 헛도는 회사는 빼고)."""
+    if k not in (db0.get("agent_tried") or {}):
+        return True
+    lg = (db0.get("agent_log") or {}).get(k)
+    if not lg:
+        return True
+    return lg["n"] < MAXR and (lg["last"] > 0 or lg["n"] < 2)
+
+
 def one_web(B, key, db):
     """**공시에서 못 찾은 회사를 인터넷에서 찾는다**(회원님 11/13: "공시 말고도 인터넷에서 가져올 수 있는 건 가져와야 한다"). 검산은 같다.
     여기서도 못 찾으면 그 분기들은 notab 에 적어 **다시는 안 본다**("진짜 없으면 그 종목은 안 해도 돼")."""
@@ -529,8 +543,8 @@ def main():
             q0 = (db0["stocks"].get(k) or {}).get("q") or {}
             n = len([e for e in C.missing(B0, k)[1] if e not in q0])
             # 공시 방식: 아직 안 본 회사 / 웹 방식(--web): 공시 방식을 이미 거쳤는데 빈칸이 남았고 웹은 아직 안 본 회사
-            if n and ((k in (db0.get("agent_tried") or {}) and k not in (db0.get("web_tried") or {})) if "--web" in args
-                      else k not in (db0.get("agent_tried") or {})):
+            if n and ((k in (db0.get("agent_tried") or {}) and k not in (db0.get("web_tried") or {}) and not again(db0, k)) if "--web" in args
+                      else again(db0, k)):
                 cand.append((-(af.CAPS.get(k) or 0), k, n))
         keys = [k for _c, k, _n in sorted(cand)]
         print(f"{args[i + 1]}~{args[i + 2]} 미국 발표 회사 중 사업부 빈칸이 남은 곳: {len(keys)} · 빈칸 {sum(n for _c, _k, n in cand)}")
@@ -550,7 +564,8 @@ def main():
         tried = db0.get("web_tried" if "--web" in args else "agent_tried") or {}
         cand = [(k, len([e for e in J.all_holes(B0, k) if e not in ((db0["stocks"].get(k) or {}).get("q") or {})
                          or ((db0["stocks"].get(k) or {}).get("q") or {})[e].get("uv")])) for k in ks]
-        keys = [k for k, n in cand if n and k not in tried and ("--web" not in args or k in (db0.get("agent_tried") or {}))]
+        keys = [k for k, n in cand if n and ((k in (db0.get("agent_tried") or {}) and k not in (db0.get("web_tried") or {}) and not again(db0, k))
+                                             if "--web" in args else again(db0, k))]
         print(f"{args[i + 1]}~{args[i + 2]} 일본 발표 회사 중 사업부 빈칸이 남은 곳: {len(keys)} · 빈칸 {sum(n for k, n in cand if k in keys)}")
         if "--count" in args:
             return
@@ -587,7 +602,10 @@ def main():
         with C.LOCK:
             tot[0] += n
             if not WEB:
+                was = key in (db.get("agent_tried") or {})       # 기록(agent_log)이 생기기 전에 이미 한 번 본 회사는 이번이 두 번째다
                 db.setdefault("agent_tried", {})[key] = date.today().isoformat()
+                lg = db.setdefault("agent_log", {}).get(key) or {"n": 1 if was else 0}
+                db["agent_log"][key] = {"n": int(lg.get("n") or 0) + 1, "last": n}
             C.OUT.write_text(json.dumps(db, ensure_ascii=False, separators=(",", ":")), encoding="utf-8")
             print("== " + key)
             print("\n".join(lines), flush=True)
