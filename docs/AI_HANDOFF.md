@@ -462,4 +462,4 @@
 - 알림은 `realtime/app.py` 의 `TG_OUT_BUILD_US`·`TG_OUT_BUILD_ADD`(같은 목록 — 둘을 같이 고칠 것). 업데이트 순서는 `extractive()` 를 쓰는
   scrape_fin·scrape_live_us·ai_fill 이 저절로 맨 뒤로 보낸다.
 - **살려 둔 회사**(데이터센터·전력망을 짓는 곳 — 스미토모전공 때와 같은 이유, 회원님 확인 필요): PWR·FIX·EME·IESC·MTZ·PRIM·MYRG·STRL.
-- 건자재(Building Products/Materials)·주택 용품은 안 건드렸다.
+- 11/13 추가: 건자재(Building Materials · Building Products · RETAIL: Building Materials)도 뺀다. 주택 용품(Home Furnishings)은 안 건드렸다.

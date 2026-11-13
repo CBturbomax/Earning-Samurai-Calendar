@@ -579,7 +579,7 @@ _EXTRACT_IND = _re.compile(
     r"metals and minerals|metal fabrication|\bcoal\b|steel|aluminum|^gold$|^silver$|^copper$|uranium")
 # **미국 EPC·건설·주택 건설사도 같은 대우**(회원님 11/13: "미국에서 EPC 건설 주택 이런 회사들 다 빼버려 알림에서, 업데이트도 가장 후순위").
 # 미국에만 건다 — 일본 建設業 은 수주 지표를 보는 업종이라 그대로 둔다. realtime/app.py 의 TG_OUT_BUILD_US 와 같이 고친다.
-_BUILD_US = _re.compile(r"(?i)homebuilding|engineering & construction|line construction|bldg contractors")
+_BUILD_US = _re.compile(r"(?i)homebuilding|engineering & construction|line construction|bldg contractors|building materials|building products")
 # 나스닥이 'Military/Government/Technical' 로 묶어 업종으로는 안 걸리는 EPC·토목 회사 — 플루어·KBR·제이콥스·에이콤·그래닛·스탠텍·테트라텍 등
 BUILD_ADD = {"us:FLR", "us:KBR", "us:J", "us:ACM", "us:GVA", "us:STN", "us:TTEK", "us:ROAD", "us:ORN", "us:SHIM", "us:SLND", "us:CDNL", "us:WLDN", "us:MWH"}
 _EXTRACT_JP = {"鉱業", "石油", "石油・石炭製品", "非鉄金属", "非鉄金属製品", "金属製品", "鉄鋼", "ガス", "광업", "석유", "석유·석탄제품", "비철금속", "비철금속제품", "금속제품", "철강", "가스"}
