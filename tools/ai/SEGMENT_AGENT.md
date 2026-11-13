@@ -40,3 +40,12 @@ the names already on our chart. These standing rules apply to every company. Tex
 - Use 外部顧客への売上高 (external customers). 調整額 goes to "elim". Units are usually 百万円.
 - Many companies put the breakdown only in sentences (「日本事業の売上収益は1,505億円」) or only in the presentation deck: read both files.
 - 「単一セグメントであるため記載を省略」 with no product/region breakdown anywhere → answer "none".
+
+## MANDATORY final checklist — do not skip, do not shorten
+Before you write the final JSON, go through the requested quarters ONE BY ONE, in order. Every requested quarter must end up in
+exactly one of these two places — none may be silently dropped:
+- in "q" with its numbers (and the sum check done), or
+- in "missing": {"YYYY-MM-DD": "short reason"} — e.g. "not in any file", "only annual figure printed and no 9-month file",
+  "segments did not reconcile to total (sum 1,234 vs 1,300)", "single segment, no breakdown".
+Count them: len(q) + len(missing) must equal the number of requested quarters. If it does not, you are not finished — go back and look.
+Do not stop early because the first few quarters worked. Do not summarise instead of answering. The final message is JSON only.

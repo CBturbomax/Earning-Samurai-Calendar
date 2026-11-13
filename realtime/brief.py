@@ -102,9 +102,12 @@ def _ask(user, timeout, system=None):
         for i, tok in enumerate(CC_TOKENS):
             if _REST.get(tok, 0) > time.time():
                 continue
-            r = subprocess.run(["claude", "-p", "--model", CC_MODEL, "--output-format", "text", "--max-turns", "1"],
+            # 도구를 끄고 저장소 밖에서 부른다(11/13): /app 에서 부르면 CLAUDE.md(7만 토큰)가 매번 붙고, 모델이 도구를 쓰려다
+            # "Reached max turns (1)" 로 죽었다 — 그때마다 Codex 로 넘어갔는데 Codex 로그인이 만료돼 요약이 통째로 비었다.
+            r = subprocess.run(["claude", "-p", "--model", CC_MODEL, "--output-format", "text", "--max-turns", "1", "--tools", "",
+                                "--strict-mcp-config", "--disable-slash-commands"],
                                input=sysm + "\n\n" + user, capture_output=True, text=True, timeout=timeout,
-                               env={**os.environ, "CLAUDE_CODE_OAUTH_TOKEN": tok})
+                               cwd=tempfile.gettempdir(), env={**os.environ, "CLAUDE_CODE_OAUTH_TOKEN": tok})
             if r.returncode == 0 and r.stdout.strip():
                 VIA["last"] = f"claude{i + 1}"
                 return r.stdout
