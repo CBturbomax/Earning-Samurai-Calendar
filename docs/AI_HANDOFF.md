@@ -510,3 +510,9 @@
 - 11/13 추가(회원님: "임업 광업 농업 이런 회사들 다 빼버려"): 임업(Forest Products · Lumber & Wood Production) · 농업(Farming/Seeds/Milling ·
   Farm Products · Agricultural Inputs · Agricultural Chemicals) · 축수산(Meat/Poultry/Fish), 일본 「水産・農林業」「水産」 — 알림 제외 + 업데이트 맨 뒤.
   농기계(Farm & Heavy Construction Machinery)는 안 걸린다.
+
+### 11/14 — 3천억 원 이상으로 넓힘(11/13~12/31 발표 · 공시 전문만, `FPI_MIN_CAP=0.2`)
+- 먼저 토큰 없이 표시: 일본 187칸 · 미국 736칸. 대기줄 일본 77곳·739칸, 미국 100곳·1,935칸.
+- 일본: 334분기 통과 · 684만 토큰 → 화면 1,869 → 2,189칸(+320 · 35곳). 미국: 410분기 통과 · 1,073만 토큰 + `--confirm` 16칸 → 화면 9,099 → 9,495칸(+396 · 43곳).
+- 빠진 칸은 대부분 반기 이름표(1H·2H)가 분기 이름표로 바뀐 것(2429·2752·AMBR·HTLM·LOT·UXIN). 3038 의 3Q21·3Q22 는 확인 안 함.
+- 이 실행에는 '빠뜨린 분기 다시 묻기'(AGENT_RECHECK)가 아직 안 들어갔다 — 다음 실행부터.
