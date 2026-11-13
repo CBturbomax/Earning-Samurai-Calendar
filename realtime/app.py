@@ -1039,6 +1039,21 @@ def finish(ev, point=None):
             pts = _apply_point(ev, pts, point)
             log("숫자: 보도자료 손익 표(AI, 전년 검산 통과)", key, point["label"], point["rev"])
         else:
+            # 어차피 안 보낼 회사(소형주·은행·보험·제외 업종)는 숫자를 기다리지 않는다 — 사유를 바로 적는다(11/13: '사유 없는 미발송' 18건이
+            # 전부 이런 회사였는데, 진짜로 기다리는 속보(나카니시)와 섞여 구별이 안 됐다). 숫자 대기에는 보낼 회사만 남긴다.
+            try:
+                ok0, why0 = tg_pick(ev, pts)
+            except Exception:                                    # noqa: BLE001
+                ok0, why0 = True, None
+            if not ok0:
+                ev["tg"] = False
+                ev["tgWhy"] = why0
+                ev["tlab"] = _target_label(ev, pts)
+                if S.add(ev) or True:
+                    S.broadcast(ev)
+                    S.update(ev)
+                log("숫자 없음 · 텔레그램 대상 아님", key, why0)
+                return
             ev["hold"] = True
             ev["tgWhy"] = None
             ev["tlab"] = _target_label(ev, pts)
