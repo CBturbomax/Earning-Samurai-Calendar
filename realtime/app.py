@@ -665,7 +665,7 @@ TG_OUT_IND = re.compile(
 TG_OUT_EXTRACT = re.compile(
     r"(?i)oil & gas|oil/gas|oil and gas|oilfield|integrated oil|oil refining|natural gas|regulated gas|precious metals|metal mining|\bmining\b|"
     r"metals and minerals|metal fabrication|\bcoal\b|steel|aluminum|^gold$|^silver$|^copper$|uranium")
-TG_OUT_BUILD_US = re.compile(r"(?i)homebuilding|engineering & construction|line construction|bldg contractors")   # 미국 EPC·건설·주택(11/13) — markets._BUILD_US
+TG_OUT_BUILD_US = re.compile(r"(?i)homebuilding|engineering & construction|line construction|bldg contractors|building materials|building products")   # 미국 EPC·건설·주택(11/13) — markets._BUILD_US
 TG_OUT_BUILD_ADD = {"us:FLR", "us:KBR", "us:J", "us:ACM", "us:GVA", "us:STN", "us:TTEK", "us:ROAD", "us:ORN", "us:SHIM", "us:SLND", "us:CDNL", "us:WLDN", "us:MWH"}      # 업종으로 안 걸리는 EPC·토목(markets.BUILD_ADD)
 TG_OUT_EXTRACT_JP = {"鉱業", "石油", "石油・石炭製品", "非鉄金属", "非鉄金属製品", "金属製品", "鉄鋼", "ガス", "광업", "석유", "석유·석탄제품", "비철금속", "비철금속제품", "금속제품", "철강", "가스"}
 # 업종은 비철금속이지만 AI 수혜주(광케이블·반도체 소재)라 알림을 보내는 회사 — markets.EXTRACT_KEEP 과 같은 목록
