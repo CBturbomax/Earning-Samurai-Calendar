@@ -576,7 +576,7 @@ _JP_NAME_OUT = _re.compile(r"投資法人|銀行|銀$|国債|社債|債券|^Ｏ�
 # 금속 가공, 철강, 알루미늄, 비철금속(일본 非鉄金属·金属製品·鉄鋼·ガス)까지. 일본 「電気・ガス業」은 전력회사가 섞여 있어 안 넣었다.
 _EXTRACT_IND = _re.compile(
     r"(?i)oil & gas|oil/gas|oil and gas|oilfield|integrated oil|oil refining|natural gas|regulated gas|precious metals|metal mining|\bmining\b|"
-    r"metals and minerals|metal fabrication|\bcoal\b|steel|aluminum|^gold$|^silver$|^copper$|uranium|\\bpaper\\b|pulp")
+    r"metals and minerals|metal fabrication|\bcoal\b|steel|aluminum|^gold$|^silver$|^copper$|uranium|\bpaper\b|pulp")
 # **미국 EPC·건설·주택 건설사도 같은 대우**(회원님 11/13: "미국에서 EPC 건설 주택 이런 회사들 다 빼버려 알림에서, 업데이트도 가장 후순위").
 # 미국에만 건다 — 일본 建設業 은 수주 지표를 보는 업종이라 그대로 둔다. realtime/app.py 의 TG_OUT_BUILD_US 와 같이 고친다.
 _BUILD_US = _re.compile(r"(?i)homebuilding|engineering & construction|line construction|bldg contractors|building materials|building products")
