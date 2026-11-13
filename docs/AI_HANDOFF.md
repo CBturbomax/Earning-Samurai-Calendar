@@ -481,3 +481,10 @@
   DSGX +17 · ZS·MTN·MANU·KEP·DOO·CHWY·CASY·VSXY 각 +16 · QFIN·CAAP +14 … 남은 17곳은 안 돌렸다(다시 부르면 이어서 돈다).
 - 화면에서 빠진 칸: 2015~16년 여섯 칸(AVAV·CTAS·JBL·NDSN)과 FRO 2H21·GDS 2H24(반기→분기로 이름이 바뀐 것으로 보이나 확인 안 함).
 - 비용: 회사당 가운뎃값 8만 토큰대(캐시 읽기 포함한 합계) · 한 회사 1~2분 · 네 줄 병렬.
+
+### 11/13 — 일꾼 AI 전용 지침(`tools/ai/SEGMENT_AGENT.md`) · 웹 찾기 본 실행
+- 회원님이 보여 준 대화("하네스나 Readme 같은 마크다운 파일도 가장 위에 걸어두신 거죠?"): 이 세션·이어받는 AI 는 CLAUDE.md·AGENTS.md·AI_HANDOFF.md 가
+  걸려 있었지만, **공시를 뒤지는 일꾼 AI 에게는 코드 속 짧은 프롬프트뿐**이었다. `ai_agent_co.hang_rules` 가 작업 폴더에 `SEGMENT_AGENT.md` 를
+  `CLAUDE.md` 로 걸어 준다(claude -p 가 저절로 읽는 것을 확인). 사업부 고르는 차례·숫자가 숨는 자리·결산 분기 빼기·통화·자기 검산이 적혀 있다.
+  **새 함정을 찾으면 인수인계에만 적지 말고 이 파일에도 적을 것.**
+- `python ai_agent_co.py --web --days A B` — 공시 방식을 거치고도 빈칸이 남은 회사를 인터넷에서 찾는다. 8번 넘게 뒤지고도 없으면 `notab`(영구).

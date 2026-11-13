@@ -145,7 +145,17 @@ Finish with ONLY this JSON as your final message (no prose around it):
 """
 
 
+def hang_rules(cwd):
+    """일꾼 AI 의 작업 폴더 맨 위에 **전용 지침**을 건다(tools/ai/SEGMENT_AGENT.md -> CLAUDE.md). claude -p 가 저절로 읽는다.
+    저장소의 CLAUDE.md 는 7만 토큰이라 일꾼에게는 안 준다 — 대신 사업부 찾기에 필요한 것만 추린 한 장을 준다(회원님 11/13)."""
+    try:
+        (Path(cwd) / "CLAUDE.md").write_text((HERE / "tools" / "ai" / "SEGMENT_AGENT.md").read_text(encoding="utf-8"), encoding="utf-8")
+    except OSError:
+        pass
+
+
 def ask_agent(prompt, cwd):
+    hang_rules(cwd)
     cmd = ["claude", "-p", "--output-format", "json", "--max-turns", str(TURNS),
            "--tools", "Read,Grep,Glob", "--allowedTools", "Read,Grep,Glob",
            "--system-prompt", "You are a careful financial analyst. You read filings with Read/Grep/Glob and finish with JSON only.",
@@ -205,6 +215,7 @@ Finish with ONLY this JSON as your final message:
 
 
 def ask_web(prompt, cwd):
+    hang_rules(cwd)
     cmd = ["claude", "-p", "--output-format", "json", "--max-turns", os.environ.get("AGENT_WEB_TURNS", "45"),
            "--tools", "WebSearch,WebFetch,Read,Grep,Glob,Bash",
            "--allowedTools", "WebSearch,WebFetch,Read,Grep,Glob,Bash(curl:*),Bash(pdftotext:*)",
@@ -410,7 +421,9 @@ def main():
                 continue
             q0 = (db0["stocks"].get(k) or {}).get("q") or {}
             n = len([e for e in C.missing(B0, k)[1] if e not in q0])
-            if n and k not in (db0.get("agent_tried") or {}):
+            # 공시 방식: 아직 안 본 회사 / 웹 방식(--web): 공시 방식을 이미 거쳤는데 빈칸이 남았고 웹은 아직 안 본 회사
+            if n and ((k in (db0.get("agent_tried") or {}) and k not in (db0.get("web_tried") or {})) if "--web" in args
+                      else k not in (db0.get("agent_tried") or {})):
                 cand.append((-(af.CAPS.get(k) or 0), k, n))
         keys = [k for _c, k, _n in sorted(cand)]
         print(f"{args[i + 1]}~{args[i + 2]} 미국 발표 회사 중 사업부 빈칸이 남은 곳: {len(keys)} · 빈칸 {sum(n for _c, _k, n in cand)}")
