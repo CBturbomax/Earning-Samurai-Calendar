@@ -379,7 +379,7 @@ def main():
             if not shutil.which("codex") or not (Path.home() / ".codex" / "auth.json").exists():
                 print("codex CLI 또는 로그인 파일이 없다 — 아무것도 안 한다.")
                 return
-        elif not shutil.which("claude") or not os.environ.get("CLAUDE_CODE_OAUTH_TOKEN"):
+        elif not shutil.which("claude") or not (os.environ.get("CLAUDE_CODE_OAUTH_TOKEN") or os.environ.get("AI_SESSION")):
             print("claude CLI 또는 구독 토큰이 없다 — 아무것도 안 한다.")
             return
     t0 = time.time()
