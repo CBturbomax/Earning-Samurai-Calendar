@@ -604,6 +604,7 @@ def main():
         import ai_web_co
         NAMES.update(ai_web_co.names_map())
     tot = [0]
+    LIMIT = [None]
     T0 = time.time()
     SECS = int(os.environ.get("FPI_SECS", "3000"))
     from concurrent.futures import ThreadPoolExecutor
@@ -611,9 +612,16 @@ def main():
     def run(key):
         if USED["in"] + USED["out"] >= MAX_TOK or time.time() - T0 > SECS:
             return
+        if LIMIT[0]:
+            return
         try:
             lines, n = (one_web if WEB else one)(B, key, db)
         except Exception as ex:                          # noqa: BLE001
+            if re.search(r"hit your .*limit|usage limit|rate limit", repr(ex), re.I):
+                # 한도에 걸린 것은 '뒤져 봤는데 없다'가 아니다 — 기록하지 않고 그 자리에서 멈춘다(11/15: 477곳이 한도 실패로 '두 번 0'이 될 뻔했다)
+                LIMIT[0] = repr(ex)[:200]
+                print("== " + key + "\n  한도에 걸려 멈춘다 — " + LIMIT[0], flush=True)
+                return
             lines, n = [f"  실패 {ex!r}"[:300]], 0
         with C.LOCK:
             tot[0] += n
