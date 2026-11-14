@@ -316,6 +316,8 @@ NAMES = {}
 
 
 MAXR = int(os.environ.get("AGENT_MAXR", "4"))
+TIERS = os.environ.get("AGENT_TIER", "012")              # 우선순위 단계(prio.tier) — 0 소비재·인터넷 / 1 산업재 / 2 나머지
+import prio  # noqa: E402
 
 
 def again(db0, k):
@@ -554,7 +556,9 @@ def main():
             # 공시 방식: 아직 안 본 회사 / 웹 방식(--web): 공시 방식을 이미 거쳤는데 빈칸이 남았고 웹은 아직 안 본 회사
             if n and ((k in (db0.get("agent_tried") or {}) and k not in (db0.get("web_tried") or {}) and not again(db0, k)) if "--web" in args
                       else again(db0, k)):
-                cand.append((-(af.CAPS.get(k) or 0), k, n))
+                tr_ = prio.tier(k, ind)
+                if str(tr_) in TIERS:
+                    cand.append(((tr_, -(af.CAPS.get(k) or 0)), k, n))
         keys = [k for _c, k, _n in sorted(cand)]
         print(f"{args[i + 1]}~{args[i + 2]} 미국 발표 회사 중 사업부 빈칸이 남은 곳: {len(keys)} · 빈칸 {sum(n for _c, _k, n in cand)}")
         if "--count" in args:
@@ -570,6 +574,9 @@ def main():
         i = args.index("--jpdays")
         with contextlib.redirect_stdout(io.StringIO()):
             ks = J.week(B0, args[i + 1], args[i + 2])
+        import ai_fill as af_
+        tj_ = {k_: prio.tier(k_, B0.SECTORS.get(k_, "") or af_.jp_sector(k_[3:])) for k_ in ks}
+        ks = sorted((k_ for k_ in ks if str(tj_[k_]) in TIERS), key=lambda k_: tj_[k_])      # 안정 정렬 — 단계 안에서는 시총 순 그대로
         tried = db0.get("web_tried" if "--web" in args else "agent_tried") or {}
         cand = [(k, len([e for e in J.all_holes(B0, k) if e not in ((db0["stocks"].get(k) or {}).get("q") or {})
                          or ((db0["stocks"].get(k) or {}).get("q") or {})[e].get("uv")])) for k in ks]
