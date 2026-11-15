@@ -97,6 +97,19 @@ def fetch_docs(key, ends):
         else:
             f = next((f for f in per if abs((C._d(f[0]) - C._d(e)).days) <= 12), None)
             if not f:
+                # **막 발표한 분기는 10-Q 가 아직 없다 — 실적 8-K 의 보도자료(EX-99)를 준다**(11/16 회원님: "실적 나오면 바로바로").
+                # 분기 끝에서 100일 안의 일만. 10-Q 가 나오면 그쪽이 다음 실행에서 읽힌다.
+                if 0 <= (date.today() - C._d(e)).days <= 100 and "8K" not in seen:
+                    try:
+                        hit = lu.find_8k(cik, date.fromordinal(C._d(e).toordinal() + 10).isoformat())
+                        pr_ = lu.ex99_html(cik, hit[0]) if hit else None
+                    except Exception:                    # noqa: BLE001
+                        pr_ = None
+                    if pr_ and len(pr_) > 3000:
+                        seen.add("8K")
+                        fn = f"{e}_8K_press_release.txt"
+                        (d / fn).write_text(to_text(pr_)[:3_000_000], encoding="utf-8")
+                        out.append((fn, f"earnings press release (8-K exhibit 99) for the quarter ended about {e} — three-month columns are usually printed"))
                 continue
             # 결산 분기는 10-K 에 연간 값뿐이다 — **바로 앞 3분기 10-Q(9개월 누계)**를 같이 줘야 AI 가 뺄 수 있다(래드넷: 못 줘서 0칸이었다)
             fs = [f] + ([g for g in per if g[1] == "10-Q" and 75 <= (C._d(f[0]) - C._d(g[0])).days <= 105][:1] if f[1] == "10-K" else [])
@@ -322,12 +335,12 @@ ANN = {}                                                 # key -> 그 기간의 
 
 
 def fresh_ok(db0, k):
-    """막 발표한 회사인가 — 이 발표를 아직 안 봤거나, 봤는데 못 얻었고(세 번까지) 오늘은 아직 안 본 회사."""
+    """막 발표한 회사인가 — 이 발표를 아직 안 봤거나, 봤는데 못 얻었고(네 번까지) 여섯 시간이 지난 회사."""
     r = (db0.get("fresh") or {}).get(k)
     d = ANN.get(k, "")
     if not d or d > date.today().isoformat():
         return False
-    return (not r or r.get("d") != d) or (int(r.get("n") or 0) < 3 and str(r.get("t")) < date.today().isoformat())
+    return (not r or r.get("d") != d) or (int(r.get("n") or 0) < 4 and time.time() - float(r.get("ts") or 0) > 6 * 3600)
 
 
 TIERS = os.environ.get("AGENT_TIER", "012")              # 우선순위 단계(prio.tier) — 0 소비재·인터넷 / 1 산업재 / 2 나머지
@@ -657,7 +670,7 @@ def main():
             if FRESH:                                    # 발표마다 따로 센다 — 옛 빈칸의 '두 번 0' 기록(agent_log)은 건드리지 않는다
                 r_ = (db.get("fresh") or {}).get(key) or {}
                 same = r_.get("d") == ANN.get(key)
-                db.setdefault("fresh", {})[key] = {"d": ANN.get(key), "t": date.today().isoformat(),
+                db.setdefault("fresh", {})[key] = {"d": ANN.get(key), "t": date.today().isoformat(), "ts": int(time.time()),
                                                    "n": 9 if n else (int(r_.get("n") or 0) + 1 if same else 1)}
             elif not WEB:
                 was = key in (db.get("agent_tried") or {})       # 기록(agent_log)이 생기기 전에 이미 한 번 본 회사는 이번이 두 번째다
