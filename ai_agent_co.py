@@ -316,6 +316,20 @@ NAMES = {}
 
 
 MAXR = int(os.environ.get("AGENT_MAXR", "4"))
+FRESH = os.environ.get("AGENT_FRESH") == "1"            # 새 발표 따라가기(워크플로 ai_agent.yml) — 막 발표한 회사의 새 분기만, 발표마다 세 번까지
+SINCE = os.environ.get("AGENT_SINCE") or (date.fromordinal(date.today().toordinal() - 150).isoformat() if FRESH else "")
+ANN = {}                                                 # key -> 그 기간의 (가장 늦은) 발표일 — 새 발표 따라가기에서만 쓴다
+
+
+def fresh_ok(db0, k):
+    """막 발표한 회사인가 — 이 발표를 아직 안 봤거나, 봤는데 못 얻었고(세 번까지) 오늘은 아직 안 본 회사."""
+    r = (db0.get("fresh") or {}).get(k)
+    d = ANN.get(k, "")
+    if not d or d > date.today().isoformat():
+        return False
+    return (not r or r.get("d") != d) or (int(r.get("n") or 0) < 3 and str(r.get("t")) < date.today().isoformat())
+
+
 TIERS = os.environ.get("AGENT_TIER", "012")              # 우선순위 단계(prio.tier) — 0 소비재·인터넷 / 1 산업재 / 2 나머지
 import prio  # noqa: E402
 
@@ -339,10 +353,10 @@ def one_web(B, key, db):
     if key.startswith("jp:"):
         import ai_jp_co as J
         all_ends = [p_["end"] for p_ in fin.get("points") or [] if p_.get("end")]
-        miss = [e for e in J.all_holes(B, key) if e not in q0 or q0[e].get("uv")][:HOLES]
+        miss = [e for e in J.all_holes(B, key) if (e not in q0 or q0[e].get("uv")) and e >= SINCE][:HOLES]
     else:
         all_ends, miss = C.missing(B, key)
-        miss = [e for e in miss if e not in q0][:HOLES]
+        miss = [e for e in miss if e not in q0 and e >= SINCE][:HOLES]
     if not miss:
         return ["  빈칸 없음"], 0
     names = (B.SEG.get(key) or {}).get("names") or []
@@ -421,10 +435,10 @@ def one(B, key, db):
     if jp:
         import ai_jp_co as J
         all_ends = [p_["end"] for p_ in fin.get("points") or [] if p_.get("end")]
-        miss = [e for e in J.all_holes(B, key) if e not in q0 or q0[e].get("uv")][:HOLES]
+        miss = [e for e in J.all_holes(B, key) if (e not in q0 or q0[e].get("uv")) and e >= SINCE][:HOLES]
     else:
         all_ends, miss = C.missing(B, key)
-        miss = [e for e in miss if e not in q0][:HOLES]
+        miss = [e for e in miss if e not in q0 and e >= SINCE][:HOLES]
     if not miss:
         return ["  빈칸 없음"], 0
     names = (B.SEG.get(key) or {}).get("names") or []
@@ -542,7 +556,10 @@ def main():
                 rows = json.loads((HERE / "data" / name).read_text(encoding="utf-8")).get("rows", [])
             except (OSError, ValueError):
                 rows = []
-            ks |= {"us:" + r["code"] for r in rows if isinstance(r, dict) and args[i + 1] <= str(r.get("date")) <= args[i + 2]}
+            for r in rows:
+                if isinstance(r, dict) and args[i + 1] <= str(r.get("date")) <= args[i + 2]:
+                    ks.add("us:" + r["code"])
+                    ANN["us:" + r["code"]] = max(ANN.get("us:" + r["code"], ""), str(r.get("date")))
         with contextlib.redirect_stdout(io.StringIO()):
             af.targets(B0, ks)
         mincap = float(os.environ.get("FPI_MIN_CAP", "0.7"))
@@ -552,7 +569,11 @@ def main():
             if k not in B0.FIN or (af.CAPS.get(k) or 0) < mincap or "Banks" in ind or extractive("us", "", ind, k):
                 continue
             q0 = (db0["stocks"].get(k) or {}).get("q") or {}
-            n = len([e for e in C.missing(B0, k)[1] if e not in q0])
+            n = len([e for e in C.missing(B0, k)[1] if e not in q0 and e >= SINCE])
+            if FRESH:
+                if n and fresh_ok(db0, k) and str(prio.tier(k, ind)) in TIERS:
+                    cand.append(((prio.tier(k, ind), -(af.CAPS.get(k) or 0)), k, n))
+                continue
             # 공시 방식: 아직 안 본 회사 / 웹 방식(--web): 공시 방식을 이미 거쳤는데 빈칸이 남았고 웹은 아직 안 본 회사
             if n and ((k in (db0.get("agent_tried") or {}) and k not in (db0.get("web_tried") or {}) and not again(db0, k)) if "--web" in args
                       else again(db0, k)):
@@ -578,10 +599,18 @@ def main():
         tj_ = {k_: prio.tier(k_, B0.SECTORS.get(k_, "") or af_.jp_sector(k_[3:])) for k_ in ks}
         ks = sorted((k_ for k_ in ks if str(tj_[k_]) in TIERS), key=lambda k_: tj_[k_])      # 안정 정렬 — 단계 안에서는 시총 순 그대로
         tried = db0.get("web_tried" if "--web" in args else "agent_tried") or {}
-        cand = [(k, len([e for e in J.all_holes(B0, k) if e not in ((db0["stocks"].get(k) or {}).get("q") or {})
-                         or ((db0["stocks"].get(k) or {}).get("q") or {})[e].get("uv")])) for k in ks]
+        for name_ in ("earnings.json", "earnings_jp_sched.json", "earnings_jp_past.json"):
+            try:
+                rows_ = json.loads((HERE / "data" / name_).read_text(encoding="utf-8")).get("rows", [])
+            except (OSError, ValueError):
+                rows_ = []
+            for r_ in rows_:
+                if isinstance(r_, dict) and args[i + 1] <= str(r_.get("date")) <= args[i + 2]:
+                    ANN["jp:" + str(r_.get("code"))] = max(ANN.get("jp:" + str(r_.get("code")), ""), str(r_.get("date")))
+        cand = [(k, len([e for e in J.all_holes(B0, k) if (e not in ((db0["stocks"].get(k) or {}).get("q") or {})
+                         or ((db0["stocks"].get(k) or {}).get("q") or {})[e].get("uv")) and e >= SINCE])) for k in ks]
         keys = [k for k, n in cand if n and ((k in (db0.get("agent_tried") or {}) and k not in (db0.get("web_tried") or {}) and not again(db0, k))
-                                             if "--web" in args else again(db0, k))]
+                                             if "--web" in args else (fresh_ok(db0, k) if FRESH else again(db0, k)))]
         print(f"{args[i + 1]}~{args[i + 2]} 일본 발표 회사 중 사업부 빈칸이 남은 곳: {len(keys)} · 빈칸 {sum(n for k, n in cand if k in keys)}")
         if "--count" in args:
             return
@@ -625,7 +654,12 @@ def main():
             lines, n = [f"  실패 {ex!r}"[:300]], 0
         with C.LOCK:
             tot[0] += n
-            if not WEB:
+            if FRESH:                                    # 발표마다 따로 센다 — 옛 빈칸의 '두 번 0' 기록(agent_log)은 건드리지 않는다
+                r_ = (db.get("fresh") or {}).get(key) or {}
+                same = r_.get("d") == ANN.get(key)
+                db.setdefault("fresh", {})[key] = {"d": ANN.get(key), "t": date.today().isoformat(),
+                                                   "n": 9 if n else (int(r_.get("n") or 0) + 1 if same else 1)}
+            elif not WEB:
                 was = key in (db.get("agent_tried") or {})       # 기록(agent_log)이 생기기 전에 이미 한 번 본 회사는 이번이 두 번째다
                 db.setdefault("agent_tried", {})[key] = date.today().isoformat()
                 lg = db.setdefault("agent_log", {}).get(key) or {"n": 1 if was else 0}
