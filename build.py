@@ -3884,8 +3884,42 @@ def drop_part_totals(rec):
 SEG_ODD = [0]
 
 
+def merge_same_key(rec):
+    """표기만 다른 같은 부문을 한 줄로(11/15 패스트리테일링: 'UNIQLO Japan' 과 'UNIQLOJAPAN' 이 두 줄로 서서 한쪽은 옛 기준으로 밀렸다).
+    열쇠(seg_key — 대소문자·띄어쓰기·and 를 지운 것)가 같고, **같은 분기에 둘 다 값이 있으면 1% 안에서 같을 때만** 합친다. 먼저 나온 이름을 남긴다."""
+    try:
+        names = list(rec.get("names") or [])
+        pts = rec.get("pts") or []
+        first, drop = {}, {}
+        for i, n in enumerate(names):
+            k = seg_key(str(n))
+            if not k or re.search(r"[\u3040-\u30ff\u3400-\u9fff\uff00-\uffef]", str(n)):     # 일본어·중국어 이름은 열쇠가 글자를 지워 버린다(ECマーケットプレイス… 셋이 한 열쇠) — 안 합친다
+                continue
+            if k in first:
+                j = first[k]
+                ok = all(r[1 + i] in (None, 0) or r[1 + j] in (None, 0) or abs(r[1 + i] - r[1 + j]) <= 0.01 * max(abs(r[1 + i]), abs(r[1 + j]))
+                         for r in pts if len(r) > 1 + max(i, j))
+                if ok:
+                    drop[i] = j
+            else:
+                first[k] = i
+        if not drop:
+            return rec
+        new_pts = []
+        for r in pts:
+            r = list(r)
+            for i, j in drop.items():
+                if len(r) > 1 + max(i, j) and r[1 + j] in (None, 0) and r[1 + i] not in (None, 0):
+                    r[1 + j] = r[1 + i]
+            new_pts.append([r[0]] + [v for c, v in enumerate(r[1:]) if c not in drop])
+        return {**rec, "names": [n for c, n in enumerate(names) if c not in drop], "pts": new_pts}
+    except Exception:                                    # noqa: BLE001 — 모양이 다른 기록은 그대로 둔다
+        return rec
+
+
 def pack_seg(rec, fin_rec):
     """[분기 라벨, 부문1, 부문2, …]. 라벨은 총매출 쪽 것을 빌려 온다."""
+    rec = merge_same_key(rec)
     rec = drop_part_totals(rec)
     fit = seg_fit(rec, fin_rec)
     if not fit:
