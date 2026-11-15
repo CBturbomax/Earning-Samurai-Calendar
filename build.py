@@ -3917,6 +3917,9 @@ def merge_same_key(rec):
         return rec
 
 
+SPARSE_Q = [True]
+
+
 def pack_seg(rec, fin_rec):
     """[분기 라벨, 부문1, 부문2, …]. 라벨은 총매출 쪽 것을 빌려 온다."""
     rec = merge_same_key(rec)
@@ -3937,6 +3940,13 @@ def pack_seg(rec, fin_rec):
         rat = [sum(v for v in r[1:] if v) / rev for r, (_l, rev) in zip(pts, aligned) if rev and rev > 0]
         if rec.get("fpiq") and len(rat) == len(pts) and all(0.9 <= x <= 1.1 for x in rat):
             gaps = []
+        # **분기 값인 것이 숫자로 확실하면 분기 이름 그대로**(11/16 SHOEI 7839: 회사가 1·3분기에만 부문을 내서 간격이 반년 → 「2H23」 같은
+        # 반기 이름을 받았다). 총매출이 분기로 오고(freq Q) **모든 줄의 합이 그 분기 총매출과 3% 안**일 때만 — 반기 값이면 합이 두 배라 안 걸린다.
+        if SPARSE_Q[0] and (fin_rec or {}).get("freq") == "Q" and len(rat) == len(pts) >= 4 and all(0.97 <= x <= 1.03 for x in rat):
+            fe = sorted(date.fromisoformat(p_["end"]) for p_ in (fin_rec.get("points") or [])[-12:] if p_.get("end"))
+            fg = sorted((y - x).days for x, y in zip(fe, fe[1:]))
+            if fg and fg[len(fg) // 2] <= 120:           # 총매출이 정말 석 달 간격일 때만(반기 회사인데 freq 가 Q 로 적힌 허치메드·스미스앤드네퓨는 그대로)
+                gaps = []
         if len(gaps) >= 2 and gaps[len(gaps) // 2] > 250:
             return None
         if len(gaps) >= 2 and 150 <= gaps[len(gaps) // 2] <= 220 and not all(re.search("H", l or "") for l, _ in aligned):
