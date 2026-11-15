@@ -2695,6 +2695,11 @@ try:
         SEG_KO_FILE.setdefault(_k, _v)
 except (OSError, ValueError):
     pass
+try:                                                             # 사업부 채우기로 새로 들어온 일본어 이름 — 세션에서 한 번에 옮겨 둔 것(11/15).
+    for _k, _v in json.loads((HERE / "data" / "seg_ko_fill.json").read_text(encoding="utf-8")).items():      # 서버가 seg_ko_extra 를 덮어써도 남는다
+        SEG_KO_FILE.setdefault(_k, _v)
+except (OSError, ValueError):
+    pass
 
 
 def seg_ko(name):
