@@ -3440,8 +3440,10 @@ def segko_loop():
         with H.lock:
             # 일·중 원문, 그리고 일본·홍콩 회사의 영문 부문 이름(Real Estate Lease Business)도 한국어로.
             # 미국 회사의 영어 부문 이름도 한국어로(회원님 10/30: 인텔 'Client Computing' 이 영어로 남았다).
-            names = {n for k, v in (H.D.get("seg") or {}).items() for n in v.get("names") or []
-                     if n not in SEGKO and not hangul.search(n)}
+            # 지역별 매출(geo)·수주(ord) 그림의 이름도 본다(11/16) — 사업부(seg)만 보던 탓에 Appier 「北東アジア地域」가 원문으로 남았다.
+            names = {n for kind in ("seg", "geo", "ord") for k, v in (H.D.get(kind) or {}).items()
+                     for n in (v.get("names") if isinstance(v, dict) else None) or []
+                     if isinstance(n, str) and n not in SEGKO and not hangul.search(n)}
         names = sorted(names, key=lambda n: (not cjk.search(n), n))[:1600]
         for i in range(0, len(names), 40):
             got = brief.translate_names(names[i:i + 40])
