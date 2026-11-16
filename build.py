@@ -2629,6 +2629,7 @@ def load_ai_fill():
 _SEG_CJK_KEYS = sorted(SEG_KO_CJK, key=len, reverse=True)
 _SEG_EN_WORD = re.compile(r"[A-Za-z0-9&,\-./·'()% ]+")
 _CJK_LEFT = re.compile(r"[\u3040-\u30ff\u3400-\u9fff\uff01-\uff60]")
+_SEG_JUNK = re.compile(r"[、。◎「」]|第$|^自\d{4}年|割合|に関しては")
 
 
 try:
@@ -3997,7 +3998,24 @@ def pack_seg(rec, fin_rec):
         rows = [[r[0]] + [r[j + 1] for j in keep] for r in rows]
     # 이름은 화면 직전에 한글로 옮긴다(아는 이름만 — seg_ko). 여기서 옮겨야
     # 미국·일본·홍콩이 한 길로 지나간다.
-    out = {"names": [seg_ko(n) for n in names], "pts": rows}
+    kn = [seg_ko(n) for n in names]
+    # 한글로 못 옮긴 이름 가운데 **문장 토막**(「これらの結果、」「前第」「…の割合」)은 부문이 아니다 — 표 옆 글을 이름으로 읽은 것이라 줄째 뺀다(11/16).
+    junk = {j for j, n in enumerate(kn) if _CJK_LEFT.search(n) and _SEG_JUNK.search(n)}
+    # 같은 한글 이름으로 옮겨진 두 줄(「近畿」·「近畿地方」)은 값이 겹치지 않을 때만 한 줄로 잇는다.
+    first = {}
+    for j, n in enumerate(kn):
+        if j in junk:
+            continue
+        i = first.setdefault(n, j)
+        if i != j and not any(r[i + 1] is not None and r[j + 1] is not None for r in rows):
+            for r in rows:
+                if r[i + 1] is None:
+                    r[i + 1] = r[j + 1]
+            junk.add(j)
+    if junk and len(junk) < len(kn):
+        kn = [n for j, n in enumerate(kn) if j not in junk]
+        rows = [[r[0]] + [r[j + 1] for j in range(len(names)) if j not in junk] for r in rows]
+    out = {"names": kn, "pts": rows}
     # 어느 축으로 쪼갠 것인가. 사업부문이 없어 제품이나 지역으로 내려간 회사가
     # 있다(애플의 영업부문은 지역이다). 화면 제목이 이걸로 갈린다.
     if rec.get("axis") and rec["axis"] != "사업부문":
