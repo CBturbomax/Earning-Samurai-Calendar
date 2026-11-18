@@ -265,7 +265,7 @@
   "2654": {
    "page": "https://www.asmo1.co.jp",
    "found": "2026-10-13",
-   "parse_miss": "2026-11-18T00:09:03+00:00"
+   "parse_miss": "2026-11-18T01:33:10+00:00"
   },
   "2659": {
    "miss": "2026-11-18"
@@ -402,7 +402,7 @@
   "3058": {
    "page": "https://ir.sanyodo.co.jp/ir/irnews.html",
    "found": "2026-10-13",
-   "parse_miss": "2026-11-18T00:09:03+00:00"
+   "parse_miss": "2026-11-18T01:33:10+00:00"
   },
   "3064": {
    "miss": "2026-11-18"
@@ -442,7 +442,7 @@
   },
   "3160": {
    "page": "https://www.oomitsu.com",
-   "parse_miss": "2026-11-17T23:53:50+00:00"
+   "parse_miss": "2026-11-18T01:33:10+00:00"
   },
   "3175": {
    "miss": "2026-11-18"
@@ -883,11 +883,11 @@
   "7610": {
    "page": "https://www.tay2.co.jp/ir/irlibrary/01.html",
    "found": "2026-10-13",
-   "parse_miss": "2026-11-17T23:53:50+00:00"
+   "parse_miss": "2026-11-18T01:33:10+00:00"
   },
   "7604": {
    "page": "https://www.umenohana.co.jp/investor/archive?category=monthly_sales",
-   "parse_miss": "2026-11-17T23:53:50+00:00"
+   "parse_miss": "2026-11-18T01:33:10+00:00"
   },
   "7494": {
    "page": "https://www.konaka.co.jp/ir/getsuji_-2026.html",
@@ -1117,7 +1117,7 @@
   },
   "3080": {
    "page": "https://jason.co.jp/ir/monthly_information_2027_2",
-   "parse_miss": "2026-11-17T23:53:50+00:00"
+   "parse_miss": "2026-11-18T01:33:10+00:00"
   },
   "3195": {
    "page": "https://www.genepa.com/ir/",
@@ -1129,7 +1129,7 @@
   },
   "7865": {
    "page": "https://www.people-kk.co.jp/investorrelations/monthly/",
-   "parse_miss": "2026-11-17T23:53:50+00:00"
+   "parse_miss": "2026-11-18T01:33:10+00:00"
   },
   "8218": {
    "page": "https://www.komeri.bit.or.jp/ir/monthlytrend/",
@@ -6984,7 +6984,7 @@
      "doc": "https://www.haruyama.co.jp/ir/ir_monthly_data.php"
     }
    },
-   "ts": "2026-11-17T23:53:50+00:00"
+   "ts": "2026-11-18T01:33:10+00:00"
   },
   "7514": {
    "name": "ヒマラヤ",
@@ -7061,7 +7061,7 @@
      "doc": "https://www.hmry.jp/ir/library/monthly/?y=2027"
     }
    },
-   "ts": "2026-11-17T23:53:50+00:00"
+   "ts": "2026-11-18T01:33:10+00:00"
   },
   "7494": {
    "name": "コナカ",
@@ -7284,7 +7284,7 @@
      "doc": "https://www.konaka.co.jp/ir/getsuji_h31.html"
     }
    },
-   "ts": "2026-11-17T23:53:50+00:00"
+   "ts": "2026-11-18T01:33:10+00:00"
   },
   "9021": {
    "name": "ＪＲ西日本",
@@ -9271,7 +9271,7 @@
      "doc": "https://srsholdings.com/pages/ir-library-monthly"
     }
    },
-   "ts": "2026-11-18T00:09:03+00:00"
+   "ts": "2026-11-18T01:33:10+00:00"
   },
   "9278": {
    "name": "ブックオフＧＨＤ",
@@ -13335,8 +13335,8 @@
    "name": "ハンズマン",
    "page": "https://www.handsman.co.jp/ir/sales_report",
    "months": {},
-   "ts": "2026-11-17T23:53:50+00:00",
-   "pdf_ts": "2026-11-17T00:50:18+00:00",
+   "ts": "2026-11-18T01:33:10+00:00",
+   "pdf_ts": "2026-11-18T01:33:10+00:00",
    "pdf": {
     "2017-07": {
      "doc": "https://www.handsman.co.jp/wp-content/uploads/ir/i_sales_report/uriage-201706.pdf",
@@ -15045,8 +15045,8 @@
      "doc": "https://www.village-v.co.jp/company/ir/sales_trend/"
     }
    },
-   "ts": "2026-11-17T23:53:50+00:00",
-   "pdf_ts": "2026-11-15T00:10:59+00:00"
+   "ts": "2026-11-18T01:33:10+00:00",
+   "pdf_ts": "2026-11-18T01:33:10+00:00"
   },
   "9973": {
    "name": "ＫＯＺＯホールディングス",
@@ -18100,8 +18100,8 @@
    "name": "東和フード",
    "page": "https://www.towafood-net.co.jp/investor/monthly/",
    "months": {},
-   "ts": "2026-11-17T23:53:50+00:00",
-   "pdf_ts": "2026-11-17T00:35:26+00:00",
+   "ts": "2026-11-18T01:33:10+00:00",
+   "pdf_ts": "2026-11-18T01:33:10+00:00",
    "pdf": {
     "2025-10": {
      "doc": "https://www.towafood-net.co.jp/wp-content/uploads/2025/11/2025年10月度売上高速報（前期対比）.pdf",
@@ -18486,8 +18486,8 @@
    "name": "スターシーズ",
    "page": "https://starseeds.co.jp",
    "months": {},
-   "ts": "2026-11-17T23:53:50+00:00",
-   "pdf_ts": "2026-11-17T00:20:35+00:00",
+   "ts": "2026-11-18T01:33:10+00:00",
+   "pdf_ts": "2026-11-18T01:33:10+00:00",
    "pdf": {
     "2026-03": {
      "doc": "https://ssl4.eir-parts.net/doc/3083/ir_material2/289363/00.pdf",
@@ -22954,7 +22954,7 @@
      "doc": "https://jason.co.jp/wptest/wp-content/uploads/2026/10/2027年2月期_202609.png"
     }
    },
-   "ts": "2026-11-17T23:53:50+00:00"
+   "ts": "2026-11-18T01:33:10+00:00"
   },
   "3317": {
    "name": "フライングガーデン",
@@ -24360,8 +24360,8 @@
      "doc": "https://contents.xj-storage.jp/xcontents/AS81590/c7ab06bc/7fb9/400c/a551/7bc78ccd60ea/140120261007546987.pdf"
     }
    },
-   "ts": "2026-11-17T23:53:50+00:00",
-   "pdf_ts": "2026-11-15T01:48:09+00:00",
+   "ts": "2026-11-18T01:33:10+00:00",
+   "pdf_ts": "2026-11-18T01:33:10+00:00",
    "pdf": {
     "2021-02": {
      "doc": "https://contents.xj-storage.jp/xcontents/AS81590/17409267/206d/4c62/8b0d/8574b1c77735/140120220307501344.pdf",
@@ -27841,7 +27841,7 @@
      "doc": "https://www.release.tdnet.info/inbs/140120261002545594.pdf"
     }
    },
-   "ts": "2026-11-18T00:09:03+00:00"
+   "ts": "2026-11-18T01:33:10+00:00"
   },
   "3160": {
    "name": "大光",
@@ -27864,8 +27864,8 @@
      "doc": "https://www.release.tdnet.info/inbs/140120261013549233.pdf"
     }
    },
-   "ts": "2026-11-17T23:53:50+00:00",
-   "pdf_ts": "2026-11-15T03:52:11+00:00"
+   "ts": "2026-11-18T01:33:10+00:00",
+   "pdf_ts": "2026-11-18T01:33:10+00:00"
   },
   "3358": {
    "name": "Ｔｒａｉｌｈｅａｄ Ｇｌｏｂａｌ Ｈｏｌｄｉｎｇｓ",
@@ -28628,8 +28628,8 @@
      "doc": "https://ir.hamayuu.co.jp/ja/ir/news/news-7041927872435864695/main/0/link/pdffile.pdf"
     }
    },
-   "ts": "2026-11-17T23:53:50+00:00",
-   "pdf_ts": "2026-11-17T00:20:35+00:00",
+   "ts": "2026-11-18T01:33:10+00:00",
+   "pdf_ts": "2026-11-18T01:33:10+00:00",
    "pdf": {
     "2026-08": {
      "doc": "https://ir.hamayuu.co.jp/ja/ir/news/news2872742421994131078/main/0/link/pdffile.pdf",
@@ -28891,7 +28891,7 @@
      "doc": "https://www.asmo1.co.jp/wp-content/uploads/2026/09/2026%E5%B9%B48%E6%9C%88%E5%BA%A6%E3%80%80%E6%9C%88%E6%AC%A1%E5%AE%9F%E7%B8%BE%E3%81%AE%E3%81%8A%E7%9F%A5%E3%82%89%E3%81%9B.pdf"
     }
    },
-   "ts": "2026-11-18T00:09:03+00:00",
+   "ts": "2026-11-18T01:33:10+00:00",
    "pdf_ts": "2026-11-18T00:09:03+00:00"
   },
   "2698": {
@@ -29828,7 +29828,7 @@
      "doc": "https://d2t9fdkhmis4do.cloudfront.net/images/app/public/ir-pdfs/01M2EVA7P7H6EYBD7282YR7B4X.pdf"
     }
    },
-   "ts": "2026-11-17T23:53:50+00:00"
+   "ts": "2026-11-18T01:33:10+00:00"
   },
   "7686": {
    "name": "ひとまいる",
@@ -30164,8 +30164,8 @@
      "doc": "https://www2.jpx.co.jp/disc/23110/140120260925539933.pdf"
     }
    },
-   "ts": "2026-11-17T23:53:50+00:00",
-   "pdf_ts": "2026-11-15T00:10:59+00:00",
+   "ts": "2026-11-18T01:33:10+00:00",
+   "pdf_ts": "2026-11-18T01:33:10+00:00",
    "pdf": {
     "2026-01": {
      "doc": "https://ssl4.eir-parts.net/doc/2311/tdnet/2887431/00.pdf",
@@ -30481,7 +30481,7 @@
      "doc": "https://contents.xj-storage.jp/xcontents/AS90259/df40d077/1985/4ef1/a694/5b2133e0bb21/140120260907532511.pdf"
     }
    },
-   "ts": "2026-11-17T23:53:50+00:00"
+   "ts": "2026-11-18T01:33:10+00:00"
   },
   "7865": {
    "name": "ピープル",
@@ -30492,8 +30492,8 @@
      "doc": "https://www.people-kk.co.jp/global-image/units/upfiles/205321-1-20260917172552_b6aaba410e6540.pdf"
     }
    },
-   "ts": "2026-11-17T23:53:50+00:00",
-   "pdf_ts": "2026-11-15T03:16:47+00:00"
+   "ts": "2026-11-18T01:33:10+00:00",
+   "pdf_ts": "2026-11-18T01:33:10+00:00"
   },
   "8214": {
    "name": "ＡＯＫＩホールディングス",
@@ -31404,8 +31404,8 @@
      "doc": "https://www.horiifood.co.jp/ir/library/prospectus?file_id=1&id=20&mode=download"
     }
    },
-   "ts": "2026-11-17T23:53:50+00:00",
-   "pdf_ts": "2026-11-17T00:20:35+00:00",
+   "ts": "2026-11-18T01:33:10+00:00",
+   "pdf_ts": "2026-11-18T01:33:10+00:00",
    "pdf": {
     "2025-04": {
      "doc": "https://www.horiifood.co.jp/ir/library/prospectus.cgi?mode=download&id=22&file_id=1",
@@ -33999,8 +33999,8 @@
    "name": "日産証券グループ",
    "page": "https://www.nissansec-g.co.jp",
    "months": {},
-   "ts": "2026-11-17T23:53:50+00:00",
-   "pdf_ts": "2026-11-17T00:20:35+00:00",
+   "ts": "2026-11-18T01:33:10+00:00",
+   "pdf_ts": "2026-11-18T01:33:10+00:00",
    "pdf": {
     "2026-04": {
      "doc": "https://www.nissansec-g.co.jp/pdf/press20260817.pdf",
@@ -34088,8 +34088,8 @@
    "name": "ＤＡＩＷＡ ＣＹＣＬＥ",
    "page": "https://www.daiwa-cycle.co.jp",
    "months": {},
-   "ts": "2026-11-17T23:53:50+00:00",
-   "pdf_ts": "2026-11-17T00:20:35+00:00",
+   "ts": "2026-11-18T01:33:10+00:00",
+   "pdf_ts": "2026-11-18T01:33:10+00:00",
    "pdf": {
     "2026-02": {
      "doc": "https://ssl4.eir-parts.net/doc/5888/tdnet/2918800/00.pdf",
@@ -34234,7 +34234,7 @@
  "note": "회사가 제 사이트에 올린 월차 표에서 읽는다. 값은 전년동월비(%)뿐이고 금액은 없다. 회계연도가 적힌 표는 그 해로 읽으므로 옛 회계연도 표를 함께 싣는 회사는 이력이 길다.",
  "companies": 181,
  "months": 3384,
- "ts": "2026-11-18T01:26:56+00:00",
+ "ts": "2026-11-18T01:43:11+00:00",
  "done": [
   "https://amiyakitei.co.jp/prd/wordpress/wp-content/uploads/2025/04/●連結開示-202503.pdf",
   "https://amiyakitei.co.jp/prd/wordpress/wp-content/uploads/2026/04/monthly_newsflash1097.pdf",
@@ -38693,59 +38693,59 @@
   },
   "https://www.towafood-net.co.jp/wp-content/uploads/2026/10/2026年9月度売上高速報（前期対比）.pdf": {
    "reason": "표없음",
-   "day": "2026-11-15"
+   "day": "2026-11-18"
   },
   "https://www.towafood-net.co.jp/wp-content/uploads/2026/09/2026年8月度売上高速報（前期対比）.pdf": {
    "reason": "표없음",
-   "day": "2026-11-15"
+   "day": "2026-11-18"
   },
   "https://www.towafood-net.co.jp/wp-content/uploads/2026/08/2026年7月度売上高速報（前期対比）.pdf": {
    "reason": "표없음",
-   "day": "2026-11-15"
+   "day": "2026-11-18"
   },
   "https://www.towafood-net.co.jp/wp-content/uploads/2026/07/2026年6月度売上高速報（前期対比）.pdf": {
    "reason": "표없음",
-   "day": "2026-11-15"
+   "day": "2026-11-18"
   },
   "https://www.towafood-net.co.jp/wp-content/uploads/2026/06/2026年5月度売上高速報（前期対比）.pdf": {
    "reason": "표없음",
-   "day": "2026-11-15"
+   "day": "2026-11-18"
   },
   "https://www.towafood-net.co.jp/wp-content/uploads/2026/05/2026年4月度売上高速報（前期対比）.pdf": {
    "reason": "표없음",
-   "day": "2026-11-15"
+   "day": "2026-11-18"
   },
   "https://www.towafood-net.co.jp/wp-content/uploads/2026/04/2026年3月度売上高速報（前期対比）.pdf": {
    "reason": "표없음",
-   "day": "2026-11-15"
+   "day": "2026-11-18"
   },
   "https://www.towafood-net.co.jp/wp-content/uploads/2026/03/2026年2月度売上高速報（前期対比）.pdf": {
    "reason": "표없음",
-   "day": "2026-11-15"
+   "day": "2026-11-18"
   },
   "https://www.towafood-net.co.jp/wp-content/uploads/2026/02/2026年1月度売上高速報（前期対比）.pdf": {
    "reason": "표없음",
-   "day": "2026-11-15"
+   "day": "2026-11-18"
   },
   "https://www.towafood-net.co.jp/wp-content/uploads/2026/01/2025年12月度売上高速報（前期対比）.pdf": {
    "reason": "표없음",
-   "day": "2026-11-15"
+   "day": "2026-11-18"
   },
   "https://www.towafood-net.co.jp/wp-content/uploads/2025/12/2025年11月度売上高速報（前期対比）.pdf": {
    "reason": "표없음",
-   "day": "2026-11-15"
+   "day": "2026-11-18"
   },
   "https://www.towafood-net.co.jp/wp-content/uploads/2023/04/2023年3月度-売上高速報（前期対比）.pdf": {
    "reason": "표없음",
-   "day": "2026-11-15"
+   "day": "2026-11-18"
   },
   "https://www.towafood-net.co.jp/wp-content/uploads/2023/03/20230301.pdf": {
    "reason": "표없음",
-   "day": "2026-11-15"
+   "day": "2026-11-18"
   },
   "https://www.towafood-net.co.jp/wp-content/uploads/2023/03/20230201.pdf": {
    "reason": "표없음",
-   "day": "2026-11-15"
+   "day": "2026-11-18"
   },
   "https://www.towafood-net.co.jp/pdf/monthly_report/2023_4/2022年12月度 売上高速報（前期対比）.pdf": {
    "reason": "표없음",
@@ -39245,215 +39245,215 @@
   },
   "https://www.nissansec-g.co.jp/pdf/press20260916.pdf": {
    "reason": "표없음",
-   "day": "2026-11-15"
+   "day": "2026-11-18"
   },
   "https://www.nissansec-g.co.jp/pdf/press20260730.pdf": {
    "reason": "표없음",
-   "day": "2026-11-15"
+   "day": "2026-11-18"
   },
   "https://www.nissansec-g.co.jp/pdf/press202604301.pdf": {
    "reason": "표없음",
-   "day": "2026-11-15"
+   "day": "2026-11-18"
   },
   "https://www.nissansec-g.co.jp/pdf/press202602133.pdf": {
    "reason": "표없음",
-   "day": "2026-11-15"
+   "day": "2026-11-18"
   },
   "https://www.nissansec-g.co.jp/pdf/press20260129.pdf": {
    "reason": "표없음",
-   "day": "2026-11-15"
+   "day": "2026-11-18"
   },
   "https://www.horiifood.co.jp/ir/library/prospectus.cgi?mode=download&id=21&file_id=1": {
    "reason": "표없음",
-   "day": "2026-11-15"
+   "day": "2026-11-18"
   },
   "https://www.horiifood.co.jp/ir/library/prospectus.cgi?mode=download&id=20&file_id=1": {
    "reason": "표없음",
-   "day": "2026-11-15"
+   "day": "2026-11-18"
   },
   "https://www.horiifood.co.jp/ir/library/prospectus.cgi?mode=download&id=19&file_id=1": {
    "reason": "표없음",
-   "day": "2026-11-15"
+   "day": "2026-11-18"
   },
   "https://www.horiifood.co.jp/ir/library/prospectus.cgi?mode=download&id=18&file_id=1": {
    "reason": "표없음",
-   "day": "2026-11-15"
+   "day": "2026-11-18"
   },
   "https://www.horiifood.co.jp/ir/library/prospectus.cgi?mode=download&id=17&file_id=1": {
    "reason": "표없음",
-   "day": "2026-11-15"
+   "day": "2026-11-18"
   },
   "https://www.horiifood.co.jp/ir/library/prospectus.cgi?mode=download&id=16&file_id=1": {
    "reason": "표없음",
-   "day": "2026-11-15"
+   "day": "2026-11-18"
   },
   "https://www.horiifood.co.jp/ir/library/prospectus.cgi?mode=download&id=15&file_id=1": {
    "reason": "표없음",
-   "day": "2026-11-15"
+   "day": "2026-11-18"
   },
   "https://www.horiifood.co.jp/ir/library/prospectus.cgi?mode=download&id=14&file_id=1": {
    "reason": "표없음",
-   "day": "2026-11-15"
+   "day": "2026-11-18"
   },
   "https://www.horiifood.co.jp/ir/library/prospectus.cgi?mode=download&id=13&file_id=1": {
    "reason": "표없음",
-   "day": "2026-11-15"
+   "day": "2026-11-18"
   },
   "https://www.horiifood.co.jp/ir/library/prospectus.cgi?mode=download&id=12&file_id=1": {
    "reason": "표없음",
-   "day": "2026-11-15"
+   "day": "2026-11-18"
   },
   "https://www.horiifood.co.jp/ir/library/prospectus.cgi?mode=download&id=10&file_id=1": {
    "reason": "표없음",
-   "day": "2026-11-15"
+   "day": "2026-11-18"
   },
   "https://www.horiifood.co.jp/ir/library/prospectus.cgi?mode=download&id=9&file_id=1": {
    "reason": "표없음",
-   "day": "2026-11-15"
+   "day": "2026-11-18"
   },
   "https://www.oomitsu.com/topics2017/ooame_20260911.pdf": {
    "reason": "표없음",
-   "day": "2026-11-15"
+   "day": "2026-11-18"
   },
   "https://www.oomitsu.com/topics2017/syoukai_20260630.pdf": {
    "reason": "표없음",
-   "day": "2026-11-15"
+   "day": "2026-11-18"
   },
   "https://www.oomitsu.com/topics2017/syoukai_20260525.pdf": {
    "reason": "표없음",
-   "day": "2026-11-15"
+   "day": "2026-11-18"
   },
   "https://www.oomitsu.com/topics2017/fckeiyaku_20260206.pdf": {
    "reason": "표없음",
-   "day": "2026-11-15"
+   "day": "2026-11-18"
   },
   "https://www.oomitsu.com/topics2017/syoukai_20260115.pdf": {
    "reason": "표없음",
-   "day": "2026-11-15"
+   "day": "2026-11-18"
   },
   "https://www.oomitsu.com/topics2017/syoukai_20251222.pdf": {
    "reason": "표없음",
-   "day": "2026-11-15"
+   "day": "2026-11-18"
   },
   "https://www.oomitsu.com/topics2017/syoukai_20251014.pdf": {
    "reason": "표없음",
-   "day": "2026-11-15"
+   "day": "2026-11-18"
   },
   "https://www.oomitsu.com/topics2017/syoukai_20250917.pdf": {
    "reason": "표없음",
-   "day": "2026-11-15"
+   "day": "2026-11-18"
   },
   "https://www.oomitsu.com/topics2017/syoukai_20250905.pdf": {
    "reason": "표없음",
-   "day": "2026-11-15"
+   "day": "2026-11-18"
   },
   "https://www.oomitsu.com/topics2017/syoukai_20250823.pdf": {
    "reason": "표없음",
-   "day": "2026-11-15"
+   "day": "2026-11-18"
   },
   "https://www.oomitsu.com/topics2017/syoukai_20250718.pdf": {
    "reason": "표없음",
-   "day": "2026-11-15"
+   "day": "2026-11-18"
   },
   "https://www.oomitsu.com/topics2017/syoukai_20250529.pdf": {
    "reason": "표없음",
-   "day": "2026-11-15"
+   "day": "2026-11-18"
   },
   "https://www.oomitsu.com/topics2017/syoukai_20250514.pdf": {
    "reason": "표없음",
-   "day": "2026-11-15"
+   "day": "2026-11-18"
   },
   "https://www.oomitsu.com/topics2017/syoukai_20250510.pdf": {
    "reason": "표없음",
-   "day": "2026-11-15"
+   "day": "2026-11-18"
   },
   "https://www.oomitsu.com/topics2017/syoukai_20250121.pdf": {
    "reason": "표없음",
-   "day": "2026-11-15"
+   "day": "2026-11-18"
   },
   "https://www.oomitsu.com/topics2017/syoukai_20241220.pdf": {
    "reason": "표없음",
-   "day": "2026-11-15"
+   "day": "2026-11-18"
   },
   "https://www.oomitsu.com/topics2017/syoukai_20241205.pdf": {
    "reason": "표없음",
-   "day": "2026-11-15"
+   "day": "2026-11-18"
   },
   "https://www.oomitsu.com/topics2017/syoukai_20241127.pdf": {
    "reason": "표없음",
-   "day": "2026-11-15"
+   "day": "2026-11-18"
   },
   "https://www.oomitsu.com/topics2017/syoukai_20240930.pdf": {
    "reason": "표없음",
-   "day": "2026-11-15"
+   "day": "2026-11-18"
   },
   "https://www.oomitsu.com/topics2017/syoukai_20240904.pdf": {
    "reason": "표없음",
-   "day": "2026-11-15"
+   "day": "2026-11-18"
   },
   "https://www.oomitsu.com/topics2017/syoukai_20240730.pdf": {
    "reason": "표없음",
-   "day": "2026-11-15"
+   "day": "2026-11-18"
   },
   "https://www.oomitsu.com/topics2017/syoukai_20240704.pdf": {
    "reason": "표없음",
-   "day": "2026-11-15"
+   "day": "2026-11-18"
   },
   "https://www.oomitsu.com/topics2017/syoukai_20240702.pdf": {
    "reason": "표없음",
-   "day": "2026-11-15"
+   "day": "2026-11-18"
   },
   "https://www.oomitsu.com/topics2017/syoukai_20240524.pdf": {
    "reason": "표없음",
-   "day": "2026-11-15"
+   "day": "2026-11-18"
   },
   "https://www.oomitsu.com/topics2017/syoukai_20240205.pdf": {
    "reason": "표없음",
-   "day": "2026-11-15"
+   "day": "2026-11-18"
   },
   "https://www.oomitsu.com/topics2017/syoukai_20240122.pdf": {
    "reason": "표없음",
-   "day": "2026-11-15"
+   "day": "2026-11-18"
   },
   "https://www.oomitsu.com/topics2017/syoukai_20231221.pdf": {
    "reason": "표없음",
-   "day": "2026-11-15"
+   "day": "2026-11-18"
   },
   "https://www.oomitsu.com/topics2017/syoukai_20231219.pdf": {
    "reason": "표없음",
-   "day": "2026-11-15"
+   "day": "2026-11-18"
   },
   "https://www.oomitsu.com/topics2017/syoukai_20231201.pdf": {
    "reason": "표없음",
-   "day": "2026-11-15"
+   "day": "2026-11-18"
   },
   "https://www.oomitsu.com/topics2017/syoukai_20231030.pdf": {
    "reason": "표없음",
-   "day": "2026-11-15"
+   "day": "2026-11-18"
   },
   "https://www.oomitsu.com/topics2017/syoukai_20230919.pdf": {
    "reason": "표없음",
-   "day": "2026-11-15"
+   "day": "2026-11-18"
   },
   "https://www.oomitsu.com/topics2017/syoukai_20230605.pdf": {
    "reason": "표없음",
-   "day": "2026-11-15"
+   "day": "2026-11-18"
   },
   "https://www.oomitsu.com/topics2017/syoukai_20230410.pdf": {
    "reason": "표없음",
-   "day": "2026-11-15"
+   "day": "2026-11-18"
   },
   "https://www.oomitsu.com/topics2017/syoukai_20230331.pdf": {
    "reason": "표없음",
-   "day": "2026-11-15"
+   "day": "2026-11-18"
   },
   "https://www.oomitsu.com/topics2017/syoukai_202301030.pdf": {
    "reason": "표없음",
-   "day": "2026-11-15"
+   "day": "2026-11-18"
   },
   "https://www.oomitsu.com/topics2017/syoukai_202301026.pdf": {
    "reason": "표없음",
-   "day": "2026-11-15"
+   "day": "2026-11-18"
   },
   "https://www.oomitsu.com/topics2017/syoukai_20230116.pdf": {
    "reason": "표없음",
@@ -39481,155 +39481,155 @@
   },
   "https://www.village-v.co.jp/company/docs/bafb618903156fd1e304ff852e92b34b996a088d.pdf": {
    "reason": "표없음",
-   "day": "2026-11-15"
+   "day": "2026-11-18"
   },
   "https://www.village-v.co.jp/company/docs/7aa569fc45582d5abf9e20ba3bcffb48ef572cd1.pdf": {
    "reason": "표없음",
-   "day": "2026-11-15"
+   "day": "2026-11-18"
   },
   "https://ssl4.eir-parts.net/doc/2311/ir_material_for_fiscal_ym/212038/00.pdf": {
    "reason": "표없음",
-   "day": "2026-11-15"
+   "day": "2026-11-18"
   },
   "https://contents.xj-storage.jp/xcontents/AS81590/c7ab06bc/7fb9/400c/a551/7bc78ccd60ea/140120261007546987.pdf": {
    "reason": "표없음",
-   "day": "2026-11-15"
+   "day": "2026-11-18"
   },
   "https://contents.xj-storage.jp/xcontents/AS81590/2e2cd354/8607/46d7/8aab/59a2b988ac49/140120260907532387.pdf": {
    "reason": "표없음",
-   "day": "2026-11-15"
+   "day": "2026-11-18"
   },
   "https://contents.xj-storage.jp/xcontents/AS81590/779cd3fa/8dfb/4202/8c49/2ac461d3ee50/140120260806512422.pdf": {
    "reason": "표없음",
-   "day": "2026-11-15"
+   "day": "2026-11-18"
   },
   "https://contents.xj-storage.jp/xcontents/AS81590/f9c80ba9/04ba/4cf2/a0da/79337095d94d/140120260707588722.pdf": {
    "reason": "표없음",
-   "day": "2026-11-15"
+   "day": "2026-11-18"
   },
   "https://contents.xj-storage.jp/xcontents/AS81590/041859f8/6590/49a1/bbc3/3a9c36dea361/140120260605563920.pdf": {
    "reason": "표없음",
-   "day": "2026-11-15"
+   "day": "2026-11-18"
   },
   "https://contents.xj-storage.jp/xcontents/AS81590/b07267f2/0fd7/49cc/be35/bc28a41492a3/140120260512525601.pdf": {
    "reason": "표없음",
-   "day": "2026-11-15"
+   "day": "2026-11-18"
   },
   "https://contents.xj-storage.jp/xcontents/AS81590/3b46dff8/a6be/4ba5/b559/a8c52e626d89/140120260407599197.pdf": {
    "reason": "표없음",
-   "day": "2026-11-15"
+   "day": "2026-11-18"
   },
   "https://contents.xj-storage.jp/xcontents/AS81590/6b1469a9/3261/4a9e/a61b/ff8f1950035e/140120260306577560.pdf": {
    "reason": "표없음",
-   "day": "2026-11-15"
+   "day": "2026-11-18"
   },
   "https://contents.xj-storage.jp/xcontents/AS81590/74f20f06/0a9e/426d/ae8f/590f45fb525d/140120260206550484.pdf": {
    "reason": "표없음",
-   "day": "2026-11-15"
+   "day": "2026-11-18"
   },
   "https://contents.xj-storage.jp/xcontents/AS81590/9b0c1e6c/d7e0/4160/b29f/87133f6e7da1/140120260108530537.pdf": {
    "reason": "표없음",
-   "day": "2026-11-15"
+   "day": "2026-11-18"
   },
   "https://contents.xj-storage.jp/xcontents/AS81590/2b651b40/bfb2/4e0a/a408/83fadf0ad78b/140120251205515158.pdf": {
    "reason": "표없음",
-   "day": "2026-11-15"
+   "day": "2026-11-18"
   },
   "https://contents.xj-storage.jp/xcontents/AS81590/616c993c/d0c5/414e/b090/65f95baff1a8/140120251110593101.pdf": {
    "reason": "표없음",
-   "day": "2026-11-15"
+   "day": "2026-11-18"
   },
   "https://contents.xj-storage.jp/xcontents/AS81590/65c8e273/fb10/42cd/a168/71578f43f483/140120251007569418.pdf": {
    "reason": "표없음",
-   "day": "2026-11-15"
+   "day": "2026-11-18"
   },
   "https://contents.xj-storage.jp/xcontents/AS81590/21a70554/940d/4c3f/a7b4/03dbd703b480/140120250905553921.pdf": {
    "reason": "표없음",
-   "day": "2026-11-15"
+   "day": "2026-11-18"
   },
   "https://contents.xj-storage.jp/xcontents/AS81590/281dcf97/dbd9/4236/93dd/7af00b1f7462/140120250807533321.pdf": {
    "reason": "표없음",
-   "day": "2026-11-15"
+   "day": "2026-11-18"
   },
   "https://contents.xj-storage.jp/xcontents/AS81590/77a911f3/245e/42d7/b571/b659ac41ca3c/140120250707509356.pdf": {
    "reason": "표없음",
-   "day": "2026-11-15"
+   "day": "2026-11-18"
   },
   "https://contents.xj-storage.jp/xcontents/AS81590/6af63fe5/d108/4b2d/a0c5/871fe1e832cc/140120250605583200.pdf": {
    "reason": "표없음",
-   "day": "2026-11-15"
+   "day": "2026-11-18"
   },
   "https://contents.xj-storage.jp/xcontents/AS81590/3d40a3b1/c15d/44e2/8880/bf54c681fb33/140120250509536745.pdf": {
    "reason": "표없음",
-   "day": "2026-11-15"
+   "day": "2026-11-18"
   },
   "https://contents.xj-storage.jp/xcontents/AS81590/ac8dbd5c/6b80/450a/a9f1/706ae6680c8b/140120250407509709.pdf": {
    "reason": "표없음",
-   "day": "2026-11-15"
+   "day": "2026-11-18"
   },
   "https://contents.xj-storage.jp/xcontents/AS81590/dc7cce15/d764/49ed/a19b/0edd5f250c83/140120250307590489.pdf": {
    "reason": "표없음",
-   "day": "2026-11-15"
+   "day": "2026-11-18"
   },
   "https://contents.xj-storage.jp/xcontents/AS81590/7d6b1ca7/aa04/4370/bb1a/af143d5114d5/140120250207566574.pdf": {
    "reason": "표없음",
-   "day": "2026-11-15"
+   "day": "2026-11-18"
   },
   "https://contents.xj-storage.jp/xcontents/AS81590/10b0437d/f831/40ca/a009/aa40ea7c6b31/140120250110549383.pdf": {
    "reason": "표없음",
-   "day": "2026-11-15"
+   "day": "2026-11-18"
   },
   "https://contents.xj-storage.jp/xcontents/AS81590/67fcc9a4/a88c/4283/9af9/64ea4338e7ad/140120241206535086.pdf": {
    "reason": "표없음",
-   "day": "2026-11-15"
+   "day": "2026-11-18"
   },
   "https://contents.xj-storage.jp/xcontents/AS81590/32ca622e/5555/4cf0/b516/c6c35aa49cba/140120241108515655.pdf": {
    "reason": "표없음",
-   "day": "2026-11-15"
+   "day": "2026-11-18"
   },
   "https://contents.xj-storage.jp/xcontents/AS81590/fbbd7125/5869/47ab/bed6/b9cff95913a9/140120241007594288.pdf": {
    "reason": "표없음",
-   "day": "2026-11-15"
+   "day": "2026-11-18"
   },
   "https://contents.xj-storage.jp/xcontents/AS81590/4f6cee69/15d7/4132/b3a7/718796d894c8/140120240906581917.pdf": {
    "reason": "표없음",
-   "day": "2026-11-15"
+   "day": "2026-11-18"
   },
   "https://contents.xj-storage.jp/xcontents/AS81590/ea2efd75/9de1/4003/81d2/c23b0d95dd1c/140120240807564697.pdf": {
    "reason": "표없음",
-   "day": "2026-11-15"
+   "day": "2026-11-18"
   },
   "https://contents.xj-storage.jp/xcontents/AS81590/d9e8cf9e/976e/47d7/b6a5/c69bac7dd28f/140120240705544698.pdf": {
    "reason": "표없음",
-   "day": "2026-11-15"
+   "day": "2026-11-18"
   },
   "https://contents.xj-storage.jp/xcontents/AS81590/387d8c5a/9a7a/42cd/827b/769d8ff5fbee/140120240607523893.pdf": {
    "reason": "표없음",
-   "day": "2026-11-15"
+   "day": "2026-11-18"
   },
   "https://contents.xj-storage.jp/xcontents/AS81590/f56699f1/c607/4593/85ae/476de9c3f917/140120240509585978.pdf": {
    "reason": "표없음",
-   "day": "2026-11-15"
+   "day": "2026-11-18"
   },
   "https://contents.xj-storage.jp/xcontents/AS81590/6fefd80b/3456/4fab/b4da/03dc7a27066f/140120240405566541.pdf": {
    "reason": "표없음",
-   "day": "2026-11-15"
+   "day": "2026-11-18"
   },
   "https://contents.xj-storage.jp/xcontents/AS81590/0c0e6949/547a/4817/9991/745ea1f30f27/140120240307549833.pdf": {
    "reason": "표없음",
-   "day": "2026-11-15"
+   "day": "2026-11-18"
   },
   "https://contents.xj-storage.jp/xcontents/AS81590/cb9d87ef/d3bc/42bd/9206/f85be74167c8/140120240207528195.pdf": {
    "reason": "표없음",
-   "day": "2026-11-15"
+   "day": "2026-11-18"
   },
   "https://contents.xj-storage.jp/xcontents/AS81590/7f450d9a/15b3/4418/b96b/64d94c46c718/140120240111513352.pdf": {
    "reason": "표없음",
-   "day": "2026-11-15"
+   "day": "2026-11-18"
   },
   "https://contents.xj-storage.jp/xcontents/AS81590/8f0a850f/36b4/422d/addf/02de9913bc6e/140120231207500053.pdf": {
    "reason": "표없음",
-   "day": "2026-11-15"
+   "day": "2026-11-18"
   },
   "https://contents.xj-storage.jp/xcontents/AS81590/02c9110d/dec2/4180/8c8e/ea1553035f4a/140120231108582012.pdf": {
    "reason": "표없음",
@@ -39877,147 +39877,147 @@
   },
   "https://www.people-kk.co.jp/global-image/units/upfiles/205321-1-20261015101148_b6ad0285411225.pdf": {
    "reason": "표없음",
-   "day": "2026-11-15"
+   "day": "2026-11-18"
   },
   "https://www.people-kk.co.jp/global-image/units/upfiles/205321-1-20260917172552_b6aaba410e6540.pdf": {
    "reason": "표없음",
-   "day": "2026-11-15"
+   "day": "2026-11-18"
   },
   "https://www.people-kk.co.jp/global-image/units/upfiles/205321-1-20260901120726_b6a96416e0a495.pdf": {
    "reason": "표없음",
-   "day": "2026-11-15"
+   "day": "2026-11-18"
   },
   "https://www.people-kk.co.jp/global-image/units/upfiles/205321-1-20260716093945_b6a5828516713b.pdf": {
    "reason": "표없음",
-   "day": "2026-11-15"
+   "day": "2026-11-18"
   },
   "https://www.people-kk.co.jp/global-image/units/upfiles/205321-1-20260610165825_b6a29192134143.pdf": {
    "reason": "표없음",
-   "day": "2026-11-15"
+   "day": "2026-11-18"
   },
   "https://www.people-kk.co.jp/global-image/units/upfiles/205321-1-20260529130640_b6a1910d05fa7d.pdf": {
    "reason": "표없음",
-   "day": "2026-11-15"
+   "day": "2026-11-18"
   },
   "https://www.people-kk.co.jp/global-image/units/upfiles/205321-1-20260410093051_b69d844bbdde3e.pdf": {
    "reason": "표없음",
-   "day": "2026-11-15"
+   "day": "2026-11-18"
   },
   "https://www.people-kk.co.jp/global-image/units/upfiles/205321-1-20260316163853_b69b7b38d1df27.pdf": {
    "reason": "표없음",
-   "day": "2026-11-15"
+   "day": "2026-11-18"
   },
   "https://www.people-kk.co.jp/global-image/units/upfiles/205321-1-20260302121056_b69a4ffc0356a8.pdf": {
    "reason": "표없음",
-   "day": "2026-11-15"
+   "day": "2026-11-18"
   },
   "https://www.people-kk.co.jp/global-image/units/upfiles/201256-1-20260113151449_b6965e2d986868.pdf": {
    "reason": "표없음",
-   "day": "2026-11-15"
+   "day": "2026-11-18"
   },
   "https://www.people-kk.co.jp/global-image/units/upfiles/200973-1-20251212112254_b693b7c7ecf0ae.pdf": {
    "reason": "표없음",
-   "day": "2026-11-15"
+   "day": "2026-11-18"
   },
   "https://www.people-kk.co.jp/global-image/units/upfiles/200272-1-20251128165654_b692955c684a2f.pdf": {
    "reason": "표없음",
-   "day": "2026-11-15"
+   "day": "2026-11-18"
   },
   "https://www.people-kk.co.jp/global-image/units/upfiles/194989-1-20251014134516_b68edd55c8c3a3.pdf": {
    "reason": "표없음",
-   "day": "2026-11-15"
+   "day": "2026-11-18"
   },
   "https://www.people-kk.co.jp/global-image/units/upfiles/191277-1-20250912141711_b68c3acd787f80.pdf": {
    "reason": "표없음",
-   "day": "2026-11-15"
+   "day": "2026-11-18"
   },
   "https://www.people-kk.co.jp/global-image/units/upfiles/189134-1-20250829141312_b68b136e832523.pdf": {
    "reason": "표없음",
-   "day": "2026-11-15"
+   "day": "2026-11-18"
   },
   "https://www.people-kk.co.jp/global-image/units/upfiles/185312-1-20250710172315_b686f7873237d9.pdf": {
    "reason": "표없음",
-   "day": "2026-11-15"
+   "day": "2026-11-18"
   },
   "https://www.people-kk.co.jp/global-image/units/upfiles/181898-1-20250613140935_b684bb28f10a33.pdf": {
    "reason": "표없음",
-   "day": "2026-11-15"
+   "day": "2026-11-18"
   },
   "https://www.people-kk.co.jp/global-image/units/upfiles/179417-1-20250602143712_b683d388818cbc.pdf": {
    "reason": "표없음",
-   "day": "2026-11-15"
+   "day": "2026-11-18"
   },
   "https://www.people-kk.co.jp/global-image/units/upfiles/175591-1-20250411142220_b67f8a70c2c40d.pdf": {
    "reason": "표없음",
-   "day": "2026-11-15"
+   "day": "2026-11-18"
   },
   "https://www.people-kk.co.jp/global-image/units/upfiles/171400-1-20250314142221_b67d3bd0d42330.pdf": {
    "reason": "표없음",
-   "day": "2026-11-15"
+   "day": "2026-11-18"
   },
   "https://www.people-kk.co.jp/global-image/units/upfiles/168206-1-20250303144813_b67c5429d7c5e6.pdf": {
    "reason": "표없음",
-   "day": "2026-11-15"
+   "day": "2026-11-18"
   },
   "https://www.people-kk.co.jp/global-image/units/upfiles/162639-1-20250114181217_b67862a71c982e.pdf": {
    "reason": "표없음",
-   "day": "2026-11-15"
+   "day": "2026-11-18"
   },
   "https://www.people-kk.co.jp/global-image/units/upfiles/162353-1-20241213134850_b675bbcb2e60fd.pdf": {
    "reason": "표없음",
-   "day": "2026-11-15"
+   "day": "2026-11-18"
   },
   "https://www.people-kk.co.jp/global-image/units/upfiles/161546-1-20241202132552_b674d36d050de8.pdf": {
    "reason": "표없음",
-   "day": "2026-11-15"
+   "day": "2026-11-18"
   },
   "https://www.people-kk.co.jp/global-image/units/upfiles/157078-1-20241018124213_b6711d91517e61.pdf": {
    "reason": "표없음",
-   "day": "2026-11-15"
+   "day": "2026-11-18"
   },
   "https://www.people-kk.co.jp/global-image/units/upfiles/156935-1-20240913152912_b66e3dbb8eede4.pdf": {
    "reason": "표없음",
-   "day": "2026-11-15"
+   "day": "2026-11-18"
   },
   "https://www.people-kk.co.jp/global-image/units/upfiles/154963-1-20240830125125_b66d141bdabed4.pdf": {
    "reason": "표없음",
-   "day": "2026-11-15"
+   "day": "2026-11-18"
   },
   "https://www.people-kk.co.jp/global-image/units/upfiles/150494-1-20240712132339_b6690afcbada9a.pdf": {
    "reason": "표없음",
-   "day": "2026-11-15"
+   "day": "2026-11-18"
   },
   "https://www.people-kk.co.jp/global-image/units/upfiles/146832-1-20240614164523_b666bf513dce06.pdf": {
    "reason": "표없음",
-   "day": "2026-11-15"
+   "day": "2026-11-18"
   },
   "https://www.people-kk.co.jp/global-image/units/upfiles/146400-1-20240603101838_b665d19eeaba36.pdf": {
    "reason": "표없음",
-   "day": "2026-11-15"
+   "day": "2026-11-18"
   },
   "https://www.people-kk.co.jp/global-image/units/upfiles/145505-1-20240415171952_b661ce328b162a.pdf": {
    "reason": "표없음",
-   "day": "2026-11-15"
+   "day": "2026-11-18"
   },
   "https://www.people-kk.co.jp/global-image/units/upfiles/140576-1-20240314141248_b65f2875014f60.pdf": {
    "reason": "표없음",
-   "day": "2026-11-15"
+   "day": "2026-11-18"
   },
   "https://www.people-kk.co.jp/global-image/units/upfiles/134962-1-20240301140332_b65e161a44a373.pdf": {
    "reason": "표없음",
-   "day": "2026-11-15"
+   "day": "2026-11-18"
   },
   "https://www.people-kk.co.jp/global-image/units/upfiles/130843-1-20240118113440_b65a88e4043aa3.pdf": {
    "reason": "표없음",
-   "day": "2026-11-15"
+   "day": "2026-11-18"
   },
   "https://www.people-kk.co.jp/global-image/units/upfiles/127187-1-20231215124614_b657bcc06c44ec.pdf": {
    "reason": "표없음",
-   "day": "2026-11-15"
+   "day": "2026-11-18"
   },
   "https://www.people-kk.co.jp/global-image/units/upfiles/125574-1-20231201112905_b656944f101780.pdf": {
    "reason": "표없음",
-   "day": "2026-11-15"
+   "day": "2026-11-18"
   },
   "https://www.people-kk.co.jp/global-image/units/upfiles/14734-1-20190604143105_b5cf60219c5b90.pdf": {
    "reason": "표없음",
@@ -42265,7 +42265,7 @@
   },
   "https://ssl4.eir-parts.net/doc/2311/ir_material_for_fiscal_ym/212039/00.pdf": {
    "reason": "표없음",
-   "day": "2026-11-15"
+   "day": "2026-11-18"
   },
   "https://www.fgarden.co.jp/common/sysfile/irs/ID00000168binary1.pdf?1792615616": {
    "reason": "표없음",
@@ -42637,7 +42637,7 @@
   },
   "https://ssl4.eir-parts.net/doc/2311/ir_material_for_fiscal_ym/212086/00.pdf": {
    "reason": "표없음",
-   "day": "2026-11-15"
+   "day": "2026-11-18"
   },
   "https://kozosushi-gr.com/uploads/2014/05/68c8d53e2f695fbb418bb21b81753607.pdf": {
    "reason": "fetch_failed",
@@ -54141,7 +54141,7 @@
   },
   "https://www.handsman.co.jp/wp-content/uploads/2026/11/uriage-202610.pdf": {
    "reason": "표없음",
-   "day": "2026-11-15"
+   "day": "2026-11-18"
   },
   "https://www.fgarden.co.jp/common/sysfile/irs/ID00000171binary1.pdf?1794003556": {
    "reason": "표없음",
@@ -55749,7 +55749,7 @@
   },
   "https://contents.xj-storage.jp/xcontents/AS81590/0533ad43/4880/4d47/a445/8cc02cda2e72/140120261109569988.pdf": {
    "reason": "표없음",
-   "day": "2026-11-15"
+   "day": "2026-11-18"
   },
   "https://www.fgarden.co.jp/common/sysfile/irs/ID00000171binary1.pdf?1794213969": {
    "reason": "표없음",
@@ -57161,19 +57161,19 @@
   },
   "https://www.nissansec-g.co.jp/pdf/press202611127.pdf": {
    "reason": "표없음",
-   "day": "2026-11-15"
+   "day": "2026-11-18"
   },
   "https://www.nissansec-g.co.jp/pdf/press202611125.pdf": {
    "reason": "표없음",
-   "day": "2026-11-15"
+   "day": "2026-11-18"
   },
   "https://www.nissansec-g.co.jp/pdf/press202611124.pdf": {
    "reason": "표없음",
-   "day": "2026-11-15"
+   "day": "2026-11-18"
   },
   "https://www.nissansec-g.co.jp/pdf/press202611123.pdf": {
    "reason": "표없음",
-   "day": "2026-11-15"
+   "day": "2026-11-18"
   },
   "https://www.fgarden.co.jp/common/sysfile/irs/ID00000171binary1.pdf?1794463833": {
    "reason": "표없음",
@@ -59686,6 +59686,294 @@
   "https://www.fgarden.co.jp/common/sysfile/irs/ID00000166binary1.pdf?1794961558": {
    "reason": "표없음",
    "day": "2026-11-18"
+  },
+  "https://www.towafood-net.co.jp/pdf/monthly_report/2023_4/2022年12月度%20売上高速報（前期対比）.pdf": {
+   "reason": "표없음",
+   "day": "2026-11-18"
+  },
+  "https://www.towafood-net.co.jp/pdf/monthly_report/2023_4/2022年11月度%20売上高速報（前期対比）.pdf": {
+   "reason": "표없음",
+   "day": "2026-11-18"
+  },
+  "https://www.towafood-net.co.jp/pdf/monthly_report/2023_4/2022年10月度%20売上高速報（前期対比）.pdf": {
+   "reason": "표없음",
+   "day": "2026-11-18"
+  },
+  "https://www.towafood-net.co.jp/pdf/monthly_report/2023_4/2022年9月度%20売上高速報（前期対比）.pdf": {
+   "reason": "표없음",
+   "day": "2026-11-18"
+  },
+  "https://www.towafood-net.co.jp/pdf/monthly_report/2023_4/2022年8月度%20売上高速報（前期対比）.pdf": {
+   "reason": "표없음",
+   "day": "2026-11-18"
+  },
+  "https://www.towafood-net.co.jp/pdf/monthly_report/2023_4/2022年7月度%20売上高速報（前期対比）.pdf": {
+   "reason": "표없음",
+   "day": "2026-11-18"
+  },
+  "https://www.towafood-net.co.jp/pdf/monthly_report/2022_4/2022年4月度%20売上高速報（前期対比）.pdf": {
+   "reason": "표없음",
+   "day": "2026-11-18"
+  },
+  "https://www.towafood-net.co.jp/pdf/monthly_report/2022_4/2022年3月度%20売上高速報（前期対比）.pdf": {
+   "reason": "표없음",
+   "day": "2026-11-18"
+  },
+  "https://www.towafood-net.co.jp/pdf/monthly_report/2022_4/2022年2月度%20売上高速報（前期対比）.pdf": {
+   "reason": "표없음",
+   "day": "2026-11-18"
+  },
+  "https://www.towafood-net.co.jp/pdf/monthly_report/2022_4/2022年1月度%20売上高速報（前期対比）.pdf": {
+   "reason": "표없음",
+   "day": "2026-11-18"
+  },
+  "https://www.towafood-net.co.jp/pdf/monthly_report/2022_4/2021年12月度%20売上高速報（前期対比）.pdf": {
+   "reason": "표없음",
+   "day": "2026-11-18"
+  },
+  "https://www.towafood-net.co.jp/pdf/monthly_report/2022_4/2021年11月度%20売上高速報（前期対比）.pdf": {
+   "reason": "표없음",
+   "day": "2026-11-18"
+  },
+  "https://www.towafood-net.co.jp/pdf/monthly_report/2022_4/2021年10月度%20売上高速報（前期対比）.pdf": {
+   "reason": "표없음",
+   "day": "2026-11-18"
+  },
+  "https://www.towafood-net.co.jp/pdf/monthly_report/2022_4/2021年9月度%20売上高速報（前期対比）.pdf": {
+   "reason": "표없음",
+   "day": "2026-11-18"
+  },
+  "https://www.towafood-net.co.jp/pdf/monthly_report/2022_4/2021年8月度%20売上高速報（前期対比）.pdf": {
+   "reason": "표없음",
+   "day": "2026-11-18"
+  },
+  "https://www.towafood-net.co.jp/pdf/monthly_report/2022_4/2021年7月度%20売上高速報（前期対比）.pdf": {
+   "reason": "표없음",
+   "day": "2026-11-18"
+  },
+  "https://www.towafood-net.co.jp/pdf/monthly_report/2021_4/2021年4月度%20売上高速報（前期対比）.pdf": {
+   "reason": "표없음",
+   "day": "2026-11-18"
+  },
+  "https://www.towafood-net.co.jp/pdf/monthly_report/2021_4/2021年3月度%20売上高速報（前期対比）.pdf": {
+   "reason": "표없음",
+   "day": "2026-11-18"
+  },
+  "https://www.towafood-net.co.jp/pdf/monthly_report/2021_4/2021年2月度%20売上高速報（前期対比）.pdf": {
+   "reason": "표없음",
+   "day": "2026-11-18"
+  },
+  "https://www.towafood-net.co.jp/pdf/monthly_report/2021_4/2021年1月度%20売上高速報（前期対比）.pdf": {
+   "reason": "표없음",
+   "day": "2026-11-18"
+  },
+  "https://www.towafood-net.co.jp/pdf/monthly_report/2021_4/2020年12月度%20売上高速報（前期対比）.pdf": {
+   "reason": "표없음",
+   "day": "2026-11-18"
+  },
+  "https://www.towafood-net.co.jp/pdf/monthly_report/2021_4/2020年11月度%20売上高速報（前期対比）.pdf": {
+   "reason": "표없음",
+   "day": "2026-11-18"
+  },
+  "https://www.towafood-net.co.jp/pdf/monthly_report/2021_4/2020年10月度%20売上高速報（前期対比）.pdf": {
+   "reason": "표없음",
+   "day": "2026-11-18"
+  },
+  "https://www.towafood-net.co.jp/pdf/monthly_report/2021_4/2020年9月度%20売上高速報（前期対比）.pdf": {
+   "reason": "표없음",
+   "day": "2026-11-18"
+  },
+  "https://www.towafood-net.co.jp/pdf/monthly_report/2021_4/2020年8月度%20売上高速報（前期対比）.pdf": {
+   "reason": "표없음",
+   "day": "2026-11-18"
+  },
+  "https://www.towafood-net.co.jp/pdf/monthly_report/2021_4/2020年7月度%20売上高速報（前期対比）.pdf": {
+   "reason": "표없음",
+   "day": "2026-11-18"
+  },
+  "https://www.towafood-net.co.jp/pdf/monthly_report/2020_4/2020年4月度%20売上高速報（前期対比）.pdf": {
+   "reason": "표없음",
+   "day": "2026-11-18"
+  },
+  "https://www.towafood-net.co.jp/pdf/monthly_report/2020_4/2020年3月度%20売上高速報（前期対比）.pdf": {
+   "reason": "표없음",
+   "day": "2026-11-18"
+  },
+  "https://www.towafood-net.co.jp/pdf/monthly_report/2020_4/2020年2月度%20売上高速報（前期対比）.pdf": {
+   "reason": "표없음",
+   "day": "2026-11-18"
+  },
+  "https://www.towafood-net.co.jp/pdf/monthly_report/2020_4/2020年1月度%20売上高速報（前期対比）.pdf": {
+   "reason": "표없음",
+   "day": "2026-11-18"
+  },
+  "https://www.towafood-net.co.jp/pdf/monthly_report/2020_4/2019年12月度%20売上高速報（前期対比）.pdf": {
+   "reason": "표없음",
+   "day": "2026-11-18"
+  },
+  "https://www.towafood-net.co.jp/pdf/monthly_report/2020_4/2019年11月度%20売上高速報（前期対比）.pdf": {
+   "reason": "표없음",
+   "day": "2026-11-18"
+  },
+  "https://www.towafood-net.co.jp/pdf/monthly_report/2020_4/2019年10月度%20売上高速報（前期対比）.pdf": {
+   "reason": "표없음",
+   "day": "2026-11-18"
+  },
+  "https://www.towafood-net.co.jp/pdf/monthly_report/2020_4/2019年9月度%20売上高速報（前期対比）.pdf": {
+   "reason": "표없음",
+   "day": "2026-11-18"
+  },
+  "https://www.towafood-net.co.jp/pdf/monthly_report/2020_4/2019年8月度%20売上高速報（前期対比）.pdf": {
+   "reason": "표없음",
+   "day": "2026-11-18"
+  },
+  "https://www.towafood-net.co.jp/pdf/monthly_report/2020_4/2019年7月度%20売上高速報（前期対比）.pdf": {
+   "reason": "표없음",
+   "day": "2026-11-18"
+  },
+  "https://www.towafood-net.co.jp/pdf/monthly_report/2019_4/2019年4月度%20売上高速報（前期対比）.pdf": {
+   "reason": "표없음",
+   "day": "2026-11-18"
+  },
+  "https://www.towafood-net.co.jp/pdf/monthly_report/2019_4/2019年3月度%20売上高速報（前期対比）.pdf": {
+   "reason": "표없음",
+   "day": "2026-11-18"
+  },
+  "https://www.towafood-net.co.jp/pdf/monthly_report/2019_4/2019年2月度%20売上高速報（前期対比）.pdf": {
+   "reason": "표없음",
+   "day": "2026-11-18"
+  },
+  "https://www.towafood-net.co.jp/pdf/monthly_report/2019_4/2019年1月度%20売上高速報（前期対比）.pdf": {
+   "reason": "표없음",
+   "day": "2026-11-18"
+  },
+  "https://www.towafood-net.co.jp/pdf/monthly_report/2019_4/2018年12月度%20売上高速報（前期対比）.pdf": {
+   "reason": "표없음",
+   "day": "2026-11-18"
+  },
+  "https://www.towafood-net.co.jp/pdf/monthly_report/2019_4/2018年11月度%20売上高速報（前期対比）.pdf": {
+   "reason": "표없음",
+   "day": "2026-11-18"
+  },
+  "https://www.towafood-net.co.jp/pdf/monthly_report/2019_4/2018年10月度%20売上高速報（前期対比）.pdf": {
+   "reason": "표없음",
+   "day": "2026-11-18"
+  },
+  "https://www.towafood-net.co.jp/pdf/monthly_report/2019_4/2018年9月度%20売上高速報（前期対比）.pdf": {
+   "reason": "표없음",
+   "day": "2026-11-18"
+  },
+  "https://www.towafood-net.co.jp/pdf/monthly_report/2019_4/2018年8月度%20売上高速報（前期対比）.pdf": {
+   "reason": "표없음",
+   "day": "2026-11-18"
+  },
+  "https://www.towafood-net.co.jp/pdf/monthly_report/2019_4/2018年7月度%20売上高速報（前期対比）.pdf": {
+   "reason": "표없음",
+   "day": "2026-11-18"
+  },
+  "https://www.towafood-net.co.jp/pdf/monthly_report/2018_4/2018年4月度%20売上高速報（前期対比）.pdf": {
+   "reason": "표없음",
+   "day": "2026-11-18"
+  },
+  "https://www.towafood-net.co.jp/pdf/monthly_report/2018_4/2018年3月度%20売上高速報（前期対比）.pdf": {
+   "reason": "표없음",
+   "day": "2026-11-18"
+  },
+  "https://www.towafood-net.co.jp/pdf/monthly_report/2018_4/2018年2月度%20売上高速報（前期対比）.pdf": {
+   "reason": "표없음",
+   "day": "2026-11-18"
+  },
+  "https://www.towafood-net.co.jp/pdf/monthly_report/2018_4/2018年1月度%20売上高速報（前期対比）.pdf": {
+   "reason": "표없음",
+   "day": "2026-11-18"
+  },
+  "https://www.towafood-net.co.jp/pdf/monthly_report/2018_4/2017年12月度%20売上高速報（前期対比）.pdf": {
+   "reason": "표없음",
+   "day": "2026-11-18"
+  },
+  "https://www.towafood-net.co.jp/pdf/monthly_report/2018_4/2017年11月度%20売上高速報（前期対比）.pdf": {
+   "reason": "표없음",
+   "day": "2026-11-18"
+  },
+  "https://www.towafood-net.co.jp/pdf/monthly_report/2018_4/2017年10月度%20売上高速報（前期対比）.pdf": {
+   "reason": "표없음",
+   "day": "2026-11-18"
+  },
+  "https://www.towafood-net.co.jp/pdf/monthly_report/2018_4/2017年9月度%20売上高速報（前期対比）.pdf": {
+   "reason": "표없음",
+   "day": "2026-11-18"
+  },
+  "https://www.towafood-net.co.jp/pdf/monthly_report/2018_4/2017年8月度%20売上高速報（前期対比）.pdf": {
+   "reason": "표없음",
+   "day": "2026-11-18"
+  },
+  "https://www.towafood-net.co.jp/pdf/monthly_report/2018_4/2017年7月度%20売上高速報（前期対比）.pdf": {
+   "reason": "표없음",
+   "day": "2026-11-18"
+  },
+  "https://www.towafood-net.co.jp/pdf/monthly_report/2017_4/2017年4月度%20売上高速報（前期対比）.pdf": {
+   "reason": "표없음",
+   "day": "2026-11-18"
+  },
+  "https://www.towafood-net.co.jp/pdf/monthly_report/2017_4/2017年3月度%20売上高速報（前期対比）.pdf": {
+   "reason": "표없음",
+   "day": "2026-11-18"
+  },
+  "https://www.towafood-net.co.jp/pdf/monthly_report/2017_4/2017年2月度%20損益状況について.pdf": {
+   "reason": "표없음",
+   "day": "2026-11-18"
+  },
+  "https://www.towafood-net.co.jp/pdf/monthly_report/2017_4/2017年2月度%20売上高速報（前期対比）.pdf": {
+   "reason": "표없음",
+   "day": "2026-11-18"
+  },
+  "https://www.towafood-net.co.jp/pdf/monthly_report/2017_4/2017年1月度%20売上高速報（前期対比）.pdf": {
+   "reason": "표없음",
+   "day": "2026-11-18"
+  },
+  "https://www.towafood-net.co.jp/pdf/monthly_report/2017_4/2016年9月度%20売上高速報（前期対比）.pdf": {
+   "reason": "표없음",
+   "day": "2026-11-18"
+  },
+  "https://www.towafood-net.co.jp/pdf/monthly_report/2017_4/2016年8月度%20売上高速報（前期対比）.pdf": {
+   "reason": "표없음",
+   "day": "2026-11-18"
+  },
+  "https://www.towafood-net.co.jp/pdf/monthly_report/2016_4/2016年4月度%20売上高速報（前期対比）.pdf": {
+   "reason": "표없음",
+   "day": "2026-11-18"
+  },
+  "https://www.towafood-net.co.jp/pdf/monthly_report/2016_4/2016年3月度%20売上高速報（前期対比）.pdf": {
+   "reason": "표없음",
+   "day": "2026-11-18"
+  },
+  "https://www.towafood-net.co.jp/pdf/monthly_report/2016_4/2016年2月度%20売上高速報（前期対比）.pdf": {
+   "reason": "표없음",
+   "day": "2026-11-18"
+  },
+  "https://www.towafood-net.co.jp/pdf/monthly_report/2016_4/2016年1月度%20売上高速報（前期対比）.pdf": {
+   "reason": "표없음",
+   "day": "2026-11-18"
+  },
+  "https://www.towafood-net.co.jp/pdf/monthly_report/2016_4/2015年12月度%20売上高速報（前期対比）.pdf": {
+   "reason": "표없음",
+   "day": "2026-11-18"
+  },
+  "https://www.towafood-net.co.jp/pdf/monthly_report/2016_4/2015年11月度%20売上高速報（前期対比）.pdf": {
+   "reason": "표없음",
+   "day": "2026-11-18"
+  },
+  "https://www.towafood-net.co.jp/pdf/monthly_report/2016_4/2015年10月度%20売上高速報（前期対比）.pdf": {
+   "reason": "표없음",
+   "day": "2026-11-18"
+  },
+  "https://www.towafood-net.co.jp/pdf/monthly_report/2016_4/2015年9月度%20売上高速報（前期対比）.pdf": {
+   "reason": "표없음",
+   "day": "2026-11-18"
+  },
+  "https://www.towafood-net.co.jp/pdf/monthly_report/2016_4/2015年8月度%20売上高速報（前期対比）.pdf": {
+   "reason": "표없음",
+   "day": "2026-11-18"
   }
  },
  "pdf_months": 3060,
@@ -60206,7 +60494,7 @@
   "7606": "2026-11-17T20:05:43+00:00",
   "9900": "2026-11-18T00:40:39+00:00",
   "3817": "2026-11-18T01:16:11+00:00",
-  "8163": "2026-11-18T00:09:03+00:00",
+  "8163": "2026-11-18T01:33:10+00:00",
   "8200": "2026-11-18T00:24:16+00:00",
   "7412": "2026-11-18T00:40:39+00:00",
   "4343": "2026-11-18T00:09:03+00:00",
@@ -60258,7 +60546,7 @@
   "7678": "2026-11-18T00:09:03+00:00",
   "3068": "2026-11-18T01:16:11+00:00",
   "7643": "2026-11-18T01:16:11+00:00",
-  "3329": "2026-11-17T23:53:50+00:00",
+  "3329": "2026-11-18T01:33:10+00:00",
   "3544": "2026-11-18T01:16:11+00:00",
   "5892": "2026-11-18T00:40:39+00:00",
   "6571": "2026-11-17T23:38:44+00:00",
@@ -60277,39 +60565,39 @@
   "6073": "2026-11-18T00:40:39+00:00",
   "7646": "2026-11-17T20:05:43+00:00",
   "9993": "2026-11-18T00:40:39+00:00",
-  "3083": "2026-11-17T23:53:50+00:00",
+  "3083": "2026-11-18T01:33:10+00:00",
   "8207": "2026-11-18T00:40:39+00:00",
   "3030": "2026-11-18T00:40:39+00:00",
   "3082": "2026-11-18T00:40:39+00:00",
   "7134": "2026-11-18T00:09:03+00:00",
   "9245": "2026-11-18T00:09:03+00:00",
-  "7636": "2026-11-17T23:53:50+00:00",
-  "3080": "2026-11-17T23:53:50+00:00",
-  "7416": "2026-11-17T23:53:50+00:00",
-  "7514": "2026-11-17T23:53:50+00:00",
-  "8705": "2026-11-17T23:53:50+00:00",
+  "7636": "2026-11-18T01:33:10+00:00",
+  "3080": "2026-11-18T01:33:10+00:00",
+  "7416": "2026-11-18T01:33:10+00:00",
+  "7514": "2026-11-18T01:33:10+00:00",
+  "8705": "2026-11-18T01:33:10+00:00",
   "6561": "2026-11-18T00:09:03+00:00",
   "9890": "2026-11-17T04:28:21+00:00",
-  "3077": "2026-11-17T23:53:50+00:00",
+  "3077": "2026-11-18T01:33:10+00:00",
   "556A": "2026-11-17T23:38:44+00:00",
-  "7610": "2026-11-17T23:53:50+00:00",
-  "3160": "2026-11-17T23:53:50+00:00",
-  "7604": "2026-11-17T23:53:50+00:00",
-  "7682": "2026-11-17T23:53:50+00:00",
-  "7494": "2026-11-17T23:53:50+00:00",
-  "2769": "2026-11-17T23:53:50+00:00",
-  "5888": "2026-11-17T23:53:50+00:00",
-  "2311": "2026-11-17T23:53:50+00:00",
+  "7610": "2026-11-18T01:33:10+00:00",
+  "3160": "2026-11-18T01:33:10+00:00",
+  "7604": "2026-11-18T01:33:10+00:00",
+  "7682": "2026-11-18T01:33:10+00:00",
+  "7494": "2026-11-18T01:33:10+00:00",
+  "2769": "2026-11-18T01:33:10+00:00",
+  "5888": "2026-11-18T01:33:10+00:00",
+  "2311": "2026-11-18T01:33:10+00:00",
   "3566": "2026-11-18T00:09:03+00:00",
-  "7674": "2026-11-17T23:53:50+00:00",
+  "7674": "2026-11-18T01:33:10+00:00",
   "7506": "2026-11-18T00:09:03+00:00",
   "245A": "2026-11-18T00:09:03+00:00",
   "7049": "2026-11-18T00:09:03+00:00",
   "9876": "2026-11-18T00:09:03+00:00",
   "9904": "2026-11-18T00:09:03+00:00",
   "9973": "2026-11-18T00:09:03+00:00",
-  "2654": "2026-11-18T00:09:03+00:00",
-  "3058": "2026-11-18T00:09:03+00:00",
+  "2654": "2026-11-18T01:33:10+00:00",
+  "3058": "2026-11-18T01:33:10+00:00",
   "7127": "2026-11-18T00:09:03+00:00",
   "7370": "2026-11-18T00:09:03+00:00",
   "7918": "2026-11-18T00:09:03+00:00",
@@ -60337,7 +60625,7 @@
   "2778": "2026-11-18T00:58:56+00:00",
   "3370": "2026-11-18T00:58:56+00:00",
   "7585": "2026-11-18T00:58:56+00:00",
-  "7865": "2026-11-17T23:53:50+00:00",
+  "7865": "2026-11-18T01:33:10+00:00",
   "8279": "2026-11-18T00:24:16+00:00",
   "4565": "2026-11-17T00:04:27+00:00",
   "4911": "2026-11-18T00:24:16+00:00",
@@ -60542,7 +60830,7 @@
   "7606": "2026-11-17T20:05:43+00:00",
   "9900": "2026-11-18T00:40:39+00:00",
   "3817": "2026-11-18T01:16:11+00:00",
-  "8163": "2026-11-18T00:09:03+00:00",
+  "8163": "2026-11-18T01:33:10+00:00",
   "8200": "2026-11-18T00:24:16+00:00",
   "7412": "2026-11-18T00:40:39+00:00",
   "4343": "2026-11-18T00:09:03+00:00",
@@ -60594,7 +60882,7 @@
   "7678": "2026-11-18T00:09:03+00:00",
   "3068": "2026-11-18T01:16:11+00:00",
   "7643": "2026-11-18T01:16:11+00:00",
-  "3329": "2026-11-17T23:53:50+00:00",
+  "3329": "2026-11-18T01:33:10+00:00",
   "3544": "2026-11-18T01:16:11+00:00",
   "5892": "2026-11-18T00:40:39+00:00",
   "6571": "2026-11-17T23:38:44+00:00",
@@ -60613,39 +60901,39 @@
   "6073": "2026-11-18T00:40:39+00:00",
   "7646": "2026-11-17T20:05:43+00:00",
   "9993": "2026-11-18T00:40:39+00:00",
-  "3083": "2026-11-17T23:53:50+00:00",
+  "3083": "2026-11-18T01:33:10+00:00",
   "8207": "2026-11-18T00:40:39+00:00",
   "3030": "2026-11-18T00:40:39+00:00",
   "3082": "2026-11-18T00:40:39+00:00",
   "7134": "2026-11-18T00:09:03+00:00",
   "9245": "2026-11-18T00:09:03+00:00",
-  "7636": "2026-11-17T23:53:50+00:00",
-  "3080": "2026-11-17T23:53:50+00:00",
-  "7416": "2026-11-17T23:53:50+00:00",
-  "7514": "2026-11-17T23:53:50+00:00",
-  "8705": "2026-11-17T23:53:50+00:00",
+  "7636": "2026-11-18T01:33:10+00:00",
+  "3080": "2026-11-18T01:33:10+00:00",
+  "7416": "2026-11-18T01:33:10+00:00",
+  "7514": "2026-11-18T01:33:10+00:00",
+  "8705": "2026-11-18T01:33:10+00:00",
   "6561": "2026-11-18T00:09:03+00:00",
   "9890": "2026-11-17T04:28:21+00:00",
-  "3077": "2026-11-17T23:53:50+00:00",
+  "3077": "2026-11-18T01:33:10+00:00",
   "556A": "2026-11-17T23:38:44+00:00",
-  "7610": "2026-11-17T23:53:50+00:00",
-  "3160": "2026-11-17T23:53:50+00:00",
-  "7604": "2026-11-17T23:53:50+00:00",
-  "7682": "2026-11-17T23:53:50+00:00",
-  "7494": "2026-11-17T23:53:50+00:00",
-  "2769": "2026-11-17T23:53:50+00:00",
-  "5888": "2026-11-17T23:53:50+00:00",
-  "2311": "2026-11-17T23:53:50+00:00",
+  "7610": "2026-11-18T01:33:10+00:00",
+  "3160": "2026-11-18T01:33:10+00:00",
+  "7604": "2026-11-18T01:33:10+00:00",
+  "7682": "2026-11-18T01:33:10+00:00",
+  "7494": "2026-11-18T01:33:10+00:00",
+  "2769": "2026-11-18T01:33:10+00:00",
+  "5888": "2026-11-18T01:33:10+00:00",
+  "2311": "2026-11-18T01:33:10+00:00",
   "3566": "2026-11-18T00:09:03+00:00",
-  "7674": "2026-11-17T23:53:50+00:00",
+  "7674": "2026-11-18T01:33:10+00:00",
   "7506": "2026-11-18T00:09:03+00:00",
   "245A": "2026-11-18T00:09:03+00:00",
   "7049": "2026-11-18T00:09:03+00:00",
   "9876": "2026-11-18T00:09:03+00:00",
   "9904": "2026-11-18T00:09:03+00:00",
   "9973": "2026-11-18T00:09:03+00:00",
-  "2654": "2026-11-18T00:09:03+00:00",
-  "3058": "2026-11-18T00:09:03+00:00",
+  "2654": "2026-11-18T01:33:10+00:00",
+  "3058": "2026-11-18T01:33:10+00:00",
   "7127": "2026-11-18T00:09:03+00:00",
   "7370": "2026-11-18T00:09:03+00:00",
   "7918": "2026-11-18T00:09:03+00:00",
@@ -60673,7 +60961,7 @@
   "2778": "2026-11-18T00:58:56+00:00",
   "3370": "2026-11-18T00:58:56+00:00",
   "7585": "2026-11-18T00:58:56+00:00",
-  "7865": "2026-11-17T23:53:50+00:00",
+  "7865": "2026-11-18T01:33:10+00:00",
   "8279": "2026-11-18T00:24:16+00:00",
   "4565": "2026-11-17T00:04:27+00:00",
   "4911": "2026-11-18T00:24:16+00:00",
@@ -60890,14 +61178,14 @@
   "https://www.daiichi-d.co.jp/sys/wp-content/uploads/1a6b3a323228ddb53605304ab24d3c86.pdf": "2026-11-13",
   "https://www.daiichi-d.co.jp/sys/wp-content/uploads/kessan-hosoku_202303.pdf?20230511": "2026-10-17",
   "https://www.daiichi-d.co.jp/sys/wp-content/uploads/kessan-hosoku_202211.pdf": "2026-10-17",
-  "https://www.towafood-net.co.jp/wp-content/uploads/2025/11/2025年10月度売上高速報（前期対比）.pdf": "2026-11-17",
-  "https://www.towafood-net.co.jp/wp-content/uploads/2025/10/2025年9月度売上高速報（前期対比）.pdf": "2026-11-17",
-  "https://www.towafood-net.co.jp/wp-content/uploads/2025/09/2025年8月度売上高速報（前期対比）-1.pdf": "2026-11-17",
-  "https://www.towafood-net.co.jp/wp-content/uploads/2025/08/2025年7月度売上高速報（前期対比）.pdf": "2026-11-17",
-  "https://www.towafood-net.co.jp/wp-content/uploads/2025/05/2025年4月度売上高速報（前期対比）.pdf": "2026-11-17",
-  "https://www.towafood-net.co.jp/wp-content/uploads/2025/04/2025年3月度売上高速報（前期対比）.pdf": "2026-11-17",
-  "https://www.towafood-net.co.jp/wp-content/uploads/2025/03/2025年2月度売上高速報（前期対比）.pdf": "2026-11-17",
-  "https://www.towafood-net.co.jp/wp-content/uploads/2025/02/2025年1月度売上高速報（前期対比）.pdf": "2026-11-17",
+  "https://www.towafood-net.co.jp/wp-content/uploads/2025/11/2025年10月度売上高速報（前期対比）.pdf": "2026-11-18",
+  "https://www.towafood-net.co.jp/wp-content/uploads/2025/10/2025年9月度売上高速報（前期対比）.pdf": "2026-11-18",
+  "https://www.towafood-net.co.jp/wp-content/uploads/2025/09/2025年8月度売上高速報（前期対比）-1.pdf": "2026-11-18",
+  "https://www.towafood-net.co.jp/wp-content/uploads/2025/08/2025年7月度売上高速報（前期対比）.pdf": "2026-11-18",
+  "https://www.towafood-net.co.jp/wp-content/uploads/2025/05/2025年4月度売上高速報（前期対比）.pdf": "2026-11-18",
+  "https://www.towafood-net.co.jp/wp-content/uploads/2025/04/2025年3月度売上高速報（前期対比）.pdf": "2026-11-18",
+  "https://www.towafood-net.co.jp/wp-content/uploads/2025/03/2025年2月度売上高速報（前期対比）.pdf": "2026-11-18",
+  "https://www.towafood-net.co.jp/wp-content/uploads/2025/02/2025年1月度売上高速報（前期対比）.pdf": "2026-11-18",
   "https://contents.xj-storage.jp/xcontents/AS09313/e64ce307/d84f/4639/afb0/b53ce1a70eed/20260407151118523s.pdf": "2026-11-18",
   "https://contents.xj-storage.jp/xcontents/AS09313/a2be5fa3/2e37/4dfd/b561/a97d9667f62d/20260306115501751s.pdf": "2026-11-18",
   "https://contents.xj-storage.jp/xcontents/AS09313/bd4cc4c7/8b1b/44fa/bf76/b6e8de705201/20260205172008884s.pdf": "2026-11-18",
@@ -60940,20 +61228,20 @@
   "https://www.plant-co.jp/corp/pdf/uriselm_201409.pdf": "2026-10-17",
   "https://www.plant-co.jp/corp/pdf/uriselm_201309.pdf": "2026-10-17",
   "https://www.kichiri.co.jp/wp-content/uploads/2026/09/2609031111.pdf": "2026-11-18",
-  "https://www.nissansec-g.co.jp/pdf/press20261015.pdf": "2026-11-17",
+  "https://www.nissansec-g.co.jp/pdf/press20261015.pdf": "2026-11-18",
   "https://www.nissansec-g.co.jp/pdf/press20260910.pdf": "2026-11-16",
-  "https://www.nissansec-g.co.jp/pdf/press20260817.pdf": "2026-11-17",
+  "https://www.nissansec-g.co.jp/pdf/press20260817.pdf": "2026-11-18",
   "https://www.nissansec-g.co.jp/pdf/press20260713.pdf": "2026-10-17",
   "https://www.nissansec-g.co.jp/pdf/press20260612.pdf": "2026-10-17",
   "https://www.nissansec-g.co.jp/pdf/press20260518.pdf": "2026-10-17",
-  "https://www.nissansec-g.co.jp/pdf/press20260414.pdf": "2026-11-17",
-  "https://www.nissansec-g.co.jp/pdf/press20260312.pdf": "2026-11-17",
+  "https://www.nissansec-g.co.jp/pdf/press20260414.pdf": "2026-11-18",
+  "https://www.nissansec-g.co.jp/pdf/press20260312.pdf": "2026-11-18",
   "https://www.nissansec-g.co.jp/pdf/press202602134.pdf": "2026-10-17",
-  "https://www.nissansec-g.co.jp/pdf/press20260115.pdf": "2026-11-17",
-  "https://www.horiifood.co.jp/ir/library/prospectus.cgi?mode=download&id=25&file_id=1": "2026-11-17",
-  "https://www.horiifood.co.jp/ir/library/prospectus.cgi?mode=download&id=24&file_id=1": "2026-11-17",
-  "https://www.horiifood.co.jp/ir/library/prospectus.cgi?mode=download&id=23&file_id=1": "2026-11-17",
-  "https://www.horiifood.co.jp/ir/library/prospectus.cgi?mode=download&id=22&file_id=1": "2026-11-17",
+  "https://www.nissansec-g.co.jp/pdf/press20260115.pdf": "2026-11-18",
+  "https://www.horiifood.co.jp/ir/library/prospectus.cgi?mode=download&id=25&file_id=1": "2026-11-18",
+  "https://www.horiifood.co.jp/ir/library/prospectus.cgi?mode=download&id=24&file_id=1": "2026-11-18",
+  "https://www.horiifood.co.jp/ir/library/prospectus.cgi?mode=download&id=23&file_id=1": "2026-11-18",
+  "https://www.horiifood.co.jp/ir/library/prospectus.cgi?mode=download&id=22&file_id=1": "2026-11-18",
   "https://ir.hamayuu.co.jp/ja/ir/news/news-7041927872435864695/main/0/link/pdffile.pdf": "2026-11-10",
   "https://ssl4.eir-parts.net/doc/5888/tdnet/2895392/00.pdf": "2026-11-16",
   "https://ssl4.eir-parts.net/doc/5888/tdnet/2884563/00.pdf": "2026-11-16",
@@ -61708,7 +61996,7 @@
   "https://www.baroque-global.com/jp/notice/download/428/7633": "2026-11-17",
   "https://www.plant-co.jp/corp/pdf/uriselm_202609.pdf": "2026-11-17",
   "https://www.chiyodagrp.co.jp/ir/annual_report/80_2q.pdf": "2026-11-18",
-  "https://ssl4.eir-parts.net/doc/3083/ir_material2/289363/00.pdf": "2026-11-17",
+  "https://ssl4.eir-parts.net/doc/3083/ir_material2/289363/00.pdf": "2026-11-18",
   "https://palemo.co.jp/wp-content/uploads/2025/11/月次売上高前年比情報に関するお知らせ202511.pdf": "2026-11-04",
   "https://palemo.co.jp/wp-content/uploads/2025/10/月次売上高前年比情報に関するお知らせ202510-1.pdf": "2026-11-04",
   "https://palemo.co.jp/wp-content/uploads/2025/09/月次売上高前年比情報に関するお知らせ202509.pdf": "2026-11-04",
@@ -61851,7 +62139,7 @@
   "https://www.24028.jp/ir/wp-content/uploads/sites/3/getsujiH28.7.pdf": "2026-11-10",
   "https://www.poplar-cvs.co.jp/ir/pdf/index/2026/tsukiji261110.pdf": "2026-11-18",
   "https://www.chimney.co.jp/prd/wordpress/wp-content/uploads/2026/11/uriage202610.pdf": "2026-11-18",
-  "https://ir.hamayuu.co.jp/ja/ir/news/news2872742421994131078/main/0/link/pdffile.pdf": "2026-11-17",
+  "https://ir.hamayuu.co.jp/ja/ir/news/news2872742421994131078/main/0/link/pdffile.pdf": "2026-11-18",
   "https://contents.xj-storage.jp/xcontents/AS98629/54fb2345/3faf/493d/a3db/53789b78f4b0/20261110153710992s.pdf": "2026-11-17",
   "https://contents.xj-storage.jp/xcontents/AS99965/cf1217fc/f1a0/454b/8bc3/90d773ac8638/140120261110571233.pdf": "2026-11-17",
   "https://contents.xj-storage.jp/xcontents/AS91042/d0815250/c0be/48f6/b986/ba216cd1cbef/140120261110570562.pdf": "2026-11-11",
@@ -61860,10 +62148,10 @@
   "https://kozohd.co.jp/wp-content/uploads/2026/11/2026年10月度-月次売上-昨対比_1109.pdf": "2026-11-18",
   "https://corp.artnature.co.jp/ja/ir/finance/monthly_info/main/018/teaserItems1/00/linkList/0/link/20261113getsuji.pdf": "2026-11-18",
   "https://www.daiichi-d.co.jp/sys/wp-content/uploads/kessan-hosoku202611.pdf": "2026-11-18",
-  "https://www.nissansec-g.co.jp/pdf/press20261116.pdf": "2026-11-17",
+  "https://www.nissansec-g.co.jp/pdf/press20261116.pdf": "2026-11-18",
   "https://www.pietro.co.jp/assets/upload/news/getsuji_202611.pdf": "2026-11-18",
   "https://www.teraprobe.com/cwp/wp-content/uploads/20261116_monthlysales2610.pdf": "2026-11-18",
-  "https://ssl4.eir-parts.net/doc/5888/tdnet/2918800/00.pdf": "2026-11-17",
+  "https://ssl4.eir-parts.net/doc/5888/tdnet/2918800/00.pdf": "2026-11-18",
   "https://www.takashimaya.co.jp/base/corp/topics/261116a.pdf": "2026-11-18",
   "https://www.pepper-fs.co.jp/_img/ir/monthly_report/2026/PFS20261116.pdf": "2026-11-18",
   "https://contents.xj-storage.jp/xcontents/AS93479/e08ac842/5062/4017/abca/4c3ef926e360/140120261116581095.pdf": "2026-11-17",
