@@ -9747,7 +9747,12 @@ function rtApply(ev) {
   let r = ROWS.find(x => keyOf(x) === key && Math.abs(Date.parse(x[0]) - Date.parse(ev.date)) <= 4 * 864e5);
   // 장후 발표 회사의 서류가 다음 날 아침 접수되면(외국 기업 6-K — 그랩) 발표일을 옮기지 않는다
   const lateFile = r && r[10] === '장후' && (Date.parse(ev.date) - Date.parse(r[0])) === 864e5;
-  if (r && !lateFile) { r[0] = ev.date; r[12] = ev.kstDate; r[13] = ev.kstTime; r[14] = 1; }
+  // 뉴스(야후·와이어) 기사는 발표 전 예고·분석 기사가 섞인다 — 11/18 엔비디아가 월·화·수 세 칸에 떴다.
+  // 예정일보다 이르거나, 장후 회사인데 그날 장 마감(15:55 ET) 전 기사면 발표가 아니다. 이미 실제 시각(8-K)으로 굳은 줄도 안 옮긴다.
+  const news = /뉴스/.test(ev.src || '');
+  if (r && news && (r[14] === 1 || ev.date < r[0] || (ev.date === r[0] && r[10] === '장후' && (ev.time || '') < '15:55'))) return false;
+  if (r && lateFile) {}                                   // 다음 날 아침 서류 — 날짜도 안 옮기고 줄도 새로 만들지 않는다
+  else if (r) { r[0] = ev.date; r[12] = ev.kstDate; r[13] = ev.kstTime; r[14] = 1; }
   else {
     // 은행·리츠·ETF·채권 펀드는 싣지 않는다(빌드의 drop_banks_reits 와 같은 뜻 — 회원님 11/03 「493A 국채 ETF 는 왜 있나」)
     const raw = (ev.orig || '') + ' ' + (ev.name || '');
