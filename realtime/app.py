@@ -2512,6 +2512,15 @@ def pr_process(c, title, link, pt):
     pub_et = pt.astimezone(ET).strftime("%Y-%m-%d %H:%M")
     if (key, pub_et[:10]) in PR_SENT:
         return
+    # 발표 전 기사를 발표로 잡지 않는다(11/18 엔비디아: 11/16·11/17 아침 기사로 월·화에 가짜 발표가 떴다).
+    # 캘린더 예정일이 나흘 안에 있으면 — 그보다 이른 날, 또는 장후 회사인데 그날 15:55 ET 전 기사는 버린다.
+    with H.lock:
+        r = H.row(key, pub_et[:10])
+    if r:
+        gap = (date.fromisoformat(r[0]) - date.fromisoformat(pub_et[:10])).days
+        if 0 < gap <= 4 or (gap == 0 and r[10] == "장후" and pub_et[11:] < "15:55"):
+            log(f"발표 전 기사라 건너뜀 {key} 예정 {r[0]} {r[10]} · 기사 {pub_et} {title[:60]}")
+            return
     ev = base_event("us", code, orig, pub_et, ET, "보도자료(뉴스와이어)", link, title)
     PR_SENT[(key, pub_et[:10])] = ev["id"]
     point = None
