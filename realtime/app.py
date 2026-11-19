@@ -770,6 +770,14 @@ def _apply_point(ev, pts, point):
     if not point:
         return pts
     lab = point["label"]
+    # **한 칸 건너뛴 이름은 바로 다음 칸으로**(11/19 BBWI) — 이력의 마지막이 2Q26 인데 새 분기가 4Q26 이면
+    # 이름 붙이기가 밀린 것이다(그 사이 분기를 건너뛰고 발표하는 회사는 없다). 그러면 전년비가 엉뚱한 분기와 견줘진다.
+    qs = [p[0] for p in pts if re.match(r"\dQ\d\d$", p[0] or "")]
+    if qs and re.match(r"\dQ\d\d$", lab):
+        nx = lambda l: f"{int(l[0]) % 4 + 1}Q{int(l[2:]) + (l[0] == '4'):02d}"   # noqa: E731
+        if lab == nx(nx(qs[-1])):
+            log("분기 이름 한 칸 건너뜀 — 바로잡음", ev.get("key"), lab, "->", nx(qs[-1]))
+            lab = point["label"] = nx(qs[-1])
     # **이미 가진 분기와 숫자가 똑같은 '새 분기'는 싣지 않는다**(11/04 재팬아이웨어: 2Q26 의 매출·영업이익이 3Q26 으로 한 번 더 섰다 —
     # 지난 분기 자료를 다음 분기로 잘못 이름 붙인 것). 매출과 영업이익이 0.1% 안에서 같은 다른 분기가 있으면 같은 분기다.
     for p in pts:
@@ -1302,8 +1310,7 @@ def ser_add_q(key, b, cur):
         return 0
     items = []
     for col in b["segq"]:
-        y, m = int(col["end"][:4]), int(col["end"][5:7])
-        lab = f"{(m - 1) // 3 + 1}Q{y % 100:02d}"
+        lab = q_label_end(col["end"])
         items += [(lab, n, v * sc) for n, v in col["vals"].items()]
     _ser_put(key, cur, items)
     log("분기 추이 표", key, len(b["segq"]), "분기")
@@ -2258,10 +2265,20 @@ def us_period(key, filed):
     return f"{'Jan Feb Mar Apr May Jun Jul Aug Sep Oct Nov Dec'.split()[q_end_month - 1]} {y}"
 
 
+def q_label_end(end):
+    """분기 이름은 **기간 한가운데(끝나기 45일 전)** 로 정한다 — 사이트 build.py 의 q_label 과 같은 규칙.
+    11/19 BBWI: 10월 말에 끝나는 3분기를 '끝난 달'로 4Q26 이라 불러 작년 **4분기(연말 성수기)** 와 견줬고
+    매출 −42% 가 속보에 나갔다. 1·4·7·10월에 분기가 끝나는 회사(소매·엔비디아…)가 전부 한 칸씩 밀려 있었다."""
+    d = (end if isinstance(end, date) else date.fromisoformat(str(end)[:10])) - timedelta(days=45)
+    return f"{(d.month - 1) // 3 + 1}Q{d.year % 100:02d}"
+
+
 def label_of(period):
     mon, y = period.split()
     mi = "Jan Feb Mar Apr May Jun Jul Aug Sep Oct Nov Dec".split().index(mon) + 1
-    return f"{(mi - 1) // 3 + 1}Q{int(y) % 100:02d}"
+    y = int(y)
+    last = (date(y + (mi == 12), mi % 12 + 1, 1) - timedelta(days=1))
+    return q_label_end(last)
 
 
 def us_extra_text(cik, acc):
