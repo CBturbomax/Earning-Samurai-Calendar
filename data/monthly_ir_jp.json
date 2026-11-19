@@ -33,12 +33,12 @@
   },
   "9831": {
    "page": "https://www.yamada-holdings.jp/ir/monthly.html",
-   "fetch_failed": "2026-11-19T03:48:49+00:00"
+   "fetch_failed": "2026-11-19T04:21:58+00:00"
   },
   "3563": {
    "page": "https://food-and-life.co.jp/investor/monthly-information",
    "found": "2026-09-28",
-   "parse_miss": "2026-11-19T03:48:49+00:00"
+   "parse_miss": "2026-11-19T04:21:58+00:00"
   },
   "7564": {
    "page": "https://www.workman.co.jp/ir%e6%83%85%e5%a0%b1/%e6%9c%88%e6%ac%a1%e5%a0%b1%e5%91%8a",
@@ -56,7 +56,7 @@
   "3097": {
    "page": "https://www.monogatari.co.jp/ir/date/",
    "found": "2026-10-13",
-   "parse_miss": "2026-11-19T03:48:49+00:00"
+   "parse_miss": "2026-11-19T04:21:58+00:00"
   },
   "3197": {
    "page": "https://corp.skylark.co.jp/ir/financial/performance/"
@@ -64,7 +64,7 @@
   "4666": {
    "page": "https://www.park24.co.jp/ir/financial/monthly.html",
    "found": "2026-10-13",
-   "parse_miss": "2026-11-19T03:48:49+00:00"
+   "parse_miss": "2026-11-19T04:21:58+00:00"
   },
   "8016": {
    "page": "https://www.onward-hd.co.jp/ir/finance/monthly.html",
@@ -155,7 +155,7 @@
   },
   "3222": {
    "page": "https://www.usmh.co.jp/ir/monthly_reports",
-   "parse_miss": "2026-11-19T03:48:49+00:00"
+   "parse_miss": "2026-11-19T04:21:58+00:00"
   },
   "7532": {
    "page": "https://ppih.co.jp/ir/highlight/monthly/",
@@ -172,7 +172,7 @@
   "3099": {
    "page": "https://www.imhds.co.jp/corporate/ir/finance/monthly-report.html",
    "found": "2026-10-13",
-   "parse_miss": "2026-11-19T03:48:49+00:00"
+   "parse_miss": "2026-11-19T04:21:58+00:00"
   },
   "9021": {
    "page": "https://www.westjr.co.jp/company/ir/finance/monthly/"
@@ -235,7 +235,7 @@
   "2461": {
    "page": "https://www.fancs.com/news/376546549/",
    "found": "2026-10-13",
-   "parse_miss": "2026-11-19T03:31:00+00:00"
+   "parse_miss": "2026-11-19T04:21:58+00:00"
   },
   "2502": {
    "page": "https://www.asahigroup-holdings.com/en/ir/financial_data/monthly_data/",
@@ -248,7 +248,7 @@
   "2593": {
    "page": "https://www.itoen.co.jp/ir/library/monthly_sales_backnumber/",
    "found": "2026-10-13",
-   "parse_miss": "2026-11-19T03:48:49+00:00"
+   "parse_miss": "2026-11-19T04:21:58+00:00"
   },
   "262A": {
    "page": "https://www.zoff.com/ir/monthly/",
@@ -310,7 +310,7 @@
   "2730": {
    "page": "https://www.edion.co.jp/ir/library/monthly",
    "found": "2026-10-13",
-   "parse_miss": "2026-11-19T03:48:49+00:00"
+   "parse_miss": "2026-11-19T04:21:58+00:00"
   },
   "2736": {
    "page": "https://www.festaria.co.jp/company/ir/",
@@ -322,7 +322,7 @@
   "274A": {
    "page": "https://ir-gardengroup.jp/",
    "found": "2026-10-13",
-   "parse_miss": "2026-11-19T03:31:00+00:00"
+   "parse_miss": "2026-11-19T04:21:58+00:00"
   },
   "2750": {
    "miss": "2026-11-18"
@@ -410,7 +410,7 @@
   "3068": {
    "page": "https://www.wdi.co.jp/ir/monthly.html",
    "found": "2026-10-13",
-   "parse_miss": "2026-11-19T03:31:00+00:00"
+   "parse_miss": "2026-11-19T04:21:58+00:00"
   },
   "3069": {
    "page": "https://j-fla.com/ir/monthly/",
@@ -431,7 +431,7 @@
   "3087": {
    "page": "https://www.doutor.co.jp/ir/library/monthly/",
    "found": "2026-10-13",
-   "parse_miss": "2026-11-19T03:48:49+00:00"
+   "parse_miss": "2026-11-19T04:21:58+00:00"
   },
   "3135": {
    "miss": "2026-11-18"
@@ -442,7 +442,7 @@
   },
   "3160": {
    "page": "https://www.oomitsu.com",
-   "parse_miss": "2026-11-19T03:31:00+00:00"
+   "parse_miss": "2026-11-19T04:21:58+00:00"
   },
   "3175": {
    "miss": "2026-11-18"
@@ -513,7 +513,7 @@
   },
   "3544": {
    "page": "https://satudora-hd.co.jp/ir/monthly/",
-   "parse_miss": "2026-11-19T03:31:00+00:00"
+   "parse_miss": "2026-11-19T04:21:58+00:00"
   },
   "3547": {
    "miss": "2026-11-18"
@@ -532,7 +532,7 @@
   },
   "3591": {
    "page": "https://www.wacoalholdings.jp/ir/monthlydata/",
-   "parse_miss": "2026-11-19T03:48:49+00:00"
+   "parse_miss": "2026-11-19T04:21:58+00:00"
   },
   "9962": {
    "page": "https://www.misumi.co.jp/ir/library/monthly_sales",
@@ -549,7 +549,7 @@
   },
   "9142": {
    "page": "https://www.jrkyushu.co.jp/company/ir/finance/monthly/",
-   "fetch_failed": "2026-11-19T03:48:49+00:00"
+   "fetch_failed": "2026-11-19T04:21:58+00:00"
   },
   "8985": {
    "page": "https://www.jhrth.co.jp/ja/portfolio/review.html",
@@ -558,7 +558,7 @@
   "8963": {
    "page": "https://www.invincible-inv.co.jp",
    "found": "2026-10-13",
-   "parse_miss": "2026-11-19T03:48:49+00:00"
+   "parse_miss": "2026-11-19T04:21:58+00:00"
   },
   "9989": {
    "page": "https://www.sundrug.co.jp/ir/irdata/monthly"
@@ -570,7 +570,7 @@
   "3923": {
    "page": "https://www.rakus.co.jp/ir/monthly-sales/",
    "found": "2026-10-13",
-   "parse_miss": "2026-11-19T03:48:49+00:00"
+   "parse_miss": "2026-11-19T04:21:58+00:00"
   },
   "8242": {
    "page": "https://www.h2o-retailing.co.jp/ja/ir/library/monthly.html",
@@ -579,12 +579,12 @@
   "4680": {
    "page": "https://www.round1-group.co.jp/en/ir/financial-affairs/sales/",
    "found": "2026-10-13",
-   "parse_miss": "2026-11-19T03:48:49+00:00"
+   "parse_miss": "2026-11-19T04:21:58+00:00"
   },
   "8628": {
    "page": "https://www.matsui.co.jp/company/ir/disclosure/business/",
    "found": "2026-10-13",
-   "parse_miss": "2026-11-19T03:48:49+00:00"
+   "parse_miss": "2026-11-19T04:21:58+00:00"
   },
   "8282": {
    "miss": "2026-11-18"
@@ -596,12 +596,12 @@
   "9627": {
    "page": "https://www.ainj.co.jp/corporate/ir/",
    "found": "2026-10-13",
-   "parse_miss": "2026-11-19T03:48:49+00:00"
+   "parse_miss": "2026-11-19T04:21:58+00:00"
   },
   "7630": {
    "page": "https://www.ichibanya.jp/ir/finance/monthly/",
    "found": "2026-10-13",
-   "parse_miss": "2026-11-19T03:48:49+00:00"
+   "parse_miss": "2026-11-19T04:21:58+00:00"
   },
   "2154": {
    "page": "https://www.openupgroup.co.jp",
@@ -704,7 +704,7 @@
   "7412": {
    "page": "https://www.atom-corp.co.jp/ir/monthlysale.php",
    "found": "2026-10-13",
-   "parse_miss": "2026-11-19T03:31:00+00:00"
+   "parse_miss": "2026-11-19T04:21:58+00:00"
   },
   "8160": {
    "page": "https://www.kisoji.co.jp/ir/monthly.html",
@@ -830,7 +830,7 @@
   },
   "6073": {
    "page": "https://www.asante.co.jp/ir/library/disclosure/",
-   "parse_miss": "2026-11-19T03:31:00+00:00"
+   "parse_miss": "2026-11-19T04:21:58+00:00"
   },
   "7561": {
    "page": "https://www.hurxley.co.jp/ir_information/month/",
@@ -846,7 +846,7 @@
   "7686": {
    "page": "https://www.hitomile.co.jp/ir/monthly_report.html",
    "found": "2026-10-13",
-   "parse_miss": "2026-11-19T03:31:00+00:00"
+   "parse_miss": "2026-11-19T04:21:58+00:00"
   },
   "9993": {
    "page": "https://yamazawa.co.jp/ir/term-month.html"
@@ -886,7 +886,7 @@
   },
   "7604": {
    "page": "https://www.umenohana.co.jp/investor/archive?category=monthly_sales",
-   "parse_miss": "2026-11-19T03:31:00+00:00"
+   "parse_miss": "2026-11-19T04:21:58+00:00"
   },
   "7494": {
    "page": "https://www.konaka.co.jp/ir/getsuji_-2026.html",
@@ -1088,7 +1088,7 @@
   },
   "9616": {
    "page": "https://www.kyoritsugroup.co.jp/ir/library/?category=16",
-   "parse_miss": "2026-11-19T03:48:49+00:00"
+   "parse_miss": "2026-11-19T04:21:58+00:00"
   },
   "3088": {
    "miss": "2026-11-18"
@@ -1129,11 +1129,11 @@
   },
   "7865": {
    "page": "https://www.people-kk.co.jp/investorrelations/monthly/",
-   "parse_miss": "2026-11-19T03:31:00+00:00"
+   "parse_miss": "2026-11-19T04:21:58+00:00"
   },
   "8218": {
    "page": "https://www.komeri.bit.or.jp/ir/monthlytrend/",
-   "parse_miss": "2026-11-19T03:48:49+00:00"
+   "parse_miss": "2026-11-19T04:21:58+00:00"
   },
   "7685": {
    "miss": "2026-11-18"
@@ -1187,17 +1187,17 @@
   },
   "9020": {
    "page": "https://www.jreast.co.jp/company/ir/library/monthly/",
-   "fetch_failed": "2026-11-19T03:48:49+00:00"
+   "fetch_failed": "2026-11-19T04:21:58+00:00"
   },
   "7453": {
    "page": "https://www.ryohin-keikaku.jp/ir/monthly",
-   "fetch_failed": "2026-11-19T03:48:49+00:00"
+   "fetch_failed": "2026-11-19T04:21:58+00:00"
   },
   "2752": {
    "miss": "2026-11-17"
   },
   "9251": {
-   "fetch_failed": "2026-11-19T03:48:49+00:00"
+   "fetch_failed": "2026-11-19T04:21:58+00:00"
   },
   "2735": {
    "fetch_failed": "2026-11-19T04:05:41+00:00"
@@ -3202,7 +3202,7 @@
      "doc": "https://food-and-life.co.jp/investor/monthly-information"
     }
    },
-   "ts": "2026-11-19T03:48:49+00:00",
+   "ts": "2026-11-19T04:21:58+00:00",
    "pdf_ts": "2026-10-31T02:38:43+00:00"
   },
   "7564": {
@@ -4381,7 +4381,7 @@
      "doc": "https://www.arcs-g.co.jp/ir/monthly-performance/index.html"
     }
    },
-   "ts": "2026-11-19T03:48:49+00:00"
+   "ts": "2026-11-19T04:21:58+00:00"
   },
   "7532": {
    "name": "ＰＰＩＨ",
@@ -5502,13 +5502,13 @@
      "doc": "https://www.toridoll.com/ir/finance/report/"
     }
    },
-   "ts": "2026-11-19T03:48:49+00:00"
+   "ts": "2026-11-19T04:21:58+00:00"
   },
   "9007": {
    "name": "小田急電鉄",
    "page": "https://www.odakyu.jp",
    "months": {},
-   "ts": "2026-11-19T03:48:49+00:00",
+   "ts": "2026-11-19T04:21:58+00:00",
    "pdf_ts": "2026-11-18T00:24:16+00:00",
    "pdf": {
     "2026-04": {
@@ -6179,7 +6179,7 @@
      "doc": "https://www.royal-holdings.co.jp/ir/finance/sales/"
     }
    },
-   "ts": "2026-11-19T03:48:49+00:00"
+   "ts": "2026-11-19T04:21:58+00:00"
   },
   "7561": {
    "name": "ハークスレイホールディングス",
@@ -6401,7 +6401,7 @@
      "doc": "https://www.hurxley.co.jp/ir_information/month/"
     }
    },
-   "ts": "2026-11-19T03:31:00+00:00"
+   "ts": "2026-11-19T04:21:58+00:00"
   },
   "7416": {
    "name": "はるやまホールディングス",
@@ -7283,13 +7283,13 @@
      "doc": "https://www.konaka.co.jp/ir/getsuji_h31.html"
     }
    },
-   "ts": "2026-11-19T03:31:00+00:00"
+   "ts": "2026-11-19T04:21:58+00:00"
   },
   "9021": {
    "name": "ＪＲ西日本",
    "page": "https://www.westjr.co.jp/company/ir/finance/monthly/",
    "months": {},
-   "ts": "2026-11-19T03:48:49+00:00",
+   "ts": "2026-11-19T04:21:58+00:00",
    "pdf_ts": "2026-11-19T00:21:55+00:00",
    "pdf": {
     "2026-05": {
@@ -7724,7 +7724,7 @@
      "doc": "https://corp.skylark.co.jp/ir/financial/performance/"
     }
    },
-   "ts": "2026-11-19T03:48:49+00:00"
+   "ts": "2026-11-19T04:21:58+00:00"
   },
   "9142": {
    "name": "ＪＲ九州",
@@ -8335,7 +8335,7 @@
      "doc": "https://www.nsd.co.jp/ir/irmaterial/sokuhou.html"
     }
    },
-   "ts": "2026-11-19T03:48:49+00:00"
+   "ts": "2026-11-19T04:21:58+00:00"
   },
   "8173": {
    "name": "Ｊｏｓｈｉｎ",
@@ -9270,7 +9270,7 @@
      "doc": "https://srsholdings.com/pages/ir-library-monthly"
     }
    },
-   "ts": "2026-11-19T03:48:49+00:00"
+   "ts": "2026-11-19T04:21:58+00:00"
   },
   "9278": {
    "name": "ブックオフＧＨＤ",
@@ -11122,7 +11122,7 @@
    "name": "チムニー",
    "page": "https://www.chimney.co.jp/ir/sales/",
    "months": {},
-   "ts": "2026-11-19T03:31:00+00:00",
+   "ts": "2026-11-19T04:21:58+00:00",
    "pdf_ts": "2026-11-19T03:31:00+00:00",
    "pdf": {
     "2026-04": {
@@ -11642,7 +11642,7 @@
    "name": "サックスバーホールディングス",
    "page": "https://www.sacs-bar.co.jp/news/csr2868/",
    "months": {},
-   "ts": "2026-11-19T03:31:00+00:00",
+   "ts": "2026-11-19T04:21:58+00:00",
    "pdf_ts": "2026-10-28T18:11:04+00:00",
    "pdf": {
     "2025-06": {
@@ -11945,13 +11945,13 @@
      "doc": "https://www.vega-c.com/ir/library/monthly-report/"
     }
    },
-   "ts": "2026-11-19T03:31:00+00:00"
+   "ts": "2026-11-19T04:21:58+00:00"
   },
   "2818": {
    "name": "ピエトロ",
    "page": "https://www.pietro.co.jp",
    "months": {},
-   "ts": "2026-11-19T03:31:00+00:00",
+   "ts": "2026-11-19T04:21:58+00:00",
    "pdf_ts": "2026-11-19T00:55:55+00:00",
    "pdf": {
     "2026-04": {
@@ -11995,8 +11995,8 @@
    "name": "高島屋",
    "page": "https://www.takashimaya.co.jp/corp/topics/",
    "months": {},
-   "ts": "2026-11-19T03:48:49+00:00",
-   "pdf_ts": "2026-11-19T03:48:49+00:00",
+   "ts": "2026-11-19T04:21:58+00:00",
+   "pdf_ts": "2026-11-19T04:21:58+00:00",
    "pdf": {
     "2026-07": {
      "doc": "https://www.takashimaya.co.jp/base/corp/topics/260817a.pdf",
@@ -12269,7 +12269,7 @@
    "name": "Ｈ２Ｏリテイリング",
    "page": "https://www.h2o-retailing.co.jp/ja/ir/library/monthly.html",
    "months": {},
-   "ts": "2026-11-19T03:48:49+00:00",
+   "ts": "2026-11-19T04:21:58+00:00",
    "pdf_ts": "2026-11-18T01:47:54+00:00",
    "pdf": {
     "2020-04": {
@@ -12560,7 +12560,7 @@
    "name": "ペッパーフードサービス",
    "page": "https://www.pepper-fs.co.jp/ir/monthly_report/library.php",
    "months": {},
-   "ts": "2026-11-19T03:31:00+00:00",
+   "ts": "2026-11-19T04:21:58+00:00",
    "pdf_ts": "2026-11-19T00:55:55+00:00",
    "pdf": {
     "2026-01": {
@@ -15044,7 +15044,7 @@
      "doc": "https://www.village-v.co.jp/company/ir/sales_trend/"
     }
    },
-   "ts": "2026-11-19T03:31:00+00:00",
+   "ts": "2026-11-19T04:21:58+00:00",
    "pdf_ts": "2026-11-18T01:33:10+00:00"
   },
   "9973": {
@@ -15343,13 +15343,13 @@
      "doc": "https://www.tsuruha-hd.co.jp/ir/report/"
     }
    },
-   "ts": "2026-11-19T03:48:49+00:00"
+   "ts": "2026-11-19T04:21:58+00:00"
   },
   "2670": {
    "name": "ＡＢＣマート",
    "page": "https://www.abc-mart.co.jp/ir/getsujijoho.html",
    "months": {},
-   "ts": "2026-11-19T03:48:49+00:00",
+   "ts": "2026-11-19T04:21:58+00:00",
    "pdf_ts": "2026-11-18T00:58:56+00:00",
    "pdf": {
     "2020-03": {
@@ -15568,7 +15568,7 @@
    "name": "Ｊフロント",
    "page": "https://www.j-front-retailing.com/ir/finance/monthly.html",
    "months": {},
-   "ts": "2026-11-19T03:48:49+00:00",
+   "ts": "2026-11-19T04:21:58+00:00",
    "updated": "2025-11-12",
    "pdf_ts": "2026-11-19T00:38:11+00:00",
    "pdf": {
@@ -15984,7 +15984,7 @@
      "doc": "https://www.sundrug.co.jp/ir/irdata/monthly"
     }
    },
-   "ts": "2026-11-19T03:48:49+00:00"
+   "ts": "2026-11-19T04:21:58+00:00"
   },
   "7616": {
    "name": "コロワイド",
@@ -16866,7 +16866,7 @@
      "doc": "https://ssl4.eir-parts.net/V4Public/eir/7616/ja/announcement/announcement_0.js"
     }
    },
-   "ts": "2026-11-19T03:48:49+00:00"
+   "ts": "2026-11-19T04:21:58+00:00"
   },
   "3148": {
    "name": "クリエイトＳＤＨＤ",
@@ -16898,7 +16898,7 @@
      "doc": "https://www.createsdhd.co.jp/ir/monthly/"
     }
    },
-   "ts": "2026-11-19T03:48:49+00:00"
+   "ts": "2026-11-19T04:21:58+00:00"
   },
   "8273": {
    "name": "イズミ",
@@ -16945,7 +16945,7 @@
      "doc": "https://www.izumi.co.jp/ir/finance/monthly/"
     }
    },
-   "ts": "2026-11-19T03:48:49+00:00"
+   "ts": "2026-11-19T04:21:58+00:00"
   },
   "7476": {
    "name": "アズワン",
@@ -18054,7 +18054,7 @@
    "name": "ダイイチ",
    "page": "https://www.daiichi-d.co.jp/ir/monthly-report",
    "months": {},
-   "ts": "2026-11-19T03:31:00+00:00",
+   "ts": "2026-11-19T04:21:58+00:00",
    "updated": "2026-11-02",
    "pdf_ts": "2026-11-19T00:55:55+00:00",
    "pdf": {
@@ -18099,7 +18099,7 @@
    "name": "東和フード",
    "page": "https://www.towafood-net.co.jp/investor/monthly/",
    "months": {},
-   "ts": "2026-11-19T03:31:00+00:00",
+   "ts": "2026-11-19T04:21:58+00:00",
    "pdf_ts": "2026-11-19T00:55:55+00:00",
    "pdf": {
     "2025-10": {
@@ -18426,8 +18426,8 @@
    "name": "ＳＲＡホールディングス",
    "page": "https://www.sra-hd.co.jp/ir/ir-news/index_2026.html",
    "months": {},
-   "ts": "2026-11-19T03:48:49+00:00",
-   "pdf_ts": "2026-11-19T03:48:49+00:00",
+   "ts": "2026-11-19T04:21:58+00:00",
+   "pdf_ts": "2026-11-19T04:21:58+00:00",
    "pdf": {
     "2026-06": {
      "doc": "https://www.sra-hd.co.jp/Portals/0/ir/negotiable/houkoku201408.pdf",
@@ -18524,7 +18524,7 @@
    "name": "トライアルホールディングス",
    "page": "https://www.trial-holdings.inc/news/release/3346/",
    "months": {},
-   "ts": "2026-11-19T03:48:49+00:00",
+   "ts": "2026-11-19T04:21:58+00:00",
    "pdf_ts": "2026-11-04T01:34:23+00:00",
    "pdf": {
     "2026-07": {
@@ -18788,7 +18788,7 @@
    "name": "パルグループＨＤ",
    "page": "https://www.palgroup.holdings",
    "months": {},
-   "ts": "2026-11-19T03:48:49+00:00",
+   "ts": "2026-11-19T04:21:58+00:00",
    "pdf_ts": "2026-11-19T00:07:16+00:00",
    "pdf": {
     "2026-02": {
@@ -18914,7 +18914,7 @@
      "doc": "https://www.yoshinoya-holdings.com/ir/report/yoshinoya/"
     }
    },
-   "ts": "2026-11-19T03:48:49+00:00"
+   "ts": "2026-11-19T04:21:58+00:00"
   },
   "3050": {
    "name": "ＤＣＭ",
@@ -18953,14 +18953,14 @@
      "doc": "https://www.dcm-hldgs.co.jp/grp/ir/performance/monthly-report.html"
     }
    },
-   "ts": "2026-11-19T03:48:49+00:00",
+   "ts": "2026-11-19T04:21:58+00:00",
    "updated": "2026-11-09"
   },
   "9956": {
    "name": "バローホールディングス",
    "page": "https://valorholdings.co.jp/ir/finance/",
    "months": {},
-   "ts": "2026-11-19T03:48:49+00:00",
+   "ts": "2026-11-19T04:21:58+00:00",
    "pdf_ts": "2026-11-19T03:14:26+00:00",
    "pdf": {
     "2026-03": {
@@ -19475,7 +19475,7 @@
      "doc": "https://www.the-fuji.com/company/ir/monthly/year2025.php"
     }
    },
-   "ts": "2026-11-19T03:48:49+00:00"
+   "ts": "2026-11-19T04:21:58+00:00"
   },
   "7516": {
    "name": "コーナン商事",
@@ -19670,7 +19670,7 @@
    "name": "テラプローブ",
    "page": "https://www.teraprobe.com",
    "months": {},
-   "ts": "2026-11-19T03:31:00+00:00",
+   "ts": "2026-11-19T04:21:58+00:00",
    "pdf_ts": "2026-11-19T00:07:16+00:00",
    "pdf": {
     "2026-07": {
@@ -21556,7 +21556,7 @@
      "doc": "https://tdnet-pdf.kabutan.jp/20260914/140120260914536041.pdf"
     }
    },
-   "ts": "2026-11-19T03:48:49+00:00"
+   "ts": "2026-11-19T04:21:58+00:00"
   },
   "7545": {
    "name": "西松屋チェーン",
@@ -21970,7 +21970,7 @@
      "doc": "https://kabubiz.com/getuji/getuji_stock.php?c=7630"
     }
    },
-   "ts": "2026-11-19T03:48:49+00:00"
+   "ts": "2026-11-19T04:21:58+00:00"
   },
   "2502": {
    "name": "アサヒグループ",
@@ -23212,7 +23212,7 @@
      "doc": "https://contents.xj-storage.jp/xcontents/AS09313/4f02161d/b9ef/4720/bff5/78c4e68f762f/140120260812518741.pdf"
     }
    },
-   "ts": "2026-11-19T03:31:00+00:00",
+   "ts": "2026-11-19T04:21:58+00:00",
    "pdf_ts": "2026-11-19T00:55:55+00:00",
    "pdf": {
     "2025-04": {
@@ -23667,7 +23667,7 @@
      "doc": "https://tdnet-pdf.kabutan.jp/20260603/140120260603561631.pdf"
     }
    },
-   "ts": "2026-11-19T03:31:00+00:00",
+   "ts": "2026-11-19T04:21:58+00:00",
    "pdf_ts": "2026-11-19T00:55:55+00:00",
    "pdf": {
     "2025-04": {
@@ -24839,7 +24839,7 @@
      "doc": "https://www.lifecorp.jp/company/ir/financial/monthly/"
     }
    },
-   "ts": "2026-11-19T03:48:49+00:00",
+   "ts": "2026-11-19T04:21:58+00:00",
    "pdf_ts": "2026-11-18T00:24:16+00:00"
   },
   "8244": {
@@ -24891,7 +24891,7 @@
      "doc": "https://www.ainj.co.jp/corporate/assets/upload/news/monthly_report_202608_English_Consolidated.pdf"
     }
    },
-   "ts": "2026-11-19T03:48:49+00:00",
+   "ts": "2026-11-19T04:21:58+00:00",
    "pdf_ts": "2026-11-19T00:07:16+00:00"
   },
   "7585": {
@@ -24951,7 +24951,7 @@
      "doc": "https://www.matsui.co.jp/company/ir/xls/disclose_data.xls?202610"
     }
    },
-   "ts": "2026-11-19T03:48:49+00:00",
+   "ts": "2026-11-19T04:21:58+00:00",
    "pdf_ts": "2026-11-18T00:24:16+00:00"
   },
   "7550": {
@@ -25692,7 +25692,7 @@
      "doc": "https://www.tsi-holdings.com/tsuki/302.html"
     }
    },
-   "ts": "2026-11-19T03:31:00+00:00"
+   "ts": "2026-11-19T04:21:58+00:00"
   },
   "3549": {
    "name": "クスリのアオキＨＤ",
@@ -25959,7 +25959,7 @@
      "doc": "https://kusuri-aoki-hd.co.jp/ir/finance/monthry/"
     }
    },
-   "ts": "2026-11-19T03:48:49+00:00"
+   "ts": "2026-11-19T04:21:58+00:00"
   },
   "3543": {
    "name": "コメダＨＤ",
@@ -26021,7 +26021,7 @@
      "doc": "https://www.kobebussan.co.jp/ir/monthly.php"
     }
    },
-   "ts": "2026-11-19T03:48:49+00:00"
+   "ts": "2026-11-19T04:21:58+00:00"
   },
   "262A": {
    "name": "インターメスティック",
@@ -27819,7 +27819,7 @@
      "doc": "https://www.release.tdnet.info/inbs/140120261007547012.pdf"
     }
    },
-   "ts": "2026-11-19T03:31:00+00:00"
+   "ts": "2026-11-19T04:21:58+00:00"
   },
   "3058": {
    "name": "三洋堂ホールディングス",
@@ -27873,7 +27873,7 @@
      "doc": "https://www.release.tdnet.info/inbs/140120261013549233.pdf"
     }
    },
-   "ts": "2026-11-19T03:31:00+00:00",
+   "ts": "2026-11-19T04:21:58+00:00",
    "pdf_ts": "2026-11-18T02:38:26+00:00"
   },
   "3358": {
@@ -27970,7 +27970,7 @@
      "doc": "https://www.release.tdnet.info/inbs/140120260914535500.pdf"
     }
    },
-   "ts": "2026-11-19T03:48:49+00:00"
+   "ts": "2026-11-19T04:21:58+00:00"
   },
   "6036": {
    "name": "ＫｅｅＰｅｒ技研",
@@ -28595,7 +28595,7 @@
      "doc": "https://www.atom-corp.co.jp/ir/ir_disp.php?ir_no=868"
     }
    },
-   "ts": "2026-11-19T03:31:00+00:00"
+   "ts": "2026-11-19T04:21:58+00:00"
   },
   "7596": {
    "name": "魚力",
@@ -28637,7 +28637,7 @@
      "doc": "https://ir.hamayuu.co.jp/ja/ir/news/news-7041927872435864695/main/0/link/pdffile.pdf"
     }
    },
-   "ts": "2026-11-19T03:31:00+00:00",
+   "ts": "2026-11-19T04:21:58+00:00",
    "pdf_ts": "2026-11-19T00:55:55+00:00",
    "pdf": {
     "2026-08": {
@@ -28842,7 +28842,7 @@
      "doc": "https://www.invincible-inv.co.jp/news/upd/140120260925540060.pdf"
     }
    },
-   "ts": "2026-11-19T03:48:49+00:00",
+   "ts": "2026-11-19T04:21:58+00:00",
    "pdf_ts": "2026-11-18T00:24:16+00:00"
   },
   "2294": {
@@ -28873,7 +28873,7 @@
      "doc": "https://ssl4.eir-parts.net/doc/2593/ir_material_for_fiscal_ym4/211815/00.pdf"
     }
    },
-   "ts": "2026-11-19T03:48:49+00:00"
+   "ts": "2026-11-19T04:21:58+00:00"
   },
   "2654": {
    "name": "アスモ",
@@ -29320,7 +29320,7 @@
      "doc": "https://ssl4.eir-parts.net/doc/3068/ir_material1/272959/00.pdf"
     }
    },
-   "ts": "2026-11-19T03:31:00+00:00"
+   "ts": "2026-11-19T04:21:58+00:00"
   },
   "3087": {
    "name": "ドトール・日レスＨＤ",
@@ -29375,7 +29375,7 @@
      "doc": "https://www.doutor.co.jp/about_us/ir/report/monthly/pdf/20261013100709.pdf"
     }
    },
-   "ts": "2026-11-19T03:48:49+00:00"
+   "ts": "2026-11-19T04:21:58+00:00"
   },
   "3195": {
    "name": "ジェネレーションパス",
@@ -29719,7 +29719,7 @@
      "doc": "https://www.wacoalholdings.jp/ir/monthlydata/"
     }
    },
-   "ts": "2026-11-19T03:48:49+00:00",
+   "ts": "2026-11-19T04:21:58+00:00",
    "pdf_ts": "2026-11-18T00:24:16+00:00"
   },
   "6045": {
@@ -29837,7 +29837,7 @@
      "doc": "https://d2t9fdkhmis4do.cloudfront.net/images/app/public/ir-pdfs/01M2EVA7P7H6EYBD7282YR7B4X.pdf"
     }
    },
-   "ts": "2026-11-19T03:31:00+00:00"
+   "ts": "2026-11-19T04:21:58+00:00"
   },
   "7686": {
    "name": "ひとまいる",
@@ -29864,7 +29864,7 @@
      "doc": "https://ssl4.eir-parts.net/doc/7686/tdnet/2883694/00.pdf"
     }
    },
-   "ts": "2026-11-19T03:31:00+00:00"
+   "ts": "2026-11-19T04:21:58+00:00"
   },
   "8207": {
    "name": "テンアライド",
@@ -29911,7 +29911,7 @@
      "doc": "https://www.jhrth.co.jp/ja/portfolio/review.html"
     }
    },
-   "ts": "2026-11-19T03:48:49+00:00",
+   "ts": "2026-11-19T04:21:58+00:00",
    "pdf_ts": "2026-11-18T00:24:16+00:00"
   },
   "9279": {
@@ -30127,7 +30127,7 @@
      "doc": "https://www.usmh.co.jp/ir/monthly_reports"
     }
    },
-   "ts": "2026-11-19T03:48:49+00:00"
+   "ts": "2026-11-19T04:21:58+00:00"
   },
   "3612": {
    "name": "ワールド",
@@ -30447,7 +30447,7 @@
      "doc": "https://contents.xj-storage.jp/xcontents/60730/21c5e1da/157b/4bdc/a051/9b8dcbd93988/140120261003545596.pdf"
     }
    },
-   "ts": "2026-11-19T03:31:00+00:00",
+   "ts": "2026-11-19T04:21:58+00:00",
    "pdf_ts": "2026-11-18T00:40:39+00:00"
   },
   "7513": {
@@ -30501,7 +30501,7 @@
      "doc": "https://www.people-kk.co.jp/global-image/units/upfiles/205321-1-20260917172552_b6aaba410e6540.pdf"
     }
    },
-   "ts": "2026-11-19T03:31:00+00:00",
+   "ts": "2026-11-19T04:21:58+00:00",
    "pdf_ts": "2026-11-18T03:27:56+00:00"
   },
   "8214": {
@@ -30587,7 +30587,7 @@
      "doc": "https://ircms.irstreet.com/contents/data_file.php?template=2063&brand=257&data=501774&filename=pdf_file.pdf"
     }
    },
-   "ts": "2026-11-19T03:48:49+00:00"
+   "ts": "2026-11-19T04:21:58+00:00"
   },
   "3093": {
    "name": "トレファク",
@@ -30688,7 +30688,7 @@
      "doc": "https://pdf.irpocket.com/C3099/xoA3/IjHJ/Xv5y/jV94.pdf"
     }
    },
-   "ts": "2026-11-19T03:48:49+00:00",
+   "ts": "2026-11-19T04:21:58+00:00",
    "pdf_ts": "2026-11-14T00:05:48+00:00"
   },
   "2461": {
@@ -30728,7 +30728,7 @@
      "doc": "https://files.microcms-assets.io/assets/d45caef7ee5f48168c423fe98204dea1/a7289ab7761147819cac18a24d2e9fcd/260915_JP_Monthly%20Business%20Perfomance%20Report.pdf"
     }
    },
-   "ts": "2026-11-19T03:31:00+00:00",
+   "ts": "2026-11-19T04:21:58+00:00",
    "pdf_ts": "2026-11-18T01:16:11+00:00"
   },
   "2674": {
@@ -31358,7 +31358,7 @@
      "doc": "https://www.edion.co.jp/system/files/ir-library/pdf/ja/2026-10/%E2%98%85202609_monthly_sales_report.pdf"
     }
    },
-   "ts": "2026-11-19T03:48:49+00:00",
+   "ts": "2026-11-19T04:21:58+00:00",
    "pdf_ts": "2026-11-18T00:24:16+00:00"
   },
   "2910": {
@@ -31413,7 +31413,7 @@
      "doc": "https://www.horiifood.co.jp/ir/library/prospectus?file_id=1&id=20&mode=download"
     }
    },
-   "ts": "2026-11-19T03:31:00+00:00",
+   "ts": "2026-11-19T04:21:58+00:00",
    "pdf_ts": "2026-11-19T00:55:55+00:00",
    "pdf": {
     "2025-04": {
@@ -32363,7 +32363,7 @@
      "doc": "https://ssl4.eir-parts.net/doc/3544/ir_material_for_fiscal_ym/213475/00.pdf"
     }
    },
-   "ts": "2026-11-19T03:31:00+00:00"
+   "ts": "2026-11-19T04:21:58+00:00"
   },
   "4680": {
    "name": "ラウンドワン",
@@ -32394,7 +32394,7 @@
      "doc": "https://www.round1-group.co.jp/docs/pdf/2026/20261008_uriage_eng.pdf"
     }
    },
-   "ts": "2026-11-19T03:48:49+00:00"
+   "ts": "2026-11-19T04:21:58+00:00"
   },
   "7522": {
    "name": "ワタミ",
@@ -33339,7 +33339,7 @@
      "doc": "https://www.komeri.bit.or.jp/ir/monthlytrend/"
     }
    },
-   "ts": "2026-11-19T03:48:49+00:00",
+   "ts": "2026-11-19T04:21:58+00:00",
    "pdf_ts": "2026-11-18T00:24:16+00:00"
   },
   "9616": {
@@ -33351,7 +33351,7 @@
      "doc": "https://www.kyoritsugroup.co.jp/Portals/0/pdf/ir/library/2026_8_monthly-report_jp.pdf"
     }
    },
-   "ts": "2026-11-19T03:48:49+00:00"
+   "ts": "2026-11-19T04:21:58+00:00"
   },
   "9993": {
    "name": "ヤマザワ",
@@ -33398,7 +33398,7 @@
      "doc": "https://yamazawa.co.jp/ir/term-month.html"
     }
    },
-   "ts": "2026-11-19T03:31:00+00:00"
+   "ts": "2026-11-19T04:21:58+00:00"
   },
   "8715": {
    "name": "アニコムホールディングス",
@@ -34213,7 +34213,7 @@
      "doc": "https://www.mcd-holdings.co.jp/ir/library_result/sales_report/"
     }
    },
-   "ts": "2026-11-19T03:48:49+00:00"
+   "ts": "2026-11-19T04:21:58+00:00"
   },
   "9946": {
    "name": "ミニストップ",
@@ -34254,7 +34254,7 @@
  "note": "회사가 제 사이트에 올린 월차 표에서 읽는다. 값은 전년동월비(%)뿐이고 금액은 없다. 회계연도가 적힌 표는 그 해로 읽으므로 옛 회계연도 표를 함께 싣는 회사는 이력이 길다.",
  "companies": 181,
  "months": 3384,
- "ts": "2026-11-19T04:15:42+00:00",
+ "ts": "2026-11-19T04:32:13+00:00",
  "done": [
   "https://amiyakitei.co.jp/prd/wordpress/wp-content/uploads/2025/04/●連結開示-202503.pdf",
   "https://amiyakitei.co.jp/prd/wordpress/wp-content/uploads/2026/04/monthly_newsflash1097.pdf",
@@ -46395,11 +46395,11 @@
   },
   "https://www.takashimaya.co.jp/base/corp/topics/210301a.pdf": {
    "reason": "표없음",
-   "day": "2026-11-16"
+   "day": "2026-11-19"
   },
   "https://www.takashimaya.co.jp/base/corp/topics/210301b.pdf": {
    "reason": "표없음",
-   "day": "2026-11-16"
+   "day": "2026-11-19"
   },
   "https://contents.xj-storage.jp/xcontents/AS93479/2b0b5dca/2f99/49f3/b016/eb2a6f470e82/20250326184713997s.pdf": {
    "reason": "표없음",
@@ -46483,139 +46483,139 @@
   },
   "https://www.takashimaya.co.jp/base/corp/topics/210216s.pdf": {
    "reason": "표없음",
-   "day": "2026-11-16"
+   "day": "2026-11-19"
   },
   "https://www.takashimaya.co.jp/base/corp/topics/210215u.pdf": {
    "reason": "표없음",
-   "day": "2026-11-16"
+   "day": "2026-11-19"
   },
   "https://www.takashimaya.co.jp/base/corp/topics/210215t.pdf": {
    "reason": "표없음",
-   "day": "2026-11-16"
+   "day": "2026-11-19"
   },
   "https://www.takashimaya.co.jp/base/corp/topics/210201r.pdf": {
    "reason": "표없음",
-   "day": "2026-11-16"
+   "day": "2026-11-19"
   },
   "https://www.takashimaya.co.jp/base/corp/topics/210201s.pdf": {
    "reason": "표없음",
-   "day": "2026-11-16"
+   "day": "2026-11-19"
   },
   "https://www.takashimaya.co.jp/base/corp/topics/210115m.pdf": {
    "reason": "표없음",
-   "day": "2026-11-16"
+   "day": "2026-11-19"
   },
   "https://www.takashimaya.co.jp/base/corp/topics/210115n.pdf": {
    "reason": "표없음",
-   "day": "2026-11-16"
+   "day": "2026-11-19"
   },
   "https://www.takashimaya.co.jp/base/corp/topics/210104m.pdf": {
    "reason": "표없음",
-   "day": "2026-11-16"
+   "day": "2026-11-19"
   },
   "https://www.takashimaya.co.jp/base/corp/topics/210104n.pdf": {
    "reason": "표없음",
-   "day": "2026-11-16"
+   "day": "2026-11-19"
   },
   "https://www.takashimaya.co.jp/base/corp/topics/201228s.pdf": {
    "reason": "표없음",
-   "day": "2026-11-16"
+   "day": "2026-11-19"
   },
   "https://www.takashimaya.co.jp/base/corp/topics/201225q.pdf": {
    "reason": "표없음",
-   "day": "2026-11-16"
+   "day": "2026-11-19"
   },
   "https://www.takashimaya.co.jp/base/corp/topics/201225r.pdf": {
    "reason": "표없음",
-   "day": "2026-11-16"
+   "day": "2026-11-19"
   },
   "https://www.takashimaya.co.jp/base/corp/topics/201215s.pdf": {
    "reason": "표없음",
-   "day": "2026-11-16"
+   "day": "2026-11-19"
   },
   "https://www.takashimaya.co.jp/base/corp/topics/201215t.pdf": {
    "reason": "표없음",
-   "day": "2026-11-16"
+   "day": "2026-11-19"
   },
   "https://www.takashimaya.co.jp/base/corp/topics/201201c.pdf": {
    "reason": "표없음",
-   "day": "2026-11-16"
+   "day": "2026-11-19"
   },
   "https://www.takashimaya.co.jp/base/corp/topics/201201d.pdf": {
    "reason": "표없음",
-   "day": "2026-11-16"
+   "day": "2026-11-19"
   },
   "https://www.takashimaya.co.jp/base/corp/topics/201116s.pdf": {
    "reason": "표없음",
-   "day": "2026-11-16"
+   "day": "2026-11-19"
   },
   "https://www.takashimaya.co.jp/base/corp/topics/201116t.pdf": {
    "reason": "표없음",
-   "day": "2026-11-16"
+   "day": "2026-11-19"
   },
   "https://www.takashimaya.co.jp/base/corp/topics/201102v.pdf": {
    "reason": "표없음",
-   "day": "2026-11-16"
+   "day": "2026-11-19"
   },
   "https://www.takashimaya.co.jp/base/corp/topics/201102w.pdf": {
    "reason": "표없음",
-   "day": "2026-11-16"
+   "day": "2026-11-19"
   },
   "https://www.takashimaya.co.jp/base/corp/topics/201019f.pdf": {
    "reason": "표없음",
-   "day": "2026-11-16"
+   "day": "2026-11-19"
   },
   "https://www.takashimaya.co.jp/base/corp/topics/201015s.pdf": {
    "reason": "표없음",
-   "day": "2026-11-16"
+   "day": "2026-11-19"
   },
   "https://www.takashimaya.co.jp/base/corp/topics/201015t.pdf": {
    "reason": "표없음",
-   "day": "2026-11-16"
+   "day": "2026-11-19"
   },
   "https://www.takashimaya.co.jp/base/corp/topics/201013i.pdf": {
    "reason": "표없음",
-   "day": "2026-11-16"
+   "day": "2026-11-19"
   },
   "https://www.takashimaya.co.jp/base/corp/topics/201013h.pdf": {
    "reason": "표없음",
-   "day": "2026-11-16"
+   "day": "2026-11-19"
   },
   "https://www.takashimaya.co.jp/base/corp/topics/201013x.pdf": {
    "reason": "표없음",
-   "day": "2026-11-16"
+   "day": "2026-11-19"
   },
   "https://www.takashimaya.co.jp/base/corp/topics/201013y.pdf": {
    "reason": "표없음",
-   "day": "2026-11-16"
+   "day": "2026-11-19"
   },
   "https://www.takashimaya.co.jp/base/corp/topics/201001c.pdf": {
    "reason": "표없음",
-   "day": "2026-11-16"
+   "day": "2026-11-19"
   },
   "https://www.takashimaya.co.jp/base/corp/topics/201001d.pdf": {
    "reason": "표없음",
-   "day": "2026-11-16"
+   "day": "2026-11-19"
   },
   "https://www.takashimaya.co.jp/base/corp/topics/200915a.pdf": {
    "reason": "표없음",
-   "day": "2026-11-16"
+   "day": "2026-11-19"
   },
   "https://www.takashimaya.co.jp/base/corp/topics/200915b.pdf": {
    "reason": "표없음",
-   "day": "2026-11-16"
+   "day": "2026-11-19"
   },
   "https://www.takashimaya.co.jp/base/corp/topics/200915c.pdf": {
    "reason": "표없음",
-   "day": "2026-11-16"
+   "day": "2026-11-19"
   },
   "https://www.takashimaya.co.jp/base/corp/topics/200907b.pdf": {
    "reason": "표없음",
-   "day": "2026-11-16"
+   "day": "2026-11-19"
   },
   "https://www.takashimaya.co.jp/base/corp/topics/200901e.pdf": {
    "reason": "표없음",
-   "day": "2026-11-16"
+   "day": "2026-11-19"
   },
   "https://www.takashimaya.co.jp/base/corp/topics/200901f.pdf": {
    "reason": "표없음",
@@ -47263,19 +47263,19 @@
   },
   "https://www.sra-hd.co.jp/Portals/0/ir/bizqrt_report/tsushin200908.pdf": {
    "reason": "표없음",
-   "day": "2026-11-16"
+   "day": "2026-11-19"
   },
   "https://www.sra-hd.co.jp/Portals/0/ir/negotiable/houkoku200908.pdf": {
    "reason": "표없음",
-   "day": "2026-11-16"
+   "day": "2026-11-19"
   },
   "https://www.sra-hd.co.jp/Portals/0/ir/bizqrt_report/tsushin200906.pdf": {
    "reason": "표없음",
-   "day": "2026-11-16"
+   "day": "2026-11-19"
   },
   "https://www.sra-hd.co.jp/Portals/0/ir/corporate_exp/setsumei090520.pdf": {
    "reason": "표없음",
-   "day": "2026-11-16"
+   "day": "2026-11-19"
   },
   "https://www.takashimaya.co.jp/base/corp/topics/200115x.pdf": {
    "reason": "표없음",
@@ -47423,35 +47423,35 @@
   },
   "https://www.sra-hd.co.jp/Portals/0/ir/bizqrt_report/tsushin200902.pdf": {
    "reason": "표없음",
-   "day": "2026-11-16"
+   "day": "2026-11-19"
   },
   "https://www.sra-hd.co.jp/Portals/0/ir/negotiable/houkoku200902.pdf": {
    "reason": "표없음",
-   "day": "2026-11-16"
+   "day": "2026-11-19"
   },
   "https://www.sra-hd.co.jp/Portals/0/ir/bizqrt_report/tsushin200811.pdf": {
    "reason": "표없음",
-   "day": "2026-11-16"
+   "day": "2026-11-19"
   },
   "https://www.sra-hd.co.jp/Portals/0/ir/corporate_exp/setsumei081118.pdf": {
    "reason": "표없음",
-   "day": "2026-11-16"
+   "day": "2026-11-19"
   },
   "https://www.sra-hd.co.jp/Portals/0/ir/negotiable/houkoku200811.pdf": {
    "reason": "표없음",
-   "day": "2026-11-16"
+   "day": "2026-11-19"
   },
   "https://www.sra-hd.co.jp/Portals/0/ir/bizqrt_report/tsushin200808.pdf": {
    "reason": "표없음",
-   "day": "2026-11-16"
+   "day": "2026-11-19"
   },
   "https://www.sra-hd.co.jp/Portals/0/ir/negotiable/houkoku200808.pdf": {
    "reason": "표없음",
-   "day": "2026-11-16"
+   "day": "2026-11-19"
   },
   "https://www.sra-hd.co.jp/Portals/0/ir/bizqrt_report/houkoku200803.pdf": {
    "reason": "표없음",
-   "day": "2026-11-16"
+   "day": "2026-11-19"
   },
   "https://www.takashimaya.co.jp/base/corp/topics/190614b.pdf": {
    "reason": "표없음",
@@ -60802,12 +60802,12 @@
  },
  "cursor": 56,
  "attempts": {
-  "9020": "2026-11-19T03:48:49+00:00",
-  "7453": "2026-11-19T03:48:49+00:00",
+  "9020": "2026-11-19T04:21:58+00:00",
+  "7453": "2026-11-19T04:21:58+00:00",
   "8237": "2026-11-19T02:39:30+00:00",
   "1379": "2026-11-19T02:56:43+00:00",
   "2752": "2026-11-17T20:52:06+00:00",
-  "9251": "2026-11-19T03:48:49+00:00",
+  "9251": "2026-11-19T04:21:58+00:00",
   "2735": "2026-11-19T04:05:41+00:00",
   "3069": "2026-11-19T02:39:30+00:00",
   "8165": "2026-11-19T04:05:41+00:00",
@@ -60819,18 +60819,18 @@
   "7532": "2026-11-19T04:05:41+00:00",
   "7550": "2026-11-19T04:05:41+00:00",
   "9843": "2026-11-19T04:05:41+00:00",
-  "9021": "2026-11-19T03:48:49+00:00",
-  "3563": "2026-11-19T03:48:49+00:00",
-  "3099": "2026-11-19T03:48:49+00:00",
-  "3391": "2026-11-19T03:48:49+00:00",
-  "3197": "2026-11-19T03:48:49+00:00",
-  "2670": "2026-11-19T03:48:49+00:00",
-  "3086": "2026-11-19T03:48:49+00:00",
-  "3038": "2026-11-19T03:48:49+00:00",
-  "8233": "2026-11-19T03:48:49+00:00",
-  "9007": "2026-11-19T03:48:49+00:00",
-  "9142": "2026-11-19T03:48:49+00:00",
-  "9831": "2026-11-19T03:48:49+00:00",
+  "9021": "2026-11-19T04:21:58+00:00",
+  "3563": "2026-11-19T04:21:58+00:00",
+  "3099": "2026-11-19T04:21:58+00:00",
+  "3391": "2026-11-19T04:21:58+00:00",
+  "3197": "2026-11-19T04:21:58+00:00",
+  "2670": "2026-11-19T04:21:58+00:00",
+  "3086": "2026-11-19T04:21:58+00:00",
+  "3038": "2026-11-19T04:21:58+00:00",
+  "8233": "2026-11-19T04:21:58+00:00",
+  "9007": "2026-11-19T04:21:58+00:00",
+  "9142": "2026-11-19T04:21:58+00:00",
+  "9831": "2026-11-19T04:21:58+00:00",
   "3189": "2026-11-18T00:09:03+00:00",
   "4015": "2026-11-18T00:09:03+00:00",
   "6059": "2026-11-18T00:09:03+00:00",
@@ -60863,42 +60863,42 @@
   "3174": "2026-11-19T02:39:30+00:00",
   "3287": "2026-11-18T00:09:03+00:00",
   "3064": "2026-11-18T00:09:03+00:00",
-  "2702": "2026-11-19T03:48:49+00:00",
-  "8985": "2026-11-19T03:48:49+00:00",
+  "2702": "2026-11-19T04:21:58+00:00",
+  "8985": "2026-11-19T04:21:58+00:00",
   "7649": "2026-11-18T00:09:03+00:00",
-  "8963": "2026-11-19T03:48:49+00:00",
-  "141A": "2026-11-19T03:48:49+00:00",
+  "8963": "2026-11-19T04:21:58+00:00",
+  "141A": "2026-11-19T04:21:58+00:00",
   "7564": "2026-11-19T02:05:23+00:00",
-  "9989": "2026-11-19T03:48:49+00:00",
-  "3923": "2026-11-19T03:48:49+00:00",
-  "3549": "2026-11-19T03:48:49+00:00",
-  "3397": "2026-11-19T03:48:49+00:00",
-  "2593": "2026-11-19T03:48:49+00:00",
-  "4680": "2026-11-19T03:48:49+00:00",
-  "8242": "2026-11-19T03:48:49+00:00",
-  "9616": "2026-11-19T03:48:49+00:00",
-  "4666": "2026-11-19T03:48:49+00:00",
-  "8628": "2026-11-19T03:48:49+00:00",
-  "9861": "2026-11-19T03:48:49+00:00",
-  "2730": "2026-11-19T03:48:49+00:00",
-  "2726": "2026-11-19T03:48:49+00:00",
-  "9759": "2026-11-19T03:48:49+00:00",
-  "7616": "2026-11-19T03:48:49+00:00",
-  "3050": "2026-11-19T03:48:49+00:00",
-  "3097": "2026-11-19T03:48:49+00:00",
-  "8194": "2026-11-19T03:48:49+00:00",
-  "3148": "2026-11-19T03:48:49+00:00",
-  "8273": "2026-11-19T03:48:49+00:00",
-  "9627": "2026-11-19T03:48:49+00:00",
-  "9948": "2026-11-19T03:48:49+00:00",
-  "9956": "2026-11-19T03:48:49+00:00",
+  "9989": "2026-11-19T04:21:58+00:00",
+  "3923": "2026-11-19T04:21:58+00:00",
+  "3549": "2026-11-19T04:21:58+00:00",
+  "3397": "2026-11-19T04:21:58+00:00",
+  "2593": "2026-11-19T04:21:58+00:00",
+  "4680": "2026-11-19T04:21:58+00:00",
+  "8242": "2026-11-19T04:21:58+00:00",
+  "9616": "2026-11-19T04:21:58+00:00",
+  "4666": "2026-11-19T04:21:58+00:00",
+  "8628": "2026-11-19T04:21:58+00:00",
+  "9861": "2026-11-19T04:21:58+00:00",
+  "2730": "2026-11-19T04:21:58+00:00",
+  "2726": "2026-11-19T04:21:58+00:00",
+  "9759": "2026-11-19T04:21:58+00:00",
+  "7616": "2026-11-19T04:21:58+00:00",
+  "3050": "2026-11-19T04:21:58+00:00",
+  "3097": "2026-11-19T04:21:58+00:00",
+  "8194": "2026-11-19T04:21:58+00:00",
+  "3148": "2026-11-19T04:21:58+00:00",
+  "8273": "2026-11-19T04:21:58+00:00",
+  "9627": "2026-11-19T04:21:58+00:00",
+  "9948": "2026-11-19T04:21:58+00:00",
+  "9956": "2026-11-19T04:21:58+00:00",
   "7476": "2026-11-17T07:26:50+00:00",
-  "3591": "2026-11-19T03:48:49+00:00",
-  "8218": "2026-11-19T03:48:49+00:00",
+  "3591": "2026-11-19T04:21:58+00:00",
+  "8218": "2026-11-19T04:21:58+00:00",
   "7685": "2026-11-18T00:09:03+00:00",
-  "7630": "2026-11-19T03:48:49+00:00",
-  "8278": "2026-11-19T03:48:49+00:00",
-  "3222": "2026-11-19T03:48:49+00:00",
+  "7630": "2026-11-19T04:21:58+00:00",
+  "8278": "2026-11-19T04:21:58+00:00",
+  "3222": "2026-11-19T04:21:58+00:00",
   "9936": "2026-11-19T04:05:41+00:00",
   "8214": "2026-11-19T04:05:41+00:00",
   "2685": "2026-11-19T04:05:41+00:00",
@@ -60962,11 +60962,11 @@
   "4776": "2026-11-18T00:09:03+00:00",
   "3046": "2026-11-18T00:09:03+00:00",
   "7177": "2026-11-18T22:27:53+00:00",
-  "3087": "2026-11-19T03:48:49+00:00",
+  "3087": "2026-11-19T04:21:58+00:00",
   "2695": "2026-11-19T04:05:41+00:00",
   "7516": "2026-11-18T15:44:15+00:00",
   "3543": "2026-11-19T04:05:41+00:00",
-  "8179": "2026-11-19T03:48:49+00:00",
+  "8179": "2026-11-19T04:21:58+00:00",
   "9974": "2026-11-19T04:05:41+00:00",
   "8276": "2026-11-19T04:05:41+00:00",
   "9166": "2026-11-19T04:05:41+00:00",
@@ -60987,22 +60987,22 @@
   "9997": "2026-11-18T00:09:03+00:00",
   "6036": "2026-11-18T22:27:53+00:00",
   "8198": "2026-11-19T04:05:41+00:00",
-  "6627": "2026-11-19T03:31:00+00:00",
+  "6627": "2026-11-19T04:21:58+00:00",
   "2653": "2026-11-19T02:39:30+00:00",
   "9279": "2026-11-19T04:05:41+00:00",
   "8715": "2026-11-19T04:05:41+00:00",
   "2742": "2026-11-19T04:05:41+00:00",
   "7421": "2026-11-19T04:05:41+00:00",
   "8244": "2026-11-19T04:05:41+00:00",
-  "3608": "2026-11-19T03:31:00+00:00",
+  "3608": "2026-11-19T04:21:58+00:00",
   "2705": "2026-11-19T04:05:41+00:00",
   "8160": "2026-11-19T04:05:41+00:00",
   "7606": "2026-11-19T02:05:23+00:00",
   "9900": "2026-11-19T04:05:41+00:00",
-  "3817": "2026-11-19T03:48:49+00:00",
-  "8163": "2026-11-19T03:48:49+00:00",
+  "3817": "2026-11-19T04:21:58+00:00",
+  "8163": "2026-11-19T04:21:58+00:00",
   "8200": "2026-11-19T02:39:30+00:00",
-  "7412": "2026-11-19T03:31:00+00:00",
+  "7412": "2026-11-19T04:21:58+00:00",
   "4343": "2026-11-18T00:09:03+00:00",
   "3395": "2026-11-19T03:48:49+00:00",
   "3733": "2026-11-19T03:48:49+00:00",
@@ -61036,7 +61036,7 @@
   "7683": "2026-11-19T03:48:49+00:00",
   "2753": "2026-11-19T02:05:23+00:00",
   "7823": "2026-11-19T03:48:49+00:00",
-  "2461": "2026-11-19T03:31:00+00:00",
+  "2461": "2026-11-19T04:21:58+00:00",
   "4058": "2026-11-19T04:05:41+00:00",
   "3179": "2026-11-18T00:09:03+00:00",
   "8203": "2026-11-19T04:05:41+00:00",
@@ -61045,32 +61045,32 @@
   "3548": "2026-11-19T02:56:43+00:00",
   "7554": "2026-11-19T04:05:41+00:00",
   "7185": "2026-11-18T00:09:03+00:00",
-  "9990": "2026-11-19T03:31:00+00:00",
-  "3178": "2026-11-19T03:31:00+00:00",
+  "9990": "2026-11-19T04:21:58+00:00",
+  "3178": "2026-11-19T04:21:58+00:00",
   "3547": "2026-11-18T00:09:03+00:00",
   "428A": "2026-11-19T04:05:41+00:00",
   "7678": "2026-11-18T00:09:03+00:00",
-  "3068": "2026-11-19T03:31:00+00:00",
-  "7643": "2026-11-19T03:31:00+00:00",
-  "3329": "2026-11-19T03:31:00+00:00",
-  "3544": "2026-11-19T03:31:00+00:00",
-  "5892": "2026-11-19T03:31:00+00:00",
+  "3068": "2026-11-19T04:21:58+00:00",
+  "7643": "2026-11-19T04:21:58+00:00",
+  "3329": "2026-11-19T04:21:58+00:00",
+  "3544": "2026-11-19T04:21:58+00:00",
+  "5892": "2026-11-19T04:21:58+00:00",
   "6571": "2026-11-19T04:05:41+00:00",
-  "7562": "2026-11-19T03:31:00+00:00",
+  "7562": "2026-11-19T04:21:58+00:00",
   "3193": "2026-11-18T00:09:03+00:00",
   "6045": "2026-11-19T03:48:49+00:00",
-  "3542": "2026-11-19T03:31:00+00:00",
-  "274A": "2026-11-19T03:31:00+00:00",
+  "3542": "2026-11-19T04:21:58+00:00",
+  "274A": "2026-11-19T04:21:58+00:00",
   "3415": "2026-11-18T00:09:03+00:00",
-  "3053": "2026-11-19T03:31:00+00:00",
-  "7561": "2026-11-19T03:31:00+00:00",
-  "7686": "2026-11-19T03:31:00+00:00",
+  "3053": "2026-11-19T04:21:58+00:00",
+  "7561": "2026-11-19T04:21:58+00:00",
+  "7686": "2026-11-19T04:21:58+00:00",
   "3175": "2026-11-18T00:09:03+00:00",
   "9145": "2026-11-18T00:09:03+00:00",
-  "2818": "2026-11-19T03:31:00+00:00",
-  "6073": "2026-11-19T03:31:00+00:00",
+  "2818": "2026-11-19T04:21:58+00:00",
+  "6073": "2026-11-19T04:21:58+00:00",
   "7646": "2026-11-19T02:05:23+00:00",
-  "9993": "2026-11-19T03:31:00+00:00",
+  "9993": "2026-11-19T04:21:58+00:00",
   "3083": "2026-11-19T03:48:49+00:00",
   "8207": "2026-11-19T03:48:49+00:00",
   "3030": "2026-11-19T03:48:49+00:00",
@@ -61084,14 +61084,14 @@
   "8705": "2026-11-19T03:48:49+00:00",
   "6561": "2026-11-18T00:09:03+00:00",
   "9890": "2026-11-17T04:28:21+00:00",
-  "3077": "2026-11-19T03:31:00+00:00",
+  "3077": "2026-11-19T04:21:58+00:00",
   "556A": "2026-11-19T04:05:41+00:00",
   "7610": "2026-11-19T03:48:49+00:00",
-  "3160": "2026-11-19T03:31:00+00:00",
-  "7604": "2026-11-19T03:31:00+00:00",
-  "7682": "2026-11-19T03:31:00+00:00",
-  "7494": "2026-11-19T03:31:00+00:00",
-  "2769": "2026-11-19T03:31:00+00:00",
+  "3160": "2026-11-19T04:21:58+00:00",
+  "7604": "2026-11-19T04:21:58+00:00",
+  "7682": "2026-11-19T04:21:58+00:00",
+  "7494": "2026-11-19T04:21:58+00:00",
+  "2769": "2026-11-19T04:21:58+00:00",
   "5888": "2026-11-19T03:48:49+00:00",
   "2311": "2026-11-19T03:48:49+00:00",
   "3566": "2026-11-18T00:09:03+00:00",
@@ -61131,19 +61131,19 @@
   "2778": "2026-11-19T04:05:41+00:00",
   "3370": "2026-11-19T04:05:41+00:00",
   "7585": "2026-11-19T04:05:41+00:00",
-  "7865": "2026-11-19T03:31:00+00:00",
+  "7865": "2026-11-19T04:21:58+00:00",
   "8279": "2026-11-19T04:05:41+00:00",
   "4565": "2026-11-17T00:04:27+00:00",
   "4911": "2026-11-19T02:39:30+00:00",
   "2124": "2026-11-19T00:07:16+00:00"
  },
  "pdf_turns": {
-  "9020": "2026-11-19T03:48:49+00:00",
-  "7453": "2026-11-19T03:48:49+00:00",
+  "9020": "2026-11-19T04:21:58+00:00",
+  "7453": "2026-11-19T04:21:58+00:00",
   "8237": "2026-11-19T02:39:30+00:00",
   "1379": "2026-11-19T02:56:43+00:00",
   "2752": "2026-11-17T20:52:06+00:00",
-  "9251": "2026-11-19T03:48:49+00:00",
+  "9251": "2026-11-19T04:21:58+00:00",
   "2735": "2026-11-19T04:05:41+00:00",
   "3069": "2026-11-19T02:39:30+00:00",
   "8165": "2026-11-19T04:05:41+00:00",
@@ -61155,18 +61155,18 @@
   "7532": "2026-11-19T04:05:41+00:00",
   "7550": "2026-11-19T04:05:41+00:00",
   "9843": "2026-11-19T04:05:41+00:00",
-  "9021": "2026-11-19T03:48:49+00:00",
-  "3563": "2026-11-19T03:48:49+00:00",
-  "3099": "2026-11-19T03:48:49+00:00",
-  "3391": "2026-11-19T03:48:49+00:00",
-  "3197": "2026-11-19T03:48:49+00:00",
-  "2670": "2026-11-19T03:48:49+00:00",
-  "3086": "2026-11-19T03:48:49+00:00",
-  "3038": "2026-11-19T03:48:49+00:00",
-  "8233": "2026-11-19T03:48:49+00:00",
-  "9007": "2026-11-19T03:48:49+00:00",
-  "9142": "2026-11-19T03:48:49+00:00",
-  "9831": "2026-11-19T03:48:49+00:00",
+  "9021": "2026-11-19T04:21:58+00:00",
+  "3563": "2026-11-19T04:21:58+00:00",
+  "3099": "2026-11-19T04:21:58+00:00",
+  "3391": "2026-11-19T04:21:58+00:00",
+  "3197": "2026-11-19T04:21:58+00:00",
+  "2670": "2026-11-19T04:21:58+00:00",
+  "3086": "2026-11-19T04:21:58+00:00",
+  "3038": "2026-11-19T04:21:58+00:00",
+  "8233": "2026-11-19T04:21:58+00:00",
+  "9007": "2026-11-19T04:21:58+00:00",
+  "9142": "2026-11-19T04:21:58+00:00",
+  "9831": "2026-11-19T04:21:58+00:00",
   "3189": "2026-11-18T00:09:03+00:00",
   "4015": "2026-11-18T00:09:03+00:00",
   "6059": "2026-11-18T00:09:03+00:00",
@@ -61199,42 +61199,42 @@
   "3174": "2026-11-19T02:39:30+00:00",
   "3287": "2026-11-18T00:09:03+00:00",
   "3064": "2026-11-18T00:09:03+00:00",
-  "2702": "2026-11-19T03:48:49+00:00",
-  "8985": "2026-11-19T03:48:49+00:00",
+  "2702": "2026-11-19T04:21:58+00:00",
+  "8985": "2026-11-19T04:21:58+00:00",
   "7649": "2026-11-18T00:09:03+00:00",
-  "8963": "2026-11-19T03:48:49+00:00",
-  "141A": "2026-11-19T03:48:49+00:00",
+  "8963": "2026-11-19T04:21:58+00:00",
+  "141A": "2026-11-19T04:21:58+00:00",
   "7564": "2026-11-19T02:05:23+00:00",
-  "9989": "2026-11-19T03:48:49+00:00",
-  "3923": "2026-11-19T03:48:49+00:00",
-  "3549": "2026-11-19T03:48:49+00:00",
-  "3397": "2026-11-19T03:48:49+00:00",
-  "2593": "2026-11-19T03:48:49+00:00",
-  "4680": "2026-11-19T03:48:49+00:00",
-  "8242": "2026-11-19T03:48:49+00:00",
-  "9616": "2026-11-19T03:48:49+00:00",
-  "4666": "2026-11-19T03:48:49+00:00",
-  "8628": "2026-11-19T03:48:49+00:00",
-  "9861": "2026-11-19T03:48:49+00:00",
-  "2730": "2026-11-19T03:48:49+00:00",
-  "2726": "2026-11-19T03:48:49+00:00",
-  "9759": "2026-11-19T03:48:49+00:00",
-  "7616": "2026-11-19T03:48:49+00:00",
-  "3050": "2026-11-19T03:48:49+00:00",
-  "3097": "2026-11-19T03:48:49+00:00",
-  "8194": "2026-11-19T03:48:49+00:00",
-  "3148": "2026-11-19T03:48:49+00:00",
-  "8273": "2026-11-19T03:48:49+00:00",
-  "9627": "2026-11-19T03:48:49+00:00",
-  "9948": "2026-11-19T03:48:49+00:00",
-  "9956": "2026-11-19T03:48:49+00:00",
+  "9989": "2026-11-19T04:21:58+00:00",
+  "3923": "2026-11-19T04:21:58+00:00",
+  "3549": "2026-11-19T04:21:58+00:00",
+  "3397": "2026-11-19T04:21:58+00:00",
+  "2593": "2026-11-19T04:21:58+00:00",
+  "4680": "2026-11-19T04:21:58+00:00",
+  "8242": "2026-11-19T04:21:58+00:00",
+  "9616": "2026-11-19T04:21:58+00:00",
+  "4666": "2026-11-19T04:21:58+00:00",
+  "8628": "2026-11-19T04:21:58+00:00",
+  "9861": "2026-11-19T04:21:58+00:00",
+  "2730": "2026-11-19T04:21:58+00:00",
+  "2726": "2026-11-19T04:21:58+00:00",
+  "9759": "2026-11-19T04:21:58+00:00",
+  "7616": "2026-11-19T04:21:58+00:00",
+  "3050": "2026-11-19T04:21:58+00:00",
+  "3097": "2026-11-19T04:21:58+00:00",
+  "8194": "2026-11-19T04:21:58+00:00",
+  "3148": "2026-11-19T04:21:58+00:00",
+  "8273": "2026-11-19T04:21:58+00:00",
+  "9627": "2026-11-19T04:21:58+00:00",
+  "9948": "2026-11-19T04:21:58+00:00",
+  "9956": "2026-11-19T04:21:58+00:00",
   "7476": "2026-11-17T07:26:50+00:00",
-  "3591": "2026-11-19T03:48:49+00:00",
-  "8218": "2026-11-19T03:48:49+00:00",
+  "3591": "2026-11-19T04:21:58+00:00",
+  "8218": "2026-11-19T04:21:58+00:00",
   "7685": "2026-11-18T00:09:03+00:00",
-  "7630": "2026-11-19T03:48:49+00:00",
-  "8278": "2026-11-19T03:48:49+00:00",
-  "3222": "2026-11-19T03:48:49+00:00",
+  "7630": "2026-11-19T04:21:58+00:00",
+  "8278": "2026-11-19T04:21:58+00:00",
+  "3222": "2026-11-19T04:21:58+00:00",
   "9936": "2026-11-19T04:05:41+00:00",
   "8214": "2026-11-19T04:05:41+00:00",
   "2685": "2026-11-19T04:05:41+00:00",
@@ -61298,11 +61298,11 @@
   "4776": "2026-11-18T00:09:03+00:00",
   "3046": "2026-11-18T00:09:03+00:00",
   "7177": "2026-11-18T22:27:53+00:00",
-  "3087": "2026-11-19T03:48:49+00:00",
+  "3087": "2026-11-19T04:21:58+00:00",
   "2695": "2026-11-19T04:05:41+00:00",
   "7516": "2026-11-18T15:44:15+00:00",
   "3543": "2026-11-19T04:05:41+00:00",
-  "8179": "2026-11-19T03:48:49+00:00",
+  "8179": "2026-11-19T04:21:58+00:00",
   "9974": "2026-11-19T04:05:41+00:00",
   "8276": "2026-11-19T04:05:41+00:00",
   "9166": "2026-11-19T04:05:41+00:00",
@@ -61323,22 +61323,22 @@
   "9997": "2026-11-18T00:09:03+00:00",
   "6036": "2026-11-18T22:27:53+00:00",
   "8198": "2026-11-19T04:05:41+00:00",
-  "6627": "2026-11-19T03:31:00+00:00",
+  "6627": "2026-11-19T04:21:58+00:00",
   "2653": "2026-11-19T02:39:30+00:00",
   "9279": "2026-11-19T04:05:41+00:00",
   "8715": "2026-11-19T04:05:41+00:00",
   "2742": "2026-11-19T04:05:41+00:00",
   "7421": "2026-11-19T04:05:41+00:00",
   "8244": "2026-11-19T04:05:41+00:00",
-  "3608": "2026-11-19T03:31:00+00:00",
+  "3608": "2026-11-19T04:21:58+00:00",
   "2705": "2026-11-19T04:05:41+00:00",
   "8160": "2026-11-19T04:05:41+00:00",
   "7606": "2026-11-19T02:05:23+00:00",
   "9900": "2026-11-19T04:05:41+00:00",
-  "3817": "2026-11-19T03:48:49+00:00",
-  "8163": "2026-11-19T03:48:49+00:00",
+  "3817": "2026-11-19T04:21:58+00:00",
+  "8163": "2026-11-19T04:21:58+00:00",
   "8200": "2026-11-19T02:39:30+00:00",
-  "7412": "2026-11-19T03:31:00+00:00",
+  "7412": "2026-11-19T04:21:58+00:00",
   "4343": "2026-11-18T00:09:03+00:00",
   "3395": "2026-11-19T03:48:49+00:00",
   "3733": "2026-11-19T03:48:49+00:00",
@@ -61372,7 +61372,7 @@
   "7683": "2026-11-19T03:48:49+00:00",
   "2753": "2026-11-19T02:05:23+00:00",
   "7823": "2026-11-19T03:48:49+00:00",
-  "2461": "2026-11-19T03:31:00+00:00",
+  "2461": "2026-11-19T04:21:58+00:00",
   "4058": "2026-11-19T04:05:41+00:00",
   "3179": "2026-11-18T00:09:03+00:00",
   "8203": "2026-11-19T04:05:41+00:00",
@@ -61381,32 +61381,32 @@
   "3548": "2026-11-19T02:56:43+00:00",
   "7554": "2026-11-19T04:05:41+00:00",
   "7185": "2026-11-18T00:09:03+00:00",
-  "9990": "2026-11-19T03:31:00+00:00",
-  "3178": "2026-11-19T03:31:00+00:00",
+  "9990": "2026-11-19T04:21:58+00:00",
+  "3178": "2026-11-19T04:21:58+00:00",
   "3547": "2026-11-18T00:09:03+00:00",
   "428A": "2026-11-19T04:05:41+00:00",
   "7678": "2026-11-18T00:09:03+00:00",
-  "3068": "2026-11-19T03:31:00+00:00",
-  "7643": "2026-11-19T03:31:00+00:00",
-  "3329": "2026-11-19T03:31:00+00:00",
-  "3544": "2026-11-19T03:31:00+00:00",
-  "5892": "2026-11-19T03:31:00+00:00",
+  "3068": "2026-11-19T04:21:58+00:00",
+  "7643": "2026-11-19T04:21:58+00:00",
+  "3329": "2026-11-19T04:21:58+00:00",
+  "3544": "2026-11-19T04:21:58+00:00",
+  "5892": "2026-11-19T04:21:58+00:00",
   "6571": "2026-11-19T04:05:41+00:00",
-  "7562": "2026-11-19T03:31:00+00:00",
+  "7562": "2026-11-19T04:21:58+00:00",
   "3193": "2026-11-18T00:09:03+00:00",
   "6045": "2026-11-19T03:48:49+00:00",
-  "3542": "2026-11-19T03:31:00+00:00",
-  "274A": "2026-11-19T03:31:00+00:00",
+  "3542": "2026-11-19T04:21:58+00:00",
+  "274A": "2026-11-19T04:21:58+00:00",
   "3415": "2026-11-18T00:09:03+00:00",
-  "3053": "2026-11-19T03:31:00+00:00",
-  "7561": "2026-11-19T03:31:00+00:00",
-  "7686": "2026-11-19T03:31:00+00:00",
+  "3053": "2026-11-19T04:21:58+00:00",
+  "7561": "2026-11-19T04:21:58+00:00",
+  "7686": "2026-11-19T04:21:58+00:00",
   "3175": "2026-11-18T00:09:03+00:00",
   "9145": "2026-11-18T00:09:03+00:00",
-  "2818": "2026-11-19T03:31:00+00:00",
-  "6073": "2026-11-19T03:31:00+00:00",
+  "2818": "2026-11-19T04:21:58+00:00",
+  "6073": "2026-11-19T04:21:58+00:00",
   "7646": "2026-11-19T02:05:23+00:00",
-  "9993": "2026-11-19T03:31:00+00:00",
+  "9993": "2026-11-19T04:21:58+00:00",
   "3083": "2026-11-19T03:48:49+00:00",
   "8207": "2026-11-19T03:48:49+00:00",
   "3030": "2026-11-19T03:48:49+00:00",
@@ -61420,14 +61420,14 @@
   "8705": "2026-11-19T03:48:49+00:00",
   "6561": "2026-11-18T00:09:03+00:00",
   "9890": "2026-11-17T04:28:21+00:00",
-  "3077": "2026-11-19T03:31:00+00:00",
+  "3077": "2026-11-19T04:21:58+00:00",
   "556A": "2026-11-19T04:05:41+00:00",
   "7610": "2026-11-19T03:48:49+00:00",
-  "3160": "2026-11-19T03:31:00+00:00",
-  "7604": "2026-11-19T03:31:00+00:00",
-  "7682": "2026-11-19T03:31:00+00:00",
-  "7494": "2026-11-19T03:31:00+00:00",
-  "2769": "2026-11-19T03:31:00+00:00",
+  "3160": "2026-11-19T04:21:58+00:00",
+  "7604": "2026-11-19T04:21:58+00:00",
+  "7682": "2026-11-19T04:21:58+00:00",
+  "7494": "2026-11-19T04:21:58+00:00",
+  "2769": "2026-11-19T04:21:58+00:00",
   "5888": "2026-11-19T03:48:49+00:00",
   "2311": "2026-11-19T03:48:49+00:00",
   "3566": "2026-11-18T00:09:03+00:00",
@@ -61467,7 +61467,7 @@
   "2778": "2026-11-19T04:05:41+00:00",
   "3370": "2026-11-19T04:05:41+00:00",
   "7585": "2026-11-19T04:05:41+00:00",
-  "7865": "2026-11-19T03:31:00+00:00",
+  "7865": "2026-11-19T04:21:58+00:00",
   "8279": "2026-11-19T04:05:41+00:00",
   "4565": "2026-11-17T00:04:27+00:00",
   "4911": "2026-11-19T02:39:30+00:00",
