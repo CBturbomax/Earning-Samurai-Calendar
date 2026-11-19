@@ -127,6 +127,13 @@ jobs:
         timeout-minutes: 5
         run: python scrape_jp_sched.py
 
+      # 일본 **발표 예정 시각**(11/19) — JPX 는 날짜만 준다. 트레이더스웹 결산 캘린더 한 장(1MB)에
+      # 회사가 정한 시각(15:30 등)이 실린다. 실패하면 헌 파일을 그대로 둔다.
+      - name: 🇯🇵 일본 발표 예정 시각 (트레이더스웹)
+        continue-on-error: true
+        timeout-minutes: 3
+        run: python scrape_jp_time.py
+
       # 홍콩은 '이미 나온 공시'라 과거만 의미가 있다.
       #
       # 120일만 훑던 시절에 **팝마트(09992)가 통째로 없었다.** 3월 하순에 낸
@@ -185,7 +192,7 @@ jobs:
           set -uo pipefail
           rm -f build.log
           bash .github/scripts/save_owned.sh "일정 갱신 $(date -u +%F' '%H:%M) [skip ci]" \
-            data/earnings.json data/earnings_jp_sched.json data/earnings_us.json data/earnings_hk.json data/caps.json
+            data/earnings.json data/earnings_jp_sched.json data/earnings_us.json data/earnings_hk.json data/caps.json data/times_jp.json
           # 페이지는 한 번만 — 지면 그만이다(3분 루프가 곧 다시 만든다). 자료 저장이 먼저다.
           python build.py > /dev/null || true
           bash .github/scripts/save_owned.sh "페이지 다시 만들기 [skip ci]" index.html version.txt \
