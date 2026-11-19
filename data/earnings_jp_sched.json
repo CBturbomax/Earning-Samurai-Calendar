@@ -1,13 +1,12 @@
 {
  "source": "JPX 결산발표 예정일",
  "source_url": "https://www.jpx.co.jp/listing/event-schedules/financial-announcement/index.html",
- "fetched": "2026-11-19T16:18+09:00",
+ "fetched": "2026-11-19T16:35+09:00",
  "files": [
   "kessan09_1106.xlsx",
-  "kessan10_1106.xlsx",
-  "kessan.xlsx"
+  "kessan10_1106.xlsx"
  ],
- "count": 3178,
+ "count": 3177,
  "ok_days": [
   "2026-11-19",
   "2026-11-20",
@@ -26652,15 +26651,6 @@
    "fy": "3月期",
    "kind": "第２",
    "sector": "保険業",
-   "market": "東証"
-  },
-  {
-   "date": "2026-11-19",
-   "code": "8958",
-   "name": "グローバル・ワン不動産投資法人",
-   "fy": "9月期",
-   "kind": "-",
-   "sector": "REIT",
    "market": "東証"
   },
   {
