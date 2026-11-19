@@ -19,10 +19,13 @@ jobs:
           python-version: '3.12'
       - name: 🔎 일본 결산 발표 예정 시각을 주는 곳(11/19)
         continue-on-error: true
-        run: python tools/probe_jptime.py 2026/11/20 > /tmp/probe.txt 2>&1
+        run: |
+          curl -sS -A "Mozilla/5.0 (Windows NT 10.0; Win64; x64) Chrome/131.0" -o /tmp/tr.html https://www.traders.co.jp/market_jp/earnings_calendar
+          curl -sS -A "Mozilla/5.0 (Windows NT 10.0; Win64; x64) Chrome/131.0" -o /tmp/tr2.html "https://www.traders.co.jp/market_jp/earnings_calendar/all/all/2" || true
+          ls -la /tmp/tr*.html > /tmp/probe.txt
       - name: 결과를 probe-out 가지에
         if: always()
         run: |
           cd /tmp && rm -rf po && mkdir po && cd po && git init -q
-          cp /tmp/probe.txt . ; git add . && git -c user.name=bot -c user.email=b@b commit -qm probe
+          cp /tmp/probe.txt /tmp/tr*.html . ; git add . && git -c user.name=bot -c user.email=b@b commit -qm probe
           git push -f "https://x-access-token:${{ github.token }}@github.com/${{ github.repository }}" HEAD:refs/heads/probe-out
