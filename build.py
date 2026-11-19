@@ -5298,6 +5298,44 @@ def ann_fallback(ann, packed, fcst):
     return ann
 
 
+
+def apply_jp_times(packed):
+    """일본 앞일에 **회사가 정한 발표 예정 시각**을 얹는다(11/19 회원님: "일본도 정확히 언제인지").
+    JPX 목록은 날짜만 줘서 전부 「15:00경」이었다. scrape_jp_time.py 가 트레이더스웹에서 받은 시각을
+    아직 실제 공시가 없는 줄(정확도 0)에만 얹고 정확도를 2(회사 예정 시각)로 둔다 — 실제 공시 시각(1)은
+    늘 이것을 이긴다. 시각 미정(「-」)인 회사는 그대로 「15:00경」이다.
+    예정일이 바뀐 회사: 트레이더스웹에 시각까지 정해진 줄이 하나뿐이고 우리 줄이 아직 오지 않은 날이면
+    그 날짜로 옮긴다(한 달 안에서만)."""
+    path = HERE / "data" / "times_jp.json"
+    if not path.exists():
+        return
+    try:
+        t = json.loads(path.read_text(encoding="utf-8"))
+    except (ValueError, OSError) as e:
+        print(f"  ! {path.name} 읽기 실패: {e}")
+        return
+    today = (datetime.now(timezone.utc) + timedelta(hours=9)).date().isoformat()
+    by = {}
+    for r in t.get("rows", []):
+        by.setdefault(r["code"], []).append(r)
+    put = moved = 0
+    for p in packed:
+        if p[9] != "jp" or p[14] or p[0] < today:
+            continue
+        cs = by.get(p[1]) or []
+        hit = next((r for r in cs if r["date"] == p[0]), None)
+        if not hit:
+            timed = [r for r in cs if r["time"] and r["date"] >= today
+                     and abs((date.fromisoformat(r["date"]) - date.fromisoformat(p[0])).days) <= 31]
+            if len(timed) == 1:
+                hit = timed[0]
+                p[0] = p[12] = hit["date"]
+                moved += 1
+        if hit and hit["time"]:
+            p[12], p[13], p[14] = hit["date"], hit["time"], 2          # JST = KST
+            put += 1
+    print(f"  일본 회사 예정 시각: {put:,}줄에 얹음 (날짜 옮김 {moved}) · {t.get('fetched', '')}")
+
 def build():
     data = {m: load(m) for m in MARKET_ORDER}
     have = [m for m in MARKET_ORDER if data[m]]
@@ -5353,6 +5391,7 @@ def build():
         b = best.get(p[9] + ":" + p[1])
         if b:
             p[11] = b[1]
+    apply_jp_times(packed)
     order = {m: i for i, m in enumerate(MARKET_ORDER)}
     packed.sort(key=lambda p: (p[0], order[p[9]], -p[11], p[1]))
 
@@ -7983,7 +8022,7 @@ function openModal(k, dt) {
   document.getElementById('mdList').innerHTML =      // 발표일·분기·테마 줄은 뺐다(회원님 11/03)
     (r[10] ? '<dt>발표 시각</dt><dd>' + esc(r[10]) +
              (r[10] === '장전' ? ' (Before Open)' : r[10] === '장중' ? ' (Market Hours)' : ' (After Close)') +
-             (r[13] ? ' · 한국 ' + esc(r[12].slice(5).replace('-', '/')) + ' ' + r[13] + (r[14] ? ' (실제 공시 시각)' : '경') : '') + '</dd>' : '') +
+             (r[13] ? ' · 한국 ' + esc(r[12].slice(5).replace('-', '/')) + ' ' + r[13] + (r[14] === 2 ? ' (회사 예정 시각)' : r[14] ? ' (실제 공시 시각)' : '경') : '') + '</dd>' : '') +
     (r[11] || liveCap(k) ? '<dt>시가총액</dt><dd>' + capKo(r[11], k) + '</dd>' : '') +
     (r[5] ? '<dt>업종</dt><dd>' + esc(r[5]) + '</dd>' : '') +
     '<dt>시장</dt><dd>' + esc(MKT[m].ko) + (r[6] ? ' · ' + esc(r[6]) : '') + '</dd>';
