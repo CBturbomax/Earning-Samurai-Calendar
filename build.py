@@ -5761,6 +5761,7 @@ setTimeout(() => {
       if (!v || v === ES_BUILD) return;
       const u = new URL(location.href);
       u.searchParams.set('_v', v);
+      u.hash = '';                         // 「#mnMeta」 꼬리를 들고 다시 열면 월매출로 내려간다(11/19)
       location.replace(u.toString());
     }).catch(() => {});
 }, 800);
@@ -9711,6 +9712,8 @@ setInterval(() => {
       if (!v || v === ES_BUILD) return;
       const u = new URL(location.href);
       u.searchParams.set('_v', v);
+      u.hash = '';
+      try { sessionStorage.setItem('esY', String(Math.round(scrollY))); } catch (_) {}   // 보던 자리로 돌아온다
       location.replace(u.toString());
     }).catch(() => {});
 }, 120e3);
@@ -9818,6 +9821,24 @@ function renderAll() {
   renderCal(); renderMonthly(); renderGroups(); renderBars(); renderTable();
 }
 reslice(); fillFilters(); fillWeeks(); renderFoot(); renderAll();
+/* 위 메뉴(시장 현황판·스크리너·일본 월매출)는 주소에 「#…」 를 남기지 않고 내려간다(11/19 회원님: "들어가면 자꾸 일본 월차로 넘어간다").
+   한 번 누른 「#mnMeta」 가 주소에 남아, 다시 들어오거나 2분마다 새 빌드를 받을 때마다 월매출로 뛰었다. */
+document.querySelectorAll('.samurai-nav a[href^="#"]').forEach(a => a.addEventListener('click', e => {
+  const t = document.getElementById(a.getAttribute('href').slice(1));
+  if (!t) return;
+  e.preventDefault();
+  t.scrollIntoView({ behavior: 'smooth', block: 'start' });
+}));
+(() => {
+  const NAV = ['#bdMeta', '#scrMeta', '#mnMeta'];
+  let y = null;
+  try { y = sessionStorage.getItem('esY'); sessionStorage.removeItem('esY'); } catch (_) {}
+  if (NAV.includes(location.hash)) {
+    history.replaceState(null, '', location.pathname + location.search);
+    if (y == null) scrollTo(0, 0);
+  }
+  if (y != null) scrollTo(0, +y);
+})();
 </script>
 </body>
 </html>
