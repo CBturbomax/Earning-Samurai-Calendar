@@ -5775,13 +5775,12 @@ TEMPLATE = r"""<!DOCTYPE html>
      나란히 놓고 보는 것이 이 화면의 전부인데 세로로 쌓이면 그게 없어진다.
      폭을 1440 으로 못박으면 브라우저가 페이지 전체를 줄여 그리므로 데스크톱과
      같은 다섯 칸이 나오고, 손가락으로 확대해서 본다.
-     좁은 화면에 맞춰 보고 싶으면 캘린더 아래 버튼으로 되돌린다(선택은 기억된다). -->
+     폰 폭에 맞추는 버튼은 두지 않는다 — 누르면 되돌아오지 못했다(11/19). -->
 <meta name="viewport" id="vp" content="width=1440">
 <script>
-try {
-  if (localStorage.getItem('esFit') === 'mobile')
-    document.getElementById('vp').content = 'width=device-width, initial-scale=1';
-} catch (e) {}
+/* 「폰 화면에 맞추기」 버튼은 걷어냈다(11/19 회원님: "눌렀더니 PC 화면으로 복구가 안 돼").
+   예전에 눌러 둔 기기에 남은 선택을 지워 PC 화면으로 되돌린다. */
+try { localStorage.removeItem('esFit'); } catch (e) {}
 </script>
 <!-- GitHub Pages는 같은 URL에 새 파일을 덮어쓴다. 캐시가 남으면 지난주 일정을
      이번주로 착각하게 되므로 매번 새로 받도록 강제한다. -->
@@ -6671,7 +6670,6 @@ svg.bars rect.b:hover { fill:var(--a3); }
 </div>
 <div class="cal" id="cal"></div>
 <div class="tools">
-  <button class="btn" id="fitBtn" hidden></button>
 </div>
 
 <h2><span class="n">2</span>🧭 시장 현황판 <span class="meta" id="bdMeta">2년 주봉 · 주황선 30주선 · 강한 순</span></h2>
@@ -9185,31 +9183,6 @@ document.getElementById('mdBack').onclick = e => {
   if (e.target.id === 'mdBack') closeModal();
 };
 document.addEventListener('keydown', e => { if (e.key === 'Escape') closeModal(); });
-
-/* ── 폰에서 화면 폭 고르기 ─────────────────────────────────────
-   기본은 PC 화면 그대로(폭 1440 고정)다. 한 주를 나란히 놓고 보는 것이 이 화면의
-   전부인데, 폰 폭에 맞추면 캘린더가 세로로 쌓여 그게 없어진다.
-   다만 글씨가 작아지므로 되돌릴 길을 남긴다. 버튼은 **좁은 기기에서만** 보인다 —
-   screen.width 는 viewport 를 고정해도 기기 폭 그대로라 이 판단에 쓸 수 있다. */
-const fitBtn = document.getElementById('fitBtn');
-function fitMode() {
-  try { return localStorage.getItem('esFit') === 'mobile' ? 'mobile' : 'pc'; }
-  catch (e) { return 'pc'; }
-}
-if (screen.width < 900) {
-  fitBtn.hidden = false;
-  const paint = () => {
-    fitBtn.textContent = fitMode() === 'pc' ? '📱 폰 화면에 맞추기' : '🖥 PC 화면으로 보기';
-  };
-  paint();
-  fitBtn.onclick = () => {
-    const next = fitMode() === 'pc' ? 'mobile' : 'pc';
-    try { localStorage.setItem('esFit', next); } catch (e) {}
-    document.getElementById('vp').content =
-      next === 'mobile' ? 'width=device-width, initial-scale=1' : 'width=1440';
-    paint();
-  };
-}
 
 /* ── 이벤트 위임 ──────────────────────────────────────────── */
 document.addEventListener('click', e => {
