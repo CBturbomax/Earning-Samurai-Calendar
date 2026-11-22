@@ -6717,7 +6717,6 @@ svg.bars rect.b:hover { fill:var(--a3); }
 </aside>
 <h1><span class="mark" aria-hidden="true"></span>Earning <span class="jp">Samurai</span>
     <span class="byline">by CB</span></h1>
-<p class="sub">미국 · 일본 · 홍콩 주간 실적발표 일정 — 누가 언제 무엇을 발표했는지</p>
 
 <nav class="samurai-nav" aria-label="어닝사무라이 메뉴">
   <a href="./" aria-current="page">실적 캘린더</a>
@@ -9459,10 +9458,7 @@ function renderCards() {
     '<div class="card"><div class="k">' + c[0] + '</div>' +
     '<div class="v ' + c[2] + '">' + c[1] + '</div></div>').join('');
 
-  const cur = mkt ? MKT[mkt] : null;
-  document.getElementById('calMeta').textContent = cur
-    ? cur.ko + ' 상장사 — ' + cur.note
-    : '미국 · 일본 상장사 발표 예정 + 홍콩 공시';
+  document.getElementById('calMeta').textContent = '';
 }
 
 /* ── 출처와 수집 구멍 ─────────────────────────────────────── */
