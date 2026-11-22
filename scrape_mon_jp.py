@@ -72,11 +72,17 @@ def get(url, timeout=40):
         return None
 
 
+POPPLER_VER = 1
+REREAD = False
+
+
 def load():
+    global REREAD
     try:
         old = json.loads(OUT.read_text(encoding="utf-8"))
     except (ValueError, OSError):
         return {}, set(), {}
+    REREAD = old.get("pp") != POPPLER_VER and bool(__import__("shutil").which("pdftotext"))
     by = old.get("codes") or {}
     done = set(old.get("done") or [])
     skip = old.get("skip") or {}
@@ -93,6 +99,7 @@ def save(by, done, skip):
     months = sum(len(v.get("months") or {}) for v in by.values())
     payload = {
         "pv": PARSE_VER,
+        "pp": POPPLER_VER if __import__("shutil").which("pdftotext") else None,   # poppler 가 있는 곳에서 한 번 다시 읽었다는 표
         "source": "TDnet 월매출 공시 첨부 PDF — 표에서 직접 읽는다",
         "note": ("달 이름표 줄을 찾아 아래 줄의 값을 x 가 가장 가까운 이름표에 "
                  "붙인다. 붙일 이름표가 없으면 버린다. 암호가 걸렸거나 표가 "
@@ -154,7 +161,7 @@ def main():
                 print("   암호가 걸려 있다"); continue
             for ln in pdftext.extract_lines(data, 4)[:24]:
                 print("   |", ln[:120])
-            got = montable.read(data, r["date"], title=r.get("title", ""))
+            got = montable.read(data, r["date"], title=r.get("title", ""), prefer_poppler=True)
             print("   ->", json.dumps(got, ensure_ascii=False)[:600] if got else "표를 못 읽었다")
         return
 
@@ -188,6 +195,17 @@ def main():
             skip = {**(m0.get("skip") or {}), **skip}
         except (OSError, ValueError):
             pass
+    # **poppler 로 바꾼 뒤 한 번, 아직 받을 수 있는 최근 40일 공시만 다시 읽는다**(11/22). 규칙 판(PARSE_VER)을 올리면
+    # 이미 사라진 옛 공시 수천 건을 다시 두드리게 된다. 다시 읽으면 그 공시가 낸 달만 갈아치우므로(merge) 틀렸던 값이 고쳐진다.
+    global REREAD
+    if REREAD:
+        from datetime import date as _d0, timedelta as _td0
+        cut0 = (_d0.today() - _td0(days=40)).isoformat()
+        again = {r["doc"] for r in rows if r.get("doc") and (r.get("date") or "") >= cut0}
+        n0 = len(again & (done | set(skip)))
+        done -= again
+        skip = {k: v for k, v in skip.items() if k not in again}
+        print(f"  poppler 로 바꿔 최근 40일 공시 {n0}건을 다시 읽는다.")
     if RECENT_DAYS:
         from datetime import date as _d, timedelta as _td
         cut = (_d.today() - _td(days=RECENT_DAYS)).isoformat()
@@ -215,7 +233,7 @@ def main():
         # 보안 핸들러에 빈 사용자 암호였다(권한 잠금만 걸어 둔 것) — pdfcrypt
         # 가 규격대로 연다. 그래도 안 열리면 그때 '암호'로 적는다.
         try:
-            got = montable.read(data, r["date"], title=r.get("title", ""))
+            got = montable.read(data, r["date"], title=r.get("title", ""), prefer_poppler=True)
         except Exception as e:                      # noqa: BLE001
             # 깨진 PDF 하나가 실행 전체를 죽이지 않게 한다.
             print(f"  ! {r['code']} {type(e).__name__}: {e}")

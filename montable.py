@@ -446,17 +446,53 @@ def _vertical_yoy(table, aday: date, title: str = ""):
     return ({"rows": rows, "amount_label": "", "yoy_label": "対前年比"}
             if rows else None)
 
-def read(data: bytes, ann: str, max_pages: int = 12, title: str = ""):
-    """우리 해석기로 먼저 읽고, **못 읽었을 때만** poppler 로 꺼낸 글자로 같은 규칙을 한 번 더 돌린다(11/22).
-    이미 읽히던 공시는 안 건드리므로 나빠질 것이 없다 — 표 읽는 규칙(오검출 막는 거름 전부)은 그대로다."""
-    got = _read(data, ann, max_pages, title, pdftext.extract_cells)
-    if got and got.get("rows"):
+def _mk(ym):
+    return int(ym[:4]) * 12 + int(ym[5:7])
+
+
+def _sane(got, ann):
+    """TDnet 월차 공시에 거는 두 거름(11/22 견주기에서 나온 것).
+    ① 1천만 엔도 안 되는 '금액'은 매출이 아니다 — 고라쿠엔 7554 의 점포 수 345 가 금액으로 읽혔다. 금액만 지우고 전년비는 남긴다.
+    ② 읽은 마지막 달이 공시한 달의 1~2달 전이 아니면 해·달을 잘못 매긴 것이다(ABC마트 11/4 공시에서 3~8월, 아이플러그 11/5 공시에서
+       2025-10~2026-03) — 통째로 버린다."""
+    if not got or not got.get("rows"):
         return got
-    alt = _read(data, ann, max_pages, title, getattr(pdftext, "poppler_cells", lambda *a: []))
-    if alt and alt.get("rows"):
-        alt["via"] = "poppler"
-        return alt
-    return got
+    rows = []
+    for r in got["rows"]:
+        r = dict(r)
+        if r.get("rev") is not None and r["rev"] < 1e7:
+            r["rev"] = None
+        if r.get("rev") is not None or r.get("yoy") is not None:
+            rows.append(r)
+    if not rows:
+        return None
+    gap = _mk(ann[:7]) - _mk(max(r["period"] for r in rows))
+    if not 1 <= gap <= 2:
+        return None
+    return {**got, "rows": rows}
+
+
+def read(data: bytes, ann: str, max_pages: int = 12, title: str = "", prefer_poppler: bool = False):
+    """PDF -> {'rows': [...]} 또는 None.
+
+    **TDnet 월차 공시(prefer_poppler=True)는 poppler 로 먼저 읽는다**(11/22 회원님: "PDF 읽는 게 매번 말썽").
+    같은 공시 50건을 두 길로 읽어 손으로 대조해 둔 값과 맞춰 보니 poppler 가 맞고 우리 해석기가 틀린 것이 여럿이었다
+    (MRO 3064 우리 0/2·poppler 2/2, 하드오프 2674 는 우리가 해를 한 해 틀림, 리베로 9245 는 우리가 전년비 431%).
+    「표없음」 78건 중 15건(131달)이 새로 읽혔다. poppler 가 못 읽으면 우리 해석기로. 표 읽는 규칙은 하나다.
+    회사 IR PDF(기본값)는 견주기를 안 했으므로 예전 차례(우리 먼저, 못 읽으면 poppler) 그대로다."""
+    pop = getattr(pdftext, "poppler_cells", lambda *a: [])
+    order = [(pop, "poppler"), (pdftext.extract_cells, "")] if prefer_poppler else [(pdftext.extract_cells, ""), (pop, "poppler")]
+    first = None
+    for fn, via in order:
+        got = _read(data, ann, max_pages, title, fn)
+        if prefer_poppler:
+            got = _sane(got, ann)
+        if got and got.get("rows"):
+            if via:
+                got["via"] = via
+            return got
+        first = first or got
+    return first
 
 
 def _read(data: bytes, ann: str, max_pages: int, title: str, cells_of):

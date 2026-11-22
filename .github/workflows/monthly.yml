@@ -69,6 +69,9 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: '3.12'
+      # 월매출 PDF 를 poppler 로 읽는다(11/22, montable.read prefer_poppler) — 없으면 우리 해석기로만 읽는다
+      - name: poppler
+        run: command -v pdftotext || (sudo apt-get update -qq && sudo apt-get install -y -qq poppler-utils) || true
 
       # 수집기가 스스로 시간을 잰다(MON_SECS). 워크플로의 timeout 이 먼저
       # 닿으면 그 실행에서 받은 것을 저장도 못 하고 죽어, 다음 실행이 같은
