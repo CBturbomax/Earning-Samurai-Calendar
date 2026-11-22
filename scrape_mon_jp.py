@@ -25,6 +25,7 @@ import os
 import sys
 import time
 import urllib.error
+import urllib.parse
 import urllib.request
 from pathlib import Path
 
@@ -55,6 +56,8 @@ PAUSE = 0.35
 
 
 def get(url, timeout=40):
+    # 회사 IR 의 PDF 이름에 일본어·빈칸이 그대로 있다(도와푸드 「2022年12月度 売上高速報（前期対比）.pdf」) — 주소로 쓰려면 퍼센트로 싼다
+    url = urllib.parse.quote(url, safe=":/?&=%#+~@!$,;")
     req = urllib.request.Request(url, headers={
         "User-Agent": UA, "Accept": "*/*", "Accept-Encoding": "gzip"})
     try:
