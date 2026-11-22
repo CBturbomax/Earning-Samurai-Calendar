@@ -185,6 +185,13 @@ class History:
         except (OSError, ValueError):
             ind = {}
         with self.lock:
+            prevD = self.D if self.ts else None
+        if D:
+            try:
+                site_mon_alerts(prevD, D)
+            except Exception:                                    # noqa: BLE001
+                log("사이트 월차 알림 실패", traceback.format_exc(limit=1))
+        with self.lock:
             if D:
                 self.D = D
                 by = {}
@@ -2844,6 +2851,7 @@ def _guide_audit(days=45, limit=600):
     log("가이던스 빈칸 점검", len(todo), "곳")
     got = 0
     for code, day, name, cap in todo:
+        lastvals = None                                  # XBRL 이 없는 공시면 아래에서 정의 전에 읽혀 NameError 였다(11/22)
         try:
             with _yano["lock"]:
                 time.sleep(0.4)
@@ -3078,20 +3086,90 @@ def mon_ai_rows(blob, code, name, day, title):
     return out
 
 
+MON_TG_MIN = 15            # 월차 텔레그램 — 전년비 +15% 이상(회원님 11/22: "YoY +15% 이상인 것들은 텔레로 바로")
+MON_OK = re.compile(r"売上|営業収益|営業収入|取扱高|販売高|月商|前年|昨対|全社|全店|既存店|月次|百万円|千円")
+
+
+def mon_rows_ok(rows):
+    """사이트 빌드(`build._tdnet_series`)와 같은 거름 — 매출성 이름표만(全社合計·全店·百万円·月次 포함), 이름표에 해가 박힌 줄
+    (「全店Sep.2023-」 = 2년 전 대비)·한국어 이름표 줄(옛 해석기가 제목만 보고 읽은 것)·0 이하·석 달 넘게 같은 값은 버린다."""
+    out = [r for r in rows if r.get("yoy") is not None and r["yoy"] > 0
+           and (not r.get("metric") or (MON_OK.search(r["metric"]) and not re.search(r"(19|20)\d\d|[가-힣]", r["metric"])))]
+    by = {}
+    for r in out:
+        by.setdefault(r.get("metric") or "", []).append(r)
+    bad = set()
+    for lab, rs in by.items():
+        rs.sort(key=lambda r: r["period"])
+        for i in range(len(rs) - 2):
+            if rs[i]["yoy"] == rs[i + 1]["yoy"] == rs[i + 2]["yoy"]:
+                bad.add(lab)
+    return [r for r in out if (r.get("metric") or "") not in bad]
+
+
+def mon_send(ev, replay=False):
+    """월차 한 건을 텔레그램으로 — TDnet 월차·회사 IR 월차 공용. 업종·시총 거름(tg_pick)을 지나고 전년비 +15% 이상일 때만."""
+    send, why = tg_pick(ev, [])
+    if send and ev["mon"]["yoy"] < MON_TG_MIN and not replay:
+        send, why = False, f"월차 {pct(ev['mon']['yoy'])} (+{MON_TG_MIN}% 미만)"
+    log(f"월차 {ev['code']} {ev['name']} {ev['mon']['period']} {ev['mon']['base']} {pct(ev['mon']['yoy'])} · "
+        f"텔레그램 {'보냄' if send or replay else '안 보냄'} ({why}) · {ev['src']}")
+    if not (send or replay):
+        return
+    pngs = []
+    if H.html:
+        try:
+            pngs = shot.render(dict({k: v for k, v in ev.items() if not k.startswith("_")}, onlySeg="mon")) or []
+        except Exception:                                        # noqa: BLE001
+            log("월차 그림 실패", ev["code"], traceback.format_exc(limit=2))
+    TG.send_album(("🧪 <i>지난 공시 다시 보내기(시험)</i>\n" if replay else "") + caption(ev), pngs)
+
+
+def site_mon_alerts(old, new):
+    """**TDnet 에 안 내는 회사**(유니클로·니토리·세븐&아이처럼 회사 IR·기사로만 나오는 월차) — 사이트 자료를 20분마다 새로 받을 때
+    새 달이 생긴 회사를 같은 규칙으로 텔레그램에 보낸다(11/22). TDnet 월차는 jp_mon_process 가 3초 감시로 이미 보낸다."""
+    if not old:
+        return                                                    # 켜자마자 지난 것을 한꺼번에 쏘지 않는다
+    o_num, n_num = old.get("monthlyNum") or {}, new.get("monthlyNum") or {}
+    cut = (datetime.now(JST) - timedelta(days=70)).strftime("%Y-%m")
+    names = {r[2]: (r[3] or r[4]) for r in (new.get("monthly") or []) if len(r) > 4}
+    for code, v in n_num.items():
+        src = (v.get("src") or "") + " " + (v.get("historySrc") or "")
+        if "TDnet" in (v.get("src") or "") or not v.get("m"):
+            continue
+        last = v["m"][-1]
+        prev = (o_num.get(code) or {}).get("m") or []
+        if last[2] is None or last[0] < cut or (prev and prev[-1][0] >= last[0]):
+            continue
+        base = v.get("historyBase") or v.get("base") or ""
+        key = (code, last[0], base)
+        if key in MON_SENT:
+            continue
+        MON_SENT.add(key)
+        name = v.get("name") or names.get(code, "")
+        ev = base_event("jp", code, name, datetime.now(JST).strftime("%Y-%m-%d %H:%M"), JST,
+                        "회사 IR 월차" if "IR" in src else "월차(사이트)", v.get("doc") or "", f"{last[0]} 월차")
+        ev["mon"] = {"period": last[0], "base": base, "yoy": last[2] - 100,
+                     "rows": [list(r[:4]) for r in v["m"][-24:]], "other": ""}
+        try:
+            mon_send(ev)
+        except Exception:                                        # noqa: BLE001
+            log("사이트 월차 알림 실패", code, traceback.format_exc(limit=1))
+
+
 def jp_mon_process(row, day, replay=False):
-    """월차 — 표를 읽어 최근 달의 전년비. 기존점 우선. +10% 이상이면 알림(회원님 10/30)."""
+    """월차 — 표를 읽어 최근 달의 전년비. 기존점 우선. +15% 이상이면 알림(회원님 10/30 +10% → 11/22 +15%)."""
     code = row["code"]
     if H.skip("jp", code, row["name"]):
         return
     url = "https://www.release.tdnet.info/inbs/" + row["pdf"]
     try:
         blob = http_get(url, ua=BROWSER_UA, timeout=30, binary=True)
-        got = montable.read(blob, day, title=row["title"])
+        got = montable.read(blob, day, title=row["title"], prefer_poppler=True)   # 사이트와 같이 poppler 먼저(11/22 대조값 2/2·3/3)
     except Exception as e:                                       # noqa: BLE001
         log("월차 PDF 실패", code, repr(e)[:120])
         return
-    rows = [r for r in (got or {}).get("rows") or []
-            if r.get("yoy") is not None and (not r.get("metric") or re.search(r"売上|営業収益|営業収入|取扱高|販売高|月商|前年|昨対", r["metric"]))]
+    rows = mon_rows_ok((got or {}).get("rows") or [])
     if not rows:
         # 표 규칙이 못 읽으면 **그 자리에서** AI 로 — 예전엔 GitHub 의 AI 판독 줄(30분 바퀴)에 서서 숫자가 한참 늦었다(11/04)
         rows = mon_ai_rows(blob, code, row["name"], day, row["title"])
@@ -3118,19 +3196,7 @@ def jp_mon_process(row, day, replay=False):
     series = [[r["period"], r.get("rev"), r["yoy"], 0] for r in rows if lab(r) == lab(pick)]
     ev["mon"] = {"period": last, "base": base, "yoy": pick["yoy"] - 100, "rows": series,
                  "other": f"전점 {pct(other['yoy'] - 100)}" if other else ""}
-    send, why = tg_pick(ev, [])
-    if send and ev["mon"]["yoy"] < 10 and not replay:
-        send, why = False, f"월차 {pct(ev['mon']['yoy'])} (+10% 미만)"
-    log(f"월차 {code} {ev['name']} {last} {base} {pct(ev['mon']['yoy'])} · 텔레그램 {'보냄' if send or replay else '안 보냄'} ({why})")
-    if not (send or replay):
-        return
-    pngs = []
-    if H.html:
-        try:
-            pngs = shot.render(dict({k: v for k, v in ev.items() if not k.startswith("_")}, onlySeg="mon")) or []
-        except Exception:                                        # noqa: BLE001
-            log("월차 그림 실패", code, traceback.format_exc(limit=2))
-    TG.send_album(("🧪 <i>지난 공시 다시 보내기(시험)</i>\n" if replay else "") + caption(ev), pngs)
+    mon_send(ev, replay)
 
 
 def jp_watch():
