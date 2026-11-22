@@ -447,6 +447,19 @@ def _vertical_yoy(table, aday: date, title: str = ""):
             if rows else None)
 
 def read(data: bytes, ann: str, max_pages: int = 12, title: str = ""):
+    """우리 해석기로 먼저 읽고, **못 읽었을 때만** poppler 로 꺼낸 글자로 같은 규칙을 한 번 더 돌린다(11/22).
+    이미 읽히던 공시는 안 건드리므로 나빠질 것이 없다 — 표 읽는 규칙(오검출 막는 거름 전부)은 그대로다."""
+    got = _read(data, ann, max_pages, title, pdftext.extract_cells)
+    if got and got.get("rows"):
+        return got
+    alt = _read(data, ann, max_pages, title, getattr(pdftext, "poppler_cells", lambda *a: []))
+    if alt and alt.get("rows"):
+        alt["via"] = "poppler"
+        return alt
+    return got
+
+
+def _read(data: bytes, ann: str, max_pages: int, title: str, cells_of):
     """PDF -> {'rows': [...], 'basis': ...} 또는 None.
 
     rows: [{'period': 'YYYY-MM', 'rev': 원화가 아닌 **엔**, 'yoy': 전년동월비(%),
@@ -457,7 +470,7 @@ def read(data: bytes, ann: str, max_pages: int = 12, title: str = ""):
     except ValueError:
         return None
     try:
-        table = pdftext.extract_cells(data, max_pages)
+        table = cells_of(data, max_pages)
     except Exception:
         return None
     # 이름표가 약한 줄에 붙일 이름. 공시 제목이 「月次売上速報」 라면 그 표의

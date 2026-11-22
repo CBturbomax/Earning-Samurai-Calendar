@@ -599,3 +599,55 @@ def layout_lines(data: bytes, max_pages: int = 40):
             return []
     txt = r.stdout.decode("utf-8", "replace")
     return [re.sub(r"[ \t]{2,}", " | ", ln.strip()) for ln in txt.splitlines() if ln.strip()]
+
+
+def poppler_cells(data: bytes, max_pages: int = 40):
+    """**poppler 로 글자와 좌표를 꺼내 `extract_cells` 와 같은 꼴로 돌려준다**(11/22 회원님: "PDF 읽는 게 매번 말썽").
+    우리 해석기는 폰트(CID·ToUnicode)·암호·좌표 변환을 손으로 풀어서 깨지는 공시가 남는다(10월분 152건 중 21건 「표없음」).
+    `pdftotext -bbox-layout` 은 낱말마다 상자(xMin·yMin·xMax·yMax)를 주므로, 줄 묶기·칸 가르기만 우리 규칙대로 한다.
+    y 는 위에서 아래로 커진다 — 줄 차례만 쓰므로 뒤집을 필요는 없다. poppler 가 없으면 빈 목록."""
+    import html
+    import shutil
+    import subprocess
+    import tempfile
+    if not data or not shutil.which("pdftotext"):
+        return []
+    with tempfile.NamedTemporaryFile(suffix=".pdf") as f:
+        f.write(data)
+        f.flush()
+        try:
+            r = subprocess.run(["pdftotext", "-bbox-layout", "-q", "-l", str(max_pages), f.name, "-"],
+                               capture_output=True, timeout=60)
+        except (OSError, subprocess.SubprocessError):
+            return []
+    doc = r.stdout.decode("utf-8", "replace")
+    rows = []
+    for page in re.findall(r"<page\b.*?</page>", doc, re.S):
+        words = []
+        for a in re.finditer(r'<word xMin="([\d.]+)" yMin="([\d.]+)" xMax="([\d.]+)" yMax="([\d.]+)">(.*?)</word>', page):
+            x0, y0, x1, y1 = (float(a.group(i)) for i in range(1, 5))
+            t = html.unescape(a.group(5)).strip()
+            if t:
+                words.append(((y0 + y1) / 2, x0, x1, y1 - y0, t))
+        buckets = []
+        for w in sorted(words, key=lambda w: (w[0], w[1])):
+            if buckets and abs(buckets[-1][0] - w[0]) <= max(1.5, w[3] * 0.3):
+                buckets[-1][1].append(w)
+            else:
+                buckets.append((w[0], [w]))
+        for _y, ws in buckets:
+            ws.sort(key=lambda w: w[1])
+            cells, cur, cx0, cx1 = [], "", 0.0, 0.0
+            for _yy, x0, x1, h, t in ws:
+                if cur and x0 - cx1 > max(h, 6.0) * 0.45:     # 칸 사이 — extract_cells 와 같은 잣대
+                    cells.append((round(cx0, 1), cur))
+                    cur = ""
+                if not cur:
+                    cx0 = x0
+                cur += t
+                cx1 = x1
+            if cur:
+                cells.append((round(cx0, 1), cur))
+            if cells:
+                rows.append(cells)
+    return rows
