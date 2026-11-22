@@ -6048,7 +6048,7 @@ __FLAGCSS__
 .board .bdl { font-size:15px; opacity:.9; margin:4px 0 14px; line-height:1.8; padding:10px 14px; border-radius:10px; background:rgba(139,148,158,.1); }
 .board .bdcols { display:grid; grid-template-columns:1fr; gap:22px; }
 .board .bdc { border:1px solid var(--line, #30363d); border-radius:12px; padding:14px 16px 10px; background:var(--panel, #161b22); }
-.board .bdh { font-weight:800; font-size:22px; margin:0 0 8px; } .board .bdh small { font-weight:400; opacity:.65; font-size:14px; }
+.board .bdh { font-weight:800; font-size:22px; margin:0 0 8px; display:flex; align-items:center; gap:8px; } .board .bdh .fl { transform:scale(1.4); margin-right:4px; } .board .bdh small { font-weight:400; opacity:.65; font-size:14px; }
 .board .bdi { display:flex; flex-wrap:wrap; gap:6px 22px; font-size:15px; margin-bottom:10px; } .board .bdi small { opacity:.6; }
 .board .bds { display:flex; flex-wrap:wrap; gap:6px 36px; font-size:17px; padding:10px 14px; border-radius:10px; background:rgba(139,148,158,.1); margin-bottom:10px; }
 .board .bdr { width:100%; border-collapse:collapse; font-variant-numeric:tabular-nums; }
@@ -6717,7 +6717,6 @@ svg.bars rect.b:hover { fill:var(--a3); }
 </aside>
 <h1><span class="mark" aria-hidden="true"></span>Earning <span class="jp">Samurai</span>
     <span class="byline">by CB</span></h1>
-<p class="sub">미국 · 일본 · 홍콩 주간 실적발표 일정 — 누가 언제 무엇을 발표했는지</p>
 
 <nav class="samurai-nav" aria-label="어닝사무라이 메뉴">
   <a href="./" aria-current="page">실적 캘린더</a>
@@ -6760,7 +6759,7 @@ svg.bars rect.b:hover { fill:var(--a3); }
 <div class="tools">
 </div>
 
-<h2><span class="n">2</span>🧭 시장 현황판 <span class="meta" id="bdMeta">업종 상대강도(RS) 순위 · 위가 가장 강한 업종, 아래가 가장 약한 업종 · 일본·홍콩 업종 이름을 누르면 스크리너로</span></h2>
+<h2><span class="n">2</span>🧭 시장 현황판 <span class="meta" id="bdMeta"></span></h2>
 <div class="board" id="board"></div>
 
 <h2><span class="n">3</span>📈 실적 스크리너 <span class="meta" id="scrMeta"></span></h2>
@@ -9459,10 +9458,7 @@ function renderCards() {
     '<div class="card"><div class="k">' + c[0] + '</div>' +
     '<div class="v ' + c[2] + '">' + c[1] + '</div></div>').join('');
 
-  const cur = mkt ? MKT[mkt] : null;
-  document.getElementById('calMeta').textContent = cur
-    ? cur.ko + ' 상장사 — ' + cur.note
-    : '미국 · 일본 상장사 발표 예정 + 홍콩 공시';
+  document.getElementById('calMeta').textContent = '';
 }
 
 /* ── 출처와 수집 구멍 ─────────────────────────────────────── */
@@ -9538,7 +9534,7 @@ function bdDraw() {
      줄 = 업종, 위에서 아래로 3개월 지수 대비 강한 순. 상태 한 단어 + 고점 대비 + RS 선(52주). */
   const B = D.board || [], el = document.getElementById('board');
   if (!B.length) { el.innerHTML = '<p class="meta">주가를 아직 모으는 중입니다.</p>'; return; }
-  const MK = { us: '🇺🇸 미국', jp: '🇯🇵 일본', hk: '🇭🇰 홍콩' };
+  const MK = { us: FL('us') + ' 미국', jp: FL('jp') + ' 일본', hk: FL('hk') + ' 홍콩' };
   const pf = v => v == null ? '—' : (v > 0 ? '+' : '') + (Math.abs(v) >= 10 ? Math.round(v) : v.toFixed(1));
   const cls = v => v == null ? '' : v >= 0 ? 'up' : 'dn';
   const ST = t => {
@@ -9561,12 +9557,10 @@ function bdDraw() {
     const bench = (idx.find(t => t.rel === 0) || idx[0] || {}).n || '지수';
     const mx = Math.max(1, ...sec.map(t => Math.abs(t.q3)));
     const top = sec.filter(t => t.st === 'lead').slice(0, 3).map(t => t.n), bot = sec.filter(t => t.st === 'fall').slice(-3).reverse().map(t => t.n);
-    let h = '<div class="bdc"><div class="bdh">' + MK[g.m] + ' <small>비교 기준: ' + esc(bench) + '</small></div>';
-    h += '<div class="bdi">' + idx.map(t => '<span>' + esc(t.n) + ' <small>3개월</small> <b class="' + cls(t.r3) + '">' + pct(t.r3) + '</b> <small>· 고점 대비</small> -' + Math.abs(t.d52).toFixed(0) + '%</span>').join('') + '</div>';
-    h += '<div class="bds"><span>🔥 가장 강한 업종 <b>' + (top.map(esc).join(' · ') || '없음') + '</b></span><span>📉 가장 약한 업종 <b>' + (bot.map(esc).join(' · ') || '없음') + '</b></span></div>';
-    h += '<table class="bdr"><thead><tr><th class="l">업종</th><th colspan="2">RS 점수<br><small>3개월 동안 ' + esc(bench) + ' 보다 ±몇%</small></th>' +
-      '<th>최근 1개월<br><small>지수 대비</small></th><th>고점 대비<br><small>52주 최고가에서</small></th><th class="l">상태</th>' +
-      '<th class="l">이 업종 대표 기업 3곳<br><small>막대 = 업종 시총에서 차지하는 비중 · 오른쪽 = 3개월 주가</small></th><th>RS 선<br><small>1년</small></th></tr></thead><tbody>';
+    let h = '<div class="bdc"><div class="bdh">' + MK[g.m] + '</div>';
+    h += '<table class="bdr"><thead><tr><th class="l">업종</th><th colspan="2">RS 점수</th>' +
+      '<th>최근 1개월</th><th>고점 대비</th><th class="l">상태</th>' +
+      '<th class="l">이 업종 대표 기업 3곳</th><th>RS 선</th></tr></thead><tbody>';
     for (const t of sec) {
       const [sc, sl] = ST(t), w = Math.abs(t.q3) / mx * 50;
       const ld = (t.ld || []).map(x => '<div class="ld" data-bdk="' + esc(x[3]) + '" title="' + esc(x[0]) + '"><div class="l1"><span class="ln">' + esc(x[0]) + '</span><i class="' + cls(x[2]) + '">' + pct(x[2]) + '</i></div>' +
@@ -9578,11 +9572,7 @@ function bdDraw() {
     }
     return h + '</tbody></table></div>';
   };
-  el.innerHTML = '<div class="bdl"><b>RS 점수</b> = 최근 3개월 동안 그 업종이 지수보다 <b>몇 % 더 올랐나(+) / 더 빠졌나(−)</b>. 예) +17% → 지수보다 17% 더 강했다.<br>' +
-    '<span class="lead">🔥 주도</span> 강하고 더 강해지는 중 · <span class="fade">⚠️ 꺾이는 중</span> 강했는데 최근 밀림 · ' +
-    '<span class="fall">🩸 하락</span> 약하고 더 약해지는 중 (몇 주째 = 30주 이동평균선 밑으로 간 지 몇 주, 4주 안이면 초입) · ' +
-    '<span class="turn">🌱 바닥</span> 아직 약하지만 최근엔 지수보다 나음 → 하락 마무리 신호<br>RS 선(지수 대비 비율선)이 오른쪽 위로 꺾이면 바닥을 빠져나오는 중. 대표 기업 이름을 누르면 그 회사 창이 열립니다.</div>' +
-    '<div class="bdcols">' + B.map(col).join('') + '</div>';
+  el.innerHTML = '<div class="bdcols">' + B.map(col).join('') + '</div>';
 }
 document.getElementById('board').addEventListener('click', e => {
   const k = e.target.closest('[data-bdk]');
