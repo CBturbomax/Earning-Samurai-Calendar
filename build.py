@@ -4579,7 +4579,9 @@ def _tdnet_series(rec):
             continue
         rows.append([k, v.get("rev"), v.get("yoy"), 0,
                      v.get("doc", ""), v.get("day", ""), metric])
-    return rows
+    # **공시한 달과 그 뒤의 달은 버린다** — 아직 끝나지 않은 달이다. 표 끝의 딴 칸(누계·전년 같은 달)이 달로 읽힌 것(11/22 세리아·다이이치:
+    # 11월 초 공시에서 '2026-11' 이 나왔다). 공시를 통째로 버리지는 않는다 — 나머지 달은 손으로 대조한 값과 9/9 맞았다.
+    return [r for r in rows if not (re.match(r"\d{4}-\d\d", str(r[5])) and r[0] >= str(r[5])[:7])]
 
 
 def _tdnet_trusted(rows, target):
@@ -4829,6 +4831,57 @@ def load_monthly_nums(monthly):
         }
 
     return out
+
+KR_METRIC = re.compile(r"매출|영업수입|전년")
+
+
+def extend_kr_months(monthly, nums):
+    """**한국어 이름표로 읽힌 줄은 새 달을 잇는 데만 쓴다**(11/22 회원님: "10월 월매출이 안 채워진 게 너무 많다").
+    표 읽기의 한 갈래가 이름표를 「월매출 전년비」처럼 한국어로 적는데, 매출 낱말 거름이 일본어만 알아봐 이 줄이 통째로 빠졌다
+    (59개사 1,392개월 · 10월분 29개사). 그대로 다 살리면 엉터리가 같이 들어온다 — 9904 는 4~10월이 전부 120.1 로 찍혔다.
+    그래서 **화면 계열과 겹치는 달이 둘 이상이고 전부 0.15 안에서 같을 때만**, 그 계열의 마지막 달 **뒤의** 달(공시 목록의 대상 달까지)을
+    잇는다. 있는 값은 덮지 않는다."""
+    want = {r[2]: r[5] for r in monthly}
+    kr = {}
+    for fn in ("monthly_nums_jp.json", "monthly_nums_fresh_jp.json"):
+        try:
+            codes = json.loads((HERE / "data" / fn).read_text(encoding="utf-8")).get("codes") or {}
+        except (OSError, ValueError):
+            continue
+        for c, r in codes.items():
+            for p_, v in (r.get("months") or {}).items():
+                day = str(v.get("day") or "")
+                if (v.get("yoy") is None or not KR_METRIC.search(str(v.get("metric") or ""))
+                        or (re.match(r"\d{4}-\d\d", day) and p_ >= day[:7])):
+                    continue
+                old = kr.setdefault(c, {}).get(p_)
+                if not old or day >= old[1]:
+                    kr[c][p_] = (v["yoy"], day, v.get("doc", ""))
+    n_co = n_m = 0
+    for c, ks in kr.items():
+        rec, w = nums.get(c), want.get(c)
+        if not rec or not rec.get("m") or not w:
+            continue
+        have = {r[0]: r[2] for r in rec["m"] if r[2] is not None}
+        last = max(r[0] for r in rec["m"])
+        if last >= w:
+            continue
+        ov = [p_ for p_ in ks if p_ in have]
+        if len(ov) < 2 or any(abs(ks[p_][0] - have[p_]) > 0.15 for p_ in ov):
+            continue
+        add = sorted(p_ for p_ in ks if last < p_ <= w)
+        if not add:
+            continue
+        rec["m"] = rec["m"] + [[p_, None, ks[p_][0], 0] for p_ in add]
+        top = add[-1]
+        rec["latest"] = {"period": top, "yoy": ks[top][0], **({"base": rec["latest"]["base"]} if (rec.get("latest") or {}).get("base") else {})}
+        rec["doc"] = ks[top][2] or rec.get("doc", "")
+        rec["historySrc"] = (rec.get("historySrc") or rec.get("src") or "") + " + TDnet PDF(새 달)"
+        n_co += 1
+        n_m += len(add)
+    print(f"  월매출: 한국어 이름표 줄로 새 달을 이은 회사 {n_co} · {n_m}달")
+    return nums
+
 
 def apply_reviewed_monthly(monthly, nums):
     """Source-linked, same-metric backfill; collectors never overwrite this archive."""
@@ -5472,6 +5525,7 @@ def build():
     monthly_nums = load_monthly_nums(monthly)
     monthly, monthly_nums = apply_reviewed_monthly(monthly, monthly_nums)
     monthly, monthly_nums = apply_ledger_fill(monthly, monthly_nums)
+    monthly_nums = extend_kr_months(monthly, monthly_nums)
     # 리츠·은행 등(markets.excluded)은 월매출 화면 밖 — 투자법인의 월차는 임대·호텔 가동 지표다(11/04 8963·8985)
     nm_of = {r[2]: r[4] for r in monthly}
     for c in [c for c in monthly_nums if excluded("jp", nm_of.get(c, "") or (monthly_nums[c].get("name") or ""))]:

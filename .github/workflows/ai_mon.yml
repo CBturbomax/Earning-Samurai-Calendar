@@ -24,9 +24,10 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - {shard: 0, want: codex}
-          - {shard: 1, want: codex}
-          - {shard: 2, want: codex}
+          # 11/22: Codex 로그인 토큰이 죽어(refresh token already used) 11/04~ 판독이 멈췄다 — 362건 밀림. Claude 1·2번 계정으로 돌린다.
+          - {shard: 0, want: claude1}
+          - {shard: 1, want: claude2}
+          - {shard: 2, want: claude1}
     env:
       TOK1: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
       TOK2: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN_2 }}
