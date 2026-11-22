@@ -9562,9 +9562,9 @@ function bdDraw() {
     const mx = Math.max(1, ...sec.map(t => Math.abs(t.q3)));
     const top = sec.filter(t => t.st === 'lead').slice(0, 3).map(t => t.n), bot = sec.filter(t => t.st === 'fall').slice(-3).reverse().map(t => t.n);
     let h = '<div class="bdc"><div class="bdh">' + MK[g.m] + '</div>';
-    h += '<table class="bdr"><thead><tr><th class="l">업종</th><th colspan="2">RS 점수<br><small>3개월 동안 ' + esc(bench) + ' 보다 ±몇%</small></th>' +
-      '<th>최근 1개월<br><small>지수 대비</small></th><th>고점 대비<br><small>52주 최고가에서</small></th><th class="l">상태</th>' +
-      '<th class="l">이 업종 대표 기업 3곳<br><small>막대 = 업종 시총에서 차지하는 비중 · 오른쪽 = 3개월 주가</small></th><th>RS 선<br><small>1년</small></th></tr></thead><tbody>';
+    h += '<table class="bdr"><thead><tr><th class="l">업종</th><th colspan="2">RS 점수</th>' +
+      '<th>최근 1개월</th><th>고점 대비</th><th class="l">상태</th>' +
+      '<th class="l">이 업종 대표 기업 3곳</th><th>RS 선</th></tr></thead><tbody>';
     for (const t of sec) {
       const [sc, sl] = ST(t), w = Math.abs(t.q3) / mx * 50;
       const ld = (t.ld || []).map(x => '<div class="ld" data-bdk="' + esc(x[3]) + '" title="' + esc(x[0]) + '"><div class="l1"><span class="ln">' + esc(x[0]) + '</span><i class="' + cls(x[2]) + '">' + pct(x[2]) + '</i></div>' +
