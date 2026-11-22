@@ -2831,7 +2831,33 @@ def load_board(packed):
             by[(y, wn)] = c
         return [by[k] for k in sorted(by)][-105:]
 
-    def tile(name, sub, wk, daily=None, bench3=None, extra=None):
+    def rs_of(t, wk, bwk):
+        """업종 순위표(회원님 11/22: "주도 섹터·꼬라박는 섹터를 RS 로, 하락 초입인지 마무리인지").
+        RS 선 = 업종 ÷ 지수(주봉, 끝을 맞춰 겹치는 구간만). 강도 = 3개월 지수 대비, 방향 = 최근 1개월 지수 대비.
+        st: lead 주도 · fade 주도였는데 꺾임 · fall 하락 진행 · turn 바닥 다지기. wb: 30주선 위(+)/아래(-) 몇 주째."""
+        n = min(len(wk), len(bwk))
+        if n < 40:
+            return
+        a, b = wk[-n:], bwk[-n:]
+        rs = [x / y for x, y in zip(a, b) if y]
+        if len(rs) < 40:
+            return
+        g = lambda k: round((rs[-1] / rs[-1 - k] - 1) * 100, 1)
+        t["q1"], t["q3"], t["q6"] = g(4), g(13), g(26)
+        tail = rs[-52:]
+        t["rs"] = [round(v / tail[0] * 100, 1) for v in tail]
+        m, p = t["m"], t["p"]
+        above, wb = p[-1] > (m[-1] or 0), 0
+        for i in range(len(p) - 1, -1, -1):
+            if m[i] is None or (p[i] > m[i]) != above:
+                break
+            wb += 1
+        t["wb"] = wb if above else -wb
+        rs10 = sum(rs[-10:]) / 10                              # RS 선이 10주 평균보다 위면 '최근 상대 강해지는 중'
+        up = rs[-1] >= rs10 and t["q1"] >= 0
+        t["st"] = ("lead" if up else "fade") if t["q3"] >= 0 else ("turn" if up else "fall")
+
+    def tile(name, sub, wk, daily=None, bench3=None, extra=None, bwk=None):
         if len(wk) < 40:
             return None
         base = wk[0]
@@ -2844,6 +2870,8 @@ def load_board(packed):
             t["rel"] = round(t["r3"] - bench3, 1)
         if extra:
             t.update(extra)
+        if bwk:
+            rs_of(t, wk, bwk)
         return t
 
     out = []
@@ -2854,7 +2882,7 @@ def load_board(packed):
         tiles = []
         for sym, nm in lst:
             if sym in etf:
-                t = tile(nm, sym.replace(".T", "").replace(".HK", ""), weekly_of_daily(etf[sym]), etf[sym], b3)
+                t = tile(nm, sym.replace(".T", "").replace(".HK", ""), weekly_of_daily(etf[sym]), etf[sym], b3, bwk=bw)
                 if t:
                     t["idx"] = 1 if sym in [x[0] for x in lst[:4 if mkt == "us" else 3]] else 0
                     tiles.append(t)
@@ -2875,7 +2903,7 @@ def load_board(packed):
                     continue
                 tot = sum(c for c, _ in ser)
                 idx = [sum(c * cl[i] / cl[-1] for c, cl in ser) / tot for i in range(100)]
-                t = tile(g, "", idx, None, b3, {"c": len(ser), "f": [mkt, g]})
+                t = tile(g, "", idx, None, b3, {"c": len(ser), "f": [mkt, g]}, bwk=bw)
                 if t:
                     tiles.append(t)
         tiles.sort(key=lambda t: (-t.get("idx", 0), -(t.get("rel") if t.get("rel") is not None else -1e9)))
@@ -5977,18 +6005,26 @@ __FLAGCSS__
    같은 꼴이다 — 묶음 머리에 종목 수와 합계, 카드마다 코드·이름·업종·시총,
    그 아래 최신월 수치와 전년비, 막대 그림, 맨 아래 한 줄짜리 사업 설명.
    한 종목이 한 줄을 다 쓰던 큰 카드도, 이름만 빽빽하던 작은 카드도 아니다. */
-.board .bdg { margin:6px 0 18px; }
-.board .bdh { font-weight:800; font-size:15px; margin:4px 0 8px; }
-.board .bdt { display:grid; grid-template-columns:repeat(auto-fill, minmax(250px, 1fr)); gap:10px; }
-.board .bt { border:1px solid var(--line, #30363d); border-radius:10px; padding:9px 10px 7px; background:var(--panel, #161b22); }
-.board .bt.idx { border-color:#8b949e; }
-.board .bt.f { cursor:pointer; } .board .bt.f:hover { border-color:#f5b301; }
-.board .bt1 { display:flex; justify-content:space-between; font-size:13px; font-weight:700; }
-.board .bt1 small { font-weight:400; opacity:.6; margin-left:4px; }
-.board .bt svg { width:100%; height:70px; display:block; }
-.board .bt2 { display:flex; justify-content:space-between; align-items:center; font-size:11.5px; opacity:.9; margin-top:3px; }
-.board .bb { display:inline-block; padding:0 5px; border-radius:4px; margin-right:3px; font-size:11px; background:rgba(139,148,158,.18); }
-.board .bb.u { background:rgba(255,92,92,.18); color:#ff6b6b; } .board .bb.d { background:rgba(76,154,255,.18); color:#5ca8ff; }
+.board .bdl { font-size:12.5px; opacity:.85; margin:2px 0 10px; line-height:1.7; }
+.board .bdcols { display:grid; grid-template-columns:repeat(3, minmax(0, 1fr)); gap:14px; align-items:start; }
+.board .bdc { border:1px solid var(--line, #30363d); border-radius:10px; padding:10px 10px 6px; background:var(--panel, #161b22); }
+.board .bdh { font-weight:800; font-size:16px; margin:0 0 6px; } .board .bdh small { font-weight:400; opacity:.6; font-size:12px; }
+.board .bdi { display:flex; flex-wrap:wrap; gap:4px 12px; font-size:12px; margin-bottom:8px; } .board .bdi small { opacity:.6; }
+.board .bds { font-size:13px; line-height:1.7; padding:6px 8px; border-radius:8px; background:rgba(139,148,158,.1); margin-bottom:8px; }
+.board .bdr { width:100%; border-collapse:collapse; font-size:13px; font-variant-numeric:tabular-nums; }
+.board .bdr th { font-size:11px; font-weight:400; opacity:.6; padding:2px 3px; text-align:right; white-space:nowrap; }
+.board .bdr td { font-size:13px; padding:3px 3px; text-align:right; border-top:1px solid rgba(139,148,158,.15); white-space:nowrap; }
+.board .bdr .l { text-align:left; } .board .bdr td.l:first-child { font-weight:700; }
+.board .bdr tr.f { cursor:pointer; } .board .bdr tr.f:hover td { background:rgba(245,179,1,.08); }
+.board .bdr td.st { font-size:12px; font-weight:700; }
+.board .bdr svg { width:44px; height:22px; display:block; margin-left:auto; }
+.board .bar { position:relative; width:56px; height:16px; margin-left:auto; }
+.board .bar::before { content:""; position:absolute; left:50%; top:0; bottom:0; border-left:1px solid rgba(139,148,158,.5); }
+.board .bar i { position:absolute; top:3px; height:12px; border-radius:2px; opacity:.55; }
+.board .bar i.up { background:#ff5c5c; } .board .bar i.dn { background:#4c9aff; }
+.board .bdr td.n { font-weight:800; padding-left:2px; }
+.board .lead { color:#ff6b6b; } .board .fade { color:#f0b23e; } .board .fall { color:#5ca8ff; } .board .turn { color:#5fcf93; }
+.board tr.lead .st { color:#ff6b6b; } .board tr.fade .st { color:#f0b23e; } .board tr.fall .st { color:#5ca8ff; } .board tr.turn .st { color:#5fcf93; }
 .board .up { color:#ff5c5c; } .board .dn { color:#4c9aff; }
 .scrsecs { position:relative; }
 .scrsecs summary { cursor:pointer; padding:6px 12px; border:1px solid var(--line, #30363d); border-radius:8px; list-style:none; }
@@ -6672,7 +6708,7 @@ svg.bars rect.b:hover { fill:var(--a3); }
 <div class="tools">
 </div>
 
-<h2><span class="n">2</span>🧭 시장 현황판 <span class="meta" id="bdMeta">2년 주봉 · 주황선 30주선 · 강한 순</span></h2>
+<h2><span class="n">2</span>🧭 시장 현황판 <span class="meta" id="bdMeta">업종 상대강도(RS) 순위 · 위가 주도, 아래가 꼬라박 · 일본·홍콩 업종 줄을 누르면 스크리너로</span></h2>
 <div class="board" id="board"></div>
 
 <h2><span class="n">3</span>📈 실적 스크리너 <span class="meta" id="scrMeta"></span></h2>
@@ -9446,27 +9482,48 @@ const FIND = (() => {
 /* ── 시장 현황판(회원님 11/03) — D.board: 나라마다 지수·ETF + 업종 지수 타일. 업종 타일을 누르면 아래 스크리너가 그 업종으로 걸러진다. */
 let scrSecSet = new Set();
 function bdDraw() {
+  /* 업종 순위표(회원님 11/22: "주도 섹터가 뭔지, 꼬라박는 섹터가 뭔지 RS 로 — 하락 초입인지 마무리인지").
+     줄 = 업종, 위에서 아래로 3개월 지수 대비 강한 순. 상태 한 단어 + 고점 대비 + RS 선(52주). */
   const B = D.board || [], el = document.getElementById('board');
   if (!B.length) { el.innerHTML = '<p class="meta">주가를 아직 모으는 중입니다.</p>'; return; }
-  const MK = { us: '🇺🇸 미국 — 지수·섹터 ETF', jp: '🇯🇵 일본 — 지수 · 업종(구성 종목 시총 가중)', hk: '🇭🇰 홍콩 — 지수 · 업종(구성 종목 시총 가중)' };
-  const pf = v => v == null ? '—' : (v >= 0 ? '+' : '') + (Math.abs(v) >= 10 ? Math.round(v) : v.toFixed(1));
+  const MK = { us: '🇺🇸 미국', jp: '🇯🇵 일본', hk: '🇭🇰 홍콩' };
+  const pf = v => v == null ? '—' : (v > 0 ? '+' : '') + (Math.abs(v) >= 10 ? Math.round(v) : v.toFixed(1));
   const cls = v => v == null ? '' : v >= 0 ? 'up' : 'dn';
-  const svg = t => {
-    const W = 240, H = 70, all = t.p.concat(t.m.filter(x => x != null)), lo = Math.min(...all), hi = Math.max(...all);
-    const X = i => (i / (t.p.length - 1) * (W - 34)).toFixed(1), Y = v => (H - 4 - (v - lo) / ((hi - lo) || 1) * (H - 10)).toFixed(1);
-    const line = (a, c, w) => '<polyline fill="none" stroke="' + c + '" stroke-width="' + w + '" points="' +
-      a.map((v, i) => v == null ? '' : X(i) + ',' + Y(v)).filter(Boolean).join(' ') + '"/>';
-    const last = t.p[t.p.length - 1], tot = last - 100;
-    return '<svg viewBox="0 0 ' + W + ' ' + H + '" preserveAspectRatio="none">' + line(t.m, '#f0883e', 1.2) + line(t.p, 'currentColor', 1.4) +
-      '<text x="' + (W - 32) + '" y="' + (+Y(last) + 4) + '" font-size="10" font-weight="700" fill="currentColor">' + pf(tot) + '%</text></svg>';
+  const ST = t => {
+    const w = t.wb || 0;
+    if (t.st === 'lead') return ['lead', '🔥 주도'];
+    if (t.st === 'fade') return ['fade', '⚠️ 꺾이는 중'];
+    if (t.st === 'turn') return ['turn', w > 0 ? '🌱 반등 시작' : '🌱 바닥 다지는 중'];
+    return ['fall', w < 0 ? (-w <= 4 ? '🩸 하락 초입' : '🩸 하락 ' + (-w) + '주째') : '🩸 힘 빠지는 중'];
   };
-  const badge = (l, v) => '<span class="bb ' + (v === 1 ? 'u' : v === -1 ? 'd' : '') + '">' + l + (v === 1 ? '▲' : v === -1 ? '▼' : v === 0 ? '·' : '—') + '</span>';
-  el.innerHTML = B.map(g => '<div class="bdg"><div class="bdh">' + MK[g.m] + '</div><div class="bdt">' + g.t.map(t =>
-    '<div class="bt' + (t.idx ? ' idx' : '') + (t.f ? ' f' : '') + '"' + (t.f ? ' data-bdf="' + esc(t.f.join('|')) + '"' : '') + '>' +
-    '<div class="bt1"><span>' + esc(t.n) + '<small>' + esc(t.s || (t.c ? t.c + '종목' : '')) + '</small></span><span class="' + cls(t.r1) + '">1개월 ' + pf(t.r1) + '%</span></div>' +
-    svg(t) +
-    '<div class="bt2"><span>' + (t.b[0] != null ? badge('일', t.b[0]) : '') + badge('주', t.b[1]) + badge('월', t.b[2]) + '</span><span>' +
-    (t.idx ? '52주 고점 대비 -' + pf(t.d52).replace('+', '') + '%' : '3개월 상대 <b class="' + cls(t.rel) + '">' + pf(t.rel) + '%p</b>') + '</span></div></div>').join('') + '</div></div>').join('');
+  const spark = a => {
+    if (!a || a.length < 2) return '';
+    const W = 44, H = 22, lo = Math.min(...a), hi = Math.max(...a);
+    const pts = a.map((v, i) => (i / (a.length - 1) * W).toFixed(1) + ',' + (H - 2 - (v - lo) / ((hi - lo) || 1) * (H - 4)).toFixed(1)).join(' ');
+    const c = a[a.length - 1] >= a[0] ? '#ff5c5c' : '#4c9aff';
+    return '<svg viewBox="0 0 ' + W + ' ' + H + '" preserveAspectRatio="none"><polyline fill="none" stroke="' + c + '" stroke-width="1.5" points="' + pts + '"/></svg>';
+  };
+  const col = g => {
+    const idx = g.t.filter(t => t.idx), sec = g.t.filter(t => !t.idx && t.q3 != null).sort((a, b) => b.q3 - a.q3);
+    const bench = (D.board.find(x => x.m === g.m).t.find(t => t.idx && t.rel === 0) || idx[0] || {}).n || '지수';
+    const mx = Math.max(1, ...sec.map(t => Math.abs(t.q3)));
+    const top = sec.filter(t => t.st === 'lead').slice(0, 3).map(t => t.n), bot = sec.filter(t => t.st === 'fall').slice(-3).reverse().map(t => t.n);
+    let h = '<div class="bdc"><div class="bdh">' + MK[g.m] + ' <small>기준 ' + esc(bench) + '</small></div>';
+    h += '<div class="bdi">' + idx.map(t => '<span>' + esc(t.n) + ' <b class="' + cls(t.r3) + '">' + pf(t.r3) + '%</b> <small>고점 -' + Math.abs(t.d52).toFixed(0) + '%</small></span>').join('') + '</div>';
+    h += '<div class="bds"><div>🔥 주도 <b>' + (top.map(esc).join(' · ') || '없음') + '</b></div><div>🩸 꼬라박 <b>' + (bot.map(esc).join(' · ') || '없음') + '</b></div></div>';
+    h += '<table class="bdr"><thead><tr><th class="l">업종</th><th colspan="2">3개월 지수 대비</th><th>최근 1개월</th><th>고점 대비</th><th class="l">상태</th><th>RS</th></tr></thead><tbody>';
+    for (const t of sec) {
+      const [sc, sl] = ST(t), w = Math.abs(t.q3) / mx * 50;
+      h += '<tr class="' + sc + (t.f ? ' f" data-bdf="' + esc(t.f.join('|')) : '') + '"><td class="l">' + esc(t.n) + '</td>' +
+        '<td><div class="bar"><i class="' + cls(t.q3) + '" style="' + (t.q3 >= 0 ? 'left:50%' : 'right:50%') + ';width:' + w.toFixed(1) + '%"></i></div></td><td class="n ' + cls(t.q3) + '">' + pf(t.q3) + '</td>' +
+        '<td class="' + cls(t.q1) + '">' + pf(t.q1) + '</td><td>-' + Math.abs(t.d52).toFixed(0) + '%</td><td class="l st">' + sl + '</td><td>' + spark(t.rs) + '</td></tr>';
+    }
+    return h + '</tbody></table></div>';
+  };
+  el.innerHTML = '<div class="bdl">숫자 = 그 업종이 <b>지수보다 몇 %p 더 올랐나(+)/빠졌나(−)</b> · ' +
+    '<span class="lead">🔥 주도</span> 강하고 더 강해짐 · <span class="fade">⚠️ 꺾이는 중</span> 강했는데 최근 밀림 · ' +
+    '<span class="fall">🩸 하락</span> 약하고 더 약해짐(30주선 밑으로 간 지 몇 주째인지 · 4주 안 = 초입) · <span class="turn">🌱 바닥</span> 약하지만 최근 지수보다 나음 = 하락 마무리 신호' +
+    ' · RS 1년 선이 오른쪽 위로 꺾이면 바닥 탈출</div><div class="bdcols">' + B.map(col).join('') + '</div>';
 }
 document.getElementById('board').addEventListener('click', e => {
   const t = e.target.closest('[data-bdf]'); if (!t) return;
