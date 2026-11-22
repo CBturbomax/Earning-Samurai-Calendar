@@ -52,6 +52,7 @@ jobs:
     env:
       TOK1: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
       CODEX_AUTH_JSON: ${{ secrets.CODEX_AUTH_JSON }}
+      TOK2: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN_2 }}
       AI_MODEL: "${{ github.event.inputs.model || 'haiku' }}"   # 표 읽기 — 검산(합계·연간 합)이 틀린 답을 거른다
       CODEX_EFFORT: low
       FPI_TOKENS: "${{ github.event.inputs.tokens || '300000' }}"

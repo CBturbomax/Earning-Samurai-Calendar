@@ -92,7 +92,59 @@ def codex(prompt):
     return ans
 
 
+_TRIED = set()
+
+
+def _cur_engine():
+    if ENGINE == "codex":
+        return "codex"
+    tok = os.environ.get("CLAUDE_CODE_OAUTH_TOKEN", "")
+    return "claude2" if tok and tok == os.environ.get("TOK2") else "claude1"
+
+
+def _switch(why):
+    """**막히면 다음 엔진으로**(11/22 회원님: "Codex 만료되든 말든 안 되면 클로드 1·2번으로 옮겨야지").
+    Codex 로그인이 죽었거나 한 계정 한도가 차면 Claude 1번 → 2번 → Codex 차례로 넘어간다. 다 막히면 그때 멈춘다(추가 결제는 여전히 안 한다)."""
+    global ENGINE
+    _TRIED.add(_cur_engine())
+    toks = {"claude1": os.environ.get("TOK1") or "", "claude2": os.environ.get("TOK2") or ""}
+    if not any(toks.values()) and os.environ.get("CLAUDE_CODE_OAUTH_TOKEN"):
+        toks["claude1"] = os.environ["CLAUDE_CODE_OAUTH_TOKEN"]
+    has_codex = (Path.home() / ".codex" / "auth.json").exists() or bool(os.environ.get("CODEX_AUTH_JSON"))
+    for e in ("claude1", "claude2", "codex"):
+        if e in _TRIED or (e != "codex" and not toks[e]) or (e == "codex" and not has_codex):
+            continue
+        if e == "codex":
+            auth = Path.home() / ".codex" / "auth.json"
+            if not auth.exists():
+                auth.parent.mkdir(parents=True, exist_ok=True)
+                auth.write_text(os.environ["CODEX_AUTH_JSON"], encoding="utf-8")
+            cli, pkg = "codex", "@openai/codex"
+        else:
+            os.environ["CLAUDE_CODE_OAUTH_TOKEN"] = toks[e]
+            cli, pkg = "claude", "@anthropic-ai/claude-code"
+        if not shutil.which(cli):
+            subprocess.run(["npm", "install", "-g", pkg], capture_output=True, timeout=300)
+            if not shutil.which(cli):
+                _TRIED.add(e)
+                continue
+        ENGINE = "codex" if e == "codex" else "claude"
+        print(f"  ↪ 엔진 바꿈 → {e} (앞 엔진: {why[:140]})", flush=True)
+        return True
+    return False
+
+
 def claude(prompt):
+    """AI 한 번 묻기. 지금 엔진이 막히면(로그인 만료·한도) 다음 엔진으로 넘어가 다시 묻는다 — 다 막히면 Limited."""
+    while True:
+        try:
+            return _codex_or_claude(prompt)
+        except Limited as e:
+            if not _switch(str(e)):
+                raise
+
+
+def _codex_or_claude(prompt):
     """`claude -p` 한 번 -> 답 글자. 도구는 안 쓴다(글만 읽고 JSON 을 쓴다). AI_ENGINE=codex 면 codex 로."""
     if ENGINE == "codex":
         return codex(prompt)

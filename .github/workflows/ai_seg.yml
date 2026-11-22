@@ -28,6 +28,8 @@ jobs:
     timeout-minutes: 36
     env:
       CODEX_AUTH_JSON: ${{ secrets.CODEX_AUTH_JSON }}
+      TOK1: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
+      TOK2: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN_2 }}
       AI_ENGINE: codex
       CODEX_EFFORT: low
       SEC_UA: 'Earning Samurai Calendar (cbpark@wisdomasset.co.kr)'
