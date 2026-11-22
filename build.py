@@ -6060,9 +6060,16 @@ __FLAGCSS__
 .board .bdr tr:hover td { background:rgba(245,179,1,.06); }
 .board .bdr td.st { font-size:15px; font-weight:800; }
 .board .bdr td.n { font-weight:800; font-size:17px; padding-left:4px; }
-.board .bdr td.lds { white-space:normal; font-size:14px; }
-.board .ld { display:inline-block; margin:1px 14px 1px 0; cursor:pointer; } .board .ld:hover { color:#f5b301; }
-.board .ld small { opacity:.6; } .board .ld i { font-style:normal; font-weight:700; }
+.board .bdr td.lds { white-space:normal; padding-top:5px; padding-bottom:5px; }
+.board .ldg { display:grid; grid-template-columns:repeat(3, 175px); gap:0 14px; }
+.board .ld { cursor:pointer; min-width:0; } .board .ld:hover .ln { color:#f5b301; }
+.board .ld .l1 { display:flex; justify-content:space-between; gap:6px; font-size:14.5px; line-height:1.3; }
+.board .ld .ln { font-weight:700; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.board .ld i { font-style:normal; font-weight:800; flex:none; }
+.board .ld .l2 { display:flex; align-items:center; gap:6px; margin-top:3px; }
+.board .ld .lw { flex:1; height:6px; border-radius:3px; background:rgba(139,148,158,.22); overflow:hidden; }
+.board .ld .lw b { display:block; height:100%; background:#f5b301; opacity:.85; }
+.board .ld em { font-style:normal; font-size:12px; opacity:.75; flex:none; width:56px; text-align:right; }
 .board .bdr svg { width:90px; height:26px; display:block; margin-left:auto; }
 .board .bar { position:relative; width:140px; height:20px; margin-left:auto; }
 .board .bar::before { content:""; position:absolute; left:50%; top:0; bottom:0; border-left:1px solid rgba(139,148,158,.5); }
@@ -9557,16 +9564,17 @@ function bdDraw() {
     let h = '<div class="bdc"><div class="bdh">' + MK[g.m] + ' <small>비교 기준: ' + esc(bench) + '</small></div>';
     h += '<div class="bdi">' + idx.map(t => '<span>' + esc(t.n) + ' <small>3개월</small> <b class="' + cls(t.r3) + '">' + pct(t.r3) + '</b> <small>· 고점 대비</small> -' + Math.abs(t.d52).toFixed(0) + '%</span>').join('') + '</div>';
     h += '<div class="bds"><span>🔥 가장 강한 업종 <b>' + (top.map(esc).join(' · ') || '없음') + '</b></span><span>📉 가장 약한 업종 <b>' + (bot.map(esc).join(' · ') || '없음') + '</b></span></div>';
-    h += '<table class="bdr"><thead><tr><th class="l">업종</th><th colspan="2">RS 점수<br><small>3개월 동안 ' + esc(bench) + '보다 몇 % 더 오름(+)·빠짐(−)</small></th>' +
+    h += '<table class="bdr"><thead><tr><th class="l">업종</th><th colspan="2">RS 점수<br><small>3개월 동안 ' + esc(bench) + ' 보다 ±몇%</small></th>' +
       '<th>최근 1개월<br><small>지수 대비</small></th><th>고점 대비<br><small>52주 최고가에서</small></th><th class="l">상태</th>' +
-      '<th class="l">이 업종 대표 기업<br><small>업종 안 시총 비중 · 3개월 주가</small></th><th>RS 선<br><small>1년</small></th></tr></thead><tbody>';
+      '<th class="l">이 업종 대표 기업 3곳<br><small>막대 = 업종 시총에서 차지하는 비중 · 오른쪽 = 3개월 주가</small></th><th>RS 선<br><small>1년</small></th></tr></thead><tbody>';
     for (const t of sec) {
       const [sc, sl] = ST(t), w = Math.abs(t.q3) / mx * 50;
-      const ld = (t.ld || []).map(x => '<span class="ld" data-bdk="' + esc(x[3]) + '">' + esc(x[0]) + ' <small>' + x[1] + '%</small> <i class="' + cls(x[2]) + '">' + pct(x[2]) + '</i></span>').join('');
+      const ld = (t.ld || []).map(x => '<div class="ld" data-bdk="' + esc(x[3]) + '" title="' + esc(x[0]) + '"><div class="l1"><span class="ln">' + esc(x[0]) + '</span><i class="' + cls(x[2]) + '">' + pct(x[2]) + '</i></div>' +
+        '<div class="l2"><span class="lw"><b style="width:' + Math.min(100, x[1]) + '%"></b></span><em>비중 ' + x[1] + '%</em></div></div>').join('');
       h += '<tr class="' + sc + (t.f ? ' f" data-bdf="' + esc(t.f.join('|')) : '') + '"><td class="l nm">' + esc(t.n) + '</td>' +
         '<td><div class="bar"><i class="' + cls(t.q3) + '" style="' + (t.q3 >= 0 ? 'left:50%' : 'right:50%') + ';width:' + w.toFixed(1) + '%"></i></div></td><td class="n ' + cls(t.q3) + '">' + pct(t.q3) + '</td>' +
         '<td class="' + cls(t.q1) + '">' + pct(t.q1) + '</td><td>-' + Math.abs(t.d52).toFixed(0) + '%</td><td class="l st">' + sl + '</td>' +
-        '<td class="l lds">' + (ld || '<small>—</small>') + '</td><td>' + spark(t.rs) + '</td></tr>';
+        '<td class="l lds"><div class="ldg">' + (ld || '<small>—</small>') + '</div></td><td>' + spark(t.rs) + '</td></tr>';
     }
     return h + '</tbody></table></div>';
   };
