@@ -2824,6 +2824,44 @@ def load_board(packed):
         if p[5]:
             sec[k] = JP_SEC_SAME.get(p[5], p[5]) if p[9] == "jp" else p[5]
 
+    name = {}
+    for p in packed:
+        name.setdefault(p[9] + ":" + p[1], p[2])
+    # 미국 섹터 ETF 의 주요 구성 종목(GICS 기준, 손으로 적은 명단). 나스닥 업종 분류는 ETF 와 너무 달라서(유틸리티에 웨이스트매니지먼트,
+    # 필수소비재에 소니) 못 쓴다. 비중 = 이 명단 안의 시총 비중(ETF 공식 비중 아님 — 운용사 보유 파일은 이 환경에서 못 받음, 11/22).
+    US_SET = {k: v.split() for k, v in {
+        "XLK": "NVDA AAPL MSFT AVGO ORCL PLTR AMD CSCO IBM CRM MU INTU NOW QCOM TXN AMAT LRCX KLAC ADBE ANET ADI PANW APH",
+        "XLC": "GOOGL META NFLX TMUS DIS T VZ CMCSA EA TTWO CHTR WBD OMC LYV",
+        "XLY": "AMZN TSLA HD MCD BKNG TJX LOW SBUX NKE ORLY MAR CMG ABNB GM F HLT RCL AZO ROST DHI",
+        "XLP": "WMT COST PG KO PM PEP MO MDLZ CL MNST TGT KMB KDP KR GIS STZ HSY KHC SYY ADM",
+        "XLV": "LLY JNJ ABBV UNH MRK ABT TMO ISRG AMGN BSX GILD DHR PFE SYK VRTX MDT BMY CVS ELV CI MCK HCA REGN ZTS",
+        "IBB": "GILD AMGN VRTX REGN ALNY INSM BIIB MRNA NTRA ILMN BMRN INCY UTHR EXEL ARGX BNTX",
+        "XLF": "BRK-B JPM V MA BAC WFC GS MS AXP SCHW C SPGI BLK PGR CB MMC ICE CME COF PYPL",
+        "XLI": "GE CAT RTX UBER GEV BA HON UNP ETN DE LMT ADP PH TT WM GD MMM NOC UPS CTAS EMR CSX ITW FDX",
+        "ITA": "GE RTX BA LMT GD NOC HWM TDG AXON LHX TXT HEI CW",
+        "XLE": "XOM CVX COP WMB EOG KMI PSX MPC SLB OKE VLO OXY BKR FANG TRGP EQT",
+        "XLB": "LIN SHW ECL APD NEM FCX CTVA DD NUE VMC MLM DOW PPG IP SW BALL STLD",
+        "XLU": "NEE SO DUK CEG VST AEP SRE D EXC PEG XEL ETR PCG ED WEC NRG",
+        "SMH": "NVDA TSM AVGO AMD ASML QCOM TXN MU AMAT LRCX KLAC INTC ADI MRVL SNPS CDNS NXPI MCHP MPWR",
+        "IGV": "MSFT ORCL PLTR CRM INTU NOW ADBE PANW CRWD APP SNPS CDNS ADSK FTNT WDAY ROP MSTR TEAM DDOG",
+        "GDX": "NEM AEM B WPM FNV GFI KGC AU RGLD PAAS AGI",
+        "ARKK": "TSLA COIN ROKU HOOD PLTR SHOP RBLX CRSP TEM AMD",
+    }.items()}
+
+    def leaders(keys, n=3):
+        """업종을 끌고 가는 대표 기업 — 시총 큰 순 셋: [이름, 업종 안 시총 비중 %, 3개월 수익률 %, 키]."""
+        ks = [k for k in set(keys) if cap.get(k)]
+        tot = sum(cap[k] for k in ks)
+        out = []
+        for k in sorted(ks, key=lambda k: -cap[k])[:n]:
+            cl = (w.get(k) or [None, []])[1]
+            r3 = round((cl[-1] / cl[-14] - 1) * 100, 1) if len(cl) > 14 and cl[-14] else None
+            out.append([name.get(k, k.split(":")[1]), round(cap[k] / tot * 100), r3, k])
+        return out
+
+    def us_keys(sym):
+        return ["us:" + t for t in US_SET.get(sym, [])]
+
     def weekly_of_daily(pts):
         by = {}
         for d, c in pts:
@@ -2885,6 +2923,8 @@ def load_board(packed):
                 t = tile(nm, sym.replace(".T", "").replace(".HK", ""), weekly_of_daily(etf[sym]), etf[sym], b3, bwk=bw)
                 if t:
                     t["idx"] = 1 if sym in [x[0] for x in lst[:4 if mkt == "us" else 3]] else 0
+                    if mkt == "us" and sym in US_SET:
+                        t["ld"] = leaders(us_keys(sym))
                     tiles.append(t)
         if mkt != "us":                                       # 미국 업종은 섹터 ETF 가 더 잘게 갈라 준다
             groups = {}
@@ -2903,7 +2943,7 @@ def load_board(packed):
                     continue
                 tot = sum(c for c, _ in ser)
                 idx = [sum(c * cl[i] / cl[-1] for c, cl in ser) / tot for i in range(100)]
-                t = tile(g, "", idx, None, b3, {"c": len(ser), "f": [mkt, g]}, bwk=bw)
+                t = tile(g, "", idx, None, b3, {"c": len(ser), "f": [mkt, g], "ld": leaders(ks)}, bwk=bw)
                 if t:
                     tiles.append(t)
         tiles.sort(key=lambda t: (-t.get("idx", 0), -(t.get("rel") if t.get("rel") is not None else -1e9)))
@@ -6005,25 +6045,30 @@ __FLAGCSS__
    같은 꼴이다 — 묶음 머리에 종목 수와 합계, 카드마다 코드·이름·업종·시총,
    그 아래 최신월 수치와 전년비, 막대 그림, 맨 아래 한 줄짜리 사업 설명.
    한 종목이 한 줄을 다 쓰던 큰 카드도, 이름만 빽빽하던 작은 카드도 아니다. */
-.board .bdl { font-size:12.5px; opacity:.85; margin:2px 0 10px; line-height:1.7; }
-.board .bdcols { display:grid; grid-template-columns:repeat(3, minmax(0, 1fr)); gap:14px; align-items:start; }
-.board .bdc { border:1px solid var(--line, #30363d); border-radius:10px; padding:10px 10px 6px; background:var(--panel, #161b22); }
-.board .bdh { font-weight:800; font-size:16px; margin:0 0 6px; } .board .bdh small { font-weight:400; opacity:.6; font-size:12px; }
-.board .bdi { display:flex; flex-wrap:wrap; gap:4px 12px; font-size:12px; margin-bottom:8px; } .board .bdi small { opacity:.6; }
-.board .bds { font-size:13px; line-height:1.7; padding:6px 8px; border-radius:8px; background:rgba(139,148,158,.1); margin-bottom:8px; }
-.board .bdr { width:100%; border-collapse:collapse; font-size:13px; font-variant-numeric:tabular-nums; }
-.board .bdr th { font-size:11px; font-weight:400; opacity:.6; padding:2px 3px; text-align:right; white-space:nowrap; }
-.board .bdr td { font-size:13px; padding:3px 3px; text-align:right; border-top:1px solid rgba(139,148,158,.15); white-space:nowrap; }
-.board .bdr .l { text-align:left; } .board .bdr td.l:first-child { font-weight:700; }
-.board .bdr tr.f { cursor:pointer; } .board .bdr tr.f:hover td { background:rgba(245,179,1,.08); }
-.board .bdr td.st { font-size:12px; font-weight:700; }
-.board .bdr svg { width:44px; height:22px; display:block; margin-left:auto; }
-.board .bar { position:relative; width:56px; height:16px; margin-left:auto; }
+.board .bdl { font-size:15px; opacity:.9; margin:4px 0 14px; line-height:1.8; padding:10px 14px; border-radius:10px; background:rgba(139,148,158,.1); }
+.board .bdcols { display:grid; grid-template-columns:1fr; gap:22px; }
+.board .bdc { border:1px solid var(--line, #30363d); border-radius:12px; padding:14px 16px 10px; background:var(--panel, #161b22); }
+.board .bdh { font-weight:800; font-size:22px; margin:0 0 8px; } .board .bdh small { font-weight:400; opacity:.65; font-size:14px; }
+.board .bdi { display:flex; flex-wrap:wrap; gap:6px 22px; font-size:15px; margin-bottom:10px; } .board .bdi small { opacity:.6; }
+.board .bds { display:flex; flex-wrap:wrap; gap:6px 36px; font-size:17px; padding:10px 14px; border-radius:10px; background:rgba(139,148,158,.1); margin-bottom:10px; }
+.board .bdr { width:100%; border-collapse:collapse; font-variant-numeric:tabular-nums; }
+.board .bdr th { font-size:13px; font-weight:600; opacity:.75; padding:4px 8px; text-align:right; white-space:nowrap; vertical-align:bottom; line-height:1.3; }
+.board .bdr th small { font-weight:400; opacity:.8; font-size:11.5px; }
+.board .bdr td { font-size:16px; padding:7px 8px; text-align:right; border-top:1px solid rgba(139,148,158,.15); white-space:nowrap; }
+.board .bdr .l { text-align:left; } .board .bdr td.nm { font-weight:800; font-size:17px; }
+.board .bdr tr.f td.nm { cursor:pointer; text-decoration:underline dotted rgba(139,148,158,.6); }
+.board .bdr tr:hover td { background:rgba(245,179,1,.06); }
+.board .bdr td.st { font-size:15px; font-weight:800; }
+.board .bdr td.n { font-weight:800; font-size:17px; padding-left:4px; }
+.board .bdr td.lds { white-space:normal; font-size:14px; }
+.board .ld { display:inline-block; margin:1px 14px 1px 0; cursor:pointer; } .board .ld:hover { color:#f5b301; }
+.board .ld small { opacity:.6; } .board .ld i { font-style:normal; font-weight:700; }
+.board .bdr svg { width:90px; height:26px; display:block; margin-left:auto; }
+.board .bar { position:relative; width:140px; height:20px; margin-left:auto; }
 .board .bar::before { content:""; position:absolute; left:50%; top:0; bottom:0; border-left:1px solid rgba(139,148,158,.5); }
-.board .bar i { position:absolute; top:3px; height:12px; border-radius:2px; opacity:.55; }
+.board .bar i { position:absolute; top:3px; height:14px; border-radius:2px; opacity:.6; }
 .board .bar i.up { background:#ff5c5c; } .board .bar i.dn { background:#4c9aff; }
-.board .bdr td.n { font-weight:800; padding-left:2px; }
-.board .lead { color:#ff6b6b; } .board .fade { color:#f0b23e; } .board .fall { color:#5ca8ff; } .board .turn { color:#5fcf93; }
+.board .bdl .lead { color:#ff6b6b; } .board .bdl .fade { color:#f0b23e; } .board .bdl .fall { color:#5ca8ff; } .board .bdl .turn { color:#5fcf93; }
 .board tr.lead .st { color:#ff6b6b; } .board tr.fade .st { color:#f0b23e; } .board tr.fall .st { color:#5ca8ff; } .board tr.turn .st { color:#5fcf93; }
 .board .up { color:#ff5c5c; } .board .dn { color:#4c9aff; }
 .scrsecs { position:relative; }
@@ -6708,7 +6753,7 @@ svg.bars rect.b:hover { fill:var(--a3); }
 <div class="tools">
 </div>
 
-<h2><span class="n">2</span>🧭 시장 현황판 <span class="meta" id="bdMeta">업종 상대강도(RS) 순위 · 위가 주도, 아래가 꼬라박 · 일본·홍콩 업종 줄을 누르면 스크리너로</span></h2>
+<h2><span class="n">2</span>🧭 시장 현황판 <span class="meta" id="bdMeta">업종 상대강도(RS) 순위 · 위가 가장 강한 업종, 아래가 가장 약한 업종 · 일본·홍콩 업종 이름을 누르면 스크리너로</span></h2>
 <div class="board" id="board"></div>
 
 <h2><span class="n">3</span>📈 실적 스크리너 <span class="meta" id="scrMeta"></span></h2>
@@ -9498,34 +9543,42 @@ function bdDraw() {
   };
   const spark = a => {
     if (!a || a.length < 2) return '';
-    const W = 44, H = 22, lo = Math.min(...a), hi = Math.max(...a);
+    const W = 90, H = 26, lo = Math.min(...a), hi = Math.max(...a);
     const pts = a.map((v, i) => (i / (a.length - 1) * W).toFixed(1) + ',' + (H - 2 - (v - lo) / ((hi - lo) || 1) * (H - 4)).toFixed(1)).join(' ');
     const c = a[a.length - 1] >= a[0] ? '#ff5c5c' : '#4c9aff';
     return '<svg viewBox="0 0 ' + W + ' ' + H + '" preserveAspectRatio="none"><polyline fill="none" stroke="' + c + '" stroke-width="1.5" points="' + pts + '"/></svg>';
   };
+  const pct = v => v == null ? '—' : pf(v) + '%';
   const col = g => {
     const idx = g.t.filter(t => t.idx), sec = g.t.filter(t => !t.idx && t.q3 != null).sort((a, b) => b.q3 - a.q3);
-    const bench = (D.board.find(x => x.m === g.m).t.find(t => t.idx && t.rel === 0) || idx[0] || {}).n || '지수';
+    const bench = (idx.find(t => t.rel === 0) || idx[0] || {}).n || '지수';
     const mx = Math.max(1, ...sec.map(t => Math.abs(t.q3)));
     const top = sec.filter(t => t.st === 'lead').slice(0, 3).map(t => t.n), bot = sec.filter(t => t.st === 'fall').slice(-3).reverse().map(t => t.n);
-    let h = '<div class="bdc"><div class="bdh">' + MK[g.m] + ' <small>기준 ' + esc(bench) + '</small></div>';
-    h += '<div class="bdi">' + idx.map(t => '<span>' + esc(t.n) + ' <b class="' + cls(t.r3) + '">' + pf(t.r3) + '%</b> <small>고점 -' + Math.abs(t.d52).toFixed(0) + '%</small></span>').join('') + '</div>';
-    h += '<div class="bds"><div>🔥 주도 <b>' + (top.map(esc).join(' · ') || '없음') + '</b></div><div>🩸 꼬라박 <b>' + (bot.map(esc).join(' · ') || '없음') + '</b></div></div>';
-    h += '<table class="bdr"><thead><tr><th class="l">업종</th><th colspan="2">3개월 지수 대비</th><th>최근 1개월</th><th>고점 대비</th><th class="l">상태</th><th>RS</th></tr></thead><tbody>';
+    let h = '<div class="bdc"><div class="bdh">' + MK[g.m] + ' <small>비교 기준: ' + esc(bench) + '</small></div>';
+    h += '<div class="bdi">' + idx.map(t => '<span>' + esc(t.n) + ' <small>3개월</small> <b class="' + cls(t.r3) + '">' + pct(t.r3) + '</b> <small>· 고점 대비</small> -' + Math.abs(t.d52).toFixed(0) + '%</span>').join('') + '</div>';
+    h += '<div class="bds"><span>🔥 가장 강한 업종 <b>' + (top.map(esc).join(' · ') || '없음') + '</b></span><span>📉 가장 약한 업종 <b>' + (bot.map(esc).join(' · ') || '없음') + '</b></span></div>';
+    h += '<table class="bdr"><thead><tr><th class="l">업종</th><th colspan="2">RS 점수<br><small>3개월 동안 ' + esc(bench) + '보다 몇 % 더 오름(+)·빠짐(−)</small></th>' +
+      '<th>최근 1개월<br><small>지수 대비</small></th><th>고점 대비<br><small>52주 최고가에서</small></th><th class="l">상태</th>' +
+      '<th class="l">이 업종 대표 기업<br><small>업종 안 시총 비중 · 3개월 주가</small></th><th>RS 선<br><small>1년</small></th></tr></thead><tbody>';
     for (const t of sec) {
       const [sc, sl] = ST(t), w = Math.abs(t.q3) / mx * 50;
-      h += '<tr class="' + sc + (t.f ? ' f" data-bdf="' + esc(t.f.join('|')) : '') + '"><td class="l">' + esc(t.n) + '</td>' +
-        '<td><div class="bar"><i class="' + cls(t.q3) + '" style="' + (t.q3 >= 0 ? 'left:50%' : 'right:50%') + ';width:' + w.toFixed(1) + '%"></i></div></td><td class="n ' + cls(t.q3) + '">' + pf(t.q3) + '</td>' +
-        '<td class="' + cls(t.q1) + '">' + pf(t.q1) + '</td><td>-' + Math.abs(t.d52).toFixed(0) + '%</td><td class="l st">' + sl + '</td><td>' + spark(t.rs) + '</td></tr>';
+      const ld = (t.ld || []).map(x => '<span class="ld" data-bdk="' + esc(x[3]) + '">' + esc(x[0]) + ' <small>' + x[1] + '%</small> <i class="' + cls(x[2]) + '">' + pct(x[2]) + '</i></span>').join('');
+      h += '<tr class="' + sc + (t.f ? ' f" data-bdf="' + esc(t.f.join('|')) : '') + '"><td class="l nm">' + esc(t.n) + '</td>' +
+        '<td><div class="bar"><i class="' + cls(t.q3) + '" style="' + (t.q3 >= 0 ? 'left:50%' : 'right:50%') + ';width:' + w.toFixed(1) + '%"></i></div></td><td class="n ' + cls(t.q3) + '">' + pct(t.q3) + '</td>' +
+        '<td class="' + cls(t.q1) + '">' + pct(t.q1) + '</td><td>-' + Math.abs(t.d52).toFixed(0) + '%</td><td class="l st">' + sl + '</td>' +
+        '<td class="l lds">' + (ld || '<small>—</small>') + '</td><td>' + spark(t.rs) + '</td></tr>';
     }
     return h + '</tbody></table></div>';
   };
-  el.innerHTML = '<div class="bdl">숫자 = 그 업종이 <b>지수보다 몇 %p 더 올랐나(+)/빠졌나(−)</b> · ' +
-    '<span class="lead">🔥 주도</span> 강하고 더 강해짐 · <span class="fade">⚠️ 꺾이는 중</span> 강했는데 최근 밀림 · ' +
-    '<span class="fall">🩸 하락</span> 약하고 더 약해짐(30주선 밑으로 간 지 몇 주째인지 · 4주 안 = 초입) · <span class="turn">🌱 바닥</span> 약하지만 최근 지수보다 나음 = 하락 마무리 신호' +
-    ' · RS 1년 선이 오른쪽 위로 꺾이면 바닥 탈출</div><div class="bdcols">' + B.map(col).join('') + '</div>';
+  el.innerHTML = '<div class="bdl"><b>RS 점수</b> = 최근 3개월 동안 그 업종이 지수보다 <b>몇 % 더 올랐나(+) / 더 빠졌나(−)</b>. 예) +17% → 지수보다 17% 더 강했다.<br>' +
+    '<span class="lead">🔥 주도</span> 강하고 더 강해지는 중 · <span class="fade">⚠️ 꺾이는 중</span> 강했는데 최근 밀림 · ' +
+    '<span class="fall">🩸 하락</span> 약하고 더 약해지는 중 (몇 주째 = 30주 이동평균선 밑으로 간 지 몇 주, 4주 안이면 초입) · ' +
+    '<span class="turn">🌱 바닥</span> 아직 약하지만 최근엔 지수보다 나음 → 하락 마무리 신호<br>RS 선(지수 대비 비율선)이 오른쪽 위로 꺾이면 바닥을 빠져나오는 중. 대표 기업 이름을 누르면 그 회사 창이 열립니다.</div>' +
+    '<div class="bdcols">' + B.map(col).join('') + '</div>';
 }
 document.getElementById('board').addEventListener('click', e => {
+  const k = e.target.closest('[data-bdk]');
+  if (k) { const x = FIND.find(f => f.k === k.dataset.bdk); if (x) openModal(x.k, x.r[0]); return; }
   const t = e.target.closest('[data-bdf]'); if (!t) return;
   const [m, g] = t.dataset.bdf.split('|');
   scrSecSet = new Set([g]); scrPre = ''; document.getElementById('scrMkt').value = m; scrDraw();
