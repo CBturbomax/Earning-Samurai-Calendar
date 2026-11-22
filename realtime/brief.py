@@ -12,6 +12,7 @@
 """
 import html
 import json
+import tempfile          # _ask 가 모듈 머리에서 쓴다 — 빠져서 11/22 까지 Claude 호출이 전부 NameError 로 죽었다(월차 AI 판독·요약)
 import os
 import re
 import shutil
