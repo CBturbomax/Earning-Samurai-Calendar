@@ -4568,17 +4568,46 @@ def _ir_pick(rec):
         return prows, pbase, pdf
     return [], "", {}
 
-def _tdnet_series(rec):
+STRICT_METRIC = re.compile(r"売上|営業収益|営業収入|取扱高|販売高|月商|前年|昨対")
+POPPLER_SINCE = "2026-10-13"    # scrape_mon_jp 가 poppler 로 바꾸며(11/22) 다시 읽은 최근 40일 공시의 시작
+WIDE_METRIC = re.compile(r"全社|全店|既存店|月次|百万円|千円")
+
+
+def _tdnet_series(rec, wide=False):
+    """월매출 PDF 에서 읽은 줄 -> 화면 계열. 매출성 지표만(ADR·가동률·점포수 같은 것은 이 화면 숫자가 아니다).
+    wide=True 면 「全社合計」「全店」「(百万円)」「月次」 이름표도 받는다 — **원래 계열이 아예 없는 회사에만** 쓴다(11/22: 이것을 몰라
+    히라마쓰·요시쿠스·시키가쿠·엔진 등이 10월분을 읽어 놓고도 화면에 없었다). 원래 계열이 있는 회사에 섞으면 全店 과 既存店 이 한 선에
+    섞여 손으로 대조해 둔 표와 어긋난다(진스 3046). **한국어 이름표 줄**(「월매출 전년비」 — 옛 해석기가 제목만 보고 읽는 마지막 길)은
+    여기 넣지 않는다 — 고메효 2780 의 35~40%·베리테 9904 의 석 달 내리 120.1 이 거기서 나왔다. 그 줄은 `extend_kr_months` 가
+    겹치는 달이 맞을 때 새 달을 잇는 데만 쓴다."""
     months = rec.get("months") or {}
+    strict_labels = [str(v.get("metric") or "") for v in months.values() if STRICT_METRIC.search(str(v.get("metric") or ""))]
+    kizon = sum("既存" in m for m in strict_labels) > len(strict_labels) / 2      # 원래 계열이 기존점 기준인가
     rows = []
     for k, v in sorted(months.items()):
         metric = str(v.get("metric") or "")
-        # 매출성 지표만. ADR/가동률/점포수 같은 것은 이 화면 숫자가 아니다.
-        if metric and not re.search(r"売上|営業収益|営業収入|取扱高|販売高|月商|前年|昨対",
-                                    metric):
+        # poppler 로 다시 읽은 최근 공시(POPPLER_SINCE 이후)의 줄은 넓은 이름표도 받는다 — 같은 길이 대조값과 2/2·3/3 맞았다
+        # (리베로 9245 「(単位：百万円)」 10월 111.4%). 다만 기존점 계열에 全店 줄을 잇지는 않는다(진스 3046).
+        # 이름표에 해가 박힌 줄(「全店Sep.2023-」 = 2년 전 대비)은 전년비가 아니다(진스 3046 120% — 대조값 105%).
+        fresh = (str(v.get("day") or "") >= POPPLER_SINCE and WIDE_METRIC.search(metric) and not (kizon and "全店" in metric)
+                 and not re.search(r"(19|20)\d\d", metric))
+        if metric and not (STRICT_METRIC.search(metric) or (wide and WIDE_METRIC.search(metric)) or fresh):
             continue
+        if v.get("yoy") is not None and v["yoy"] <= 0:          # 전년비 0 은 빈 칸을 읽은 것이다(아즈원 7476)
+            v = {**v, "yoy": None}
         rows.append([k, v.get("rev"), v.get("yoy"), 0,
                      v.get("doc", ""), v.get("day", ""), metric])
+    # **같은 전년비가 석 달 넘게 똑같이 이어지면 표의 한 칸을 되풀이해 읽은 것이다**(11/22 베리테 9904: 8·9·10월이 모두 120.1).
+    run = 1
+    for i in range(1, len(rows) + 1):
+        if i < len(rows) and rows[i][2] is not None and rows[i][2] == rows[i - 1][2]:
+            run += 1
+            continue
+        if run >= 3:
+            for j in range(i - run, i):
+                rows[j][2] = None
+        run = 1
+    rows = [r for r in rows if r[1] is not None or r[2] is not None]
     # **공시한 달과 그 뒤의 달은 버린다** — 아직 끝나지 않은 달이다. 표 끝의 딴 칸(누계·전년 같은 달)이 달로 읽힌 것(11/22 세리아·다이이치:
     # 11월 초 공시에서 '2026-11' 이 나왔다). 공시를 통째로 버리지는 않는다 — 나머지 달은 손으로 대조한 값과 9/9 맞았다.
     return [r for r in rows if not (re.match(r"\d{4}-\d\d", str(r[5])) and r[0] >= str(r[5])[:7])]
@@ -4654,10 +4683,13 @@ def load_monthly_nums(monthly):
 
     # 3분 루프가 막 읽은 공시(monthly_nums_fresh_jp.json) — 본 파일보다 새 공시면 그 달을 이긴다
     try:
-        fr = {}
+        fr, fresh_pp = {}, {}
+        main_pp = got.get("pp")
         for fn in ("monthly_nums_fresh_jp.json", "monthly_rt_jp.json"):     # 3분 루프 PDF · 실시간 서버(공시 즉시, AI 포함)
             try:
-                for c, r in (json.loads((HERE / "data" / fn).read_text(encoding="utf-8")).get("codes") or {}).items():
+                _j = json.loads((HERE / "data" / fn).read_text(encoding="utf-8"))
+                for c, r in (_j.get("codes") or {}).items():
+                    fresh_pp[c] = fresh_pp.get(c) or (_j.get("pp") == main_pp and fn == "monthly_nums_fresh_jp.json")
                     cur0 = fr.setdefault(c, {k: v for k, v in r.items() if k != "months"})
                     cur0.setdefault("months", {}).update({p_: v for p_, v in (r.get("months") or {}).items()
                                                           if p_ not in cur0.get("months", {}) or v.get("day", "") >= cur0["months"][p_].get("day", "")})
@@ -4668,7 +4700,16 @@ def load_monthly_nums(monthly):
             cur = gc.setdefault(c, {k: v for k, v in r.items() if k != "months"})
             cm = cur.setdefault("months", {})
             for p_, v in (r.get("months") or {}).items():
-                if p_ not in cm or v.get("day", "") >= cm[p_].get("day", ""):
+                # 날짜가 같으면 **매출 이름표가 확실한 쪽**이 이긴다(11/22). 3분 루프의 한국어 이름표 줄이 본 파일의 poppler 값을 덮거나
+                # (INGS 245A 114.8 → 123.5), 거꾸로 본 파일의 약한 줄이 3분 루프의 멀쩡한 값을 덮는 일(274A·3046·3415…)을 둘 다 막는다.
+                sure = lambda x: bool(STRICT_METRIC.search(str((x or {}).get("metric") or "")))
+                old_v = cm.get(p_)
+                # 본 파일만 poppler 로 다시 읽었으면(pp) 같은 날 공시에서는 본 파일의 줄이 이긴다 — 한국어 이름표 줄(옛 해석기가 제목만 보고
+                # 읽은 것)이 아닐 때만. 리베로 9245: 3분 루프의 옛 값 431% 가 본 파일 poppler 값 111.4% 를 덮었다.
+                main_pop = (main_pp and not fresh_pp.get(c) and old_v is not None and old_v.get("day", "") == v.get("day", "")
+                            and old_v.get("day", "") >= POPPLER_SINCE and not KR_METRIC.search(str(old_v.get("metric") or "")))
+                if not main_pop and (old_v is None or v.get("day", "") > old_v.get("day", "")
+                        or (v.get("day", "") == old_v.get("day", "") and (sure(v) or not sure(old_v)))):
                     cm[p_] = v
             for k in ("amount_label", "yoy_label"):
                 if r.get(k) and not cur.get(k):
@@ -4713,7 +4754,7 @@ def load_monthly_nums(monthly):
 
         rec = (got.get("codes") or {}).get(code)
         if rec:
-            rows = _tdnet_series(rec)
+            rows = _tdnet_series(rec) or _tdnet_series(rec, wide=True)
             if rows:
                 base = _base_of(rec.get("amount_label", "") +
                                 rec.get("yoy_label", ""))
