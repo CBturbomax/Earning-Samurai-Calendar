@@ -147,13 +147,18 @@ def main():
             break
         part, texts = [], {}
         for url, code, day, name, title in todo[i:i + BATCH]:
-            data = M.get(url) or M.get(re.sub(r"https://www\.release\.tdnet\.info/inbs/",
-                                               f"https://www2.jpx.co.jp/disc/{code}0/", url))
             asked[url] = date.today().isoformat()
+            try:                                             # 받기 실패 하나가 실행 전체를 죽이고 읽은 것까지 날렸다(11/22) — 그 공시만 건너뛴다
+                data = M.get(url) or M.get(re.sub(r"https://www\.release\.tdnet\.info/inbs/",
+                                                   f"https://www2.jpx.co.jp/disc/{code}0/", url))
+            except Exception as e:                           # noqa: BLE001
+                print(f"  ! 받기 실패 {code}: {e!r}"[:160])
+                asked.pop(url, None)                          # 다음 실행에서 다시
+                continue
             if not data:
                 continue
             try:
-                tx = "\n".join(pdftext.extract_lines(data, 4) or pdftext.layout_lines(data, 4))[:CHARS]   # 암호 PDF 는 pdftotext
+                tx = "\n".join(pdftext.extract_lines(data, 4) or pdftext.layout_lines(data, 4))[:CHARS].replace("\x00", "")   # 암호 PDF 는 pdftotext · 빈 문자(NUL)는 claude -p 인자로 못 넘긴다
             except Exception:                                # noqa: BLE001
                 continue
             if len(tx) < 60:
