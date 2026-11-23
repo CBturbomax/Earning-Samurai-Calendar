@@ -361,6 +361,8 @@ def main():
     industries = dict(known_ind)
     industries.update(US_INDUSTRIES)
     industries.update(HK_INDUSTRIES)
+    from markets import IND_FIX
+    industries.update(IND_FIX)
 
     payload = {
         "source": "Yahoo Finance (시총·홍콩 업종) + Nasdaq screener (미국 업종)",
