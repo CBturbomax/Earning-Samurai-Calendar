@@ -74,7 +74,7 @@ PDF_PER_RUN = int(os.environ.get("IR_PDF_PER_RUN", "60"))
 # **표가 새것이어도 PDF 는 아직 안 본 것일 수 있다.** 달이 이미 쌓인 회사를
 # 신선하다고 건너뛰면 그 회사의 PDF 를 영영 안 연다 — 실제로 첫 실행에서
 # 그랬다. 옛 PDF 는 안 바뀌므로 하루에 한 번이면 넉넉하다.
-PDF_FRESH_HOURS = float(os.environ.get("IR_PDF_FRESH_HOURS", "24"))
+PDF_FRESH_HOURS = float(os.environ.get("IR_PDF_FRESH_HOURS", "2"))   # 24 -> 2(11/23): 회계연도 PDF 는 같은 주소에 새 달이 붙는다 — 하루 늦던 것
 ARCHIVE_PER_COMPANY = int(os.environ.get("IR_ARCHIVE_PER_COMPANY", "4"))
 # 공식 홈페이지를 모르는 seed 종목은 Yahoo assetProfile 에서 조금씩만 채운다.
 # 월차 잡이 10분마다 도니 한 바퀴에 12개면 하루 안에 300여 종목을 한 번 돈다.
