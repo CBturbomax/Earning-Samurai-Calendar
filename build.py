@@ -5057,6 +5057,65 @@ def apply_reviewed_monthly(monthly, nums):
                       'latest': {'period': latest[0], 'yoy': latest[2], 'base': base}}
     return list(rows.values()), nums
 
+def apply_series_match(monthly, nums):
+    """**표의 전년비 줄 중 화면 이력과 같은 줄을 찾아 빈 달을 잇는다**(11/23 회원님: 월매출 큰 회사 빈칸 "근본적으로 고쳐").
+
+    화면은 회사마다 정해 둔 계열(대조표 `monthly_reviewed_jp` 의 전점·기존점, 이온은 イオンリテール 全店)을 잇는데, 표 읽기는 표의
+    **첫 전년비 줄** 하나만 냈다. 그 줄이 다른 계열이면(패스트리 既存店 ↔ 화면 直営店, 이온은 자회사 표) 새 달이 통째로 버려져
+    큰 회사 137곳의 10월이 비었다. 지금 수집기(TDnet 첨부·회사 IR PDF)는 표의 전년비 줄을 **전부** `series` 로 남긴다. 여기서
+    **이미 가진 이력과 석 달 넘게 겹치고 겹친 달이 전부 0.15 안에서 맞는 줄**만 골라 **빈 달만** 채운다 — 원장 메우기와 같은 잣대다.
+    우연히 석 달이 0.15 안에서 맞을 일은 없으므로 엉뚱한 줄이 붙지 않는다. 있는 값은 덮지 않는다."""
+    cur = (datetime.utcnow() + timedelta(hours=9)).strftime('%Y-%m')
+    cands = {}
+    for fn in ('monthly_nums_jp.json', 'monthly_nums_fresh_jp.json', 'monthly_ir_jp.json'):
+        try:
+            codes = json.loads((HERE / 'data' / fn).read_text(encoding='utf-8')).get('codes') or {}
+        except (OSError, ValueError):
+            continue
+        for code, rec in codes.items():
+            for lab, mm in (rec.get('series') or {}).items():
+                d = cands.setdefault(code, {}).setdefault(lab, {})
+                for p, v in mm.items():
+                    if isinstance(v, list) and isinstance(v[0], (int, float)) and (p not in d or (v[2] or '') >= (d[p][2] or '')):
+                        d[p] = v
+    filled = cos = 0
+    for code, sers in cands.items():
+        n = nums.get(code)
+        if not n or not n.get('m'):
+            continue
+        hist = {r[0]: r[2] for r in n['m'] if r[2] is not None}
+        have = {r[0] for r in n['m']}
+        # 석 달 겹쳐 0.15 안 — 또는 두 달뿐이면 0.05 안에서 맞고 **그렇게 맞는 줄이 하나뿐일 때**(PPIH: 회계연도 첫 공시라 7·8월만 겹친다).
+        ok = []
+        for lab, mm in sers.items():
+            ov = [p for p in mm if p in hist]
+            if len(ov) >= 3 and all(abs(mm[p][0] - hist[p]) < 0.15 for p in ov):
+                ok.append((len(ov), lab))
+            elif len(ov) == 2 and all(abs(mm[p][0] - hist[p]) <= 0.05 for p in ov):
+                ok.append((2, lab))
+        if not ok or (max(ok)[0] == 2 and len(ok) > 1):
+            continue
+        best = max(ok)[1]
+        add = [(p, v) for p, v in sers[best].items() if p not in have and p < cur]
+        if not add:
+            continue
+        ev = n.setdefault('evidence', {})
+        for p, v in add:
+            n['m'].append([p, None, v[0], 0])
+            ev[p] = {'ratio': v[0], 'source': v[1], 'kind': '자동 수집 · 같은 계열 대조', 'scope': best}
+        n['m'].sort(key=lambda r: r[0])
+        last = n['m'][-1]
+        if n.get('latest') and last[0] > n['latest'].get('period', ''):
+            n['latest'] = {**n['latest'], 'period': last[0], 'yoy': last[2]}
+        for r in monthly:
+            if r[2] == code and (r[5] or '') < last[0]:
+                r[5] = last[0]
+        filled += len(add)
+        cos += 1
+    print(f"  월매출 같은 계열 잇기: {cos}곳 · {filled}달")
+    return monthly, nums
+
+
 def apply_ledger_fill(monthly, nums):
     """월차 원장(`data/monthly_ledger_jp.json`)으로 **빈 달만** 채운다.
 
@@ -5610,6 +5669,7 @@ def build():
         Path(os.environ["MON_DUMP"]).write_text(json.dumps(
             {c: {"scope": n.get("scope"), "base": n.get("base"), "m": {r[0]: r[2] for r in n.get("m", []) if r[2] is not None}}
              for c, n in monthly_nums.items()}, ensure_ascii=False), encoding="utf-8")
+    monthly, monthly_nums = apply_series_match(monthly, monthly_nums)
     monthly, monthly_nums = apply_ledger_fill(monthly, monthly_nums)
     monthly_nums = extend_kr_months(monthly, monthly_nums)
     # 리츠·은행 등(markets.excluded)은 월매출 화면 밖 — 투자법인의 월차는 임대·호텔 가동 지표다(11/04 8963·8985)

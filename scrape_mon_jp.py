@@ -72,7 +72,7 @@ def get(url, timeout=40):
         return None
 
 
-POPPLER_VER = 1
+POPPLER_VER = 2      # 2: 표의 전년비 줄 전부(series)를 같이 담는다(11/23) — 최근 40일 공시를 한 번 다시 읽는다
 REREAD = False
 
 
@@ -142,6 +142,15 @@ def merge(rec, got, doc, day):
                 m[k] = r[k]
         months[p] = m
         n += 1
+    # 표의 전년비 줄 전부(montable 의 series) — 어느 줄을 화면에 이을지는 빌드가 이력과 대조해 정한다(build.py 의 apply_series_match)
+    ser = rec.setdefault("series", {})
+    for lab, mm in (got.get("series") or {}).items():
+        s0 = ser.setdefault(lab, {})
+        for k in [k for k, v in s0.items() if v[1] == doc]:
+            del s0[k]
+        for p, v in mm.items():
+            if p not in s0 or s0[p][2] <= day:
+                s0[p] = [v, doc, day]
     rec["amount_label"] = got.get("amount_label") or rec.get("amount_label", "")
     rec["yoy_label"] = got.get("yoy_label") or rec.get("yoy_label", "")
     return n
@@ -240,6 +249,12 @@ def main():
             skip[r["doc"]] = "터짐"
             continue
         read += 1
+        if got and not got.get("rows") and got.get("series"):
+            # 화면에 바로 쓸 줄은 없지만 전년비 줄이 있다(이온 — 자회사별 표). 줄만 담는다.
+            rec = by.setdefault(r["code"], {"name": r.get("name", "")})
+            merge(rec, got, r["doc"], r["date"])
+            got_n += 0
+            continue
         if not got:
             # **'암호'와 '표가 없다'를 가른다.** 암호가 걸렸다고 곧장 그렇게
             # 적었더니, 멀쩡히 열린 공시(마쓰이증권의 매매실적·호시노리조트의

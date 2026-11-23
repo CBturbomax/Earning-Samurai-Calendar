@@ -455,6 +455,13 @@ def _sane(got, ann):
     ① 1천만 엔도 안 되는 '금액'은 매출이 아니다 — 고라쿠엔 7554 의 점포 수 345 가 금액으로 읽혔다. 금액만 지우고 전년비는 남긴다.
     ② 읽은 마지막 달이 공시한 달의 1~2달 전이 아니면 해·달을 잘못 매긴 것이다(ABC마트 11/4 공시에서 3~8월, 아이플러그 11/5 공시에서
        2025-10~2026-03) — 통째로 버린다."""
+    if got and got.get("series"):                     # 전년비 줄 모음 — 공시한 달과 그 뒤 달은 있을 수 없다
+        cut = ann[:7]
+        ser = {k: {p: v for p, v in m.items() if p < cut} for k, m in got["series"].items()}
+        got = {**got, "series": {k: m for k, m in ser.items() if len(m) >= 2}}
+        if not got["series"]:
+            got.pop("series")
+    keep = {"series": got["series"], "rows": []} if got and got.get("series") else None
     if not got or not got.get("rows"):
         return got
     rows = []
@@ -465,10 +472,10 @@ def _sane(got, ann):
         if r.get("rev") is not None or r.get("yoy") is not None:
             rows.append(r)
     if not rows:
-        return None
+        return keep
     gap = _mk(ann[:7]) - _mk(max(r["period"] for r in rows))
     if not 1 <= gap <= 2:
-        return None
+        return keep
     return {**got, "rows": rows}
 
 
@@ -490,7 +497,11 @@ def read(data: bytes, ann: str, max_pages: int = 12, title: str = "", prefer_pop
         if got and got.get("rows"):
             if via:
                 got["via"] = via
+            if not got.get("series") and first and first.get("series"):
+                got["series"] = first["series"]
             return got
+        if got and (got.get("series") and not (first or {}).get("series")):
+            first = got
         first = first or got
     return first
 
@@ -515,6 +526,7 @@ def _read(data: bytes, ann: str, max_pages: int, title: str, cells_of):
     title_metric = tm.group(0) if tm else "월매출"
 
     cands = []
+    series = {}
     for i, cells in enumerate(table):
         hdr = _headers(cells)
         if not hdr:
@@ -549,14 +561,21 @@ def _read(data: bytes, ann: str, max_pages: int, title: str, cells_of):
         # 한 줄만 보면 이름표도 단위도 없는 숫자 열두 개라 통째로 버려진다.
         # 그래서 값 없는 줄의 이름표를 다음 값 줄에 **물려주고**, 단위는 바로
         # 아랫줄까지 본다. 지어내는 것이 아니라 같은 표의 같은 줄을 읽는 것이다.
+        # 「（単位 Unit：％）」(이온 — UNIT_DECL 은 단위 바로 뒤 ： 만 본다)·「(YoY sales)」 처럼 머리 언저리에 %·전년이 적힌 표
+        ctx = "".join(_norm(t) for row in table[max(0, i - 3):i + 3] for _x, t in row)
+        ser_pct = bool(re.search(r"単位[^)）]{0,10}[%％]|YoY|前年|前期比", ctx)) and not cap_mul
         pending = ""
         # 이름표 줄 아래로 여덟 줄까지 본다. 그 아래는 다른 표다.
-        for k in range(i + 1, min(i + 9, len(table))):
+        # (11/23) 표가 이번엔 스무 줄까지 이어지는 공시가 있다(이온 — 자회사마다 全店·既存店 두 줄). 전년비 줄 모으기(series)는 넓게 본다.
+        for k in range(i + 1, min(i + 25, len(table))):
             cells2 = table[k]
             if _headers(cells2):
                 break
             lab = _label(cells2, hdr)
             vals = _assign(cells2, hdr)
+            _series_row(series, table, i, hdr, lab or pending, vals, cells2, aday, pct_decl or cap_yoy or ser_pct)
+            if k >= i + 9:
+                continue
             if len(vals) < 2:
                 # 값이 없는 줄은 다음 줄의 이름표일 수 있다. 단위 안내줄
                 # (「(単位：百万円)」)은 이름이 아니므로 물려주지 않는다 —
@@ -634,7 +653,7 @@ def _read(data: bytes, ann: str, max_pages: int, title: str, cells_of):
         vertical = _vertical_yoy(table, aday, title)
         group = _single_month_group_yoy(table, aday, title)
         single = _single_month_yoy(table, aday, title)
-        return vertical or group or single or _sentence(table, aday)
+        return _with_series(vertical or group or single or _sentence(table, aday), series)
 
     groups = {}
     for c in cands:
@@ -680,8 +699,44 @@ def _read(data: bytes, ann: str, max_pages: int, title: str, cells_of):
         out = [r for r in out if r.get("period", "") <= target]
 
     if not out:
-        return None
-    return {"rows": out, "amount_label": amt_lab, "yoy_label": yoy_lab}
+        return _with_series(None, series)
+    return _with_series({"rows": out, "amount_label": amt_lab, "yoy_label": yoy_lab}, series)
+
+
+# ── 전년비 줄 전부(series) ──────────────────────────────────────────────────
+# (11/23 회원님: 월매출 큰 회사 빈칸 "근본적으로 고쳐") 표 읽기는 **한 줄**(첫 전년비 줄)만 rows 로 낸다. 그런데 화면은 회사마다 정해 둔
+# 계열(전점·기존점·특정 자회사)을 잇는다 — 패스트리는 直営店, 이온은 イオンリテール 全店 이다. 첫 줄이 그 계열이 아니면 새 달이 통째로 버려져
+# 큰 회사 137곳의 10월이 비었다. 그래서 표의 **전년비처럼 생긴 줄을 전부** 이름표와 함께 `series` 로 따로 낸다. 어느 줄을 쓸지는 빌드가
+# 정한다 — **이미 가진 이력과 석 달 넘게 0.15 안에서 맞는 줄만** 빈 달에 잇는다(build.py 의 `apply_series_match`). rows 는 그대로다.
+def _series_row(series, table, i, hdr, lab, vals, cells, aday, pct_table):
+    if len(vals) < 2 or not lab or SKIP_LABEL.search(lab) or "単位" in lab:
+        return
+    if not all(40.0 <= v <= 250.0 for v in vals.values()):
+        return
+    rowtext = "".join(_norm(t) for _x, t in cells)
+    pct_row = rowtext.count("%") + rowtext.count("％") >= len(vals)
+    if not (pct_table or pct_row or YOY_LABEL.search(lab)):
+        return
+    if re.search(r"円", rowtext) or re.search(r"[0-9]{1,3},[0-9]{3}", rowtext):
+        return
+    cols = [m for _x, m, _y in hdr]
+    given = [y for _x, _m, y in hdr]
+    yrs = _years(cols, sorted(vals), aday, given)
+    months = {f"{yrs[k]:04d}-{cols[k]:02d}": round(v, 2) for k, v in vals.items()}
+    key = lab[:40]
+    n = 2
+    while key in series and series[key] != months:
+        key = f"{lab[:40]}#{n}"
+        n += 1
+    series[key] = months
+
+
+def _with_series(got, series):
+    if not series:
+        return got
+    got = dict(got) if got else {"rows": []}
+    got["series"] = series
+    return got
 
 
 # ── 스스로 시험 ─────────────────────────────────────────────────────────────
