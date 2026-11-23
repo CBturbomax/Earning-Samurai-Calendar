@@ -5606,6 +5606,10 @@ def build():
     monthly = load_monthly(packed)
     monthly_nums = load_monthly_nums(monthly)
     monthly, monthly_nums = apply_reviewed_monthly(monthly, monthly_nums)
+    if os.environ.get("MON_DUMP"):              # 원장 갱신용 — 원장을 얹기 전 화면 계열(손으로 원장을 다시 뜰 때 대조에 쓴다)
+        Path(os.environ["MON_DUMP"]).write_text(json.dumps(
+            {c: {"scope": n.get("scope"), "base": n.get("base"), "m": {r[0]: r[2] for r in n.get("m", []) if r[2] is not None}}
+             for c, n in monthly_nums.items()}, ensure_ascii=False), encoding="utf-8")
     monthly, monthly_nums = apply_ledger_fill(monthly, monthly_nums)
     monthly_nums = extend_kr_months(monthly, monthly_nums)
     # 리츠·은행 등(markets.excluded)은 월매출 화면 밖 — 투자법인의 월차는 임대·호텔 가동 지표다(11/04 8963·8985)
