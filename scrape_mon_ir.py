@@ -434,6 +434,7 @@ def read_pdfs(page, url, pdf, rec, today, budget, series=None):
     """월차 페이지에 걸린 PDF 를 기존 montable 규칙으로 읽는다."""
     done, skip = set(rec.get("done") or []), rec.setdefault("skip", {})
     checked = rec.setdefault("pdf_checked", {})
+    series_seen = rec.setdefault("series_seen", {})
     # Annual files can retain their URL while adding this month's results.
     # Revalidate recent reports daily; genuinely old archives remain immutable.
     recent_docs = {row.get("doc") for period, row in pdf.items()
@@ -446,14 +447,18 @@ def read_pdfs(page, url, pdf, rec, today, budget, series=None):
             break
         failure = skip.get(u)
         if u in done and not failure:
-            if u not in recent_docs:
+            # 올해·지난해 것으로 보이는 파일도 다시 본다 — 회계연도 파일은 같은 주소에 달마다 칸이 늘어난다(패스트리 MonthlySales_2027 은
+            # 처음 볼 때 쓸 달이 없어 pdf 에 아무 달도 안 남았고, 그래서 recent_docs 에 못 들어 10월이 영영 안 읽혔다).
+            if u not in recent_docs and (when or "") < f"{today.year - 1:04d}-01-01":
                 continue
-            try:
-                age_hours = (today - date.fromisoformat(checked[u])).days * 24
-                if age_hours < PDF_FRESH_HOURS:
-                    continue
-            except (KeyError, TypeError, ValueError):
-                pass
+            # 전년비 줄(series)을 모으기 전에 읽은 파일은 신선해도 **한 번** 다시 읽는다(11/23)
+            if u in series_seen:
+                try:
+                    age_hours = (today - date.fromisoformat(checked[u])).days * 24
+                    if age_hours < PDF_FRESH_HOURS:
+                        continue
+                except (KeyError, TypeError, ValueError):
+                    pass
         if isinstance(failure, dict):
             try:
                 age = (today - date.fromisoformat(failure["day"])).days
@@ -469,6 +474,7 @@ def read_pdfs(page, url, pdf, rec, today, budget, series=None):
         if not data:
             skip[u] = {"reason": "fetch_failed", "day": today.isoformat()}
             continue
+        series_seen[u] = 1
         # 이름표의 「2027年8月期」 는 결산기말이라 발표일로 쓰면 아직 오지 않은 날이 된다(패스트리 MonthlySales_2027 → 2027-09-01,
         # 그래서 9·10월이 '미래 달'로 읽혀 버려졌다). 오늘보다 늦을 수는 없다.
         when = min(when, today.isoformat())
