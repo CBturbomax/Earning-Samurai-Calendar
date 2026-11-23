@@ -74,7 +74,7 @@ PDF_PER_RUN = int(os.environ.get("IR_PDF_PER_RUN", "60"))
 # **표가 새것이어도 PDF 는 아직 안 본 것일 수 있다.** 달이 이미 쌓인 회사를
 # 신선하다고 건너뛰면 그 회사의 PDF 를 영영 안 연다 — 실제로 첫 실행에서
 # 그랬다. 옛 PDF 는 안 바뀌므로 하루에 한 번이면 넉넉하다.
-PDF_FRESH_HOURS = float(os.environ.get("IR_PDF_FRESH_HOURS", "24"))
+PDF_FRESH_HOURS = float(os.environ.get("IR_PDF_FRESH_HOURS", "2"))   # 24 -> 2(11/23): 회계연도 PDF 는 같은 주소에 새 달이 붙는다 — 하루 늦던 것
 ARCHIVE_PER_COMPANY = int(os.environ.get("IR_ARCHIVE_PER_COMPANY", "4"))
 # 공식 홈페이지를 모르는 seed 종목은 Yahoo assetProfile 에서 조금씩만 채운다.
 # 월차 잡이 10분마다 도니 한 바퀴에 12개면 하루 안에 300여 종목을 한 번 돈다.
@@ -430,10 +430,11 @@ def save_coverage(rec):
                         encoding="utf-8")
 
 
-def read_pdfs(page, url, pdf, rec, today, budget):
+def read_pdfs(page, url, pdf, rec, today, budget, series=None):
     """월차 페이지에 걸린 PDF 를 기존 montable 규칙으로 읽는다."""
     done, skip = set(rec.get("done") or []), rec.setdefault("skip", {})
     checked = rec.setdefault("pdf_checked", {})
+    series_seen = rec.setdefault("series_seen", {})
     # Annual files can retain their URL while adding this month's results.
     # Revalidate recent reports daily; genuinely old archives remain immutable.
     recent_docs = {row.get("doc") for period, row in pdf.items()
@@ -446,14 +447,18 @@ def read_pdfs(page, url, pdf, rec, today, budget):
             break
         failure = skip.get(u)
         if u in done and not failure:
-            if u not in recent_docs:
+            # 올해·지난해 것으로 보이는 파일도 다시 본다 — 회계연도 파일은 같은 주소에 달마다 칸이 늘어난다(패스트리 MonthlySales_2027 은
+            # 처음 볼 때 쓸 달이 없어 pdf 에 아무 달도 안 남았고, 그래서 recent_docs 에 못 들어 10월이 영영 안 읽혔다).
+            if u not in recent_docs and (when or "") < f"{today.year - 1:04d}-01-01":
                 continue
-            try:
-                age_hours = (today - date.fromisoformat(checked[u])).days * 24
-                if age_hours < PDF_FRESH_HOURS:
-                    continue
-            except (KeyError, TypeError, ValueError):
-                pass
+            # 전년비 줄(series)을 모으기 전에 읽은 파일은 신선해도 **한 번** 다시 읽는다(11/23)
+            if u in series_seen:
+                try:
+                    age_hours = (today - date.fromisoformat(checked[u])).days * 24
+                    if age_hours < PDF_FRESH_HOURS:
+                        continue
+                except (KeyError, TypeError, ValueError):
+                    pass
         if isinstance(failure, dict):
             try:
                 age = (today - date.fromisoformat(failure["day"])).days
@@ -469,12 +474,22 @@ def read_pdfs(page, url, pdf, rec, today, budget):
         if not data:
             skip[u] = {"reason": "fetch_failed", "day": today.isoformat()}
             continue
+        series_seen[u] = 1
+        # 이름표의 「2027年8月期」 는 결산기말이라 발표일로 쓰면 아직 오지 않은 날이 된다(패스트리 MonthlySales_2027 → 2027-09-01,
+        # 그래서 9·10월이 '미래 달'로 읽혀 버려졌다). 오늘보다 늦을 수는 없다.
+        when = min(when, today.isoformat())
         try:
             got = montable.read(data, when, title=lab)
         except Exception as e:
             skip[u] = {"reason": type(e).__name__, "day": today.isoformat()}
             continue
         rows = (got or {}).get("rows") or []
+        ser = series if series is not None else {}      # 표의 전년비 줄 전부(회사별) — 빌드가 이력과 대조해 고른다(apply_series_match)
+        for slab, mm in ((got or {}).get("series") or {}).items():
+            s0 = ser.setdefault(slab, {})
+            for per, v in mm.items():
+                if per < cur:
+                    s0[per] = [v, u, when]
         if not rows:
             skip[u] = {"reason": "표없음", "day": today.isoformat()}
             continue
@@ -659,12 +674,13 @@ def main():
         # 회사가 많다 — 패스트리는 회계연도 한 장에 열두 달이라 세 장으로
         # 36달이 들어온다(91차). 못 읽는 PDF 는 그냥 지나간다.
         pdf = dict(cur.get("pdf") or {})
+        series = {k: dict(v) for k, v in (cur.get("series") or {}).items()}
         looked = False
         for pdf_url, pdf_page in [(url, page)] + feed_pages:
             if pdf_left <= 0:
                 break
             pdf, n_new, pdf_left, page_looked = read_pdfs(
-                pdf_page, pdf_url, pdf, rec, today, pdf_left)
+                pdf_page, pdf_url, pdf, rec, today, pdf_left, series)
             looked = looked or page_looked
             new_months += n_new
 
@@ -683,7 +699,7 @@ def main():
                 got.setdefault(p, dict(v, doc=au))
             if pdf_left > 0:
                 pdf, n_new, pdf_left, arch_looked = read_pdfs(
-                    apage, au, pdf, rec, today, pdf_left)
+                    apage, au, pdf, rec, today, pdf_left, series)
                 new_months += n_new
                 looked = looked or arch_looked
         # **이미 받아 둔 달을 빈 결과로 덮지 않는다.** 회사 사이트가 회계연도를
@@ -723,6 +739,8 @@ def main():
             codes[code]["pdf_ts"] = cur["pdf_ts"]
         if pdf:
             codes[code]["pdf"] = pdf
+        if series:
+            codes[code]["series"] = series
         ks = sorted(months) or sorted(pdf)
         print(f"  {code} {name}: 표 {len(months)}달 · PDF {len(pdf)}달"
               f" ({ks[0]} ~ {ks[-1]})")

@@ -3157,6 +3157,26 @@ def site_mon_alerts(old, new):
             log("사이트 월차 알림 실패", code, traceback.format_exc(limit=1))
 
 
+def mon_series_pick(code, series):
+    """표의 전년비 줄(montable 의 series) 중 사이트 화면 이력과 같은 줄 -> rows(사이트 이력 + 이번 공시의 새 달) 또는 None."""
+    hist = {r[0]: r[2] for r in (((H.D.get("monthlyNum") or {}).get(code) or {}).get("m") or []) if r[2] is not None}
+    if not hist or not series:
+        return None
+    ok = []
+    for lab, mm in series.items():
+        ov = [p for p in mm if p in hist]
+        if len(ov) >= 3 and all(abs(mm[p] - hist[p]) < 0.15 for p in ov):
+            ok.append((len(ov), lab))
+        elif len(ov) == 2 and all(abs(mm[p] - hist[p]) <= 0.05 for p in ov):
+            ok.append((2, lab))
+    if not ok or (max(ok)[0] == 2 and len(ok) > 1):
+        return None
+    lab = max(ok)[1]
+    merged = dict(hist)
+    merged.update(series[lab])
+    return [{"period": p, "yoy": v, "metric": lab} for p, v in sorted(merged.items())][-24:]
+
+
 def jp_mon_process(row, day, replay=False):
     """월차 — 표를 읽어 최근 달의 전년비. 기존점 우선. +15% 이상이면 알림(회원님 10/30 +10% → 11/22 +15%)."""
     code = row["code"]
@@ -3170,6 +3190,11 @@ def jp_mon_process(row, day, replay=False):
         log("월차 PDF 실패", code, repr(e)[:120])
         return
     rows = mon_rows_ok((got or {}).get("rows") or [])
+    # **사이트 화면이 잇는 계열과 같은 줄을 먼저 쓴다**(11/23, build.apply_series_match 와 같은 잣대). 표의 첫 줄만 쓰면 이온(자회사 표)·
+    # 돈키호테(全店/既存店 두 줄, 첫 줄은 7월 값)처럼 엉뚱한 숫자로 알림이 갔다. 이력과 석 달 넘게 0.15 안(두 달이면 0.05 안·유일)에서 맞는 줄.
+    hit = mon_series_pick(code, (got or {}).get("series") or {})
+    if hit:
+        rows, got = hit, {"yoy_label": hit[0]["metric"], "_site": True}
     if not rows:
         # 표 규칙이 못 읽으면 **그 자리에서** AI 로 — 예전엔 GitHub 의 AI 판독 줄(30분 바퀴)에 서서 숫자가 한참 늦었다(11/04)
         rows = mon_ai_rows(blob, code, row["name"], day, row["title"])
@@ -3186,6 +3211,8 @@ def jp_mon_process(row, day, replay=False):
     lab = lambda r: (r.get("metric") or "") + " " + (got.get("yoy_label") or "")     # noqa: E731
     pick = next((r for r in now if "既存" in lab(r)), None) or next((r for r in now if "全店" in lab(r)), None) or now[0]
     base = "기존점" if "既存" in lab(pick) else "전점" if "全店" in lab(pick) else ""
+    if got.get("_site"):
+        base = ((H.D.get("monthlyNum") or {}).get(code) or {}).get("historyBase") or base
     other = next((r for r in now if r is not pick and "全店" in lab(r)), None)
     key = (code, last, base)
     if key in MON_SENT and not replay:

@@ -25,6 +25,7 @@ import os
 import sys
 import time
 import urllib.error
+import urllib.parse
 import urllib.request
 from pathlib import Path
 
@@ -55,6 +56,8 @@ PAUSE = 0.35
 
 
 def get(url, timeout=40):
+    # 회사 IR 의 PDF 이름에 일본어·빈칸이 그대로 있다(도와푸드 「2022年12月度 売上高速報（前期対比）.pdf」) — 주소로 쓰려면 퍼센트로 싼다
+    url = urllib.parse.quote(url, safe=":/?&=%#+~@!$,;")
     req = urllib.request.Request(url, headers={
         "User-Agent": UA, "Accept": "*/*", "Accept-Encoding": "gzip"})
     try:
@@ -69,11 +72,17 @@ def get(url, timeout=40):
         return None
 
 
+POPPLER_VER = 2      # 2: 표의 전년비 줄 전부(series)를 같이 담는다(11/23) — 최근 40일 공시를 한 번 다시 읽는다
+REREAD = False
+
+
 def load():
+    global REREAD
     try:
         old = json.loads(OUT.read_text(encoding="utf-8"))
     except (ValueError, OSError):
         return {}, set(), {}
+    REREAD = old.get("pp") != POPPLER_VER and bool(__import__("shutil").which("pdftotext"))
     by = old.get("codes") or {}
     done = set(old.get("done") or [])
     skip = old.get("skip") or {}
@@ -90,6 +99,7 @@ def save(by, done, skip):
     months = sum(len(v.get("months") or {}) for v in by.values())
     payload = {
         "pv": PARSE_VER,
+        "pp": POPPLER_VER if __import__("shutil").which("pdftotext") else None,   # poppler 가 있는 곳에서 한 번 다시 읽었다는 표
         "source": "TDnet 월매출 공시 첨부 PDF — 표에서 직접 읽는다",
         "note": ("달 이름표 줄을 찾아 아래 줄의 값을 x 가 가장 가까운 이름표에 "
                  "붙인다. 붙일 이름표가 없으면 버린다. 암호가 걸렸거나 표가 "
@@ -132,6 +142,15 @@ def merge(rec, got, doc, day):
                 m[k] = r[k]
         months[p] = m
         n += 1
+    # 표의 전년비 줄 전부(montable 의 series) — 어느 줄을 화면에 이을지는 빌드가 이력과 대조해 정한다(build.py 의 apply_series_match)
+    ser = rec.setdefault("series", {})
+    for lab, mm in (got.get("series") or {}).items():
+        s0 = ser.setdefault(lab, {})
+        for k in [k for k, v in s0.items() if v[1] == doc]:
+            del s0[k]
+        for p, v in mm.items():
+            if p not in s0 or s0[p][2] <= day:
+                s0[p] = [v, doc, day]
     rec["amount_label"] = got.get("amount_label") or rec.get("amount_label", "")
     rec["yoy_label"] = got.get("yoy_label") or rec.get("yoy_label", "")
     return n
@@ -151,7 +170,7 @@ def main():
                 print("   암호가 걸려 있다"); continue
             for ln in pdftext.extract_lines(data, 4)[:24]:
                 print("   |", ln[:120])
-            got = montable.read(data, r["date"], title=r.get("title", ""))
+            got = montable.read(data, r["date"], title=r.get("title", ""), prefer_poppler=True)
             print("   ->", json.dumps(got, ensure_ascii=False)[:600] if got else "표를 못 읽었다")
         return
 
@@ -185,6 +204,17 @@ def main():
             skip = {**(m0.get("skip") or {}), **skip}
         except (OSError, ValueError):
             pass
+    # **poppler 로 바꾼 뒤 한 번, 아직 받을 수 있는 최근 40일 공시만 다시 읽는다**(11/22). 규칙 판(PARSE_VER)을 올리면
+    # 이미 사라진 옛 공시 수천 건을 다시 두드리게 된다. 다시 읽으면 그 공시가 낸 달만 갈아치우므로(merge) 틀렸던 값이 고쳐진다.
+    global REREAD
+    if REREAD:
+        from datetime import date as _d0, timedelta as _td0
+        cut0 = (_d0.today() - _td0(days=40)).isoformat()
+        again = {r["doc"] for r in rows if r.get("doc") and (r.get("date") or "") >= cut0}
+        n0 = len(again & (done | set(skip)))
+        done -= again
+        skip = {k: v for k, v in skip.items() if k not in again}
+        print(f"  poppler 로 바꿔 최근 40일 공시 {n0}건을 다시 읽는다.")
     if RECENT_DAYS:
         from datetime import date as _d, timedelta as _td
         cut = (_d.today() - _td(days=RECENT_DAYS)).isoformat()
@@ -212,13 +242,19 @@ def main():
         # 보안 핸들러에 빈 사용자 암호였다(권한 잠금만 걸어 둔 것) — pdfcrypt
         # 가 규격대로 연다. 그래도 안 열리면 그때 '암호'로 적는다.
         try:
-            got = montable.read(data, r["date"], title=r.get("title", ""))
+            got = montable.read(data, r["date"], title=r.get("title", ""), prefer_poppler=True)
         except Exception as e:                      # noqa: BLE001
             # 깨진 PDF 하나가 실행 전체를 죽이지 않게 한다.
             print(f"  ! {r['code']} {type(e).__name__}: {e}")
             skip[r["doc"]] = "터짐"
             continue
         read += 1
+        if got and not got.get("rows") and got.get("series"):
+            # 화면에 바로 쓸 줄은 없지만 전년비 줄이 있다(이온 — 자회사별 표). 줄만 담는다.
+            rec = by.setdefault(r["code"], {"name": r.get("name", "")})
+            merge(rec, got, r["doc"], r["date"])
+            got_n += 0
+            continue
         if not got:
             # **'암호'와 '표가 없다'를 가른다.** 암호가 걸렸다고 곧장 그렇게
             # 적었더니, 멀쩡히 열린 공시(마쓰이증권의 매매실적·호시노리조트의
