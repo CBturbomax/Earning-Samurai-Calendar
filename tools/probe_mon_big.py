@@ -37,6 +37,9 @@ def pdf(url, ann, title, n=70):
         print("   받기 실패")
         return
     print(f"   {len(data)}B 암호={pdftext.is_encrypted(data)}")
+    out = HERE / "probe_out"
+    out.mkdir(exist_ok=True)
+    (out / url.rstrip("/").split("/")[-1]).write_bytes(data)
     for pp in (True, False):
         try:
             print(f"   montable(prefer_poppler={pp}):", rows(montable.read(data, ann, title=title, prefer_poppler=pp)) or "없음")
