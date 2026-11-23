@@ -115,6 +115,7 @@ python scrape_desc.py                       # 사업 설명 원문
 | 월매출 — 공시를 안 내는 회사 | `scrape_mon_web.py` — 표 읽기와 브랜드→코드 사전은 `monweb.py` 의 `BRANDS` |
 | 월매출 — 회사 IR 페이지 | `scrape_mon_ir.py` — 표 읽기는 `monir.py`, 손으로 잇는 주소는 `monir.py` 의 `IR_SITES` |
 | 월매출 — **빈 달 메우기**(InvestingWiki 月次 원장 스냅샷) | `data/monthly_ledger_jp.json` → `build.py` 의 `apply_ledger_fill`. 화면 기준과 같은 계열·겹치는 달 전부 일치일 때만 실렸고, 있는 값은 안 덮는다. 원장은 GitHub Actions 에서 못 부르므로(MCP) 손으로 다시 떠서 갱신한다 — **10/22 판에 멈춰 10월분이 통째로 비었었다(11/22 다시 뜸: 17곳). 달이 바뀌면 다시 뜰 것** |
+| 일본 **분기 실적이 통째로 끊긴 회사**(만다라케 2652 — stockanalysis 가 2006~2010 만 줬다) | `data/financials_jp_wiki.json`(InvestingWiki jp_financials 스냅샷, 손으로 뜬다 — MCP 라 Actions 에서 못 부름) → `build.py` 의 `jp_wiki_fin`. rank 가 가장 낮아 빈 분기만 메우고, 가진 줄이 그 앞 해에 끝났으면 옛 줄을 버린다. 결산기를 바꾼 해는 뺀다. 11/23 판 16종목 |
 | 부문 이름 한글 표기 | `markets.py`의 `SEG_KO_FULL`/`SEG_KO_EN`/`SEG_KO_CJK` — 옮기기는 `build.py`의 `seg_ko` |
 | 부문을 어느 축으로 가를까 | `scrape_seg_sec.py`의 `axis_rank` / `AXIS_KO` |
 | 회사 사업 설명(한국어) | `descriptions.py`의 `DESC_KO` — 원문 수집은 `scrape_desc.py` |
