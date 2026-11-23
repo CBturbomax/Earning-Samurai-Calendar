@@ -638,6 +638,12 @@ def load_fin():
         print(f"  financials_fpi.json: 분기 회사에 반기·연간 간격 점이라 안 합친 종목 {FPI_HALF_SKIP[0]:,}")
     for key, v in jp_old_fin().items():          # 1Q18 부터 — 비어 있는 옛 분기만 메운다(rank 가 가장 낮다)
         out[key] = merge_fin(out.get(key), v)
+    for key, v in jp_wiki_fin().items():         # 분기가 아예 끊긴 회사(만다라케 2652) — 손으로 뜬 스냅샷, 빈 분기만
+        cur = out.get(key)
+        # 가진 것이 몇 년 전에 끝났으면(stockanalysis 가 2006~2010 만 준 2652) 그 옛 줄은 버리고 새로 세운다.
+        if cur and last_end(cur) < v["points"][0]["end"][:4]:
+            cur = None
+        out[key] = merge_fin(cur, v)
     try:
         hk_long_fin(out)
     except Exception as e:                        # noqa: BLE001  — 이것 때문에 페이지가 안 만들어지면 안 된다
@@ -955,6 +961,41 @@ def jp_old_fin():
     return out
 
 
+def jp_wiki_fin():
+    """일본 분기 실적 스냅샷(InvestingWiki jp_financials — 결산단신 XBRL). GitHub Actions 에서 못 부르므로(MCP) 손으로 떠
+    data/financials_jp_wiki.json 에 둔다. 분기가 통째로 빈 회사만 떠 왔고, rank 가 가장 낮아 있는 값은 안 덮는다.
+    「YYYY/M期 kQ」 → 그 분기 끝 달. 결산기를 바꾼 해(12달이 아닌 해)는 분기 경계를 모르므로 버린다."""
+    try:
+        raw = json.loads((HERE / "data" / "financials_jp_wiki.json").read_text(encoding="utf-8"))["stocks"]
+    except (OSError, ValueError, KeyError):
+        return {}
+    import calendar
+    from datetime import date as _d, timedelta as _td
+    out = {}
+    for key, rec in raw.items():
+        fys = sorted({(int(p[:4]), int(p[5:p.index("期")])) for p, *_ in rec.get("q", [])})
+        bad, prev = set(), None
+        for y, m in fys:
+            if prev and (y * 12 + m) - (prev[0] * 12 + prev[1]) != 12:
+                bad.add((y, m))
+            prev = (y, m)
+        by_end = {}
+        for p, basis, rev, opi, ni in rec.get("q", []):
+            y, m, k = int(p[:4]), int(p[5:p.index("期")]), int(p[-2])
+            if (y, m) in bad or basis not in ("reported", "derived") or not rev or rev <= 0:
+                continue
+            em = y * 12 + (m - 1) - 3 * (4 - k)
+            ey, emo = em // 12, em % 12 + 1
+            en = _d(ey, emo, calendar.monthrange(ey, emo)[1]).isoformat()
+            by_end[en] = {"label": f"{(emo + 2) // 3}Q{en[2:4]}", "end": en,
+                          "mid": (_d.fromisoformat(en) - _td(days=45)).isoformat(), "rev": rev, "opi": opi, "ni": ni}
+        pts = [by_end[e] for e in sorted(by_end)]
+        if len(pts) >= 2:
+            out[key] = {"v": 1, "freq": "Q", "cur": "JPY", "src": "wiki", "points": pts}
+    print(f"  일본 분기 스냅샷(InvestingWiki): {len(out):,}종목 · {sum(len(v['points']) for v in out.values()):,}분기")
+    return out
+
+
 def last_end(rec):
     pts = (rec or {}).get("points") or []
     return pts[-1].get("end", "") if pts else ""
@@ -990,7 +1031,7 @@ def merge_fin(a, b):
     # 예전에는 'sec 이면 뼈대' 하나로만 갈랐는데, 일본은 sec 이 없어서 그 규칙이
     # 아무 일도 안 했다. 그러면 TDnet 이 방금 받아온 새 분기가 stockanalysis 의
     # 헌 줄에 덮여 사라진다.
-    rank = {"sec": 3, "tdnet": 2, "mix": 1, "sa": 1, "yahoo": 0, "tdold": -1}
+    rank = {"sec": 3, "tdnet": 2, "mix": 1, "sa": 1, "yahoo": 0, "tdold": -1, "wiki": -2}
     pa, pb = rank.get(a.get("src"), 0), rank.get(b.get("src"), 0)
     base, extra = (a, b) if len(a.get("points") or []) >= len(b.get("points") or []) else (b, a)
     win = a if pa >= pb else b               # 겹치는 분기를 가져갈 쪽
