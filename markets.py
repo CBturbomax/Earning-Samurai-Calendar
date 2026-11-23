@@ -555,6 +555,12 @@ _IND_OUT = _re.compile(r"\bbanks?\b|savings institution|real estate|\breit\b|rea
                        r"rental|leasing|"
                        # 택배·물류·해운도 뺀다(회원님 10/30). 항공사·철도 차량 제조는 남는다.
                        r"freight|courier|marine transportation|marine shipping|trucking|logistics", _re.I)
+# 나스닥이 「Marine Transportation」에 함께 넣는 해운 아닌 회사(11/23 회원님: 바이킹 VIK 가 왜 없나).
+# 위 해운 거름에 같이 쓸려 나갔으므로 세부 업종을 바로잡는다 — scrape_caps 가 caps.json 에 쓸 때 얹는다.
+IND_FIX = {"us:VIK": "Cruise Lines", "us:CCL": "Cruise Lines", "us:RCL": "Cruise Lines", "us:NCLH": "Cruise Lines",
+           "us:GD": "Aerospace & Defense", "us:HII": "Shipbuilding & Defense",
+           "us:MBUU": "Recreational Boats", "us:MCFT": "Recreational Boats",
+           "us:BIP": "Infrastructure Operations", "us:BIPC": "Infrastructure Operations"}
 _US_NAME_BANK = _re.compile(r"\bbancorp|\bbancshares|\bbankshares|\bbanc\b|\bbank\b", _re.I)
 _US_NAME_REIT = _re.compile(r"\breit\b|real estate investment trust|realty trust", _re.I)
 _HK_NAME_OUT = _re.compile(r"\bbank\b|\bbk\b|銀行|航運|物流|\bshipping\b|\blogistics\b|\breit\b|產業信託|置業信託|房託|房地產投資信託|"
