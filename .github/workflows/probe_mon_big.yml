@@ -4,6 +4,9 @@ name: 월매출 큰 회사 진단
 on:
   workflow_dispatch:
 
+permissions:
+  contents: write
+
 jobs:
   probe:
     runs-on: ubuntu-latest
@@ -17,7 +20,7 @@ jobs:
         run: command -v pdftotext || (sudo apt-get update -qq && sudo apt-get install -y -qq poppler-utils)
       - name: 진단
         run: python tools/probe_mon_big.py
-      - uses: actions/upload-artifact@v4
-        with:
-          name: pdfs
-          path: probe_out/
+      - name: PDF 를 임시 가지에
+        run: |
+          git config user.name probe-bot && git config user.email probe@users.noreply.github.com
+          git checkout --orphan probe-pdfs && git rm -rq --cached . && git add -f probe_out && git commit -qm pdfs && git push -fq origin probe-pdfs
