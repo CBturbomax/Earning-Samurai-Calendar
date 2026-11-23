@@ -3164,6 +3164,8 @@ def mon_series_pick(code, series):
         return None
     ok = []
     for lab, mm in series.items():
+        if re.search(r'客数|客単価|店舗数|会員数|稼働|件数|人数|台数', lab):
+            continue
         ov = [p for p in mm if p in hist]
         if len(ov) >= 3 and all(abs(mm[p] - hist[p]) < 0.15 for p in ov):
             ok.append((len(ov), lab))

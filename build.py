@@ -5067,12 +5067,20 @@ def apply_series_match(monthly, nums):
     우연히 석 달이 0.15 안에서 맞을 일은 없으므로 엉뚱한 줄이 붙지 않는다. 있는 값은 덮지 않는다."""
     cur = (datetime.utcnow() + timedelta(hours=9)).strftime('%Y-%m')
     cands = {}
-    for fn in ('monthly_nums_jp.json', 'monthly_nums_fresh_jp.json', 'monthly_ir_jp.json'):
+    for fn in ('monthly_nums_jp.json', 'monthly_nums_fresh_jp.json', 'monthly_ir_jp.json', 'monthly_web_jp.json'):
         try:
             codes = json.loads((HERE / 'data' / fn).read_text(encoding='utf-8')).get('codes') or {}
         except (OSError, ValueError):
             continue
         for code, rec in codes.items():
+            # 회사 IR 표·流通ニュース 기사의 달별 값(same=기존점·all=전점·yoy)도 같은 잣대로 잇는다 — 시마무라(8227)는 기사에 10월 全店 104.4 가
+            # 있었는데 화면 이력과 줄을 대 보지 않아 비어 있었다(11/23).
+            for key in (('same', 'all', 'yoy') if fn in ('monthly_ir_jp.json', 'monthly_web_jp.json') else ()):
+                mm = {p: v[key] for p, v in (rec.get('months') or {}).items() if isinstance(v, dict) and isinstance(v.get(key), (int, float))}
+                if len(mm) >= 2:
+                    d = cands.setdefault(code, {}).setdefault(f'{fn}:{key}', {})
+                    for p, v in mm.items():
+                        d[p] = [v, (rec['months'][p].get('doc') or rec.get('page') or ''), rec['months'][p].get('day') or '']
             for lab, mm in (rec.get('series') or {}).items():
                 d = cands.setdefault(code, {}).setdefault(lab, {})
                 for p, v in mm.items():
@@ -5088,6 +5096,8 @@ def apply_series_match(monthly, nums):
         # 석 달 겹쳐 0.15 안 — 또는 두 달뿐이면 0.05 안에서 맞고 **그렇게 맞는 줄이 하나뿐일 때**(PPIH: 회계연도 첫 공시라 7·8월만 겹친다).
         ok = []
         for lab, mm in sers.items():
+            if re.search(r'客数|客単価|店舗数|会員数|稼働|件数|人数|台数', lab):   # 매출이 아닌 줄(바로크 3548 의 客数 가 화면 이력과 우연히 맞았다)
+                continue
             ov = [p for p in mm if p in hist]
             if len(ov) >= 3 and all(abs(mm[p][0] - hist[p]) < 0.15 for p in ov):
                 ok.append((len(ov), lab))
