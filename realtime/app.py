@@ -30,6 +30,7 @@ import sys
 import threading
 import time
 import traceback
+import unicodedata
 import urllib.error
 import urllib.parse
 import urllib.request
@@ -687,6 +688,16 @@ TG_KEEP = {"jp:5802", "jp:5801", "jp:5803", "jp:5805", "jp:5016", "jp:5706",
 BIO_DESC = re.compile(r"創薬|新薬開発|バイオベンチャー|신약|바이오벤처|drug discovery|clinical[- ]stage|biopharmaceutical company",
                       re.I)
 MIN_KRW = float(os.environ.get("TG_MIN_KRW", "1e11"))      # 1,000억 원
+# 코인 관련 회사 — 회원님 11/24: "미국·홍콩·일본 공통으로 비트코인이나 코인 관련 회사들도 다 빼버려." 채굴·거래소·코인 사 모으는 회사·
+# 스테이블코인·웹3. 업종 칸에는 안 잡히는 회사가 많아(스트래티지 = 소프트웨어, 메타플래닛 = 업종 없음) 이름과 사업 설명으로 가른다.
+# 가이던스를 올려도 안 보낸다. **'digital asset' 만으로는 안 건다** — 방송국(그레이 미디어)·콘텐츠 회사가 제 사이트를 그렇게 부른다.
+# 'BTC' 도 안 건다(리버티 라틴아메리카의 통신 브랜드). 넓히기 전에 data/desc.json 전 종목에 돌려 새로 걸리는 것을 눈으로 볼 것.
+CRYPTO = re.compile(
+    r"(?i)bitcoin|ethereum|\bsolana\b|crypto|blockchain|stablecoin|\bweb3\b|\bdefi\b|"
+    r"digital asset (treasury|mining|ecosystem|economy|infrastructure|technology)|mines digital assets|digital assets business|plus digital assets|"
+    r"ビットコイン|暗号資産|仮想通貨|ブロックチェーン|イーサリアム|比特[幣币]|加密[貨货][幣币]|區塊鏈|区块链|虛擬資產|虚拟资产|"
+    r"비트코인|이더리움|암호화폐|가상자산|스테이블코인|블록체인")
+CRYPTO_KEEP = {"us:APLD"}      # 어플라이드디지털(AI 데이터센터) — desc.json 에 남의 설명(스테이블코인)이 잘못 붙어 있다
 
 
 def guide_boom(ev):
@@ -719,6 +730,10 @@ def tg_pick(ev, pts):
                                      (ev["mkt"] == "us" and TG_OUT_BUILD_US.search(H.ind.get(ev["key"], "") or "")) or
                                      (ev["mkt"] == "jp" and (ev.get("sector") or "") in TG_OUT_EXTRACT_JP)):
         return False, "채굴·정유·건설 제외"                          # 가이던스 급상향이어도 안 보낸다
+    with H.lock:
+        desc = (H.D.get("descKo") or {}).get(ev["key"], "") + " " + (H.D.get("desc") or {}).get(ev["key"], "")
+    if ev["key"] not in CRYPTO_KEEP and CRYPTO.search(unicodedata.normalize("NFKC", f"{ev.get('orig') or ''} {ev.get('name') or ''} {desc}")):
+        return False, "코인 관련 제외"                              # 가이던스 급상향이어도 안 보낸다
     boom = guide_boom(ev)
     if boom:
         return True, boom
@@ -732,8 +747,6 @@ def tg_pick(ev, pts):
         return False, "업종 제외(이름)"
     if re.search(r"(?i)\bREIT\b|投資法人|리츠", ev.get("orig", "") + " " + ev.get("name", "")):
         return False, "리츠 제외"
-    with H.lock:
-        desc = (H.D.get("descKo") or {}).get(ev["key"], "") + " " + (H.D.get("desc") or {}).get(ev["key"], "")
     if BIO_DESC.search(desc):
         return False, "신약 개발 바이오 제외"
     krw = (ev.get("cap") or 0) * 1e9 * float(H.D.get("usdKrw") or 1400)
