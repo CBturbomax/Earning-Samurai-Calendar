@@ -191,8 +191,45 @@ def find_8k(cik, since):
 FILES = "https://www.sec.gov/Archives/edgar/data/{cik}/{acc}/index.json"
 
 
+TXT = "https://www.sec.gov/Archives/edgar/data/{cik}/{acc}/{a}-{b}-{c}.txt"
+
+
+def ex99_from_txt(cik, acc):
+    """통짜 제출 파일(`<접수번호>.txt`)에서 보도자료(EX-99) HTML 을 꺼낸다 — 첨부 목록(index.json) 없이 요청 한 번.
+    고르는 규칙은 아래 목록 쪽과 같다: EX-99·press·earnings 인 htm 중 가장 큰 것, 없으면 htm 중 가장 큰 것."""
+    a = str(acc).replace("-", "")
+    if len(a) != 18:
+        return None
+    raw = sec_get(TXT.format(cik=cik, acc=a, a=a[:10], b=a[10:12], c=a[12:]), timeout=25)
+    if not raw:
+        return None
+    htm = []
+    for d in re.findall(r"<DOCUMENT>(.*?)</DOCUMENT>", raw.decode("utf-8", "replace"), re.S):
+        ty = (re.search(r"<TYPE>([^\n<]*)", d) or [None, ""])[1].strip()
+        fn = (re.search(r"<FILENAME>([^\n<]*)", d) or [None, ""])[1].strip()
+        body = re.search(r"<TEXT>(.*?)</TEXT>", d, re.S)
+        if not body or not fn.lower().endswith((".htm", ".html")) or ty.upper() == "XML":
+            continue                                             # R1.htm 같은 XBRL 보기용 조각은 서류가 아니다
+        htm.append((ty, fn, body.group(1)))
+    ex = [t for t in htm if t[0].upper().startswith("EX-99") or re.search(r"ex[-_]?99|991|992|press|earnings", t[1], re.I)]
+    if not (ex or htm):
+        return None
+    return max(ex or htm, key=lambda t: len(t[2]))[2]
+
+
 def ex99_html(cik, acc):
-    """8-K 의 보도자료(EX-99) HTML. 이름이 제각각이라 크기로도 고른다(scrape_pr_us 와 같은 규칙)."""
+    """8-K 의 보도자료(EX-99) HTML. 이름이 제각각이라 크기로도 고른다(scrape_pr_us 와 같은 규칙).
+
+    **첨부 목록(index.json)이 안 오면 통짜 제출 파일에서 꺼낸다(11/24).** 11/23 장 마감 뒤로 목록이 조용히 비어(404·504)
+    실시간 서버도 3분 루프도 8-K 를 보고도 보도자료를 한 건도 못 읽었다 — 몇 시간 지난 공시도 마찬가지였다(HPE·CENT 77분 보류)."""
+    try:
+        raw = _ex99_by_index(cik, acc)
+    except Exception:                                            # noqa: BLE001 — 목록이 막혀도(504) 통짜 파일은 따로 온다
+        raw = None
+    return raw or ex99_from_txt(cik, acc)
+
+
+def _ex99_by_index(cik, acc):
     blob = sec_get(FILES.format(cik=cik, acc=acc), timeout=15, binary=False)
     if not blob:
         return None
