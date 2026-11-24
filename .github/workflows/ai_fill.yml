@@ -1,18 +1,17 @@
 # AI 빈칸 메우기 — 1Q18 부터 사업부·지역·수주가 빈 분기를 공시 원문에서 읽는다(ai_fill.py).
-# **네 갈래가 동시에** 돌고(회사를 열쇠 해시로 나눔) 갈래마다 제 파일(data/ai_fill_s{0..3}.json)의 주인이다 — 커밋이 안 부딪힌다.
-# 끝나면 곧장 다음 실행을 건다(이어달리기). 구독 한도에 걸린 갈래는 25분 쉰다. 크론은 안전망.
+# 두 갈래가 동시에 돌고(회사를 열쇠 해시로 나눔) 갈래마다 제 파일(data/ai_fill_s{0,1}.json)의 주인이다. 옛 s2·s3 은 읽기만(빌드·기억).
+# 세 시간마다 두 갈래(Claude 두 계정)로 돈다. 대상은 '채울 수 있는 사업부 빈칸'뿐이라 다 차면 저절로 할 일이 없어진다. 이어달리기는 껐다.
 # 키: GitHub Secrets 의 CLAUDE_CODE_OAUTH_TOKEN · CLAUDE_CODE_OAUTH_TOKEN_2 · CODEX_AUTH_JSON(있는 것만 쓴다).
 # 한도에 한 번 걸리면 그 갈래는 곧장 멈춘다(AIFILL_RETRY=1). 추가 결제는 각 계정 설정에서 꺼 둘 것.
 name: AI 빈칸 메우기
 
 on:
-  # 정시 실행은 Codex 갈래만 돈다(11/02) — Claude 계정은 회원님이 쓰는 한도·추가 결제 걱정이 있어 손으로 부를 때만.
   schedule:
-    - cron: '23,53 * * * *'
+    - cron: '17 */3 * * *'     # 세 시간마다(하루 8번 · 계정당 한 번에 10~15만 토큰까지) — 대상이 다 차면 몇 초 만에 끝난다
   workflow_dispatch:
     inputs:
-      codex_only:
-        description: '1 이면 Codex 갈래만(이어달리기가 쓴다)'
+      engine:
+        description: 'codex 면 두 갈래 다 Codex 로(기본은 Claude 두 계정)'
         required: false
         default: ''
       only:
@@ -22,7 +21,15 @@ on:
       max:
         description: '갈래당 최대 호출 수(시험은 작게)'
         required: false
-        default: '40'
+        default: '900'      # 11/05: 토큰 300만이면 공시 600건 넘게 읽는다 · 11/04 밤: 이어달리기가 이 기본값(40)으로 걸려 실행마다 3분 만에 끝났다
+      acct:
+        description: '1 이면 두 갈래 다 Claude 1번 계정(회원님 채팅 계정인 2번을 안 쓴다)'
+        required: false
+        default: ''
+      ctok:
+        description: 'Claude 로 돌 때 갈래당 토큰 상한(비우면 15만·10만)'
+        required: false
+        default: ''
       recent:
         description: '최근 며칠 안의 빈칸만(0 = 1Q18 부터 전부)'
         required: false
@@ -47,11 +54,12 @@ jobs:
       #   claude1 = CLAUDE_CODE_OAUTH_TOKEN · claude2 = CLAUDE_CODE_OAUTH_TOKEN_2 · codex = CODEX_AUTH_JSON(~/.codex/auth.json 내용)
       matrix:
         include:
-          # tok = 이번 실행 토큰 상한. claude2(회원님이 지금 채팅하는 계정)는 작게 — 채팅까지 막히면 안 된다
-          - {shard: 0, want: claude1, tok: '150000'}
-          - {shard: 1, want: claude2, tok: '60000'}
-          - {shard: 2, want: codex, tok: '300000', w: '2'}
-          - {shard: 3, want: codex, tok: '300000', w: '2'}
+          # **11/10 구조를 바꿨다**: 두 갈래 · 기본은 Claude 두 계정(회원님: "Codex 아니어도 Claude 계정들로") · 대상은 '채울 수 있는 사업부 빈칸'만
+          # (ai_fill.gaps — 시총 1조 원 이상 · 사업부를 내는 회사 · 기록이 시작된 뒤의 구멍). 한 번 실행에 계정당 ctok 토큰까지.
+          # 손으로 engine=codex 를 주면 두 갈래 다 Codex(tok).
+          - {shard: 0, alt: claude1, tok: '3000000', ctok: '150000', w: '2'}
+          # claude2 = 회원님이 채팅하는 계정. 11/10 주간 한도 77%(금요일 초기화)라 **정시 실행에서는 쉰다**(sched: off) — 손으로 부를 때만 돈다.
+          - {shard: 1, alt: claude2, tok: '3000000', ctok: '100000', w: '2', sched: 'off'}
     env:
       TOK1: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
       TOK2: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN_2 }}
@@ -59,11 +67,11 @@ jobs:
       AIFILL_RETRY: '1'
       AIFILL_TOKENS: ${{ matrix.tok }}
       AI_MODEL: haiku          # 가장 가벼운 모델 — 합계 검산이 틀린 답을 거른다
-      AIFILL_MAX: "${{ github.event.inputs.max || '120' }}"        # 갈래당 한 번에 120건까지(토큰 상한 tok 이 먼저 막는다)
+      AIFILL_MAX: "${{ github.event.inputs.max || '900' }}"        # 갈래당 한 번에 120건까지(토큰 상한 tok 이 먼저 막는다)
       AIFILL_DOC: '20000'
       AIFILL_RECENT: "${{ github.event.inputs.recent || '730' }}"
       CODEX_EFFORT: low
-      AIFILL_SHARD: '${{ matrix.shard }}/4'
+      AIFILL_SHARD: '${{ matrix.shard }}/2'
       AIFILL_SECS: '2700'
       AIFILL_WORKERS: "${{ matrix.w || '1' }}"   # Codex 갈래는 두 줄
       SEC_UA: 'Earning Samurai Calendar (cbpark@wisdomasset.co.kr)'
@@ -71,20 +79,27 @@ jobs:
       - uses: actions/checkout@v4
       - name: 최신 main 으로 맞춘다
         run: |
-          git fetch origin main
-          git reset --hard origin/main
+          git fetch --depth=1 origin main
+          git reset --hard FETCH_HEAD
       - uses: actions/setup-python@v5
         with:
           python-version: '3.12'
+      # 암호 걸린 결산단신 PDF(고마쓰·TDK)는 우리 해석기가 못 연다 — poppler pdftotext 로 읽는다(11/04)
+      - name: pdftotext
+        run: command -v pdftotext || (sudo apt-get update -qq && sudo apt-get install -y -qq poppler-utils) || true
       - name: 엔진 고르기
         run: |
           has() { case $1 in claude1) [ -n "$TOK1" ];; claude2) [ -n "$TOK2" ];; codex) [ -n "$CODEX_AUTH_JSON" ];; esac; }
           pick=""
-          for e in ${{ matrix.want }} claude1 claude2 codex; do has $e && { pick=$e; break; }; done
+          # 기본은 그 갈래의 Claude 계정. 손으로 engine=codex 를 주면 Codex. 열쇠가 없으면 그 갈래는 쉰다(다른 계정으로 넘어가지 않는다).
+          if [ "${{ github.event_name }}" = "schedule" ] && [ "${{ matrix.sched }}" = "off" ]; then echo "정시 실행에서는 쉬는 갈래";
+          elif [ "${{ github.event.inputs.engine }}" = "codex" ]; then if has codex; then pick=codex; fi;
+          elif [ "${{ github.event.inputs.acct }}" = "1" ]; then if has claude1; then pick=claude1; fi;
+          elif has "${{ matrix.alt }}"; then pick="${{ matrix.alt }}"; fi
           echo "엔진: ${pick:-없음}"
           case $pick in
-            claude1) echo "CLAUDE_CODE_OAUTH_TOKEN=$TOK1" >> "$GITHUB_ENV"; echo "AI_ENGINE=claude" >> "$GITHUB_ENV";;
-            claude2) echo "CLAUDE_CODE_OAUTH_TOKEN=$TOK2" >> "$GITHUB_ENV"; echo "AI_ENGINE=claude" >> "$GITHUB_ENV";;
+            claude1) echo "CLAUDE_CODE_OAUTH_TOKEN=$TOK1" >> "$GITHUB_ENV"; echo "AI_ENGINE=claude" >> "$GITHUB_ENV"; echo "CLAUDE_TOK=${{ github.event.inputs.ctok || matrix.ctok }}" >> "$GITHUB_ENV";;
+            claude2) echo "CLAUDE_CODE_OAUTH_TOKEN=$TOK2" >> "$GITHUB_ENV"; echo "AI_ENGINE=claude" >> "$GITHUB_ENV"; echo "CLAUDE_TOK=${{ github.event.inputs.ctok || matrix.ctok }}" >> "$GITHUB_ENV";;
             codex)   mkdir -p ~/.codex && printf '%s' "$CODEX_AUTH_JSON" > ~/.codex/auth.json && chmod 600 ~/.codex/auth.json
                      echo "AI_ENGINE=codex" >> "$GITHUB_ENV";;
           esac
@@ -101,6 +116,7 @@ jobs:
         timeout-minutes: 50
         run: |
           set -o pipefail
+          [ -n "${CLAUDE_TOK:-}" ] && export AIFILL_TOKENS="$CLAUDE_TOK" AIFILL_WORKERS=1   # Claude 계정으로 돌 때는 작은 상한·한 줄
           python ai_fill.py ${{ github.event.inputs.only }} | { grep -v '^  [a-z_]*\.json\|번역 받기' || true; } | tee fill.log
           { echo "### 갈래 ${{ matrix.shard }}"; echo '```'; tail -40 fill.log; echo '```'; } >> "$GITHUB_STEP_SUMMARY"
       - name: 저장소에 반영
@@ -112,21 +128,13 @@ jobs:
           rm -f fill.log
           F=data/ai_fill_s${{ matrix.shard }}.json
           [ -f "$F" ] || { echo "파일이 없다."; exit 0; }
-          git add "$F"
-          git diff --cached --quiet && { echo "달라진 게 없다."; exit 0; }
-          git commit -m "AI 빈칸 메우기 갈래 ${{ matrix.shard }} $(date -u +%F' '%H:%M) [skip ci]"
-          for i in 1 2 3 4 5 6; do
-            git fetch origin main || { sleep $((2**i)); continue; }
-            git merge --no-edit -X ours origin/main || { git merge --abort; sleep $((2**i)); continue; }
-            git push origin HEAD:main && exit 0
-            sleep $((2**i + RANDOM % 5))
-          done
-          echo "푸시를 끝내 못 했다"; exit 1
+          bash .github/scripts/save_owned.sh "AI 빈칸 메우기 갈래 ${{ matrix.shard }} $(date -u +%F' '%H:%M) [skip ci]" "$F"
 
   relay:
     needs: fill
     # 끝나면 곧장 다음 실행(Codex 갈래만) — 30분 크론을 기다리지 않는다. 한도에 걸린 갈래는 다음 실행에서 25분 쉰다.
-    if: always() && github.ref_name == 'main' && github.event.inputs.only == ''
+    # 11/10 껐다: 한도에 걸려 쉬는 중에도 6분마다 다음 실행을 걸어 헛돌았다. 30분 크론이면 충분하다(막는 것은 Codex 한도다).
+    if: false
     runs-on: ubuntu-latest
     steps:
       - name: 다음 실행을 건다(이어달리기)

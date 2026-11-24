@@ -455,6 +455,10 @@ SEG_KO_CJK = {
     "服务": "서비스", "产品": "제품", "手机": "휴대폰", "汽车": "자동차",
     "物业": "부동산관리", "地产": "부동산", "酒店": "호텔", "餐饮": "외식",
     "医药": "의약", "电商": "이커머스", "智能": "스마트",
+    # 새 지역 이름이 원문으로 남지 않게(11/16, Appier 「北東アジア地域」「グレーターチャイナ地域」) — 단위 꼬리도 뗀다
+    "北東アジア": "동북아시아", "東北アジア": "동북아시아", "東南アジア": "동남아시아", "グレーターチャイナ": "중화권",
+    "欧米": "유럽·미국", "北アメリカ": "북미", "南アメリカ": "남미", "カナダ": "캐나다", "アセアン": "아세안",
+    "（百万円）": "", "(百万円)": "", "（千円）": "", "(千円)": "",
     # 분기 부문 이력(EDINET)에서 새로 보인 낱말들.
     "コネクティブインダストリーズ": "커넥티브 인더스트리",
     "ニュートラシューティカルズ": "뉴트라슈티컬",
@@ -551,6 +555,12 @@ _IND_OUT = _re.compile(r"\bbanks?\b|savings institution|real estate|\breit\b|rea
                        r"rental|leasing|"
                        # 택배·물류·해운도 뺀다(회원님 10/30). 항공사·철도 차량 제조는 남는다.
                        r"freight|courier|marine transportation|marine shipping|trucking|logistics", _re.I)
+# 나스닥이 「Marine Transportation」에 함께 넣는 해운 아닌 회사(11/23 회원님: 바이킹 VIK 가 왜 없나).
+# 위 해운 거름에 같이 쓸려 나갔으므로 세부 업종을 바로잡는다 — scrape_caps 가 caps.json 에 쓸 때 얹는다.
+IND_FIX = {"us:VIK": "Cruise Lines", "us:CCL": "Cruise Lines", "us:RCL": "Cruise Lines", "us:NCLH": "Cruise Lines",
+           "us:GD": "Aerospace & Defense", "us:HII": "Shipbuilding & Defense",
+           "us:MBUU": "Recreational Boats", "us:MCFT": "Recreational Boats",
+           "us:BIP": "Infrastructure Operations", "us:BIPC": "Infrastructure Operations"}
 _US_NAME_BANK = _re.compile(r"\bbancorp|\bbancshares|\bbankshares|\bbanc\b|\bbank\b", _re.I)
 _US_NAME_REIT = _re.compile(r"\breit\b|real estate investment trust|realty trust", _re.I)
 _HK_NAME_OUT = _re.compile(r"\bbank\b|\bbk\b|銀行|航運|物流|\bshipping\b|\blogistics\b|\breit\b|產業信託|置業信託|房託|房地產投資信託|"
@@ -568,6 +578,44 @@ _JP_ETF_NAME = (r"ＥＴＦ|ＥＴＮ|^ＮＦ|^ＭＸＳ|^ＭＸ|^ｉ[ＳＦ]|^�
 _JP_NAME_OUT = _re.compile(r"投資法人|銀行|銀$|国債|社債|債券|^Ｏｎｅ|^[ＲＩＥRIE][－\-]|不動産|地所|リース|電力|瓦斯|ガス(?!ト)|" + _JP_ETF_NAME + "|"
                            r"鉄道|電鉄|地下鉄|旅客|急行|東急|阪急|近鉄|京成|京阪|相鉄|西武ホールディングス|"
                            r"^[ＪJ][ＲR]|メトロ|京急|小田急|京王|東武|名鉄|南海電|西鉄")       # TDnet 줄임 이름(ＪＲ東日本·東京メトロ)
+
+
+# **캐는 회사(광산·석유가스 생산·정유·석탄)는 맨 뒷줄**(회원님 11/11: "미국에 쓰잘데없는 회사가 너무 많다 — 광산이든 정유든 채굴하는 회사는
+# 텔레로 쏘지 말고 업데이트도 제일 후순위로"). 화면에서 빼지는 않는다 — 알림을 안 보내고, 수집 대기줄에서 맨 뒤에 선다.
+# 11/11 넓힘(회원님: "유전 서비스·파이프라인·도시가스·금속 가공·구리 가공 이런 것도 싹 다, 모든 시장에서"): 유전 서비스·장비, 송유·가스관, 가스 배급,
+# 금속 가공, 철강, 알루미늄, 비철금속(일본 非鉄金属·金属製品·鉄鋼·ガス)까지. 일본 「電気・ガス業」은 전력회사가 섞여 있어 안 넣었다.
+_EXTRACT_IND = _re.compile(
+    r"(?i)oil & gas|oil/gas|oil and gas|oilfield|integrated oil|oil refining|natural gas|regulated gas|precious metals|metal mining|\bmining\b|"
+    r"metals and minerals|metal fabrication|\bcoal\b|steel|aluminum|^gold$|^silver$|^copper$|uranium|\bpaper\b|pulp|forest products|lumber & wood|farming/seeds|farm products|agricultural inputs|agricultural chemicals|meat/poultry/fish")
+# **미국 EPC·건설·주택 건설사도 같은 대우**(회원님 11/13: "미국에서 EPC 건설 주택 이런 회사들 다 빼버려 알림에서, 업데이트도 가장 후순위").
+# 미국에만 건다 — 일본 建設業 은 수주 지표를 보는 업종이라 그대로 둔다. realtime/app.py 의 TG_OUT_BUILD_US 와 같이 고친다.
+_BUILD_US = _re.compile(r"(?i)homebuilding|engineering & construction|line construction|bldg contractors|building materials|building products")
+# 나스닥이 'Military/Government/Technical' 로 묶어 업종으로는 안 걸리는 EPC·토목 회사 — 플루어·KBR·제이콥스·에이콤·그래닛·스탠텍·테트라텍 등
+BUILD_ADD = {"us:FLR", "us:KBR", "us:J", "us:ACM", "us:GVA", "us:STN", "us:TTEK", "us:ROAD", "us:ORN", "us:SHIM", "us:SLND", "us:CDNL", "us:WLDN", "us:MWH"}
+_EXTRACT_JP = {"水産", "水産・農林業", "수산", "수산·농림", "パルプ・紙", "펄프·종이", "鉱業", "石油", "石油・石炭製品", "非鉄金属", "非鉄金属製品", "金属製品", "鉄鋼", "ガス", "광업", "석유", "석유·석탄제품", "비철금속", "비철금속제품", "금속제품", "철강", "가스"}
+
+
+# **업종은 비철금속이지만 AI 수혜주라 빼지 않는 회사**(회원님 11/11: "스미토모전공 같은 회사는 광케이블이 있잖아 — 제외해야지").
+# 전선·광섬유: 스미토모전공 5802 · 후루카와전공 5801 · 후지쿠라 5803 · SWCC 5805 / 반도체·AI 서버 소재: JX금속 5016 · 미쓰이금속 5706.
+# 11/12 회원님이 고른 'A' 묶음을 더했다: SUMCO 3436 · RS테크놀로지스 3445(웨이퍼) · 토카로 3433(반도체 장비 코팅) · 닛파쓰 5991(HDD 서스펜션) /
+# 미국 파커하니핀 PH · 하우멧 HWM · ATI · 카펜터 CRS(항공·특수합금) · 제너락 GNRC(데이터센터 비상 발전) · 베이커휴즈 BKR(가스터빈) · X-에너지 XE(소형 원전).
+# 더 넣고 빼려면 이 목록과 realtime/app.py 의 TG_KEEP 을 같이 고친다.
+EXTRACT_KEEP = {"jp:5802", "jp:5801", "jp:5803", "jp:5805", "jp:5016", "jp:5706",
+     "jp:3436", "jp:3445", "jp:3433", "jp:5991",
+     "us:PH", "us:HWM", "us:GNRC", "us:ATI", "us:CRS", "us:BKR", "us:XE",
+     # 11/13: 건설 업종이지만 데이터센터·전력망을 짓는 회사 — 콴타 PWR · 컴포트시스템즈 FIX · 엠코 EME · IES · 마스텍 MTZ · 프리모리스 PRIM · MYR · 스털링 STRL
+     "us:PWR", "us:FIX", "us:EME", "us:IESC", "us:MTZ", "us:PRIM", "us:MYRG", "us:STRL"}
+
+
+def extractive(mkt, sector="", industry="", key=""):
+    """광산·석유가스 생산·정유·석탄 회사인가(세부 업종이 있으면 그것으로, 일본은 업종으로). key 가 EXTRACT_KEEP 에 있으면 아니다."""
+    if key and key in EXTRACT_KEEP:
+        return False
+    if mkt == "jp":
+        return (sector or "") in _EXTRACT_JP
+    if key in BUILD_ADD:
+        return True
+    return bool(industry) and bool(_EXTRACT_IND.search(industry) or (mkt == "us" and _BUILD_US.search(industry)))
 
 
 def excluded(mkt, name="", sector="", industry=""):

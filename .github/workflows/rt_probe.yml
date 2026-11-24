@@ -1,0 +1,18 @@
+# 실시간 서버(Railway) 상태 찍기 — 로그에만 남기고 아무것도 커밋하지 않는다. dispatch 전용.
+name: 실시간 서버 상태
+
+on:
+  workflow_dispatch:
+
+jobs:
+  probe:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - name: 상태
+        run: |
+          U=$(cat realtime/URL)
+          for p in /health /api/stats "/api/log" /api/mon; do
+            echo "===== $p"; curl -s -m 25 -w "\n[HTTP %{http_code} · %{time_total}s]\n" "$U$p" | head -c 6000; echo
+          done

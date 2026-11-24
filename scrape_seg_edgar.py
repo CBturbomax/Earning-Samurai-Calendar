@@ -85,7 +85,7 @@ OUT = HERE / "data" / "segments_edgar.json"
 
 EDGAR_VER = 1
 # 2 — 지역 축(geo)과 수주잔고(RPO)를 같이 뜯는다.
-PARSE_VER = 2
+PARSE_VER = 3      # 3: ReportableSubsegments 표시도 부문 값(CAT)
 
 IDX = "https://www.sec.gov/Archives/edgar/full-index/{y}/QTR{q}/form.idx"
 FOLDER = "https://www.sec.gov/Archives/edgar/data/{cik}/{acc}"

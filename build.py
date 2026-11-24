@@ -581,6 +581,22 @@ def half_yearly(pts):
     return 150 <= gaps[len(gaps) // 2] <= 220
 
 
+FPI_HALF_SKIP = [0]
+
+
+def _coarser_than_base(v, base):
+    """6-K 기록(v)의 점 간격이 반년 이상인데 이미 가진 줄(base)은 분기인가."""
+    if not base or base.get("freq") != "Q":
+        return False
+    b = sorted(p["end"] for p in base.get("points") or [] if p.get("end") and p.get("rev"))
+    e = sorted(p["end"] for p in v.get("points") or [] if p.get("end") and p.get("rev"))
+    if len(b) < 8 or len(e) < 2:
+        return False
+    gap = lambda xs: sorted((date.fromisoformat(y) - date.fromisoformat(x)).days for x, y in zip(xs, xs[1:]))
+    gb, ge = gap(b), gap(e)
+    return gb[len(gb) // 2] <= 125 and ge[len(ge) // 2] >= 150
+
+
 def load_fin():
     """따로 받아둔 실적 수치(매출·영업이익 시계열, 발표 완료 여부).
 
@@ -610,14 +626,166 @@ def load_fin():
         for k, v in got.items():
             # 예전 financials.json 은 열쇠가 'AAPL' 이었다. 'us:' 를 붙여 옮긴다.
             key = k if ":" in k else prefix + k
+            # **반기 값을 분기 줄에 끼우지 않는다**(11/10 MT 2Q21 = 355억 — 상반기 누계가 분기 칸에 앉아 있었다. BUD·NAT·CRNT 도).
+            # financials_fpi 에는 '분기가 하나도 안 나오는 회사'의 상반기·하반기 점이 들어 있는데(scrape_seg_sec.quarterly), 같은 회사를
+            # stockanalysis 는 분기로 준다. merge_fin 은 '없는 종료일'만 메우므로 stockanalysis 20분기 앞의 반기 값이 그대로 분기 칸에 섰다.
+            # 6-K 쪽 점 간격이 반년 이상이고 이미 가진 줄이 분기면 그 기록은 안 합친다. 틀린 값보다 빈칸.
+            if name == "financials_fpi.json" and _coarser_than_base(v, out.get(key)):
+                FPI_HALF_SKIP[0] += 1
+                continue
             out[key] = merge_fin(out.get(key), v)
+    if FPI_HALF_SKIP[0]:
+        print(f"  financials_fpi.json: 분기 회사에 반기·연간 간격 점이라 안 합친 종목 {FPI_HALF_SKIP[0]:,}")
     for key, v in jp_old_fin().items():          # 1Q18 부터 — 비어 있는 옛 분기만 메운다(rank 가 가장 낮다)
         out[key] = merge_fin(out.get(key), v)
+    for key, v in jp_wiki_fin().items():         # 분기가 아예 끊긴 회사(만다라케 2652) — 손으로 뜬 스냅샷, 빈 분기만
+        cur = out.get(key)
+        # 가진 것이 몇 년 전에 끝났으면(stockanalysis 가 2006~2010 만 준 2652) 그 옛 줄은 버리고 새로 세운다.
+        if cur and last_end(cur) < v["points"][0]["end"][:4]:
+            cur = None
+        out[key] = merge_fin(cur, v)
     try:
         hk_long_fin(out)
     except Exception as e:                        # noqa: BLE001  — 이것 때문에 페이지가 안 만들어지면 안 된다
         print(f"  ! 홍콩 긴 이력 붙이기 실패: {e!r}")
+    try:
+        load_fpi_pr(out)
+    except Exception as e:                        # noqa: BLE001
+        print(f"  ! 외국 기업 보도자료 수치 붙이기 실패: {e!r}")
     return out
+
+
+FPI_UV = {}                     # 열쇠 -> {종료일} — **검산을 못 통과했지만 회원님 지시(11/11 "일단 실어봐")로 싣는 칸**. 화면이 분기 이름에 '?' 를 단다
+FPI_FILL = {}                   # 열쇠 -> {종료일: 그 분기 총매출} — 회사 단위로 읽어 빈칸을 메운 칸(ai_jp_co). 헌 줄이 어긋나 있으면 갈아 끼운다
+FPI_SEG = {}                    # 열쇠 -> {종료일: {사업부: 값}} — 검산을 통과한 분기만(load_fpi_seg 가 SEG 에 싣는다)
+
+
+def _fy_quarters(end, step=3):
+    """회계연도 끝 날짜 -> 그 해의 분기(반기) 종료일 넷(둘)."""
+    e, out = date.fromisoformat(end), []
+    for i in range(12 // step):
+        y, m = e.year, e.month - step * i
+        while m <= 0:
+            y, m = y - 1, m + 12
+        last = (date(y + (m == 12), m % 12 + 1, 1) - timedelta(days=1))
+        out.append(last if e.day >= 28 else date(y, m, min(e.day, last.day)))
+    return out
+
+
+def load_fpi_pr(out):
+    """미국 상장 **외국 기업**의 옛 분기 — 6-K 보도자료 표에서 읽은 총매출·사업부(ai_fpi.py → data/fpi_pr.json).
+
+    회원님(11/10): SE 가 "거의 다 빈칸". 10-Q 를 안 내는 회사는 stockanalysis 20분기(3Q21~)가 전부라 그 앞은 총매출부터 없었다.
+    **검산을 통과한 분기만** 싣는다 — 있는 값은 안 덮는다.
+      · 이미 가진 분기 총매출과 2% 안(수집기가 이미 걸렀다 — 여기서 한 번 더)
+      · 없는 분기는 그 회계연도 **네 분기 합 = 20-F 연간 매출(1.5% 안)** 이거나 **두 공시가 같은 값(0.5% 안)**일 때만"""
+    p = HERE / "data" / "fpi_pr.json"
+    if not p.exists():
+        return
+    try:
+        stocks = json.loads(p.read_text(encoding="utf-8")).get("stocks") or {}
+        raw_us = json.loads((HERE / "data" / "financials.json").read_text(encoding="utf-8")).get("stocks", {})
+    except (ValueError, OSError) as e:
+        print(f"  ! fpi_pr.json 읽기 실패: {e}")
+        return
+    try:
+        co = json.loads((HERE / "data" / "fpi_co.json").read_text(encoding="utf-8")).get("stocks") or {}
+    except (ValueError, OSError):
+        co = {}
+    n_fin = n_co = 0
+    for key in list(stocks) + [k for k in co if k not in stocks]:
+        st = stocks.get(key) or {"cur": co[key].get("cur"), "q": {}}
+        q = {e: list(lst) for e, lst in (st.get("q") or {}).items() if lst}
+        # 회사 단위로 읽은 쪽(fpi_co)이 본 총매출 — 장마다 읽은 값이 없는 분기에만 후보로 넣는다. 싣는 조건은 아래와 같다(연간 합·두 번 같은 값).
+        for e, x in ((co.get(key) or {}).get("q") or {}).items():
+            if x.get("pend") and x.get("rev") and (co[key].get("cur") or "") == (st.get("cur") or "") and \
+                    (e not in q or (x.get("rev2") and not any(r_.get("seg") for r_ in q[e])
+                                    and abs((q[e][-1].get("rev") or 0) / x["rev"] - 1) > 0.05)):   # 두 공시로 확인된 값은 옛 수집기 값(단위 틀림 — 넷이즈)을 이긴다
+                # rev2 = 1년 뒤 공시의 '전년 동기' 칸에서 같은 값을 다시 찾았다(ai_fpi_co.confirm_pend) — '두 공시가 같은 값' 규칙에 걸리게 두 벌로 넣는다
+                q[e] = [{"a": "co", "d": "", "rev": x["rev"]}] * (2 if x.get("rev2") else 1)
+        if not q:
+            continue
+        f = out.get(key) or {}
+        if f and (f.get("freq") not in ("Q", "H") or (f.get("cur") or "") != (st.get("cur") or "")):
+            continue
+        step = 6 if f.get("freq") == "H" else 3
+        have = {x["end"]: x["rev"] for x in f.get("points") or [] if x.get("end") and x.get("rev")}
+        ann = raw_us.get(key.split(":")[1]) or {}
+        ann_ok = ann.get("freq") == "A" and (ann.get("cur") or "") == (st.get("cur") or "")
+        # **단위를 놓친 답을 바로잡는다**(11/10 첫 시험: 핀둬둬·넷이즈 표는 '천 위안'인데 AI 가 단위 1 로 적어 1000배 작았다 — 단위 문구가
+        # 표 밖에 있었다). 다시 묻지 않고, 1·천·백만 배 가운데 **20-F 연간 매출과 자릿수가 맞는 것**을 고른다. 맞는 것이 없으면 그대로(검산이 버린다).
+        if ann_ok:
+            ys = {a["end"][:4]: a["rev"] for a in ann.get("points") or [] if a.get("end") and a.get("rev")}
+            pairs = [(lst[-1]["rev"], ys[e[:4]]) for e, lst in q.items() if e not in have and e[:4] in ys]
+            if pairs:
+                sc = max((1, 1e3, 1e6), key=lambda k_: sum(1 for v, a in pairs if 0.1 <= v * k_ / a <= 0.5))
+                if sc != 1 and sum(1 for v, a in pairs if 0.1 <= v * sc / a <= 0.5) >= 0.8 * len(pairs):
+                    q = {e: ([dict(x, rev=x["rev"] * sc, **({"opi": x["opi"] * sc} if x.get("opi") is not None else {}),
+                                   **({"seg": {n: v * sc for n, v in x["seg"].items()}} if x.get("seg") else {})) for x in lst]
+                             if e not in have else lst) for e, lst in q.items()}
+        val = {e: lst[-1]["rev"] for e, lst in q.items()}            # 나중 공시(재표시) 값
+        ok = set()
+        for e, lst in q.items():
+            if e in have:
+                if abs(val[e] / have[e] - 1) <= 0.02:
+                    ok.add(e)
+            elif len(lst) >= 2 and abs(lst[0]["rev"] / lst[-1]["rev"] - 1) <= 0.005:
+                ok.add(e)
+        if ann_ok:
+            for a in ann.get("points") or []:
+                if not (a.get("end") and a.get("rev")):
+                    continue
+                qs = [d.isoformat() for d in _fy_quarters(a["end"], step)]
+                vals = [have.get(e, val.get(e)) for e in qs]
+                if all(vals) and abs(sum(vals) / a["rev"] - 1) <= 0.015:
+                    ok.update(e for e in qs if e in q)
+        add = [{"end": e, "rev": val[e], "opi": q[e][-1].get("opi")} for e in sorted(ok) if e not in have]
+        # **외톨이 분기는 안 싣는다**(11/13 TK·IX: 옛 분기 총매출이 띄엄띄엄 들어오자 점 사이 간격이 반년으로 읽혀 분기 회사가 반기로 바뀌고
+        # 멀쩡한 칸이 사라졌다). 바로 앞이나 뒤 분기(80~100일)가 우리에게 있거나 같이 들어올 때만.
+        if step == 3:
+            allp = sorted(set(have) | {x_["end"] for x_ in add})
+            add = [x_ for x_ in add if any(75 <= abs((date.fromisoformat(o_) - date.fromisoformat(x_["end"])).days) <= 100 for o_ in allp)]
+        if add:
+            out[key] = merge_fin(f or None, {"v": 1, "freq": f.get("freq") or "Q", "cur": st.get("cur") or "USD",
+                                             "src": "pr", "points": add})
+            n_fin += len(add)
+            n_co += 1
+        segs = {}
+        for e in ok:
+            x = next((r for r in reversed(q[e]) if r.get("seg")), None)   # 나중 공시 것(지금 기준으로 재표시된 값)
+            if x:
+                segs[e] = x["seg"]
+        if len(segs) >= 2:
+            FPI_SEG[key] = segs
+    # **회사 단위로 한 번에 읽은 사업부**(ai_fpi_co.py → fpi_co.json, 11/10). 한 이름 체계·한 기준으로 정리된 줄이라 장마다 읽은 것보다 앞선다.
+    # 수집기가 '부문 합 ÷ 총매출이 분기마다 고른가'로 걸렀다. 여기서는 **그 분기 총매출을 우리가 가졌을 때만** 싣는다(pend = 수집기 때는 없던 분기).
+    n_cos = 0
+    for key, st in co.items():
+        f = out.get(key) or {}
+        # fill = 화면에 이미 사업부가 있는 회사의 빈 분기만 메운 것(일본 — ai_jp_co.py). 한 칸이어도 싣는다.
+        if (f.get("cur") or "") != (st.get("cur") or "") or len(st.get("q") or {}) < (1 if st.get("fill") else 4):
+            continue
+        ends = [(date.fromisoformat(x["end"]), x["rev"]) for x in f.get("points") or [] if x.get("end") and x.get("rev")]
+        segs = dict(FPI_SEG.get(key) or {})
+        for e, x in st["q"].items():
+            d = date.fromisoformat(e)
+            hit = min(ends, key=lambda t: abs((t[0] - d).days), default=None)
+            if not hit or abs((hit[0] - d).days) > 20 or len(x.get("seg") or {}) < 2:
+                continue
+            if x.get("pend") and abs(x["rev"] / hit[1] - 1) > 0.02:      # 임시 총매출로 검산한 분기 — 나중에 얻은 총매출과 맞아야
+                continue
+            segs[e] = x["seg"]
+            n_cos += 1
+            if x.get("uv"):                                          # 검산 안 된 값 — 표시를 달아 싣고, 있는 줄은 안 갈아 끼운다
+                FPI_UV.setdefault(key, set()).add(e)
+            elif st.get("fill"):
+                FPI_FILL.setdefault(key, {})[e] = hit[1]             # 그 분기 총매출 — load_fpi_seg 가 헌 줄과 견줄 때 쓴다
+        if len(segs) >= (1 if st.get("fill") else 2):               # fill 은 한 칸이어도(11/11: 한 칸짜리 회사 43칸이 여기서 통째로 빠졌다)
+            FPI_SEG[key] = segs
+    if n_cos:
+        print(f"  외국 기업 사업부(회사 단위로 읽은 것): {n_cos:,}칸 · {len(co):,}곳")
+    if n_fin or FPI_SEG:
+        print(f"  외국 기업 6-K 보도자료: 옛 분기 총매출 {n_fin:,}칸({n_co:,}곳) · 사업부를 읽은 회사 {len(FPI_SEG):,}")
 
 
 def hk_long_fin(out):
@@ -793,6 +961,41 @@ def jp_old_fin():
     return out
 
 
+def jp_wiki_fin():
+    """일본 분기 실적 스냅샷(InvestingWiki jp_financials — 결산단신 XBRL). GitHub Actions 에서 못 부르므로(MCP) 손으로 떠
+    data/financials_jp_wiki.json 에 둔다. 분기가 통째로 빈 회사만 떠 왔고, rank 가 가장 낮아 있는 값은 안 덮는다.
+    「YYYY/M期 kQ」 → 그 분기 끝 달. 결산기를 바꾼 해(12달이 아닌 해)는 분기 경계를 모르므로 버린다."""
+    try:
+        raw = json.loads((HERE / "data" / "financials_jp_wiki.json").read_text(encoding="utf-8"))["stocks"]
+    except (OSError, ValueError, KeyError):
+        return {}
+    import calendar
+    from datetime import date as _d, timedelta as _td
+    out = {}
+    for key, rec in raw.items():
+        fys = sorted({(int(p[:4]), int(p[5:p.index("期")])) for p, *_ in rec.get("q", [])})
+        bad, prev = set(), None
+        for y, m in fys:
+            if prev and (y * 12 + m) - (prev[0] * 12 + prev[1]) != 12:
+                bad.add((y, m))
+            prev = (y, m)
+        by_end = {}
+        for p, basis, rev, opi, ni in rec.get("q", []):
+            y, m, k = int(p[:4]), int(p[5:p.index("期")]), int(p[-2])
+            if (y, m) in bad or basis not in ("reported", "derived") or not rev or rev <= 0:
+                continue
+            em = y * 12 + (m - 1) - 3 * (4 - k)
+            ey, emo = em // 12, em % 12 + 1
+            en = _d(ey, emo, calendar.monthrange(ey, emo)[1]).isoformat()
+            by_end[en] = {"label": f"{(emo + 2) // 3}Q{en[2:4]}", "end": en,
+                          "mid": (_d.fromisoformat(en) - _td(days=45)).isoformat(), "rev": rev, "opi": opi, "ni": ni}
+        pts = [by_end[e] for e in sorted(by_end)]
+        if len(pts) >= 2:
+            out[key] = {"v": 1, "freq": "Q", "cur": "JPY", "src": "wiki", "points": pts}
+    print(f"  일본 분기 스냅샷(InvestingWiki): {len(out):,}종목 · {sum(len(v['points']) for v in out.values()):,}분기")
+    return out
+
+
 def last_end(rec):
     pts = (rec or {}).get("points") or []
     return pts[-1].get("end", "") if pts else ""
@@ -828,7 +1031,7 @@ def merge_fin(a, b):
     # 예전에는 'sec 이면 뼈대' 하나로만 갈랐는데, 일본은 sec 이 없어서 그 규칙이
     # 아무 일도 안 했다. 그러면 TDnet 이 방금 받아온 새 분기가 stockanalysis 의
     # 헌 줄에 덮여 사라진다.
-    rank = {"sec": 3, "tdnet": 2, "mix": 1, "sa": 1, "yahoo": 0, "tdold": -1}
+    rank = {"sec": 3, "tdnet": 2, "mix": 1, "sa": 1, "yahoo": 0, "tdold": -1, "wiki": -2}
     pa, pb = rank.get(a.get("src"), 0), rank.get(b.get("src"), 0)
     base, extra = (a, b) if len(a.get("points") or []) >= len(b.get("points") or []) else (b, a)
     win = a if pa >= pb else b               # 겹치는 분기를 가져갈 쪽
@@ -955,7 +1158,7 @@ def _last_at(pts, val, i):
     return -1
 
 
-def current_basis(rec):
+def current_basis(rec, lenient=True, selective=False):
     """지금 쓰는 부문 기준만 남긴다. 남길 게 없으면 None."""
     names, pts = rec.get("names") or [], rec.get("pts") or []
     if len(names) < 2 or not pts:
@@ -1039,7 +1242,24 @@ def current_basis(rec):
         # 코히어런트가 그랬다. 새 부문(Datacenter…)이 재표시된 3Q24 에 이미 값이
         # 있어 개편으로 못 보고 두 기준을 같이 쌓았고, 그 두 칸의 막대가 두 배였다.
         first_dead = min((sp[0] for i in dead if (sp := span(i))), default=0)
-        born = [i for i in live if (sp := span(i)) and sp[0] >= first_dead + 4]
+        last_dead = max((sp[1] for i in dead if (sp := span(i))), default=0)
+        # 옛 기준과 **한 해 넘게 나란히 있던** 이름은 후신이 아니다(11/05 CAT: 건설 부문이 벌크 초기 칸에 빠져 2017 년부터
+        # 나오는 바람에 '새 이름'으로 잡혀, 그 뒤 몇 년을 같이 있던 에너지 부문 값이 옛 기준으로 지워졌다). 재표시 비교치가
+        # 겹치는 건 넉 분기 안이다(코히어런트).
+        born_old = [i for i in live if (sp := span(i)) and sp[0] >= first_dead + 4]
+        born = [i for i in born_old if span(i)[0] >= last_dead - 4] if lenient else born_old
+        if born != born_old:
+            # 겹친 기간에 끊긴 이름들의 합이 남은 이름들의 합과 같으면(±15%) **같은 매출을 두 기준으로 나눈 것**이다(로우스) —
+            # 그때는 예전 규칙대로 자른다. 다르면 서로 다른 부문이 나란히 있던 것이다(CAT).
+            rat = []
+            for r in pts:
+                d_ = sum(val(r, i) or 0 for i in dead)
+                l_ = sum(val(r, i) or 0 for i in live)
+                if d_ and l_ and all(val(r, i) is not None for i in dead if span(i)):
+                    rat.append(d_ / l_)
+            rat.sort()
+            if rat and 0.85 <= rat[len(rat) // 2] <= 1.15:
+                born = born_old
         if not born:
             # 개편이 아니다(수집 구멍이거나 판 사업). 끊긴 부문도 그대로 둔다 —
             # 뒤가 빈 막대는 '그 사업이 거기서 끝났다'는 사실이고, 지우면 그
@@ -1092,7 +1312,19 @@ def current_basis(rec):
     # 가르므로(회원님 10/30 "둘 다 보여줘, 옛 기준은 최대한"), 여기서는 새 기준 분기에서 옛 이름만 비우고 앞은 그대로 넘긴다.
     if os.environ.get("SEG_CUT_OLD") != "1":
         live_s = set(live)
-        rows = [[r[0]] + [(val(r, i) if (j < start or i in live_s) else None) for i in keep] for j, r in enumerate(pts)]
+        born_s = set(born)
+        # 새 기준 분기에서 옛 이름을 비우는 것은 **그 칸에 같은 매출이 두 기준으로 함께 실렸을 때만**(옛 이름들의 합과 새 이름들의
+        # 합이 ±20% 안)이다(11/05 퀀타: 'Underground and Infrastructure' 가 2020 년에 이름만 바뀌어 '새 이름'으로 잡히자
+        # 2020~2023 칸의 전력 부문 값이 통째로 지워져 그 열두 분기가 반쪽이 됐고, 그래서 화면에서 빠졌다).
+        def _blank(j, r):
+            if j < start:
+                return False
+            if not selective:
+                return True
+            d_ = sum(val(r, i) or 0 for i in dead)
+            b_ = sum(val(r, i) or 0 for i in born_s) or sum(val(r, i) or 0 for i in live)
+            return not d_ or not b_ or 0.8 <= d_ / b_ <= 1.25
+        rows = [[r[0]] + [(val(r, i) if (i in live_s or not _blank(j, r)) else None) for i in keep] for j, r in enumerate(pts)]
         rows = [r for r in rows if any(v is not None for v in r[1:])]
         if len(rows) < 2:
             return None
@@ -1581,6 +1813,10 @@ def load_seg():
                     out[key] = v
                     new += 1
                 continue
+            if _one_line(base) and not _one_line(v) and len(v.get("pts") or []) >= 2 and _sums_to_rev(key, v):
+                out[key] = v                                  # LLY: 벌크는 'Reportable' 한 줄(=총매출)뿐, 10-Q 엔 제품별이 있다
+                new += 1
+                continue
             n_add = splice(base, v)
             added += bool(n_add)
         print(f"  segments_edgar.json: 최근 분기를 이어 붙인 종목 {added:,}"
@@ -1655,9 +1891,20 @@ def load_seg():
             # 꼬리를 못 붙였으면(이름이 안 맞거나 새로 낼 분기가 없으면) **긴
             # 쪽을 남긴다.** 무턱대고 이력으로 갈아치우면 TDnet 이 방금 받아 온
             # 최근 분기가 사라진다.
-            if splice(base, tail) or len(base["pts"]) > len(tail.get("pts") or []):
+            if splice(base, tail):
                 out[k] = base
                 grew += 1
+            else:
+                # 이력 쪽으로 못 이었으면 **거꾸로** 해 본다 — 꼬리(최근 분기가 촘촘한 쪽)를 뼈대로 이력의 옛 분기를 잇는다.
+                # 예전에는 길이만 보고 이력을 남겨 꼬리가 가진 분기(미쓰비시상사 2024 년 두 분기)가 사라졌다(11/05).
+                t2 = json.loads(json.dumps(tail))
+                splice(t2, base)
+                if len(t2.get("pts") or []) >= len(base["pts"]):
+                    out[k] = t2
+                    grew += 1
+                elif len(base["pts"]) > len(tail.get("pts") or []):
+                    out[k] = base
+                    grew += 1
         else:
             out[k] = base
             seeded += 1
@@ -1680,7 +1927,7 @@ def load_seg():
     # '최근 두 분기'가 실제 최근이 된다.
     cut = gone = 0
     for k in list(out):
-        got = current_basis(out[k])
+        got = _pick_basis(k, out[k])
         if got is None:
             del out[k]; gone += 1
         elif got is not out[k]:
@@ -1688,7 +1935,95 @@ def load_seg():
     if cut or gone:
         print(f"  기준이 바뀐 종목 {cut:,}: 옛 부문을 뺐다"
               + (f" · 남는 부문이 없어 뺀 종목 {gone:,}" if gone else ""))
+    # **한 줄짜리는 사업부 그림이 아니다**(11/04 LLY: 'Reportable' 한 줄 = 총매출). 186곳이 그랬다 — 그림을 안 내야
+    # 빈칸 메우기(AI)가 '사업부 없음'으로 보고 원문에서 다시 읽는다.
+    one = [k for k in out if _one_line(out[k])]
+    for k in one:
+        del out[k]
+    if one:
+        print(f"  사업부가 한 줄뿐(=총매출)이라 그림을 안 내는 종목 {len(one):,}")
+    print(f"  개편으로 새로 생긴 부문을 새 칸으로 이은 종목: {SPLICE_NEW[0]:,}")
+    print(f"  새 기준 칸에서 옛 이름을 두 번 실렸을 때만 비운 판을 고른 종목: {SEG_SELECT[0]:,}")
     return out
+
+
+def _sums_to_rev(key, rec):
+    """마지막 칸의 부문 합이 그 분기 총매출의 0.97~1.1배일 때만 — LLY 10-Q 는 상위 줄(Cardiometabolic)과 그 아래
+    제품(Mounjaro…)을 같이 실어 합이 총매출의 1.9배였다. 겹쳐 쌓으면 막대가 거짓말을 한다."""
+    pts = [p for p in (FIN.get(key) or {}).get("points") or [] if p.get("end") and p.get("rev")]
+    last = (rec.get("pts") or [[None]])[-1]
+    if not pts or not re.match(r"\d{4}-\d\d-\d\d$", str(last[0])):
+        return False
+    d = date.fromisoformat(last[0])
+    p = min(pts, key=lambda q: abs((date.fromisoformat(q["end"]) - d).days))
+    if abs((date.fromisoformat(p["end"]) - d).days) > 20:
+        return False
+    return 0.97 <= sum(v for v in last[1:] if v) / p["rev"] <= 1.1
+
+
+def _basis_fit(key, rec):
+    """부문 합이 그 분기 총매출에서 얼마나 벗어나나(로그 차이의 중앙값). 대볼 총매출이 없으면 None."""
+    import math
+    pts = [p for p in (FIN.get(key) or {}).get("points") or [] if p.get("end") and p.get("rev")]
+    if not rec or not pts:
+        return None
+    ends = [(date.fromisoformat(p["end"]), p["rev"]) for p in pts]
+    errs = []
+    for r in rec.get("pts") or []:
+        if not re.match(r"\d{4}-\d\d-\d\d$", str(r[0])):
+            continue
+        d = date.fromisoformat(r[0])
+        rv = next((v for e, v in ends if abs((e - d).days) <= 20), None)
+        sm = sum(v for v in r[1:] if v)
+        if rv and rv > 0 and sm > 0:
+            errs.append(abs(math.log(sm / rv)))
+    errs.sort()
+    return errs[len(errs) // 2] if errs else None
+
+
+def _pick_basis(key, rec):
+    """옛 기준을 자르는 두 판(넉넉한 판 · 예전 판)을 다 만들어 **총매출에 더 맞는 쪽**을 고른다(11/05).
+    넉넉한 판은 CAT 처럼 옛 기준과 나란히 있던 부문을 살리고, 예전 판은 로우스처럼 합계·세부 줄이 겹친 회사를 막는다."""
+    a = current_basis(rec, True)
+    b = current_basis(json.loads(json.dumps(rec)), False)
+    if a is None or b is None:
+        best = a if b is None else b
+    else:
+        fa, fb = _basis_fit(key, a), _basis_fit(key, b)
+        best = b if (fa is None or fb is None) else (a if fa < fb - 0.01 else b)
+    # **새 기준 칸에서 옛 이름을 비우는 것은 같은 매출이 두 번 실렸을 때만**(selective) 판도 만들어, 총매출과 ±12% 안으로 맞는
+    # 분기가 더 많을 때만 그 판을 쓴다(11/05 퀀타 2020~2023 전력 부문 · 반대로 포드·HPE 는 예전 판이 맞다).
+    c = current_basis(json.loads(json.dumps(rec)), True, True)
+    if best is not None and c is not None and _good_rows(key, c) > _good_rows(key, best):
+        SEG_SELECT[0] += 1
+        return c
+    return best
+
+
+SEG_SELECT = [0]
+
+
+def _good_rows(key, rec):
+    """부문 합이 그 분기 총매출의 0.88~1.12 배인 분기 수."""
+    pts = [p for p in (FIN.get(key) or {}).get("points") or [] if p.get("end") and p.get("rev")]
+    ends = [(date.fromisoformat(p["end"]), p["rev"]) for p in pts]
+    n = 0
+    for r in rec.get("pts") or []:
+        if not re.match(r"\d{4}-\d\d-\d\d$", str(r[0])):
+            continue
+        d = date.fromisoformat(r[0])
+        rv = next((v for e, v in ends if abs((e - d).days) <= 20), None)
+        sm = sum(v for v in r[1:] if v and v > 0)
+        if rv and rv > 0 and 0.88 <= sm / rv <= 1.12:
+            n += 1
+    return n
+
+
+def _one_line(rec):
+    """**한 번도** 두 부문 이상을 낸 적이 없다 — 쪼갠 것이 아니다(LLY 'Reportable'). 최근 몇 칸만 보면 GOOG 처럼
+    다른 소스의 반쪽 칸이 꼬리에 붙은 멀쩡한 37분기가 통째로 갈려 나간다(11/04)."""
+    pts = [r for r in (rec.get("pts") or []) if any(v for v in r[1:])]
+    return bool(pts) and all(sum(1 for v in r[1:] if v) <= 1 for r in pts)
 
 
 SEG_NORM = re.compile(r"[^a-z0-9]|and")
@@ -1698,6 +2033,9 @@ def seg_key(name: str) -> str:
     """부문 이름을 맞춰 보는 열쇠. 대소문자·띄어쓰기·'and' 를 지운다.
     수집기 쪽 `norm_name` 과 같은 규칙이다 — 한쪽만 고치면 안 붙는다."""
     return SEG_NORM.sub("", name.lower())
+
+
+SPLICE_NEW = [0]
 
 
 def splice(base, fresh):
@@ -1721,6 +2059,38 @@ def splice(base, fresh):
         return seg_key(n) or ("\x00" + n)
     fi = {sk(n): i for i, n in enumerate(fresh["names"])}
     hit = [fi.get(sk(n)) for n in base["names"]]
+    # **이름이 안 맞으면 값으로 짝짓는다**(11/05 미쓰비시상사: 같은 부문이 소스마다 '金属資源'·'Mineral Resources' 로 달라
+    # 옛 이력의 2024 년 두 분기가 영영 안 붙었다). 겹치는 분기 둘 이상에서 0.5% 안으로 같고, 2% 넘게 어긋나는 분기가 없을 때만.
+    if None in hit:
+        def _rows(rec):
+            return {str(r[0]): r for r in rec.get("pts") or [] if re.match(r"\d{4}-\d\d-\d\d$", str(r[0]))}
+        br, fr = _rows(base), _rows(fresh)
+        common = sorted(set(br) & set(fr))
+        taken = {h for h in hit if h is not None}
+        for i, h in enumerate(hit):
+            if h is not None or not common:
+                continue
+            cands = []
+            for j in range(len(fresh["names"])):
+                if j in taken:
+                    continue
+                ok = bad = 0
+                for d in common:
+                    a = br[d][i + 1] if i + 1 < len(br[d]) else None
+                    b = fr[d][j + 1] if j + 1 < len(fr[d]) else None
+                    if not a or not b:
+                        continue
+                    if abs(a / b - 1) <= 0.005:
+                        ok += 1
+                    elif abs(a / b - 1) > 0.02:
+                        bad += 1
+                # 한 분기가 틀린 소스(인텔 4Q23 벌크는 연간값이 섞였다)에 짝짓기가 통째로 막히지 않게, 맞는 분기가 넷 넘고
+                # 틀린 분기가 맞는 것의 5분의 1 이하면 짝으로 본다(11/05 — 인텔 2022 네 분기가 이것 때문에 안 붙었다).
+                if (ok >= 2 and not bad) or (ok >= 4 and bad * 5 <= ok):
+                    cands.append(j)
+            if len(cands) == 1:
+                hit[i] = cands[0]
+                taken.add(cands[0])
     # **잣대는 헌 기록의 이름 전부가 아니라 '지금 쓰는 것'이다.** 벌크 기록에는
     # 옛 이름이 같이 실려 있는 일이 흔해서(아이하트미디어는 같은 부문 셋이 옛
     # 이름으로도 들어 있어 여섯 줄이었다), 전부를 분모로 삼으면 멀쩡한 짝이
@@ -1738,27 +2108,91 @@ def splice(base, fresh):
     # 다만 **이름을 바꾼 경우**는 예외다. 그때는 덜 겹치는 게 당연하고
     # (콜게이트 'Pet Nutrition' -> 'Hills Pet Nutrition'), 뒤에서 current_basis 가
     # 정리한다. 하나도 안 겹치면 그건 이름 변경이 아니라 **다른 축**이다.
-    if not (cov == len(liveb) or (cov and newborn)):
+    tail_ok = cov == len(liveb) or (cov and newborn)      # 새 분기를 덧붙여도 되나(반쪽 칸 채우기는 이름이 같기만 하면 된다)
+    if not any(h is not None for h in hit):
         return 0
     # 뒤만이 아니라 **가운데 빈 분기도** 채운다(회원님 11/01: "비어 있으면 안 된다"). 도요타는 EDINET 이력이
     # 2024-03 · 2024-12 를 갖고 2024-06 · 2024-09 가 비어 있었는데, '마지막 뒤만' 이으니 TDnet 이 가진 두 분기가
     # 영영 안 들어갔다. 종료일이 열흘 안이면 같은 분기로 본다(있는 칸은 건드리지 않는다).
     have = [date.fromisoformat(p[0]) for p in base["pts"] if re.match(r"\d{4}-\d\d-\d\d$", str(p[0]))]
     add = []
+    patched = 0
+    base_last = max(have) if have else date(1900, 1, 1)
+    mapped = {h for h in hit if h is not None}
+    newcols, used_new = [], [False]
+    fresh_last = max((date.fromisoformat(r[0]) for r in fresh["pts"] if re.match(r"\d{4}-\d\d-\d\d$", str(r[0]))),
+                     default=date(1900, 1, 1))
+    # 헌 기록이 거의 최근까지 오면(두 분기 안) 개편이 아니라 같은 부문의 다른 표기다(마이크론 CMBU = Cloud Memory) — 새 칸을 안 만든다
+    if have and (fresh_last - base_last).days >= 150:
+        for j, nm in enumerate(fresh["names"]):
+            if j in mapped:
+                continue
+            ds = [date.fromisoformat(r[0]) for r in fresh["pts"] if re.match(r"\d{4}-\d\d-\d\d$", str(r[0]))
+                  and j + 1 < len(r) and r[j + 1]]
+            if ds and min(ds) >= base_last - timedelta(days=400) and max(ds) > base_last + timedelta(days=10):
+                newcols.append(j)
     for p in sorted(fresh["pts"]):
         try:
             d = date.fromisoformat(p[0])
         except (ValueError, TypeError):
             continue
         if any(abs((d - h).days) <= 10 for h in have):
+            # **반쪽 칸은 채운다**(11/04). 벌크의 CAT 2018~2021 은 금융 부문 한 줄, COST 결산 분기는 회비 한 줄만 있어
+            # '있는 칸'으로 쳐서 10-Q 를 다 읽은 이력이 들어와도 안 채웠다 — 그 칸들이 화면에서 통째로 빠졌다.
+            # 비어 있는 부문 칸만 채우고(있는 값은 안 바꾼다), 채운 뒤 합이 원래의 1.4배를 넘을 때만(=정말 반쪽이었다).
+            row = next(r for r in base["pts"] if re.match(r"\d{4}-\d\d-\d\d$", str(r[0]))
+                       and abs((date.fromisoformat(r[0]) - d).days) <= 10)
+            fill = {}
+            for bi, fi_ in enumerate(hit):
+                if fi_ is None or fi_ + 1 >= len(p) or p[fi_ + 1] is None:
+                    continue
+                if bi + 1 >= len(row) or row[bi + 1] is None:
+                    fill[bi + 1] = p[fi_ + 1]
+            old_sum = sum(abs(v) for v in row[1:] if v)
+            if fill and old_sum + sum(abs(v) for v in fill.values()) > 1.4 * old_sum:
+                while len(row) < len(base["names"]) + 1:
+                    row.append(None)
+                for j, v in fill.items():
+                    row[j] = v
+                patched += 1
+            continue
+        if not tail_ok:
             continue
         # 열은 늘 **헌 기록의 이름 차례**를 따른다. 새 기록에 없는 부문은 빈칸이다.
-        add.append([p[0]] + [(p[i + 1] if i is not None and i + 1 < len(p) else None)
-                             for i in hit])
+        row_new = [p[0]] + [(p[i + 1] if i is not None and i + 1 < len(p) else None) for i in hit]
+        # **개편으로 새로 생긴 부문은 칸을 새로 만들어 잇는다**(11/05 커티스라이트: 2020 까지 벌크의 옛 세 부문, 2021 부터
+        # 이력의 새 세 부문 — 새 이름이 헌 칸에 안 맞는다고 다섯 해가 통째로 버려졌다. 이번 주 미국 빈칸의 큰 몫).
+        # 헌 기록이 끝난 뒤의 칸이고, 그 이름이 새 기록에서도 헌 기록 끝 무렵(1년 안) 이후에 처음 나올 때만 — 처음부터
+        # 이름만 다른 소스(stockanalysis 의 구글)를 새 기준으로 잘못 보고 옛 이력을 자르지 않게.
+        if newcols and d > base_last + timedelta(days=10):
+            ext = [p[j + 1] if j + 1 < len(p) else None for j in newcols]
+            if any(ext):
+                row_new = row_new + [None] * (len(base["names"]) + 1 - len(row_new)) + ext
+                fs = sum(v for v in p[1:] if v and v > 0)
+                if fs and sum(v for v in row_new[1:] if v and v > 0) >= 0.9 * fs:
+                    add.append(row_new)
+                    used_new[0] = True
+                    continue
+        # **반쪽 행은 붙이지 않는다**(11/04 GOOG: stockanalysis 는 부문 이름이 달라 클라우드 한 줄만 맞았고, 그 한 줄짜리
+        # 칸이 최근 분기로 붙었다). 지금 쓰는 부문의 절반 이상이 차야 붙인다.
+        if sum(1 for i in liveb if row_new[i + 1] is not None) * 2 < len(liveb):
+            continue
+        add.append(row_new)
     if not add:
-        return 0
+        return patched
+    if used_new[0]:
+        n0 = len(base["names"])
+        base["names"] = list(base["names"]) + [fresh["names"][j] for j in newcols]
+        for r in base["pts"]:
+            while len(r) < len(base["names"]) + 1:
+                r.append(None)
+        for r in add:
+            if len(r) < len(base["names"]) + 1:            # 옛 칸만 있는 줄 — 새 칸을 빈칸으로
+                r.extend([None] * (len(base["names"]) + 1 - len(r)))
+        SPLICE_NEW[0] += 1
+        del n0
     base["pts"] = sorted(base["pts"] + add, key=lambda r: str(r[0]))
-    return len(add)
+    return len(add) + patched
 
 
 SEG = load_seg()
@@ -2032,12 +2466,54 @@ def _ai_fill_one(base, add):
         rows = [[r[0]] + [None] * len(bnames) + list(r[1:]) for r in add["pts"]]
         rows += [list(r) + [None] * len(anames) for r in base["pts"]]
         return dict(base, names=names, pts=sorted(rows, key=lambda r: r[0])), len(add["pts"])
+    # **기준이 다른 표를 섞지 않는다**(11/04 SN: SEC 는 North America·Europe, AI 는 Domestic·International 이라
+    # 한 그림에 분기마다 번갈아 서서 차트가 깨졌다). 짝이 하나도 없는데 같은 분기가 겹치면 다른 축이다 —
+    # 섞지 말고 분기가 더 많은 쪽 하나만 쓴다(AI 쪽도 분기 합이 총매출 3% 안이라는 검산을 이미 통과했다).
+    if not mp and overlap:
+        return (add, len(add["pts"])) if len(add["pts"]) > len(bpts) and len(add["pts"]) >= 4 and \
+            sorted((date.fromisoformat(b[0]) - date.fromisoformat(a[0])).days
+                   for a, b in zip(sorted(add["pts"]), sorted(add["pts"])[1:]))[(len(add["pts"]) - 1) // 2] <= 120 \
+            else (base, 0)
+    # 짝이 일부만 있을 때(SN: 2022 년은 North America·Europe, 2023 년부터는 Domestic·International) — 짝 없는
+    # 이름이 대부분인 분기들이 따로 한 기준이다. 그 기준의 분기가 나머지 전부보다 많으면 그쪽 하나만 쓴다.
+    def _mapped_share(r):
+        tot = sum(abs(v) for v in r[1:] if v)
+        return (sum(abs(r[j + 1]) for j in mp if r[j + 1]) / tot) if tot else 1
+    um = [r for r in add["pts"] if _mapped_share(r) < 0.5]
+    def _dense(rows):                                   # 띄엄띄엄한 분기를 통째로 쓰면 반기로 읽혀 이름이 틀어진다(SN 1Q23 -> 2H22)
+        ds = sorted(date.fromisoformat(r[0]) for r in rows)
+        gaps = sorted((b - a).days for a, b in zip(ds, ds[1:]))
+        return bool(gaps) and gaps[len(gaps) // 2] <= 120
+    if um and len(um) > len(bpts) + len(add["pts"]) - len(um) and _dense(um):
+        keep = [j for j in range(len(anames)) if j not in mp and any(r[j + 1] for r in um)]
+        alt = {"names": [anames[j] for j in keep], "pts": [[r[0]] + [r[j + 1] for j in keep] for r in um]}
+        return dict(base, **alt), len(um)
     # 짝이 없는 이름(그해에만 쓴 지역 구분 — 엔비디아 'Other Asia Pacific')은 새 줄로 붙인다. 빈 분기 칸만 채우므로
     # 있는 값과 섞이지 않는다. 그 줄은 최근에 값이 없어 그림이 '옛 기준' 칸으로 가른다.
     extra = {}
     for r in add["pts"]:
-        if near(r[0], bpts):
+        br = near(r[0], bpts)
+        if br:
+            # **반쪽 칸은 AI 값으로 채운다**(11/04). 벌크에 한두 부문만 있는 분기(CAT 금융 부문 한 줄 등)는 '있는 칸'이라
+            # AI 가 원문에서 검산까지 통과한 값(5,244칸)을 읽어 놓고도 1,836칸만 들어갔다. 짝이 맞는 이름의 빈칸만 채우고
+            # 있는 값은 안 바꾼다 — 채운 뒤 합이 원래의 1.4배를 넘을 때만(=정말 반쪽이었다).
+            fill = {mp[j] + 1: r[j + 1] for j in mp if r[j + 1] is not None
+                    and (mp[j] + 1 >= len(br) or br[mp[j] + 1] is None)}
+            old_sum = sum(abs(v) for v in br[1:] if v)
+            new_sum = old_sum + sum(abs(v) for v in fill.values())
+            ai_sum = sum(abs(v) for v in r[1:] if v)          # AI 한 줄은 검산(합 = 총매출)을 통과한 값이다
+            # 채운 합이 AI 합과 맞아야 한다 — CAT 은 'ME&T 합계' 칸 위에 건설·자원·에너지를 채워 두 배가 됐다
+            if fill and new_sum > 1.4 * old_sum and 0.9 * ai_sum <= new_sum <= 1.1 * ai_sum:
+                i = next(i for i, x in enumerate(rows) if x[0] == br[0])
+                row = list(rows[i]) + [None] * (len(names) + 1 - len(rows[i]))
+                for jj, v in fill.items():
+                    row[jj] = v
+                rows[i] = row
+                n += 1
             continue
+        tot = sum(abs(v) for v in r[1:] if v)
+        if tot and sum(abs(r[j + 1]) for j in mp if r[j + 1]) < tot * 0.5:
+            continue                                      # 그 분기 값 대부분이 짝 없는 이름 — 다른 기준의 표라 안 섞는다
         new = [r[0]] + [None] * len(names)
         for j, an in enumerate(anames):
             v = r[j + 1]
@@ -2057,6 +2533,10 @@ def _ai_fill_one(base, add):
             n += 1
     rows = [x + [None] * (len(names) + 1 - len(x)) for x in rows]
     return (dict(base, names=names, pts=sorted(rows, key=lambda x: x[0])), n) if n else (base, 0)
+
+
+AI_SEG_REC = {}
+AI_POST = [0, 0]
 
 
 def load_ai_fill():
@@ -2109,6 +2589,8 @@ def load_ai_fill():
                 rec.pop("axis", None)
                 if SEG.get(k, {}).get("axis"):
                     rec["axis"] = SEG[k]["axis"]
+            if kind == "seg":
+                AI_SEG_REC[k] = rec
             got, n = _ai_fill_one(store.get(k), rec)
             if n:
                 store[k] = got
@@ -2158,6 +2640,27 @@ def load_ai_fill():
             base["pts"].sort(key=lambda r: r[0])
     if raw:
         print(f"  AI 빈칸 메우기: 사업부 {nseg:,}칸 · 지역 {ngeo:,}칸 · 수주 {nord:,}칸")
+    # **옛 분기 이력(XBRL·JPX 보관소 — 이미 받아 둔 공짜 자료)도 같은 길로 빈칸에 넣는다(11/10).** load_seg 의 splice·prepend_old 는
+    # 이름이 다르면(개편 전 기준) 뼈대 **안쪽** 빈칸을 못 채웠다 — AMD 2Q21 은 XBRL 이력에 있는데 화면이 비어, AI 가 같은 공시를
+    # 글로 다시 읽고 있었다(회원님: "그냥 물어보면 토큰도 안 쓰고 바로 나오는데 그 원리대로 하라"). 검산(fits)·빈칸만 채우기는 AI 값과 같다.
+    nh = 0
+    for name in sorted(p.name for p in (HERE / "data").glob("segments_hist_*_s*.json")):
+        hj = _read_stocks(name)
+        recs = list((hj.get("stocks") or {}).items()) + [(k0, v) for k0, lst in (hj.get("more") or {}).items() for v in lst]
+        for k0, v in recs:
+            k = k0 if ":" in k0 else "us:" + k0
+            rows = {str(r[0]): {n: x for n, x in zip(v.get("names") or [], r[1:]) if x}
+                    for r in v.get("pts") or [] if re.match(r"\d{4}-\d\d-\d\d$", str(r[0]))}
+            rec = _as_rec(fits(k, {e: row for e, row in rows.items() if len(row) >= 1}, "seg"), "사업부")
+            if not rec:
+                continue
+            rec.pop("axis", None)
+            got, n = _ai_fill_one(SEG.get(k), rec)
+            if n:
+                SEG[k] = got
+                nh += n
+    if nh:
+        print(f"  옛 분기 이력으로 화면 빈칸을 채움: 사업부 {nh:,}칸")
 
 
 # ── 부문 이름 한글 표기 ──────────────────────────────────────────
@@ -2167,6 +2670,7 @@ def load_ai_fill():
 _SEG_CJK_KEYS = sorted(SEG_KO_CJK, key=len, reverse=True)
 _SEG_EN_WORD = re.compile(r"[A-Za-z0-9&,\-./·'()% ]+")
 _CJK_LEFT = re.compile(r"[\u3040-\u30ff\u3400-\u9fff\uff01-\uff60]")
+_SEG_JUNK = re.compile(r"[、。◎「」]|第$|^自\d{4}年|割合|に関しては")
 
 
 try:
@@ -2230,6 +2734,11 @@ if RT_URL:
         print(f"  ! 부문 이름 번역 받기 실패: {_e}")
 try:
     for _k, _v in json.loads((HERE / "data" / "seg_ko_extra.json").read_text(encoding="utf-8")).items():
+        SEG_KO_FILE.setdefault(_k, _v)
+except (OSError, ValueError):
+    pass
+try:                                                             # 사업부 채우기로 새로 들어온 일본어 이름 — 세션에서 한 번에 옮겨 둔 것(11/15).
+    for _k, _v in json.loads((HERE / "data" / "seg_ko_fill.json").read_text(encoding="utf-8")).items():      # 서버가 seg_ko_extra 를 덮어써도 남는다
         SEG_KO_FILE.setdefault(_k, _v)
 except (OSError, ValueError):
     pass
@@ -2356,6 +2865,44 @@ def load_board(packed):
         if p[5]:
             sec[k] = JP_SEC_SAME.get(p[5], p[5]) if p[9] == "jp" else p[5]
 
+    name = {}
+    for p in packed:
+        name.setdefault(p[9] + ":" + p[1], p[2])
+    # 미국 섹터 ETF 의 주요 구성 종목(GICS 기준, 손으로 적은 명단). 나스닥 업종 분류는 ETF 와 너무 달라서(유틸리티에 웨이스트매니지먼트,
+    # 필수소비재에 소니) 못 쓴다. 비중 = 이 명단 안의 시총 비중(ETF 공식 비중 아님 — 운용사 보유 파일은 이 환경에서 못 받음, 11/22).
+    US_SET = {k: v.split() for k, v in {
+        "XLK": "NVDA AAPL MSFT AVGO ORCL PLTR AMD CSCO IBM CRM MU INTU NOW QCOM TXN AMAT LRCX KLAC ADBE ANET ADI PANW APH",
+        "XLC": "GOOGL META NFLX TMUS DIS T VZ CMCSA EA TTWO CHTR WBD OMC LYV",
+        "XLY": "AMZN TSLA HD MCD BKNG TJX LOW SBUX NKE ORLY MAR CMG ABNB GM F HLT RCL AZO ROST DHI",
+        "XLP": "WMT COST PG KO PM PEP MO MDLZ CL MNST TGT KMB KDP KR GIS STZ HSY KHC SYY ADM",
+        "XLV": "LLY JNJ ABBV UNH MRK ABT TMO ISRG AMGN BSX GILD DHR PFE SYK VRTX MDT BMY CVS ELV CI MCK HCA REGN ZTS",
+        "IBB": "GILD AMGN VRTX REGN ALNY INSM BIIB MRNA NTRA ILMN BMRN INCY UTHR EXEL ARGX BNTX",
+        "XLF": "BRK-B JPM V MA BAC WFC GS MS AXP SCHW C SPGI BLK PGR CB MMC ICE CME COF PYPL",
+        "XLI": "GE CAT RTX UBER GEV BA HON UNP ETN DE LMT ADP PH TT WM GD MMM NOC UPS CTAS EMR CSX ITW FDX",
+        "ITA": "GE RTX BA LMT GD NOC HWM TDG AXON LHX TXT HEI CW",
+        "XLE": "XOM CVX COP WMB EOG KMI PSX MPC SLB OKE VLO OXY BKR FANG TRGP EQT",
+        "XLB": "LIN SHW ECL APD NEM FCX CTVA DD NUE VMC MLM DOW PPG IP SW BALL STLD",
+        "XLU": "NEE SO DUK CEG VST AEP SRE D EXC PEG XEL ETR PCG ED WEC NRG",
+        "SMH": "NVDA TSM AVGO AMD ASML QCOM TXN MU AMAT LRCX KLAC INTC ADI MRVL SNPS CDNS NXPI MCHP MPWR",
+        "IGV": "MSFT ORCL PLTR CRM INTU NOW ADBE PANW CRWD APP SNPS CDNS ADSK FTNT WDAY ROP MSTR TEAM DDOG",
+        "GDX": "NEM AEM B WPM FNV GFI KGC AU RGLD PAAS AGI",
+        "ARKK": "TSLA COIN ROKU HOOD PLTR SHOP RBLX CRSP TEM AMD",
+    }.items()}
+
+    def leaders(keys, n=3):
+        """업종을 끌고 가는 대표 기업 — 시총 큰 순 셋: [이름, 업종 안 시총 비중 %, 3개월 수익률 %, 키]."""
+        ks = [k for k in set(keys) if cap.get(k)]
+        tot = sum(cap[k] for k in ks)
+        out = []
+        for k in sorted(ks, key=lambda k: -cap[k])[:n]:
+            cl = (w.get(k) or [None, []])[1]
+            r3 = round((cl[-1] / cl[-14] - 1) * 100, 1) if len(cl) > 14 and cl[-14] else None
+            out.append([name.get(k, k.split(":")[1]), round(cap[k] / tot * 100), r3, k])
+        return out
+
+    def us_keys(sym):
+        return ["us:" + t for t in US_SET.get(sym, [])]
+
     def weekly_of_daily(pts):
         by = {}
         for d, c in pts:
@@ -2363,7 +2910,33 @@ def load_board(packed):
             by[(y, wn)] = c
         return [by[k] for k in sorted(by)][-105:]
 
-    def tile(name, sub, wk, daily=None, bench3=None, extra=None):
+    def rs_of(t, wk, bwk):
+        """업종 순위표(회원님 11/22: "주도 섹터·꼬라박는 섹터를 RS 로, 하락 초입인지 마무리인지").
+        RS 선 = 업종 ÷ 지수(주봉, 끝을 맞춰 겹치는 구간만). 강도 = 3개월 지수 대비, 방향 = 최근 1개월 지수 대비.
+        st: lead 주도 · fade 주도였는데 꺾임 · fall 하락 진행 · turn 바닥 다지기. wb: 30주선 위(+)/아래(-) 몇 주째."""
+        n = min(len(wk), len(bwk))
+        if n < 40:
+            return
+        a, b = wk[-n:], bwk[-n:]
+        rs = [x / y for x, y in zip(a, b) if y]
+        if len(rs) < 40:
+            return
+        g = lambda k: round((rs[-1] / rs[-1 - k] - 1) * 100, 1)
+        t["q1"], t["q3"], t["q6"] = g(4), g(13), g(26)
+        tail = rs[-52:]
+        t["rs"] = [round(v / tail[0] * 100, 1) for v in tail]
+        m, p = t["m"], t["p"]
+        above, wb = p[-1] > (m[-1] or 0), 0
+        for i in range(len(p) - 1, -1, -1):
+            if m[i] is None or (p[i] > m[i]) != above:
+                break
+            wb += 1
+        t["wb"] = wb if above else -wb
+        rs10 = sum(rs[-10:]) / 10                              # RS 선이 10주 평균보다 위면 '최근 상대 강해지는 중'
+        up = rs[-1] >= rs10 and t["q1"] >= 0
+        t["st"] = ("lead" if up else "fade") if t["q3"] >= 0 else ("turn" if up else "fall")
+
+    def tile(name, sub, wk, daily=None, bench3=None, extra=None, bwk=None):
         if len(wk) < 40:
             return None
         base = wk[0]
@@ -2376,6 +2949,8 @@ def load_board(packed):
             t["rel"] = round(t["r3"] - bench3, 1)
         if extra:
             t.update(extra)
+        if bwk:
+            rs_of(t, wk, bwk)
         return t
 
     out = []
@@ -2386,9 +2961,11 @@ def load_board(packed):
         tiles = []
         for sym, nm in lst:
             if sym in etf:
-                t = tile(nm, sym.replace(".T", "").replace(".HK", ""), weekly_of_daily(etf[sym]), etf[sym], b3)
+                t = tile(nm, sym.replace(".T", "").replace(".HK", ""), weekly_of_daily(etf[sym]), etf[sym], b3, bwk=bw)
                 if t:
                     t["idx"] = 1 if sym in [x[0] for x in lst[:4 if mkt == "us" else 3]] else 0
+                    if mkt == "us" and sym in US_SET:
+                        t["ld"] = leaders(us_keys(sym))
                     tiles.append(t)
         if mkt != "us":                                       # 미국 업종은 섹터 ETF 가 더 잘게 갈라 준다
             groups = {}
@@ -2407,7 +2984,7 @@ def load_board(packed):
                     continue
                 tot = sum(c for c, _ in ser)
                 idx = [sum(c * cl[i] / cl[-1] for c, cl in ser) / tot for i in range(100)]
-                t = tile(g, "", idx, None, b3, {"c": len(ser), "f": [mkt, g]})
+                t = tile(g, "", idx, None, b3, {"c": len(ser), "f": [mkt, g], "ld": leaders(ks)}, bwk=bw)
                 if t:
                     tiles.append(t)
         tiles.sort(key=lambda t: (-t.get("idx", 0), -(t.get("rel") if t.get("rel") is not None else -1e9)))
@@ -2469,6 +3046,91 @@ def dedupe_moved(rows):
         print(f"  us: 날짜를 옮긴 회사의 옛 줄 {len(drop):,}건 뺌")
     return [r for r in rows if id(r) not in drop]
 
+
+def write_seg_holes(screen=None):
+    """**다 채운 회사·분기는 다시 안 본다**(회원님 11/05: "이미 완성한 기업은 과거 데이터는 건들 필요 없으니 더 가벼워지는 거 아님?").
+    1Q18 이후 총매출이 있는데 사업부가 빈 분기 종료일을 data/seg_holes.json 에 적는다. 옛 이력 수집기(일본·미국)가 이 목록에 있는
+    회사의, 그 분기를 담은 공시만 받는다. 빈칸이 없는 회사는 아예 안 건드린다."""
+    def cov(rec, e):
+        ed = date.fromisoformat(e)
+        for r in (rec or {}).get("pts") or []:
+            if re.match(r"\d{4}-\d\d-\d\d$", str(r[0])) and abs((date.fromisoformat(r[0]) - ed).days) <= 20 and any(v for v in r[1:]):
+                return True
+        return False
+    out = {}
+    # **화면 기준**(11/05): 원자료에 칸이 있어도 틀려서 화면 직전에 지워진 분기는 빈칸이다 — 원자료 기준으로 적었더니 AI 메우기가
+    # 그 분기를 '있다'고 보고 영영 안 물었다.
+    shown = {k: {r[0] for r in v.get("pts") or [] if any(x is not None for x in r[1:])} for k, v in (screen or {}).items()}
+    for key, f in FIN.items():
+        if f.get("freq") not in ("Q", "H"):
+            continue
+        if screen is not None and key in shown:
+            miss = [p["end"] for p in f.get("points") or []
+                    if p.get("end") and p["end"] >= "2018-01-01" and p.get("rev") and p.get("label") not in shown[key]]
+        else:
+            miss = [p["end"] for p in f.get("points") or []
+                    if p.get("end") and p["end"] >= "2018-01-01" and p.get("rev") and not cov(SEG.get(key), p["end"])]
+        if miss:
+            out[key] = sorted(set(miss))
+    (HERE / "data" / "seg_holes.json").write_text(json.dumps({"ts": datetime.now(timezone.utc).isoformat()[:16], "holes": out},
+                                                             ensure_ascii=False, separators=(",", ":")), encoding="utf-8")
+    print(f"  빈 분기 목록: {len(out):,}곳 · {sum(map(len, out.values())):,}분기")
+
+
+def seg_none(on_screen, seg):
+    """**없는 숫자는 없다고 쓴다**(회원님 11/05: "전혀 없는 숫자는 없다고 쓰고"). 근거가 있는 것만 —
+    일본 결산단신의 「単一セグメント…記載を省略」(scrape_seg_hist_jp 의 single) · AI 가 원문을 읽었는데 사업부·지역 표가
+    아예 없던 공시(ai_fill 의 none). 키 -> {"s": 1(단일 사업부)} 또는 {"d": [원문을 본 공시 이름…]}."""
+    out = {}
+    for name in sorted(p.name for p in (HERE / "data").glob("segments_hist_jp_s*.json")):
+        if True:
+            try:
+                j = json.loads((HERE / "data" / name).read_text(encoding="utf-8"))
+            except (OSError, ValueError):
+                continue
+            for c, ends in (j.get("single") or {}).items():
+                k = "jp:" + c
+                if k in on_screen and ends:
+                    out[k] = {"s": 1, "e": max(ends)}
+    for i in range(4):
+        try:
+            j = json.loads((HERE / "data" / f"ai_fill_s{i}.json").read_text(encoding="utf-8"))
+        except (OSError, ValueError):
+            continue
+        for k, labs in (j.get("none") or {}).items():
+            if k in on_screen and k not in out and labs:
+                out[k] = {"d": sorted(set(labs))[-6:]}
+    # 단일 사업부라 적혀 있는데 사업부 그림이 있으면(옛날엔 나눴던 회사) 그림이 이긴다 — 그때는 적지 않는다
+    return {k: v for k, v in out.items() if not (v.get("s") and k in seg)}
+
+
+def mon_none(nums):
+    """회사마다 **월차 공시가 실제로 없던 달**(최근 2년, 값 없는 칸만) — scrape_mon_hist 가 yanoshin 목록 전체에서 읽은 '낸 달'
+    (data/monthly_hist_jp.json 의 periods)에 없는 달. 목록을 못 본 회사(IR 전용)는 비워 둔다 — 확인 못 한 것을 없다고 쓰지 않는다."""
+    try:
+        per = json.loads((HERE / "data" / "monthly_hist_jp.json").read_text(encoding="utf-8")).get("periods") or {}
+    except (OSError, ValueError):
+        return {}
+    today = date.today()
+    win = []
+    y, m = today.year, today.month
+    for _ in range(25):
+        m -= 1
+        if m == 0:
+            y, m = y - 1, 12
+        win.append(f"{y:04d}-{m:02d}")
+    out = {}
+    for c, v in nums.items():
+        ps = set(per.get(c) or [])
+        if c not in per or not ps:
+            continue
+        have = {r[0] for r in v.get("m") or [] if r[1] is not None or r[2] is not None}
+        first = min(ps)
+        miss = [p for p in win if p not in have and p not in ps and p >= first and p < max(ps)]
+        if miss:
+            out[c] = sorted(miss)
+    return out
+
 def load_surprise(keys):
     """Zacks EPS 서프라이즈 이력(scrape_surprise.py) -> {us:티커: [[회계분기 'YYYY-MM', %], ...]} — 2017-10 이후 최대 36칸."""
     st = {}
@@ -2523,7 +3185,366 @@ def load_desc():
     return out
 
 
+REVFIX = [0]
+
+
+def seg_repair():
+    """**분기마다 '합이 총매출과 맞는 조합'을 골라 쓴다(11/10).** 숫자는 받아 놓고도 화면이 비던 까닭이 이것이었다 —
+      · AMD 2Q21: 나중 공시의 재표시 비교치(새 부문 둘만 — 합이 매출의 22%)가 그 칸을 차지해, 제대로 된 옛 기준 줄(합 = 매출)이 못 들어갔다
+      · 맥도날드 2018: 옛 기준 넷 + 재표시 새 기준 둘이 한 칸에 섞여 합이 1.7배 → '튄 칸'으로 통째로 빠졌다
+      · 코노코필립스 4분기: 연간 − 9개월이 일부 부문만 되살아나 반쪽
+    회원님: "채팅에서 물으면 빈칸 없이 다 알려주면서 이건 왜 못 하냐" — 채팅의 나는 공시 표를 놓고 합이 맞는 줄을 고른다. 그 규칙을 그대로 옮긴다.
+    후보 = 지금 칸 + 옛 분기 이력(segments_hist_* 의 stocks·more)의 같은 분기 줄. 줄 전체가 맞으면 그것, 아니면 그 줄의 이름 부분집합(10개 이하) 중
+    합이 그 회사 평소 비율(대개 1.0)×총매출의 1.5% 안인 것. 앞 분기에서 쓴 이름과 많이 겹치는 쪽(같은 기준이 이어지게) → 이름이 많은 쪽 차례로 고른다.
+    지금 칸이 멀쩡하면(평소 비율 ±5%) 손대지 않는다. 평소 비율을 못 잡는 회사(멀쩡한 칸 6개 미만)는 건드리지 않는다."""
+    from itertools import combinations
+    hist = {}
+    for name in sorted(p.name for p in (HERE / "data").glob("segments_hist_*_s*.json")):
+        hj = _read_stocks(name)
+        for k0, v in list((hj.get("stocks") or {}).items()) + [(k0, v) for k0, lst in (hj.get("more") or {}).items() for v in lst]:
+            hist.setdefault(k0 if ":" in k0 else "us:" + k0, []).append(v)
+    fixed = cos = 0
+    for k, f in FIN.items():
+        base = SEG.get(k)
+        if not base or f.get("freq") not in ("Q", "H"):
+            continue
+        bpts = [r for r in base.get("pts") or [] if re.match(r"\d{4}-\d\d-\d\d$", str(r[0]))]
+        if len(bpts) != len(base.get("pts") or []) or len(bpts) < 6:
+            continue
+        fin = [(date.fromisoformat(p["end"]), p["end"], p["rev"]) for p in f.get("points") or [] if p.get("end") and p.get("rev")]
+        pobj = {p["end"]: p for p in f.get("points") or [] if p.get("end")}
+
+        def rev_at(e):
+            d = date.fromisoformat(e)
+            c = min(fin, key=lambda x: abs((x[0] - d).days), default=None)
+            return c if c and abs((c[0] - d).days) <= 20 else None
+        names = list(base["names"])
+        rat = []
+        for r in bpts:
+            c = rev_at(r[0])
+            sm = sum(v for v in r[1:] if v)
+            if c and sm:
+                rat.append(sm / c[2])
+        good = sorted(x for x in rat if 0.9 <= x <= 1.7)
+        if len(good) < 6:
+            continue
+        m = good[len(good) // 2]
+        if sum(1 for x in good if abs(x / m - 1) <= 0.05) < 0.6 * len(good):
+            continue                                   # 비율이 고르지 않은 회사 — 맞춰 볼 잣대가 없다
+        rows = {r[0]: r for r in bpts}
+
+        def row_near(e):
+            d = date.fromisoformat(e)
+            return next((r for r in bpts if abs((date.fromisoformat(r[0]) - d).days) <= 20), None)
+        def cand_rows(_d, cur_d):
+            cands = [cur_d] if cur_d else []
+            # **결산 분기 되살리기**: 누계 줄(연간·9개월)이 있으면 '연간 − 9개월', 없으면 '연간 − 지금 화면의 앞 세 분기'를 줄 단위로.
+            # 이름은 열쇠(seg_key)로 맞추고, 아래 합 검산을 통과해야 쓴다.
+            for h in hist.get(k, []):
+                for _ax, rows_c in (h.get("cum") or {}).items():
+                    for ck, arow in rows_c.items():
+                        ce, _, cq = ck.partition("|")
+                        if cq != "4" or abs((date.fromisoformat(ce) - _d).days) > 20:
+                            continue
+                        ak = {seg_key(n): (n, v) for n, v in arow.items()}
+                        for ck2, yrow in rows_c.items():          # 연간 − 9개월
+                            e2, _, q2 = ck2.partition("|")
+                            if q2 == "3" and 70 <= (_d - date.fromisoformat(e2)).days <= 115:
+                                yk = {seg_key(n): v for n, v in yrow.items()}
+                                if set(ak) <= set(yk):
+                                    cands.append({n: v - yk[kk] for kk, (n, v) in ak.items() if v - yk[kk] > 0})
+                        q3 = []                                      # 연간 − 앞 세 분기(화면 값)
+                        for back in (91, 182, 273):
+                            pr = next((r for r in bpts if abs((_d - date.fromisoformat(r[0])).days - back) <= 20), None)
+                            if pr:
+                                q3.append({seg_key(names[i]): v for i, v in enumerate(pr[1:]) if v})
+                        if len(q3) == 3 and all(set(ak) <= set(q) for q in q3):
+                            cands.append({n: v - sum(q[kk] for q in q3) for kk, (n, v) in ak.items() if v - sum(q[kk] for q in q3) > 0})
+            for h in hist.get(k, []):
+                for r in h.get("pts") or []:
+                    if re.match(r"\d{4}-\d\d-\d\d$", str(r[0])) and abs((date.fromisoformat(r[0]) - _d).days) <= 20:
+                        cands.append({n: v for n, v in zip(h.get("names") or [], r[1:]) if v})
+            return cands
+
+        prev_names, changed = set(), 0
+        recent, revfix = [], 0
+        # q 프레임은 SEC 자료에만 있다 — 일본·홍콩·stockanalysis 점에는 아예 없어 전부 '되살린 분기'로 보였다(시험 빌드에서 일본 빈칸이 늘었다)
+        us_q = k.startswith("us:") and sum(1 for p in f.get("points") or [] if p.get("q")) >= 6
+        for _d, e, rev in sorted(fin):
+            if e < "2017-01-01":
+                continue
+            cur = row_near(e)
+            cur_d = {names[i]: v for i, v in enumerate(cur[1:]) if v} if cur else {}
+            # **결산 분기 총매출이 틀린 회사**(11/10): 10-K 에는 연간만 있어 4분기 총매출을 '연간 − 9개월'로 만드는데, 두 값의 매출 항목이
+            # 다르면 엉뚱한 값이 된다(코노코필립스 4Q21 38.8억 — 실제 약 150억 · 엑셀론 −82억 · AIG −148억). 그러면 사업부 합 검산도
+            # 영영 못 통과해 4분기 사업부가 비었다. 앞 세 분기 가운뎃값의 0.6배 밑·1.7배 위(또는 음수)인 **되살린** 4분기(q 프레임 없음)에
+            # 한해, 앞 분기와 **부문 이름이 똑같은** 줄이 있으면 그 합 ÷ 평소 비율을 4분기 총매출로 쓴다(매출·사업부 두 그림을 같이 고친다).
+            po = pobj.get(e)
+            med3 = sorted(recent[-3:])[1] if len(recent) >= 3 else None
+            if us_q and po is not None and not po.get("q") and med3 and prev_names and (rev <= 0 or rev / med3 < 0.6 or rev / med3 > 1.7):
+                pk = {seg_key(n) for n in prev_names}
+                fixrow = None
+                for c in cand_rows(_d, cur_d):
+                    c = {n: v for n, v in c.items() if v and v > 0}
+                    if len(c) >= 2 and {seg_key(n) for n in c} == pk and 0.5 <= sum(c.values()) / m / med3 <= 2.2:
+                        fixrow = c
+                        break
+                if fixrow:
+                    if len(REVFIX) < 14:
+                        REVFIX.append(f"{k} {e} {rev / 1e9:.2f}→{sum(fixrow.values()) / m / 1e9:.2f}B")
+                    po["rev"] = rev = sum(fixrow.values()) / m
+                    po["revfix"] = 1
+                    revfix += 1
+                    cur_d = {}                      # 아래에서 이 줄을 후보로 다시 고르게(이름 맞추기·열 넣기)
+                    if cur is not None:
+                        for i in range(1, len(cur)):
+                            cur[i] = None
+                    hist.setdefault(k, []).append({"names": list(fixrow), "pts": [[e] + list(fixrow.values())]})
+            recent.append(rev)
+            if cur_d and abs(sum(cur_d.values()) / rev / m - 1) <= 0.05:
+                prev_names = set(cur_d)
+                continue
+            cands = cand_rows(_d, cur_d)
+            best = None
+            for c in cands:
+                items = [(n, v) for n, v in c.items() if v and v > 0]
+                opts = []
+                if len(items) >= 2 and abs(sum(v for _n, v in items) / rev / m - 1) <= 0.015:
+                    opts.append(dict(items))
+                elif 3 <= len(items) <= 10:
+                    for size in range(len(items) - 1, 1, -1):
+                        for sub in combinations(items, size):
+                            if abs(sum(v for _n, v in sub) / rev / m - 1) <= 0.015:
+                                opts.append(dict(sub))
+                for o in opts:
+                    key_ = (len({seg_key(n) for n in o} & {seg_key(n) for n in prev_names}), len(o))
+                    if best is None or key_ > best[0]:
+                        best = (key_, o)
+            if not best:
+                if cur_d:
+                    prev_names = prev_names or set(cur_d)
+                continue
+            pick = best[1]
+            # 이름을 뼈대 이름에 맞춘다(같은 열쇠면 그 줄)
+            for n in list(pick):
+                hit = next((bn for bn in names if seg_key(bn) == seg_key(n)), None)
+                if hit and hit != n:
+                    pick[hit] = pick.pop(n)
+            for n in pick:
+                if n not in names:
+                    names.append(n)
+                    for r in bpts:
+                        r.append(None)
+            if cur is None:
+                cur = [e] + [None] * len(names)
+                bpts.append(cur)
+            for i, n in enumerate(names):
+                while len(cur) < len(names) + 1:
+                    cur.append(None)
+                cur[i + 1] = pick.get(n)
+            prev_names = set(pick)
+            changed += 1
+        REVFIX[0] += revfix
+        if changed:
+            bpts.sort(key=lambda r: r[0])
+            base["names"], base["pts"] = names, bpts
+            fixed += changed
+            cos += 1
+    if fixed:
+        print(f"  사업부 칸 바로잡기(합이 총매출과 맞는 조합으로): {fixed:,}칸 · {cos:,}곳 · 틀린 결산 분기 총매출을 고친 칸 {REVFIX[0]:,}")
+        if len(REVFIX) > 1:
+            print("    총매출 고친 예: " + " / ".join(REVFIX[1:]))
+
+
 load_ai_fill()                 # 부문 이름 옮기기(seg_ko)가 정의된 뒤에 — 같은 지역의 두 표기(TW·Taiwan)를 한 줄로
+
+
+def load_fpi_seg():
+    """외국 기업 보도자료에서 읽은 사업부(FPI_SEG)를 SEG 에 — **헌 기록에 없는 분기만** 줄째 더한다(있는 분기는 안 건드린다).
+    이름은 열쇠(seg_key)가 같으면 같은 줄, 아니면 새 줄이다(회사가 표기를 바꾼 옛 기준 — 그림이 가른다).
+    처음에는 `_ai_fill_one` 에 맡겼는데 이름이 안 겹치는 옛 분기를 통째로 흘렸다(11/10 알리바바 2018~21 열세 분기 · 핀둬둬 1Q18~2Q19)."""
+    n = 0
+    for k, segs in FPI_SEG.items():
+        old = SEG.get(k)
+        if not old:
+            rec = _as_rec(segs, "사업부")
+            if rec:
+                rec.pop("axis", None)
+                rec["fpiq"] = 1                              # 전 줄이 보도자료 석 달 칸(pack_seg 가 반기로 오해하지 않게)
+                SEG[k] = rec
+                n += len(rec["pts"])
+            continue
+        pts = [list(r) for r in old.get("pts") or []]
+        if not all(re.match(r"\d{4}-\d\d-\d\d$", str(r[0])) for r in pts):
+            continue
+        names = list(old["names"])
+        have = [date.fromisoformat(r[0]) for r in pts if any(v for v in r[1:])]
+        add = 0
+        for e in sorted(segs):
+            d = date.fromisoformat(e)
+            if any(abs((h - d).days) <= 20 for h in have):
+                # **그 자리에 헌 줄이 있어도, 어긋난 줄이면 갈아 끼운다**(11/11 — 화면이 버리는 줄이라 빈칸으로 보이던 자리 29칸).
+                # 새 값은 '합 ÷ 그 분기 총매출'이 검산을 통과한 칸이다. 헌 줄의 합이 새 값의 합과 5% 넘게 다를 때만(같으면 안 건드린다).
+                rv = (FPI_FILL.get(k) or {}).get(e)
+                oldrow = next((r for r in pts if abs((date.fromisoformat(r[0]) - d).days) <= 20 and any(v for v in r[1:])), None)
+                tot_new = sum(v for v in segs[e].values() if v)
+                tot_old = sum(v for v in oldrow[1:] if v) if oldrow else 0
+                if not rv or not oldrow or not tot_new or abs(tot_old / tot_new - 1) <= 0.05:
+                    continue
+                pts = [r for r in pts if r is not oldrow]
+            row = {}
+            for nm, v in segs[e].items():
+                # **이름이 글자 그대로 같으면 같은 줄**(11/12 삿포로 2501): seg_key 는 일본어를 통째로 지워 빈 글자가 되므로 일본 이름은 늘 '새 줄'로
+                # 붙었고, 같은 이름의 줄이 여럿 생겨 그 줄마다 같은 값이 들어가 합이 3~4배가 됐다. 글자가 같으면 먼저 그 줄을 쓴다.
+                hit = next((bn for bn in names if bn == nm), None) or \
+                    next((bn for bn in names if seg_key(bn) and seg_key(bn) == seg_key(nm)), None)
+                if hit is None:
+                    names.append(nm)
+                    hit = nm
+                row[hit] = v
+            pts = [r for r in pts if abs((date.fromisoformat(r[0]) - d).days) > 20]     # 값 없는 빈 줄이 그 자리에 있으면 갈아 끼운다
+            pts.append([e] + [row.get(x) for x in names])
+            add += 1
+        if add:
+            for r in pts:
+                while len(r) < len(names) + 1:
+                    r.append(None)
+            pts.sort(key=lambda r: r[0])
+            SEG[k] = dict(old, names=names, pts=pts)
+            n += add
+    if n:
+        print(f"  외국 기업 6-K 보도자료 사업부: {n:,}칸 · {len(FPI_SEG):,}곳")
+
+
+try:
+    load_fpi_seg()
+except Exception as _e:                      # noqa: BLE001
+    print(f"  ! 외국 기업 사업부 싣기 실패: {_e!r}")
+try:
+    seg_repair()
+except Exception as _e:                      # noqa: BLE001 — 바로잡기가 죽어도 빌드는 간다
+    print(f"  ! 사업부 칸 바로잡기 실패: {_e!r}")
+
+
+def seg_fy_fix():
+    """**결산 분기(4분기)를 '연간 − 9개월 누계'로 다시 만든다 — 검산은 그 해 9개월치의 비율로**(11/10 회원님: "4분기만 비는 오류가 미국에 유독 많다").
+
+    원자료(segments_hist_us_* 의 cum — 연간·9개월 누계 줄)는 이미 있었다. 캐터필러 4Q22: 연간 − 9개월 = 건설 68.5 · 자원 34.4 ·
+    **에너지·운송 68.2억**(회사 발표 그대로)인데 화면 칸에는 100.8억이 앉아 합이 안 맞았고 `seg_unannual` 이 그 칸을 통째로 뺐다.
+    `seg_repair` 도 같은 뺄셈을 후보로 만들지만 **'평소 비율'이 고른 회사만** 본다 — 캐터필러는 상계 전 총액 줄이 섞여 비율이 두 갈래
+    (1.02·1.10)라 통째로 건너뛰었다. 여기서는 평소 비율 대신 **같은 해 9개월치의 '부문 합 ÷ 총매출'**과 견준다(2% 안) — 같은 표의
+    같은 줄들이라 해마다 기준이 달라도 맞는다. 소계 줄(다른 줄들의 합과 원 단위까지 같은 줄)은 뺀다. 지금 칸이 이미 그 비율이면 안 건드린다.
+    총매출 쪽이 틀린 4분기는 비율이 안 맞아 저절로 빠진다(지어 넣지 않는다)."""
+    fixed = cos = 0
+    for name in sorted(p.name for p in (HERE / "data").glob("segments_hist_us_s*.json")):
+        for k0, h in (_read_stocks(name).get("stocks") or {}).items():
+            k = k0 if ":" in k0 else "us:" + k0
+            base, f = SEG.get(k), FIN.get(k)
+            if not base or not f or not h.get("cum") or f.get("freq") != "Q":
+                continue
+            bpts = base.get("pts") or []
+            if not bpts or not all(re.match(r"\d{4}-\d\d-\d\d$", str(r[0])) for r in bpts):
+                continue
+            names = list(base["names"])
+            bkeys = {seg_key(n) for n in names}
+            fin = [(date.fromisoformat(p["end"]), p["rev"]) for p in f.get("points") or [] if p.get("end") and p.get("rev")]
+
+            def rev_at(d):
+                c = min(fin, key=lambda x: abs((x[0] - d).days), default=None)
+                return c[1] if c and abs((c[0] - d).days) <= 20 and c[1] > 0 else None
+            changed = 0
+            for _ax, rows_c in h["cum"].items():
+                for ck, arow in rows_c.items():
+                    ce, _, cq = ck.partition("|")
+                    if cq != "4" or ce < "2018-01-01":
+                        continue
+                    d4 = date.fromisoformat(ce)
+                    yrow = next((v for ck2, v in rows_c.items() if ck2.endswith("|3")
+                                 and 70 <= (d4 - date.fromisoformat(ck2[:10])).days <= 115), None)
+                    if not yrow:
+                        continue
+                    a = {seg_key(n): (n, v) for n, v in arow.items() if v}
+                    tot = sum(v for _n, v in a.values())
+                    for kk in [kk for kk, (_n, v) in a.items()               # 소계: 나머지 전부의 합, 또는 나머지에서 한 줄 뺀 합
+                               if len(a) >= 3 and any(abs(v - (tot - v - x)) < 1 for x in [0] + [w for k2, (_m, w) in a.items() if k2 != kk])]:
+                        a.pop(kk)
+                    y = {seg_key(n): v for n, v in yrow.items() if v}
+                    # 같은 값이 두 이름으로(이름을 바꾼 해 — 캐터필러 2023: Energy&Transportation = Power&Energy) — 9개월 줄에 있는 이름을 남긴다
+                    for kk in [kk for kk, (_n, v) in a.items() if kk not in y
+                               and any(k2 != kk and abs(w - v) < 1 for k2, (_m, w) in a.items())]:
+                        a.pop(kk)
+                    # 이름만 바꾼 부문 하나(연간에만 있는 큰 줄 하나 ↔ 9개월에만 있는 큰 줄 하나) — 짝지어 뺀다. 아래 비율 검산이 지킨다.
+                    big = 0.02 * sum(v for _n, v in a.values())
+                    only_a = [kk for kk, (_n, v) in a.items() if kk not in y and v >= big]
+                    only_y = [kk for kk, v in y.items() if kk not in a and v >= 0.02 * sum(y.values())]
+                    if len(only_a) == 1 and len(only_y) == 1:                 # 이름은 그 해 분기들이 쓰던 쪽(9개월 줄)을 따른다 — 이웃 분기와 이어지게
+                        yn = next(n for n in yrow if seg_key(n) == only_y[0])
+                        a[only_y[0]] = (yn, a.pop(only_a[0])[1])
+                    # 자잘한 줄(연간의 2% 미만)이 9개월 줄에 없거나 뺀 값이 0 이하면 그 줄만 양쪽에서 뺀다(연간에만 실리는 'Other' · 재분류된 'All Other')
+                    for kk in [kk for kk, (_n, v) in a.items() if v < big and (kk not in y or v - y[kk] <= 0)]:
+                        a.pop(kk)
+                    if len(a) < 2 or not set(a) <= set(y) or 2 * len(set(a) & bkeys) < len(a):
+                        continue                                              # 9개월 줄과 이름이 안 맞거나, 화면과 다른 축
+                    d = {n: v - y[kk] for kk, (n, v) in a.items()}
+                    if any(v <= 0 for v in d.values()):
+                        continue
+                    rev4 = rev_at(d4)
+                    rev9 = [rev_at(d4 - timedelta(days=back)) for back in (91, 182, 273)]
+                    if not rev4 or not all(rev9):
+                        continue
+                    r9 = sum(y[kk] for kk in a) / sum(rev9)
+                    if abs(sum(d.values()) / rev4 / r9 - 1) > 0.02:
+                        continue
+                    # **앞(또는 뒤) 분기와 같은 부문 구성일 때만** 넣는다 — 다른 층위·다른 표기의 줄(에머슨의 그룹 합계, 시스코의 옛 표기)을
+                    # 끼우면 뒤 단계가 이웃 분기를 '옛 기준'으로 보고 지운다(시험 빌드에서 97칸을 잃었다). 이웃에만 있는 줄은 자잘할 때(3% 미만)만 봐준다.
+                    def same_basis(days):
+                        nb = next((r for r in bpts if abs((d4 - date.fromisoformat(r[0])).days - days) <= 20), None)
+                        if not nb:
+                            return False
+                        nd = {seg_key(names[i]): v for i, v in enumerate(nb[1:]) if v and v > 0}
+                        dk = {seg_key(n): v for n, v in d.items()}
+                        if not nd or not set(dk) <= set(nd) or sum(v for kk, v in nd.items() if kk not in dk) > 0.03 * sum(nd.values()):
+                            return False
+                        # 부문마다도 이웃 분기의 0.4~2.5배 안 — 합은 맞는데 연간 줄에서 두 부문이 뒤바뀐 회사가 있다(필립스66 4Q19 정유 344억)
+                        if not all(0.4 * nd[kk] <= v <= 2.5 * nd[kk] for kk, v in dk.items() if nd[kk] >= 0.05 * sum(nd.values())):
+                            return False
+                        # 화면의 이웃 분기와 같은 기준(합 ÷ 총매출이 3% 안) — 누계 줄만 상계 전 총액인 회사(필립스66)는 넣으면 그 칸만 튄다
+                        nrev = rev_at(date.fromisoformat(nb[0]))
+                        return bool(nrev) and abs((sum(dk.values()) / rev4) / (sum(nd.values()) / nrev) - 1) <= 0.03
+                    if not (same_basis(91) or same_basis(-91)):
+                        continue
+                    cur = next((r for r in bpts if abs((date.fromisoformat(r[0]) - d4).days) <= 20), None)
+                    cur_d = {names[i]: v for i, v in enumerate(cur[1:]) if v} if cur else {}
+                    if cur_d and len(cur_d) >= len(d) and abs(sum(cur_d.values()) / rev4 / r9 - 1) <= 0.02:
+                        continue                                              # 지금 칸이 멀쩡하다
+                    pick = {}
+                    for n, v in d.items():
+                        pick[next((bn for bn in names if seg_key(bn) == seg_key(n)), n)] = v
+                    for n in pick:
+                        if n not in names:
+                            names.append(n)
+                    if cur is None:
+                        cur = [ce]
+                        bpts.append(cur)
+                    for r in bpts:
+                        while len(r) < len(names) + 1:
+                            r.append(None)
+                    for i, n in enumerate(names):
+                        cur[i + 1] = pick.get(n)
+                    changed += 1
+            if changed:
+                bpts.sort(key=lambda r: r[0])
+                base["names"], base["pts"] = names, bpts
+                fixed += changed
+                cos += 1
+    if fixed:
+        print(f"  결산 분기를 '연간 − 9개월'로 다시 만든 칸(그 해 9개월 비율로 검산): {fixed:,}칸 · {cos:,}곳")
+
+
+try:
+    seg_fy_fix()
+except Exception as _e:                      # noqa: BLE001
+    print(f"  ! 결산 분기 다시 만들기 실패: {_e!r}")
 DESC = load_desc()
 
 
@@ -2646,6 +3667,8 @@ def seg_unannual(pts, aligned):
         if not rev:
             out_p.append(r); out_a.append((lab, rev)); continue
         base = base_at(i)
+        if 0.93 <= sum(v or 0 for v in r[1:]) / rev <= 1.12:   # 합이 총매출과 거의 같다 — 멀쩡한 칸이다(평소 비율이 반쪽 칸에
+            out_p.append(r); out_a.append((lab, rev)); continue  # 끌려 내려간 회사에서 멀쩡한 칸이 '튄 칸'으로 빠졌다, 11/04 CAT)
         k = sum(v or 0 for v in r[1:]) / rev / base
         if k < 0.25:                         # 합이 총매출의 4분의 1도 안 되는 칸 — 단위가 어긋난 칸이다
             SEG_FIXED["dropped"] += 1
@@ -2667,6 +3690,167 @@ def seg_unannual(pts, aligned):
             SEG_FIXED["dropped"] += 1
         SEG_FIXED["who"].append(lab)
     return out_p, out_a
+
+
+SEG_PART = [0]
+SEG_BADREV = [0]
+
+
+def seg_partition(names, pts, aligned):
+    """**한 축에 나눔이 둘 겹친 회사**는 총매출과 맞는 나눔 하나만 남긴다(11/05). 조에티스는 제품 축 아래 축종별(반려동물·가축)과
+    치료군별(구충제·백신…)이 함께 실려 합이 총매출의 몇 배였고, 로우스는 '제품' 합계와 그 아래 품목이 나란히 있었다.
+    부문 합이 평소 총매출의 1.6배를 넘는 회사만 — 이름 조합 가운데 분기마다 합이 총매출과 2% 안으로 맞는(70% 이상의 분기)
+    조합을 찾아, 맞는 분기가 가장 많고 같으면 더 잘게 나눈 조합을 쓴다. 못 찾으면 그대로 둔다(뒤의 검사가 거른다)."""
+    from itertools import combinations
+    n = len(names)
+    rows = [(r, rev) for r, (_l, rev) in zip(pts, aligned) if rev and rev > 0]
+    if n < 3 or n > 12 or len(rows) < 4:
+        return names, pts
+    rat = sorted(sum(v for v in r[1:] if v) / rev for r, rev in rows)
+    if rat[len(rat) // 2] <= 1.6:
+        return names, pts
+    best = None
+    for size in range(2, n):
+        for sub in combinations(range(n), size):
+            hit = tot = 0
+            for r, rev in rows:
+                vals = [r[j + 1] if j + 1 < len(r) else None for j in sub]
+                if sum(1 for v in vals if v) < 2:
+                    continue
+                tot += 1
+                hit += abs(sum(v for v in vals if v) / rev - 1) <= 0.02
+            if tot >= 4 and hit >= 0.7 * tot:
+                key = (hit, size)
+                if best is None or key > best[0]:
+                    best = (key, sub)
+    if not best:
+        return names, pts
+    sub = best[1]
+    SEG_PART[0] += 1
+    return [names[j] for j in sub], [[r[0]] + [r[j + 1] if j + 1 < len(r) else None for j in sub] for r in pts]
+
+
+SEG_ROWDUP = [0]
+SEG_COLDUP = [0]
+
+
+def seg_col_dedupe(names, pts):
+    """**나란히 실리는 거의 같은 두 줄은 한 줄로**(11/05 레즈메드 'Software As Service' 와 '…Before Deferred Revenue
+    Adjustment' 는 분기마다 1~2% 차이로 함께 실린다). 함께 실린 분기가 셋 이상이고 그 모든 분기에서 2% 안이면 값이 적은
+    쪽 줄을 지우고, 그 줄에만 있던 분기는 남는 줄의 빈칸에 옮긴다."""
+    n = len(names)
+    col = lambda j: [r[j + 1] if j + 1 < len(r) else None for r in pts]   # noqa: E731
+    gone = set()
+    for a in range(n):
+        for b in range(a + 1, n):
+            if a in gone or b in gone:
+                continue
+            ca, cb = col(a), col(b)
+            both = [(x, y) for x, y in zip(ca, cb) if x and y and x > 0 and y > 0]
+            if len(both) < 3 or any(abs(x - y) > 0.02 * max(x, y) for x, y in both):
+                continue
+            na, nb = sum(1 for x in ca if x), sum(1 for y in cb if y)
+            keep, drop = (a, b) if na >= nb else (b, a)
+            for r in pts:
+                while len(r) < n + 1:
+                    r.append(None)
+                if r[keep + 1] is None and r[drop + 1] is not None:
+                    r[keep + 1] = r[drop + 1]
+                r[drop + 1] = None
+            gone.add(drop)
+    if not gone:
+        return names, pts
+    SEG_COLDUP[0] += 1
+    ks = [j for j in range(n) if j not in gone]
+    return [names[j] for j in ks], [[r[0]] + [r[j + 1] if j + 1 < len(r) else None for j in ks] for r in pts]
+
+
+def seg_row_dedupe(pts, aligned):
+    """**한 분기에 같은 부문이 두 번 실린 칸**을 그 칸 안에서 걷어낸다(11/05). 퀀타 3Q20 은 'Electric Power Infrastructure
+    Services' 와 '…Solutions' 가 둘 다 2,108 — 이름만 바뀐 같은 부문이 한 분기에 나란히 실려 합이 매출의 2배가 됐고,
+    그래서 칸째 지워졌다(레즈메드 'Devices and Masks' 660 = 'Sleep and Respiratory' 660). 같은 값 두 줄(0.5% 안)이나
+    '다른 칸 둘 이상의 합'과 같은 소계 칸을 빼서, 합이 총매출의 0.9~1.15배로 들어올 때만 뺀다. 총매출을 모르면 손대지 않는다."""
+    from itertools import combinations
+    colsz = {}
+    for r in pts:
+        for j, v in enumerate(r[1:]):
+            if v:
+                colsz[j] = colsz.get(j, 0) + 1
+    # 부문을 상계 전 총액으로 내는 회사(평소에도 합이 매출보다 큰 HPE·버크셔·길리어드)는 손대지 않는다 — 평소 비율이 1.1 밑인 회사만
+    rs = sorted(sum(v for v in r[1:] if v and v > 0) / rev for r, (_l, rev) in zip(pts, aligned) if rev and rev > 0 and any(r[1:]))
+    if not rs or rs[len(rs) // 2] > 1.1:
+        return pts
+    med = rs[len(rs) // 2]
+    out = []
+    for r, (_l, rev) in zip(pts, aligned):
+        vals = {j: v for j, v in enumerate(r[1:]) if v and v > 0}
+        s = sum(vals.values())
+        if not rev or rev <= 0 or len(vals) < 3 or s / rev <= max(1.04, med * 1.04):
+            out.append(r)
+            continue
+        drop = set()
+        js = sorted(vals, key=lambda j: colsz.get(j, 0))       # 값이 적은(잠깐 쓴) 이름부터 버린다
+        for a, b in combinations(js, 2):
+            if a in drop or b in drop:
+                continue
+            if abs(vals[a] - vals[b]) <= 0.005 * max(vals[a], vals[b]):
+                drop.add(a if colsz.get(a, 0) <= colsz.get(b, 0) else b)
+        rest = [j for j in vals if j not in drop]
+        for j in sorted(rest, key=lambda j: -vals[j]):           # 소계: 남은 다른 칸 몇 개의 합과 0.5% 안
+            others = [o for o in rest if o != j and o not in drop]
+            hit = False
+            for k in range(2, min(len(others), 6) + 1):
+                for sub in combinations(others, k):
+                    if abs(sum(vals[o] for o in sub) - vals[j]) <= 0.005 * vals[j]:
+                        hit = True
+                        break
+                if hit:
+                    break
+            if hit:
+                drop.add(j)
+        s2 = sum(v for j, v in vals.items() if j not in drop)
+        if drop and abs(s2 / rev - med) <= 0.05 and abs(s2 / rev - med) < abs(s / rev - med):   # 걷어낸 뒤 평소 비율로 돌아올 때만
+            r = [r[0]] + [None if (j in drop) else v for j, v in enumerate(r[1:])]
+            SEG_ROWDUP[0] += 1
+        out.append(r)
+    return out
+
+
+SEG_RESID = [0]
+
+
+def seg_residual(pts, aligned):
+    """**한 부문만 빈 칸은 '총매출 − 나머지 부문'으로 채운다**(11/05 AMD: 해마다 4분기에 두 부문 중 하나만 있었다 — 결산 분기를
+    '연간 − 앞 세 분기'로 되살리다 한 부문만 실패한다). 회사가 낸 두 값(총매출·나머지 부문)의 뺄셈이라 지어낸 값이 아니다.
+    조건을 좁게 건다 — 앞·뒤 분기가 둘 다 '부문 합 = 총매출'(0.6% 안)이고, 그 두 분기에 값이 있던 부문 중 이 칸에 빈 것이 정확히
+    하나, 계산한 값이 앞·뒤 값의 0.5~2배일 때만. 상계·기타가 따로 있는 회사는 앞·뒤 합이 총매출과 안 맞아 저절로 빠진다."""
+    out = [list(r) for r in pts]
+    revs = [rv for _l, rv in aligned]
+    def full(i):
+        if i < 0 or i >= len(out) or not revs[i]:
+            return None
+        sm = sum(v for v in out[i][1:] if v)
+        return {j for j, v in enumerate(out[i][1:]) if v} if abs(sm / revs[i] - 1) <= 0.006 else None
+    for i, r in enumerate(out):
+        rev = revs[i]
+        if not rev:
+            continue
+        a, b = full(i - 1), full(i + 1)
+        if a is None or b is None or a != b:
+            continue
+        have = {j for j, v in enumerate(r[1:]) if v}
+        miss = a - have
+        if len(miss) != 1 or not have or not have <= a:
+            continue
+        j = miss.pop()
+        v = rev - sum(r[k + 1] for k in have)
+        nb = [out[i - 1][j + 1], out[i + 1][j + 1]]
+        if v > 0 and all(0.5 * x <= v <= 2 * x for x in nb):
+            while len(r) <= j + 1:
+                r.append(None)
+            r[j + 1] = v
+            SEG_RESID[0] += 1
+    return out
 
 
 def seg_fit(rec, fin_rec):
@@ -2698,6 +3882,18 @@ def seg_fit(rec, fin_rec):
         return None
 
     aligned = seg_align(pts, fin_rec)
+    # **총매출이 틀린 회사는 총매출로 사업부를 거르지 않는다**(11/05 휴매나: 우리 총매출이 분기 10~40억 달러로 널뛰는데
+    # 사업부는 300억대로 고르다 — 보험료가 빠진 '고객 계약 매출'만 잡혔다). 부문 합 ÷ 총매출이 2.5 배를 넘고 분기마다
+    # 1.8 배 넘게 흔들리면 대볼 잣대가 망가진 것이라, 그 잣대로 칸을 지우던 뒤 단계(한 칸 튐·국소 비율)에 총매출을 안 넘긴다.
+    _rs = sorted(sum(v for v in r[1:] if v and v > 0) / rev for r, (_l, rev) in zip(pts, aligned)
+                 if rev and rev > 0 and any(v for v in r[1:]))
+    if len(_rs) >= 6 and _rs[len(_rs) // 2] > 2.5 and _rs[-2] / max(_rs[1], 1e-9) > 1.8:
+        aligned = [(lab, None) for lab, _rev in aligned]
+        SEG_BADREV[0] += 1
+    names, pts = seg_partition(names, pts, aligned)
+    names, pts = seg_col_dedupe(names, pts)
+    pts = seg_row_dedupe(pts, aligned)
+    pts = seg_residual(pts, aligned)
     pts, aligned = seg_unannual(pts, aligned)
     shared = [(r, rev) for r, (_lab, rev) in zip(pts, aligned) if rev]
     if len(shared) < 4:
@@ -2753,6 +3949,7 @@ def drop_part_totals(rec):
     if len(names) < 4 or len(names) > 12:
         return rec
     col = lambda j: [r[j + 1] if j + 1 < len(r) else None for r in pts]   # noqa: E731
+    changed = False
     for _ in range(2):
         drop = None
         for j in range(len(names)):
@@ -2769,6 +3966,7 @@ def drop_part_totals(rec):
                         hit += abs(sum(parts) - v) <= abs(v) * 0.005
                     if tot >= 4 and hit / tot >= 0.6:
                         drop = j
+                        dsub = sub
                         break
                 if drop is not None:
                     break
@@ -2776,9 +3974,19 @@ def drop_part_totals(rec):
                 break
         if drop is None:
             break
+        # **세부 칸이 없는 분기의 소계는 남긴다**(11/05 레즈메드 2018~2021: 'Devices and Masks' 한 칸만 있는 분기에서 그 칸까지
+        # 지워 열두 분기가 SaaS 한 줄만 남았다). 세부가 하나라도 있는 분기에서만 소계를 비우고, 다 비면 줄째 뺀다.
+        pts = [list(r) for r in pts]
+        for r in pts:
+            if drop + 1 < len(r) and r[drop + 1] is not None and \
+                    any(o + 1 < len(r) and r[o + 1] is not None for o in dsub):
+                r[drop + 1] = None
+        if any(drop + 1 < len(r) and r[drop + 1] is not None for r in pts):
+            changed = True
+            break                                           # 남긴 소계가 있으면 더 찾지 않는다(같은 칸을 또 소계로 잡지 않게)
         names = names[:drop] + names[drop + 1:]
         pts = [r[:drop + 1] + r[drop + 2:] for r in pts]
-    if len(names) == len(rec.get("names") or []):
+    if len(names) == len(rec.get("names") or []) and not changed:
         return rec
     return dict(rec, names=names, pts=pts)
 
@@ -2786,8 +3994,45 @@ def drop_part_totals(rec):
 SEG_ODD = [0]
 
 
+def merge_same_key(rec):
+    """표기만 다른 같은 부문을 한 줄로(11/15 패스트리테일링: 'UNIQLO Japan' 과 'UNIQLOJAPAN' 이 두 줄로 서서 한쪽은 옛 기준으로 밀렸다).
+    열쇠(seg_key — 대소문자·띄어쓰기·and 를 지운 것)가 같고, **같은 분기에 둘 다 값이 있으면 1% 안에서 같을 때만** 합친다. 먼저 나온 이름을 남긴다."""
+    try:
+        names = list(rec.get("names") or [])
+        pts = rec.get("pts") or []
+        first, drop = {}, {}
+        for i, n in enumerate(names):
+            k = seg_key(str(n))
+            if not k or re.search(r"[\u3040-\u30ff\u3400-\u9fff\uff00-\uffef]", str(n)):     # 일본어·중국어 이름은 열쇠가 글자를 지워 버린다(ECマーケットプレイス… 셋이 한 열쇠) — 안 합친다
+                continue
+            if k in first:
+                j = first[k]
+                ok = all(r[1 + i] in (None, 0) or r[1 + j] in (None, 0) or abs(r[1 + i] - r[1 + j]) <= 0.01 * max(abs(r[1 + i]), abs(r[1 + j]))
+                         for r in pts if len(r) > 1 + max(i, j))
+                if ok:
+                    drop[i] = j
+            else:
+                first[k] = i
+        if not drop:
+            return rec
+        new_pts = []
+        for r in pts:
+            r = list(r)
+            for i, j in drop.items():
+                if len(r) > 1 + max(i, j) and r[1 + j] in (None, 0) and r[1 + i] not in (None, 0):
+                    r[1 + j] = r[1 + i]
+            new_pts.append([r[0]] + [v for c, v in enumerate(r[1:]) if c not in drop])
+        return {**rec, "names": [n for c, n in enumerate(names) if c not in drop], "pts": new_pts}
+    except Exception:                                    # noqa: BLE001 — 모양이 다른 기록은 그대로 둔다
+        return rec
+
+
+SPARSE_Q = [True]
+
+
 def pack_seg(rec, fin_rec):
     """[분기 라벨, 부문1, 부문2, …]. 라벨은 총매출 쪽 것을 빌려 온다."""
+    rec = merge_same_key(rec)
     rec = drop_part_totals(rec)
     fit = seg_fit(rec, fin_rec)
     if not fit:
@@ -2798,6 +4043,20 @@ def pack_seg(rec, fin_rec):
     try:
         ends = sorted(date.fromisoformat(r[0]) for r in pts if re.match(r"\d{4}-\d\d-\d\d$", str(r[0])))
         gaps = sorted((b - a).days for a, b in zip(ends, ends[1:]))
+        # **띄엄띄엄 있는 분기 줄을 반기·연간으로 오해하지 않는다**(11/10 선코 SU: 보도자료에서 읽은 여섯 분기가 1Q18~1Q21 에 흩어져
+        # 간격 가운뎃값이 183일 → 「1H18」 같은 반기 이름을 받아 분기 실적 차트와 짝이 안 맞았다). 간격만으로는 '반기 값'과 '구멍 난 분기 값'을
+        # 못 가른다. **보도자료 줄(load_fpi_seg 가 `fpiq` 로 표시)만** 믿는다 — 석 달 칸에서 읽었고 합이 그 분기 총매출과 맞은 줄이다.
+        # 모든 줄에 넓히면 안 된다(해 봤다: 137곳이 바뀌고 반기·연간 값이 분기 이름을 받았다). 줄마다 합이 그 분기 총매출의 ±10% 일 때만.
+        rat = [sum(v for v in r[1:] if v) / rev for r, (_l, rev) in zip(pts, aligned) if rev and rev > 0]
+        if rec.get("fpiq") and len(rat) == len(pts) and all(0.9 <= x <= 1.1 for x in rat):
+            gaps = []
+        # **분기 값인 것이 숫자로 확실하면 분기 이름 그대로**(11/16 SHOEI 7839: 회사가 1·3분기에만 부문을 내서 간격이 반년 → 「2H23」 같은
+        # 반기 이름을 받았다). 총매출이 분기로 오고(freq Q) **모든 줄의 합이 그 분기 총매출과 3% 안**일 때만 — 반기 값이면 합이 두 배라 안 걸린다.
+        if SPARSE_Q[0] and (fin_rec or {}).get("freq") == "Q" and len(rat) == len(pts) >= 4 and all(0.97 <= x <= 1.03 for x in rat):
+            fe = sorted(date.fromisoformat(p_["end"]) for p_ in (fin_rec.get("points") or [])[-12:] if p_.get("end"))
+            fg = sorted((y - x).days for x, y in zip(fe, fe[1:]))
+            if fg and fg[len(fg) // 2] <= 120:           # 총매출이 정말 석 달 간격일 때만(반기 회사인데 freq 가 Q 로 적힌 허치메드·스미스앤드네퓨는 그대로)
+                gaps = []
         if len(gaps) >= 2 and gaps[len(gaps) // 2] > 250:
             return None
         if len(gaps) >= 2 and 150 <= gaps[len(gaps) // 2] <= 220 and not all(re.search("H", l or "") for l, _ in aligned):
@@ -2823,9 +4082,22 @@ def pack_seg(rec, fin_rec):
     revs = {lab: rv for lab, rv in aligned if rv}
     rat = {r[0]: sum(v for v in r[1:] if v) / revs[r[0]] for r in rows if revs.get(r[0])}
     if len(rat) >= 4:
-        mid = sorted(rat.values())[len(rat) // 2]
-        bad = {l for l, x in rat.items() if mid > 0 and abs(x / mid - 1) > 0.12}
-        if bad and len(bad) < len(rat) / 2:
+        # 잣대는 **그 칸 앞뒤 넉 분기의 중앙값**(11/04) — 회사 전체 중앙값으로 재면 공시 방식을 바꾼 뒤(ADM·에머슨·차터가 부문 매출을
+        # 상계 전 총액으로 바꾼 뒤)의 최근 분기가 통째로 '어긋난 칸'이 되어 지워져, 사업부 그림이 2023년에서 끊겼다.
+        labs = [r[0] for r in rows if r[0] in rat]
+        bad = set()
+        for i, l in enumerate(labs):
+            nb = [rat[labs[j]] for j in range(max(0, i - 4), min(len(labs), i + 5)) if j != i]
+            if len(nb) < 3:
+                continue
+            mid = sorted(nb)[len(nb) // 2]
+            # 합이 총매출과 거의 같은 칸(0.93~1.12배)은 멀쩡하다 — 앞뒤가 이상해서 걸린 것이다(11/04 MRNA).
+            # 상계 전 총액으로 내는 회사(평소 1.3배↑, CVX 2.1배)는 유가 폭락 분기처럼 비율이 출렁인다 — 25% 까지 둔다.
+            if 0.93 <= rat[l] <= 1.12:
+                continue
+            if mid > 0 and abs(rat[l] / mid - 1) > (0.25 if mid >= 1.3 else 0.12):
+                bad.add(l)
+        if bad and len(bad) < len(rat) / 3:
             rows = [r for r in rows if r[0] not in bad]
             SEG_ODD[0] += len(bad)
     # 값이 하나도 없는 부문은 범례에도 안 낸다
@@ -2835,7 +4107,24 @@ def pack_seg(rec, fin_rec):
         rows = [[r[0]] + [r[j + 1] for j in keep] for r in rows]
     # 이름은 화면 직전에 한글로 옮긴다(아는 이름만 — seg_ko). 여기서 옮겨야
     # 미국·일본·홍콩이 한 길로 지나간다.
-    out = {"names": [seg_ko(n) for n in names], "pts": rows}
+    kn = [seg_ko(n) for n in names]
+    # 한글로 못 옮긴 이름 가운데 **문장 토막**(「これらの結果、」「前第」「…の割合」)은 부문이 아니다 — 표 옆 글을 이름으로 읽은 것이라 줄째 뺀다(11/16).
+    junk = {j for j, n in enumerate(kn) if _CJK_LEFT.search(n) and _SEG_JUNK.search(n)}
+    # 같은 한글 이름으로 옮겨진 두 줄(「近畿」·「近畿地方」)은 값이 겹치지 않을 때만 한 줄로 잇는다.
+    first = {}
+    for j, n in enumerate(kn):
+        if j in junk:
+            continue
+        i = first.setdefault(n, j)
+        if i != j and not any(r[i + 1] is not None and r[j + 1] is not None for r in rows):
+            for r in rows:
+                if r[i + 1] is None:
+                    r[i + 1] = r[j + 1]
+            junk.add(j)
+    if junk and len(junk) < len(kn):
+        kn = [n for j, n in enumerate(kn) if j not in junk]
+        rows = [[r[0]] + [r[j + 1] for j in range(len(names)) if j not in junk] for r in rows]
+    out = {"names": kn, "pts": rows}
     # 어느 축으로 쪼갠 것인가. 사업부문이 없어 제품이나 지역으로 내려간 회사가
     # 있다(애플의 영업부문은 지역이다). 화면 제목이 이걸로 갈린다.
     if rec.get("axis") and rec["axis"] != "사업부문":
@@ -2848,6 +4137,69 @@ def pack_seg(rec, fin_rec):
     if med is not None and (med < 0.95 or med > 1.05):
         out["cov"] = round(med * 100)
     return out
+
+
+def ai_post_fill(packed, rec, fin_rec):
+    """**화면에서 빈 분기에 AI 값을 넣는다**(11/05). AI 메우기는 원자료 기준 빈칸만 채웠다 — 원자료에는 칸이 있지만 틀려서(두 배로
+    쌓였거나 한 부문뿐이라) 화면 직전에 지워진 분기는 AI 가 원문에서 맞게 읽어 놓고도 못 들어갔다(AI 7,833분기 중 2,478칸만 쓰임).
+    화면 그림의 첫·끝 분기 사이에서 빈 분기만, AI 줄의 이름이 화면 이름과 90% 넘게(값 기준) 짝지어질 때만 넣는다."""
+    if not packed or not rec or not rec.get("pts"):
+        return 0
+    al = seg_align(rec["pts"], fin_rec)
+    names = packed["names"]
+    idx = {n: i for i, n in enumerate(names)}
+    have = {r[0] for r in packed["pts"] if any(v is not None for v in r[1:])}
+    keys = sorted(lab_key(l) for l in have if lab_key(l) != (0, 0))
+    if len(keys) < 2:
+        return 0
+    lo, hi = keys[0], keys[-1]
+    # 이름 짝: 한글 표기가 같으면 그것, 아니면 **겹치는 분기의 값**으로(일본어 'パワーデバイス' 와 화면의 'Power Device' 처럼
+    # 소스마다 표기가 다르다) — 겹치는 분기에서 1.5% 안으로 맞고 5% 넘게 어긋나는 분기가 없는 화면 줄이 하나뿐일 때.
+    byl = {r[0]: r for r in packed["pts"]}
+    amap = {}
+    for ai, an in enumerate(rec["names"]):
+        j = idx.get(seg_ko(an))
+        if j is not None:
+            amap[ai] = j
+            continue
+        cand = {}
+        for r, (lab, _rev) in zip(rec["pts"], al):
+            pr = byl.get(lab)
+            v = r[ai + 1] if ai + 1 < len(r) else None
+            if not pr or not v:
+                continue
+            for jj in range(len(names)):
+                pv = pr[jj + 1] if jj + 1 < len(pr) else None
+                if pv:
+                    d = abs(v / pv - 1)
+                    c = cand.setdefault(jj, [0, 0])
+                    c[0] += d <= 0.015
+                    c[1] += d > 0.05
+        ok = [jj for jj, (g, b_) in cand.items() if g >= 1 and not b_]
+        if len(ok) == 1 and ok[0] not in amap.values():
+            amap[ai] = ok[0]
+    add = []
+    for r, (lab, _rev) in zip(rec["pts"], al):
+        if not lab or lab in have or not (lo < lab_key(lab) < hi):
+            continue
+        row = [lab] + [None] * len(names)
+        tot = got = 0
+        for ai, v in enumerate(r[1:]):
+            if not v:
+                continue
+            tot += abs(v)
+            j = amap.get(ai)
+            if j is not None and row[j + 1] is None:
+                row[j + 1] = int(v)
+                got += abs(v)
+        if tot and got >= 0.9 * tot and sum(1 for v in row[1:] if v) >= 2:
+            add.append(row)
+            have.add(lab)
+    if add:
+        packed["pts"] = sorted(packed["pts"] + add, key=lambda x: lab_key(x[0]))
+        AI_POST[0] += len(add)
+        AI_POST[1] += 1
+    return len(add)
 
 
 def pack_ord(rec, fin_rec):
@@ -3257,18 +4609,49 @@ def _ir_pick(rec):
         return prows, pbase, pdf
     return [], "", {}
 
-def _tdnet_series(rec):
+STRICT_METRIC = re.compile(r"売上|営業収益|営業収入|取扱高|販売高|月商|前年|昨対")
+POPPLER_SINCE = "2026-10-13"    # scrape_mon_jp 가 poppler 로 바꾸며(11/22) 다시 읽은 최근 40일 공시의 시작
+WIDE_METRIC = re.compile(r"全社|全店|既存店|月次|百万円|千円")
+
+
+def _tdnet_series(rec, wide=False):
+    """월매출 PDF 에서 읽은 줄 -> 화면 계열. 매출성 지표만(ADR·가동률·점포수 같은 것은 이 화면 숫자가 아니다).
+    wide=True 면 「全社合計」「全店」「(百万円)」「月次」 이름표도 받는다 — **원래 계열이 아예 없는 회사에만** 쓴다(11/22: 이것을 몰라
+    히라마쓰·요시쿠스·시키가쿠·엔진 등이 10월분을 읽어 놓고도 화면에 없었다). 원래 계열이 있는 회사에 섞으면 全店 과 既存店 이 한 선에
+    섞여 손으로 대조해 둔 표와 어긋난다(진스 3046). **한국어 이름표 줄**(「월매출 전년비」 — 옛 해석기가 제목만 보고 읽는 마지막 길)은
+    여기 넣지 않는다 — 고메효 2780 의 35~40%·베리테 9904 의 석 달 내리 120.1 이 거기서 나왔다. 그 줄은 `extend_kr_months` 가
+    겹치는 달이 맞을 때 새 달을 잇는 데만 쓴다."""
     months = rec.get("months") or {}
+    strict_labels = [str(v.get("metric") or "") for v in months.values() if STRICT_METRIC.search(str(v.get("metric") or ""))]
+    kizon = sum("既存" in m for m in strict_labels) > len(strict_labels) / 2      # 원래 계열이 기존점 기준인가
     rows = []
     for k, v in sorted(months.items()):
         metric = str(v.get("metric") or "")
-        # 매출성 지표만. ADR/가동률/점포수 같은 것은 이 화면 숫자가 아니다.
-        if metric and not re.search(r"売上|営業収益|営業収入|取扱高|販売高|月商|前年|昨対",
-                                    metric):
+        # poppler 로 다시 읽은 최근 공시(POPPLER_SINCE 이후)의 줄은 넓은 이름표도 받는다 — 같은 길이 대조값과 2/2·3/3 맞았다
+        # (리베로 9245 「(単位：百万円)」 10월 111.4%). 다만 기존점 계열에 全店 줄을 잇지는 않는다(진스 3046).
+        # 이름표에 해가 박힌 줄(「全店Sep.2023-」 = 2년 전 대비)은 전년비가 아니다(진스 3046 120% — 대조값 105%).
+        fresh = (str(v.get("day") or "") >= POPPLER_SINCE and WIDE_METRIC.search(metric) and not (kizon and "全店" in metric)
+                 and not re.search(r"(19|20)\d\d", metric))
+        if metric and not (STRICT_METRIC.search(metric) or (wide and WIDE_METRIC.search(metric)) or fresh):
             continue
+        if v.get("yoy") is not None and v["yoy"] <= 0:          # 전년비 0 은 빈 칸을 읽은 것이다(아즈원 7476)
+            v = {**v, "yoy": None}
         rows.append([k, v.get("rev"), v.get("yoy"), 0,
                      v.get("doc", ""), v.get("day", ""), metric])
-    return rows
+    # **같은 전년비가 석 달 넘게 똑같이 이어지면 표의 한 칸을 되풀이해 읽은 것이다**(11/22 베리테 9904: 8·9·10월이 모두 120.1).
+    run = 1
+    for i in range(1, len(rows) + 1):
+        if i < len(rows) and rows[i][2] is not None and rows[i][2] == rows[i - 1][2]:
+            run += 1
+            continue
+        if run >= 3:
+            for j in range(i - run, i):
+                rows[j][2] = None
+        run = 1
+    rows = [r for r in rows if r[1] is not None or r[2] is not None]
+    # **공시한 달과 그 뒤의 달은 버린다** — 아직 끝나지 않은 달이다. 표 끝의 딴 칸(누계·전년 같은 달)이 달로 읽힌 것(11/22 세리아·다이이치:
+    # 11월 초 공시에서 '2026-11' 이 나왔다). 공시를 통째로 버리지는 않는다 — 나머지 달은 손으로 대조한 값과 9/9 맞았다.
+    return [r for r in rows if not (re.match(r"\d{4}-\d\d", str(r[5])) and r[0] >= str(r[5])[:7])]
 
 
 def _tdnet_trusted(rows, target):
@@ -3341,10 +4724,13 @@ def load_monthly_nums(monthly):
 
     # 3분 루프가 막 읽은 공시(monthly_nums_fresh_jp.json) — 본 파일보다 새 공시면 그 달을 이긴다
     try:
-        fr = {}
+        fr, fresh_pp = {}, {}
+        main_pp = got.get("pp")
         for fn in ("monthly_nums_fresh_jp.json", "monthly_rt_jp.json"):     # 3분 루프 PDF · 실시간 서버(공시 즉시, AI 포함)
             try:
-                for c, r in (json.loads((HERE / "data" / fn).read_text(encoding="utf-8")).get("codes") or {}).items():
+                _j = json.loads((HERE / "data" / fn).read_text(encoding="utf-8"))
+                for c, r in (_j.get("codes") or {}).items():
+                    fresh_pp[c] = fresh_pp.get(c) or (_j.get("pp") == main_pp and fn == "monthly_nums_fresh_jp.json")
                     cur0 = fr.setdefault(c, {k: v for k, v in r.items() if k != "months"})
                     cur0.setdefault("months", {}).update({p_: v for p_, v in (r.get("months") or {}).items()
                                                           if p_ not in cur0.get("months", {}) or v.get("day", "") >= cur0["months"][p_].get("day", "")})
@@ -3355,7 +4741,16 @@ def load_monthly_nums(monthly):
             cur = gc.setdefault(c, {k: v for k, v in r.items() if k != "months"})
             cm = cur.setdefault("months", {})
             for p_, v in (r.get("months") or {}).items():
-                if p_ not in cm or v.get("day", "") >= cm[p_].get("day", ""):
+                # 날짜가 같으면 **매출 이름표가 확실한 쪽**이 이긴다(11/22). 3분 루프의 한국어 이름표 줄이 본 파일의 poppler 값을 덮거나
+                # (INGS 245A 114.8 → 123.5), 거꾸로 본 파일의 약한 줄이 3분 루프의 멀쩡한 값을 덮는 일(274A·3046·3415…)을 둘 다 막는다.
+                sure = lambda x: bool(STRICT_METRIC.search(str((x or {}).get("metric") or "")))
+                old_v = cm.get(p_)
+                # 본 파일만 poppler 로 다시 읽었으면(pp) 같은 날 공시에서는 본 파일의 줄이 이긴다 — 한국어 이름표 줄(옛 해석기가 제목만 보고
+                # 읽은 것)이 아닐 때만. 리베로 9245: 3분 루프의 옛 값 431% 가 본 파일 poppler 값 111.4% 를 덮었다.
+                main_pop = (main_pp and not fresh_pp.get(c) and old_v is not None and old_v.get("day", "") == v.get("day", "")
+                            and old_v.get("day", "") >= POPPLER_SINCE and not KR_METRIC.search(str(old_v.get("metric") or "")))
+                if not main_pop and (old_v is None or v.get("day", "") > old_v.get("day", "")
+                        or (v.get("day", "") == old_v.get("day", "") and (sure(v) or not sure(old_v)))):
                     cm[p_] = v
             for k in ("amount_label", "yoy_label"):
                 if r.get(k) and not cur.get(k):
@@ -3400,7 +4795,7 @@ def load_monthly_nums(monthly):
 
         rec = (got.get("codes") or {}).get(code)
         if rec:
-            rows = _tdnet_series(rec)
+            rows = _tdnet_series(rec) or _tdnet_series(rec, wide=True)
             if rows:
                 base = _base_of(rec.get("amount_label", "") +
                                 rec.get("yoy_label", ""))
@@ -3519,6 +4914,57 @@ def load_monthly_nums(monthly):
 
     return out
 
+KR_METRIC = re.compile(r"매출|영업수입|전년")
+
+
+def extend_kr_months(monthly, nums):
+    """**한국어 이름표로 읽힌 줄은 새 달을 잇는 데만 쓴다**(11/22 회원님: "10월 월매출이 안 채워진 게 너무 많다").
+    표 읽기의 한 갈래가 이름표를 「월매출 전년비」처럼 한국어로 적는데, 매출 낱말 거름이 일본어만 알아봐 이 줄이 통째로 빠졌다
+    (59개사 1,392개월 · 10월분 29개사). 그대로 다 살리면 엉터리가 같이 들어온다 — 9904 는 4~10월이 전부 120.1 로 찍혔다.
+    그래서 **화면 계열과 겹치는 달이 둘 이상이고 전부 0.15 안에서 같을 때만**, 그 계열의 마지막 달 **뒤의** 달(공시 목록의 대상 달까지)을
+    잇는다. 있는 값은 덮지 않는다."""
+    want = {r[2]: r[5] for r in monthly}
+    kr = {}
+    for fn in ("monthly_nums_jp.json", "monthly_nums_fresh_jp.json"):
+        try:
+            codes = json.loads((HERE / "data" / fn).read_text(encoding="utf-8")).get("codes") or {}
+        except (OSError, ValueError):
+            continue
+        for c, r in codes.items():
+            for p_, v in (r.get("months") or {}).items():
+                day = str(v.get("day") or "")
+                if (v.get("yoy") is None or not KR_METRIC.search(str(v.get("metric") or ""))
+                        or (re.match(r"\d{4}-\d\d", day) and p_ >= day[:7])):
+                    continue
+                old = kr.setdefault(c, {}).get(p_)
+                if not old or day >= old[1]:
+                    kr[c][p_] = (v["yoy"], day, v.get("doc", ""))
+    n_co = n_m = 0
+    for c, ks in kr.items():
+        rec, w = nums.get(c), want.get(c)
+        if not rec or not rec.get("m") or not w:
+            continue
+        have = {r[0]: r[2] for r in rec["m"] if r[2] is not None}
+        last = max(r[0] for r in rec["m"])
+        if last >= w:
+            continue
+        ov = [p_ for p_ in ks if p_ in have]
+        if len(ov) < 2 or any(abs(ks[p_][0] - have[p_]) > 0.15 for p_ in ov):
+            continue
+        add = sorted(p_ for p_ in ks if last < p_ <= w)
+        if not add:
+            continue
+        rec["m"] = rec["m"] + [[p_, None, ks[p_][0], 0] for p_ in add]
+        top = add[-1]
+        rec["latest"] = {"period": top, "yoy": ks[top][0], **({"base": rec["latest"]["base"]} if (rec.get("latest") or {}).get("base") else {})}
+        rec["doc"] = ks[top][2] or rec.get("doc", "")
+        rec["historySrc"] = (rec.get("historySrc") or rec.get("src") or "") + " + TDnet PDF(새 달)"
+        n_co += 1
+        n_m += len(add)
+    print(f"  월매출: 한국어 이름표 줄로 새 달을 이은 회사 {n_co} · {n_m}달")
+    return nums
+
+
 def apply_reviewed_monthly(monthly, nums):
     """Source-linked, same-metric backfill; collectors never overwrite this archive."""
     path = HERE / 'data' / 'monthly_reviewed_jp.json'
@@ -3610,6 +5056,75 @@ def apply_reviewed_monthly(monthly, nums):
                       'evidence': evidence,
                       'latest': {'period': latest[0], 'yoy': latest[2], 'base': base}}
     return list(rows.values()), nums
+
+def apply_series_match(monthly, nums):
+    """**표의 전년비 줄 중 화면 이력과 같은 줄을 찾아 빈 달을 잇는다**(11/23 회원님: 월매출 큰 회사 빈칸 "근본적으로 고쳐").
+
+    화면은 회사마다 정해 둔 계열(대조표 `monthly_reviewed_jp` 의 전점·기존점, 이온은 イオンリテール 全店)을 잇는데, 표 읽기는 표의
+    **첫 전년비 줄** 하나만 냈다. 그 줄이 다른 계열이면(패스트리 既存店 ↔ 화면 直営店, 이온은 자회사 표) 새 달이 통째로 버려져
+    큰 회사 137곳의 10월이 비었다. 지금 수집기(TDnet 첨부·회사 IR PDF)는 표의 전년비 줄을 **전부** `series` 로 남긴다. 여기서
+    **이미 가진 이력과 석 달 넘게 겹치고 겹친 달이 전부 0.15 안에서 맞는 줄**만 골라 **빈 달만** 채운다 — 원장 메우기와 같은 잣대다.
+    우연히 석 달이 0.15 안에서 맞을 일은 없으므로 엉뚱한 줄이 붙지 않는다. 있는 값은 덮지 않는다."""
+    cur = (datetime.utcnow() + timedelta(hours=9)).strftime('%Y-%m')
+    cands = {}
+    for fn in ('monthly_nums_jp.json', 'monthly_nums_fresh_jp.json', 'monthly_ir_jp.json', 'monthly_web_jp.json'):
+        try:
+            codes = json.loads((HERE / 'data' / fn).read_text(encoding='utf-8')).get('codes') or {}
+        except (OSError, ValueError):
+            continue
+        for code, rec in codes.items():
+            # 회사 IR 표·流通ニュース 기사의 달별 값(same=기존점·all=전점·yoy)도 같은 잣대로 잇는다 — 시마무라(8227)는 기사에 10월 全店 104.4 가
+            # 있었는데 화면 이력과 줄을 대 보지 않아 비어 있었다(11/23).
+            for key in (('same', 'all', 'yoy') if fn in ('monthly_ir_jp.json', 'monthly_web_jp.json') else ()):
+                mm = {p: v[key] for p, v in (rec.get('months') or {}).items() if isinstance(v, dict) and isinstance(v.get(key), (int, float))}
+                if len(mm) >= 2:
+                    d = cands.setdefault(code, {}).setdefault(f'{fn}:{key}', {})
+                    for p, v in mm.items():
+                        d[p] = [v, (rec['months'][p].get('doc') or rec.get('page') or ''), rec['months'][p].get('day') or '']
+            for lab, mm in (rec.get('series') or {}).items():
+                d = cands.setdefault(code, {}).setdefault(lab, {})
+                for p, v in mm.items():
+                    if isinstance(v, list) and isinstance(v[0], (int, float)) and (p not in d or (v[2] or '') >= (d[p][2] or '')):
+                        d[p] = v
+    filled = cos = 0
+    for code, sers in cands.items():
+        n = nums.get(code)
+        if not n or not n.get('m'):
+            continue
+        hist = {r[0]: r[2] for r in n['m'] if r[2] is not None}
+        have = {r[0] for r in n['m']}
+        # 석 달 겹쳐 0.15 안 — 또는 두 달뿐이면 0.05 안에서 맞고 **그렇게 맞는 줄이 하나뿐일 때**(PPIH: 회계연도 첫 공시라 7·8월만 겹친다).
+        ok = []
+        for lab, mm in sers.items():
+            if re.search(r'客数|客単価|店舗数|会員数|稼働|件数|人数|台数', lab):   # 매출이 아닌 줄(바로크 3548 의 客数 가 화면 이력과 우연히 맞았다)
+                continue
+            ov = [p for p in mm if p in hist]
+            if len(ov) >= 3 and all(abs(mm[p][0] - hist[p]) < 0.15 for p in ov):
+                ok.append((len(ov), lab))
+            elif len(ov) == 2 and all(abs(mm[p][0] - hist[p]) <= 0.05 for p in ov):
+                ok.append((2, lab))
+        if not ok or (max(ok)[0] == 2 and len(ok) > 1):
+            continue
+        best = max(ok)[1]
+        add = [(p, v) for p, v in sers[best].items() if p not in have and p < cur]
+        if not add:
+            continue
+        ev = n.setdefault('evidence', {})
+        for p, v in add:
+            n['m'].append([p, None, v[0], 0])
+            ev[p] = {'ratio': v[0], 'source': v[1], 'kind': '자동 수집 · 같은 계열 대조', 'scope': best}
+        n['m'].sort(key=lambda r: r[0])
+        last = n['m'][-1]
+        if n.get('latest') and last[0] > n['latest'].get('period', ''):
+            n['latest'] = {**n['latest'], 'period': last[0], 'yoy': last[2]}
+        for r in monthly:
+            if r[2] == code and (r[5] or '') < last[0]:
+                r[5] = last[0]
+        filled += len(add)
+        cos += 1
+    print(f"  월매출 같은 계열 잇기: {cos}곳 · {filled}달")
+    return monthly, nums
+
 
 def apply_ledger_fill(monthly, nums):
     """월차 원장(`data/monthly_ledger_jp.json`)으로 **빈 달만** 채운다.
@@ -4055,6 +5570,44 @@ def ann_fallback(ann, packed, fcst):
     return ann
 
 
+
+def apply_jp_times(packed):
+    """일본 앞일에 **회사가 정한 발표 예정 시각**을 얹는다(11/19 회원님: "일본도 정확히 언제인지").
+    JPX 목록은 날짜만 줘서 전부 「15:00경」이었다. scrape_jp_time.py 가 트레이더스웹에서 받은 시각을
+    아직 실제 공시가 없는 줄(정확도 0)에만 얹고 정확도를 2(회사 예정 시각)로 둔다 — 실제 공시 시각(1)은
+    늘 이것을 이긴다. 시각 미정(「-」)인 회사는 그대로 「15:00경」이다.
+    예정일이 바뀐 회사: 트레이더스웹에 시각까지 정해진 줄이 하나뿐이고 우리 줄이 아직 오지 않은 날이면
+    그 날짜로 옮긴다(한 달 안에서만)."""
+    path = HERE / "data" / "times_jp.json"
+    if not path.exists():
+        return
+    try:
+        t = json.loads(path.read_text(encoding="utf-8"))
+    except (ValueError, OSError) as e:
+        print(f"  ! {path.name} 읽기 실패: {e}")
+        return
+    today = (datetime.now(timezone.utc) + timedelta(hours=9)).date().isoformat()
+    by = {}
+    for r in t.get("rows", []):
+        by.setdefault(r["code"], []).append(r)
+    put = moved = 0
+    for p in packed:
+        if p[9] != "jp" or p[14] or p[0] < today:
+            continue
+        cs = by.get(p[1]) or []
+        hit = next((r for r in cs if r["date"] == p[0]), None)
+        if not hit:
+            timed = [r for r in cs if r["time"] and r["date"] >= today
+                     and abs((date.fromisoformat(r["date"]) - date.fromisoformat(p[0])).days) <= 31]
+            if len(timed) == 1:
+                hit = timed[0]
+                p[0] = p[12] = hit["date"]
+                moved += 1
+        if hit and hit["time"]:
+            p[12], p[13], p[14] = hit["date"], hit["time"], 2          # JST = KST
+            put += 1
+    print(f"  일본 회사 예정 시각: {put:,}줄에 얹음 (날짜 옮김 {moved}) · {t.get('fetched', '')}")
+
 def build():
     data = {m: load(m) for m in MARKET_ORDER}
     have = [m for m in MARKET_ORDER if data[m]]
@@ -4110,6 +5663,7 @@ def build():
         b = best.get(p[9] + ":" + p[1])
         if b:
             p[11] = b[1]
+    apply_jp_times(packed)
     order = {m: i for i, m in enumerate(MARKET_ORDER)}
     packed.sort(key=lambda p: (p[0], order[p[9]], -p[11], p[1]))
 
@@ -4121,7 +5675,13 @@ def build():
     monthly = load_monthly(packed)
     monthly_nums = load_monthly_nums(monthly)
     monthly, monthly_nums = apply_reviewed_monthly(monthly, monthly_nums)
+    if os.environ.get("MON_DUMP"):              # 원장 갱신용 — 원장을 얹기 전 화면 계열(손으로 원장을 다시 뜰 때 대조에 쓴다)
+        Path(os.environ["MON_DUMP"]).write_text(json.dumps(
+            {c: {"scope": n.get("scope"), "base": n.get("base"), "m": {r[0]: r[2] for r in n.get("m", []) if r[2] is not None}}
+             for c, n in monthly_nums.items()}, ensure_ascii=False), encoding="utf-8")
+    monthly, monthly_nums = apply_series_match(monthly, monthly_nums)
     monthly, monthly_nums = apply_ledger_fill(monthly, monthly_nums)
+    monthly_nums = extend_kr_months(monthly, monthly_nums)
     # 리츠·은행 등(markets.excluded)은 월매출 화면 밖 — 투자법인의 월차는 임대·호텔 가동 지표다(11/04 8963·8985)
     nm_of = {r[2]: r[4] for r in monthly}
     for c in [c for c in monthly_nums if excluded("jp", nm_of.get(c, "") or (monthly_nums[c].get("name") or ""))]:
@@ -4173,11 +5733,24 @@ def build():
         if s not in on_screen:
             continue
         got = pack_seg(rec, FIN.get(s))
+        if got and FPI_UV.get(s):                                    # 검산 안 된 분기의 이름(화면이 '?' 를 단다)
+            shown = {r[0] for r in got["pts"]}
+            uvl = sorted({lab for lab, _rv in seg_align([[d_] for d_ in FPI_UV[s]], FIN.get(s))} & shown)
+            if uvl:
+                got["uv"] = uvl
         if got:
+            if s in AI_SEG_REC:
+                ai_post_fill(got, AI_SEG_REC[s], FIN.get(s))
             seg[s] = got
         else:
             tossed.append(s.split(":")[-1])
+    print(f"  AI 값을 화면에서 빈 분기에 넣음: {AI_POST[0]:,}칸 · {AI_POST[1]:,}곳")
     print(f"  부문 한 칸만 몇 배로 튄 것(연간·누계가 분기 칸에): 고침 {SEG_FIXED['fixed']:,} · 뺌 {SEG_FIXED['dropped']:,}")
+    print(f"  한 부문만 빈 칸을 '총매출 − 나머지 부문'으로 채움: {SEG_RESID[0]:,}칸")
+    print(f"  한 축에 나눔이 둘 겹친 회사에서 총매출과 맞는 나눔만 남김: {SEG_PART[0]:,}곳")
+    print(f"  거의 같은 값으로 나란히 실리는 두 줄을 한 줄로: {SEG_COLDUP[0]:,}곳")
+    print(f"  한 분기에 같은 부문이 두 번(이름 두 개)·소계가 섞인 칸을 걷어냄: {SEG_ROWDUP[0]:,}칸")
+    print(f"  총매출이 틀려(부문 합의 2.5배 넘게 작고 널뜀) 총매출 대조를 건너뛴 회사: {SEG_BADREV[0]:,}곳")
     geo_out, ord_out = {}, {}
     for s_, rec in GEO.items():
         if s_ in on_screen:
@@ -4392,6 +5965,7 @@ def build():
         # 합이 총매출과 안 맞는 종목은 여기서 걸러진다(seg_fit).
         "seg": seg,
         "segNow": seg_now,
+        "segNone": seg_none(on_screen, seg),
         # 지역별 매출 · 수주(수주고·수주잔고·RPO) — 사업부 그림과 같은 꼴로 그린다(회원님 11/02).
         "geo": geo_out,
         "ord": ord_out,
@@ -4400,8 +5974,13 @@ def build():
         # 숫자는 monthlyNum 에 따로 있다(못 읽은 종목은 거기 없다).
         "monthly": monthly,
         "monthlyNum": monthly_nums,
+        "monNone": mon_none(monthly_nums),
     }
 
+    try:                                          # 수집기들이 '이미 채운 분기'를 다시 안 보게 — 회사별 빈 분기 종료일(11/05)
+        write_seg_holes(payload["seg"])
+    except Exception as e:                        # noqa: BLE001
+        print(f"  ! 빈 분기 목록 실패: {e!r}")
     try:
         audit_gaps(packed, payload["fin"], payload["seg"])
     except Exception as e:                        # noqa: BLE001 — 점검이 실패해도 페이지는 만든다
@@ -4474,13 +6053,12 @@ TEMPLATE = r"""<!DOCTYPE html>
      나란히 놓고 보는 것이 이 화면의 전부인데 세로로 쌓이면 그게 없어진다.
      폭을 1440 으로 못박으면 브라우저가 페이지 전체를 줄여 그리므로 데스크톱과
      같은 다섯 칸이 나오고, 손가락으로 확대해서 본다.
-     좁은 화면에 맞춰 보고 싶으면 캘린더 아래 버튼으로 되돌린다(선택은 기억된다). -->
+     폰 폭에 맞추는 버튼은 두지 않는다 — 누르면 되돌아오지 못했다(11/19). -->
 <meta name="viewport" id="vp" content="width=1440">
 <script>
-try {
-  if (localStorage.getItem('esFit') === 'mobile')
-    document.getElementById('vp').content = 'width=device-width, initial-scale=1';
-} catch (e) {}
+/* 「폰 화면에 맞추기」 버튼은 걷어냈다(11/19 회원님: "눌렀더니 PC 화면으로 복구가 안 돼").
+   예전에 눌러 둔 기기에 남은 선택을 지워 PC 화면으로 되돌린다. */
+try { localStorage.removeItem('esFit'); } catch (e) {}
 </script>
 <!-- GitHub Pages는 같은 URL에 새 파일을 덮어쓴다. 캐시가 남으면 지난주 일정을
      이번주로 착각하게 되므로 매번 새로 받도록 강제한다. -->
@@ -4499,6 +6077,7 @@ setTimeout(() => {
       if (!v || v === ES_BUILD) return;
       const u = new URL(location.href);
       u.searchParams.set('_v', v);
+      u.hash = '';                         // 「#mnMeta」 꼬리를 들고 다시 열면 월매출로 내려간다(11/19)
       location.replace(u.toString());
     }).catch(() => {});
 }, 800);
@@ -4676,18 +6255,38 @@ __FLAGCSS__
    같은 꼴이다 — 묶음 머리에 종목 수와 합계, 카드마다 코드·이름·업종·시총,
    그 아래 최신월 수치와 전년비, 막대 그림, 맨 아래 한 줄짜리 사업 설명.
    한 종목이 한 줄을 다 쓰던 큰 카드도, 이름만 빽빽하던 작은 카드도 아니다. */
-.board .bdg { margin:6px 0 18px; }
-.board .bdh { font-weight:800; font-size:15px; margin:4px 0 8px; }
-.board .bdt { display:grid; grid-template-columns:repeat(auto-fill, minmax(250px, 1fr)); gap:10px; }
-.board .bt { border:1px solid var(--line, #30363d); border-radius:10px; padding:9px 10px 7px; background:var(--panel, #161b22); }
-.board .bt.idx { border-color:#8b949e; }
-.board .bt.f { cursor:pointer; } .board .bt.f:hover { border-color:#f5b301; }
-.board .bt1 { display:flex; justify-content:space-between; font-size:13px; font-weight:700; }
-.board .bt1 small { font-weight:400; opacity:.6; margin-left:4px; }
-.board .bt svg { width:100%; height:70px; display:block; }
-.board .bt2 { display:flex; justify-content:space-between; align-items:center; font-size:11.5px; opacity:.9; margin-top:3px; }
-.board .bb { display:inline-block; padding:0 5px; border-radius:4px; margin-right:3px; font-size:11px; background:rgba(139,148,158,.18); }
-.board .bb.u { background:rgba(255,92,92,.18); color:#ff6b6b; } .board .bb.d { background:rgba(76,154,255,.18); color:#5ca8ff; }
+.board .bdl { font-size:15px; opacity:.9; margin:4px 0 14px; line-height:1.8; padding:10px 14px; border-radius:10px; background:rgba(139,148,158,.1); }
+.board .bdcols { display:grid; grid-template-columns:1fr; gap:22px; }
+.board .bdc { border:1px solid var(--line, #30363d); border-radius:12px; padding:14px 16px 10px; background:var(--panel, #161b22); }
+.board .bdh { font-weight:800; font-size:22px; margin:0 0 8px; display:flex; align-items:center; gap:8px; } .board .bdh .fl { transform:scale(1.4); margin-right:4px; } .board .bdh small { font-weight:400; opacity:.65; font-size:14px; }
+.board .bdi { display:flex; flex-wrap:wrap; gap:6px 22px; font-size:15px; margin-bottom:10px; } .board .bdi small { opacity:.6; }
+.board .bds { display:flex; flex-wrap:wrap; gap:6px 36px; font-size:17px; padding:10px 14px; border-radius:10px; background:rgba(139,148,158,.1); margin-bottom:10px; }
+.board .bdr { width:100%; border-collapse:collapse; font-variant-numeric:tabular-nums; }
+.board .bdr th { font-size:13px; font-weight:600; opacity:.75; padding:4px 8px; text-align:right; white-space:nowrap; vertical-align:bottom; line-height:1.3; }
+.board .bdr th small { font-weight:400; opacity:.8; font-size:11.5px; }
+.board .bdr td { font-size:16px; padding:7px 8px; text-align:right; border-top:1px solid rgba(139,148,158,.15); white-space:nowrap; }
+.board .bdr .l { text-align:left; } .board .bdr td.nm { font-weight:800; font-size:17px; }
+.board .bdr tr.f td.nm { cursor:pointer; text-decoration:underline dotted rgba(139,148,158,.6); }
+.board .bdr tr:hover td { background:rgba(245,179,1,.06); }
+.board .bdr td.st { font-size:15px; font-weight:800; }
+.board .bdr td.n { font-weight:800; font-size:17px; padding-left:4px; }
+.board .bdr td.lds { white-space:normal; padding-top:5px; padding-bottom:5px; }
+.board .ldg { display:grid; grid-template-columns:repeat(3, 175px); gap:0 14px; }
+.board .ld { cursor:pointer; min-width:0; } .board .ld:hover .ln { color:#f5b301; }
+.board .ld .l1 { display:flex; justify-content:space-between; gap:6px; font-size:14.5px; line-height:1.3; }
+.board .ld .ln { font-weight:700; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.board .ld i { font-style:normal; font-weight:800; flex:none; }
+.board .ld .l2 { display:flex; align-items:center; gap:6px; margin-top:3px; }
+.board .ld .lw { flex:1; height:6px; border-radius:3px; background:rgba(139,148,158,.22); overflow:hidden; }
+.board .ld .lw b { display:block; height:100%; background:#f5b301; opacity:.85; }
+.board .ld em { font-style:normal; font-size:12px; opacity:.75; flex:none; width:56px; text-align:right; }
+.board .bdr svg { width:90px; height:26px; display:block; margin-left:auto; }
+.board .bar { position:relative; width:140px; height:20px; margin-left:auto; }
+.board .bar::before { content:""; position:absolute; left:50%; top:0; bottom:0; border-left:1px solid rgba(139,148,158,.5); }
+.board .bar i { position:absolute; top:3px; height:14px; border-radius:2px; opacity:.6; }
+.board .bar i.up { background:#ff5c5c; } .board .bar i.dn { background:#4c9aff; }
+.board .bdl .lead { color:#ff6b6b; } .board .bdl .fade { color:#f0b23e; } .board .bdl .fall { color:#5ca8ff; } .board .bdl .turn { color:#5fcf93; }
+.board tr.lead .st { color:#ff6b6b; } .board tr.fade .st { color:#f0b23e; } .board tr.fall .st { color:#5ca8ff; } .board tr.turn .st { color:#5fcf93; }
 .board .up { color:#ff5c5c; } .board .dn { color:#4c9aff; }
 .scrsecs { position:relative; }
 .scrsecs summary { cursor:pointer; padding:6px 12px; border:1px solid var(--line, #30363d); border-radius:8px; list-style:none; }
@@ -5328,7 +6927,6 @@ svg.bars rect.b:hover { fill:var(--a3); }
 </aside>
 <h1><span class="mark" aria-hidden="true"></span>Earning <span class="jp">Samurai</span>
     <span class="byline">by CB</span></h1>
-<p class="sub">미국 · 일본 · 홍콩 주간 실적발표 일정 — 누가 언제 무엇을 발표했는지</p>
 
 <nav class="samurai-nav" aria-label="어닝사무라이 메뉴">
   <a href="./" aria-current="page">실적 캘린더</a>
@@ -5369,10 +6967,9 @@ svg.bars rect.b:hover { fill:var(--a3); }
 </div>
 <div class="cal" id="cal"></div>
 <div class="tools">
-  <button class="btn" id="fitBtn" hidden></button>
 </div>
 
-<h2><span class="n">2</span>🧭 시장 현황판 <span class="meta" id="bdMeta">2년 주봉 · 주황선 30주선 · 강한 순</span></h2>
+<h2><span class="n">2</span>🧭 시장 현황판 <span class="meta" id="bdMeta"></span></h2>
 <div class="board" id="board"></div>
 
 <h2><span class="n">3</span>📈 실적 스크리너 <span class="meta" id="scrMeta"></span></h2>
@@ -6348,10 +7945,12 @@ function renderMonthly() {
       return '<tr data-mrow="' + esc(x.code) + '"><th scope="row"><button class="mncompany" data-mcode="' + esc(x.code) + '" title="' + esc(x.orig + ' · ' + (n.scope || basis)) + '">' + esc(x.ko) + '<small><span class="mnticker">' + esc(x.code) + '</span><span class="mnmeta">' + esc(basis + ' · ' + x.sect) + '</span></small></button></th><td class="mncapcell">' + (x.cap ? capJo(x.cap).toFixed(1) + '조 원' : '—') + '</td><td class="mncoverage">' + '<strong>' + x.coverage + '</strong> / 24<small>개월 수집</small></td>' + months.map((p,i) => {
         const value = mnHeatValue(x.series.get(p));
         const rounded = value === null ? null : Math.round(value);
-        const label = rounded === null ? '—' : (rounded > 0 ? '+' : '') + rounded + '%';
+        // TDnet·JPX 공시 목록을 다 훑어 그 달 월차 공시가 **실제로 없었던** 칸은 「없음」(회원님 11/04: 더블체크해서 없다고 표기)
+        const none = value === null && (D.monNone || {})[x.code] && D.monNone[x.code].includes(p);
+        const label = rounded === null ? (none ? '없음' : '—') : (rounded > 0 ? '+' : '') + rounded + '%';
         const color = value === null ? '#526980' : rounded === 0 ? '#9aaabd' : value > 0 ? '#ffaaa5' : '#72d8bd';
         const bg = value === null ? 'transparent' : 'rgba(' + (value >= 0 ? '191,92,91,' : '32,150,120,') + (.06 + Math.min(Math.abs(value),40) / 40 * .46).toFixed(3) + ')';
-        const tip = x.ko + ' · ' + p + ' · ' + basis + ' · ' + (n.scope || '') + ' · ' + (value === null ? mnHeatReason(x.code,p) : '전년동월비 ' + (Math.round(value*10)/10) + '%');
+        const tip = x.ko + ' · ' + p + ' · ' + basis + ' · ' + (n.scope || '') + ' · ' + (value === null ? (none ? '이 달은 월차 공시가 없음(TDnet·JPX 공시 목록 확인)' : mnHeatReason(x.code,p)) : '전년동월비 ' + (Math.round(value*10)/10) + '%');
         return '<td class="' + (i === 23 ? 'mnlatestcol ' : '') + (p.endsWith('-01') ? 'mnyear' : '') + '" style="color:' + color + ';background:' + bg + '"><button class="mncell" data-mcode="' + esc(x.code) + '" data-mperiod="' + p + '" title="' + esc(tip) + '" aria-label="' + esc(tip) + '">' + label + '</button></td>';
       }).join('') + '</tr>';
     }).join('') + '</tbody></table></div>';
@@ -6718,7 +8317,7 @@ function openModal(k, dt) {
   document.getElementById('mdList').innerHTML =      // 발표일·분기·테마 줄은 뺐다(회원님 11/03)
     (r[10] ? '<dt>발표 시각</dt><dd>' + esc(r[10]) +
              (r[10] === '장전' ? ' (Before Open)' : r[10] === '장중' ? ' (Market Hours)' : ' (After Close)') +
-             (r[13] ? ' · 한국 ' + esc(r[12].slice(5).replace('-', '/')) + ' ' + r[13] + (r[14] ? ' (실제 공시 시각)' : '경') : '') + '</dd>' : '') +
+             (r[13] ? ' · 한국 ' + esc(r[12].slice(5).replace('-', '/')) + ' ' + r[13] + (r[14] === 2 ? ' (회사 예정 시각)' : r[14] ? ' (실제 공시 시각)' : '경') : '') + '</dd>' : '') +
     (r[11] || liveCap(k) ? '<dt>시가총액</dt><dd>' + capKo(r[11], k) + '</dd>' : '') +
     (r[5] ? '<dt>업종</dt><dd>' + esc(r[5]) + '</dd>' : '') +
     '<dt>시장</dt><dd>' + esc(MKT[m].ko) + (r[6] ? ' · ' + esc(r[6]) : '') + '</dd>';
@@ -7089,6 +8688,11 @@ function finBlock(m, code) {
   }
   // 사업부별은 매출·성장률 아래에 붙인다. 큰 그림을 먼저 보고 쪼개 보는 순서다.
   if (sg) html += segChart(sg, f.cur || 'USD');
+  const sn = D.segNone && D.segNone[key];
+  if (!sg && sn && sn.s) html += '<p class="finnote">이 회사는 <b>사업부를 나누지 않습니다</b> — 결산단신에 「単一セグメント」' +
+    '(단일 사업부라 세그먼트 정보 생략)로 적혀 있어 사업부별 매출이 공시되지 않습니다.</p>';
+  else if (!sg && sn && sn.d) html += '<p class="finnote">사업부별 매출 <b>공시 없음</b> — 원문(' + sn.d.map(esc).join(' · ') +
+    ')에 사업부·지역 표가 없었습니다.</p>';
   // 지역별 매출 · 수주 — 사업부 그림과 같은 꼴(숫자 + YoY, 범례로 끄고 켬). 회원님 11/02.
   const gg = D.geo && D.geo[key], og = D.ord && D.ord[key];
   if (gg) html += segChart(gg, f.cur || 'USD');
@@ -7423,11 +9027,79 @@ function segChart(sg, cur) {
     if (!cut && lastDead >= 0 && pts.length - (lastDead + 1) >= 2) cut = lastDead + 1;
   }
   const onlyLive = r => [r[0]].concat(r.slice(1).map((v, j) => live.size >= 2 && !live.has(j) ? null : v));
-  const nowPts = pts.slice(cut).map(onlyLive);
+  let nowPts = pts.slice(cut).map(onlyLive);
   const oldPts = pts.slice(0, cut);
   const span = ps => { const r = ps.filter(q => q.slice(1).some(v => v != null)); return r[0][0] + '~' + r[r.length - 1][0]; };
-  let html = segDraw(sg, names, onAxis(nowPts, names.length), cur, cut ? '지금 기준 · ' + span(nowPts) : '');
-  if (cut && oldPts.length >= 2) html += segDraw(sg, names, onAxis(oldPts, names.length), cur, '옛 기준 · ' + span(oldPts));
+  const nowSpan = cut ? span(nowPts) : '';
+  // **기준이 바뀌어도 그대로 이어지는 사업부는 옛 분기까지 잇는다**(회원님 11/11: "핵심 둘은 그대로잖아 — 이어 줘").
+  // 이름이 같고(같은 칸) **바뀌는 자리에서 값도 이어질 때만**(앞뒤 두 분기 안의 값이 0.7~1.43배). 이름만 같고 내용이 바뀐 부문은 안 잇는다
+  // (젠쇼: 옛 '레스토랑' 1,820억 = 외식 전체, 새 '레스토랑' 360억 — 이으면 매출이 1/5 로 꺼진 것처럼 보인다. '소매' 190억은 그대로라 잇는다).
+  // 잇는 길 넷(바뀌는 자리의 마지막 옛 줄과 첫 새 줄을 견준다 — 회원님 11/11: "나머지도 다 이어줘"):
+  //  ① 같은 이름·값이 이어짐 → 그대로 잇는다(위)   ② 남은 옛 부문 하나 ↔ 남은 새 부문 하나 → 이름만 바뀐 것, 잇는다
+  //  ③ 남은 옛 부문 여럿 → 새 부문 하나(합쳐짐) → 새 부문 선을 옛 부문들의 합으로 앞까지 잇는다
+  //  ④ 남은 옛 부문 하나 → 새 부문 여럿(쪼개짐) → **옛 기준 그림**의 그 선을 새 부문들의 합으로 지금까지 잇는다(젠쇼: 외식 = 스키야+하마스시+…)
+  // ②~④는 '남은 것끼리의 매출 비중'이 앞뒤로 같을 때만(0.88~1.14배) — 비중이 다르면 다른 사업이 섞인 것이라 안 잇는다. 여럿↔여럿은 짝을 알 수 없어 안 잇는다.
+  let carried = 0, joinTag = '', fwd = null;
+  const carry = new Set();
+  if (cut) {
+    names.forEach((_, j) => {
+      if (live.size >= 2 && !live.has(j)) return;
+      const a = pts.slice(Math.max(0, cut - 2), cut).map(r => r[j + 1]).reverse().find(v => v != null && v > 0);
+      const b = pts.slice(cut, cut + 2).map(r => r[j + 1]).find(v => v != null && v > 0);
+      if (a && b && b / a >= 0.7 && b / a <= 1.43) carry.add(j);
+    });
+    const lastOld = pts[cut - 1], firstNew = pts[cut];
+    const allJ = names.map((_, j) => j);
+    const sumRow = (r, js) => js.reduce((a, j) => a + (r[j + 1] > 0 ? r[j + 1] : 0), 0);
+    const oJ = allJ.filter(j => lastOld[j + 1] > 0), nJ = allJ.filter(j => firstNew[j + 1] > 0 && (live.size < 2 || live.has(j)));
+    const Ro = oJ.filter(j => !carry.has(j)), Rn = nJ.filter(j => !carry.has(j));
+    const tO = sumRow(lastOld, oJ), tN = sumRow(firstNew, nJ);
+    const near = (x, y) => x > 0 && y > 0 && x / y >= 0.88 && x / y <= 1.14;
+    let map = null;                                   // 옛 줄 -> 지금 기준 그림의 값(새 칸 n 에 넣을 값)
+    if (Ro.length && Rn.length && tO > 0 && tN > 0 && tN / tO >= 0.7 && tN / tO <= 1.43 &&
+        near(sumRow(lastOld, Ro) / tO, sumRow(firstNew, Rn) / tN)) {
+      if (Rn.length === 1) {                          // ② 이름만 바뀜 · ③ 합쳐짐
+        map = { n: Rn[0], from: Ro };
+        joinTag = Ro.length === 1 ? ' · ' + names[Rn[0]] + ' ← ' + names[Ro[0]] : ' · ' + names[Rn[0]] + ' = 옛 ' + Ro.length + '개 합';
+      } else if (Ro.length === 1)                     // ④ 쪼개짐 — 합에는 **나중에 생긴 새 부문도** 넣는다(젠쇼 즉석식품은 한 해 뒤 패스트푸드에서 갈라졌다 — 빼면 합이 꺼진다)
+        fwd = { o: Ro[0], ns: allJ.filter(j => !carry.has(j) && (live.size < 2 || live.has(j)) && pts.slice(cut).some(r => r[j + 1] != null)) };
+    }
+    if (carry.size || map) {
+      const head = pts.slice(0, cut).map(r => {
+        const row = [r[0]].concat(r.slice(1).map((v, j) => carry.has(j) ? v : null));
+        if (map) { const got = map.from.filter(j => r[j + 1] != null); if (got.length === map.from.length) row[map.n + 1] = sumRow(r, map.from); }
+        return row;
+      }).filter(r => r.slice(1).some(v => v != null));
+      nowPts = head.concat(nowPts);
+      carried = carry.size;
+    }
+  }
+  // 합쳐 이은 줄이 있으면 YoY 는 그린 값끼리만 견준다(names 를 복사해 넘기면 segRender 가 원자료를 안 섞는다 — 섞으면 합친 첫 해 YoY 가 +96% 로 튄다)
+  let html = segDraw(sg, joinTag ? names.slice() : names, onAxis(nowPts, names.length), cur,
+    cut ? '지금 기준 · ' + nowSpan + (carried ? ' · 그대로 이어지는 ' + carried + '개는 앞 분기부터' : '') + joinTag : '');
+  if (cut && oldPts.length >= 2) {
+    // 옛 기준 그림: 안에서 이름만 바뀐 줄(끝난 다음 분기에 다른 이름이 같은 크기로 시작)은 한 줄로, 쪼개진 부문(④)은 새 부문들의 합으로 지금까지 잇는다.
+    let op = oldPts.map(r => r.slice());
+    const first = j => op.findIndex(r => r[j + 1] != null), last = j => { let k = -1; op.forEach((r, i) => { if (r[j + 1] != null) k = i; }); return k; };
+    names.forEach((_, q) => {
+      const fq = first(q);
+      if (fq <= 0) return;
+      const ps = names.map((_, p) => p).filter(p => p !== q && last(p) === fq - 1 && op[fq - 1][p + 1] > 0 && op[fq][q + 1] > 0 &&
+        op[fq][q + 1] / op[fq - 1][p + 1] >= 0.7 && op[fq][q + 1] / op[fq - 1][p + 1] <= 1.43);
+      if (ps.length === 1) op.forEach(r => { if (r[ps[0] + 1] != null) { r[q + 1] = r[ps[0] + 1]; r[ps[0] + 1] = null; } });
+    });
+    let tagO = '옛 기준 · ' + span(oldPts);
+    if (fwd) {
+      const tail = pts.slice(cut).map(r => {
+        const row = [r[0]].concat(r.slice(1).map((v, j) => carry.has(j) ? v : null));
+        const got = fwd.ns.filter(j => r[j + 1] != null);
+        if (got.length * 2 >= fwd.ns.length) row[fwd.o + 1] = got.reduce((a, j) => a + r[j + 1], 0);
+        return row;
+      }).filter(r => r[fwd.o + 1] != null);
+      if (tail.length) { op = op.concat(tail); tagO += ' · 그 뒤 ' + names[fwd.o] + ' = 지금 기준 ' + fwd.ns.length + '개 합'; }
+    }
+    html += segDraw(sg, names.slice(), onAxis(op, names.length), cur, tagO);
+  }
   return html;
 }
 
@@ -7460,6 +9132,10 @@ function segDraw(sg, names, pts, cur, tag) {
   SEGR[id] = { sg, names, pts, cur, tag, off: new Set() };
   return '<div class="segwrap" data-sid="' + id + '">' + segRender(id) + '</div>';
 }
+// 검산을 못 통과한 채 실은 분기(회원님 11/11: "일단 실어봐") — 분기 이름을 주황으로 쓰고 '?' 를 붙인다. segRender 가 그 그림의 목록을 넣어 둔다.
+let SEG_UVSET = null;
+const uvS = l => SEG_UVSET && SEG_UVSET.has(l) ? ';fill:#f0a030' : '';
+const uvQ = l => SEG_UVSET && SEG_UVSET.has(l) ? '?' : '';
 function segLines(names, pts, vis, opt) {
   // 선 그림 하나 — opt: { vals(i,j) -> 값|null, fmt, pct, H }
   // 생김새는 finChart 와 똑같이(회원님 11/02): 칸 30px · 좁으면 분기 이름을 세워 쓰고 · 글씨 13px 굵게 · 해마다 칸막이.
@@ -7521,15 +9197,16 @@ function segLines(names, pts, vis, opt) {
       (cx(i) - step / 2).toFixed(1) + '" y2="' + (H - 2) + '" style="stroke:rgba(255,255,255,.22);stroke-width:1"/>' : '';
     const t = rot
       ? '<text class="fx' + (i === n - 1 ? ' now' : '') + '" transform="translate(' + (cx(i) + 4).toFixed(1) + ',' + (BASE + 8) +
-        ') rotate(-90)" text-anchor="end" style="font-size:13px">' + r[0] + '</text>'
+        ') rotate(-90)" text-anchor="end" style="font-size:13px' + uvS(r[0]) + '">' + r[0] + uvQ(r[0]) + '</text>'
       : '<text class="fx' + (i === n - 1 ? ' now' : '') + '" x="' + cx(i).toFixed(1) + '" y="' + (BASE + 20) +
-        '" text-anchor="middle" style="font-size:13px">' + r[0] + '</text>';
+        '" text-anchor="middle" style="font-size:13px' + uvS(r[0]) + '">' + r[0] + uvQ(r[0]) + '</text>';
     return sep + t;
   }).join('');
   return '<div class="finbox"><svg viewBox="0 0 ' + W + ' ' + H + '" class="finsvg">' + axis + body + xlab + '</svg></div>';
 }
 function segRender(id) {
   const { sg, names, pts, cur, tag, off } = SEGR[id];
+  SEG_UVSET = (sg.uv && sg.uv.length) ? new Set(sg.uv) : null;
   const has = j => pts.some(r => r[j + 1] != null);
   const vis = j => has(j) && !off.has(j);
   const allV = pts.flatMap(r => r.slice(1).filter(v => v != null));
@@ -7574,7 +9251,8 @@ function segRender(id) {
     '<div class="finlegend">' + names.map((nm, j) => !has(j) ? '' :
       '<span class="lg seglg' + (off.has(j) ? ' off' : '') + '" data-sid="' + id + '" data-j="' + j + '" style="--c:' +
       SEG_COLORS[j % SEG_COLORS.length] + '">' + esc(nm) + '</span>').join('') +
-    '<span class="src" style="font-size:13px">범례를 누르면 끄고 켭니다</span></div>';
+    '<span class="src" style="font-size:13px">범례를 누르면 끄고 켭니다' +
+    (SEG_UVSET && pts.some(r => SEG_UVSET.has(r[0])) ? ' · <span style="color:#f0a030">? 붙은 분기는 검산 안 된 값(원문과 총매출이 안 맞음)</span>' : '') + '</span></div>';
 }
 document.addEventListener('click', e => {
   const t = e.target.closest && e.target.closest('.seglg');
@@ -7803,31 +9481,6 @@ document.getElementById('mdBack').onclick = e => {
 };
 document.addEventListener('keydown', e => { if (e.key === 'Escape') closeModal(); });
 
-/* ── 폰에서 화면 폭 고르기 ─────────────────────────────────────
-   기본은 PC 화면 그대로(폭 1440 고정)다. 한 주를 나란히 놓고 보는 것이 이 화면의
-   전부인데, 폰 폭에 맞추면 캘린더가 세로로 쌓여 그게 없어진다.
-   다만 글씨가 작아지므로 되돌릴 길을 남긴다. 버튼은 **좁은 기기에서만** 보인다 —
-   screen.width 는 viewport 를 고정해도 기기 폭 그대로라 이 판단에 쓸 수 있다. */
-const fitBtn = document.getElementById('fitBtn');
-function fitMode() {
-  try { return localStorage.getItem('esFit') === 'mobile' ? 'mobile' : 'pc'; }
-  catch (e) { return 'pc'; }
-}
-if (screen.width < 900) {
-  fitBtn.hidden = false;
-  const paint = () => {
-    fitBtn.textContent = fitMode() === 'pc' ? '📱 폰 화면에 맞추기' : '🖥 PC 화면으로 보기';
-  };
-  paint();
-  fitBtn.onclick = () => {
-    const next = fitMode() === 'pc' ? 'mobile' : 'pc';
-    try { localStorage.setItem('esFit', next); } catch (e) {}
-    document.getElementById('vp').content =
-      next === 'mobile' ? 'width=device-width, initial-scale=1' : 'width=1440';
-    paint();
-  };
-}
-
 /* ── 이벤트 위임 ──────────────────────────────────────────── */
 document.addEventListener('click', e => {
   const more = e.target.closest('.more');
@@ -8015,10 +9668,7 @@ function renderCards() {
     '<div class="card"><div class="k">' + c[0] + '</div>' +
     '<div class="v ' + c[2] + '">' + c[1] + '</div></div>').join('');
 
-  const cur = mkt ? MKT[mkt] : null;
-  document.getElementById('calMeta').textContent = cur
-    ? cur.ko + ' 상장사 — ' + cur.note
-    : '미국 · 일본 상장사 발표 예정 + 홍콩 공시';
+  document.getElementById('calMeta').textContent = '';
 }
 
 /* ── 출처와 수집 구멍 ─────────────────────────────────────── */
@@ -8090,29 +9740,53 @@ const FIND = (() => {
 /* ── 시장 현황판(회원님 11/03) — D.board: 나라마다 지수·ETF + 업종 지수 타일. 업종 타일을 누르면 아래 스크리너가 그 업종으로 걸러진다. */
 let scrSecSet = new Set();
 function bdDraw() {
+  /* 업종 순위표(회원님 11/22: "주도 섹터가 뭔지, 꼬라박는 섹터가 뭔지 RS 로 — 하락 초입인지 마무리인지").
+     줄 = 업종, 위에서 아래로 3개월 지수 대비 강한 순. 상태 한 단어 + 고점 대비 + RS 선(52주). */
   const B = D.board || [], el = document.getElementById('board');
   if (!B.length) { el.innerHTML = '<p class="meta">주가를 아직 모으는 중입니다.</p>'; return; }
-  const MK = { us: '🇺🇸 미국 — 지수·섹터 ETF', jp: '🇯🇵 일본 — 지수 · 업종(구성 종목 시총 가중)', hk: '🇭🇰 홍콩 — 지수 · 업종(구성 종목 시총 가중)' };
-  const pf = v => v == null ? '—' : (v >= 0 ? '+' : '') + (Math.abs(v) >= 10 ? Math.round(v) : v.toFixed(1));
+  const MK = { us: FL('us') + ' 미국', jp: FL('jp') + ' 일본', hk: FL('hk') + ' 홍콩' };
+  const pf = v => v == null ? '—' : (v > 0 ? '+' : '') + (Math.abs(v) >= 10 ? Math.round(v) : v.toFixed(1));
   const cls = v => v == null ? '' : v >= 0 ? 'up' : 'dn';
-  const svg = t => {
-    const W = 240, H = 70, all = t.p.concat(t.m.filter(x => x != null)), lo = Math.min(...all), hi = Math.max(...all);
-    const X = i => (i / (t.p.length - 1) * (W - 34)).toFixed(1), Y = v => (H - 4 - (v - lo) / ((hi - lo) || 1) * (H - 10)).toFixed(1);
-    const line = (a, c, w) => '<polyline fill="none" stroke="' + c + '" stroke-width="' + w + '" points="' +
-      a.map((v, i) => v == null ? '' : X(i) + ',' + Y(v)).filter(Boolean).join(' ') + '"/>';
-    const last = t.p[t.p.length - 1], tot = last - 100;
-    return '<svg viewBox="0 0 ' + W + ' ' + H + '" preserveAspectRatio="none">' + line(t.m, '#f0883e', 1.2) + line(t.p, 'currentColor', 1.4) +
-      '<text x="' + (W - 32) + '" y="' + (+Y(last) + 4) + '" font-size="10" font-weight="700" fill="currentColor">' + pf(tot) + '%</text></svg>';
+  const ST = t => {
+    const w = t.wb || 0;
+    if (t.st === 'lead') return ['lead', '🔥 주도'];
+    if (t.st === 'fade') return ['fade', '⚠️ 꺾이는 중'];
+    if (t.st === 'turn') return ['turn', w > 0 ? '🌱 반등 시작' : '🌱 바닥 다지는 중'];
+    return ['fall', w < 0 ? (-w <= 4 ? '🩸 하락 초입' : '🩸 하락 ' + (-w) + '주째') : '🩸 힘 빠지는 중'];
   };
-  const badge = (l, v) => '<span class="bb ' + (v === 1 ? 'u' : v === -1 ? 'd' : '') + '">' + l + (v === 1 ? '▲' : v === -1 ? '▼' : v === 0 ? '·' : '—') + '</span>';
-  el.innerHTML = B.map(g => '<div class="bdg"><div class="bdh">' + MK[g.m] + '</div><div class="bdt">' + g.t.map(t =>
-    '<div class="bt' + (t.idx ? ' idx' : '') + (t.f ? ' f' : '') + '"' + (t.f ? ' data-bdf="' + esc(t.f.join('|')) + '"' : '') + '>' +
-    '<div class="bt1"><span>' + esc(t.n) + '<small>' + esc(t.s || (t.c ? t.c + '종목' : '')) + '</small></span><span class="' + cls(t.r1) + '">1개월 ' + pf(t.r1) + '%</span></div>' +
-    svg(t) +
-    '<div class="bt2"><span>' + (t.b[0] != null ? badge('일', t.b[0]) : '') + badge('주', t.b[1]) + badge('월', t.b[2]) + '</span><span>' +
-    (t.idx ? '52주 고점 대비 -' + pf(t.d52).replace('+', '') + '%' : '3개월 상대 <b class="' + cls(t.rel) + '">' + pf(t.rel) + '%p</b>') + '</span></div></div>').join('') + '</div></div>').join('');
+  const spark = a => {
+    if (!a || a.length < 2) return '';
+    const W = 90, H = 26, lo = Math.min(...a), hi = Math.max(...a);
+    const pts = a.map((v, i) => (i / (a.length - 1) * W).toFixed(1) + ',' + (H - 2 - (v - lo) / ((hi - lo) || 1) * (H - 4)).toFixed(1)).join(' ');
+    const c = a[a.length - 1] >= a[0] ? '#ff5c5c' : '#4c9aff';
+    return '<svg viewBox="0 0 ' + W + ' ' + H + '" preserveAspectRatio="none"><polyline fill="none" stroke="' + c + '" stroke-width="1.5" points="' + pts + '"/></svg>';
+  };
+  const pct = v => v == null ? '—' : pf(v) + '%';
+  const col = g => {
+    const idx = g.t.filter(t => t.idx), sec = g.t.filter(t => !t.idx && t.q3 != null).sort((a, b) => b.q3 - a.q3);
+    const bench = (idx.find(t => t.rel === 0) || idx[0] || {}).n || '지수';
+    const mx = Math.max(1, ...sec.map(t => Math.abs(t.q3)));
+    const top = sec.filter(t => t.st === 'lead').slice(0, 3).map(t => t.n), bot = sec.filter(t => t.st === 'fall').slice(-3).reverse().map(t => t.n);
+    let h = '<div class="bdc"><div class="bdh">' + MK[g.m] + '</div>';
+    h += '<table class="bdr"><thead><tr><th class="l">업종</th><th colspan="2">RS 점수</th>' +
+      '<th>최근 1개월</th><th>고점 대비</th><th class="l">상태</th>' +
+      '<th class="l">이 업종 대표 기업 3곳</th><th>RS 선</th></tr></thead><tbody>';
+    for (const t of sec) {
+      const [sc, sl] = ST(t), w = Math.abs(t.q3) / mx * 50;
+      const ld = (t.ld || []).map(x => '<div class="ld" data-bdk="' + esc(x[3]) + '" title="' + esc(x[0]) + '"><div class="l1"><span class="ln">' + esc(x[0]) + '</span><i class="' + cls(x[2]) + '">' + pct(x[2]) + '</i></div>' +
+        '<div class="l2"><span class="lw"><b style="width:' + Math.min(100, x[1]) + '%"></b></span><em>비중 ' + x[1] + '%</em></div></div>').join('');
+      h += '<tr class="' + sc + (t.f ? ' f" data-bdf="' + esc(t.f.join('|')) : '') + '"><td class="l nm">' + esc(t.n) + '</td>' +
+        '<td><div class="bar"><i class="' + cls(t.q3) + '" style="' + (t.q3 >= 0 ? 'left:50%' : 'right:50%') + ';width:' + w.toFixed(1) + '%"></i></div></td><td class="n ' + cls(t.q3) + '">' + pct(t.q3) + '</td>' +
+        '<td class="' + cls(t.q1) + '">' + pct(t.q1) + '</td><td>-' + Math.abs(t.d52).toFixed(0) + '%</td><td class="l st">' + sl + '</td>' +
+        '<td class="l lds"><div class="ldg">' + (ld || '<small>—</small>') + '</div></td><td>' + spark(t.rs) + '</td></tr>';
+    }
+    return h + '</tbody></table></div>';
+  };
+  el.innerHTML = '<div class="bdcols">' + B.map(col).join('') + '</div>';
 }
 document.getElementById('board').addEventListener('click', e => {
+  const k = e.target.closest('[data-bdk]');
+  if (k) { const x = FIND.find(f => f.k === k.dataset.bdk); if (x) openModal(x.k, x.r[0]); return; }
   const t = e.target.closest('[data-bdf]'); if (!t) return;
   const [m, g] = t.dataset.bdf.split('|');
   scrSecSet = new Set([g]); scrPre = ''; document.getElementById('scrMkt').value = m; scrDraw();
@@ -8368,6 +10042,8 @@ setInterval(() => {
       if (!v || v === ES_BUILD) return;
       const u = new URL(location.href);
       u.searchParams.set('_v', v);
+      u.hash = '';
+      try { sessionStorage.setItem('esY', String(Math.round(scrollY))); } catch (_) {}   // 보던 자리로 돌아온다
       location.replace(u.toString());
     }).catch(() => {});
 }, 120e3);
@@ -8404,7 +10080,12 @@ function rtApply(ev) {
   let r = ROWS.find(x => keyOf(x) === key && Math.abs(Date.parse(x[0]) - Date.parse(ev.date)) <= 4 * 864e5);
   // 장후 발표 회사의 서류가 다음 날 아침 접수되면(외국 기업 6-K — 그랩) 발표일을 옮기지 않는다
   const lateFile = r && r[10] === '장후' && (Date.parse(ev.date) - Date.parse(r[0])) === 864e5;
-  if (r && !lateFile) { r[0] = ev.date; r[12] = ev.kstDate; r[13] = ev.kstTime; r[14] = 1; }
+  // 뉴스(야후·와이어) 기사는 발표 전 예고·분석 기사가 섞인다 — 11/18 엔비디아가 월·화·수 세 칸에 떴다.
+  // 예정일보다 이르거나, 장후 회사인데 그날 장 마감(15:55 ET) 전 기사면 발표가 아니다. 이미 실제 시각(8-K)으로 굳은 줄도 안 옮긴다.
+  const news = /뉴스/.test(ev.src || '');
+  if (r && news && (r[14] === 1 || ev.date < r[0] || (ev.date === r[0] && r[10] === '장후' && (ev.time || '') < '15:55'))) return false;
+  if (r && lateFile) {}                                   // 다음 날 아침 서류 — 날짜도 안 옮기고 줄도 새로 만들지 않는다
+  else if (r) { r[0] = ev.date; r[12] = ev.kstDate; r[13] = ev.kstTime; r[14] = 1; }
   else {
     // 은행·리츠·ETF·채권 펀드는 싣지 않는다(빌드의 drop_banks_reits 와 같은 뜻 — 회원님 11/03 「493A 국채 ETF 는 왜 있나」)
     const raw = (ev.orig || '') + ' ' + (ev.name || '');
@@ -8470,6 +10151,24 @@ function renderAll() {
   renderCal(); renderMonthly(); renderGroups(); renderBars(); renderTable();
 }
 reslice(); fillFilters(); fillWeeks(); renderFoot(); renderAll();
+/* 위 메뉴(시장 현황판·스크리너·일본 월매출)는 주소에 「#…」 를 남기지 않고 내려간다(11/19 회원님: "들어가면 자꾸 일본 월차로 넘어간다").
+   한 번 누른 「#mnMeta」 가 주소에 남아, 다시 들어오거나 2분마다 새 빌드를 받을 때마다 월매출로 뛰었다. */
+document.querySelectorAll('.samurai-nav a[href^="#"]').forEach(a => a.addEventListener('click', e => {
+  const t = document.getElementById(a.getAttribute('href').slice(1));
+  if (!t) return;
+  e.preventDefault();
+  t.scrollIntoView({ behavior: 'smooth', block: 'start' });
+}));
+(() => {
+  const NAV = ['#bdMeta', '#scrMeta', '#mnMeta'];
+  let y = null;
+  try { y = sessionStorage.getItem('esY'); sessionStorage.removeItem('esY'); } catch (_) {}
+  if (NAV.includes(location.hash)) {
+    history.replaceState(null, '', location.pathname + location.search);
+    if (y == null) scrollTo(0, 0);
+  }
+  if (y != null) scrollTo(0, +y);
+})();
 </script>
 </body>
 </html>

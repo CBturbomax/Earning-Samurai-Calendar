@@ -2315,7 +2315,14 @@ def us_extra_text(cik, acc):
         return ""
 
 
-def us_process(cik, acc, name, upd, replay=False):
+# **8-K 첨부(보도자료)는 접수 직후 한동안 SEC 에 없다 — 없으면 다시 받는다(11/24).** 피드에 뜬 지 1분 안에 index.json 을 한 번
+# 받아 보고 없으면 그대로 「숫자 대기」로 넘겼다. 11/23 장 마감 뒤 8-K 13건이 전부 「원문 0」이었고, 뉴스와이어가 안 잡힌 HPE·CENT 는
+# Zacks 확인 기사가 뜰 때까지 76~87분 보류됐다(「77분 늦게 잡음」). 2분 남짓 다시 받아 보고, 그래도 없으면 예전처럼 숫자 대기로 간다.
+# 기다리는 동안 POOL(8줄)을 붙잡지 않게 타이머로 다시 건다. 그 사이 보도자료로 먼저 나갔으면 맨 위 PR_SENT 가 막는다.
+EX99_WAITS = (10, 15, 20, 30, 45)
+
+
+def us_process(cik, acc, name, upd, replay=False, _try=0):
     tick = cik_ticker().get(cik)
     if not tick:
         return
@@ -2330,8 +2337,21 @@ def us_process(cik, acc, name, upd, replay=False):
         log(f"8-K {ev['key']} — 보도자료로 이미 보냄")
         return
     point = None
+    raw = None
     try:
         raw = lu.ex99_html(cik, acc.replace("-", ""))
+    except Exception as e:                                       # noqa: BLE001
+        log("미국 첨부 받기 실패", code, repr(e)[:120])
+        if "429" in str(e):
+            _try = len(EX99_WAITS)                               # SEC 가 IP 를 잠갔다 — 더 두드리지 않는다
+    if not raw and not replay and _try < len(EX99_WAITS):
+        if _try == 0:
+            log(f"8-K 첨부가 아직 없다 — 다시 받아 본다 {ev['key']}")
+        threading.Timer(EX99_WAITS[_try], POOL.submit, (safe, us_process, cik, acc, name, upd, replay, _try + 1)).start()
+        return
+    if _try:
+        log(f"8-K 첨부 {'받음' if raw else '끝내 못 받음'} {ev['key']} · 다시 받기 {_try}번")
+    try:
         ev["_text"] = brief.us_text(raw)
         ev["_more"] = lambda: us_extra_text(cik, acc.replace("-", ""))   # IR 첨부는 요약 단계에서(앨범을 늦추지 않게)
         period = us_period(ev["key"], pub_et[:10])
@@ -3164,6 +3184,8 @@ def mon_series_pick(code, series):
         return None
     ok = []
     for lab, mm in series.items():
+        if re.search(r'客数|客単価|店舗数|会員数|稼働|件数|人数|台数', lab):
+            continue
         ov = [p for p in mm if p in hist]
         if len(ov) >= 3 and all(abs(mm[p] - hist[p]) < 0.15 for p in ov):
             ok.append((len(ov), lab))

@@ -14,8 +14,9 @@ import json
 import os
 import sys
 import time
+import re
 import zlib
-from datetime import date
+from datetime import date, timedelta
 from pathlib import Path
 
 import scrape_fin_jp as F
@@ -44,16 +45,49 @@ def gaps():
                     if p.get("end", "") >= "2018-01-01" and p.get("rev"):
                         fin.setdefault(k[3:], set()).add(p["end"])
     have = {}
-    for k, v in stocks("segments_jp.json").items():
-        for p in v.get("pts") or []:
-            if any(x for x in p[1:]):
-                have.setdefault(k[3:], []).append(date.fromisoformat(p[0]))
+    # **이미 채운 분기는 다시 안 본다**(11/05 회원님: "다 완성한 기업은 과거 데이터는 건들 필요 없다"). TDnet 것만 보던 시절에는
+    # 우리가 옛 이력으로 이미 채운 회사도 '빈칸'으로 쳐서 공시 40장을 처음부터 다시 받았다(소니 40장 -> 새로 얻은 것 0).
+    srcs = [stocks("segments_jp.json")] + [stocks(p.name) for p in sorted((HERE / "data").glob("segments_hist_jp_s*.json"))]
+    for src in srcs:
+        for k, v in src.items():
+            for p in v.get("pts") or []:
+                if any(x for x in p[1:]) and re.match(r"\d{4}-\d\d-\d\d$", str(p[0])):
+                    have.setdefault(k[3:] if ":" in k else k, []).append(date.fromisoformat(p[0]))
+    # 빌드가 남긴 회사별 빈 분기(data/seg_holes.json — 모든 소스를 합친 뒤 남은 것)가 있으면 그것과 겹치는 분기만 본다.
+    # EDINET 이력·AI 메우기로 이미 찬 분기까지 여기서 다시 받지 않게(11/05).
+    holes = None
+    try:
+        hj = json.loads((HERE / "data" / "seg_holes.json").read_text(encoding="utf-8"))
+        if (date.today() - date.fromisoformat(hj["ts"][:10])).days <= 3:
+            holes = hj.get("holes") or {}
+    except (OSError, ValueError, KeyError):
+        pass
     out = {}
     for c, ends in fin.items():
         hd = have.get(c, [])
-        miss = sum(1 for e in ends if not any(abs((date.fromisoformat(e) - d).days) <= 20 for d in hd))
+        miss = sorted(e for e in ends if not any(abs((date.fromisoformat(e) - d).days) <= 20 for d in hd))
+        if holes is not None:
+            hs = [date.fromisoformat(e) for e in holes.get("jp:" + c, [])]
+            miss = [e for e in miss if any(abs((date.fromisoformat(e) - h).days) <= 20 for h in hs)]
         if miss:
             out[c] = miss
+    return out
+
+
+def wanted(items, miss):
+    """빈 분기를 채울 공시만 — 그 분기의 결산단신, 앞 분기 누계(빼서 분기를 만든다), 한 해 뒤 공시(전년 칸에 그 분기가 실린다)."""
+    md = [date.fromisoformat(e) for e in miss]
+    out = []
+    for it in items:
+        try:
+            p = date.fromisoformat((it.get("pubdate") or "")[:10])
+        except ValueError:
+            continue
+        for e in md:
+            d = (p - e).days
+            if 15 <= d <= 100 or 15 <= d - 91 <= 100 or 380 <= d <= 470:
+                out.append(it)
+                break
     return out
 
 
@@ -79,6 +113,57 @@ def quarters(raw):
     return {"axis": "사업부문", "names": order, "pts": [[e] + [q[e].get(n) for n in order] for e in ends], "src": "jpx-hist"}
 
 
+def pdf_segments(c, fn, it, blob, raw):
+    """**zip 에 사업부 태그가 없으면 같은 공시의 PDF 표를 읽는다**(11/05). 2021 년 이전 결산단신은 본문이 PDF 에만 있어 미쓰비시전기·
+    도쿄일렉트론의 결산 분기가 해마다 비었다. 칸마다 '부문 합 = 計'·'連結合計 = 요약의 누계 매출(0.3% 안)'을 맞춰야 싣는다(geojp)."""
+    import geojp
+    from datetime import date as _d
+    spans = G.spans_of(F.read_summary(blob))
+    if not spans:
+        return 0
+    pn = it.get("pdf_name") or ""
+    if not pn.lower().endswith(".pdf"):
+        pn = fn.replace("0812", "1401", 1) if fn.startswith("0812") else ""
+    if not pn:
+        return 0
+    pdf = G.get(f"https://www2.jpx.co.jp/disc/{c}0/{pn}", timeout=60)
+    if not pdf:
+        return 0
+    got = geojp.seg_from_pdf(pdf, spans)
+    # XBRL 쪽과 같은 뜻으로 — 누계(회계연도 첫날부터)만 싣는다. 3개월치 칸은 quarters() 가 누계와 섞어 두 번 셀 수 있다
+    longs = {s for (s, e) in spans if (_d.fromisoformat(e) - _d.fromisoformat(s)).days > 100}
+    n = 0
+    for (s, e), row in got.items():
+        if longs and s not in longs and (_d.fromisoformat(e) - _d.fromisoformat(s)).days <= 100 and \
+                not any(abs((_d.fromisoformat(s) - _d.fromisoformat(x)).days) <= 3 for x in longs):
+            continue
+        raw.setdefault(f"{s}/{e}", row)                    # XBRL 이 있으면 그쪽이 이긴다
+        n += 1
+    return n
+
+
+SINGLE = re.compile(r"単一(の)?(報告)?セグメント|単一事業セグメント|セグメント情報(の記載|については記載)?を?省略")
+
+
+def single_seg(blob):
+    """**사업부를 나누지 않는 회사인가**(11/05) — 결산단신 첨부에 「単一セグメントであるため…記載を省略」이 적혀 있으면 그 공시의 끝 날을
+    돌려준다. 화면이 빈칸을 '못 가져온 것'이 아니라 「단일 사업부 — 공시 없음」으로 적는 근거다(없는 숫자는 없다고 쓴다)."""
+    import io
+    import zipfile
+    try:
+        z = zipfile.ZipFile(io.BytesIO(blob))
+    except zipfile.BadZipFile:
+        return None
+    for n in z.namelist():
+        if not n.lower().endswith((".htm", ".html")) or "summary" in n.lower():
+            continue
+        t = re.sub(r"<[^>]+>|\s", "", z.read(n).decode("utf-8", "replace"))
+        if SINGLE.search(t):
+            sp = G.spans_of(F.read_summary(blob))
+            return max((e for (_s, e) in sp), default=None) or "?"
+    return None
+
+
 def main():
     only = [a.zfill(4) for a in sys.argv[1:]]
     try:
@@ -88,6 +173,10 @@ def main():
     st = db.setdefault("stocks", {})
     rawdb = db.setdefault("raw", {})
     done_co = db.setdefault("done_co", {})
+    single = db.setdefault("single", {})                   # 코드 -> [「単一セグメント」이라 적힌 공시의 끝 날]
+    single_chk = db.setdefault("single_chk", {})
+    if db.get("pv") != 2:                                  # 2: zip 에 태그가 없는 옛 공시는 PDF 사업부 표를 읽는다 — 다 읽은 회사도 다시
+        done_co.clear(); db["pv"] = 2
     try:
         caps = json.loads((HERE / "data" / "caps.json").read_text(encoding="utf-8"))
         caps = caps.get("caps") or caps
@@ -102,7 +191,22 @@ def main():
     except (OSError, ValueError):
         sect = {}
     # 시총 큰 순 · 은행 등 화면에 안 싣는 업종은 뺀다
-    cands = only or sorted((c for c in gp if not excluded("jp", "", sect.get("jp:" + c) or "")), key=lambda c: -(cap(c) or 0))
+    # 이번 주(앞뒤 열흘) 발표 회사가 맨 앞 — 그다음 시총(11/05)
+    hot = set()
+    try:
+        from datetime import timedelta
+        lo, hi = (date.today() - timedelta(days=10)).isoformat(), (date.today() + timedelta(days=10)).isoformat()
+        for f in ("earnings.json", "earnings_jp_past.json", "earnings_jp_sched.json"):
+            try:
+                ej = json.loads((HERE / "data" / f).read_text(encoding="utf-8"))
+            except (OSError, ValueError):
+                continue
+            rows = ej.get("rows") or [r for v in (ej.get("days") or {}).values() if isinstance(v, list) for r in v]
+            hot |= {str(r.get("code")) for r in rows if isinstance(r, dict) and lo <= (r.get("date") or "") <= hi}
+    except Exception:                                      # noqa: BLE001
+        pass
+    cands = only or sorted((c for c in gp if not excluded("jp", "", sect.get("jp:" + c) or "")),
+                           key=lambda c: (c not in hot, -(cap(c) or 0)))
     todo = [c for c in cands if only or (c not in done_co and zlib.crc32(c.encode()) % n_sh == i_sh)]
     print(f"이력 받을 일본 회사 {len(todo):,} (사업부 빈칸 있는 회사 {len(gp):,} · 이 갈래 다 읽은 회사 {len(done_co):,})")
     G.T0 = time.time()
@@ -121,6 +225,9 @@ def main():
             continue
         raw = rawdb.setdefault(c, {})
         complete = True
+        if not only:
+            n_all = len(items)
+            items = wanted(items, gp.get(c) or [])
         for it in items:
             if not only and time.time() - t0 > SECS - 60:
                 complete = False
@@ -134,8 +241,20 @@ def main():
             if not blob:
                 continue
             try:
+                n_x = 0
                 for s_, e_, row in F.read_segments(blob):
                     raw[f"{s_}/{e_}"] = row                    # 나중에 낸 공시(재표시)가 이긴다 — 목록이 발표 차례다
+                    n_x += 1
+                if not n_x:
+                    n_p = pdf_segments(c, fn, it, blob, raw)
+                    if n_p:
+                        print(f"  {c} {fn} PDF 사업부 {n_p}기간", flush=True)
+                    else:
+                        e1 = single_seg(blob)
+                        if e1:
+                            lst = single.setdefault(c, [])
+                            if e1 not in lst:
+                                lst.append(e1)
             except Exception as e:                             # noqa: BLE001 — 깨진 공시 하나가 실행을 죽이지 않게
                 print(f"  {c} {fn} 읽기 실패 {e!r}"[:140])
             time.sleep(G.PAUSE)
@@ -151,6 +270,31 @@ def main():
             nd += 1
         if got % 10 == 0:
             OUT.write_text(json.dumps(db, ensure_ascii=False, separators=(",", ":")), encoding="utf-8")
+    # **남은 시간에 사업부 기록이 아예 없는 회사의 최근 결산단신 한 장만 본다** — 단일 사업부라 안 나누는 회사인지(11/05).
+    # 옛 이력을 처음부터 다시 읽지 않고 공시 한 장으로 가른다. 한 번 본 회사는 석 달 뒤에 다시 본다.
+    nchk = nsing = 0
+    if not only:
+        for c in cands:
+            if time.time() - t0 > SECS - 60:
+                break
+            if "jp:" + c in st or (single_chk.get(c) or "") > (date.today() - timedelta(days=90)).isoformat() \
+                    or zlib.crc32(c.encode()) % n_sh != i_sh:
+                continue
+            try:
+                items = G.listing(c)
+                blob = G.get(f"https://www2.jpx.co.jp/disc/{c}0/{items[-1]['url_xbrl'].rsplit('/', 1)[-1]}", timeout=60) if items else None
+            except (F.Throttled, KeyError, IndexError):
+                continue
+            single_chk[c] = date.today().isoformat()
+            nchk += 1
+            e1 = single_seg(blob) if blob else None
+            if e1:
+                lst = single.setdefault(c, [])
+                if e1 not in lst:
+                    lst.append(e1)
+                nsing += 1
+            time.sleep(G.PAUSE)
+        print(f"단일 사업부 확인: 본 회사 {nchk} · 「単一セグメント」 {nsing} · 누적 {len(single)}")
     db["count"] = len(st)
     db["ts"] = date.today().isoformat()
     OUT.write_text(json.dumps(db, ensure_ascii=False, separators=(",", ":")), encoding="utf-8")

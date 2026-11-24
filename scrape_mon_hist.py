@@ -44,6 +44,15 @@ def listing(code):
     return out
 
 
+def periods_of(items):
+    """월차 공시가 실제로 다룬 달들 — 「공시 없음」 표기(회원님 11/04: "진짜 없었으면 더블체크해서 없다고 표기")의 근거."""
+    out = set()
+    for it in items:
+        p, _ok = T.monthly_period(it["title"], it["date"])
+        out.add(p)
+    return sorted(out)
+
+
 def read_one(code, it):
     url = f"https://www2.jpx.co.jp/disc/{code}0/{it['fn']}"
     data = M.get(url, timeout=60)
@@ -98,6 +107,7 @@ def main():
             time.sleep(0.4)                                  # yanoshin — 한 사람이 돌리는 무료 API
             if items is None:
                 continue
+            st.setdefault("periods", {})[code] = periods_of(items)
             items = [it for it in items
                      if f"https://www2.jpx.co.jp/disc/{code}0/{it['fn']}" not in done
                      and f"https://www2.jpx.co.jp/disc/{code}0/{it['fn']}" not in skip]
@@ -127,6 +137,15 @@ def main():
                 M.save(by, done, skip)
                 STATE.write_text(json.dumps(st, separators=(",", ":")), encoding="utf-8")
     M.save(by, done, skip)
+    STATE.write_text(json.dumps(st, separators=(",", ":")), encoding="utf-8")
+    # 이미 끝낸 회사 중 '낸 달' 목록이 없는 곳 — 목록만 한 번 받는다(공시 없음 표기용)
+    for code in [c for c in want if c not in st.setdefault("periods", {})]:
+        if time.time() - t0 > BUDGET + 60:
+            break
+        items = listing(code)
+        time.sleep(0.4)
+        if items is not None:
+            st["periods"][code] = periods_of(items)
     STATE.write_text(json.dumps(st, separators=(",", ":")), encoding="utf-8")
     print(f"  회사 {n_co} · PDF {n_doc} · 담은 달 {n_mo} · 못 읽음 {n_miss} · 끝낸 회사 누적 {len(st['codes'])}")
 

@@ -1,0 +1,22 @@
+# 큰 회사 월매출 진단(11/23) — 로그에만 찍는다. dispatch 전용.
+name: 월매출 큰 회사 진단
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  probe:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: poppler
+        run: command -v pdftotext || (sudo apt-get update -qq && sudo apt-get install -y -qq poppler-utils)
+      - name: 진단
+        run: python tools/probe_mon_big.py

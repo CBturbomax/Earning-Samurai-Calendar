@@ -77,12 +77,29 @@ def gaps_by_ticker():
         except (OSError, ValueError):
             return {}
     fin = stocks("financials.json")
+    revs = {}
+    for k, f in fin.items():
+        revs[k.replace("us:", "")] = [(date.fromisoformat(p["end"]), p["rev"]) for p in f.get("points") or []
+                                     if p.get("end") and p.get("rev")]
+
+    def full(t, p):
+        """**반쪽 칸은 빈칸이다**(11/04). CAT 2018~2021 은 벌크에 금융 부문 한 줄만, COST 결산 분기는 회비 한 줄만
+        있었는데 '값이 있다'로 쳐서 이 수집기가 받을 게 없다고 보고 그 회사를 끝냄으로 적었다(끝낸 1,986곳 중 자료를
+        남긴 곳 681). 부문 합이 그 분기 총매출의 70% 이상일 때만 채워진 칸이다."""
+        vals = [x for x in p[1:] if x]
+        if not vals or not str(p[0])[:4].isdigit() or len(str(p[0])) != 10:
+            return False
+        d0 = date.fromisoformat(str(p[0]))
+        near = [r for e, r in revs.get(t, []) if abs((e - d0).days) <= 20]
+        if not near:
+            return len(vals) >= 2
+        return sum(vals) >= 0.7 * near[0]
     have = {}
     for name in ("segments_sec.json", "segments_edgar.json"):    # segments.json(stockanalysis)은 이름이 달라 화면 기록과 안 이어진다 — 덮인 걸로 안 친다
         for k, v in stocks(name).items():
             t = k.replace("us:", "")
             for p in v.get("pts") or []:
-                if any(x for x in p[1:]):
+                if full(t, p):
                     have.setdefault(t, set()).add(str(p[0]))
     out = {}
     for k, f in fin.items():
@@ -95,6 +112,41 @@ def gaps_by_ticker():
         miss = [e for e in ends if not any(abs((date.fromisoformat(e) - d).days) <= 20 for d in hd)]
         if miss:
             out[t] = miss
+    return out
+
+
+def cum_rows(by_axis, by_pair):
+    """누계 줄을 그대로 남긴다 — {축: {"종료일|분기수": {부문: 값}}} (분기수 2·3·4 = 반기·9개월·연간).
+
+    **결산 분기는 따로 신고되지 않는다**(10-K 에는 연간만). 수집기의 '연간 − 9개월'은 부문마다 따로 빼는데, 이름·태그가 한 해 사이에
+    바뀐 부문은 못 빼서 그 분기가 반쪽이 됐다(코노코필립스 4분기 — 다섯 부문 중 셋만). 누계 줄을 통째로 넘기면 빌드(seg_repair)가
+    '연간 − 9개월' 또는 '연간 − 앞 세 분기'를 **줄 단위로** 해 보고, 합이 그 분기 총매출과 맞을 때만 쓴다."""
+    out = {}
+
+    def put(axis, member, slot):
+        for key, v in slot.items():
+            ddate, qtrs = key[-2], key[-1]
+            if qtrs not in (2, 3, 4):
+                continue
+            val = v[0] if isinstance(v, (tuple, list)) else v
+            if not val or val <= 0:
+                continue
+            row = out.setdefault(axis, {}).setdefault(f"{ss.iso(ddate)}|{qtrs}", {})
+            nm = ss.pretty(member)
+            row[nm] = max(row.get(nm) or 0, val)             # 태그가 둘이면 큰 쪽(매출 태그 변형)
+    for axis, members in (by_axis or {}).items():
+        if ss.axis_rank(axis) < 2:                            # 사업부문·제품 축만(지역은 지역 그림 몫)
+            continue
+        for member, by_tag in members.items():
+            for _tag, slot in by_tag.items():
+                put(axis, member, slot)
+    for axis, subs in (by_pair or {}).items():
+        if ss.axis_rank(axis) < 2 or axis in out:
+            continue
+        sub = max(subs, key=lambda s_: len(subs[s_]), default=None)   # 아래 축 하나만(다 더하면 곱절)
+        for member, by_tag in (subs.get(sub) or {}).items():
+            for _tag, slot in by_tag.items():
+                put(axis, member, slot)
     return out
 
 
@@ -129,9 +181,25 @@ def main():
         db = {}
     st = db.setdefault("stocks", {})
     done_co = db.setdefault("done_co", {})
+    if (db.get("gv") or 0) < 5:                              # 5(11/10): 누계(연간·9개월·반기) 줄을 같이 남긴다 — 결산 분기를 빌드가 되살린다
+        done_co.clear(); db["gv"] = 5
+    if False:                              # 4(11/10): 대상에 **화면 기준 빈칸**(seg_holes.json)을 더했다 — 한 번 다시 본다
+        done_co.clear(); db["gv"] = 4
+    if False:                                    # 1: 반쪽 칸을 채워진 칸으로 셌다 · 2: ReportableSubsegments 행을 버렸다(CAT) — 다시 본다
+        done_co.clear(); db["gv"] = 3
     caps = ss.want_tickers()
     cikmap = ss.cik_map()
     gp = gaps_by_ticker()
+    # **화면에서 빈 분기도 대상이다(11/10).** 원자료에는 값이 있어도 이름이 안 맞거나 틀려서 화면에서 빠진 분기(AMD 2Q21·3Q21)는
+    # 위 셈에 안 잡혀, 공짜로 읽을 수 있는 XBRL 을 두고 AI 가 같은 공시를 글로 읽고 있었다. 빌드가 남긴 목록을 합친다.
+    try:
+        sh = json.loads((HERE / "data" / "seg_holes.json").read_text(encoding="utf-8")).get("holes") or {}
+    except (OSError, ValueError):
+        sh = {}
+    for k, ends in sh.items():
+        if k.startswith("us:") and ends:
+            t = k[3:]
+            gp[t] = sorted(set(gp.get(t) or []) | {e for e in ends if e >= "2018-01-01"})
     i_sh, n_sh = (int(x) for x in SHARD.split("/")) if SHARD else (0, 1)
     from markets import excluded
     try:
@@ -139,8 +207,18 @@ def main():
     except (OSError, ValueError):
         ind = {}
     # 시총 큰 순(화면에서 보는 회사부터) · 은행·리츠 등 화면에 안 싣는 업종은 뺀다(첫 판이 은행·리츠부터 읽었다)
+    # **이번 주(앞뒤 열흘) 발표 회사가 맨 앞**(11/04 회원님: SN 사업부에 3Q25·4Q25·2024 이전이 비었는데 시총 순 줄에서
+    # 아직 차례가 안 왔다). 그다음 시총.
+    hot = set()
+    try:
+        from datetime import timedelta
+        eu = json.loads((HERE / "data" / "earnings_us.json").read_text(encoding="utf-8"))
+        lo, hi = (date.today() - timedelta(days=10)).isoformat(), (date.today() + timedelta(days=10)).isoformat()
+        hot = {r.get("code") for r in (eu.get("rows") or []) if lo <= (r.get("date") or "") <= hi}
+    except (OSError, ValueError):
+        pass
     cands = only or sorted((t for t in gp if t in caps and not excluded("us", "", "", (ind.get("us:" + t) or "").replace("-", ""))),
-                           key=lambda t: -(caps.get(t) or 0))
+                           key=lambda t: (t not in hot, -(caps.get(t) or 0)))
     todo, seen_cik = [], set()
     for t in cands:
         cik = ss.CIK_ALIAS.get(t) or cikmap.get(t) or cikmap.get(t.replace(".", "-"))
@@ -187,12 +265,20 @@ def main():
                 break
             continue
         rec = ss.build_stock(facts.get(cik, {}), pairs.get(cik, {}))
+        cum = cum_rows(facts.get(cik, {}), pairs.get(cik, {}))
         done_co[t] = date.today().isoformat()
         if rec:
             rec = ss.dedupe_names(rec)
             if rec.get("geo"):
                 rec["geo"] = ss.dedupe_names(rec["geo"])
             rec["src"] = "edgar-hist"
+            if cum:
+                rec["cum"] = cum
+            # 앞서 읽은 기록을 버리지 않는다 — 이번엔 빈 분기를 덮는 서류만 읽어 기록이 짧다. 옛 기록은 more 에 남겨 빌드가 둘 다 본다.
+            if st.get(t) and st[t].get("pts") != rec.get("pts"):
+                more = db.setdefault("more", {}).setdefault(t, [])
+                more.append({k: st[t][k] for k in ("names", "pts", "axis") if k in st[t]})
+                del more[:-4]
             st[t] = rec
             got += 1
             print(f"  {t}: 빈 분기 {len(gp.get(t) or [])} · 서류 {n} · 부문 {len(rec.get('pts') or [])}분기 {rec['pts'][0][0] if rec.get('pts') else ''}~"

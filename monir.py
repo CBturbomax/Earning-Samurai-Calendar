@@ -714,7 +714,12 @@ def find_monthly(page: str, base: str):
 
 ARCHIVE_LINK_HINT = re.compile(
     r"(20\d{2}年(?:\d{1,2}月期|度)|過去|バックナンバー|Back\s*Number|Archive)", re.I)
-ARCHIVE_PATH_HINT = re.compile(r"(?:backnumber|archive|/monthly/20\d{2}(?:/|$))", re.I)
+ARCHIVE_PATH_HINT = re.compile(r"(?:backnumber|archive|/monthly/20\d{2}(?:/|$)|getsuji[^/]*\.html|[?&]y(?:ear)?=20\d{2}|"
+                               r"[_-]20\d{2}\.html?$|/20\d{4}\.html?$)", re.I)
+# 이름표가 「2025」 처럼 해만 있는 링크(히말라야 ?y=2025) — 뉴스 연도 목록과 헷갈리지 않게 **같은 디렉터리**이거나
+# 주소에 월차 낱말이 있을 때만(11/04 IR 자료실 떠보기: 코나카 getsuji_-2025 · 니토리 sales_2026 · 산요상회 202603.html)
+ARCHIVE_YEAR_ONLY = re.compile(r"^\s*20\d{2}\s*(?:年|年度)?\s*$")
+MONTHLY_PATH = re.compile(r"monthly|getsuji|month|sales|uriage|geppou|tsukiji", re.I)
 
 
 def archive_links(page: str, base: str, limit: int = 4):
@@ -737,9 +742,12 @@ def archive_links(page: str, base: str, limit: int = 4):
         if href.lower().startswith(("javascript:", "mailto:", "tel:")):
             continue
         t = _txt(lab)
-        if not (ARCHIVE_LINK_HINT.search(t) or ARCHIVE_PATH_HINT.search(href)):
+        u0 = urllib.parse.urljoin(base, href).split("#")[0]
+        same_dir = u0.rsplit("/", 1)[0] == base.split("?")[0].rsplit("/", 1)[0]
+        year_only = bool(ARCHIVE_YEAR_ONLY.search(t)) and (same_dir or MONTHLY_PATH.search(u0))
+        if not (ARCHIVE_LINK_HINT.search(t) or ARCHIVE_PATH_HINT.search(u0) or year_only):
             continue
-        u = urllib.parse.urljoin(base, href).split("#")[0]
+        u = u0
         if u.split("?")[0].lower().endswith(".pdf"):
             continue
         if urllib.parse.urlparse(u).netloc != base_host:

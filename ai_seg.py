@@ -40,8 +40,11 @@ HERE = Path(__file__).parent
 OUT = HERE / "data" / "segments_aipr.json"
 SECS = int(os.environ.get("AISEG_SECS", "1200"))
 PER_CALL = int(os.environ.get("AISEG_TIMEOUT", "240"))
-MAX_CALLS = int(os.environ.get("AISEG_MAX", "40"))       # 한 실행에 묻는 횟수 — 구독 한도를 아낀다
-LIMIT_HINT = re.compile(r"usage limit|rate limit|rate_limit|limit reached|quota|try again later|overloaded|"
+WORKERS = int(os.environ.get("AISEG_WORKERS", "4"))   # 동시에 묻는 수 — 실적 시즌 한 실행에 40곳으로는 517곳을 못 따라간다
+MAX_CALLS = int(os.environ.get("AISEG_MAX", "160"))       # 한 실행에 묻는 횟수 — 구독 한도를 아낀다
+# 403·401 도 멈춤 신호다(11/05 밤: 동시 24건으로 늘렸더니 Codex 가 '403 Forbidden' 으로 전부 거절했는데, 한도로 안 보고
+# 공시마다 다시 두드려 세 실행(1시간 반)을 0건으로 헛돌았다). 멈추면 25분 쉬고 다시 — 한도가 풀리면 저절로 잇는다.
+LIMIT_HINT = re.compile(r"usage limit|rate limit|rate_limit|limit reached|quota|try again later|overloaded|403 Forbidden|401 Unauthorized|"
                         r'"api_error_status":\s*(429|529)', re.I)
 
 
@@ -76,7 +79,12 @@ def codex(prompt):
     if r.returncode != 0 or not ans.strip():
         if LIMIT_HINT.search(out):
             raise Limited(out[-300:])
-        raise RuntimeError(f"codex 실패 {r.returncode}: {out[-300:]}")
+        # 꼬리는 되읊은 프롬프트라 까닭이 안 보였다(11/10) — 오류 줄만 골라 적는다
+        errs = [l.strip()[:200] for l in out.splitlines() if re.match(r"\s*(\[?\d{4}-\d\d-\d\dT[^ ]* )?(ERROR|Error|error|WARN|stream error|unexpected status)", l)]
+        why = " ‖ ".join(errs[-3:]) or out[:200]
+        if re.search(r"(?i)401|unauthorized|refresh|sign in|log ?in|expired|403|forbidden|out of credits|add credits", why):
+            raise Limited("codex 로그인·권한·크레딧: " + why[:260])     # 로그인이 풀렸으면 한 건씩 계속 실패하지 말고 멈춘다
+        raise RuntimeError(f"codex 실패 {r.returncode}: {why[:300]}")
     m = re.search(r"tokens used\D{0,5}([\d,]+)", out, re.I)
     if m:
         USED["in"] += int(m.group(1).replace(",", ""))
@@ -84,7 +92,59 @@ def codex(prompt):
     return ans
 
 
+_TRIED = set()
+
+
+def _cur_engine():
+    if ENGINE == "codex":
+        return "codex"
+    tok = os.environ.get("CLAUDE_CODE_OAUTH_TOKEN", "")
+    return "claude2" if tok and tok == os.environ.get("TOK2") else "claude1"
+
+
+def _switch(why):
+    """**막히면 다음 엔진으로**(11/22 회원님: "Codex 만료되든 말든 안 되면 클로드 1·2번으로 옮겨야지").
+    Codex 로그인이 죽었거나 한 계정 한도가 차면 Claude 1번 → 2번 → Codex 차례로 넘어간다. 다 막히면 그때 멈춘다(추가 결제는 여전히 안 한다)."""
+    global ENGINE
+    _TRIED.add(_cur_engine())
+    toks = {"claude1": os.environ.get("TOK1") or "", "claude2": os.environ.get("TOK2") or ""}
+    if not any(toks.values()) and os.environ.get("CLAUDE_CODE_OAUTH_TOKEN"):
+        toks["claude1"] = os.environ["CLAUDE_CODE_OAUTH_TOKEN"]
+    has_codex = (Path.home() / ".codex" / "auth.json").exists() or bool(os.environ.get("CODEX_AUTH_JSON"))
+    for e in ("claude1", "claude2", "codex"):
+        if e in _TRIED or (e != "codex" and not toks[e]) or (e == "codex" and not has_codex):
+            continue
+        if e == "codex":
+            auth = Path.home() / ".codex" / "auth.json"
+            if not auth.exists():
+                auth.parent.mkdir(parents=True, exist_ok=True)
+                auth.write_text(os.environ["CODEX_AUTH_JSON"], encoding="utf-8")
+            cli, pkg = "codex", "@openai/codex"
+        else:
+            os.environ["CLAUDE_CODE_OAUTH_TOKEN"] = toks[e]
+            cli, pkg = "claude", "@anthropic-ai/claude-code"
+        if not shutil.which(cli):
+            subprocess.run(["npm", "install", "-g", pkg], capture_output=True, timeout=300)
+            if not shutil.which(cli):
+                _TRIED.add(e)
+                continue
+        ENGINE = "codex" if e == "codex" else "claude"
+        print(f"  ↪ 엔진 바꿈 → {e} (앞 엔진: {why[:140]})", flush=True)
+        return True
+    return False
+
+
 def claude(prompt):
+    """AI 한 번 묻기. 지금 엔진이 막히면(로그인 만료·한도) 다음 엔진으로 넘어가 다시 묻는다 — 다 막히면 Limited."""
+    while True:
+        try:
+            return _codex_or_claude(prompt)
+        except Limited as e:
+            if not _switch(str(e)):
+                raise
+
+
+def _codex_or_claude(prompt):
     """`claude -p` 한 번 -> 답 글자. 도구는 안 쓴다(글만 읽고 JSON 을 쓴다). AI_ENGINE=codex 면 codex 로."""
     if ENGINE == "codex":
         return codex(prompt)
@@ -168,7 +228,43 @@ def ask(sym, raw, rec, last, pend):
 def check(segs, prior, tot_now, tot_prior):
     """AI 답 -> {부문: 이번 분기 값} 또는 (None, 까닭). 규칙 수집기 read() 와 같은 잣대."""
     want = [n for n, v in prior.items() if v]
-    got = {s.get("name"): s for s in segs if s.get("name") in prior}
+
+    def _num(x):
+        """'$30,897' · '(1,234)' · '30.9' 처럼 글자로 온 숫자도 읽는다(11/04 — 전년 0개 탈락의 다수)."""
+        if isinstance(x, (int, float)):
+            return float(x)
+        if isinstance(x, str):
+            t = x.strip().replace(",", "").replace("$", "").replace(" ", "")
+            neg = t.startswith("(") and t.endswith(")")
+            t = t.strip("()")
+            try:
+                return -float(t) if neg else float(t)
+            except ValueError:
+                return None
+        return None
+    keyn = {sp.key(n): n for n in prior}
+    got = {}
+    for s0 in segs:
+        if not isinstance(s0, dict):
+            continue
+        n = s0.get("name")
+        n = n if n in prior else keyn.get(sp.key(n or ""))       # 대소문자·띄어쓰기만 다른 이름
+        if not n:
+            continue
+        g = {"prior": _num(s0.get("prior", s0.get("prior_year"))), "current": _num(s0.get("current"))}
+        got[n] = g
+    # 단위 맞춤(11/04): AI 가 '백만 달러' 표를 달러로 안 바꾸고 1,234 그대로 주는 일이 잦아 전년 값이
+    # 하나도 안 맞고 통째로 떨어졌다(40곳 물어 5곳 통과). 1·천·백만·십억 배 중 전년 값이 가장 많이 맞는 배수를
+    # 이번·전년 둘 다에 똑같이 곱한다 — 맞춤의 근거가 SEC 전년 값이라 지어내는 것이 아니다.
+    def _hits(k):
+        return sum(1 for n in want if n in got and isinstance(got[n].get("prior"), (int, float))
+                   and abs(got[n]["prior"] * k - prior[n]) <= abs(prior[n]) * 0.006)
+    k = max((1, 1e3, 1e6, 1e9), key=_hits)
+    if k != 1 and _hits(k) > _hits(1):
+        for g in got.values():
+            for f in ("prior", "current"):
+                if isinstance(g.get(f), (int, float)):
+                    g[f] = g[f] * k
     ok = [n for n in want if n in got and isinstance(got[n].get("prior"), (int, float))
           and abs(got[n]["prior"] - prior[n]) <= abs(prior[n]) * 0.006]
     if len(ok) < 2:
@@ -205,7 +301,20 @@ def main():
         db = {}
     st = db.setdefault("stocks", {})
     asked = db.setdefault("asked", {})
+    if db.get("v") != 3:                                     # 1: 단위 안 맞춤 · 2: 글자로 온 숫자를 못 읽음 — 떨어진 공시를 다시 묻는다
+        asked.clear(); db["v"] = 3
     cik_of = lu.cik_map_cached()
+    # 이번 주 발표 회사가 먼저(11/04 회원님: "이번주 실적발표 회사들 다 점검") — 그다음 시총
+    recent = {}
+    try:
+        eu = json.loads((HERE / "data" / "earnings_us.json").read_text(encoding="utf-8"))
+        lo = (date.today() - timedelta(days=10)).isoformat()
+        hi = date.today().isoformat()
+        for r in (eu.get("rows") or []):
+            if lo <= (r.get("date") or "") <= hi:
+                recent[r.get("code")] = max(recent.get(r.get("code"), ""), r["date"])
+    except (OSError, ValueError):
+        pass
     todo = []
     for sym, f in fin.items():
         sym = sym.replace("us:", "")
@@ -222,59 +331,83 @@ def main():
         if any(abs((date.fromisoformat(e) - date.fromisoformat(last["end"])).days) <= 12 for e in ends
                if re.match(r"\d{4}-\d\d-\d\d$", str(e))):
             continue                                        # 그 분기 부문이 이미 있다(규칙·SEC 가 읽었다)
-        todo.append((-(f.get("cap") or 0), sym, last, rec))
-    todo.sort(key=lambda x: x[0])
-    print(f"AI 부문 판독 대상 {len(todo)}종목 (규칙으로 못 읽은 것)")
-    t0, calls, got = time.time(), 0, 0
-    for _c, sym, last, rec in todo:
-        if not only and (time.time() - t0 > SECS or calls >= MAX_CALLS):
-            break
+        todo.append((0 if sym in recent else 1, -(f.get("cap") or 0), sym, last, rec))
+    todo.sort(key=lambda x: x[:2])
+    print(f"AI 부문 판독 대상 {len(todo)}종목 (규칙으로 못 읽은 것 · 이번 주 발표 {sum(1 for t in todo if not t[0])})")
+    import threading
+    from concurrent.futures import ThreadPoolExecutor
+    lock = threading.Lock()
+    t0 = time.time()
+    cnt = {"calls": 0, "got": 0, "stop": False}
+
+    def one(item):
+        _p, _c, sym, last, rec = item
+        with lock:
+            if cnt["stop"] or (not only and (time.time() - t0 > SECS or cnt["calls"] >= MAX_CALLS)):
+                return
         cik = cik_of.get(sym) or cik_of.get(sym.replace(".", "-"))
         if not cik:
-            continue
+            return
         try:
             hit = pr.latest_earnings_8k(int(cik))
         except Exception as e:                              # noqa: BLE001
             print(f"  ! {sym} 8-K 목록 {e!r}"[:140])
-            continue
+            return
         if not hit or asked.get(sym) == hit[0]:
-            continue
+            return
         raw = lu.ex99_html(int(cik), hit[0])
         if not raw:
-            continue
+            return
         pend = (date.fromisoformat(last["end"]) - timedelta(days=365)).isoformat()
         prior = {n: sp.value_at(srcs, sym, pend, n) for n in rec["names"]}
         fp = [p for p in (fin.get(sym) or fin.get("us:" + sym))["points"] if p.get("rev")
               and abs((date.fromisoformat(p["end"]) - date.fromisoformat(pend)).days) <= 12]
         if not fp or sum(1 for v in prior.values() if v) < 2:
-            continue
+            return
+        with lock:
+            if cnt["stop"] or (not only and cnt["calls"] >= MAX_CALLS):
+                return
+            cnt["calls"] += 1
         try:
-            calls += 1
             segs, why = ask(sym, raw, rec, last, pend)
         except Limited as e:
             print(f"  ! 구독 한도·과부하 — 이번 실행은 여기서 멈춘다: {e}")
-            db["limited"] = datetime.now(timezone.utc).isoformat(timespec="minutes")
-            break
+            with lock:
+                db["limited"] = datetime.now(timezone.utc).isoformat(timespec="minutes")
+                cnt["stop"] = True
+            return
         except Exception as e:                              # noqa: BLE001
             print(f"  ! {sym} {e!r}"[:200])
-            continue
-        asked[sym] = hit[0]
+            return
+        with lock:
+            asked[sym] = hit[0]
         if segs is None:
             print(f"  {sym} 못 읽음: {why}")
-            continue
+            return
         vals, why = check(segs, prior, last["rev"], fp[0]["rev"])
         if only:
             print(sym, json.dumps(segs, ensure_ascii=False)[:600])
         if not vals:
-            print(f"  {sym} 검산 탈락: {why}")
-            continue
+            print(f"  {sym} 검산 탈락: {why} | 우리 전년 {json.dumps({k: v for k, v in list(prior.items())[:3]})} | AI {json.dumps(segs[:3], ensure_ascii=False)}"[:600])
+            return
         names = [n for n in rec["names"] if n in vals]
-        old = st.get(sym) if (st.get(sym) or {}).get("names") == names else {"names": names, "pts": []}
-        old["pts"] = [p for p in old.get("pts", []) if p[0] != last["end"]] + [[last["end"]] + [vals[n] for n in names]]
-        old["acc"], old["axis"] = hit[0], rec.get("axis")
-        st[sym] = old
-        got += 1
+        with lock:
+            old = st.get(sym) if (st.get(sym) or {}).get("names") == names else {"names": names, "pts": []}
+            old["pts"] = [p for p in old.get("pts", []) if p[0] != last["end"]] + [[last["end"]] + [vals[n] for n in names]]
+            old["acc"], old["axis"] = hit[0], rec.get("axis")
+            st[sym] = old
+            cnt["got"] += 1
         print(f"  ✓ {sym} {last['end']} " + " · ".join(f"{n} {vals[n]/1e9:.2f}B" for n in names))
+
+    with ThreadPoolExecutor(WORKERS) as ex:
+        list(ex.map(one, todo))
+    calls, got = cnt["calls"], cnt["got"]
+    more = calls >= MAX_CALLS or time.time() - t0 > SECS      # 다 못 봤다 — 워크플로가 이어달리기를 건다
+    print(f"이어달리기 {'필요' if more and not cnt['stop'] else '없음'}")
+    try:
+        Path(os.environ.get("GITHUB_OUTPUT", "/dev/null")).open("a").write(f"more={1 if more and not cnt['stop'] else 0}\n")
+    except OSError:
+        pass
     db["count"] = len(st)
     db["ts"] = datetime.now(timezone.utc).isoformat(timespec="minutes")
     OUT.write_text(json.dumps(db, ensure_ascii=False, separators=(",", ":")), encoding="utf-8")

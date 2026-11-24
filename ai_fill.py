@@ -76,10 +76,13 @@ def jp_sector(code):
 SINCE = "2018-01-01"
 BIG = set()                                          # 시총 상위 — main 이 채운다
 BIG_N = int(os.environ.get("AIFILL_BIG", "0"))       # 사업부 기록이 아예 없는 회사(단일 부문 — 키엔스·닌텐도·다케다)는 안 묻는다(11/02)
-RECENT_DAYS = int(os.environ.get("AIFILL_RECENT", "0") or 0)   # >0 이면 그 날수 안의 빈칸만
+RECENT_DAYS = int(os.environ.get("AIFILL_RECENT", "0") or 0)   # (옛 설정 — 11/10 부터 안 쓴다)
+MIN_CAP = float(os.environ.get("AIFILL_MIN_CAP", "0.7"))        # 시총 하한(십억 달러 — 0.7 ≈ 1조 원). 0 이면 전부
+CAPS = {}                                                       # 열쇠 -> 시총(십억 달러) — targets 가 채운다
 DOC_LIMIT = int(os.environ.get("AIFILL_DOC", "20000"))   # 원문 길이 상한 — 길수록 한도를 많이 먹는다
-EMPTY_VER = 3                   # 2: 일본 PDF 이름을 목록에서(미국 기준 회사 — 도요타·고마쓰)
-DRY_N = 4                       # 연달아 이만큼 읽어 맞은 것이 없으면 그 회사는 넉 달 쉰다
+CHECK_VER = 2                   # 검산 규칙 판 — 바뀌면 버렸던 답(rej)을 AI 를 다시 안 부르고 다시 검산한다(2: 단위·소계 고침)
+EMPTY_VER = 4                   # 2: 일본 PDF 이름을 목록에서(미국 기준 회사 — 도요타·고마쓰)  # 11/04: 암호 PDF 를 pdftotext 로
+DRY_N = 3                       # 연달아 이만큼 읽어 맞은 것이 없으면 그 회사는 한 해 쉰다(11/10: 넷·넉 달 -> 셋·한 해)
 KEYS = re.compile(r"segment|geograph|region|countr|americas|europe|asia|china|japan|emea|international|domestic|"
                   r"backlog|remaining performance|bookings|new orders|order intake|orders received|disaggregat|"
                   r"revenue by|revenues by|net sales by|sales by", re.I)
@@ -103,28 +106,48 @@ def covered(rec, end, tol=20):
 
 
 def gaps(B, key):
-    """총매출이 있는 1Q18 이후 분기 중 사업부·지역이 빈 종료일들."""
+    """AI 가 읽을 값어치가 있는 빈 분기 — **채울 수 있는 것만**(11/10 구조를 바꿨다).
+
+    예전에는 '총매출은 있는데 사업부·지역·수주가 빈 분기'를 전부 대상으로 삼았다(7만 4천 칸). 뜯어 보니 대부분 회사가 애초에
+    안 내는 숫자였고(수주 지표를 내기 전 분기 · 보험사·단일 부문 · 사업부 공시를 시작하기 전), AI 가 그걸 찾느라 공시를 읽고
+    빈손으로 나왔다 — 회원님: "토큰을 너무 많이, 헛된 곳에 쓴다." 지금은 다음만 묻는다.
+      · **사업부만**(지역·수주는 안 묻는다 — 낸 회사는 규칙 수집기가 이미 받는다)
+      · 사업부 기록이 4분기 이상 있는 회사만(없는 회사는 단일 부문·보험사)
+      · 시총 하한(MIN_CAP) 이상만
+      · 그 회사 사업부 기록이 **시작된 뒤**의 구멍만(시작 전은 공시를 안 하던 때다)
+      · 빈칸이 전체의 6할을 넘는 회사는 뺀다(기록이 우연히 몇 칸 있을 뿐, 분기 사업부를 안 내는 회사다)
+      · 끝난 지 100일 안 된 분기는 뺀다(10-Q·결산단신이 나오면 수집기가 채운다)"""
     f = B.FIN.get(key) or {}
     if f.get("freq") not in ("Q", "H"):
         return []
-    m, code = key.split(":")
-    # **한도 아끼기(11/02 실측)**: 지역·수주는 그 회사가 낸 적이 있을 때만 묻는다. 빈칸 18만 칸 중 대부분이 '분기 지역 매출을
-    # 아예 안 내는 회사'였고, AI 가 그걸 찾느라 공시를 읽고 빈손으로 나왔다. 낸 적이 있는 회사의 구멍만 판다.
-    ordc = len((B.ORD.get(key) or {}).get("pts") or []) >= 2
-    geoc = len((B.GEO.get(key) or {}).get("pts") or []) >= 4
-    # 사업부 기록이 아예 없는 회사는 대개 '단일 부문'이다 — 시총 상위(BIG)만 묻는다(우리 수집기가 놓친 큰 회사를 찾으려고)
-    segc = len((B.SEG.get(key) or {}).get("pts") or []) >= 4 or key in BIG or key in SOON
-    since = SINCE
-    if RECENT_DAYS and key not in SOON:               # 곧 발표할 회사는 1Q18 부터 전부                                    # 최근 칸부터(같은 토큰으로 눈에 보이는 빈칸이 가장 많이 준다)
-        since = max(SINCE, (date.today() - timedelta(days=RECENT_DAYS)).isoformat())
-    out = []
-    for p in f.get("points") or []:
-        e = p.get("end")
-        if not e or e < since or not p.get("rev"):
-            continue
-        if (segc and not covered(B.SEG.get(key), e)) or (geoc and not covered(B.GEO.get(key), e)) or (ordc and not covered(B.ORD.get(key), e)):
-            out.append(e)
-    return out
+    seg = B.SEG.get(key) or {}
+    spts = [str(r[0]) for r in seg.get("pts") or [] if re.match(r"\d{4}-\d\d-\d\d$", str(r[0])) and any(v for v in r[1:])]
+    if len(spts) < 4:
+        return []
+    if MIN_CAP and (CAPS.get(key) or 0) < MIN_CAP:
+        return []
+    first = min(spts)
+    fresh = (date.today() - timedelta(days=100)).isoformat()
+    sh = HOLES.get(key, set()) if HOLES else None
+    ends = [p["end"] for p in f.get("points") or [] if p.get("end") and p["end"] >= SINCE and p.get("rev")]
+    miss = [e for e in ends if first < e < fresh and ((e in sh) if sh is not None else not covered(seg, e))]
+    inside = [e for e in ends if first < e < fresh]
+    if not miss or len(miss) > 0.6 * max(len(inside), 1):
+        return []
+    return miss
+
+
+def _load_holes():
+    try:
+        j = json.loads((HERE / "data" / "seg_holes.json").read_text(encoding="utf-8"))
+        if (date.today() - date.fromisoformat(j["ts"][:10])).days <= 3:
+            return {k: set(v) for k, v in (j.get("holes") or {}).items()}
+    except (OSError, ValueError, KeyError):
+        pass
+    return {}
+
+
+HOLES = _load_holes()           # 화면 기준 빈 분기(빌드가 남긴 것). 회사가 없으면 None 취급 → 원자료 기준
 
 
 SOON = set()                    # 지난 7일 ~ 앞으로 21일 안에 발표하는 회사(targets 가 채운다)
@@ -167,10 +190,20 @@ def targets(B, only):
             continue                                  # GOOG/GOOGL 처럼 같은 회사의 두 종목
         seen.add(sig)
         first = 0 if key in soon else 1
+        from markets import extractive
+        if extractive(m, sect, B.INDUSTRIES.get(key, "") or "", key):
+            first = 2                                 # 캐는 회사(광산·석유가스·정유·석탄)는 맨 뒷줄 — 회원님 11/11
         if m == "us":
             us.append((first, -(ucap.get(key) or 0), key))
         elif m == "jp":
             jp.append((first, -(B.CAPS.get(key) or 0), key))
+    try:
+        cj = json.loads((HERE / "data" / "caps.json").read_text(encoding="utf-8")).get("caps") or {}
+    except (OSError, ValueError):
+        cj = {}
+    CAPS.update({k: v for k, v in cj.items() if isinstance(v, (int, float))})
+    for k, v in ucap.items():
+        CAPS[k] = max(CAPS.get(k) or 0, v or 0)
     us.sort()
     jp.sort()
     out = []
@@ -331,6 +364,11 @@ def jp_text(code, fn, pn=""):
         except Exception:                              # noqa: BLE001 — 암호·깨진 PDF
             lines = []
         rows = [" | ".join(re.sub(r"\s+", " ", t).strip() for _x, t in sorted(c) if t.strip()) for c in lines]
+        if not rows and pdf:                           # 암호 걸린 PDF(고마쓰·TDK) — pdftotext 로 다시
+            try:
+                rows = pdftext.layout_lines(pdf, 40)
+            except Exception:                          # noqa: BLE001
+                rows = []
         keep = set()
         for i, r in enumerate(rows):
             if KEYS_JP.search(r) and len(r) < 90:
@@ -367,6 +405,18 @@ TABLES:
 {tables}
 """
 
+
+# **사업부만 묻는다(11/10).** 지역·수주까지 적게 하면 답이 길어져 출력 토큰이 3할을 차지했다 — 대상(gaps)이 사업부뿐이니 물음도 사업부만.
+if os.environ.get("AIFILL_KINDS", "seg") == "seg":
+    for _l in ('- "geo": revenue by geographic region or country.\n',
+               '- "oh": order intake / new orders / bookings / 受注高 (company total only).\n',
+               '- "ob": order backlog / 受注残高 (company total only).\n',
+               '- "rpo": remaining performance obligations (company total only).\n'):
+        assert _l in PROMPT
+        PROMPT = PROMPT.replace(_l, "")
+    PROMPT = PROMPT.replace("k (seg|geo|oh|ob|rpo)", "k (always seg)").replace("; regions: {geos}", "{geos:.0s}") \
+                   .replace('{{"k": "geo", "name": "Americas"', '{{"k": "seg", "name": "Cloud"') \
+                   .replace("Read ONLY the tables below.", "Read ONLY the tables below. Ignore geographic, order and backlog tables.")
 
 _PAUSE = [0.0]
 _PLOCK = threading.Lock()
@@ -438,15 +488,30 @@ def fin_rev(B, key, st, en, jspans):
     return sum(p["rev"] for p in inside)
 
 
+def _num(x):
+    """'30,897' · '$1,234' · '(12)' 처럼 글자로 온 숫자도 읽는다(11/04 — float() 에서 ValueError 로 조용히 버려졌다)."""
+    if isinstance(x, (int, float)):
+        return float(x)
+    t = str(x).strip().replace(",", "").replace("$", "").replace("¥", "").replace("円", "").replace(" ", "")
+    neg = t.startswith("(") and t.endswith(")")
+    t = t.strip("()")
+    v = float(t)                                       # 못 읽으면 ValueError — 부르는 쪽이 그 줄을 건너뛴다
+    return -v if neg else v
+
+
+WHY = threading.local()          # 마지막 accept 가 기간을 버린 까닭(로그용, 11/05 — 'ATRC 항목 52 · 맞은 기간 0' 이 왜인지 몰랐다)
+
+
 def accept(B, key, items, rec, jspans):
     """검산 통과분만 rec 에 담는다. 반환: 담은 기간 수."""
+    why = WHY.c = {}
     starts = sorted({k.split("/")[0] for kind in ("seg", "geo") for k in rec.get(kind, {})})
     groups = {}
     n_ord = 0
     for it in items or []:
         try:
             k, nm, en, m = it["k"], str(it["name"]).strip(), str(it["end"])[:10], int(it.get("m") or 0)
-            v = float(it["v"]) * float(it.get("u") or 1)
+            v = _num(it["v"]) * _num(it.get("u") or 1)
             _d(en)
         except (KeyError, TypeError, ValueError):
             continue
@@ -466,6 +531,7 @@ def accept(B, key, items, rec, jspans):
         st, en = span_of(en, m, starts)
         rev = fin_rev(B, key, st, en, jspans)
         if not rev:
+            why["매출없음"] = why.get("매출없음", 0) + 1
             continue
         parts = {}
         elim = tot = 0.0
@@ -477,11 +543,39 @@ def accept(B, key, items, rec, jspans):
             elif v > 0:
                 parts.setdefault(nm, v)
         if len(parts) < 2:
+            why["부문<2"] = why.get("부문<2", 0) + 1
             continue
-        s = sum(parts.values())
-        ok = abs(s / rev - 1) <= 0.02 or (elim and abs((s + elim) / rev - 1) <= 0.02) \
-            or (tot and abs(s / tot - 1) <= 0.01 and abs(tot / rev - 1) <= 0.02)
+        def _ok(parts, elim, tot):
+            s = sum(parts.values())
+            return abs(s / rev - 1) <= 0.02 or (elim and abs((s + elim) / rev - 1) <= 0.02) \
+                or (tot and abs(s / tot - 1) <= 0.01 and abs(tot / rev - 1) <= 0.02)
+        ok = _ok(parts, elim, tot)
+        # **단위를 틀리게 적은 표**(11/05 LVWR '합/매출 0.0' — 천 달러 표를 1 로 적었다)는 10 의 거듭제곱 하나로 맞으면 그 배수로 고친다.
+        # 2% 안으로 맞는 거듭제곱이 우연히 나올 일은 드물다. 같은 공시의 다른 기간도 같은 배수일 것이라 따로 따로 본다.
         if not ok:
+            s0 = sum(parts.values())
+            for e in (3, 6, -3, -6, 9, -9, 2, -2, 1, -1, 4, -4, 5, -5, 8, -8, 7, -7):
+                f = 10.0 ** e
+                if abs(s0 * f / rev - 1) <= 0.02 or (tot and abs(tot * f / rev - 1) <= 0.02 and abs(s0 / tot - 1) <= 0.01):
+                    parts = {nm: v * f for nm, v in parts.items()}
+                    elim, tot = elim * f, tot * f
+                    ok = True
+                    why["단위고침"] = why.get("단위고침", 0) + 1
+                    break
+        # **합계 줄이 이름 없이 섞인 표**(11/05 jp:9929 '합/매출 1.94')는 나머지의 합과 같은 줄 하나를 빼서 맞으면 뺀다.
+        if not ok and len(parts) >= 3:
+            s0 = sum(parts.values())
+            for nm, v in sorted(parts.items(), key=lambda x: -x[1]):
+                if abs(v / (s0 - v) - 1) <= 0.01:
+                    p2 = {a: b for a, b in parts.items() if a != nm}
+                    if _ok(p2, elim, tot):
+                        parts, ok = p2, True
+                        why["소계뺌"] = why.get("소계뺌", 0) + 1
+                    break
+        s = sum(parts.values())
+        if not ok:
+            r = round(s / rev, 2)
+            why[f"합/매출{r}"] = why.get(f"합/매출{r}", 0) + 1
             continue
         rec.setdefault(k, {})[f"{st}/{en}"] = {nm: round(v) for nm, v in parts.items()}
         starts.append(st)
@@ -509,7 +603,7 @@ def one(B, key, miss, db, bud, t0, verbose):
     m, code = key.split(":")
     asked = set(db["asked"].get(key, []))
     rec = json.loads(json.dumps(db["stocks"].get(key) or {}))     # 갈래마다 제 사본 — 저장과 부딪히지 않게
-    new_asked, new_empty = [], []
+    new_asked, new_empty, new_rej = [], [], {}
     asked |= set(db.get("empty", {}).get(key, []))
     f = B.FIN.get(key) or {}
     cur = f.get("cur") or ("JPY" if m == "jp" else "USD")
@@ -522,7 +616,7 @@ def one(B, key, miss, db, bud, t0, verbose):
         import scrape_live_us as lu
         cik = lu.cik_map_cached().get(code) or lu.cik_map_cached().get(code.replace(".", "-"))
         if not cik:
-            return key, 0, 0, ["CIK 없음"], rec, (new_asked, new_empty), 0
+            return key, 0, 0, ["CIK 없음"], rec, (new_asked, new_empty, new_rej), 0
         files = us_filings(int(cik))
         docs = [(f"{a}", f"{fm} {rd}", (int(cik), a, nm)) for rd, fm, a, nm in us_pick(files, miss)]
     else:
@@ -576,6 +670,10 @@ def one(B, key, miss, db, bud, t0, verbose):
             log.append(f"{label} 답 깨짐")
             continue
         n = accept(B, key, items, rec, jspans)
+        if not items:                                   # 원문을 읽었는데 사업부·지역 표가 아예 없다 — 화면에 「공시 없음」으로 적을 근거
+            new_rej.setdefault("_none", []).append(label)
+        elif not n:
+            new_rej[did] = {"items": items, "js": {f"{a}/{b}": v for (a, b), v in (jspans or {}).items()}}
         got += n
         dry_n = 0 if n else dry_n + 1
         if dry_n >= DRY_N:
@@ -583,8 +681,10 @@ def one(B, key, miss, db, bud, t0, verbose):
             break
         if verbose:
             print(key, label, json.dumps(items, ensure_ascii=False)[:800])
-        log.append(f"{label} 항목 {len(items)} · 맞은 기간 {n}")
-    return key, tried, got, log, rec, (new_asked, new_empty), dry_n
+        wy = getattr(WHY, "c", {}) or {}
+        log.append(f"{label} 항목 {len(items)} · 맞은 기간 {n}" + (" · 버림 " + ",".join(f"{a}×{b}" for a, b in
+                   sorted(wy.items(), key=lambda x: -x[1])[:4]) if wy and not n else ""))
+    return key, tried, got, log, rec, (new_asked, new_empty, new_rej), dry_n
 
 
 def main():
@@ -622,10 +722,43 @@ def main():
         for k, lst in (old.get("asked") or {}).items():
             have = db["asked"].setdefault(k, [])
             have.extend(x for x in lst if x not in have)
+    # **다른 갈래 파일의 기억도 읽는다(11/10).** 갈래 수를 바꾸면 회사가 다른 파일로 옮겨 가는데, 제 파일만 보면 이미 물은 공시를 또 묻는다.
+    for other in sorted((HERE / "data").glob("ai_fill_s*.json")):
+        if other == OUT:
+            continue
+        try:
+            oj = json.loads(other.read_text(encoding="utf-8"))
+        except (OSError, ValueError):
+            continue
+        for fld in ("asked", "empty", "none"):
+            for k, lst in (oj.get(fld) or {}).items():
+                have = db.setdefault(fld, {}).setdefault(k, [])
+                have.extend(x for x in lst if x not in have)
+        for k, v in (oj.get("dry") or {}).items():
+            cur = db.setdefault("dry", {}).get(k)
+            if not cur or (v.get("ts", "") > cur.get("ts", "")):
+                db["dry"][k] = v
     i_sh, n_sh = (int(x) for x in SHARD.split("/")) if SHARD else (0, 1)
     import zlib
     todo = []
     dry = db.setdefault("dry", {})
+    # **판 번호는 '작으면'으로 견준다(11/10).** `!= 2` 다음에 `!= 3` 을 두었더니 3 으로 저장된 파일이 다음 실행에서 `!= 2` 에 다시 걸려
+    # **실행마다 asked·empty·dry 를 통째로 지웠다** — 같은 회사 두 곳의 같은 공시 15건을 6분마다 다시 묻고(1회 10만 토큰) 빈칸은 그대로였다.
+    if (db.get("dv") or 0) < 2:                          # 1: 글자로 온 숫자를 못 읽어 맞은 게 없다고 쉬게 한 회사 — 다시 묻는다
+        dry.clear(); db["dv"] = 2
+        db.get("asked", {}).clear(); db.get("empty", {}).clear()   # 그때 읽은 공시도 다시(빈칸이 남은 회사만 대상이 된다)
+    if (db.get("dv") or 0) < 3:                          # 3: 단위를 틀리게 적은 표·합계 줄 섞인 표로 쉬게 한 회사 — 다시 묻는다
+        dry.clear(); db["dv"] = 3
+    if db.get("cv") != CHECK_VER:                        # 검산 규칙이 바뀌었다 — 버렸던 답을 AI 없이 다시 본다
+        nre = 0
+        for key, docs in (db.get("rej") or {}).items():
+            rec = db["stocks"].setdefault(key, {})
+            for did, a in list(docs.items()):
+                js = {tuple(k.split("/")): v for k, v in (a.get("js") or {}).items()} or None
+                if accept(B, key, a.get("items"), rec, js):
+                    docs.pop(did); nre += 1
+        db["cv"] = CHECK_VER
+        print(f"검산 규칙 {CHECK_VER}판: 버렸던 답에서 다시 살린 공시 {nre}")
     tg = targets(B, set(only))
     for mk in ("us:", "jp:"):
         BIG.update([k for k in tg if k.startswith(mk)][:BIG_N])
@@ -635,7 +768,7 @@ def main():
         if zlib.crc32(key.encode()) % n_sh != i_sh:
             continue
         d = dry.get(key) or {}
-        if not only and d.get("n", 0) >= DRY_N and (date.today() - _d(d.get("ts", "2000-01-01"))).days < 120:
+        if not only and d.get("n", 0) >= DRY_N and (date.today() - _d(d.get("ts", "2000-01-01"))).days < 365:
             continue                                  # 공시를 넷 읽어도 하나도 안 맞은 회사 — 넉 달 쉰다(안 내는 회사)
         miss = gaps(B, key)
         if miss:
@@ -667,6 +800,12 @@ def main():
                     db["stocks"][key] = rec
                 db["asked"].setdefault(key, []).extend(new_asked[0])
                 db["empty"].setdefault(key, []).extend(new_asked[1])
+                nn = new_asked[2].pop("_none", None)
+                if nn:
+                    have = db.setdefault("none", {}).setdefault(key, [])
+                    have.extend(x for x in nn if x not in have)
+                if new_asked[2]:
+                    db.setdefault("rej", {}).setdefault(key, {}).update(new_asked[2])
                 if tr:
                     dry[key] = {"n": dn, "ts": date.today().isoformat()}
                 done_keys += 1

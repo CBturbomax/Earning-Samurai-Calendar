@@ -186,7 +186,12 @@ def scrape_day(day: date, exch: dict):
 FRESH_HOURS = float(os.environ.get("US_FRESH_HOURS", "6"))
 # **오늘·어제는 훨씬 자주 받는다.** 여섯 시간에 한 번이면 오늘 아침 발표한
 # 종목이 저녁까지 그대로였다(회원님: "3시간이 지났는데 왜 반영이 안 되냐").
-NEAR_MINUTES = float(os.environ.get("US_NEAR_MINUTES", "15"))
+NEAR_MINUTES = float(os.environ.get("US_NEAR_MINUTES", "10"))
+# **두 주 안은 한 시간마다**(회원님 11/19: "발표 시간이 바뀌면 바로바로 반영"). 회사가 일정을 확정하거나
+# 장전↔장후를 바꾸는 것은 대개 발표 1~2주 전이다. 여섯 시간에 한 번이면 그 사이 반나절을 옛 시간으로 보여줬다.
+# 14일 × 하루 24번 = 336요청/일이라 싸다.
+SOON_DAYS = int(os.environ.get("US_SOON_DAYS", "14"))
+SOON_HOURS = float(os.environ.get("US_SOON_HOURS", "1"))
 
 
 def load_cache():
@@ -214,7 +219,8 @@ def stale(key: str, seen: dict, today: date) -> bool:
     except ValueError:
         return True
     near = key <= (today + timedelta(days=1)).isoformat()
-    limit = NEAR_MINUTES * 60 if near else FRESH_HOURS * 3600
+    soon = key <= (today + timedelta(days=SOON_DAYS)).isoformat()
+    limit = NEAR_MINUTES * 60 if near else SOON_HOURS * 3600 if soon else FRESH_HOURS * 3600
     return (datetime.now(timezone.utc) - got).total_seconds() > limit
 
 
