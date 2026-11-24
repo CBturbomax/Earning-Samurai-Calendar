@@ -827,29 +827,79 @@ def _target_label(ev, pts):
 _UNIT = [(r"십억|billion|bn\b", 1e9), (r"억", 1e8), (r"백만|million|mn\b|mm\b", 1e6), (r"천|thousand", 1e3)]
 
 
+def _lab_prev(lab):
+    """바로 앞 기간 이름 — 3Q26 -> 2Q26, 1Q26 -> 4Q25, 1H26 -> 2H25."""
+    n, k, y = int(lab[0]), lab[1], int(lab[2:])
+    top = 4 if k == "Q" else 2
+    return f"{n - 1}{k}{y:02d}" if n > 1 else f"{top}{k}{y - 1:02d}"
+
+
+def _ai_span(kind, period):
+    """AI 가 읽은 숫자가 이력의 몇 칸치인가 — 분기 회사: 3개월 1 · 반기 2 · 9개월 3 · 연간 4 / 반기 회사: 반기 1 · 연간 2. 모르면 None."""
+    per = period or ""
+    nine = re.search(r"9개월|nine", per, re.I)
+    half = re.search(r"상반기|하반기|반기|중간|6개월|six|half|interim", per, re.I)
+    year = re.search(r"연간|통기|12개월|year", per, re.I) and not half
+    if kind == "H":
+        return None if nine else 1 if half else 2 if year else None       # 반기 이력 회사가 분기만 따로 낸 공시는 얹을 칸이 없다
+    if nine:
+        return 3
+    if half:
+        return 2
+    if year:
+        return 4
+    return None if re.search(r"누계", per) else 1                           # 몇 달치인지 모르는 누계는 안 쓴다
+
+
 def _point_from_ai(ev, pts, b):
-    """AI 가 읽은 손익 표(fin)에서 이번 분기 — 전년 같은 분기 매출이 우리 이력과 2% 안일 때만 쓴다(단위·열을 그걸로 검산)."""
+    """AI 가 읽은 손익 표(fin)에서 이번 기간 — 전년 같은 기간 매출이 우리 이력과 2% 안일 때만 쓴다(단위·열을 그걸로 검산).
+
+    **3개월 값만 받다가 홍콩이 통째로 밀렸다(11/24).** 반기 회사의 중간결산(6개월)은 그 회사 이력의 한 칸(1H·2H)인데 '3개월 값이
+    아니다'라고 버려, 왕왕·네임슨·비타소이가 사이트 이력에 그 반기가 생길 때까지 40분~몇 시간 보류됐다(11월 홍콩 발송 38건의
+    중앙값 175분). 지금은 숫자가 이력 몇 칸치인지 보고(`_ai_span`) 누계·연간이면 앞 칸들을 빼서 이번 칸을 만든다 — 회사가 낸 값과
+    우리가 가진 값의 뺄셈이고, 전년 같은 기간(같은 칸 수의 합)이 2% 안에서 맞을 때만이다. 못 쓰면 왜인지 적는다."""
+    def no(why):
+        log("AI 숫자 못 씀", ev.get("key"), why)
+        return None
     f = (b or {}).get("fin") if b else None
     if not f or not f.get("rev") or f["rev"][0] is None or f["rev"][1] is None:
-        return None
-    if re.search(r"누계|9개월|반기|상반기|연간|nine|six|year", f.get("period") or "", re.I):
-        return None                                               # 3개월 값이 아니다
+        return no("손익 숫자 없음" if b else "AI 답 없음")
     lab = _target_label(ev, pts)
     if not lab:
-        return None
-    py = f"{lab[:2]}{int(lab[2:]) - 1:02d}"
-    prev = next((p for p in pts if p[0] == py), None)
-    if not prev or not prev[1]:
-        return None
+        return no("이력에 기간 이름 없음")
+    n = _ai_span(lab[1], f.get("period"))
+    if not n:
+        return no(f"기간이 이력과 안 맞음({f.get('period')} · 이력 {lab})")
+    by = {p[0]: p for p in pts}
+    cur_l = [lab]
+    for _ in range(n - 1):
+        cur_l.append(_lab_prev(cur_l[-1]))
+    prev_l = [f"{l[:2]}{int(l[2:]) - 1:02d}" for l in cur_l]
+    need = cur_l[1:] + prev_l
+    if any(not (by.get(l) and by[l][1]) for l in need):
+        return no(f"이력에 없는 기간 {[l for l in need if not (by.get(l) and by[l][1])]}")
+    prev_rev = sum(by[l][1] for l in prev_l)
+    before = sum(by[l][1] for l in cur_l[1:])
+
+    def opi_of(ls):
+        v = [by[l][2] if len(by[l]) > 2 else None for l in ls]
+        return None if any(x is None for x in v) else sum(v)
     scales = [sc for pat, sc in _UNIT if re.search(pat, f.get("unit") or "", re.I)] or [1, 1e3, 1e6, 1e9]
     for sc in scales:
-        if abs(f["rev"][1] * sc - prev[1]) <= abs(prev[1]) * 0.02:
-            op = f.get("op")
-            opi = op[0] * sc if op and op[0] is not None and (
-                len(prev) < 3 or prev[2] is None or op[1] is None or abs(op[1] * sc - prev[2]) <= abs(prev[2]) * 0.05 + 1) else None
+        if abs(f["rev"][1] * sc - prev_rev) <= abs(prev_rev) * 0.02:
+            rev = f["rev"][0] * sc - before
+            if rev <= 0:
+                return no(f"뺀 값이 0 이하({lab})")
+            op, po, bo = f.get("op"), opi_of(prev_l), opi_of(cur_l[1:])
+            opi = None
+            if op and op[0] is not None and bo is not None and (
+                    n == 1 and (po is None or op[1] is None) or
+                    po is not None and op[1] is not None and abs(op[1] * sc - po) <= abs(po) * 0.05 + 1):
+                opi = op[0] * sc - bo
             ni = f.get("ni")
-            return {"label": lab, "rev": f["rev"][0] * sc, "opi": opi, "ni": ni[0] * sc if ni and ni[0] is not None else None, "src": "ai"}
-    return None
+            return {"label": lab, "rev": rev, "opi": opi,
+                    "ni": ni[0] * sc if n == 1 and ni and ni[0] is not None else None, "src": "ai"}
+    return no(f"전년 값 안 맞음(AI {f['rev'][1]} {f.get('unit')} · 이력 {prev_rev:,.0f} · {n}칸)")
 
 
 PEND_PATH = DATA / "pending_tg.json"
@@ -3266,6 +3316,13 @@ def jp_watch():
                 rows_all += fresh
                 if not fresh and not first:
                     break
+            # **한꺼번에 쏟아지면 시총 큰 회사부터 줄을 세운다(11/24).** 15:30 에 수백 건이 같이 뜨는데 목록 차례대로 8줄에 넣어,
+            # 11/13 15:30 발송 131건의 중앙값이 13분이었다(큰 회사도 작은 회사 뒤에서 기다렸다). 차례만 바꾼다 — 빼는 것은 없다.
+            if len(rows_all) > 8:
+                with H.lock:
+                    capof = {r["code"]: max(((x[11] or 0) for x in H.rows_by_key.get("jp:" + r["code"]) or []), default=0)
+                             for r in rows_all}
+                rows_all.sort(key=lambda r: -capof.get(r["code"], 0))    # 안정 정렬 — 시총 모르는 것은 목록 차례 그대로 뒤에
             for r in rows_all:
                 k = (day, r["code"], r["time"], r["title"])
                 if k in seen:
