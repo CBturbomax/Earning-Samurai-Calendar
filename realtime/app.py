@@ -672,7 +672,13 @@ TG_OUT_JP = {"은행", "증권", "증권·선물", "보험", "기타금융", "�
 TG_OUT_IND = re.compile(
     r"(?i)\bbanks?\b|savings institutions|insurance|insurers|investment bankers|brokers|capital markets|"
     r"finance|financial|credit services|asset management|investment managers|mortgage|"
-    r"^chemicals$|chemicals|steel|real estate investment trusts|\breit\b|biotechnology")
+    r"^chemicals$|chemicals|steel|real estate investment trusts|\breit\b")
+# **신약 바이오만 뺀다 — 의료기기·진단·분석장비·대형 제약은 보낸다(회원님 11/24: "의료기기나 대형제약은 그래도 봐야지").**
+# 예전에는 업종에 'biotechnology' 가 들면 통째로 뺐는데, 나스닥은 메드트로닉(Electromedical Apparatus)·애질런트(Laboratory Analytical
+# Instruments)·애보트(Pharmaceutical Preparations)까지 'Biotechnology: …' 로 묶는다(미국 800곳) — 11/24 메드트로닉이 「업종 제외」로 안 나갔다.
+# 지금은 약을 만드는 두 갈래(제약·바이오의약품)와 사업 설명이 신약 개발인 회사만, 그것도 시총 10조 원 밑일 때만 뺀다.
+TG_BIO_IND = re.compile(r"(?i)^biotechnology$|biotechnology: (pharmaceutical preparations|biological products)|pharmaceuticals and biotechnology")
+BIG_BIO_KRW = float(os.environ.get("TG_BIG_BIO_KRW", "1e13"))      # 10조 원 — 이 위는 '대형 제약'으로 보고 보낸다
 # 캐는 회사(광산·석유가스 생산·정유·석탄) — 회원님 11/11: "미국에 쓰잘데없는 회사가 너무 많다. 텔레로 쏴주지 마." (markets.extractive 와 같은 규칙)
 TG_OUT_EXTRACT = re.compile(
     r"(?i)oil & gas|oil/gas|oil and gas|oilfield|integrated oil|oil refining|natural gas|regulated gas|precious metals|metal mining|\bmining\b|"
@@ -747,9 +753,9 @@ def tg_pick(ev, pts):
         return False, "업종 제외(이름)"
     if re.search(r"(?i)\bREIT\b|投資法人|리츠", ev.get("orig", "") + " " + ev.get("name", "")):
         return False, "리츠 제외"
-    if BIO_DESC.search(desc):
-        return False, "신약 개발 바이오 제외"
     krw = (ev.get("cap") or 0) * 1e9 * float(H.D.get("usdKrw") or 1400)
+    if krw < BIG_BIO_KRW and (TG_BIO_IND.search(H.ind.get(ev["key"], "") or "") or BIO_DESC.search(desc)):
+        return False, "신약 개발 바이오 제외"                          # 시총 10조 원 이상(대형 제약)은 보낸다
     if krw < MIN_KRW:
         return False, "시총 1,000억 원 미만" if krw else "시총 모름"
     return True, cap_won(ev)
@@ -3365,14 +3371,23 @@ HK_NOT = re.compile(r"CONVEN|PRESENTATION|BRIEFING|BOARD MEETING|DATE OF|NOTICE 
                     r"說明會|業績會|董事會會議", re.I)
 
 
-def hk_process(ev):
+# **홍콩 PDF 는 목록에 뜬 직후 한동안 404 다 — 다시 받는다(11/24).** 목록에 오른 지 1분 안에 PDF 를 한 번 받아 보고 404 면 그대로
+# 숫자 없이 넘겨, 저우다푸·즈후·빌리빌리·바오쭌이 사이트 이력에 숫자가 생길 때까지 40~47분 보류됐다. 같은 주소가 두 시간 뒤에는
+# 200 이었다(직접 받아 확인). 여섯 번, 여섯 분 남짓 다시 받아 보고 그래도 안 되면 예전처럼 숫자 없이 넘긴다. 타이머라 POOL 을 안 붙잡는다.
+HK_PDF_WAITS = (15, 30, 45, 60, 90, 120)
+
+
+def hk_process(ev, _try=0):
     """홍콩은 숫자를 못 읽지만(PDF) 회사 설명은 PDF 글에서 뽑는다."""
     if brief.enabled() and ev.get("url", "").lower().endswith(".pdf"):
         try:
             ev["_text"] = brief.hk_text(http_get(ev["url"], ua="Mozilla/5.0", timeout=30, binary=True))
-            log("홍콩 PDF", ev["code"], "글", len(ev["_text"]))
+            log("홍콩 PDF", ev["code"], "글", len(ev["_text"]), f"· 다시 받기 {_try}번" if _try else "")
         except Exception as e:                                   # noqa: BLE001
-            log("홍콩 PDF 실패", ev["code"], e)
+            log("홍콩 PDF 실패", ev["code"], e, f"· 다시 받기 {_try}번" if _try else "")
+            if _try < len(HK_PDF_WAITS):
+                threading.Timer(HK_PDF_WAITS[_try], POOL.submit, (safe, hk_process, ev, _try + 1)).start()
+                return
     finish(ev, None)
 
 
