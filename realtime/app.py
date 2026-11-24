@@ -672,7 +672,13 @@ TG_OUT_JP = {"은행", "증권", "증권·선물", "보험", "기타금융", "�
 TG_OUT_IND = re.compile(
     r"(?i)\bbanks?\b|savings institutions|insurance|insurers|investment bankers|brokers|capital markets|"
     r"finance|financial|credit services|asset management|investment managers|mortgage|"
-    r"^chemicals$|chemicals|steel|real estate investment trusts|\breit\b|biotechnology")
+    r"^chemicals$|chemicals|steel|real estate investment trusts|\breit\b")
+# **신약 바이오만 뺀다 — 의료기기·진단·분석장비·대형 제약은 보낸다(회원님 11/24: "의료기기나 대형제약은 그래도 봐야지").**
+# 예전에는 업종에 'biotechnology' 가 들면 통째로 뺐는데, 나스닥은 메드트로닉(Electromedical Apparatus)·애질런트(Laboratory Analytical
+# Instruments)·애보트(Pharmaceutical Preparations)까지 'Biotechnology: …' 로 묶는다(미국 800곳) — 11/24 메드트로닉이 「업종 제외」로 안 나갔다.
+# 지금은 약을 만드는 두 갈래(제약·바이오의약품)와 사업 설명이 신약 개발인 회사만, 그것도 시총 10조 원 밑일 때만 뺀다.
+TG_BIO_IND = re.compile(r"(?i)^biotechnology$|biotechnology: (pharmaceutical preparations|biological products)|pharmaceuticals and biotechnology")
+BIG_BIO_KRW = float(os.environ.get("TG_BIG_BIO_KRW", "1e13"))      # 10조 원 — 이 위는 '대형 제약'으로 보고 보낸다
 # 캐는 회사(광산·석유가스 생산·정유·석탄) — 회원님 11/11: "미국에 쓰잘데없는 회사가 너무 많다. 텔레로 쏴주지 마." (markets.extractive 와 같은 규칙)
 TG_OUT_EXTRACT = re.compile(
     r"(?i)oil & gas|oil/gas|oil and gas|oilfield|integrated oil|oil refining|natural gas|regulated gas|precious metals|metal mining|\bmining\b|"
@@ -747,9 +753,9 @@ def tg_pick(ev, pts):
         return False, "업종 제외(이름)"
     if re.search(r"(?i)\bREIT\b|投資法人|리츠", ev.get("orig", "") + " " + ev.get("name", "")):
         return False, "리츠 제외"
-    if BIO_DESC.search(desc):
-        return False, "신약 개발 바이오 제외"
     krw = (ev.get("cap") or 0) * 1e9 * float(H.D.get("usdKrw") or 1400)
+    if krw < BIG_BIO_KRW and (TG_BIO_IND.search(H.ind.get(ev["key"], "") or "") or BIO_DESC.search(desc)):
+        return False, "신약 개발 바이오 제외"                          # 시총 10조 원 이상(대형 제약)은 보낸다
     if krw < MIN_KRW:
         return False, "시총 1,000억 원 미만" if krw else "시총 모름"
     return True, cap_won(ev)
