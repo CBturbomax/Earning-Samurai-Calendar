@@ -89,3 +89,7 @@ fcstTable·finChart·segChart 를 불러 찍는다(가이던스 변천만 같은
 전 종목 대조(미국 'Biotechnology' 800곳): 새로 보내는 것 — 의료기기·진단·장비 62곳(MDT·IDXX·A·WAT·IQV·MTD…) · 대형 제약 66곳(LLY·JNJ·ABBV·
 MRK·PFE…) · 홍콩 대형 6곳. 그대로 빼는 것 — 미국 413곳 · 홍콩 68곳. 새로 빠지게 된 회사는 없다(규칙을 좁히기만 했다).
 
+
+**Railway 요금이 갑자기 늘던 것(11/27).** 사이트가 2~3분마다 다시 빌드되는데(index.html 36MB) 서버는 version.txt 가 바뀔 때마다
+`H.refresh` — 36MB 받아 JSON 풀기 + data 파일 8개(~70MB) + 크로미움이 그 페이지를 새로 띄움(`shot.reload`)을 한 시간에 20번 넘게 했다.
+지금은 바뀌어도 최소 `HIST_GAP`(기본 600초) 쉰다(늦어도 20분). 더 줄이려면 Railway 변수 `HIST_GAP` 를 늘린다.
