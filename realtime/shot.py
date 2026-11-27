@@ -13,7 +13,10 @@ import threading
 import traceback
 
 JOBS = queue.Queue()
-_page = {"html": None, "ver": 0}
+_page = {"html": None, "ver": 0, "open": False}
+# 사이트(36MB)를 띄워 둔 탭 하나가 메모리를 약 750MB 잡는다(11/27 실측 — 빈 브라우저 360MB → 1,110MB, 띄우기 6초).
+# 알림이 IDLE 초 동안 없으면 탭을 닫아 메모리를 돌려준다. 다음 알림 때 다시 띄운다(몇 초 더 걸림).
+IDLE = float(os.environ.get("SHOT_IDLE", "900"))
 
 GUIDE_JS = r"""
 // 사이트(build.py)에 같은 함수가 있다 — 옛 빌드를 띄웠을 때만 이것을 쓴다.
@@ -196,7 +199,15 @@ def _worker(get_html):
                 br = pw.chromium.launch(args=["--no-sandbox"], executable_path=exe)
                 page, ver, fails = None, -1, 0
                 while fails < 2:
-                    job = JOBS.get()
+                    try:
+                        job = JOBS.get(timeout=IDLE if page is not None else None)
+                    except queue.Empty:                                  # 한동안 알림 없음 — 탭을 닫아 메모리를 돌려준다
+                        try:
+                            page.close()
+                        except Exception:                                # noqa: BLE001
+                            pass
+                        page, _page["open"] = None, False
+                        continue
                     if job is None:
                         return
                     ev, gh, box, done = job
@@ -210,7 +221,7 @@ def _worker(get_html):
                             page.set_content(get_html(), wait_until="domcontentloaded", timeout=120000)
                             page.add_script_tag(content=GUIDE_JS)
                             page.wait_for_timeout(800)
-                            ver = _page["ver"]
+                            ver, _page["open"] = _page["ver"], True
                         if ev is not None:                               # None = 미리 띄워 두기만
                             n = page.evaluate("([ev, gh]) => tgBuild(ev, gh)", [ev, gh])
                             page.add_style_tag(content=".finbox{overflow:visible!important}.finsvg{min-width:0!important;width:100%!important}")
@@ -219,7 +230,7 @@ def _worker(get_html):
                     except Exception:                                    # noqa: BLE001
                         LAST_ERR[0] = traceback.format_exc(limit=2)[-400:]
                         traceback.print_exc(limit=3)
-                        page = None
+                        page, _page["open"] = None, False
                         fails += 1
                     finally:
                         done.set()
@@ -238,9 +249,11 @@ def start(get_html):
 
 
 def reload():
-    """사이트가 새로 빌드됐다 — 새 페이지를 미리 띄워 둔다(첫 알림이 30초를 기다리지 않게)."""
+    """사이트가 새로 빌드됐다. 탭이 열려 있을 때(알림이 이어지는 중)만 새 페이지를 미리 띄운다 —
+    한가할 때 미리 띄우면 아무도 안 쓰는 탭이 750MB 를 잡는다. 닫혀 있으면 다음 알림 때 새 판으로 띄운다."""
     _page["ver"] += 1
-    JOBS.put((None, None, {}, threading.Event()))
+    if _page["open"]:
+        JOBS.put((None, None, {}, threading.Event()))
 
 
 def render(ev, gh=None, timeout=60):
