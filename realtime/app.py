@@ -156,6 +156,7 @@ class History:
         self.ind = {}
         self.ts = 0
         self.html = ""
+        self.etag = {}                                           # 파일 -> ETag. 안 바뀐 파일은 다시 받지 않는다(304)
 
     def refresh(self):
         try:
@@ -172,13 +173,24 @@ class History:
             D = None
         for fn in (() if os.environ.get("HISTORY_LOCAL") else self.FILES):   # 기존 수집기 함수가 읽는 자리
             try:
-                b = http_get(RAW + fn, ua="Mozilla/5.0", timeout=120, binary=True)
+                hd = {"User-Agent": "Mozilla/5.0", "Accept-Encoding": "identity"}
+                if self.etag.get(fn) and (ROOT / "data" / fn).exists():
+                    hd["If-None-Match"] = self.etag[fn]
+                try:
+                    with urllib.request.urlopen(urllib.request.Request(RAW + fn, headers=hd), timeout=120) as r:
+                        b, et = r.read(), r.headers.get("ETag")
+                except urllib.error.HTTPError as e:
+                    if e.code == 304:                            # 그대로 — 받지도 풀지도 않는다
+                        continue
+                    raise
                 json.loads(b)
                 # 통째로 갈아끼운다(11/13 나카니시 7716: 이 파일을 쓰는 도중에 결산단신 처리 쪽이 읽어 '앞 분기 없음'이 됐고,
                 # 3분기 숫자를 못 만들어 속보가 보류됐다). 임시 파일에 쓰고 이름을 바꾸면 읽는 쪽은 늘 온전한 파일을 본다.
                 tmp_ = ROOT / "data" / (fn + ".part")
                 tmp_.write_bytes(b)
                 os.replace(tmp_, ROOT / "data" / fn)
+                if et:
+                    self.etag[fn] = et
             except Exception as e:                               # noqa: BLE001
                 log("이력:", fn, "실패", e)
         lu._FIN = None                                          # sec_prior 캐시 비우기
