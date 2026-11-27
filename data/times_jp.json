@@ -1,8 +1,8 @@
 {
 "source": "トレーダーズ・ウェブ 決算発表予定",
 "source_url": "https://www.traders.co.jp/market_jp/earnings_calendar",
-"fetched": "2026-11-27T09:01+09:00",
-"count": 350,
+"fetched": "2026-11-27T09:21+09:00",
+"count": 352,
 "rows": [
 {
 "date": "2026-11-30",
@@ -363,6 +363,12 @@
 "time": "",
 "code": "6577",
 "kind": "連1Q"
+},
+{
+"date": "2026-12-10",
+"time": "",
+"code": "657A",
+"kind": "連本決算"
 },
 {
 "date": "2026-12-10",
@@ -1941,6 +1947,12 @@
 "time": "15:30",
 "code": "3660",
 "kind": "連2Q"
+},
+{
+"date": "2027-02-10",
+"time": "15:30",
+"code": "4071",
+"kind": "連1Q"
 },
 {
 "date": "2027-02-10",
