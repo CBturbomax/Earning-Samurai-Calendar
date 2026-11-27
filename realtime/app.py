@@ -67,6 +67,7 @@ PORT = int(os.environ.get("PORT", "8080"))
 US_EVERY = float(os.environ.get("US_EVERY", "4"))
 JP_EVERY = float(os.environ.get("JP_EVERY", "3"))
 HK_EVERY = float(os.environ.get("HK_EVERY", "10"))
+HIST_GAP = float(os.environ.get("HIST_GAP", "600"))   # 사이트 이력 다시 받기 최소 간격(초)
 QUIET = os.environ.get("QUIET_START", "1") == "1"   # 켤 때 이미 떠 있던 공시는 알리지 않는다
 # 다만 막 뜬 것(재배포 중에 나온 공시)까지 삼키면 안 된다 — 이 분 안의 것은 그대로 알린다.
 # 같은 공시를 두 번 보내는 것은 events.json(볼륨)의 id 로 막힌다.
@@ -3787,18 +3788,22 @@ def fill_loop():
 
 
 def history_loop():
-    """사이트가 다시 빌드되면 1분 안에 따라 받는다 — 텔레그램 그림이 늘 최신 사이트와 같게."""
-    last, t0 = None, time.time()
+    """사이트가 다시 빌드되면 따라 받는다(최소 HIST_GAP 간격, 늦어도 20분) — 텔레그램 그림이 최신 사이트와 같게."""
+    last, t0, dirty = None, time.time(), False
     while True:
         time.sleep(60)
         try:
             v = http_get(SITE + "version.txt?t=" + str(int(time.time())), ua="Mozilla/5.0", timeout=20).strip()
         except Exception:                                        # noqa: BLE001
             v = None
-        if (v and last and v != last) or time.time() - t0 > 20 * 60:
+        # 사이트는 2~3분마다 다시 빌드된다(index.html 36MB). 바뀔 때마다 받으면 한 시간에 20번 넘게 36MB 를 풀고
+        # 크로미움이 그 페이지를 새로 띄워 Railway 요금이 크게 늘었다(11/27). 바뀌어도 HIST_GAP(기본 10분)은 쉰다.
+        dirty = dirty or bool(v and last and v != last)          # 쉬는 동안 바뀐 것은 잊지 않고 쉼이 끝나면 받는다
+        gap = time.time() - t0
+        if (dirty and gap > HIST_GAP) or gap > 20 * 60:
             safe(H.refresh)
             safe(late_check)
-            t0 = time.time()
+            t0, dirty = time.time(), False
         last = v or last
 
 
