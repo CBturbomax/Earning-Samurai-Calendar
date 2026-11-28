@@ -6899,6 +6899,7 @@ body.ph .md .mt { font-size:22px; }
 /* 그래프·표는 폰 폭에 딱 맞춰 한눈에(텔레그램 그림처럼) — 옆으로 밀지 않는다(회원님 11/28 "한눈에 보고 싶다"). */
 body.ph .md #mdFin svg { min-width:0 !important; max-width:100% !important; width:100% !important; height:auto; }
 body.ph .md .finbox, body.ph .md .chartbox { overflow:visible; }
+/* 그래프 안 글씨는 phFitWide 가 1.5배로 키운다(글자마다 크기가 박혀 있어 CSS 로는 안 덮인다). */
 body.ph .md .ms { font-size:15px; }
 
 /* ── 방금 발표(오른쪽 위 피드) ─────────────────────────────────
@@ -10041,8 +10042,16 @@ function phDraw() {
 function phOpenFind() { phFit(); phFindL.hidden = false; phq.value = ''; phDraw(); phq.focus(); }
 function phCloseFind() { phFindL.hidden = true; phq.blur(); }
 /* 표(연간 표 등)가 폰 폭보다 넓으면 표째로 줄여 한눈에 — 옆으로 밀지 않게. 그래프는 CSS 가 폭에 맞춘다. */
+const PH_TXT = 1.5;      // 폰에서 그래프 안 글씨 배율(회원님 11/28 "글자 크기만 더 키울 수 있나")
 function phFitWide(root) {
-  (root || document.getElementById('mdFin')).querySelectorAll('.fcwrap').forEach(b => {
+  root = root || document.getElementById('mdFin');
+  // 폰은 그래프를 폭에 맞춰 줄이므로 글씨가 깨알 — 글자마다 1.5배(원래 크기 차이는 그대로). 한 번만.
+  root.querySelectorAll('svg text:not([data-ph])').forEach(t => {
+    const fs = parseFloat(getComputedStyle(t).fontSize) || 12;
+    t.style.fontSize = (fs * PH_TXT).toFixed(1) + 'px';
+    t.dataset.ph = '1';
+  });
+  root.querySelectorAll('.fcwrap').forEach(b => {
     const t = b.firstElementChild;
     if (!t) return;
     t.style.zoom = '';
