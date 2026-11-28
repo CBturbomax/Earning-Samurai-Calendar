@@ -564,3 +564,9 @@
   `fill_loop`(2시간마다 부문·가이던스·IR 메우기)는 기본 꺼짐(`FILL_LOOP=1` 이면 켬). 회사 지정 명령(replay.txt: `segfill INTC,AMD` · `segfilljp N` · `jphist` · `guideaudit` · `irhist`)은 그대로.
   GitHub 쪽(무료) 빈칸 메우기는 손대지 않았다.
 - 서버에서 받아 가는 새 주소는 반드시 `rtget.get_json`(gzip). 새 장부·큰 데이터는 `pack` 조각으로. 되돌리기 `PACK_D=0`.
+
+## 11/28 — 간판 주소 https://earning-samurai.github.io (되돌리지 말 것)
+- 회원님 단체 계정 `Earning-Samurai` 의 저장소 `earning-samurai.github.io` = `index.html`(실제 사이트를 iframe 으로 화면 가득) + `logo.jpg`. 주소 뒤 `?…#…` 은 그대로 넘긴다.
+- **실제 사이트는 여전히 `cbturbomax.github.io/Earning-Samurai-Calendar`.** 이 저장소 이름을 바꾸거나 옮기면 간판이 빈 화면이 된다. Railway 도 이 저장소를 본다.
+- 회원님이 도메인 구입·저장소 이전은 싫다고 하셨다(Railway 연결이 꼬일까 봐). 아이콘·탭 제목은 간판 저장소의 index.html 에서 바꾼다.
+- 사이트가 iframe 을 막는 코드(top.location 등)를 넣지 않는다.
