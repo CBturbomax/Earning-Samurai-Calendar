@@ -69,6 +69,17 @@ PORT = int(os.environ.get("PORT", "8080"))
 US_EVERY = float(os.environ.get("US_EVERY", "4"))
 JP_EVERY = float(os.environ.get("JP_EVERY", "3"))
 HK_EVERY = float(os.environ.get("HK_EVERY", "10"))
+OFF_EVERY = float(os.environ.get("OFF_EVERY", "30"))       # 공시가 거의 안 나오는 시간(밤·주말)의 확인 간격
+# 공시 창구가 여는 시간(현지, 평일). 그 밖에는 OFF_EVERY 로 느슨하게 본다 — 하루 3분의 2가 밤·주말인데도 2~4초마다
+# 묻고 있었다(11/28). 창 밖에 나온 공시도 놓치지 않는다 — 몇십 초 늦게 볼 뿐.
+OPEN_HOURS = {"us": (6, 22), "jp": (7, 22), "hk": (6, 24)}
+
+
+def pace(base, mkt):
+    tz = {"us": ET, "jp": JST, "hk": HKT}[mkt]
+    now = datetime.now(tz)
+    a, b = OPEN_HOURS[mkt]
+    return base if now.weekday() < 5 and a <= now.hour < b else max(base, OFF_EVERY)
 HIST_GAP = float(os.environ.get("HIST_GAP", "600"))   # 사이트 이력 다시 받기 최소 간격(초)
 QUIET = os.environ.get("QUIET_START", "1") == "1"   # 켤 때 이미 떠 있던 공시는 알리지 않는다
 # 다만 막 뜬 것(재배포 중에 나온 공시)까지 삼키면 안 된다 — 이 분 안의 것은 그대로 알린다.
@@ -2528,7 +2539,7 @@ def us_watch():
                 time.sleep(60)
             else:
                 time.sleep(5)
-        time.sleep(max(0.2, US_EVERY - (time.time() - t0)))
+        time.sleep(max(0.2, pace(US_EVERY, "us") - (time.time() - t0)))
 
 
 # ── 미국 보도자료(뉴스와이어) — 8-K 보다 먼저 ─────────────────────────────
@@ -2632,7 +2643,7 @@ def pr_watch():
                     POOL.submit(safe, pr_process, hit[0], title, link, pt)
         except Exception as e:                                   # noqa: BLE001
             log("보도자료 감시:", repr(e)[:160])
-        time.sleep(max(1.0, PR_EVERY - (time.time() - t0)))
+        time.sleep(max(1.0, pace(PR_EVERY, "us") - (time.time() - t0)))
 
 
 _ZK = re.compile(r"revenues? of \$\s?([\d,.]+)\s*(billion|million)[^.]{0,80}?quarter ended (\w+) (\d{4})[^$]{0,300}?"
@@ -3413,7 +3424,7 @@ def jp_watch():
         except Exception as e:                                   # noqa: BLE001
             log("일본 목록:", e)
             time.sleep(5)
-        time.sleep(max(0.2, JP_EVERY - (time.time() - t0)))
+        time.sleep(max(0.2, pace(JP_EVERY, "jp") - (time.time() - t0)))
 
 
 # ── 홍콩 ────────────────────────────────────────────────────────────────
@@ -3470,7 +3481,7 @@ def hk_watch():
         except Exception as e:                                   # noqa: BLE001
             log("홍콩:", e)
             time.sleep(10)
-        time.sleep(max(1, HK_EVERY - (time.time() - t0)))
+        time.sleep(max(1, pace(HK_EVERY, "hk") - (time.time() - t0)))
 
 
 ALERTS = {"n": 0, "lock": threading.Lock()}             # 지금 처리 중인 실적 알림 수 — 끄기 전에 다 보내고 끈다
@@ -3861,6 +3872,21 @@ def history_loop():
 
 
 # ── HTTP ────────────────────────────────────────────────────────────────
+def mem_report():
+    """프로세스 이름별 메모리(MB) — Railway RAM 이 평균 3.7GB 였는데(11/28) 무엇이 먹는지 몰랐다. /health 에 싣는다."""
+    out = collections.Counter()
+    for d in Path("/proc").glob("[0-9]*"):
+        try:
+            st = (d / "status").read_text()
+        except OSError:
+            continue
+        name = re.search(r"^Name:\s*(.+)$", st, re.M)
+        rss = re.search(r"^VmRSS:\s*(\d+)", st, re.M)
+        if name and rss:
+            out[name.group(1).strip()] += int(rss.group(1)) // 1024
+    return dict(out.most_common(8))
+
+
 _GZ = {}                                                         # 주소 -> (몸통 해시, 압축본) — 같은 10MB 를 매번 다시 압축하지 않게
 
 
@@ -3921,7 +3947,7 @@ class Handler(BaseHTTPRequestHandler):
             self.head()
             self.wfile.write(json.dumps({"ok": True, "events": len(S.events), "subs": len(TG.subs),
                                          "history": int(time.time() - H.ts),
-                                         "volume": os.path.ismount(str(DATA)), "guideRev": [len(getattr(GD, "rev", {})), sum(len(x) for v in getattr(GD, "rev", {}).values() for x in v.values())], "doneRev": len(JH.get("done_rev") or []), "doneIr": len(JH.get("done_ir") or []), "llm": LLM_TEST}).encode())
+                                         "volume": os.path.ismount(str(DATA)), "guideRev": [len(getattr(GD, "rev", {})), sum(len(x) for v in getattr(GD, "rev", {}).values() for x in v.values())], "doneRev": len(JH.get("done_rev") or []), "doneIr": len(JH.get("done_ir") or []), "llm": LLM_TEST, "memMB": mem_report()}).encode())
         elif path == "/api/live":
             self.head()
             cut = (datetime.now(timezone.utc) - timedelta(days=4)).isoformat()
