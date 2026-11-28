@@ -3885,7 +3885,15 @@ def late_check():
 
 def fill_loop():
     """끊겨도 저절로 이어 간다 — 재배포로 서버가 다시 켜지면 하던 큰 일(옛 결산단신)이 멈췄고, 이번 분기 부문
-    메우기도 사람이 다시 걸어야 했다(인텔 3Q26 이 그래서 빠졌다, 10/30). 켜진 뒤 2분, 그다음 두 시간마다."""
+    메우기도 사람이 다시 걸어야 했다(인텔 3Q26 이 그래서 빠졌다, 10/30). 켜진 뒤 2분, 그다음 두 시간마다.
+
+    **기본은 꺼짐(11/28 회원님 "과거는 더 뒤지지 말고, 발표 때 업데이트만. 원하는 회사만 찾아오라 하면 그때").**
+    11/28 로그: 미국 부문 45곳 중 2 · 일본 부문은 오류로 안 돌았고 고친 뒤엔 대부분 '누계라 못 씀' · 가이던스 점검 78곳 0 ·
+    IR 덱 0 — 2시간마다 헛일이었다. 회사를 콕 집어 메우는 명령(replay.txt 의 segfill·jphist·guideaudit·irhist)은 그대로 된다.
+    다시 켜려면 Railway 변수 FILL_LOOP=1."""
+    if os.environ.get("FILL_LOOP") != "1":
+        log("과거 메우기(2시간마다) 꺼짐 — FILL_LOOP=1 이면 켠다")
+        return
     time.sleep(120)
     while True:
         if JH.get("want") and len(JH["done"]) < JH["want"] and not any(t.name == "jphist" for t in threading.enumerate()):
