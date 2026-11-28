@@ -16,3 +16,11 @@ jobs:
           for p in /health /api/stats "/api/log" /api/mon; do
             echo "===== $p"; curl -s -m 25 -w "\n[HTTP %{http_code} · %{time_total}s]\n" "$U$p" | head -c 6000; echo
           done
+      - name: 응답 크기(밖으로 나가는 양 — 11/28 Egress 1TB/월 원인 찾기)
+        run: |
+          U=$(cat realtime/URL)
+          for p in /api/jpfinraw /api/guide /api/segko /api/segs /api/mon /api/jpsegraw /api/live /api/sent "/api/co?key=us:NVDA" "/api/px?key=us:NVDA"; do
+            curl -s -m 60 -o /dev/null -w "$p  %{size_download} bytes  %{time_total}s  HTTP %{http_code}\n" "$U$p" || true
+            curl -s -m 60 -o /dev/null -H "Accept-Encoding: gzip" -w "$p  gzip요청 %{size_download} bytes\n" "$U$p" || true
+          done
+          timeout 20 curl -s -N "$U/stream" | wc -c | xargs echo "/stream 20초 동안 bytes"
