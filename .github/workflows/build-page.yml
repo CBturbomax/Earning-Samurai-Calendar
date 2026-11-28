@@ -20,7 +20,9 @@ concurrency:
 jobs:
   build:
     runs-on: ubuntu-latest
-    timeout-minutes: 5
+    # 5분이던 때(11/28) 화면 고친 커밋 세 번이 다 시간 초과로 취소됐다 — build.py 한 번이 3분쯤인데,
+    # 그 사이 수집 봇 커밋으로 push 가 밀리면 한 번 더 만들어 5분을 넘긴다. 바뀐 화면이 수집 루프를 기다리며 늦게 떴다.
+    timeout-minutes: 15
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
