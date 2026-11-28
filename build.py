@@ -10025,11 +10025,18 @@ function renderFeed() {
   }).join('');
 }
 setInterval(renderFeed, 60e3);
-/* 새 빌드가 올라오면(3분 루프) 화면을 새로 받는다 — 상세창이 열렸거나 입력 중이면 미룬다. */
+/* 새 빌드가 올라오면 화면을 새로 받는다 — 상세창이 열렸거나 입력 중이면 미룬다.
+   빌드는 2~3분마다라 그때마다 36MB 를 다시 받으며 보던 화면이 깜빡였다(회원님 11/28 "계속 새로고침된다").
+   새 실적은 실시간 서버가 새로고침 없이 넣어 준다(rtApply). 그래서 보고 있는 중이면 30분에 한 번까지만, 5분 손을 안 댔을 때만.
+   다른 탭에 가 있으면(document.hidden) 그때 받는다 — 돌아오면 새 판이다. */
+const ES_LOADED = Date.now();
+let esTouched = Date.now();
+['pointerdown', 'keydown', 'wheel', 'touchstart', 'scroll'].forEach(e => addEventListener(e, () => { esTouched = Date.now(); }, { passive: true }));
 setInterval(() => {
   if (!document.getElementById('mdBack').hidden) return;
   const a = document.activeElement;
   if (a && /INPUT|SELECT|TEXTAREA/.test(a.tagName)) return;
+  if (!document.hidden && (Date.now() - ES_LOADED < 30 * 60e3 || Date.now() - esTouched < 5 * 60e3)) return;
   fetch('./version.txt?t=' + Date.now(), { cache: 'no-store' })
     .then(r => r.ok ? r.text() : '')
     .then(v => {
