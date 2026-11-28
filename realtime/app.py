@@ -1559,7 +1559,8 @@ def segfill(n, only=None):
         if only is not None:
             if k not in only:
                 continue
-        elif p[0] != top or (s and s["pts"][-1][0] == top) or (k in SEGAI and SEGAI[k].get("label") == top):
+        elif p[0] != top or (s and s.get("pts") and s["pts"][-1][0] == top) or (k in SEGAI and SEGAI[k].get("label") == top) \
+                or sf_recent(k, top):
             continue
         cik = rev_map.get(k[3:].replace(".", "-"))
         if cik:
@@ -1567,6 +1568,8 @@ def segfill(n, only=None):
     with H.lock:
         capk = {k: max((r[11] or 0) for r in H.rows_by_key.get(k) or [[0] * 12]) for k, _, _ in todo}
     todo = sorted(todo, key=lambda t: -capk.get(t[0], 0))[:n]
+    if only is None:
+        sf_mark([t[0] for t in todo], top)
     log("부문 메우기 시작", len(todo), "종목", top)
     got = [0]
 
@@ -2024,6 +2027,29 @@ def irhist(since="2018-01-01"):
     log("IR 덱 옛 전망 끝", len(todo), "종목 · 덱", n_doc, "· 분기 전망", n_got)
 
 
+SF_PATH = DATA / "segfill_tried.json"
+try:
+    SF_TRIED = dict(json.loads(SF_PATH.read_text()))
+except (OSError, ValueError, TypeError):
+    SF_TRIED = {}
+SF_WAIT = 3 * 86400                                              # 설명자료가 늦게 올라오는 회사가 있어 사흘 뒤엔 한 번 더 본다
+
+
+def sf_recent(k, label):
+    return time.time() - SF_TRIED.get(f"{k}|{label}", 0) < SF_WAIT
+
+
+def sf_mark(keys, label):
+    """부문 메우기에서 한 번 읽어 본 (종목, 분기). 같은 문서를 다시 읽어도 결과가 같아(누계라 못 씀·합 거절)
+    2시간마다·재시작마다 AI 를 헛불렀다(11/28: 300곳). 한 번 본 곳은 사흘 쉰다. 손으로 거는 segfill only= 는 상관없다."""
+    now_ = time.time()
+    SF_TRIED.update({f"{k}|{label}": now_ for k in keys})
+    try:
+        SF_PATH.write_text(json.dumps(SF_TRIED))
+    except OSError:
+        pass
+
+
 def segfill_jp(n):
     """이번 시즌 이미 발표했는데 부문이 없는 일본 회사 — TDnet(한 달 보관)의 결산단신·설명자료를 다시 읽는다."""
     with H.lock:
@@ -2037,13 +2063,14 @@ def segfill_jp(n):
     todo = []
     for k, p in newest.items():
         s = segs.get(k)
-        if p[0] != top or (s and s.get("pts") and s["pts"][-1][0] == top) or k in SEGAI:   # 빈 pts 에 죽던 것(11/28)
+        if p[0] != top or (s and s.get("pts") and s["pts"][-1][0] == top) or k in SEGAI or sf_recent(k, top):   # 빈 pts 에 죽던 것(11/28)
             continue
         days = sorted({r[0] for r in rows.get(k, []) if cutoff <= r[0] <= datetime.now(JST).strftime("%Y-%m-%d")})
         if days:
             todo.append((k, days[-1], p))
     todo.sort(key=lambda t: -max((r[11] or 0) for r in rows.get(t[0], [[0] * 12])))   # 큰 회사부터
     todo = todo[:n]
+    sf_mark([t[0] for t in todo], top)
     log("일본 부문 메우기 시작", len(todo), "종목", top)
     got = [0]
 
