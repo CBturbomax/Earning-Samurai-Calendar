@@ -155,7 +155,7 @@ class History:
         self.rows_by_key = {}
         self.ind = {}
         self.ts = 0
-        self.html = ""
+        self.html = None                                         # (앞, 뒤) — 화면 틀만(약 400KB). 36MB 통째로는 안 들고 있다
         self.etag = {}                                           # 파일 -> ETag. 안 바뀐 파일은 다시 받지 않는다(304)
 
     def refresh(self):
@@ -167,7 +167,8 @@ class History:
             i = t.index('<script id="payload" type="application/json">')
             i = t.index(">", i) + 1
             D = json.loads(t[i:t.index("</script>", i)])
-            self.html = t
+            self.html = shot.split_html(t)
+            del t
         except Exception as e:                                   # noqa: BLE001
             log("이력: 사이트 payload 실패", e)
             D = None
@@ -2036,7 +2037,7 @@ def segfill_jp(n):
     todo = []
     for k, p in newest.items():
         s = segs.get(k)
-        if p[0] != top or (s and s["pts"][-1][0] == top) or k in SEGAI:
+        if p[0] != top or (s and s.get("pts") and s["pts"][-1][0] == top) or k in SEGAI:   # 빈 pts 에 죽던 것(11/28)
             continue
         days = sorted({r[0] for r in rows.get(k, []) if cutoff <= r[0] <= datetime.now(JST).strftime("%Y-%m-%d")})
         if days:
@@ -2924,6 +2925,9 @@ def guide_audit(days=45, limit=600):
         AUDIT_LOCK.release()
 
 
+GA_SEEN = {}                                                     # (코드, 발표일) -> 마지막으로 점검한 때
+
+
 def _guide_audit(days=45, limit=600):
     """매일 — 최근 실적을 낸 일본 회사 중 그 분기 가이던스가 빈 곳을 원본(JPX 보관소 결산단신)으로 메운다.
     XBRL 이 먼저, 안 되면 PDF 첫 쪽을 AI 가 읽는다. 회원님(10/30): 일본 가이던스는 반드시 차트에."""
@@ -2950,6 +2954,11 @@ def _guide_audit(days=45, limit=600):
             break
     todo = sorted(set(todo), key=lambda t: -t[3])[:limit]
     todo = [t for t in todo if NOG.get(t[0]) != "none" or t[1] >= (datetime.now(JST) - timedelta(days=3)).strftime("%Y-%m-%d")]
+    # 같은 곳을 2시간마다 다시 받아 봤다(11/28 로그: 78곳 → 0곳 메움, 날마다 되풀이). 못 채운 곳은 20시간 쉰다.
+    now_ = time.time()
+    todo = [t for t in todo if now_ - GA_SEEN.get((t[0], t[1]), 0) > 20 * 3600]
+    for t in todo:
+        GA_SEEN[(t[0], t[1])] = now_
     log("가이던스 빈칸 점검", len(todo), "곳")
     got = 0
     for code, day, name, cap in todo:
@@ -3587,6 +3596,7 @@ def replay_run(lines):
             continue
         if ln.strip() == "guideaudit":
             REPORT["sent"] = ""
+            GA_SEEN.clear()                                      # 손으로 건 점검은 쉬던 곳도 다시 본다
             guide_audit()
             continue
         f = re.match(r"guideus\s+(\d+)", ln.strip())
@@ -3673,6 +3683,7 @@ except (OSError, ValueError):
 def segko_loop():
     """사이트 부문 이름 중 아직 일·중 원문으로 남은 것 — AI 로 옮겨 /api/segko 로 내준다(빌드가 받아 쓴다)."""
     cjk = re.compile(r"[\u3040-\u30ff\u4e00-\u9fff]")
+    tries = collections.Counter()                                 # 세 번 못 옮긴 이름은 다시 안 묻는다(AI 를 10분마다 헛불렀다, 11/28)
     time.sleep(120)
     while True:
         hangul = re.compile(r"[\uac00-\ud7a3]")
@@ -3683,8 +3694,9 @@ def segko_loop():
             names = {n for kind in ("seg", "geo", "ord") for k, v in (H.D.get(kind) or {}).items()
                      for n in (v.get("names") if isinstance(v, dict) else None) or []
                      if isinstance(n, str) and n not in SEGKO and not hangul.search(n)}
-        names = sorted(names, key=lambda n: (not cjk.search(n), n))[:1600]
+        names = sorted((n for n in names if tries[n] < 3), key=lambda n: (not cjk.search(n), n))[:1600]
         for i in range(0, len(names), 40):
+            tries.update(names[i:i + 40])
             got = brief.translate_names(names[i:i + 40])
             if got:
                 SEGKO.update(got)
@@ -3988,7 +4000,7 @@ def main():
     signal.signal(signal.SIGTERM, on_term)
     log("시작 — 판", os.environ.get("RAILWAY_GIT_COMMIT_SHA", "")[:7], "· 텔레그램", "켜짐" if TG_TOKEN else "꺼짐(TG_BOT_TOKEN 없음)", "· 구독", len(TG.subs))
     H.refresh()
-    shot.start(lambda: H.html)
+    shot.start(lambda: (H.html, H.D))
     for fn in (TG.poll, us_watch, pr_watch, gh_live_watch, pending_loop, jp_watch, hk_watch, history_loop, llm_selftest, replay_loop, segko_loop, fill_loop, biz_loop):
         threading.Thread(target=fn, daemon=True, name=fn.__name__).start()
     ThreadingHTTPServer(("0.0.0.0", PORT), Handler).serve_forever()
