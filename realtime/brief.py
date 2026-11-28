@@ -146,6 +146,23 @@ KANA = re.compile(r"[\u3040-\u30ff\uff66-\uff9f]")
 HAN_ONLY = re.compile(r"[\u4e00-\u9fff]{2,}")
 
 
+def _objs(out):
+    """답 속 JSON 객체를 모두 합친다. AI 가 객체를 줄마다 하나씩 주면 '{.*}' 한 번 풀기가 'Extra data' 로 깨져
+    (11/28 로그: 10분마다 같은 이름 묶음이 실패 → AI 를 끝없이 다시 불렀다) 아무것도 못 얻었다."""
+    d, dec, i = {}, json.JSONDecoder(), 0
+    while True:
+        j = out.find("{", i)
+        if j < 0:
+            return d
+        try:
+            o, i = dec.raw_decode(out, j)
+        except ValueError:
+            i = j + 1
+            continue
+        if isinstance(o, dict):
+            d.update(o)
+
+
 def translate_names(names, timeout=60):
     """부문 이름(일·중) -> 쉬운 한국어. 뜻으로 옮긴다(한자음으로 읽지 않는다). 실패하면 {}."""
     if not names or not enabled():
@@ -155,9 +172,7 @@ def translate_names(names, timeout=60):
            "가타카나 외래어는 표준 한국어 외래어로(エナジー→에너지), 事業·セグメント 같은 꼬리는 빼거나 '사업'으로, 14자 안팎. "
            "JSON 객체 {원문: 한국어} 로만 답한다.\n" + json.dumps(names, ensure_ascii=False))
     try:
-        out = _ask(ask, timeout)
-        m = re.search(r"\{.*\}", out, re.S)
-        d = json.loads(m.group(0)) if m else {}
+        d = _objs(_ask(ask, timeout) or "")
     except Exception as e:                                       # noqa: BLE001
         LOG("이름 번역 실패", repr(e)[:200])
         return {}
@@ -169,8 +184,7 @@ def translate_lines(lines, timeout=40):
     try:
         out = _ask("다음 문장들을 뜻 그대로 쉬운 한국어로만 다시 써라. 일본어·한자를 남기지 말고 고유명사도 한국어로 적는다. "
                    "JSON 객체 {원문: 한국어} 로만 답한다.\n" + json.dumps(lines, ensure_ascii=False), timeout)
-        m = re.search(r"\{.*\}", out, re.S)
-        return {k: str(v) for k, v in (json.loads(m.group(0)) if m else {}).items()}
+        return {k: str(v) for k, v in _objs(out or "").items()}
     except Exception:                                            # noqa: BLE001
         return {}
 

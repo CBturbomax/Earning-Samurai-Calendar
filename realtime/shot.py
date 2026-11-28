@@ -7,16 +7,14 @@ matplotlib 으로 비슷하게 그리면 늘 어딘가 다르다. 그래서 사�
 
 플레이라이트는 한 스레드에서만 다뤄야 해서 일꾼 스레드 하나가 줄을 받아 처리한다.
 """
+import json
 import os
 import queue
+import re
 import threading
 import traceback
 
 JOBS = queue.Queue()
-_page = {"html": None, "ver": 0, "open": False}
-# 사이트(36MB)를 띄워 둔 탭 하나가 메모리를 약 750MB 잡는다(11/27 실측 — 빈 브라우저 360MB → 1,110MB, 띄우기 6초).
-# 알림이 IDLE 초 동안 없으면 탭을 닫아 메모리를 돌려준다. 다음 알림 때 다시 띄운다(몇 초 더 걸림).
-IDLE = float(os.environ.get("SHOT_IDLE", "900"))
 
 GUIDE_JS = r"""
 // 사이트(build.py)에 같은 함수가 있다 — 옛 빌드를 띄웠을 때만 이것을 쓴다.
@@ -184,12 +182,46 @@ window.tgBuild = function (ev, gh) {
 """
 
 
+_MKT = re.compile(r"^(us|jp|hk):")
+PAYLOAD_TAG = '<script id="payload" type="application/json">'
+
+
+def split_html(t):
+    """index.html -> (앞, 뒤). 가운데 payload(약 32MB)는 버리고 화면 틀(약 400KB)만 둔다."""
+    i = t.index(PAYLOAD_TAG)
+    i = t.index(">", i) + 1
+    return t[:i], t[t.index("</script>", i):]
+
+
+def slim(D, key):
+    """그 회사 하나만 남긴 payload. 회사별 묶음(fin·seg·ann·geo…)은 그 회사 칸만, 캘린더 줄도 그 회사 것만.
+    사이트 전체(36MB)를 띄운 탭은 메모리 750MB · 띄우기 6초였다(11/27) — 그림 한 장 찍는 데 3천 곳을 다 띄울 까닭이 없다."""
+    code = key.split(":", 1)[1]
+    out = {}
+    for k, v in D.items():
+        if k == "rows":
+            out[k] = [r for r in v if f"{r[9]}:{r[1]}" == key]
+        elif k == "monthlyNum" and isinstance(v, dict):
+            out[k] = {c: x for c, x in v.items() if c == code}
+        elif isinstance(v, dict) and len(v) > 50 and all(_MKT.match(str(x)) for x in list(v)[:50]):
+            out[k] = {key: v[key]} if key in v else {}
+        else:
+            out[k] = v
+    return out
+
+
+def page_html(parts, D, key):
+    head, tail = parts
+    return head + json.dumps(slim(D, key), ensure_ascii=False, separators=(",", ":")).replace("</", "<\\/") + tail
+
+
 LAST_ERR = [""]                 # 마지막 실패 까닭 — app 이 로그에 같이 적는다(예전엔 stderr 로만 가서 /api/log 에 안 보였다)
 
 
-def _worker(get_html):
-    """사이트를 띄워 두고 그림을 찍는다. **브라우저가 죽으면 새로 띄운다**(11/11 — 크로미움이 한 번 죽은 뒤 모든 알림이
-    예비 그림(matplotlib)으로 나갔다. 예전 루프는 죽은 브라우저를 붙들고 new_page 만 되풀이했다). 연달아 두 번 실패하면 통째로 다시."""
+def _worker(get_src):
+    """알림마다 **그 회사만 담은 작은 페이지**(약 560KB)를 띄워 찍고 닫는다. 예전엔 사이트 전체(36MB)를 띄워 두어
+    탭 하나가 메모리 750MB · 띄우기 8초였다(11/28 실측: 작은 페이지 1초, 그림은 같다). 띄워 둘 것이 없으니 미리 띄우기도 없다.
+    **브라우저가 죽으면 새로 띄운다**(11/11). 연달아 두 번 실패하면 통째로 다시."""
     import time
     from playwright.sync_api import sync_playwright
     while True:
@@ -197,42 +229,39 @@ def _worker(get_html):
             with sync_playwright() as pw:
                 exe = os.environ.get("CHROMIUM_PATH") or None
                 br = pw.chromium.launch(args=["--no-sandbox"], executable_path=exe)
-                page, ver, fails = None, -1, 0
+                fails = 0
                 while fails < 2:
-                    try:
-                        job = JOBS.get(timeout=IDLE if page is not None else None)
-                    except queue.Empty:                                  # 한동안 알림 없음 — 탭을 닫아 메모리를 돌려준다
-                        try:
-                            page.close()
-                        except Exception:                                # noqa: BLE001
-                            pass
-                        page, _page["open"] = None, False
-                        continue
+                    job = JOBS.get()
                     if job is None:
                         return
                     ev, gh, box, done = job
+                    if ev is None:                                       # 예전 '미리 띄우기' — 이제 할 일 없음
+                        done.set()
+                        continue
+                    page = None
                     try:
-                        if page is None or ver != _page["ver"]:
-                            if page:
-                                page.close()
-                            page = br.new_page(viewport={"width": 960, "height": 1200}, device_scale_factor=2)
-                            # 사이트가 열리며 실시간 서버에 다시 붙지 않게 막는다.
-                            page.route("**/*railway.app/**", lambda r: r.abort())
-                            page.set_content(get_html(), wait_until="domcontentloaded", timeout=120000)
-                            page.add_script_tag(content=GUIDE_JS)
-                            page.wait_for_timeout(800)
-                            ver, _page["open"] = _page["ver"], True
-                        if ev is not None:                               # None = 미리 띄워 두기만
-                            n = page.evaluate("([ev, gh]) => tgBuild(ev, gh)", [ev, gh])
-                            page.add_style_tag(content=".finbox{overflow:visible!important}.finsvg{min-width:0!important;width:100%!important}")
-                            box["pngs"] = [el.screenshot(type="png") for el in page.query_selector_all("#tgshot .tgpart")][:n]
+                        parts, D = get_src()
+                        page = br.new_page(viewport={"width": 960, "height": 1200}, device_scale_factor=2)
+                        # 사이트가 열리며 실시간 서버에 다시 붙지 않게 막는다.
+                        page.route("**/*railway.app/**", lambda r: r.abort())
+                        page.set_content(page_html(parts, D, f"{ev.get('mkt')}:{ev.get('code')}"),
+                                         wait_until="domcontentloaded", timeout=60000)
+                        page.add_script_tag(content=GUIDE_JS)
+                        page.wait_for_timeout(800)
+                        n = page.evaluate("([ev, gh]) => tgBuild(ev, gh)", [ev, gh])
+                        page.add_style_tag(content=".finbox{overflow:visible!important}.finsvg{min-width:0!important;width:100%!important}")
+                        box["pngs"] = [el.screenshot(type="png") for el in page.query_selector_all("#tgshot .tgpart")][:n]
                         fails = 0
                     except Exception:                                    # noqa: BLE001
                         LAST_ERR[0] = traceback.format_exc(limit=2)[-400:]
                         traceback.print_exc(limit=3)
-                        page, _page["open"] = None, False
                         fails += 1
                     finally:
+                        if page:
+                            try:
+                                page.close()
+                            except Exception:                            # noqa: BLE001
+                                pass
                         done.set()
                 try:
                     br.close()
@@ -244,16 +273,13 @@ def _worker(get_html):
         time.sleep(5)
 
 
-def start(get_html):
-    threading.Thread(target=_worker, args=(get_html,), daemon=True, name="shot").start()
+def start(get_src):
+    """get_src() -> ((앞, 뒤), payload dict) — split_html 의 화면 틀과 사이트 payload."""
+    threading.Thread(target=_worker, args=(get_src,), daemon=True, name="shot").start()
 
 
 def reload():
-    """사이트가 새로 빌드됐다. 탭이 열려 있을 때(알림이 이어지는 중)만 새 페이지를 미리 띄운다 —
-    한가할 때 미리 띄우면 아무도 안 쓰는 탭이 750MB 를 잡는다. 닫혀 있으면 다음 알림 때 새 판으로 띄운다."""
-    _page["ver"] += 1
-    if _page["open"]:
-        JOBS.put((None, None, {}, threading.Event()))
+    """사이트가 새로 빌드됐다 — 알림마다 새로 띄우므로 할 일이 없다(부르는 쪽 호환용)."""
 
 
 def render(ev, gh=None, timeout=60):
