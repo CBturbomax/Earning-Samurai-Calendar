@@ -6077,7 +6077,7 @@ setTimeout(() => {
     }).catch(() => {});
 }, 800);
 </script>
-<title>Earning Samurai — 글로벌 실적발표 캘린더</title>
+<title>Earning Samurai</title>
 <!-- 대표 아이콘. 그림 파일을 따로 두지 않고 SVG 를 그대로 심는다.
      제목 옆 로고와 **같은 곳(build.py 의 LOGO_SVG)** 에서 온다. -->
 <!-- rel 을 둘로 나누지 않고 한 줄에 적는다. 그림을 그대로 심으므로 link 를
