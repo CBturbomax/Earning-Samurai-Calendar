@@ -45,6 +45,51 @@ class Packed(Mapping):
         return self._raw.keys()
 
 
+class PackedRW(Packed):
+    """고쳐 쓸 수 있는 조각 — 옛 결산단신 누계(JH fin·seg)처럼 회사 하나씩 덧붙이는 것. 통째 JSON 은 풀지 않고 이어 붙인다."""
+
+    __slots__ = ()
+
+    def __setitem__(self, k, v):
+        self._raw[k] = _enc(v)
+
+    def merge(self, k, upd):
+        cur = self.get(k) or {}
+        cur.update(upd)
+        self[k] = cur
+
+    def to_json(self):
+        return "{" + ",".join(json.dumps(k, ensure_ascii=False) + ":" + b.decode("utf-8") for k, b in self._raw.items()) + "}"
+
+
+def _enc(x):
+    return json.dumps(x, ensure_ascii=False, separators=(",", ":")).encode()
+
+
+def dump_json(d):
+    """조각이 섞인 dict -> JSON 글. 조각은 풀지 않고 그대로 이어 붙인다."""
+    parts = []
+    for k, v in d.items():
+        parts.append(json.dumps(k, ensure_ascii=False) + ":" + (v.to_json() if isinstance(v, PackedRW) else json.dumps(v, ensure_ascii=False)))
+    return "{" + ",".join(parts) + "}"
+
+
+def load_jh_child(path):
+    """jphist.json -> {"rest": 나머지, "fin": {종목: 바이트}, "seg": {...}}"""
+    d = json.loads(open(path, encoding="utf-8").read())
+    out = {"rest": {k: v for k, v in d.items() if k not in ("fin", "seg")}}
+    for k in ("fin", "seg"):
+        out[k] = {key: _enc(x) for key, x in (d.get(k) or {}).items()}
+    return out
+
+
+def load_jh(blob):
+    d = pickle.loads(blob)
+    jh = dict(d["rest"])
+    jh["fin"], jh["seg"] = PackedRW(d["fin"]), PackedRW(d["seg"])
+    return jh
+
+
 def packable(v):
     return isinstance(v, dict) and len(v) > 50 and all(_MKT.match(str(x)) for x in list(v)[:50])
 
@@ -57,7 +102,7 @@ def pack_payload(text):
     plain, packed = {}, {}
     for k, v in D.items():
         if packable(v):
-            packed[k] = {key: json.dumps(x, ensure_ascii=False, separators=(",", ":")).encode() for key, x in v.items()}
+            packed[k] = {key: _enc(x) for key, x in v.items()}
         else:
             plain[k] = v
     return {"plain": plain, "packed": packed, "order": list(D)}
@@ -68,5 +113,8 @@ def unpickle(blob):
     return {k: Packed(d["packed"][k]) if k in d["packed"] else d["plain"][k] for k in d["order"]}   # 원래 차례 그대로
 
 
-if __name__ == "__main__":                                      # 자식 프로세스: 표준입력 index.html -> 표준출력 pickle
-    sys.stdout.buffer.write(pickle.dumps(pack_payload(sys.stdin.buffer.read().decode("utf-8")), protocol=4))
+if __name__ == "__main__":                                      # 자식 프로세스 — 결과를 표준출력에 pickle 로
+    if sys.argv[1:2] == ["jh"]:                                  # pack.py jh <jphist.json>
+        sys.stdout.buffer.write(pickle.dumps(load_jh_child(sys.argv[2]), protocol=4))
+    else:                                                        # 표준입력 index.html
+        sys.stdout.buffer.write(pickle.dumps(pack_payload(sys.stdin.buffer.read().decode("utf-8")), protocol=4))
