@@ -218,59 +218,51 @@ def page_html(parts, D, key):
 LAST_ERR = [""]                 # 마지막 실패 까닭 — app 이 로그에 같이 적는다(예전엔 stderr 로만 가서 /api/log 에 안 보였다)
 
 
+def _shoot(pw, get_src, ev, gh):
+    """알림 하나 — 브라우저를 띄워 그 회사만 담은 작은 페이지를 찍고 바로 끈다."""
+    parts, D = get_src()
+    exe = os.environ.get("CHROMIUM_PATH") or None
+    br = pw.chromium.launch(args=["--no-sandbox"], executable_path=exe)
+    try:
+        page = br.new_page(viewport={"width": 960, "height": 1200}, device_scale_factor=2)
+        page.route("**/*railway.app/**", lambda r: r.abort())             # 사이트가 열리며 실시간 서버에 다시 붙지 않게
+        page.set_content(page_html(parts, D, f"{ev.get('mkt')}:{ev.get('code')}"), wait_until="domcontentloaded", timeout=60000)
+        page.add_script_tag(content=GUIDE_JS)
+        page.wait_for_timeout(800)
+        n = page.evaluate("([ev, gh]) => tgBuild(ev, gh)", [ev, gh])
+        page.add_style_tag(content=".finbox{overflow:visible!important}.finsvg{min-width:0!important;width:100%!important}")
+        return [el.screenshot(type="png") for el in page.query_selector_all("#tgshot .tgpart")][:n]
+    finally:
+        try:
+            br.close()
+        except Exception:                                                # noqa: BLE001
+            pass
+
+
 def _worker(get_src):
-    """알림마다 **그 회사만 담은 작은 페이지**(약 560KB)를 띄워 찍고 닫는다. 예전엔 사이트 전체(36MB)를 띄워 두어
-    탭 하나가 메모리 750MB · 띄우기 8초였다(11/28 실측: 작은 페이지 1초, 그림은 같다). 띄워 둘 것이 없으니 미리 띄우기도 없다.
-    **브라우저가 죽으면 새로 띄운다**(11/11). 연달아 두 번 실패하면 통째로 다시."""
+    """알림마다 **브라우저를 띄워 그 회사만 담은 작은 페이지**(약 560KB)를 찍고 끈다.
+    예전엔 사이트 전체(36MB)를 띄운 브라우저를 늘 켜 두어 750MB(11/28 실측: 작은 페이지 1초, 그림은 같다), 그 뒤에도
+    빈 브라우저가 늘 360MB 를 잡았다. 알림은 하루 수십 건이라 그때만 띄운다(띄우는 데 1초 안팎).
+    알림이 몰려 줄을 서면 브라우저를 그대로 이어 쓰지 않고 하나씩 — 단순하게."""
     import time
     from playwright.sync_api import sync_playwright
     while True:
+        job = JOBS.get()
+        if job is None:
+            return
+        ev, gh, box, done = job
+        if ev is None:                                                   # 예전 '미리 띄우기' — 할 일 없음
+            done.set()
+            continue
         try:
             with sync_playwright() as pw:
-                exe = os.environ.get("CHROMIUM_PATH") or None
-                br = pw.chromium.launch(args=["--no-sandbox"], executable_path=exe)
-                fails = 0
-                while fails < 2:
-                    job = JOBS.get()
-                    if job is None:
-                        return
-                    ev, gh, box, done = job
-                    if ev is None:                                       # 예전 '미리 띄우기' — 이제 할 일 없음
-                        done.set()
-                        continue
-                    page = None
-                    try:
-                        parts, D = get_src()
-                        page = br.new_page(viewport={"width": 960, "height": 1200}, device_scale_factor=2)
-                        # 사이트가 열리며 실시간 서버에 다시 붙지 않게 막는다.
-                        page.route("**/*railway.app/**", lambda r: r.abort())
-                        page.set_content(page_html(parts, D, f"{ev.get('mkt')}:{ev.get('code')}"),
-                                         wait_until="domcontentloaded", timeout=60000)
-                        page.add_script_tag(content=GUIDE_JS)
-                        page.wait_for_timeout(800)
-                        n = page.evaluate("([ev, gh]) => tgBuild(ev, gh)", [ev, gh])
-                        page.add_style_tag(content=".finbox{overflow:visible!important}.finsvg{min-width:0!important;width:100%!important}")
-                        box["pngs"] = [el.screenshot(type="png") for el in page.query_selector_all("#tgshot .tgpart")][:n]
-                        fails = 0
-                    except Exception:                                    # noqa: BLE001
-                        LAST_ERR[0] = traceback.format_exc(limit=2)[-400:]
-                        traceback.print_exc(limit=3)
-                        fails += 1
-                    finally:
-                        if page:
-                            try:
-                                page.close()
-                            except Exception:                            # noqa: BLE001
-                                pass
-                        done.set()
-                try:
-                    br.close()
-                except Exception:                                        # noqa: BLE001
-                    pass
-        except Exception:                                                # noqa: BLE001 — 브라우저를 못 띄움
+                box["pngs"] = _shoot(pw, get_src, ev, gh)
+        except Exception:                                                # noqa: BLE001
             LAST_ERR[0] = traceback.format_exc(limit=2)[-400:]
             traceback.print_exc(limit=3)
-        time.sleep(5)
+            time.sleep(1)
+        finally:
+            done.set()
 
 
 def start(get_src):
