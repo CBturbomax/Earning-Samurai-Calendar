@@ -1726,10 +1726,31 @@ def guidefill_us(n, back=8):
 
 JH_PATH = DATA / "jphist.json"
 try:
-    JH = json.loads(JH_PATH.read_text())
+    if PACK_D and JH_PATH.exists():                            # 옛 결산단신 누계(각 10MB 안팎)도 회사별 조각으로 — pack.py
+        _r = subprocess.run([sys.executable, str(Path(__file__).with_name("pack.py")), "jh", str(JH_PATH)],
+                            capture_output=True, timeout=300)
+        if _r.returncode:
+            raise ValueError(_r.stderr.decode("utf-8", "replace")[-300:])
+        JH = pack.load_jh(_r.stdout)
+        del _r
+    else:
+        JH = json.loads(JH_PATH.read_text())
 except (OSError, ValueError):
     JH = {"done": [], "seg": {}, "fin": {}}
 JH.setdefault("fin", {})
+JH.setdefault("seg", {})
+
+
+def jh_dump():
+    """JH -> JSON 글(조각은 풀지 않고 이어 붙인다)."""
+    return pack.dump_json(JH)
+
+
+def jh_merge(kind, key, upd):
+    if isinstance(JH[kind], pack.PackedRW):
+        JH[kind].merge(key, upd)
+    else:
+        JH[kind].setdefault(key, {}).update(upd)
 JH_LOCK = threading.Lock()
 BROWSER_UA = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/124.0 Safari/537.36"
 _yano = {"t": 0.0, "lock": threading.Lock()}
@@ -1976,18 +1997,18 @@ def jphist(n, since="2017-01-01", only_rev=False):
                 continue
         with JH_LOCK:
             if seg:
-                JH["seg"].setdefault("jp:" + code, {}).update(seg)
+                jh_merge("seg", "jp:" + code, seg)
             if fin:
-                JH["fin"].setdefault("jp:" + code, {}).update(fin)
+                jh_merge("fin", "jp:" + code, fin)
             JH.setdefault("done_rev" if only_rev else "done", []).append(code)
             got[0] += 1
             if got[0] % 10 == 0:
-                JH_PATH.write_text(json.dumps(JH, ensure_ascii=False))
+                JH_PATH.write_text(jh_dump())
                 log("옛 결산단신", got[0], "/", len(todo), "종목 · 문서", got[1], "· 가장 옛", got[2])
     with ThreadPoolExecutor(10) as ex:                           # 회원님(10/30): "빠릿빠릿하게" — 파일은 JPX, 목록만 yanoshin
         list(ex.map(one, todo))
     with JH_LOCK:
-        JH_PATH.write_text(json.dumps(JH, ensure_ascii=False))
+        JH_PATH.write_text(jh_dump())
     log("일본 옛 결산단신 끝", got[0], "종목 · 문서", got[1])
 
 
@@ -2044,10 +2065,10 @@ def irhist(since="2018-01-01"):
                 JH.setdefault("done_ir", []).append(pn)
                 done.add(pn)
                 if n_doc % 10 == 0:
-                    JH_PATH.write_text(json.dumps(JH, ensure_ascii=False))
+                    JH_PATH.write_text(jh_dump())
         log("IR 덱 옛 전망", code, name, "덱", len(items))
     with JH_LOCK:
-        JH_PATH.write_text(json.dumps(JH, ensure_ascii=False))
+        JH_PATH.write_text(jh_dump())
     log("IR 덱 옛 전망 끝", len(todo), "종목 · 덱", n_doc, "· 분기 전망", n_got)
 
 
@@ -3522,7 +3543,7 @@ def on_term(*_):
         time.sleep(0.5)
     try:
         with JH_LOCK:
-            JH_PATH.write_text(json.dumps(JH, ensure_ascii=False))
+            JH_PATH.write_text(jh_dump())
     except Exception:                                            # noqa: BLE001
         pass
     os._exit(0)
@@ -3992,7 +4013,7 @@ class Handler(BaseHTTPRequestHandler):
         elif path == "/api/jpsegraw":                            # 옛 결산단신 부문 누계 — numbers 수집기가 segments_jp.json raw 에 합친다
             self.head()
             with JH_LOCK:
-                self.wfile.write(json.dumps(JH["seg"], ensure_ascii=False).encode())
+                self.wfile.write(pack.dump_json({"x": JH["seg"]})[5:-1].encode())
         elif path == "/api/px":                                  # 상세창 주가 차트 — 10년 일별 종가 + 실적 발표일(장전·장중·장후)
             key = (urllib.parse.parse_qs(urllib.parse.urlparse(self.path).query).get("key") or [""])[0]
             try:
@@ -4020,7 +4041,7 @@ class Handler(BaseHTTPRequestHandler):
         elif path == "/api/jpfinraw":                            # 옛 결산단신 실적 누계 — 빌드가 1Q18 부터의 분기로 되돌려 잇는다
             self.head()
             with JH_LOCK:
-                self.wfile.write(json.dumps(JH["fin"], ensure_ascii=False).encode())
+                self.wfile.write(pack.dump_json({"x": JH["fin"]})[5:-1].encode())
         elif path == "/api/guide":                               # 빌드가 받아 사이트 상세창의 가이던스 변천으로
             self.head()
             GD.revs("")
