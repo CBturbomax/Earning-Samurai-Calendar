@@ -6864,6 +6864,40 @@ svg.bars rect.b:hover { fill:var(--a3); }
 .md dd { margin:0; }
 .md .mact { margin-top:18px; padding-top:14px; border-top:1px solid var(--line); display:flex; gap:10px; flex-wrap:wrap; }
 
+/* ── 폰 모드(body.ph, 회원님 11/28 docs/intent/phone-search.md) ─────────────
+   화면은 폰에서도 1440 으로 그린다(위 '폰에서도 PC 화면 그대로'). 그 위에 돋보기·검색·상세창만
+   폰 크기로 띄운다 — zoom 으로 키워 '보이는 화면'(visualViewport) 한 장에 맞춘다. 값은 phFit() 이 잰다.
+   --phz 배율 · --phx/--phy/--phvw/--phvh 보이는 화면의 자리(CSS px) · --phw/--phh 폰 크기 안쪽 폭·높이 */
+.phlayer { display:none; }
+body.ph .phlayer { display:flex; position:fixed; inset:auto; left:var(--phx); top:var(--phy);
+  width:var(--phvw); height:var(--phvh); pointer-events:none; z-index:45; }
+body.ph .phlayer.phfabl { align-items:flex-end; justify-content:flex-end; }
+body.ph .phlayer > * { pointer-events:auto; zoom:var(--phz); }
+.phfab { width:60px; height:60px; margin:0 18px 22px 0; border-radius:50%; border:1px solid var(--line);
+  background:var(--panel); color:var(--fg); font-size:28px; box-shadow:0 4px 16px rgba(0,0,0,.5); cursor:pointer; }
+body.ph .phlayer.phfind { z-index:55; }
+body.ph .phlayer.phfind[hidden], .phlayer[hidden] { display:none; }
+.phpanel { width:var(--phw); height:var(--phh); background:var(--bg); display:flex; flex-direction:column;
+  box-sizing:border-box; padding:14px 14px 0; }
+.phbar { display:flex; gap:8px; align-items:center; }
+.phbar input { flex:1; min-width:0; font-size:18px; padding:12px 14px; border-radius:10px;
+  border:1px solid var(--line); background:var(--panel); color:var(--fg); }
+.phbar button, .phx { font-size:16px; padding:10px 14px; border-radius:10px; border:1px solid var(--line);
+  background:var(--panel); color:var(--fg); }
+.phres { flex:1; overflow-y:auto; margin-top:10px; -webkit-overflow-scrolling:touch; }
+.phres .fqi { display:flex; flex-wrap:wrap; gap:4px 8px; align-items:baseline; padding:14px 6px;
+  border-bottom:1px solid var(--line); font-size:17px; }
+.phres .fqc, .phres .fqd { font-size:14px; color:var(--mute); }
+.phres .fqnone { padding:18px 6px; color:var(--mute); font-size:15px; }
+.phx { display:none; }
+body.ph .mdback { inset:auto; left:var(--phx); top:var(--phy); width:var(--phvw); height:var(--phvh);
+  padding:0; align-items:flex-start; justify-content:flex-start; }
+body.ph .md { zoom:var(--phz); width:var(--phw); height:var(--phh); max-width:none; max-height:none;
+  border-radius:0; border:0; padding:12px 14px 40px; box-sizing:border-box; -webkit-overflow-scrolling:touch; }
+body.ph .md .phx { display:block; position:sticky; top:0; float:right; z-index:2; margin:0 0 6px 8px; }
+body.ph .md .mt { font-size:22px; }
+body.ph .md .ms { font-size:15px; }
+
 /* ── 방금 발표(오른쪽 위 피드) ─────────────────────────────────
    실제 공시 시각이 있는 줄(시각정확도 1: 미국 8-K 접수 · 일본 TDnet · 홍콩
    HKEXnews)만 싣는다 — 「경」으로 어림한 시각을 '방금'이라 부르면 거짓말이다.
@@ -7055,6 +7089,7 @@ svg.bars rect.b:hover { fill:var(--a3); }
 
 <div class="mdback" id="mdBack" hidden>
   <div class="md" role="dialog" aria-modal="true">
+    <button class="phx" id="mdX" aria-label="닫기">✕ 닫기</button>
     <p class="mt" id="mdTitle"></p>
     <p class="ms" id="mdSub"></p>
     <dl id="mdList"></dl>
@@ -7064,6 +7099,17 @@ svg.bars rect.b:hover { fill:var(--a3); }
       <a class="btn" id="mdLink2" target="_blank" rel="noopener">공시</a>
       <button class="btn" id="mdClose">닫기 (ESC)</button>
     </div>
+  </div>
+</div>
+<div class="phlayer phfabl" id="phFabL"><button class="phfab" id="phFab" aria-label="종목 검색">🔎</button></div>
+<div class="phlayer phfind" id="phFindL" hidden>
+  <div class="phpanel">
+    <div class="phbar">
+      <input type="search" id="phq" autocomplete="off" spellcheck="false" enterkeyhint="search"
+             placeholder="엔비디아 / NVDA / 소니 / 6758 / 텐센트">
+      <button id="phqX">닫기</button>
+    </div>
+    <div class="phres" id="phRes"></div>
   </div>
 </div>
 
@@ -9945,8 +9991,8 @@ function fqClose() { fqList.hidden = true; fqAt = -1; }
 /* 고른 종목의 창을 연다. 캘린더도 그 주로 옮겨 둔다 — 창을 닫았을 때
    엉뚱한 주가 남아 있으면 어디를 보고 있었는지 알 수 없다.
    그 시장이 꺼져 있으면 켜 준다. 안 그러면 옮겨 간 주가 비어 보인다. */
-function fqOpen(i) {
-  const x = fqHits[i];
+function fqOpen(i) { openHit(fqHits[i]); }
+function openHit(x) {
   if (!x) return;
   const r = x.r, m = r[9];
   if (!picked.has(m)) { picked = new Set([m]); refresh(); }
@@ -9954,6 +10000,70 @@ function fqOpen(i) {
   if (D.weeks.includes(w) && w !== week) go(w);
   fq.value = ''; fqClose(); fq.blur();
   openModal(x.k, slotOf(r));
+}
+
+/* ── 폰 모드 — 돋보기 → 폰 크기 검색 → 폰 크기 상세창(회원님 11/28) ──────────
+   손으로 확대해 검색하고 다시 줄여 실적을 보던 것을, 줄인 PC 화면 그대로 둔 채 바로 하게 한다.
+   상세창 내용은 PC 와 같다(openModal 그대로). 크기만 보이는 화면 한 장에 맞춘다. */
+const PH = matchMedia('(pointer:coarse)').matches && Math.min(screen.width, screen.height) <= 820;
+const phFindL = document.getElementById('phFindL'), phq = document.getElementById('phq'),
+      phRes = document.getElementById('phRes');
+let phHits = [];
+function phFit() {
+  const vv = window.visualViewport;
+  const vw = vv ? vv.width : innerWidth, vh = vv ? vv.height : innerHeight;
+  const sw = innerWidth > innerHeight ? Math.max(screen.width, screen.height) : Math.min(screen.width, screen.height);   // 지금 방향의 폰 폭
+  const z = Math.max(1, vw / sw), st = document.documentElement.style;
+  st.setProperty('--phz', z);
+  st.setProperty('--phx', (vv ? vv.offsetLeft : 0) + 'px');
+  st.setProperty('--phy', (vv ? vv.offsetTop : 0) + 'px');
+  st.setProperty('--phvw', vw + 'px');
+  st.setProperty('--phvh', vh + 'px');
+  st.setProperty('--phw', (vw / z) + 'px');
+  st.setProperty('--phh', (vh / z) + 'px');
+}
+function phDraw() {
+  const q = phq.value.trim();
+  phHits = fqSearch(q);
+  phRes.innerHTML = !q ? '<div class="fqnone">회사 이름이나 코드를 넣으세요.</div>' : !phHits.length
+    ? '<div class="fqnone">찾는 종목이 없습니다.</div>'
+    : phHits.map((x, i) => {
+        const r = x.r, dd = Math.round((parse(r[0]) - parse(D.today)) / 86400000);
+        return '<div class="fqi" data-i="' + i + '">' + FL(r[9]) +
+          '<span class="fqn">' + esc(r[2]) + '</span>' +
+          '<span class="fqc">' + esc(r[1]) + (r[7] && r[7] !== r[2] ? ' · ' + esc(r[7]) : '') + '</span>' +
+          '<span class="fqd">' + r[0] + (dd === 0 ? ' · 오늘' : dd > 0 ? ' · D-' + dd : ' · ' + (-dd) + '일 전') + '</span></div>';
+      }).join('');
+}
+function phOpenFind() { phFit(); phFindL.hidden = false; phq.value = ''; phDraw(); phq.focus(); }
+function phCloseFind() { phFindL.hidden = true; phq.blur(); }
+/* 그래프는 PC 폭 그대로(글씨가 읽히게) 두고 옆으로 민다 — 열 때 최신 분기(오른쪽 끝)가 보이게. */
+function phScrollRight(root) {
+  (root || document.getElementById('mdFin')).querySelectorAll('.finbox').forEach(b => {
+    if (!b.dataset.phr) { b.scrollLeft = b.scrollWidth; b.dataset.phr = '1'; }
+  });
+}
+if (PH) {
+  document.body.classList.add('ph');
+  phFit();
+  if (window.visualViewport) {
+    visualViewport.addEventListener('resize', phFit);
+    visualViewport.addEventListener('scroll', phFit);
+  }
+  addEventListener('orientationchange', () => setTimeout(phFit, 300));
+  document.getElementById('phFab').onclick = phOpenFind;
+  document.getElementById('phqX').onclick = phCloseFind;
+  document.getElementById('mdX').onclick = () => closeModal();
+  phq.oninput = phDraw;
+  phq.onkeydown = e => { if (e.key === 'Enter' && phHits.length) { e.preventDefault(); phCloseFind(); openHit(phHits[0]); } };
+  phRes.onclick = e => {
+    const it = e.target.closest('.fqi');
+    if (it) { phCloseFind(); openHit(phHits[Number(it.dataset.i)]); }
+  };
+  const mdFin = document.getElementById('mdFin');
+  new MutationObserver(() => requestAnimationFrame(() => phScrollRight(mdFin))).observe(mdFin, { childList: true, subtree: true });
+  new MutationObserver(() => { if (!document.getElementById('mdBack').hidden) { phFit(); document.querySelector('#mdBack .md').scrollTop = 0; } })
+    .observe(document.getElementById('mdBack'), { attributes: true, attributeFilter: ['hidden'] });
 }
 
 fq.oninput = () => { fqHits = fqSearch(fq.value); fqAt = fqHits.length ? 0 : -1; fqDraw(); };
@@ -10034,6 +10144,8 @@ let esTouched = Date.now();
 ['pointerdown', 'keydown', 'wheel', 'touchstart', 'scroll'].forEach(e => addEventListener(e, () => { esTouched = Date.now(); }, { passive: true }));
 setInterval(() => {
   if (!document.getElementById('mdBack').hidden) return;
+  const phF = document.getElementById('phFindL');
+  if (phF && !phF.hidden) return;
   const a = document.activeElement;
   if (a && /INPUT|SELECT|TEXTAREA/.test(a.tagName)) return;
   if (!document.hidden && (Date.now() - ES_LOADED < 30 * 60e3 || Date.now() - esTouched < 5 * 60e3)) return;
