@@ -74,6 +74,11 @@ def dump_json(d):
     return "{" + ",".join(parts) + "}"
 
 
+def load_file_child(path):
+    """{열쇠: 값} JSON 파일 -> {열쇠: 바이트} (가이던스 장부 guide_jp·guide_us·guide_q·guide_rev_jp)"""
+    return {k: _enc(v) for k, v in json.loads(open(path, encoding="utf-8").read()).items()}
+
+
 def load_jh_child(path):
     """jphist.json -> {"rest": 나머지, "fin": {종목: 바이트}, "seg": {...}}"""
     d = json.loads(open(path, encoding="utf-8").read())
@@ -116,5 +121,7 @@ def unpickle(blob):
 if __name__ == "__main__":                                      # 자식 프로세스 — 결과를 표준출력에 pickle 로
     if sys.argv[1:2] == ["jh"]:                                  # pack.py jh <jphist.json>
         sys.stdout.buffer.write(pickle.dumps(load_jh_child(sys.argv[2]), protocol=4))
+    elif sys.argv[1:2] == ["file"]:                              # pack.py file <장부.json>
+        sys.stdout.buffer.write(pickle.dumps(load_file_child(sys.argv[2]), protocol=4))
     else:                                                        # 표준입력 index.html
         sys.stdout.buffer.write(pickle.dumps(pack_payload(sys.stdin.buffer.read().decode("utf-8")), protocol=4))

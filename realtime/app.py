@@ -26,6 +26,7 @@ from email.utils import parsedate_to_datetime
 import io
 import json
 import os
+import pickle
 import queue
 import re
 import subprocess
@@ -57,7 +58,7 @@ import pdftext                     # noqa: E402
 from markets import excluded, ETF_TITLE   # noqa: E402
 
 import brief                       # noqa: E402
-import charts                      # noqa: E402
+# charts(matplotlib, 약 47MB)는 브라우저 그림이 실패할 때만 쓰는 예비 — 그때 불러온다(11/28).
 import pack                        # noqa: E402
 import shot                        # noqa: E402
 
@@ -323,6 +324,24 @@ def stage_of(fy_end, published):
     return "최초" if m >= 10 else "1Q" if m >= 7 else "2Q" if m >= 4 else "3Q" if m >= 0 else None
 
 
+def load_map(path):
+    """{열쇠: 값} JSON 장부 읽기 — PACK_D 면 열쇠마다 조각(pack.PackedRW, 자식 프로세스에서 풀기). 없거나 깨졌으면 {}."""
+    try:
+        if PACK_D and path.exists():
+            r = subprocess.run([sys.executable, str(Path(__file__).with_name("pack.py")), "file", str(path)],
+                               capture_output=True, timeout=180)
+            if r.returncode == 0:
+                return pack.PackedRW(pickle.loads(r.stdout))
+            log("장부 조각 실패 — 통째로 읽는다", path.name, r.stderr.decode("utf-8", "replace")[-200:])
+        return json.loads(path.read_text())
+    except (OSError, ValueError):
+        return {}
+
+
+def dump_map(m, ensure_ascii=True):
+    return m.to_json() if isinstance(m, pack.PackedRW) else json.dumps(m, ensure_ascii=ensure_ascii)
+
+
 class Guide:
     """회계연도마다 {최초·1Q·2Q·3Q: [매출, 영업이익]}.
 
@@ -333,10 +352,8 @@ class Guide:
     def __init__(self, name="guide_jp.json", seed="guidance_hist_jp.json"):
         self.path, self.seed = DATA / name, seed
         self.lock = threading.Lock()
-        try:
-            self.own = json.loads(self.path.read_text())
-        except (OSError, ValueError):
-            self.own = {}
+        self.own = load_map(self.path)
+        self._seed = None
 
     def add(self, code, fc, published):
         if not fc or not fc.get("end") or all(fc.get(k) is None for k in ("rev", "opi", "ni")):
@@ -353,9 +370,11 @@ class Guide:
         return {"stage": st, "prev": prev, "now": now, "end": fc["end"]}
 
     def _put(self, code, fy, st, vals):
-        self.own.setdefault(code, {}).setdefault(fy, {})[st] = vals
+        cur = self.own.get(code) or {}                    # 꺼내 고쳐 다시 넣는다 — 조각(PackedRW)은 꺼낸 것이 사본이다
+        cur.setdefault(fy, {})[st] = vals
+        self.own[code] = cur
         tmp = self.path.with_suffix(".tmp")
-        tmp.write_text(json.dumps(self.own))
+        tmp.write_text(dump_map(self.own))
         tmp.replace(self.path)
 
     def add_rev(self, code, fc, published):
@@ -367,29 +386,25 @@ class Guide:
         now = [fc.get("rev"), fc.get("opi"), fc.get("ni")]
         with self.lock:
             if not hasattr(self, "rev"):
-                try:
-                    self.rev = json.loads((DATA / "guide_rev_jp.json").read_text())
-                except (OSError, ValueError):
-                    self.rev = {}
+                self.rev = load_map(DATA / "guide_rev_jp.json")
             known = list(self.get(code).get(fy, {}).values()) + [v for _, v in self.rev.get(code, {}).get(fy, [])]
             same = lambda a, b: a and b and all((x is None or y is None or abs(x - y) <= max(1, abs(y) * 1e-4)) for x, y in zip(a, b))   # noqa: E731
-            lst = self.rev.setdefault(code, {}).setdefault(fy, [])
+            cur = self.rev.get(code) or {}
+            lst = cur.setdefault(fy, [])
             if any(d == published for d, _ in lst) or any(same(now, k) for k in known[-2:]):
                 return None
             prev = (lst[-1][1] if lst else None) or next((v for v in reversed(list(self.get(code).get(fy, {}).values())) if v), None)
             lst.append([published, now])
             lst.sort()
+            self.rev[code] = cur
             tmp = (DATA / "guide_rev_jp.json").with_suffix(".tmp")
-            tmp.write_text(json.dumps(self.rev))
+            tmp.write_text(dump_map(self.rev))
             tmp.replace(DATA / "guide_rev_jp.json")
         return {"stage": "수정", "prev": prev, "now": now, "end": fc["end"]}
 
     def revs(self, code):
         if not hasattr(self, "rev"):
-            try:
-                self.rev = json.loads((DATA / "guide_rev_jp.json").read_text())
-            except (OSError, ValueError):
-                self.rev = {}
+            self.rev = load_map(DATA / "guide_rev_jp.json")
         return self.rev.get(code) or {}
 
     def put_us(self, code, published, g):
@@ -405,10 +420,13 @@ class Guide:
         return {"stage": st, "prev": prev, "now": now, "end": g["fy_end"]}
 
     def get(self, code, ann=None):
-        try:
-            seed = json.loads((ROOT / "data" / self.seed).read_text()).get(code, {}) if self.seed else {}
-        except (OSError, ValueError):
-            seed = {}
+        # 옛 이력 스냅샷(1MB)은 한 번만 읽는다 — 부를 때마다 통째로 읽어 점검 한 번에 3천 번 풀었다(11/28).
+        if self._seed is None and self.seed:
+            try:
+                self._seed = json.loads((ROOT / "data" / self.seed).read_text())
+            except (OSError, ValueError):
+                self._seed = {}
+        seed = (self._seed or {}).get(code, {})
         out = {fy: dict(v) for fy, v in seed.items()}
         for fy, v in (self.own.get(code) or {}).items():
             if fy != "none":                            # 연간 전망을 안 내는 회사 표시
@@ -431,10 +449,7 @@ class GuideQ:
     def __init__(self):
         self.path = DATA / "guide_q.json"
         self.lock = threading.Lock()
-        try:
-            self.own = json.loads(self.path.read_text())
-        except (OSError, ValueError):
-            self.own = {}
+        self.own = load_map(self.path)
 
     def add(self, code, rec, base, day, src="xbrl"):
         if not rec or not rec.get("end") or rec.get("rev") is None and rec.get("opi") is None:
@@ -445,9 +460,11 @@ class GuideQ:
         if rec.get("range"):
             row["range"] = rec["range"]
         with self.lock:
-            self.own.setdefault(code, {})[rec["end"][:7]] = row
+            cur = self.own.get(code) or {}
+            cur[rec["end"][:7]] = row
+            self.own[code] = cur
             tmp = self.path.with_suffix(".tmp")
-            tmp.write_text(json.dumps(self.own, ensure_ascii=False))
+            tmp.write_text(dump_map(self.own, ensure_ascii=False))
             tmp.replace(self.path)
         return self.next_q(code, rec["end"][:7])
 
@@ -1210,6 +1227,7 @@ def finish(ev, point=None):
     if not pngs:
         log("사이트 그림 없음 — matplotlib 로", key, (shot.LAST_ERR[0] or "시간 초과").replace("\n", " ")[-200:])
         try:
+            import charts                                          # 예비 그림 — 처음 쓸 때만 불러온다
             pngs = charts.render(ev, pts, seg, fin.get("freq", "Q"), ann, G, gh)
         except Exception:                                        # noqa: BLE001
             log("차트 실패", key, traceback.format_exc(limit=2))
@@ -4045,7 +4063,7 @@ class Handler(BaseHTTPRequestHandler):
         elif path == "/api/guide":                               # 빌드가 받아 사이트 상세창의 가이던스 변천으로
             self.head()
             GD.revs("")
-            self.wfile.write(json.dumps({"jp": GD.own, "us": GU.own, "q": GQ.own, "r": GD.rev}, ensure_ascii=False).encode())
+            self.wfile.write(pack.dump_json({"jp": GD.own, "us": GU.own, "q": GQ.own, "r": GD.rev}).encode())
         elif path == "/api/segko":
             self.head()
             self.wfile.write(json.dumps(SEGKO, ensure_ascii=False).encode())

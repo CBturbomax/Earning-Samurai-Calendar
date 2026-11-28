@@ -9,5 +9,6 @@ RUN pip install --no-cache-dir matplotlib==3.9.2 playwright==1.48.0 \
     && playwright install --with-deps chromium && rm -rf /var/lib/apt/lists/*
 WORKDIR /app
 COPY . /app
-ENV PYTHONUNBUFFERED=1 DATA_DIR=/data
+# 작업 줄(스레드)이 스무 개 넘게 돌아 glibc 가 줄마다 메모리 구역을 따로 잡으며 부풀었다 — 둘로 묶는다(11/28 요금 줄이기).
+ENV PYTHONUNBUFFERED=1 DATA_DIR=/data MALLOC_ARENA_MAX=2
 CMD ["python", "-u", "realtime/app.py"]
