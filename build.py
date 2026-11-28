@@ -6896,6 +6896,9 @@ body.ph .md { zoom:var(--phz); width:var(--phw); height:var(--phh); max-width:no
   border-radius:0; border:0; padding:12px 14px 40px; box-sizing:border-box; -webkit-overflow-scrolling:touch; }
 body.ph .md .phx { display:block; position:sticky; top:0; float:right; z-index:2; margin:0 0 6px 8px; }
 body.ph .md .mt { font-size:22px; }
+/* 그래프·표는 폰 폭에 딱 맞춰 한눈에(텔레그램 그림처럼) — 옆으로 밀지 않는다(회원님 11/28 "한눈에 보고 싶다"). */
+body.ph .md #mdFin svg { min-width:0 !important; max-width:100% !important; width:100% !important; height:auto; }
+body.ph .md .finbox, body.ph .md .chartbox { overflow:visible; }
 body.ph .md .ms { font-size:15px; }
 
 /* ── 방금 발표(오른쪽 위 피드) ─────────────────────────────────
@@ -10037,10 +10040,14 @@ function phDraw() {
 }
 function phOpenFind() { phFit(); phFindL.hidden = false; phq.value = ''; phDraw(); phq.focus(); }
 function phCloseFind() { phFindL.hidden = true; phq.blur(); }
-/* 그래프는 PC 폭 그대로(글씨가 읽히게) 두고 옆으로 민다 — 열 때 최신 분기(오른쪽 끝)가 보이게. */
-function phScrollRight(root) {
-  (root || document.getElementById('mdFin')).querySelectorAll('.finbox').forEach(b => {
-    if (!b.dataset.phr) { b.scrollLeft = b.scrollWidth; b.dataset.phr = '1'; }
+/* 표(연간 표 등)가 폰 폭보다 넓으면 표째로 줄여 한눈에 — 옆으로 밀지 않게. 그래프는 CSS 가 폭에 맞춘다. */
+function phFitWide(root) {
+  (root || document.getElementById('mdFin')).querySelectorAll('.fcwrap').forEach(b => {
+    const t = b.firstElementChild;
+    if (!t) return;
+    t.style.zoom = '';
+    const need = t.scrollWidth, have = b.parentElement.clientWidth;
+    if (need > have && have > 0) t.style.zoom = (have / need).toFixed(3);
   });
 }
 if (PH) {
@@ -10061,7 +10068,9 @@ if (PH) {
     if (it) { phCloseFind(); openHit(phHits[Number(it.dataset.i)]); }
   };
   const mdFin = document.getElementById('mdFin');
-  new MutationObserver(() => requestAnimationFrame(() => phScrollRight(mdFin))).observe(mdFin, { childList: true, subtree: true });
+  let phT = 0;
+  new MutationObserver(() => { cancelAnimationFrame(phT); phT = requestAnimationFrame(() => phFitWide(mdFin)); })
+    .observe(mdFin, { childList: true, subtree: true });
   new MutationObserver(() => { if (!document.getElementById('mdBack').hidden) { phFit(); document.querySelector('#mdBack .md').scrollTop = 0; } })
     .observe(document.getElementById('mdBack'), { attributes: true, attributeFilter: ['hidden'] });
 }
