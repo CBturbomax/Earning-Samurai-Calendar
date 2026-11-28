@@ -118,3 +118,6 @@ MRK·PFE…) · 홍콩 대형 6곳. 그대로 빼는 것 — 미국 413곳 · �
 고쳐지지 않는다 — 복사(dict(...)) 없이 읽기만 한다.
    옛 결산단신 누계(JH fin·seg, `/data/jphist.json`)도 같은 스위치로 조각(`pack.PackedRW`: 회사 하나씩 덧붙이기 `jh_merge`, 저장·`/api/jpfinraw`·`jpsegraw` 는
    풀지 않고 이어 붙이기 `pack.dump_json`). 시험: 읽기·API·덧붙이기·저장 모두 예전과 같음.
+⑥ 가이던스 장부(`guide_jp`·`guide_us`·`guide_q`·`guide_rev_jp`)도 `PACK_D` 면 회사별 조각(`load_map`/`dump_map`, 꺼내 고쳐 다시 넣기).
+   옛 스냅샷 `guidance_hist_jp.json`(1MB)은 `Guide.get` 이 부를 때마다 통째로 읽던 것을 한 번만. 예비 그림 `charts`(matplotlib 47MB)는 쓸 때만 import.
+   Dockerfile `MALLOC_ARENA_MAX=2`(스레드 스무 개 넘게 — glibc 메모리 구역이 부풀지 않게). 시험: 장부 읽기·쓰기·API·파일이 예전과 같음.
