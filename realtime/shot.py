@@ -11,6 +11,7 @@ import json
 import os
 import queue
 import re
+from collections.abc import Mapping
 import threading
 import traceback
 
@@ -203,8 +204,9 @@ def slim(D, key):
             out[k] = [r for r in v if f"{r[9]}:{r[1]}" == key]
         elif k == "monthlyNum" and isinstance(v, dict):
             out[k] = {c: x for c, x in v.items() if c == code}
-        elif isinstance(v, dict) and len(v) > 50 and all(_MKT.match(str(x)) for x in list(v)[:50]):
-            out[k] = {key: v[key]} if key in v else {}
+        elif isinstance(v, Mapping) and not isinstance(v, dict) or \
+                isinstance(v, dict) and len(v) > 50 and all(_MKT.match(str(x)) for x in list(v)[:50]):
+            out[k] = {key: v[key]} if key in v else {}             # 조각(pack.Packed)이든 dict 든 그 회사 칸만
         else:
             out[k] = v
     return out

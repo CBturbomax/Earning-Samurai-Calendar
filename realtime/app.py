@@ -28,6 +28,7 @@ import json
 import os
 import queue
 import re
+import subprocess
 import sys
 import threading
 import time
@@ -57,6 +58,7 @@ from markets import excluded, ETF_TITLE   # noqa: E402
 
 import brief                       # noqa: E402
 import charts                      # noqa: E402
+import pack                        # noqa: E402
 import shot                        # noqa: E402
 
 DATA = Path(os.environ.get("DATA_DIR", "/data"))
@@ -69,7 +71,8 @@ PORT = int(os.environ.get("PORT", "8080"))
 US_EVERY = float(os.environ.get("US_EVERY", "4"))
 JP_EVERY = float(os.environ.get("JP_EVERY", "3"))
 HK_EVERY = float(os.environ.get("HK_EVERY", "10"))
-OFF_EVERY = float(os.environ.get("OFF_EVERY", "30"))       # 공시가 거의 안 나오는 시간(밤·주말)의 확인 간격
+OFF_EVERY = float(os.environ.get("OFF_EVERY", "30"))
+PACK_D = os.environ.get("PACK_D", "1") != "0"                # 사이트 payload 를 회사별 조각으로 들기(pack.py). 0 이면 예전처럼 통째로       # 공시가 거의 안 나오는 시간(밤·주말)의 확인 간격
 # 공시 창구가 여는 시간(현지, 평일). 그 밖에는 OFF_EVERY 로 느슨하게 본다 — 하루 3분의 2가 밤·주말인데도 2~4초마다
 # 묻고 있었다(11/28). 창 밖에 나온 공시도 놓치지 않는다 — 몇십 초 늦게 볼 뿐.
 OPEN_HOURS = {"us": (6, 22), "jp": (7, 22), "hk": (6, 24)}
@@ -177,9 +180,17 @@ class History:
                 t = (ROOT / "index.html").read_text(encoding="utf-8")
             else:
                 t = http_get(SITE + "index.html?t=" + str(int(time.time())), ua="Mozilla/5.0", timeout=90)
-            i = t.index('<script id="payload" type="application/json">')
-            i = t.index(">", i) + 1
-            D = json.loads(t[i:t.index("</script>", i)])
+            if PACK_D:                                           # 회사별 조각으로(자식 프로세스에서 풀기) — pack.py
+                r = subprocess.run([sys.executable, str(Path(__file__).with_name("pack.py"))], input=t.encode("utf-8"),
+                                   capture_output=True, timeout=180)
+                if r.returncode:
+                    raise RuntimeError("pack.py " + r.stderr.decode("utf-8", "replace")[-300:])
+                D = pack.unpickle(r.stdout)
+                del r
+            else:
+                i = t.index('<script id="payload" type="application/json">')
+                i = t.index(">", i) + 1
+                D = json.loads(t[i:t.index("</script>", i)])
             self.html = shot.split_html(t)
             del t
         except Exception as e:                                   # noqa: BLE001
@@ -1555,7 +1566,7 @@ def segfill(n, only=None):
         return
     import scrape_pr_us as pr
     with H.lock:
-        fin, segs = dict(H.D.get("fin", {})), dict(H.D.get("seg", {}))
+        fin, segs = H.D.get("fin", {}), H.D.get("seg", {})          # 읽기만 — 새로 받으면 통째로 바뀌지 고쳐지지 않는다
     newest = {}
     for k, f in fin.items():
         if k.startswith("us:") and f.get("points"):
@@ -1614,7 +1625,7 @@ def serfill(n, back=4):
         return
     import scrape_pr_us as pr
     with H.lock:
-        fin = dict(H.D.get("fin", {}))
+        fin = H.D.get("fin", {})
     rev_map = {v: k for k, v in cik_ticker().items()}
     todo = [k for k, r in list(SEGAI.items()) if k.startswith("us:") and r.get("alt")
             and len((SER.get(k) or {}).get("pts") or {}) < 8][:n]
@@ -1715,10 +1726,31 @@ def guidefill_us(n, back=8):
 
 JH_PATH = DATA / "jphist.json"
 try:
-    JH = json.loads(JH_PATH.read_text())
+    if PACK_D and JH_PATH.exists():                            # 옛 결산단신 누계(각 10MB 안팎)도 회사별 조각으로 — pack.py
+        _r = subprocess.run([sys.executable, str(Path(__file__).with_name("pack.py")), "jh", str(JH_PATH)],
+                            capture_output=True, timeout=300)
+        if _r.returncode:
+            raise ValueError(_r.stderr.decode("utf-8", "replace")[-300:])
+        JH = pack.load_jh(_r.stdout)
+        del _r
+    else:
+        JH = json.loads(JH_PATH.read_text())
 except (OSError, ValueError):
     JH = {"done": [], "seg": {}, "fin": {}}
 JH.setdefault("fin", {})
+JH.setdefault("seg", {})
+
+
+def jh_dump():
+    """JH -> JSON 글(조각은 풀지 않고 이어 붙인다)."""
+    return pack.dump_json(JH)
+
+
+def jh_merge(kind, key, upd):
+    if isinstance(JH[kind], pack.PackedRW):
+        JH[kind].merge(key, upd)
+    else:
+        JH[kind].setdefault(key, {}).update(upd)
 JH_LOCK = threading.Lock()
 BROWSER_UA = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/124.0 Safari/537.36"
 _yano = {"t": 0.0, "lock": threading.Lock()}
@@ -1965,18 +1997,18 @@ def jphist(n, since="2017-01-01", only_rev=False):
                 continue
         with JH_LOCK:
             if seg:
-                JH["seg"].setdefault("jp:" + code, {}).update(seg)
+                jh_merge("seg", "jp:" + code, seg)
             if fin:
-                JH["fin"].setdefault("jp:" + code, {}).update(fin)
+                jh_merge("fin", "jp:" + code, fin)
             JH.setdefault("done_rev" if only_rev else "done", []).append(code)
             got[0] += 1
             if got[0] % 10 == 0:
-                JH_PATH.write_text(json.dumps(JH, ensure_ascii=False))
+                JH_PATH.write_text(jh_dump())
                 log("옛 결산단신", got[0], "/", len(todo), "종목 · 문서", got[1], "· 가장 옛", got[2])
     with ThreadPoolExecutor(10) as ex:                           # 회원님(10/30): "빠릿빠릿하게" — 파일은 JPX, 목록만 yanoshin
         list(ex.map(one, todo))
     with JH_LOCK:
-        JH_PATH.write_text(json.dumps(JH, ensure_ascii=False))
+        JH_PATH.write_text(jh_dump())
     log("일본 옛 결산단신 끝", got[0], "종목 · 문서", got[1])
 
 
@@ -2033,10 +2065,10 @@ def irhist(since="2018-01-01"):
                 JH.setdefault("done_ir", []).append(pn)
                 done.add(pn)
                 if n_doc % 10 == 0:
-                    JH_PATH.write_text(json.dumps(JH, ensure_ascii=False))
+                    JH_PATH.write_text(jh_dump())
         log("IR 덱 옛 전망", code, name, "덱", len(items))
     with JH_LOCK:
-        JH_PATH.write_text(json.dumps(JH, ensure_ascii=False))
+        JH_PATH.write_text(jh_dump())
     log("IR 덱 옛 전망 끝", len(todo), "종목 · 덱", n_doc, "· 분기 전망", n_got)
 
 
@@ -2066,7 +2098,7 @@ def sf_mark(keys, label):
 def segfill_jp(n):
     """이번 시즌 이미 발표했는데 부문이 없는 일본 회사 — TDnet(한 달 보관)의 결산단신·설명자료를 다시 읽는다."""
     with H.lock:
-        fin, segs, rows = dict(H.D.get("fin", {})), dict(H.D.get("seg", {})), dict(H.rows_by_key)
+        fin, segs, rows = H.D.get("fin", {}), H.D.get("seg", {}), dict(H.rows_by_key)
     import collections
     newest = {k: f["points"][-1] for k, f in fin.items() if k.startswith("jp:") and f.get("points")}
     cnt = collections.Counter(p[0] for p in newest.values())
@@ -2249,7 +2281,7 @@ def biz_loop():
     time.sleep(180)
     while True:
         with H.lock:
-            desc, dko = dict(H.D.get("desc") or {}), dict(H.D.get("descKo") or {})
+            desc, dko = H.D.get("desc") or {}, H.D.get("descKo") or {}
             caps = {k: max((r[11] or 0) for r in rs) for k, rs in H.rows_by_key.items() if rs}
             names = {k: rs[-1][2] or rs[-1][7] for k, rs in H.rows_by_key.items() if rs}
         keys = [k for k in sorted(set(desc) | set(dko), key=lambda k: -caps.get(k, 0)) if k not in BIZ][:600]
@@ -3511,7 +3543,7 @@ def on_term(*_):
         time.sleep(0.5)
     try:
         with JH_LOCK:
-            JH_PATH.write_text(json.dumps(JH, ensure_ascii=False))
+            JH_PATH.write_text(jh_dump())
     except Exception:                                            # noqa: BLE001
         pass
     os._exit(0)
@@ -3981,7 +4013,7 @@ class Handler(BaseHTTPRequestHandler):
         elif path == "/api/jpsegraw":                            # 옛 결산단신 부문 누계 — numbers 수집기가 segments_jp.json raw 에 합친다
             self.head()
             with JH_LOCK:
-                self.wfile.write(json.dumps(JH["seg"], ensure_ascii=False).encode())
+                self.wfile.write(pack.dump_json({"x": JH["seg"]})[5:-1].encode())
         elif path == "/api/px":                                  # 상세창 주가 차트 — 10년 일별 종가 + 실적 발표일(장전·장중·장후)
             key = (urllib.parse.parse_qs(urllib.parse.urlparse(self.path).query).get("key") or [""])[0]
             try:
@@ -4009,7 +4041,7 @@ class Handler(BaseHTTPRequestHandler):
         elif path == "/api/jpfinraw":                            # 옛 결산단신 실적 누계 — 빌드가 1Q18 부터의 분기로 되돌려 잇는다
             self.head()
             with JH_LOCK:
-                self.wfile.write(json.dumps(JH["fin"], ensure_ascii=False).encode())
+                self.wfile.write(pack.dump_json({"x": JH["fin"]})[5:-1].encode())
         elif path == "/api/guide":                               # 빌드가 받아 사이트 상세창의 가이던스 변천으로
             self.head()
             GD.revs("")

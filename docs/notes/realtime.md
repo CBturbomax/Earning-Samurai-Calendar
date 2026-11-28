@@ -112,3 +112,9 @@ MRK·PFE…) · 홍콩 대형 6곳. 그대로 빼는 것 — 미국 413곳 · �
 ③ `/health` 의 `memMB` 가 프로세스 이름별 메모리를 보여 준다 — RAM 이 왜 평균 3.7GB 인지 여기서 본다.
 ④ 그림 브라우저는 알림 올 때만 띄우고 끈다(빈 크로미움도 늘 360MB · 띄워서 찍고 끄는 데 2.3초). 11/28 실측 memMB: python 850 · claude(AI) 613(일본 부문
 메우기 300곳 한 번) · chrome 356. Railway 단가(그 달 Usage 로 역산): RAM 10달러/GB·월 · CPU 20달러/vCPU·월 · Egress 0.05달러/GB.
+⑤ **사이트 payload 를 회사별 JSON 조각으로 든다(`realtime/pack.py` · `PACK_D`, 11/28).** 회사별 묶음(fin·seg·ann·geo… 14개)은 `Packed`
+(읽기 전용, 꺼낼 때 그 회사만 푼다), 풀기는 자식 프로세스에서(파이썬이 잘게 푼 메모리를 OS 에 잘 안 돌려줘서). 시험: 값 전부·그림 페이지
+글자까지 같음, 메모리 271→135MB. **되돌리기: Railway 변수 `PACK_D=0`**(코드 그대로 예전 방식). H.D 는 받을 때마다 통째로 바뀌고
+고쳐지지 않는다 — 복사(dict(...)) 없이 읽기만 한다.
+   옛 결산단신 누계(JH fin·seg, `/data/jphist.json`)도 같은 스위치로 조각(`pack.PackedRW`: 회사 하나씩 덧붙이기 `jh_merge`, 저장·`/api/jpfinraw`·`jpsegraw` 는
+   풀지 않고 이어 붙이기 `pack.dump_json`). 시험: 읽기·API·덧붙이기·저장 모두 예전과 같음.
