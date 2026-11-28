@@ -107,3 +107,6 @@ MRK·PFE…) · 홍콩 대형 6곳. 그대로 빼는 것 — 미국 413곳 · �
 **압축 없이** 받아 갔다. 지금 서버는 받는 쪽이 gzip 을 말하면 압축해 보낸다(같은 몸통은 압축본을 재사용, `gz_cached`).
 받는 쪽은 `rtget.get_json`(빌드·scrape_fin_jp) · `curl --compressed`(fresh.yml). 실측 압축률 3~7배.
 **서버에서 받아 가는 새 주소를 만들면 반드시 rtget 을 쓴다.** 크기는 rt_probe.yml 의 '응답 크기' 단계가 잰다.
+더 줄인 것(11/28 저녁): ① 큰 옛 이력(`jpfinraw`·`guide`·`jpsegraw`)은 빌드 여덟 번에 한 번꼴로만 받는다(`rtget.due`, 나머지는 저장소의
+지난 사본 · `RT_FULL=1` 이면 늘). ② 밤·주말(현지 평일 us 6–22 · jp 7–22 · hk 6–24시 밖)은 피드를 `OFF_EVERY`(30초)마다 본다(`pace`).
+③ `/health` 의 `memMB` 가 프로세스 이름별 메모리를 보여 준다 — RAM 이 왜 평균 3.7GB 인지 여기서 본다.
