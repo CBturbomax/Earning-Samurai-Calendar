@@ -19,6 +19,8 @@ Railway 에서 24시간 돌며 원본을 몇 초마다 직접 본다.
 `/api/stats` 가 소스별 지연을 보여준다.
 """
 import collections
+import gzip
+import hashlib
 import html
 from email.utils import parsedate_to_datetime
 import io
@@ -3859,11 +3861,27 @@ def history_loop():
 
 
 # ── HTTP ────────────────────────────────────────────────────────────────
+_GZ = {}                                                         # 주소 -> (몸통 해시, 압축본) — 같은 10MB 를 매번 다시 압축하지 않게
+
+
+def gz_cached(path, body):
+    h = hashlib.md5(body).digest()
+    got = _GZ.get(path)
+    if got and got[0] == h:
+        return got[1]
+    z = gzip.compress(body, compresslevel=6)
+    _GZ[path] = (h, z)
+    return z
+
+
 class Handler(BaseHTTPRequestHandler):
     def log_message(self, *a):
         pass
 
     def head(self, code=200, ctype="application/json; charset=utf-8", extra=None):
+        if getattr(self, "_buf", None) is not None:              # 몸통을 다 모은 뒤 압축 여부를 정해 보낸다(do_GET)
+            self._hdr = (code, ctype, extra)
+            return
         self.send_response(code)
         self.send_header("Content-Type", ctype)
         self.send_header("Access-Control-Allow-Origin", "*")
@@ -3873,6 +3891,31 @@ class Handler(BaseHTTPRequestHandler):
         self.end_headers()
 
     def do_GET(self):
+        """압축해서 보낸다. 빌드가 몇 분마다 /api/jpfinraw·guide(각 10MB)·jpsegraw(12MB)를 받아 가 밖으로 나가는 양이
+        한 달 1,096GB · 55달러였다(11/28 Railway Usage). JSON 은 gzip 으로 열에 하나 꼴로 준다. 받는 쪽이 gzip 을 말할 때만."""
+        path = urllib.parse.urlparse(self.path).path
+        if path == "/stream" or path.startswith("/chart/"):
+            return self._get()
+        real, self._buf, self._hdr = self.wfile, io.BytesIO(), None
+        self.wfile = self._buf
+        try:
+            self._get()
+        finally:
+            self.wfile, buf, hdr, self._buf = real, self._buf.getvalue(), self._hdr, None
+        if hdr is None:                                          # head() 를 안 거친 응답(send_error 등) — 모은 그대로
+            real.write(buf)
+            return
+        code, ctype, extra = hdr
+        extra = dict(extra or {})
+        if len(buf) > 2048 and "gzip" in (self.headers.get("Accept-Encoding") or ""):
+            buf = gz_cached(path, buf)
+            extra["Content-Encoding"] = "gzip"
+        extra["Content-Length"] = str(len(buf))
+        extra["Vary"] = "Accept-Encoding"
+        self.head(code, ctype, extra)
+        real.write(buf)
+
+    def _get(self):
         path = urllib.parse.urlparse(self.path).path
         if path in ("/", "/health"):
             self.head()

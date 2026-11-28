@@ -25,6 +25,7 @@ from pathlib import Path
 import companies
 import companies_hk
 import companies_us
+import rtget
 from descriptions import DESC_KO
 from markets import (CAP_STEPS, HK_TYPICAL, HKT, HOLIDAYS, JP_TYPICAL, KST, ETF_TITLE,
                      MARKET_KO, MARKET_ORDER, MARKETS, SECTOR_KO, SEG_KO_CJK,
@@ -911,9 +912,7 @@ def jp_old_fin():
     raw = {}
     if RT_URL:
         try:
-            req = urllib.request.Request(RT_URL + "/api/jpfinraw", headers={"User-Agent": "es-build"})
-            with urllib.request.urlopen(req, timeout=30) as r:
-                raw = json.loads(r.read())
+            raw = rtget.get_json(RT_URL + "/api/jpfinraw", timeout=30)
             if raw:
                 path.write_text(json.dumps(raw, ensure_ascii=False, separators=(",", ":")), encoding="utf-8")
         except Exception as e:                                    # noqa: BLE001
@@ -2693,9 +2692,7 @@ def write_guide_site():
     srv = {}
     if RT_URL:
         try:
-            req = urllib.request.Request(RT_URL + "/api/guide", headers={"User-Agent": "es-build"})
-            with urllib.request.urlopen(req, timeout=90) as r:          # 2017년치부터 쌓여 커졌다 — 20초로는 못 받았다
-                srv = json.loads(r.read())
+            srv = rtget.get_json(RT_URL + "/api/guide", timeout=90)   # 2017년치부터 쌓여 커졌다 — 20초로는 못 받았다
         except Exception as e:                                    # noqa: BLE001
             print(f"  ! 실시간 서버 가이던스 받기 실패: {e} — 지난번 guide_site.json 을 그대로 둔다")
             if (HERE / "data" / "guide_site.json").exists():
@@ -2724,9 +2721,7 @@ def write_guide_site():
 # 새로 생긴 부문 이름 — 실시간 서버가 AI 로 옮겨 /api/segko 로 준다(研究開発支援事業 같은 새 이름이 원문으로 남지 않게).
 if RT_URL:
     try:
-        with urllib.request.urlopen(urllib.request.Request(RT_URL + "/api/segko", headers={"User-Agent": "es-build"}),
-                                    timeout=15) as _r:
-            _extra = json.loads(_r.read())
+        _extra = rtget.get_json(RT_URL + "/api/segko", timeout=15)
         if isinstance(_extra, dict) and _extra:
             (HERE / "data" / "seg_ko_extra.json").write_text(json.dumps(_extra, ensure_ascii=False, sort_keys=True),
                                                             encoding="utf-8")
@@ -5774,9 +5769,7 @@ def build():
     # 안 먹는다(10/30). 빌드는 바퀴마다 새 코드로 돈다. 못 받으면 저장소에 있던 것을 쓴다.
     if RT_URL:
         try:
-            req = urllib.request.Request(RT_URL.rstrip("/") + "/api/segs", headers={"User-Agent": "es-build"})
-            with urllib.request.urlopen(req, timeout=15) as r:
-                got = json.loads(r.read())
+            got = rtget.get_json(RT_URL.rstrip("/") + "/api/segs", timeout=15)
             if isinstance(got, dict) and got:
                 (HERE / "data" / "segments_ai.json").write_text(json.dumps(got, ensure_ascii=False), encoding="utf-8")
         except Exception as e:                                    # noqa: BLE001
