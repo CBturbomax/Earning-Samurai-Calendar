@@ -1383,6 +1383,8 @@ def load_seg_raw():
     옛 결산단신(2021~) 의 누계 점은 실시간 서버가 JPX 공시 보관소에서 받아 /api/jpsegraw 로 준다 —
     TDnet 은 한 달치만 남아 2024년부터 3·4분기 부문이 비었다(EDINET 이 四半期報告書를 없앤 뒤). 있는 것은 안 덮는다."""
     raw = _seg_file().get("raw", {})
+    if raw and not rtget.due():                                  # 한 번 합친 것은 segments_jp.json 에 남아 있다 — 매번 받지 않는다
+        return raw
     try:
         url = (HERE / "realtime" / "URL").read_text(encoding="utf-8").strip().rstrip("/")
         old = rtget.get_json(url + "/api/jpsegraw", timeout=30)

@@ -910,7 +910,7 @@ def jp_old_fin():
     서버가 안 닿을 때도 쓴다."""
     path = HERE / "data" / "financials_jp_old.json"
     raw = {}
-    if RT_URL:
+    if RT_URL and (rtget.due() or not path.exists()):              # 매번 받지 않는다 — 안 받으면 아래에서 지난 사본
         try:
             raw = rtget.get_json(RT_URL + "/api/jpfinraw", timeout=30)
             if raw:
@@ -2690,6 +2690,8 @@ def write_guide_site():
     for code, v in seed.items():
         out["jp:" + code] = {fy: dict(st) for fy, st in v.items()}
     srv = {}
+    if RT_URL and not rtget.due() and (HERE / "data" / "guide_site.json").exists():
+        return                                                   # 매번 받지 않는다 — 지난번 guide_site.json 을 그대로 쓴다
     if RT_URL:
         try:
             srv = rtget.get_json(RT_URL + "/api/guide", timeout=90)   # 2017년치부터 쌓여 커졌다 — 20초로는 못 받았다
