@@ -28,6 +28,7 @@ import json
 import os
 import queue
 import re
+import subprocess
 import sys
 import threading
 import time
@@ -57,6 +58,7 @@ from markets import excluded, ETF_TITLE   # noqa: E402
 
 import brief                       # noqa: E402
 import charts                      # noqa: E402
+import pack                        # noqa: E402
 import shot                        # noqa: E402
 
 DATA = Path(os.environ.get("DATA_DIR", "/data"))
@@ -69,7 +71,8 @@ PORT = int(os.environ.get("PORT", "8080"))
 US_EVERY = float(os.environ.get("US_EVERY", "4"))
 JP_EVERY = float(os.environ.get("JP_EVERY", "3"))
 HK_EVERY = float(os.environ.get("HK_EVERY", "10"))
-OFF_EVERY = float(os.environ.get("OFF_EVERY", "30"))       # 공시가 거의 안 나오는 시간(밤·주말)의 확인 간격
+OFF_EVERY = float(os.environ.get("OFF_EVERY", "30"))
+PACK_D = os.environ.get("PACK_D", "1") != "0"                # 사이트 payload 를 회사별 조각으로 들기(pack.py). 0 이면 예전처럼 통째로       # 공시가 거의 안 나오는 시간(밤·주말)의 확인 간격
 # 공시 창구가 여는 시간(현지, 평일). 그 밖에는 OFF_EVERY 로 느슨하게 본다 — 하루 3분의 2가 밤·주말인데도 2~4초마다
 # 묻고 있었다(11/28). 창 밖에 나온 공시도 놓치지 않는다 — 몇십 초 늦게 볼 뿐.
 OPEN_HOURS = {"us": (6, 22), "jp": (7, 22), "hk": (6, 24)}
@@ -177,9 +180,17 @@ class History:
                 t = (ROOT / "index.html").read_text(encoding="utf-8")
             else:
                 t = http_get(SITE + "index.html?t=" + str(int(time.time())), ua="Mozilla/5.0", timeout=90)
-            i = t.index('<script id="payload" type="application/json">')
-            i = t.index(">", i) + 1
-            D = json.loads(t[i:t.index("</script>", i)])
+            if PACK_D:                                           # 회사별 조각으로(자식 프로세스에서 풀기) — pack.py
+                r = subprocess.run([sys.executable, str(Path(__file__).with_name("pack.py"))], input=t.encode("utf-8"),
+                                   capture_output=True, timeout=180)
+                if r.returncode:
+                    raise RuntimeError("pack.py " + r.stderr.decode("utf-8", "replace")[-300:])
+                D = pack.unpickle(r.stdout)
+                del r
+            else:
+                i = t.index('<script id="payload" type="application/json">')
+                i = t.index(">", i) + 1
+                D = json.loads(t[i:t.index("</script>", i)])
             self.html = shot.split_html(t)
             del t
         except Exception as e:                                   # noqa: BLE001
@@ -1555,7 +1566,7 @@ def segfill(n, only=None):
         return
     import scrape_pr_us as pr
     with H.lock:
-        fin, segs = dict(H.D.get("fin", {})), dict(H.D.get("seg", {}))
+        fin, segs = H.D.get("fin", {}), H.D.get("seg", {})          # 읽기만 — 새로 받으면 통째로 바뀌지 고쳐지지 않는다
     newest = {}
     for k, f in fin.items():
         if k.startswith("us:") and f.get("points"):
@@ -1614,7 +1625,7 @@ def serfill(n, back=4):
         return
     import scrape_pr_us as pr
     with H.lock:
-        fin = dict(H.D.get("fin", {}))
+        fin = H.D.get("fin", {})
     rev_map = {v: k for k, v in cik_ticker().items()}
     todo = [k for k, r in list(SEGAI.items()) if k.startswith("us:") and r.get("alt")
             and len((SER.get(k) or {}).get("pts") or {}) < 8][:n]
@@ -2066,7 +2077,7 @@ def sf_mark(keys, label):
 def segfill_jp(n):
     """이번 시즌 이미 발표했는데 부문이 없는 일본 회사 — TDnet(한 달 보관)의 결산단신·설명자료를 다시 읽는다."""
     with H.lock:
-        fin, segs, rows = dict(H.D.get("fin", {})), dict(H.D.get("seg", {})), dict(H.rows_by_key)
+        fin, segs, rows = H.D.get("fin", {}), H.D.get("seg", {}), dict(H.rows_by_key)
     import collections
     newest = {k: f["points"][-1] for k, f in fin.items() if k.startswith("jp:") and f.get("points")}
     cnt = collections.Counter(p[0] for p in newest.values())
@@ -2249,7 +2260,7 @@ def biz_loop():
     time.sleep(180)
     while True:
         with H.lock:
-            desc, dko = dict(H.D.get("desc") or {}), dict(H.D.get("descKo") or {})
+            desc, dko = H.D.get("desc") or {}, H.D.get("descKo") or {}
             caps = {k: max((r[11] or 0) for r in rs) for k, rs in H.rows_by_key.items() if rs}
             names = {k: rs[-1][2] or rs[-1][7] for k, rs in H.rows_by_key.items() if rs}
         keys = [k for k in sorted(set(desc) | set(dko), key=lambda k: -caps.get(k, 0)) if k not in BIZ][:600]
