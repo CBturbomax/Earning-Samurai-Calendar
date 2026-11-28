@@ -38,6 +38,8 @@ from datetime import date, datetime, timedelta, timezone
 from pathlib import Path
 from xml.etree import ElementTree
 
+import rtget
+
 HERE = Path(__file__).parent
 OUT = HERE / "data" / "financials_jp.json"
 SEG_OUT = HERE / "data" / "segments_jp.json"
@@ -1383,9 +1385,7 @@ def load_seg_raw():
     raw = _seg_file().get("raw", {})
     try:
         url = (HERE / "realtime" / "URL").read_text(encoding="utf-8").strip().rstrip("/")
-        req = urllib.request.Request(url + "/api/jpsegraw", headers={"User-Agent": "es-build"})
-        with urllib.request.urlopen(req, timeout=30) as r:
-            old = json.loads(r.read())
+        old = rtget.get_json(url + "/api/jpsegraw", timeout=30)
         for k, spans in old.items():
             for span, row in spans.items():
                 raw.setdefault(k, {}).setdefault(span, row)

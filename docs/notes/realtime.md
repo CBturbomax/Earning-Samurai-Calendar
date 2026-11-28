@@ -101,3 +101,9 @@ MRK·PFE…) · 홍콩 대형 6곳. 그대로 빼는 것 — 미국 413곳 · �
 같은 78곳을 2시간마다 다시 받아 0곳 메웠다(못 채운 곳은 20시간 쉼, 손으로 건 `guideaudit` 은 다 본다) · `segfill_jp` 빈 pts 에 죽던 것.
 ④ 부문 메우기(`segfill`·`segfill_jp`)는 빈 pts 에 바로 죽어 11/28 전엔 사실상 안 돌았다. 고치자 300곳을 AI 로 읽어 대부분 '누계라 못 씀' —
 같은 문서라 다시 읽어도 같다. 한 번 본 (종목, 분기)는 사흘 쉰다(`/data/segfill_tried.json`, 손으로 건 segfill only= 는 상관없음).
+
+**Railway 요금의 절반은 밖으로 나가는 양(Egress)이었다(11/28 Usage: 109달러 중 Egress 55 · RAM 37 · CPU 17, 1,096GB/월).**
+빌드가 몇 분마다 `/api/jpfinraw`·`/api/guide`(각 10.6MB)·`segs`·`segko`를, fresh 루프의 scrape_fin_jp 가 `/api/jpsegraw`(11.8MB)를
+**압축 없이** 받아 갔다. 지금 서버는 받는 쪽이 gzip 을 말하면 압축해 보낸다(같은 몸통은 압축본을 재사용, `gz_cached`).
+받는 쪽은 `rtget.get_json`(빌드·scrape_fin_jp) · `curl --compressed`(fresh.yml). 실측 압축률 3~7배.
+**서버에서 받아 가는 새 주소를 만들면 반드시 rtget 을 쓴다.** 크기는 rt_probe.yml 의 '응답 크기' 단계가 잰다.

@@ -4,7 +4,7 @@
     "builder": "DOCKERFILE",
     "dockerfilePath": "realtime/Dockerfile",
     "watchPatterns": ["realtime/**", "railway.json", "pr_table.py", "scrape_fin_jp.py",
-                      "scrape_live_us.py", "scrape_seg_sec.py", "scrape_fin.py", "scrape_hk.py", "markets.py"]
+                      "scrape_live_us.py", "scrape_seg_sec.py", "scrape_fin.py", "scrape_hk.py", "markets.py", "rtget.py"]
   },
   "deploy": {
     "restartPolicyType": "ALWAYS",

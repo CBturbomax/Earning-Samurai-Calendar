@@ -177,7 +177,7 @@ jobs:
               timeout 70 python scrape_mon_jp.py || true
             # 실시간 서버가 공시 즉시 읽은 월차(표 규칙 실패분은 그 자리에서 AI) — 빌드가 합친다
             if [ -s realtime/URL ]; then
-              curl -sf -m 20 "$(cat realtime/URL)/api/mon" -o /tmp/mon_rt.json \
+              curl -sf --compressed -m 20 "$(cat realtime/URL)/api/mon" -o /tmp/mon_rt.json \
                 && python -c "import json;json.load(open('/tmp/mon_rt.json'))" \
                 && cp /tmp/mon_rt.json data/monthly_rt_jp.json || true
             fi
@@ -190,7 +190,7 @@ jobs:
             JP_BACK_DAYS=2 timeout 150 python scrape_fin_jp.py || true
             # 실시간 서버(Railway)가 보도자료 부문 표를 AI 로 읽은 것 — 빌드가 부문 막대에 잇는다.
             if [ -s realtime/URL ]; then
-              curl -sf -m 20 "$(cat realtime/URL)/api/segs" -o /tmp/segs_ai.json \
+              curl -sf --compressed -m 20 "$(cat realtime/URL)/api/segs" -o /tmp/segs_ai.json \
                 && python -c "import json;json.load(open('/tmp/segs_ai.json'))" \
                 && cp /tmp/segs_ai.json data/segments_ai.json || true
             fi
