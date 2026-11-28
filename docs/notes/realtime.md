@@ -121,3 +121,4 @@ MRK·PFE…) · 홍콩 대형 6곳. 그대로 빼는 것 — 미국 413곳 · �
 ⑥ 가이던스 장부(`guide_jp`·`guide_us`·`guide_q`·`guide_rev_jp`)도 `PACK_D` 면 회사별 조각(`load_map`/`dump_map`, 꺼내 고쳐 다시 넣기).
    옛 스냅샷 `guidance_hist_jp.json`(1MB)은 `Guide.get` 이 부를 때마다 통째로 읽던 것을 한 번만. 예비 그림 `charts`(matplotlib 47MB)는 쓸 때만 import.
    Dockerfile `MALLOC_ARENA_MAX=2`(스레드 스무 개 넘게 — glibc 메모리 구역이 부풀지 않게). 시험: 장부 읽기·쓰기·API·파일이 예전과 같음.
+⑦ **2시간마다 과거 메우기(`fill_loop`)는 기본 꺼짐**(회원님 11/28: 발표 때 업데이트만, 원하는 회사만 그때). 켜기 `FILL_LOOP=1`. 회사 지정 명령은 그대로.
